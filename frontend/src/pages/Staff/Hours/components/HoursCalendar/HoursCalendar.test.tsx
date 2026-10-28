@@ -1,3 +1,4 @@
+import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -241,6 +242,7 @@ describe('HoursCalendar', () => {
       row: resource,
       data,
       range,
+      calendar: makeItemCalendarProps({ row: resource, data, range }),
       visibleStart: periods[1],
       visibleEnd: periods[1],
     });

@@ -41,21 +41,29 @@ export interface PeriodRange {
 }
 
 export interface DataBufferOptions<TItemData> {
+  // Data loading
+  initialData?: RowPeriodData<TItemData>;
   load: (range: PeriodRange) => Promise<RowPeriodData<TItemData>>;
   onData: (data: RowPeriodData<TItemData>) => void;
-  initialData?: RowPeriodData<TItemData>;
+
+  // Item identity and ranges
+  getItemId?: (item: TItemData) => string;
+  getItemRange?: (item: TItemData) => { start: string; end: string };
+
+  // Period buffering
+  adapter?: PeriodBufferAdapter;
   targetSize?: number;
   threshold?: number;
   replenishSize?: number;
   maxRetainedPeriods?: number;
-  getItemId?: (item: TItemData) => string;
-  getItemRange?: (item: TItemData) => { start: string; end: string };
-  adapter?: PeriodBufferAdapter;
 }
 
 interface ItemOverride<TItemData> {
+  // Reconciliation tracking
   revision: number;
   pendingPeriodKeys: Set<string>;
+
+  // Overridden item placement
   rowId?: string;
   periodKey?: string;
   item?: TItemData;
@@ -68,6 +76,11 @@ interface ItemLocation {
   range?: { start: string; end: string };
 }
 
+/**
+ * Loads ranges around the rendered window and reconciles optimistic item changes.
+ * Requires a stable item ID for mutation methods; range-aware items need `getItemRange`.
+ * Example: initialize(periods), then periodsBuilt(nextPeriods, 'right') as scrolling continues.
+ */
 export class DataBuffer<TItemData> {
   private readonly load: DataBufferOptions<TItemData>['load'];
   private readonly onData: DataBufferOptions<TItemData>['onData'];
@@ -93,6 +106,7 @@ export class DataBuffer<TItemData> {
     right: Promise.resolve(),
   };
 
+  /** function Object() { [native code] } */
   constructor(options: DataBufferOptions<TItemData>) {
     this.load = options.load;
     this.onData = options.onData;
@@ -107,6 +121,7 @@ export class DataBuffer<TItemData> {
     this.rebuildItemIndex();
   }
 
+  /** Starts the initial window load once, sharing an in-flight initialization. */
   initialize(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
     if (this.initialized || !renderedPeriods.length) return Promise.resolve();
     if (this.initializing) return this.initializing;
@@ -116,6 +131,7 @@ export class DataBuffer<TItemData> {
     return this.initializing;
   }
 
+  /** Waits for pending loads, then rebuilds the buffer around a replacement window. */
   async reset(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
     if (!renderedPeriods.length) return;
 
@@ -132,35 +148,7 @@ export class DataBuffer<TItemData> {
     await this.initialize(renderedPeriods);
   }
 
-  private async runInitialization(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
-    const renderedStart = renderedPeriods[0];
-    const renderedEnd = renderedPeriods[renderedPeriods.length - 1];
-
-    const loadedStart = this.adapter.shift(renderedStart, -this.targetSize);
-    const loadedEnd = this.adapter.shift(renderedEnd, this.targetSize);
-    const initialSize = this.adapter.distance(loadedStart, loadedEnd) + 1;
-
-    if (this.maxRetainedPeriods < initialSize) {
-      throw new RangeError(`maxRetainedPeriods must be at least ${initialSize} for the initial buffer`);
-    }
-
-    try {
-      await this.loadAndMerge({ start: loadedStart, end: loadedEnd, direction: 'initial' });
-
-      this.renderedStart ??= renderedStart;
-      this.renderedEnd ??= renderedEnd;
-      this.loadedStart = loadedStart;
-      this.loadedEnd = loadedEnd;
-      this.initialized = true;
-      this.pruneToLoadedRange();
-    } catch (error) {
-      this.initialized = false;
-      throw error;
-    } finally {
-      this.initializing = null;
-    }
-  }
-
+  /** Queues directional replenishment as scrolling exposes new periods. */
   periodsBuilt(periods: readonly CalendarPeriod[], direction: 'left' | 'right'): Promise<void> {
     if (!periods.length) return Promise.resolve();
 
@@ -180,53 +168,7 @@ export class DataBuffer<TItemData> {
     return this.queues[direction];
   }
 
-  private mergeData(incoming: RowPeriodData<TItemData>): void {
-    const getItemId = this.getItemId;
-
-    Object.entries(incoming).forEach(([rowId, periods]) => {
-      Object.entries(periods).forEach(([periodKey, items]) => {
-        // An incoming item may already be indexed under another row or anchor period.
-        if (getItemId) {
-          items.forEach(item => this.removeIndexedItem(getItemId(item)));
-        }
-
-        const row = this.data[rowId] ?? {};
-
-        if (getItemId) {
-          const replacedItems = row[periodKey] ?? [];
-
-          replacedItems.forEach(item => {
-            const itemId = getItemId(item);
-            const location = this.itemLocations.get(itemId);
-
-            if (location?.rowId === rowId && location.periodKey === periodKey) {
-              this.itemLocations.delete(itemId);
-            }
-          });
-        }
-
-        this.data = {
-          ...this.data,
-          [rowId]: { ...row, [periodKey]: items },
-        };
-
-        if (getItemId) {
-          items.forEach(item => {
-            this.itemLocations.set(getItemId(item), {
-              rowId,
-              periodKey,
-              range: this.getItemRange?.(item),
-            });
-          });
-        }
-      });
-    });
-
-    // Overrides not acknowledged by this response must win the merge.
-    this.applyItemOverrides();
-    this.onData(this.data);
-  }
-
+  /** Applies a saved record locally while guarding it against stale loads. */
   upsertItem(rowId: string, periodKey: string, item: TItemData): void {
     const getItemId = this.getItemId;
 
@@ -258,6 +200,7 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
+  /** Removes a record locally and retains its delete override until acknowledged. */
   removeItem(itemId: string): void {
     if (!this.getItemId) throw new Error('getItemId is required for item mutations');
 
@@ -280,160 +223,37 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  private applyItemOverrides(): void {
-    if (!this.getItemId) return;
+  /** Load the initial runway before publishing its bounds as initialized. */
+  private async runInitialization(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
+    const renderedStart = renderedPeriods[0];
+    const renderedEnd = renderedPeriods[renderedPeriods.length - 1];
 
-    this.itemOverrides.forEach((override, itemId) => {
-      if (override.item && override.rowId && override.periodKey) {
-        this.placeIndexedItem(override.rowId, override.periodKey, override.item);
-      } else {
-        this.removeIndexedItem(itemId);
-      }
-    });
-  }
+    const loadedStart = this.adapter.shift(renderedStart, -this.targetSize);
+    const loadedEnd = this.adapter.shift(renderedEnd, this.targetSize);
+    const initialSize = this.adapter.distance(loadedStart, loadedEnd) + 1;
 
-  private placeIndexedItem(rowId: string, periodKey: string, item: TItemData): void {
-    const getItemId = this.getItemId;
-
-    if (!getItemId) return;
-
-    const itemId = getItemId(item);
-
-    this.removeIndexedItem(itemId);
-
-    const row = this.data[rowId] ?? {};
-
-    this.data = {
-      ...this.data,
-      [rowId]: {
-        ...row,
-        [periodKey]: [...(row[periodKey] ?? []), item],
-      },
-    };
-
-    this.itemLocations.set(itemId, { rowId, periodKey, range: this.getItemRange?.(item) });
-  }
-
-  private removeIndexedItem(itemId: string): void {
-    const getItemId = this.getItemId;
-
-    if (!getItemId) return;
-
-    const location = this.itemLocations.get(itemId);
-
-    if (!location) return;
-
-    const row = this.data[location.rowId] ?? {};
-
-    this.data = {
-      ...this.data,
-      [location.rowId]: {
-        ...row,
-        [location.periodKey]: (row[location.periodKey] ?? []).filter(item => getItemId(item) !== itemId),
-      },
-    };
-
-    this.itemLocations.delete(itemId);
-  }
-
-  private rebuildItemIndex(): void {
-    this.itemLocations.clear();
-
-    const getItemId = this.getItemId;
-
-    if (!getItemId) return;
-
-    Object.entries(this.data).forEach(([rowId, periods]) => {
-      Object.entries(periods).forEach(([periodKey, items]) => {
-        items.forEach(item => this.itemLocations.set(getItemId(item), {
-          rowId,
-          periodKey,
-          range: this.getItemRange?.(item),
-        }));
-      });
-    });
-  }
-
-  private getRangeAnchor(range: { start: string; end: string } | undefined, fallback: string) {
-    if (!range || !this.loadedStart || !this.loadedEnd) return fallback;
-
-    return this.adapter.getRangeAnchor(range, this.loadedStart, this.loadedEnd) ?? fallback;
-  }
-
-  private retainOverrides(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
-    this.itemOverrides.forEach((override, itemId) => {
-      if (this.getItemRange && override.range) {
-        const anchor = this.adapter.getRangeAnchor(override.range, start, end);
-
-        if (anchor === undefined) {
-          this.itemOverrides.delete(itemId);
-          return;
-        }
-
-        if (override.item && override.periodKey) {
-          override.periodKey = anchor;
-        }
-
-        return;
-      }
-
-      const includes = (periodKey: string) => retainedKeys?.has(periodKey)
-        ?? this.adapter.includes(start, end, periodKey);
-
-      if (override.periodKey && !includes(override.periodKey)) {
-        this.itemOverrides.delete(itemId);
-        return;
-      }
-
-      override.pendingPeriodKeys = new Set(
-        [...override.pendingPeriodKeys].filter(includes),
-      );
-
-      if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
-    });
-  }
-
-  private retainData(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
-    const getItemRange = this.getItemRange;
-    const getItemId = this.getItemId;
-
-    if (!getItemRange || !getItemId) {
-      const includes = (periodKey: string) => retainedKeys?.has(periodKey)
-        ?? this.adapter.includes(start, end, periodKey);
-
-      this.data = Object.fromEntries(Object.entries(this.data).map(([rowId, periods]) => [
-        rowId,
-        Object.fromEntries(Object.entries(periods).filter(([periodKey]) => includes(periodKey))),
-      ]));
-      return;
+    if (this.maxRetainedPeriods < initialSize) {
+      throw new RangeError(`maxRetainedPeriods must be at least ${initialSize} for the initial buffer`);
     }
 
-    // Keep each ranged item once, anchored inside the portion that remains retained.
-    this.data = Object.fromEntries(Object.entries(this.data).map(([rowId, periods]) => {
-      const anchoredItems = new Map<string, TItemData[]>();
-      const seen = new Set<string>();
+    try {
+      await this.loadAndMerge({ start: loadedStart, end: loadedEnd, direction: 'initial' });
 
-      Object.values(periods).flat().forEach(item => {
-        const range = getItemRange(item);
-        const periodKey = this.adapter.getRangeAnchor(range, start, end);
-
-        if (periodKey === undefined) return;
-
-        const itemId = getItemId(item);
-
-        if (seen.has(itemId)) return;
-
-        seen.add(itemId);
-
-        const items = anchoredItems.get(periodKey) ?? [];
-        items.push(item);
-        anchoredItems.set(periodKey, items);
-      });
-
-      return [rowId, Object.fromEntries(anchoredItems)];
-    }));
+      this.renderedStart ??= renderedStart;
+      this.renderedEnd ??= renderedEnd;
+      this.loadedStart = loadedStart;
+      this.loadedEnd = loadedEnd;
+      this.initialized = true;
+      this.pruneToLoadedRange();
+    } catch (error) {
+      this.initialized = false;
+      throw error;
+    } finally {
+      this.initializing = null;
+    }
   }
 
+  /** Extends or replaces the loaded runway when a rendered edge reaches its threshold. */
   private async replenishIfNeeded(direction: 'left' | 'right'): Promise<void> {
     if (!this.loadedStart || !this.loadedEnd || !this.renderedStart || !this.renderedEnd) return;
 
@@ -500,44 +320,7 @@ export class DataBuffer<TItemData> {
     this.trimRetainedData('right');
   }
 
-  private trimRetainedData(direction: 'left' | 'right'): void {
-    if (!this.loadedStart || !this.loadedEnd) return;
-
-    const retainedCount = this.adapter.distance(this.loadedStart, this.loadedEnd) + 1;
-
-    if (retainedCount <= this.maxRetainedPeriods) return;
-
-    if (direction === 'right') {
-      this.loadedStart = this.adapter.shift(this.loadedEnd, -(this.maxRetainedPeriods - 1));
-    } else {
-      this.loadedEnd = this.adapter.shift(this.loadedStart, this.maxRetainedPeriods - 1);
-    }
-
-    const retainedKeys = new Set<string>();
-    for (let index = 0; index < this.maxRetainedPeriods; index += 1) {
-      retainedKeys.add(this.adapter.shift(this.loadedStart, index).key);
-    }
-
-    this.retainOverrides(this.loadedStart, this.loadedEnd, retainedKeys);
-    this.retainData(this.loadedStart, this.loadedEnd, retainedKeys);
-    this.rebuildItemIndex();
-    this.applyItemOverrides();
-    this.onData(this.data);
-  }
-
-  private pruneToLoadedRange(): void {
-    if (!this.loadedStart || !this.loadedEnd) return;
-
-    const loadedStart = this.loadedStart;
-    const loadedEnd = this.loadedEnd;
-
-    this.retainOverrides(loadedStart, loadedEnd);
-    this.retainData(loadedStart, loadedEnd);
-    this.rebuildItemIndex();
-    this.applyItemOverrides();
-    this.onData(this.data);
-  }
-
+  /** Loads one range and acknowledges only mutation overrides covered by that request. */
   private async loadAndMerge(range: PeriodRange): Promise<void> {
     const requestRevision = this.mutationRevision;
     const incoming = await this.load(range);
@@ -565,4 +348,254 @@ export class DataBuffer<TItemData> {
 
     this.mergeData(incoming);
   }
+
+  /** Merges server records, replacing old indexed locations and preserving current overrides. */
+  private mergeData(incoming: RowPeriodData<TItemData>): void {
+    const getItemId = this.getItemId;
+
+    Object.entries(incoming).forEach(([rowId, periods]) => {
+      Object.entries(periods).forEach(([periodKey, items]) => {
+        // An incoming item may already be indexed under another row or anchor period.
+        if (getItemId) {
+          items.forEach(item => this.removeIndexedItem(getItemId(item)));
+        }
+
+        const row = this.data[rowId] ?? {};
+
+        if (getItemId) {
+          const replacedItems = row[periodKey] ?? [];
+
+          replacedItems.forEach(item => {
+            const itemId = getItemId(item);
+            const location = this.itemLocations.get(itemId);
+
+            if (location?.rowId === rowId && location.periodKey === periodKey) {
+              this.itemLocations.delete(itemId);
+            }
+          });
+        }
+
+        this.data = {
+          ...this.data,
+          [rowId]: { ...row, [periodKey]: items },
+        };
+
+        if (getItemId) {
+          items.forEach(item => {
+            this.itemLocations.set(getItemId(item), {
+              rowId,
+              periodKey,
+              range: this.getItemRange?.(item),
+            });
+          });
+        }
+      });
+    });
+
+    // Overrides not acknowledged by this response must win the merge.
+    this.applyItemOverrides();
+    this.onData(this.data);
+  }
+
+  /** Reapplies pending local updates and deletes after server data is merged. */
+  private applyItemOverrides(): void {
+    if (!this.getItemId) return;
+
+    this.itemOverrides.forEach((override, itemId) => {
+      if (override.item && override.rowId && override.periodKey) {
+        this.placeIndexedItem(override.rowId, override.periodKey, override.item);
+      } else {
+        this.removeIndexedItem(itemId);
+      }
+    });
+  }
+
+  /** Places an item once under its current retained row and period. */
+  private placeIndexedItem(rowId: string, periodKey: string, item: TItemData): void {
+    const getItemId = this.getItemId;
+
+    if (!getItemId) return;
+
+    const itemId = getItemId(item);
+
+    this.removeIndexedItem(itemId);
+
+    const row = this.data[rowId] ?? {};
+
+    this.data = {
+      ...this.data,
+      [rowId]: {
+        ...row,
+        [periodKey]: [...(row[periodKey] ?? []), item],
+      },
+    };
+
+    this.itemLocations.set(itemId, { rowId, periodKey, range: this.getItemRange?.(item) });
+  }
+
+  /** Removes an item from its indexed location without scanning every row. */
+  private removeIndexedItem(itemId: string): void {
+    const getItemId = this.getItemId;
+
+    if (!getItemId) return;
+
+    const location = this.itemLocations.get(itemId);
+
+    if (!location) return;
+
+    const row = this.data[location.rowId] ?? {};
+
+    this.data = {
+      ...this.data,
+      [location.rowId]: {
+        ...row,
+        [location.periodKey]: (row[location.periodKey] ?? []).filter(item => getItemId(item) !== itemId),
+      },
+    };
+
+    this.itemLocations.delete(itemId);
+  }
+
+  /** Rebuilds item lookup locations after the retained buffer changes. */
+  private rebuildItemIndex(): void {
+    this.itemLocations.clear();
+
+    const getItemId = this.getItemId;
+
+    if (!getItemId) return;
+
+    Object.entries(this.data).forEach(([rowId, periods]) => {
+      Object.entries(periods).forEach(([periodKey, items]) => {
+        items.forEach(item => this.itemLocations.set(getItemId(item), {
+          rowId,
+          periodKey,
+          range: this.getItemRange?.(item),
+        }));
+      });
+    });
+  }
+
+  /** Chooses an in-range anchor for ranged records, retaining the fallback when unavailable. */
+  private getRangeAnchor(range: { start: string; end: string } | undefined, fallback: string) {
+    if (!range || !this.loadedStart || !this.loadedEnd) return fallback;
+
+    return this.adapter.getRangeAnchor(range, this.loadedStart, this.loadedEnd) ?? fallback;
+  }
+
+  /** Limits the retained runway after loading a new edge. */
+  private trimRetainedData(direction: 'left' | 'right'): void {
+    if (!this.loadedStart || !this.loadedEnd) return;
+
+    const retainedCount = this.adapter.distance(this.loadedStart, this.loadedEnd) + 1;
+
+    if (retainedCount <= this.maxRetainedPeriods) return;
+
+    if (direction === 'right') {
+      this.loadedStart = this.adapter.shift(this.loadedEnd, -(this.maxRetainedPeriods - 1));
+    } else {
+      this.loadedEnd = this.adapter.shift(this.loadedStart, this.maxRetainedPeriods - 1);
+    }
+
+    const retainedKeys = new Set<string>();
+    for (let index = 0; index < this.maxRetainedPeriods; index += 1) {
+      retainedKeys.add(this.adapter.shift(this.loadedStart, index).key);
+    }
+
+    this.retainOverrides(this.loadedStart, this.loadedEnd, retainedKeys);
+    this.retainData(this.loadedStart, this.loadedEnd, retainedKeys);
+    this.rebuildItemIndex();
+    this.applyItemOverrides();
+    this.onData(this.data);
+  }
+
+  /** Drops data outside loaded bounds and reapplies pending item overrides. */
+  private pruneToLoadedRange(): void {
+    if (!this.loadedStart || !this.loadedEnd) return;
+
+    const loadedStart = this.loadedStart;
+    const loadedEnd = this.loadedEnd;
+
+    this.retainOverrides(loadedStart, loadedEnd);
+    this.retainData(loadedStart, loadedEnd);
+    this.rebuildItemIndex();
+    this.applyItemOverrides();
+    this.onData(this.data);
+  }
+
+  /** Keeps only mutation overrides still covered by the retained window. */
+  private retainOverrides(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
+    this.itemOverrides.forEach((override, itemId) => {
+      if (this.getItemRange && override.range) {
+        const anchor = this.adapter.getRangeAnchor(override.range, start, end);
+
+        if (anchor === undefined) {
+          this.itemOverrides.delete(itemId);
+          return;
+        }
+
+        if (override.item && override.periodKey) {
+          override.periodKey = anchor;
+        }
+
+        return;
+      }
+
+      const includes = (periodKey: string) => retainedKeys?.has(periodKey)
+        ?? this.adapter.includes(start, end, periodKey);
+
+      if (override.periodKey && !includes(override.periodKey)) {
+        this.itemOverrides.delete(itemId);
+        return;
+      }
+
+      override.pendingPeriodKeys = new Set(
+        [...override.pendingPeriodKeys].filter(includes),
+      );
+
+      if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
+    });
+  }
+
+  /** Keeps each retained record once, re-anchoring ranged records inside the window. */
+  private retainData(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
+    const getItemRange = this.getItemRange;
+    const getItemId = this.getItemId;
+
+    if (!getItemRange || !getItemId) {
+      const includes = (periodKey: string) => retainedKeys?.has(periodKey)
+        ?? this.adapter.includes(start, end, periodKey);
+
+      this.data = Object.fromEntries(Object.entries(this.data).map(([rowId, periods]) => [
+        rowId,
+        Object.fromEntries(Object.entries(periods).filter(([periodKey]) => includes(periodKey))),
+      ]));
+      return;
+    }
+
+    // Keep each ranged item once, anchored inside the portion that remains retained.
+    this.data = Object.fromEntries(Object.entries(this.data).map(([rowId, periods]) => {
+      const anchoredItems = new Map<string, TItemData[]>();
+      const seen = new Set<string>();
+
+      Object.values(periods).flat().forEach(item => {
+        const range = getItemRange(item);
+        const periodKey = this.adapter.getRangeAnchor(range, start, end);
+
+        if (periodKey === undefined) return;
+
+        const itemId = getItemId(item);
+
+        if (seen.has(itemId)) return;
+
+        seen.add(itemId);
+
+        const items = anchoredItems.get(periodKey) ?? [];
+        items.push(item);
+        anchoredItems.set(periodKey, items);
+      });
+
+      return [rowId, Object.fromEntries(anchoredItems)];
+    }));
+  }
+
 }

@@ -1,3 +1,4 @@
+import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -159,11 +160,12 @@ describe('TaskCalendar', () => {
 
   it('builds lifecycle actions from task state and write capability', async () => {
     const rendered = renderCalendar({ selectedTaskId: 'task-1' });
-    const openTask = { ...task, state: 'open' as const, hoursLogged: 1 };
+    const openTask: Task = { ...task, state: 'open', hoursLogged: 1 };
     const element = calendarState.props?.buildItem({
       row: resource,
       data: openTask,
       range: { start: openTask.startDate, end: openTask.dueDate },
+      calendar: makeItemCalendarProps({ row: resource, data: openTask, range: { start: openTask.startDate, end: openTask.dueDate } }),
       visibleStart: { key: openTask.startDate, start: new Date(), end: new Date() },
       visibleEnd: { key: openTask.dueDate, start: new Date(), end: new Date() },
     }) as { props: { selected: boolean; onComplete: () => void; onCancel: () => void; onEdit: () => void } };

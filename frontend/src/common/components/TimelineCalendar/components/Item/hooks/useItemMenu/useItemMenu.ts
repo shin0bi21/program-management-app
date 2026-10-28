@@ -7,10 +7,16 @@ const PRECISE_HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 interface UseItemMenuOptions {
   triggerRef: RefObject<HTMLButtonElement | null>;
   hasActions: boolean;
+
   hideDetails: () => void;
   showDetails: () => void;
 }
 
+/**
+ * Owns item action-menu opening, action completion, and touch detail access.
+ * Requires: triggerRef identifies the item button.
+ * Example: activating an item opens actions after any selection-driven layout change.
+ */
 export default function useItemMenu({ triggerRef, hasActions, hideDetails, showDetails }: UseItemMenuOptions) {
   const [pendingAnchorX, setPendingAnchorX] = useState<number | null>(null);
   const { isOpen, openAtRect, close, position, menuRef } = useFloatingMenu(
@@ -23,16 +29,8 @@ export default function useItemMenu({ triggerRef, hasActions, hideDetails, showD
     && window.matchMedia(PRECISE_HOVER_QUERY).matches;
   const showTouchDetails = isOpen && !supportsPreciseHover;
 
-  useLayoutEffect(() => {
-    if (pendingAnchorX === null) return;
-
-    // Selection may change the layout above the calendar during the opening click.
-    const anchor = getVisibleItemAnchor(triggerRef.current, pendingAnchorX);
-    setPendingAnchorX(null);
-    if (anchor) openAtRect(anchor);
-  }, [pendingAnchorX, openAtRect, triggerRef]);
-
-  const onClick = (event: MouseEvent<HTMLButtonElement>) => {
+  /** Closes an open menu or queues opening after the item selection update. */
+  function toggleMenu(event: MouseEvent<HTMLButtonElement>): void {
     hideDetails();
 
     if (!hasActions) return;
@@ -43,19 +41,31 @@ export default function useItemMenu({ triggerRef, hasActions, hideDetails, showD
     }
 
     setPendingAnchorX(event.clientX);
-  };
+  }
 
-  const runAction = (event: MouseEvent<HTMLButtonElement>, action: () => void) => {
+  /** Closes the menu before invoking an action without activating the containing item. */
+  function runAction(event: MouseEvent<HTMLButtonElement>, action: () => void): void {
     event.stopPropagation();
     close();
     action();
-  };
+  }
 
-  const viewDetails = (event: MouseEvent<HTMLButtonElement>) => {
+  /** Replaces the touch action menu with item details. */
+  function viewDetails(event: MouseEvent<HTMLButtonElement>): void {
     event.stopPropagation();
     close();
     showDetails();
-  };
+  }
 
-  return { isOpen, close, position, menuRef, showTouchDetails, onClick, runAction, viewDetails };
+  useLayoutEffect(function openMenuAfterSelection() {
+    if (pendingAnchorX === null) return;
+
+    // Selection may change the layout above the calendar during the opening click.
+    const anchor = getVisibleItemAnchor(triggerRef.current, pendingAnchorX);
+    setPendingAnchorX(null);
+
+    if (anchor) openAtRect(anchor);
+  }, [pendingAnchorX, openAtRect, triggerRef]);
+
+  return { isOpen, close, position, menuRef, showTouchDetails, onClick: toggleMenu, runAction, viewDetails };
 }

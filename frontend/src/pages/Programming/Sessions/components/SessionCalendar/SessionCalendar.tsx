@@ -109,7 +109,8 @@ export default function SessionCalendar({
       selectedRowId={selectedProgramId}
       onRowSelect={onProgramSelect}
       onCellActivate={onAddSession ? ({ row, period }) => onAddSession(row, period.key) : undefined}
-      buildItem={({ data: session, row }) => <SessionItem
+      buildItem={({ data: session, row, calendar: itemCalendar }) => <SessionItem
+        calendar={itemCalendar}
         session={session}
         timezone={row.timezone}
         selected={session.id === selectedSessionId}

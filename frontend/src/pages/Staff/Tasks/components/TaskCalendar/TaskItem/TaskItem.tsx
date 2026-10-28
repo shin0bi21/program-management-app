@@ -1,13 +1,15 @@
+import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import { formatHours } from '../../../../../../common/utils/date';
 import type { Task } from '../../../types';
 import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
 import './TaskItem.css';
 
-export default function TaskItem({ task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete }: { task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void }) {
+export default function TaskItem<TRow, TItemData>({ calendar, task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete }: { calendar?: ItemCalendarProps<TRow, TItemData>; task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const className = `task-item--${task.status}`;
 
   return <Item
+    calendar={calendar}
     id={task.id}
     selected={selected}
     ariaLabel={`${task.title}, ${task.statusLabel}, ${task.startDate} to ${task.dueDate}`}

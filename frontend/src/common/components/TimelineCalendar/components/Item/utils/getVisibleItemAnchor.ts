@@ -1,3 +1,8 @@
+/**
+ * Finds the visible portion of an item beneath the pointer for floating content.
+ * Requires: clientX, when supplied, is a viewport coordinate.
+ * Example: a ranged item anchors floating content to the hovered visible cell.
+ */
 export function getVisibleItemAnchor(trigger: HTMLElement | null, clientX?: number) {
   if (!trigger) return null;
 

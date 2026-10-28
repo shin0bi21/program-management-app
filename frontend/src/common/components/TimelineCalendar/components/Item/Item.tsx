@@ -1,8 +1,11 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import FloatingMenuPanel from '../../../FloatingMenu/FloatingMenuPanel';
 import useItemDetails from './hooks/useItemDetails/useItemDetails';
 import useItemMenu from './hooks/useItemMenu/useItemMenu';
+import type { ItemCalendarProps } from '../../types';
+import useItemMove from './hooks/useItemMove/useItemMove';
+import useItemResize from './hooks/useItemResize/useItemResize';
 import './Item.css';
 
 export interface ItemDetail {
@@ -19,42 +22,78 @@ export interface ItemAction {
   variant?: 'danger';
 }
 
-interface ItemProps {
+interface ItemProps<TRow, TItemData> {
+  // Timeline placement and interactions
+  calendar?: ItemCalendarProps<TRow, TItemData>;
+
+  // Item identity and appearance
   id: string;
   ariaLabel: string;
+  selected?: boolean;
+  className?: string;
+
+  // Summary content
   leading?: ReactNode;
   summary: ReactNode;
   trailing?: ReactNode;
+
+  // Details content
   detailTitle: ReactNode;
   details: readonly ItemDetail[];
+
+  // Menu actions
   actions?: readonly ItemAction[];
   onEdit?: () => void;
   onDelete?: () => void;
-  selected?: boolean;
-  className?: string;
 }
 
-export default function Item({
+export default function Item<TRow, TItemData>({
+  // Timeline placement and interactions
+  calendar,
+
+  // Item identity and appearance
   id,
   ariaLabel,
+  selected = false,
+  className = '',
+
+  // Summary content
   leading,
   summary,
   trailing,
+
+  // Details content
   detailTitle,
   details,
+
+  // Menu actions
   actions = [],
   onEdit,
   onDelete,
-  selected = false,
-  className = '',
-}: ItemProps) {
+}: ItemProps<TRow, TItemData>) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const detailsId = `calendar-item-details-${id}`;
   const hasActions = actions.length > 0 || Boolean(onEdit || onDelete);
   const itemDetails = useItemDetails(triggerRef);
   const menu = useItemMenu({ triggerRef, hasActions, hideDetails: itemDetails.hideDetails, showDetails: itemDetails.showDetails });
 
-  return (
+  const move = useItemMove(calendar, itemDetails.hideDetails);
+  const resize = useItemResize(calendar, itemDetails.hideDetails);
+
+  const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!calendar) return;
+
+    if (calendar.environment.isClickSuppressed()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    calendar.onSelect();
+  };
+
+  const handleActivate = () => calendar?.onActivate();
+  const content = (
     <>
       <button
         ref={triggerRef}
@@ -153,4 +192,38 @@ export default function Item({
       )}
     </>
   );
+
+  if (!calendar) return content;
+
+  const { layout } = calendar;
+
+  return (
+    <div
+      className={getPositionedItemClassName(calendar)}
+      data-item-density={layout.density}
+      data-item-row-id={layout.rowId}
+      data-item-start={layout.start}
+      data-item-end={layout.end}
+      style={layout.style}
+      onPointerDown={move.onPointerDown}
+      onClickCapture={handleClickCapture}
+      onClick={handleActivate}
+    >
+      {resize.startHandle && <button {...resize.startHandle} />}
+      {content}
+      {resize.endHandle && <button {...resize.endHandle} />}
+    </div>
+  );
+}
+
+/** Produces visual and interaction modifiers for the positioned item wrapper. */
+function getPositionedItemClassName<TRow, TItemData>({ layout, movable, resizable }: ItemCalendarProps<TRow, TItemData>) {
+  return [
+    'item', 'positioned-item', layout.density,
+    !layout.startsInWindow ? 'continues-before' : '',
+    !layout.endsInWindow ? 'continues-after' : '',
+    layout.hideSummary ? 'summaries-hidden' : '',
+    movable ? 'draggable' : '',
+    resizable ? 'resizable' : '',
+  ].filter(Boolean).join(' ');
 }

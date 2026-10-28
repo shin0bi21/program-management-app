@@ -1,3 +1,4 @@
+import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { ReactElement } from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -51,6 +52,7 @@ function buildSessionItem(): ReactElement<Parameters<typeof SessionItem>[0]> {
   return calendarState.props!.buildItem({
     row: programs[0], data: session,
     range: { start: '2026-08-10', end: '2026-08-10' },
+    calendar: makeItemCalendarProps({ row: programs[0], data: session, range: { start: '2026-08-10', end: '2026-08-10' } }),
     visibleStart: period, visibleEnd: period,
   }) as ReactElement<Parameters<typeof SessionItem>[0]>;
 }

@@ -1,10 +1,12 @@
+import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import type { CohortSession } from '../../../types';
 import './SessionItem.css';
 
 const statusLabels = { upcoming: 'Upcoming', completed: 'Completed', cancelled: 'Cancelled' } as const;
 
-export default function SessionItem({ session, timezone = 'America/Toronto', selected = false, onEdit, onDelete }: {
+export default function SessionItem<TRow, TItemData>({ calendar, session, timezone = 'America/Toronto', selected = false, onEdit, onDelete }: {
+  calendar?: ItemCalendarProps<TRow, TItemData>;
   session: CohortSession;
   timezone?: string;
   selected?: boolean;
@@ -17,6 +19,7 @@ export default function SessionItem({ session, timezone = 'America/Toronto', sel
   const status = statusLabels[session.state];
 
   return <Item
+    calendar={calendar}
     id={session.id}
     selected={selected}
     ariaLabel={`${session.theme}, ${session.programName}, ${session.cohortName}, ${session.sessionTypeName}, ${startsAt} to ${endsAt}, ${status}`}

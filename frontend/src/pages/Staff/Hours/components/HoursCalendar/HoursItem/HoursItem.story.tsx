@@ -73,8 +73,9 @@ export function InteractiveHoursItems() {
           setSelectedResourceId(row.id);
           setSelectionCount(count => count + 1);
         }}
-        buildItem={({ data }) => (
+        buildItem={({ data, calendar }) => (
           <HoursItem
+            calendar={calendar}
             item={data.item}
             onEdit={() => setActionRecord(`edit:${data.item.id}`)}
             onDelete={() => setActionRecord(`delete:${data.item.id}`)}

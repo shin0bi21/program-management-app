@@ -1,6 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMemo, type RefObject } from 'react';
 
+/**
+ * Produces the visible row slice and spacer indices for a fixed-height calendar viewport.
+ * Requires: rowHeight matches the rendered row height and headerHeight matches the sticky header.
+ * Example: rows outside the window contribute scroll space while their components remain unmounted.
+ */
 export function useRowVirtualization<TRow>(
   rows: readonly TRow[],
   viewportRef: RefObject<HTMLElement | null>,

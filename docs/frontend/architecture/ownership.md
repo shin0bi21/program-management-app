@@ -21,6 +21,12 @@ Place a component-private hook under that component's `hooks/` directory. Choose
 
 Lift a hook to the nearest common owner when it coordinates multiple children, shared resources, or a lifecycle that must survive a child's unmount. Import shared contracts from their owner without introducing runtime dependencies back to parent components or circular module dependencies. A child receives parent-coordinated behavior through props rather than importing the parent's implementation.
 
+A shared coordinator may retain a child's workflow callbacks for an active session. In that case,
+the child can keep its interaction logic while the coordinator owns shared listeners and session
+lifetime. Pass configuration down and report changes up through explicit callbacks; do not give
+children an imperative parent-instance API. The [calendar guide](../components/calendars.md)
+shows this split for virtualized item movement and resizing.
+
 Program cycles are a shared programming capability used by Programming, Settings,
 Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract live in
 [`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).

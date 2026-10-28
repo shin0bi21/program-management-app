@@ -3,6 +3,7 @@ import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons
 
 interface ToolbarProps {
   year: number;
+
   onToday?: () => void;
   todayDisabled?: boolean;
   onPrevious?: () => void;

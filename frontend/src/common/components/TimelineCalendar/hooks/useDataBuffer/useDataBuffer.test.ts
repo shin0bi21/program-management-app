@@ -40,6 +40,25 @@ describe('useDataBuffer', () => {
     await waitFor(() => expect(result.current.error).toBeNull());
   });
 
+  it('uses the latest committed loader when resetting the retained buffer', async () => {
+    const initialLoad = vi.fn().mockResolvedValue({});
+    const nextLoad = vi.fn().mockResolvedValue({});
+    const getItemId = (item: Item) => item.id;
+    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const { result, rerender } = renderHook(({ load }) => useDataBuffer<Item>({ load, getItemId }), {
+      initialProps: { load: initialLoad },
+    });
+
+    act(() => result.current.initialize(periods));
+    await waitFor(() => expect(initialLoad).toHaveBeenCalledOnce());
+
+    rerender({ load: nextLoad });
+    act(() => result.current.reset(periods));
+
+    await waitFor(() => expect(nextLoad).toHaveBeenCalledOnce());
+    expect(initialLoad).toHaveBeenCalledOnce();
+  });
+
   it('preserves a backend account error instead of replacing it with a generic load error', async () => {
     const load = vi.fn().mockRejectedValue(new ApiError(403, 'Account is inactive'));
     const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
