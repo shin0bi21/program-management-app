@@ -15,6 +15,6 @@ describe('TaskStatusBadge', () => {
   ] satisfies Array<[Partial<Task>, string, string]>)('renders %s as %s', (overrides, modifier, label) => {
     render(<TaskStatusBadge task={makeTask(overrides)} />);
 
-    expect(screen.getByText(label)).toHaveClass(`task-status-badge--${modifier}`);
+    expect(screen.getByText(label)).toHaveClass(`status-label--${modifier}`);
   });
 });

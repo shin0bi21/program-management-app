@@ -25,7 +25,6 @@ export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onD
     summary={<HoursTypeLabel item={item} />}
     detailTitle={title}
     details={[
-      { label: 'Cycle', value: item.cycleName ?? '—' },
       { label: 'Program', value: item.programName ?? '—' },
       { label: 'Category', value: item.categoryLabel },
       { label: 'Hours', value: item.hours, sectionStart: true },

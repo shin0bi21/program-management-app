@@ -1,3 +1,4 @@
+import Badge from '../../../../../common/components/Badge/Badge';
 import './SessionTypeBadge.css';
 
 interface SessionTypeBadgeProps {
@@ -17,13 +18,13 @@ export default function SessionTypeBadge({
   const modifier = modifiersByName[name] ?? 'regular';
 
   return (
-    <span
+    <Badge
       className={
         `session-type-badge session-type-badge--${appearance} `
         + `session-type-badge--${modifier}`
       }
     >
       {name}
-    </span>
+    </Badge>
   );
 }

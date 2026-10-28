@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
+import StatusBadge from '../../../../../../common/components/StatusBadge/StatusBadge';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { CohortSession } from '../../../types';
@@ -28,7 +29,7 @@ export default function useSessionTable({
 }) {
   return useMemo<TableColumnDef<CohortSession>[]>(() => [
     { id: 'program', header: 'Program', accessorFn: session => session.programName },
-    { id: 'cohort', header: 'Cohort', accessorFn: session => session.cohortName },
+    { id: 'cohort', header: 'Cycle', accessorFn: session => session.cohortName },
     { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
     {
       id: 'date', header: 'Date', size: 135,
@@ -59,7 +60,7 @@ export default function useSessionTable({
       header: 'Status',
       size: 110,
       accessorFn: session => session.state,
-      cell: ({ row: { original: session } }) => <span className={`session-state session-state--${session.state}`}>{session.state}</span>,
+      cell: ({ row: { original: session } }) => <StatusBadge status={session.state} label={session.state.charAt(0).toUpperCase() + session.state.slice(1)} />,
     },
     ...(canWriteAttendance || canWriteSessions ? [{
       id: 'actions',
