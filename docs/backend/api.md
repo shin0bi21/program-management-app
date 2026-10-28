@@ -45,6 +45,8 @@ Task-linked create/update responses include `updatedTask` when the actor has `re
 This canonical task projection is read inside the hours transaction, including the new
 hours totals and any completion, so consumers can reconcile the task without a second request.
 
+`GET /hours/table` accepts optional paired `start` and `end` dates in `YYYY-MM-DD` format and includes work dates on both boundaries. Date filters apply before cursor pagination. Table and calendar ranges are limited to 366 inclusive days.
+
 Time-entry validation, policies, services, and `backend/tests/hours/` are authoritative for entry, cycle, task-integration, and resource-scope behavior.
 
 ### Assigned tasks — `/tasks`
@@ -61,6 +63,8 @@ Time-entry validation, policies, services, and `backend/tests/hours/` are author
 | `PATCH` | `/:id/placement` | Move or resize a task without replacing unrelated task fields |
 | `PATCH` | `/:id/state` | Update an assigned task's lifecycle state |
 | `DELETE` | `/:id` | Delete a policy-scoped task without logged time |
+
+`GET /tasks/list` accepts optional paired `start` and `end` dates in `YYYY-MM-DD` format. A task matches when its start/due interval overlaps the inclusive range. Date filters apply before cursor pagination. Table and calendar ranges are limited to 366 inclusive days.
 
 Task validation, policies, services, and `backend/tests/tasks/` are authoritative for lifecycle, assignment, placement, deletion, hours integration, and resource-scope behavior.
 
@@ -105,6 +109,11 @@ Deleting a cycle referenced by a cohort or time entry returns `409`.
 `GET /cohorts/sessions` accepts comma-separated UUID `cycleIds` to filter sessions across
 the selected cycles' cohorts. It combines with program, cohort, session-type, status,
 search, date-range and pagination filters while preserving program access restrictions.
+Paired session timestamps use an exclusive end. The selected range may cover at most
+366 Toronto calendar days, including the local dates containing the start and the last
+included instant; daylight-saving changes do not alter this count.
+Date-range query validation accepts real calendar dates in years 0001–9999, without
+restricting bounds to existing cycles.
 
 Program create/update and lookup records include `defaultDayOfWeek` (lowercase weekday),
 `defaultStartTime` and `defaultEndTime` (`HH:mm`), and `timezone` (`America/Toronto`, the only supported program timezone).

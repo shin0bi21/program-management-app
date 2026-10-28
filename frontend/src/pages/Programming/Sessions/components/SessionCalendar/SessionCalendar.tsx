@@ -9,7 +9,9 @@ import type { Program } from '../../../../../common/features/programs/types';
 import type { MoveSessionResult } from '../../sessions.api';
 import { getSessions } from '../../sessions.api';
 import type { CohortSession, SessionListFilters } from '../../types';
-import { getSessionRange, getSessionRequestRange } from './sessionCalendarDates';
+import { getSessionRange } from './sessionCalendarDates';
+import { getSessionRequestRange } from '../../utils/sessionDateRange';
+import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import SessionItem from './SessionItem/SessionItem';
 import './SessionCalendar.css';
 
@@ -39,7 +41,10 @@ export default function SessionCalendar({
 }: SessionCalendarProps) {
   const queryClient = useQueryClient();
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
-    const requestRange = getSessionRequestRange(start.key, end.key);
+    const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
+    if (!dates) return {};
+
+    const requestRange = getSessionRequestRange(dates.start, dates.end);
     const requestFilters = { ...filters, ...requestRange };
     const sessions = await queryClient.fetchQuery({
       queryKey: [...queryKey, requestFilters],
@@ -75,6 +80,7 @@ export default function SessionCalendar({
 
   return <div className="sessions-calendar-view">
     <TimelineCalendar
+      dateRange={filters.dateRange}
       rows={visiblePrograms}
       items={calendar.items}
       onInitialPeriods={calendar.initialize}

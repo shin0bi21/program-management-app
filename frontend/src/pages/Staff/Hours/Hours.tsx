@@ -1,3 +1,4 @@
+import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
 import { useCallback, useMemo, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
@@ -48,6 +49,7 @@ const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 export default function Hours() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const dateRangePresets = useDateRangePresets();
   const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
 
   // Permissions.
@@ -78,6 +80,7 @@ export default function Hours() {
 
   // Filter configuration.
   const hoursFilters = useMemo<HoursFilters>(() => ({
+    dateRange: preferences.filters.dateRange,
     staffIds: preferences.filters.staffIds,
     categories: preferences.filters.categories,
     programIds: preferences.filters.programIds,
@@ -85,6 +88,7 @@ export default function Hours() {
     cycleId: preferences.filters.cycleId ?? undefined,
     search: preferences.search.appliedValue,
   }), [
+    preferences.filters.dateRange,
     preferences.filters.categories,
     preferences.filters.cycleId,
     preferences.filters.programIds,
@@ -227,17 +231,18 @@ export default function Hours() {
         /> : undefined}
 
         filters={preferences.ready ? <FilterCard
-          categories={preferences.filters.definitions}
-          values={{
-            staff: preferences.filters.staffIds,
-            entryType: preferences.filters.categories,
-            program: preferences.filters.programIds,
-            type: preferences.filters.types,
-            cycle: preferences.filters.cycleId ? [preferences.filters.cycleId] : [],
-          }}
-          onApply={preferences.filters.apply}
-          onClearAll={preferences.filters.clear}
-        /> : undefined}
+          dateRange={{ presets: dateRangePresets, value: preferences.filters.dateRange, onApply: preferences.filters.setDateRange }}
+            categories={preferences.filters.definitions}
+            values={{
+              staff: preferences.filters.staffIds,
+              entryType: preferences.filters.categories,
+              program: preferences.filters.programIds,
+              type: preferences.filters.types,
+              cycle: preferences.filters.cycleId ? [preferences.filters.cycleId] : [],
+            }}
+            onApply={preferences.filters.apply}
+            onClearAll={preferences.filters.clear}
+          /> : undefined}
       />
       <PageErrorOverlay errors={[
         pageData.optionsError ? {

@@ -90,6 +90,7 @@ export default function TaskCalendar({
 
   return <>
     <TimelineCalendar
+      dateRange={filters.dateRange}
       rows={visibleResources}
       items={calendar.items}
       onInitialPeriods={calendar.initialize}

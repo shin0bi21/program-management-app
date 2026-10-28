@@ -29,6 +29,9 @@ export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQ
     ${hoursRecordFrom}
     WHERE ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
       ${hoursFilterPredicate(query)}
+      AND ${query.start && query.end
+        ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
+        : sql`TRUE`}
     ) listed
     WHERE TRUE
       AND ${cursor ? (direction === 'asc'

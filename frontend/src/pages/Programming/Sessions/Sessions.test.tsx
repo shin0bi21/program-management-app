@@ -113,7 +113,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
       state: 'upcoming';
     }) => void;
   }) => (
-    <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')}>
+    <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
       <button type="button" onClick={() => onProgramSelect(programs[0])}>Program row</button>
       {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
       <button
@@ -309,6 +309,24 @@ describe('Sessions', () => {
 
     expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+  });
+
+  it('applies one date range to table queries and preserves it when switching to calendar', async () => {
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-08-01' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-08-31' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    const dateRange = { start: '2026-08-01', end: '2026-08-31' };
+    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ dateRange }), expect.any(Object), expect.any(Object),
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
   });
 
   // Selection and page-spanning actions.

@@ -1,3 +1,4 @@
+import FilterCard from '../FilterCard/FilterCard';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import TimelineCalendar from './TimelineCalendar';
@@ -230,6 +231,23 @@ export function PersistedPosition() {
       getItemId={item => item.id}
       renderRow={({ row }) => <span>{row.name}</span>}
       buildItem={() => null}
+    />
+  </div>;
+}
+
+export function PageDateRange() {
+  const [dateRange, setDateRange] = useState({ start: '2028-02-28', end: '2028-03-03' });
+  return <div style={{ height: '420px', padding: '16px' }}>
+    <FilterCard categories={[{ id: 'status', label: 'Status', options: [{ value: 'active', label: 'Active' }] }]} values={{}} onApply={() => undefined} dateRange={{ value: dateRange, onApply: setDateRange }} />
+    <TimelineCalendar<StoryRow, StoryItem>
+      key={`${dateRange.start}:${dateRange.end}`}
+      dateRange={dateRange}
+      initialDate={new Date(2035, 0, 1)}
+      rows={rows.slice(0, 2)} items={{}}
+      ariaLabel="Page date range calendar"
+      getItemRange={item => ({ start: item.start, end: item.end })}
+      getRowId={row => row.id} getItemId={item => item.id}
+      renderRow={({ row }) => <span>{row.name}</span>} buildItem={() => null}
     />
   </div>;
 }

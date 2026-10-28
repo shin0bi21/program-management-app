@@ -1,3 +1,4 @@
+import { getSessionRequestRange } from './utils/sessionDateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
@@ -80,6 +81,11 @@ export function getSessions(
   pagination?: CursorRequest<SessionSortKey>,
 ) {
   const query = new URLSearchParams();
+  if (pagination && filters.dateRange) {
+    const range = getSessionRequestRange(filters.dateRange.start, filters.dateRange.end);
+    query.set('start', range.start);
+    query.set('end', range.end);
+  }
   if ('start' in filters) query.set('start', filters.start);
   if ('end' in filters) query.set('end', filters.end);
   if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));

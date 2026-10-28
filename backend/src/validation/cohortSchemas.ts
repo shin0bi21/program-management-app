@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
+import { DATE_RANGE_LIMIT_MESSAGE, exceedsDateRangeLimit, isCalendarDate, sessionRangeCalendarDates } from './dateRangeValidation';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
@@ -145,8 +146,8 @@ export const generateSessionsSchema = z.object({
 
 export const sessionListQuerySchema = z.object({
   query: z.object({
-    start: z.string().datetime({ offset: true }).optional(),
-    end: z.string().datetime({ offset: true }).optional(),
+    start: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'Start must use a supported calendar year').optional(),
+    end: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'End must use a supported calendar year').optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
@@ -168,6 +169,14 @@ export const sessionListQuerySchema = z.object({
         message: 'Session range end must be after start',
         path: ['end'],
       });
+    }
+    if (data.start && data.end && Date.parse(data.end) > Date.parse(data.start)) {
+      const dates = sessionRangeCalendarDates(data.start, data.end);
+      if (!dates) {
+        context.addIssue({ code: 'custom', message: 'Session range must use supported calendar dates', path: ['end'] });
+      } else if (exceedsDateRangeLimit(dates.start, dates.end)) {
+        context.addIssue({ code: 'custom', message: DATE_RANGE_LIMIT_MESSAGE, path: ['end'] });
+      }
     }
   }),
 });

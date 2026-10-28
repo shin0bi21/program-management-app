@@ -44,6 +44,7 @@ describe('useHoursPreferences', () => {
   it('waits for dependencies and restores one complete admin preference', async () => {
     savedPreference.preference = {
       view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
+      dateRange: { start: '2026-03-01', end: '2026-03-31' },
       types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     };
@@ -62,6 +63,7 @@ describe('useHoursPreferences', () => {
     expect(result.current.filters).toEqual(expect.objectContaining({
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleId: 'cycle-2',
+      dateRange: { start: '2026-03-01', end: '2026-03-31' },
     }));
     expect(result.current.table).toEqual(expect.objectContaining({
       hiddenColumns: ['note'], columnWidths: { note: 240 },
@@ -175,6 +177,7 @@ describe('useHoursPreferences', () => {
       result.current.filters.apply('entryType', ['meeting']);
       result.current.filters.apply('type', ['task']);
       result.current.filters.selectCycle('cycle-2');
+      result.current.filters.setDateRange({ start: '2026-08-01', end: '2026-08-31' });
     });
     expect(result.current.filters).toEqual(expect.objectContaining({
       staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
@@ -184,6 +187,7 @@ describe('useHoursPreferences', () => {
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
+      dateRange: { start: '2026-08-01', end: '2026-08-31' },
       search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     })));

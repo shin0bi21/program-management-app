@@ -89,4 +89,29 @@ describe('usePeriodVirtualization', () => {
       expect.objectContaining({ key: '2026-08-12' }),
     ]);
   });
+  it('uses inclusive selected dates, including leap day, and clamps restored positions and navigation', () => {
+    mockWindow([0, 1, 2]);
+    const { result } = renderHook(() => usePeriodVirtualization({
+      periodDefinition: dayPeriodDefinition,
+      initialDate: new Date(2035, 0, 1), initialOffset: 50,
+      periodCount: 2500, dateRange: { start: '2028-02-28', end: '2028-03-01' },
+      overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
+    }));
+    expect(result.current.allPeriods.map(period => period.key)).toEqual(['2028-02-28', '2028-02-29', '2028-03-01']);
+    expect(vi.mocked(useVirtualizer).mock.calls[vi.mocked(useVirtualizer).mock.calls.length - 1]?.[0]).toMatchObject({ count: 3, initialOffset: 200 });
+
+    act(() => result.current.goToDate(new Date(2020, 0, 1)));
+    expect(scrollToOffset).toHaveBeenLastCalledWith(0, { align: 'start' });
+    act(() => result.current.goToDate(new Date(2040, 0, 1)));
+    expect(scrollToOffset).toHaveBeenLastCalledWith(200, { align: 'start' });
+  });
+
+  it('rejects an oversized range before constructing its day periods', () => {
+    expect(() => renderHook(() => usePeriodVirtualization({
+      periodDefinition: dayPeriodDefinition, initialDate: new Date(2026, 0, 1), initialOffset: 0,
+      periodCount: 2500, dateRange: { start: '1000-01-01', end: '9999-12-31' },
+      overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
+    }))).toThrow('Calendar date range must contain valid ordered dates');
+  });
+
 });

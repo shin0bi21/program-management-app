@@ -4,6 +4,7 @@ import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQ
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
 export function useSessionTableData(queryKey: readonly unknown[], {
+  dateRange,
   programIds = [],
   cycleIds,
   sessionTypeIds = [],
@@ -11,6 +12,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
   search,
 }: SessionListFilters, sorting: ListSort<SessionSortKey>, enabled = true) {
   const filters = {
+    dateRange,
     programIds,
     cycleIds,
     sessionTypeIds,

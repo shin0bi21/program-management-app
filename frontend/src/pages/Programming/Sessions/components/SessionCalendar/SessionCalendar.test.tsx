@@ -148,11 +148,21 @@ describe('SessionCalendar', () => {
     act(() => calendarState.props!.onInitialPeriods!([period]));
 
     expect(await screen.findByText('Sessions calendar unavailable')).toBeInTheDocument();
-    expect(rendered.onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(rendered.onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Could not load sessions', action: expect.objectContaining({ label: 'Retry' }),
-    }));
+    })));
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(rendered.onSessionsLoaded).toHaveBeenLastCalledWith([session]));
     expect(screen.queryByText('Sessions calendar unavailable')).not.toBeInTheDocument();
   });
+  it('bounds the timeline and buffered request to the same page dates', async () => {
+    const dateRange = { start: '2026-08-01', end: '2026-08-31' };
+    renderCalendar({ dateRange });
+    expect(calendarState.props!.dateRange).toEqual(dateRange);
+    act(() => calendarState.props!.onInitialPeriods!([period]));
+    await waitFor(() => expect(api.getSessions).toHaveBeenCalledWith({
+      dateRange, start: '2026-08-01T04:00:00Z', end: '2026-09-01T04:00:00Z',
+    }, { signal: expect.any(AbortSignal) }));
+  });
+
 });

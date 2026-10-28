@@ -105,6 +105,19 @@ describe('useTaskPreferences', () => {
     expect(getPreference).toHaveBeenCalledWith('task-preferences', expect.anything());
   });
 
+  it('restores and saves the shared date range without changing the active view', async () => {
+    savedPreference.preference = { view: 'table', dateRange: { start: '2026-04-01', end: '2026-06-30' } };
+    const { result } = renderHook(() => usePreferences());
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.dateRange).toEqual({ start: '2026-04-01', end: '2026-06-30' });
+
+    const nextRange = { start: '2026-07-01', end: '2026-09-30' };
+    act(() => result.current.filters.setDateRange(nextRange));
+    expect(result.current.view).toBe('table');
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
+      expect.objectContaining({ dateRange: nextRange, view: 'table' })));
+  });
+
   it('uses defaults for the page visit when loading saved preferences fails', async () => {
     savedPreference.preference = {
       view: 'table',

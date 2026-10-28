@@ -1,3 +1,4 @@
+import type { DateRange } from '../../../common/utils/dateRange';
 // Domain values and records.
 export type HoursCategory =
   | 'program_delivery'
@@ -60,6 +61,7 @@ export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursEntryType = 'task' | 'session' | 'other';
 
 export interface HoursFilters {
+  dateRange?: DateRange;
   staffIds: string[];
   categories: HoursCategory[];
   programIds: string[];

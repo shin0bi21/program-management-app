@@ -83,3 +83,14 @@ describe('session API', () => {
     })).toBe('Workshop - Photos.png');
   });
 });
+
+describe('session date-range filtering', () => {
+  it('uses the same inclusive local days for table requests across DST', () => {
+    getSessions({ dateRange: { start: '2026-03-08', end: '2026-03-08' } }, undefined,
+      { key: 'date', direction: 'asc', limit: 25 });
+    const path = vi.mocked(apiClient.get).mock.calls[vi.mocked(apiClient.get).mock.calls.length - 1]?.[0];
+    const url = new URL(String(path), 'http://localhost');
+    expect(url.searchParams.get('start')).toBe('2026-03-08T05:00:00Z');
+    expect(url.searchParams.get('end')).toBe('2026-03-09T04:00:00Z');
+  });
+});

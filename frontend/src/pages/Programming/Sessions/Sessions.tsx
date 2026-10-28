@@ -1,3 +1,4 @@
+import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
@@ -37,6 +38,7 @@ const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Programming() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const dateRangePresets = useDateRangePresets();
   const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
 
   // Permissions and application services.
@@ -69,12 +71,13 @@ export default function Programming() {
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
+    dateRange: filters.dateRange,
     programIds: selectedProgramIds,
     cycleIds,
     sessionTypeIds: selectedSessionTypeIds,
     statuses: statusFilters,
     search: search.appliedValue || undefined,
-  }), [search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+  }), [filters.dateRange, search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
 
   // Selection and actions.
   const selection = useSessionSelection();
@@ -220,6 +223,7 @@ export default function Programming() {
 
           filters={filtersReady ? (
             <FilterCard
+              dateRange={{ presets: dateRangePresets, value: filters.dateRange, onApply: filters.setDateRange }}
               categories={filters.definitions}
               values={{
                 program: selectedProgramIds,

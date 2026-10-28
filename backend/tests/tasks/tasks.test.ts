@@ -532,7 +532,7 @@ describe('Tasks API', () => {
     expect(malformedId.status).toBe(400);
   });
 
-  it('returns complete tasks whose date ranges intersect the requested calendar range', async () => {
+  it('returns complete tasks whose date ranges intersect the same table and calendar range', async () => {
     const create = async (title: string, startDate: string, dueDate: string) => rememberTask(await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -540,6 +540,7 @@ describe('Tasks API', () => {
     const spanning = await create('Spans calendar range', '2026-06-10', '2026-06-20');
     const inside = await create('Inside calendar range', '2026-06-14', '2026-06-14');
     const outside = await create('Outside calendar range', '2026-06-21', '2026-06-22');
+    const boundary = await create('Boundary calendar range', '2026-06-15', '2026-06-16');
 
     const response = await request(app)
       .get(`/api/tasks/calendar?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range`)
@@ -554,10 +555,39 @@ describe('Tasks API', () => {
       expect.objectContaining({ id: outside.body.id }),
     ]));
 
+    const firstPage = await request(app)
+      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.rows.map((task: { id: string }) => task.id)).toEqual([spanning.body.id, inside.body.id]);
+    expect(firstPage.body.nextCursor).toEqual(expect.any(String));
+
+    const secondPage = await request(app)
+      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.rows.map((task: { id: string }) => task.id)).toEqual([boundary.body.id]);
+    expect(secondPage.body.nextCursor).toBeNull();
+
     const incompleteRange = await request(app)
       .get('/api/tasks/calendar?start=2026-06-12')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(incompleteRange.status).toBe(400);
+  });
+
+  it.each([
+    'start=2026-06-12',
+    'end=2026-06-15',
+    'start=2026-06-15&end=2026-06-12',
+    'start=2026-02-30&end=2026-03-01',
+    'start=2024-01-01&end=2025-01-01',
+    'start=0000-01-01&end=0000-01-02',
+  ])('rejects an invalid table range: %s', async query => {
+    const response = await request(app)
+      .get(`/api/tasks/list?${query}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(400);
   });
 
   it('preserves newer task content and status when placement changes', async () => {

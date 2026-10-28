@@ -1,3 +1,4 @@
+import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
 import { useCallback, useMemo, useState } from 'react';
 
 import Button from '../../../common/components/Button/Button';
@@ -43,6 +44,7 @@ const HOURS_QUERY_KEY = ['hours'] as const;
 
 export default function Tasks() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const dateRangePresets = useDateRangePresets();
   const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
 
   // Permissions.
@@ -62,12 +64,14 @@ export default function Tasks() {
 
   // Filter configuration.
   const taskFilters = useMemo<TasksFilters>(() => ({
+    dateRange: preferences.filters.dateRange,
     search: preferences.search.appliedValue,
     staffIds: preferences.filters.staffIds,
     programIds: preferences.filters.programIds,
     categories: preferences.filters.categories,
     statuses: preferences.filters.statuses,
   }), [
+    preferences.filters.dateRange,
     preferences.filters.categories,
     preferences.filters.programIds,
     preferences.filters.staffIds,
@@ -210,16 +214,17 @@ export default function Tasks() {
           />
           : undefined}
         filters={preferences.ready ? <FilterCard
-          categories={preferences.filters.definitions}
-          values={{
-            staff: preferences.filters.staffIds,
-            program: preferences.filters.programIds,
-            category: preferences.filters.categories,
-            status: preferences.filters.statuses,
-          }}
-          onApply={preferences.filters.apply}
-          onClearAll={preferences.filters.clear}
-        /> : undefined}
+          dateRange={{ presets: dateRangePresets, value: preferences.filters.dateRange, onApply: preferences.filters.setDateRange }}
+            categories={preferences.filters.definitions}
+            values={{
+              staff: preferences.filters.staffIds,
+              program: preferences.filters.programIds,
+              category: preferences.filters.categories,
+              status: preferences.filters.statuses,
+            }}
+            onApply={preferences.filters.apply}
+            onClearAll={preferences.filters.clear}
+          /> : undefined}
       />
 
       <PageErrorOverlay errors={[

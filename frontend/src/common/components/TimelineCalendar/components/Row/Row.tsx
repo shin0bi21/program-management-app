@@ -144,6 +144,8 @@ function Row<TRow, TItemData>({
               'item',
               'positioned-item',
               density,
+              !startsInWindow ? 'continues-before' : '',
+              !endsInWindow ? 'continues-after' : '',
               laneCount >= HIDE_ITEM_SUMMARIES_AT ? 'summaries-hidden' : '',
               movable ? 'draggable' : '',
               resizable ? 'resizable' : '',

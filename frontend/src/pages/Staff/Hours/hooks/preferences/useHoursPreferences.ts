@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
   preferenceOption,
+  preferenceDateRange,
   preferenceOptions,
   preferenceIds,
   optionalPreferenceId,
@@ -32,6 +34,7 @@ interface HoursPreferences {
   categories: HoursCategory[];
   types: HoursEntryType[];
   cycleId: string | null;
+  dateRange: DateRange;
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   hiddenColumns: string[];
@@ -69,6 +72,7 @@ export default function useHoursPreferences({
     key: 'hours-filters',
     waiting: loadingDependencies || role === null,
     fields: {
+      dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
       staffIds: preferenceIds(role !== 'admin' ? [] : canVerifyOptions
@@ -183,6 +187,8 @@ export default function useHoursPreferences({
       categories: preferences.categories,
       types: preferences.types,
       cycleId: preferences.cycleId,
+      dateRange: preferences.dateRange,
+      setDateRange: (dateRange: DateRange) => updatePreferences({ dateRange }),
       definitions: filterDefinitions,
       apply: applyFilter,
       clear: clearFilters,

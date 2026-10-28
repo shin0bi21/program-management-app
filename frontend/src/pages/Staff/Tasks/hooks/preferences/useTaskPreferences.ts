@@ -1,8 +1,10 @@
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
+  preferenceDateRange,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
@@ -23,6 +25,7 @@ import {
 type TasksView = 'calendar' | 'table';
 
 interface TaskPreferences {
+  dateRange: DateRange;
   view: TasksView;
   search: string;
   staffIds: string[];
@@ -54,6 +57,7 @@ export default function useTaskPreferences({
     key: 'task-preferences',
     waiting: referenceDataLoading,
     fields: {
+      dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
       staffIds: preferenceIds(options?.resources.map(resource => resource.id)),
@@ -125,6 +129,8 @@ export default function useTaskPreferences({
     statuses: [],
   });
 
+  const setDateRange = (dateRange: DateRange) => updatePreferences({ dateRange });
+
   // Table sorting.
   const setSorting = (sorting: ListSort<TaskSortKey>) => {
     updatePreferences({ sorting });
@@ -156,6 +162,8 @@ export default function useTaskPreferences({
     },
 
     filters: {
+      dateRange: preferences.dateRange,
+      setDateRange,
       staffIds: preferences.staffIds,
       programIds: preferences.programIds,
       categories: preferences.categories,

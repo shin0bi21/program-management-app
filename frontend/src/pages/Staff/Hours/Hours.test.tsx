@@ -14,6 +14,7 @@ import {
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
+import { getDefaultDateRange } from '../../../common/utils/dateRange';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
@@ -238,7 +239,7 @@ describe('Hours', () => {
     expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
     await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
-      { staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-fall', search: '' },
+      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-fall', search: '' },
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ key: 'date', direction: 'desc', limit: 25 }),
     ));
@@ -248,6 +249,38 @@ describe('Hours', () => {
   });
 
   // Filter configuration.
+  it('applies one page date range to table and calendar while retaining cycle membership', async () => {
+    preferenceHook.preference = { view: 'table', cycleId: 'cycle-fall' };
+    render(
+      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+      </MemoryRouter></QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
+    const from = screen.getByLabelText('From');
+    fireEvent.change(from, { target: { value: '2026-08-01' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-08-31' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    const dateRange = { start: '2026-08-01', end: '2026-08-31' };
+    await waitFor(() => expect(getHoursTableData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ dateRange, cycleId: 'cycle-fall' }),
+      expect.anything(), expect.anything(),
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ dateRange, cycleId: 'cycle-fall' }), expect.anything(),
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
+    expect(screen.getByLabelText('From')).toHaveValue(dateRange.start);
+    expect(screen.getByLabelText('To')).toHaveValue(dateRange.end);
+  });
+
   it('keeps search visible and reloads the calendar when search is applied', async () => {
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
@@ -263,7 +296,7 @@ describe('Hours', () => {
     fireEvent.keyDown(search, { key: 'Enter' });
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith({
-      staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: 'workshop',
+      dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: 'workshop',
     }, {
       start: expect.any(String),
       end: expect.any(String),
@@ -279,7 +312,7 @@ describe('Hours', () => {
       </MemoryRouter></QueryClientProvider>,
     );
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
-      { staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: '' },
+      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: '' },
       { start: expect.any(String), end: expect.any(String) },
     ));
 
@@ -289,7 +322,7 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
-      { staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleId: 'cycle-1', search: '' },
+      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleId: 'cycle-1', search: '' },
       { start: expect.any(String), end: expect.any(String) },
     ));
   });

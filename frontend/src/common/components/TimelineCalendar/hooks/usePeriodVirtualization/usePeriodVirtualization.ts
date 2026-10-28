@@ -1,3 +1,5 @@
+import { isDateRange, localDateFromKey, type DateRange } from '../../../../utils/dateRange';
+import { buildDayPeriod, addDays } from '../../utils/periods';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { CalendarPeriod, PeriodDefinition } from '../../types';
@@ -8,6 +10,7 @@ interface UseVirtualizedPeriodWindowOptions {
   initialDate: Date;
   initialOffset: number;
   periodCount: number;
+  dateRange?: DateRange;
   overscan: number;
   periodWidth: number;
   coveredLeftWidth: number;
@@ -29,6 +32,7 @@ export function usePeriodVirtualization({
   initialDate,
   initialOffset,
   periodCount: requestedPeriodCount,
+  dateRange,
   overscan: requestedOverscan,
   periodWidth,
   coveredLeftWidth,
@@ -39,18 +43,30 @@ export function usePeriodVirtualization({
 }: UseVirtualizedPeriodWindowOptions) {
   const { periodCount, overscan } = normalizePeriodVirtualizationOptions(requestedPeriodCount, requestedOverscan);
   const allPeriods = useMemo(
-    () => periodDefinition.buildInitial(initialDate, periodCount),
-    [initialDate, periodCount, periodDefinition],
+    () => {
+      if (!dateRange) return periodDefinition.buildInitial(initialDate, periodCount);
+      if (!isDateRange(dateRange)) throw new Error('Calendar date range must contain valid ordered dates');
+
+      const first = localDateFromKey(dateRange.start);
+      const dayCount = (Date.parse(`${dateRange.end}T00:00:00Z`) - Date.parse(`${dateRange.start}T00:00:00Z`)) / 86_400_000 + 1;
+      return Array.from({ length: dayCount }, (_, index) => buildDayPeriod(addDays(first, index)));
+    },
+    [dateRange?.start, dateRange?.end, initialDate, periodCount, periodDefinition],
   );
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const initialIndex = useMemo(() => {
     const index = allPeriods.findIndex(period => initialDate >= period.start && initialDate < period.end);
 
+    if (index < 0 && dateRange) return initialDate < allPeriods[0].start ? 0 : allPeriods.length - 1;
     if (index < 0) throw new Error('Calendar anchor date is outside its virtual period range');
 
     return index;
-  }, [allPeriods, initialDate]);
+  }, [allPeriods, dateRange, initialDate]);
+
+  const initialDateIsInRange = initialDate >= allPeriods[0].start
+    && initialDate < allPeriods[allPeriods.length - 1].end;
+  const restoredOffset = initialDateIsInRange ? initialOffset : 0;
 
   const virtualizer = useVirtualizer({
     count: allPeriods.length,
@@ -58,11 +74,11 @@ export function usePeriodVirtualization({
     estimateSize: () => periodWidth,
     horizontal: true,
     overscan,
-    initialOffset: initialIndex * periodWidth + initialOffset,
+    initialOffset: initialIndex * periodWidth + restoredOffset,
     getItemKey: index => allPeriods[index].key,
   });
 
-  const virtualItems = virtualizer.getVirtualItems();
+  const virtualItems = virtualizer.getVirtualItems().filter(item => item.index < allPeriods.length);
   const scrollOffset = virtualizer.scrollOffset ?? initialIndex * periodWidth;
   const visibleViewportWidth = Math.max(
     0,
@@ -90,6 +106,17 @@ export function usePeriodVirtualization({
 
   const didInitialize = useRef(false);
   const previousRange = useRef<{ first: number; last: number } | null>(null);
+
+  const rangeKey = dateRange ? `${dateRange.start}:${dateRange.end}` : '';
+  const previousRangeKey = useRef(rangeKey);
+  useEffect(() => {
+    if (previousRangeKey.current === rangeKey) return;
+
+    previousRangeKey.current = rangeKey;
+    didInitialize.current = false;
+    previousRange.current = null;
+    virtualizer.scrollToOffset(initialIndex * periodWidth, { align: 'start' });
+  }, [rangeKey, initialIndex, periodWidth, virtualizer]);
 
   useEffect(() => {
     if (!virtualItems.length) return;
@@ -149,7 +176,10 @@ export function usePeriodVirtualization({
   }, [allPeriods, periodWidth, positionStorageKey]);
 
   const goToDate = useCallback((date: Date) => {
-    const targetIndex = allPeriods.findIndex(period => date >= period.start && date < period.end);
+    const boundedDate = dateRange
+      ? new Date(Math.max(allPeriods[0].start.getTime(), Math.min(date.getTime(), allPeriods[allPeriods.length - 1].start.getTime())))
+      : date;
+    const targetIndex = allPeriods.findIndex(period => boundedDate >= period.start && boundedDate < period.end);
 
     if (targetIndex < 0) throw new Error('Calendar target date is outside its virtual period range');
 
@@ -160,7 +190,7 @@ export function usePeriodVirtualization({
     const resetEnd = Math.min(allPeriods.length, targetIndex + overscan + 1);
 
     onPeriodsReset?.(allPeriods.slice(resetStart, resetEnd));
-  }, [allPeriods, onPeriodsReset, overscan, periodWidth, positionStorageKey, virtualizer]);
+  }, [allPeriods, dateRange, onPeriodsReset, overscan, periodWidth, positionStorageKey, virtualizer]);
 
   return {
     periods,
