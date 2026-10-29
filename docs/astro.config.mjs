@@ -51,11 +51,7 @@ export default defineConfig({
       title: 'Be Original · Developer Docs',
       description: 'Architecture, development guides, and operational runbooks for Be Original.',
       customCss: ['./src/styles/custom.css'],
-      sidebar: [
-        { label: 'Overview', slug: '' },
-        { label: 'Docs Website', slug: 'website' },
-        ...manifest.sidebar,
-      ],
+      sidebar: manifest.sidebar,
     }),
   ],
 });
