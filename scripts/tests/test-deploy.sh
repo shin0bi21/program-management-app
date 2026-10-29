@@ -2,13 +2,15 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TEST_REPO="$(mktemp -d /tmp/myapp-deployment-test.XXXXXX)"
+TEST_ROOT="$(mktemp -d /tmp/myapp-deployment-test.XXXXXX)"
+TEST_REPO="$TEST_ROOT/checkout"
 REEXECUTED_ARGUMENTS="$(mktemp /tmp/myapp-deployment-arguments.XXXXXX)"
-trap 'rm -rf -- "$TEST_REPO"; rm -f -- "$REEXECUTED_ARGUMENTS"' EXIT
+trap 'rm -rf -- "$TEST_ROOT"; rm -f -- "$REEXECUTED_ARGUMENTS"' EXIT
 
+mkdir -p "$TEST_REPO"
 git -C "$TEST_REPO" init -q
-git -C "$TEST_REPO" config user.name "Deploy Plan Test"
-git -C "$TEST_REPO" config user.email "deploy-plan@example.invalid"
+git -C "$TEST_REPO" config user.name "Deploy Test"
+git -C "$TEST_REPO" config user.email "deploy-test@example.invalid"
 
 write_test_file() {
   local path="$1"
@@ -38,7 +40,7 @@ source "$PROJECT_ROOT/scripts/deploy/main.sh"
 
 for required_function in \
   parse_arguments initialize_process synchronize_repository load_environment \
-  load_revision_state classify_changes print_deployment_plan deploy_backend \
+  load_revision_state classify_changes print_deployment_summary preview_deployment deploy_backend \
   deploy_frontend deploy_infrastructure cleanup; do
   declare -F "$required_function" > /dev/null || {
     echo "FAIL: deploy component did not define $required_function"
@@ -62,15 +64,15 @@ done
   }
   # shellcheck disable=SC2317,SC2329
   reexecute_deploy() {
-    printf '%s\n' "$@" > "$REEXECUTED_ARGUMENTS"
+    printf '%s\n' "$#" > "$REEXECUTED_ARGUMENTS"
   }
 
   # shellcheck disable=SC2034
   DEPLOY_BOOTSTRAPPED=false
-  synchronize_repository --plan
+  synchronize_repository
 )
 
-[ "$(tr -d '\n' < "$REEXECUTED_ARGUMENTS")" = "--plan" ] || {
+[ "$(tr -d '\n' < "$REEXECUTED_ARGUMENTS")" = "0" ] || {
   echo "FAIL: repository bootstrap did not preserve deploy arguments"
   exit 1
 }
@@ -161,4 +163,87 @@ assert_plan documentation-only "$DOCUMENTATION_REVISION_SHA" "$INFRASTRUCTURE_RE
   [ "${steps[*]}" = "build-backend build-frontend migrate backend frontend" ] || { echo "FAIL: infrastructure deployment steps"; exit 1; }
 )
 
-echo "Deploy planner tests passed!"
+# Preview must see a remote commit absent from the checkout without changing it.
+git -C "$TEST_REPO" branch -M main
+git clone --quiet "$TEST_REPO" "$TEST_ROOT/remote"
+git -C "$TEST_ROOT/remote" config user.name "Deploy Test"
+git -C "$TEST_ROOT/remote" config user.email "deploy-test@example.invalid"
+printf '%s\n' "export default 'remote change';" > "$TEST_ROOT/remote/frontend/src/app.tsx"
+git -C "$TEST_ROOT/remote" commit -qam 'remote frontend change'
+PREVIEW_TARGET="$(git -C "$TEST_ROOT/remote" rev-parse HEAD)"
+git -C "$TEST_REPO" remote add origin ../remote
+
+mkdir -p "$TEST_REPO/.deploy-state" "$TEST_REPO/logs" "$TEST_ROOT/bin" "$TEST_ROOT/temporary" "$TEST_ROOT/hooks"
+printf '#!/usr/bin/env bash\ntouch "%s"\n' "$TEST_ROOT/hook-called" > "$TEST_ROOT/hooks/reference-transaction"
+chmod +x "$TEST_ROOT/hooks/reference-transaction"
+git config --file "$TEST_ROOT/gitconfig" core.hooksPath "$TEST_ROOT/hooks"
+for component in frontend backend infrastructure; do
+  printf '%s\n' "$DOCUMENTATION_REVISION_SHA" > "$TEST_REPO/.deploy-state/$component-revision"
+done
+printf '%s\n' 'existing log' > "$TEST_REPO/logs/deploy.log"
+printf '%s\n' 'existing lock' > "$TEST_ROOT/deploy.lock"
+printf '%s\n' 'exit 99 # Preview must never source this file.' > "$TEST_REPO/.env"
+printf '%s\n' 'uncommitted work' >> "$TEST_REPO/README.md"
+for tool in docker flock; do
+  printf '#!/usr/bin/env bash\necho "FAIL: preview invoked %s" >&2\nexit 98\n' "$tool" > "$TEST_ROOT/bin/$tool"
+  chmod +x "$TEST_ROOT/bin/$tool"
+done
+
+snapshot_checkout() {
+  (
+    cd "$TEST_REPO" || exit
+    while IFS= read -r file; do
+      cksum "$file"
+    done < <(find . -type f -print | LC_ALL=C sort)
+  )
+}
+
+run_preview() {
+  DEPLOY_REPO_ROOT="$TEST_REPO" DEPLOY_LOCKFILE="$TEST_ROOT/deploy.lock" \
+    GIT_CONFIG_GLOBAL="$TEST_ROOT/gitconfig" TMPDIR="$TEST_ROOT/temporary" PATH="$TEST_ROOT/bin:$PATH" \
+    bash "$PROJECT_ROOT/scripts/deploy/main.sh" --preview
+}
+
+assert_preview_unchanged() {
+  snapshot_checkout > "$TEST_ROOT/after"
+  cmp "$TEST_ROOT/before" "$TEST_ROOT/after" || { echo "FAIL: preview changed checkout or deployment state"; exit 1; }
+  [ "$(cat "$TEST_ROOT/deploy.lock")" = 'existing lock' ] || { echo "FAIL: preview changed deploy lock"; exit 1; }
+  [ ! -e "$TEST_ROOT/hook-called" ] || { echo "FAIL: preview ran a Git hook"; exit 1; }
+  [ -z "$(ls -A "$TEST_ROOT/temporary")" ] || { echo "FAIL: preview left temporary files"; exit 1; }
+}
+
+snapshot_checkout > "$TEST_ROOT/before"
+run_preview > "$TEST_ROOT/output"
+grep -q "Target:         $PREVIEW_TARGET" "$TEST_ROOT/output"
+grep -q 'Frontend:       true' "$TEST_ROOT/output"
+grep -q 'Backend:        false' "$TEST_ROOT/output"
+grep -q 'Migrations:     false' "$TEST_ROOT/output"
+grep -q 'Infrastructure: false' "$TEST_ROOT/output"
+grep -q 'local edits are excluded' "$TEST_ROOT/output"
+assert_preview_unchanged
+
+# No revision markers means a full preview; it must not create the state directory.
+mv "$TEST_REPO/.deploy-state" "$TEST_ROOT/saved-state"
+snapshot_checkout > "$TEST_ROOT/before"
+run_preview > "$TEST_ROOT/output"
+grep -q 'Infrastructure: true' "$TEST_ROOT/output"
+assert_preview_unchanged
+
+# Repository-local transport policy must apply to the isolated fetch as well.
+git -C "$TEST_REPO" config protocol.file.allow never
+snapshot_checkout > "$TEST_ROOT/before"
+if run_preview > "$TEST_ROOT/output" 2>&1; then
+  echo "FAIL: preview ignored the repository transport policy"
+  exit 1
+fi
+grep -q "transport 'file' not allowed" "$TEST_ROOT/output"
+assert_preview_unchanged
+
+if bash "$PROJECT_ROOT/scripts/deploy/main.sh" --plan > "$TEST_ROOT/output" 2>&1; then
+  echo "FAIL: retired --plan argument is still accepted"
+  exit 1
+fi
+grep -q "Unknown deploy argument '--plan'" "$TEST_ROOT/output"
+assert_preview_unchanged
+
+echo "Deployment classification and read-only preview tests passed!"

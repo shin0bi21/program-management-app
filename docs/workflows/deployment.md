@@ -65,15 +65,23 @@ On Lightsail, enter the production checkout and inspect it:
 ```bash
 cd /home/ubuntu/my-webapp
 git status --short
-./scripts/deploy/main.sh --plan
+./scripts/deploy/main.sh --preview
 ```
 
-The plan skips image builds, containers, database changes, and revision-marker
-writes. It still acquires the deployment lock, writes logs, fetches `origin/main`,
-and synchronizes the clean checkout to that revision. It is not a read-only Git
-inspection. A dirty checkout aborts before synchronization.
+Preview fetches the latest remote `main` into a temporary Git repository and
+compares it with the recorded component revisions using the current checkout's
+deployment tooling. It does not update the checkout, index, refs, deployment
+logs/lock, revision markers, images, services, or database, and does not load
+`.env`. Temporary Git data is removed on success or failure. Repository transport
+settings still apply; a fetch failure stops preview without starting deployment.
 
-Once the target and plan match the authorized release:
+Local edits are excluded and produce a notice; actual deployment still rejects
+a dirty checkout. Missing revision markers select the full flow without creating
+the state directory. Preview is advisory: another deployment or a new `main`
+commit can change the later result. It does not execute fetched deployment scripts.
+The former `--plan` flag is no longer accepted.
+
+Once the preview target and selected work match the authorized release:
 
 ```bash
 ./scripts/deploy/main.sh
