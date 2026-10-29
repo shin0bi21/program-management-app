@@ -87,7 +87,7 @@ export default function ExampleTable(props: ExampleTableProps) {
     keyExtractor={row => row.id}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? {
+    unavailable={tableData.error && !tableData.rows.length ? {
       title: 'Examples unavailable',
       onRetry: tableData.retry,
     } : undefined}
@@ -111,7 +111,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Use the canonical column `id` as the backend-supported sort key. Pass the owner's canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately. Keep the table wrapper at the full available height in every state; initial loading keeps headers mounted and centers a spinner inside the row area.
-- Report the table's user-safe error to the route page for `PageMessageOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
+- Report the table's user-safe error to the route page for `PageMessageOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. Use the body unavailable state only when no rows are loaded. A failed refresh keeps loaded rows visible while the page overlay reports the error and retry action. The shared table keeps its headers mounted and renders `UnavailableState` across the body for an initial failure. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
 - A next-page failure keeps loaded rows available. Pass `nextPageError` through `nextPageUnavailable` with `retryNextPage`; automatic pagination stays paused until an explicit retry succeeds. Report `error || nextPageError` to the page overlay with the matching retry action. Collection failures continue to use the body `unavailable` state.
 - Use controlled table selection only when selection has application meaning.
 
