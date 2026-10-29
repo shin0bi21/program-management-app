@@ -35,11 +35,12 @@ export default function useItemResize<TRow, TItemData>(
     if (!calendar?.resizable || event.pointerType === 'touch' || event.button !== 0) return;
 
     const { layout, environment } = calendar;
+    const viewport = environment.viewportRef.current;
     const initialPeriodKey = edge === 'start' ? layout.start : layout.end;
     const initialPeriod = environment.getPeriods().find(period => period.key === initialPeriodKey);
     const item = event.currentTarget.parentElement;
 
-    if (!initialPeriod || !item) return;
+    if (!viewport || !initialPeriod || !item) return;
 
     hideDetails();
 
@@ -57,7 +58,7 @@ export default function useItemResize<TRow, TItemData>(
       startX: event.clientX,
       startY: 0,
       axis: 'horizontal',
-      captureElement: event.currentTarget,
+      captureElement: viewport,
       onActivate: startResizePreview,
       onMove: updateResize,
       onFrame: updateResizeAutoScroll,
@@ -120,6 +121,7 @@ export default function useItemResize<TRow, TItemData>(
 
     calendar.environment.onClickSuppressionRequest();
     if (!calendar.stateRef.current.resizeEnabled) return;
+    if (current.nextPeriodKey === current.originalRange[current.edge]) return;
 
     const nextRange = current.edge === 'start'
       ? { ...current.originalRange, start: current.nextPeriodKey }

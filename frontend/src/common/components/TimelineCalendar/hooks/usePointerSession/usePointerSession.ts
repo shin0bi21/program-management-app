@@ -37,9 +37,13 @@ interface ActivePointerSession extends PointerSessionOptions {
 export type StartPointerSession = (options: PointerSessionOptions) => boolean;
 
 /**
- * Coordinates one pointer interaction and one native-listener set for this calendar.
- * Requires: the calendar keeps this hook mounted while virtualized item callbacks are retained.
- * Example: a second drag is rejected while the active interaction retains pointer capture.
+ * Runs one calendar move or resize from pointer-down through activation, recovery, and cleanup.
+ * Requires: this hook and the capture viewport stay mounted while retained item callbacks run;
+ * the source item may unmount during virtualization.
+ * Effects: installs window/document listeners and runs onFrame while an activated pointer is captured.
+ * Example: start at (100, 100), move to (110, 100) => onActivate then onMove;
+ * capture loss pauses frames, a held move recaptures, and pointerup cleans up before onEnd.
+ * A competing start returns false unless it replaces a session whose capture was lost.
  */
 export function usePointerSession() {
   const sessionRef = useRef<ActivePointerSession | null>(null);
@@ -49,170 +53,146 @@ export function usePointerSession() {
 
   const [activeType, setActiveType] = useState<PointerSessionType | null>(null);
 
-  /** Consumes the synthetic click following a drag/resize until the current event task finishes. */
-  const suppressNextClick = useCallback(() => {
-    suppressClickRef.current = true;
-    window.clearTimeout(suppressClickTimerRef.current);
-    suppressClickTimerRef.current = window.setTimeout(() => { suppressClickRef.current = false; }, 0);
-  }, []);
-  const isClickSuppressed = useCallback(() => suppressClickRef.current, []);
-
-  /** Stops the shared animation loop after completion, cancellation, or capture loss. */
-  const stopPointerSessionFrames = useCallback(() => {
+  const stopFrames = useCallback(() => {
     if (animationFrameRef.current === undefined) return;
 
     cancelAnimationFrame(animationFrameRef.current);
     animationFrameRef.current = undefined;
   }, []);
 
-  /** Delivers one active-session frame and schedules the next while the session remains retained. */
-  const runPointerSessionFrame = useCallback(function runPointerSessionFrame() {
-    const session = sessionRef.current;
-
-    if (!session) {
-      animationFrameRef.current = undefined;
-      return;
-    }
-
-    session.onFrame?.();
-    animationFrameRef.current = requestAnimationFrame(runPointerSessionFrame);
-  }, []);
-
-  /** Releases shared resources and reports cancellation, optionally avoiding state updates on unmount. */
-  const cancelPointerSession = useCallback((
+  const cancelSession = useCallback((
     session: ActivePointerSession,
     reason: PointerSessionCancelReason,
-    updateActiveType = true,
   ) => {
     if (sessionRef.current === session) sessionRef.current = null;
 
-    stopPointerSessionFrames();
-    if (updateActiveType) setActiveType(null);
+    stopFrames();
+    setActiveType(null);
 
-    releasePointer(session.captureElement, session.pointerId);
+    releasePointer(session);
     session.onCancel(reason);
-  }, [stopPointerSessionFrames]);
+  }, [stopFrames]);
 
-  /** Claims the coordinator for one pending pointer interaction without activating it prematurely. */
-  const startPointerSession = useCallback<StartPointerSession>((options) => {
-    let current = sessionRef.current;
+  const startPointerSession = useCallback((options: PointerSessionOptions) => {
+    const current = sessionRef.current;
 
-    if (current?.captureLost) {
-      cancelPointerSession(current, 'replaced-after-capture-loss');
-      current = null;
-    }
-
-    if (current) return false;
+    if (current?.captureLost) cancelSession(current, 'replaced-after-capture-loss');
+    if (sessionRef.current) return false;
 
     sessionRef.current = {
       ...options,
-      axis: options.axis ?? 'both',
       active: false,
       captureLost: false,
     };
 
-    setActiveType(options.type);
-    animationFrameRef.current = requestAnimationFrame(runPointerSessionFrame);
-
     return true;
-  }, [cancelPointerSession, runPointerSessionFrame]);
+  }, [cancelSession]);
 
-  // Stable coordinator callbacks keep ordinary renders from reinstalling native listeners.
-  useEffect(function observePointerSession() {
-    /** Activates after the threshold, recovers transient capture loss, and delivers pointer movement. */
-    function updatePointerSession(event: PointerEvent): void {
+  const suppressNextClick = useCallback(() => {
+    suppressClickRef.current = true;
+    window.clearTimeout(suppressClickTimerRef.current);
+    suppressClickTimerRef.current = window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+  }, []);
+
+  const isClickSuppressed = useCallback(() => suppressClickRef.current, []);
+
+  useEffect(function mount() {
+    function handleMove(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
-      // A mouse move with no pressed button is a late release, not a recapture opportunity.
+      // A retained session must not recapture a mouse that has already been released.
       if (isReleasedMousePointer(event)) return;
       if (!session.active && !hasCrossedPointerThreshold(session, event)) return;
 
       event.preventDefault();
 
+      if (!session.active || session.captureLost) {
+        session.captureLost = !tryCapturePointer(session.captureElement, event.pointerId);
+        if (!session.captureLost && animationFrameRef.current === undefined) {
+          animationFrameRef.current = requestAnimationFrame(runFrame);
+        }
+      }
+
       if (!session.active) {
         session.active = true;
-        session.captureLost = !tryCapturePointer(session.captureElement, event.pointerId);
-
-        if (session.captureLost) stopPointerSessionFrames();
+        setActiveType(session.type);
         session.onActivate(event);
-      } else if (session.captureLost) {
-        session.captureLost = !tryCapturePointer(session.captureElement, event.pointerId);
-
-        if (!session.captureLost) {
-          if (animationFrameRef.current === undefined) {
-            animationFrameRef.current = requestAnimationFrame(runPointerSessionFrame);
-          }
-        }
       }
 
       session.onMove(event);
     }
 
-    /** Finishes the matching interaction and releases capture before reporting its result. */
-    function endPointerSession(event: PointerEvent): void {
+    function runFrame() {
+      const session = sessionRef.current;
+
+      if (!session) {
+        animationFrameRef.current = undefined;
+        return;
+      }
+
+      session.onFrame?.();
+      animationFrameRef.current = requestAnimationFrame(runFrame);
+    }
+
+    function handleCaptureLoss(event: PointerEvent): void {
+      const session = sessionRef.current;
+
+      if (session?.pointerId === event.pointerId && event.target === session.captureElement) {
+        // Keep the workflow alive across transient capture loss; the next held move retries.
+        session.captureLost = true;
+        stopFrames();
+      }
+    }
+
+    function handleEnd(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
 
       sessionRef.current = null;
-      stopPointerSessionFrames();
+      stopFrames();
       setActiveType(null);
 
-      releasePointer(session.captureElement, event.pointerId);
+      releasePointer(session);
       session.onEnd(event);
     }
 
-    /** Cancels only the interaction matching the browser-cancelled pointer. */
     function handlePointerCancel(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
 
-      cancelPointerSession(session, 'pointer-cancel');
+      cancelSession(session, 'pointer-cancel');
     }
 
-    /** Pauses frames after transient capture loss so a later move can try to recapture. */
-    function handlePointerCaptureLoss(event: PointerEvent): void {
-      const pointerId = event.pointerId;
-      const capturedSession = sessionRef.current;
-
-      if (!capturedSession || capturedSession.pointerId !== pointerId) return;
-      if (event.target !== capturedSession.captureElement) return;
-
-      // Capture loss can be transient; retain the session so the next move can recapture it.
-      capturedSession.captureLost = true;
-      stopPointerSessionFrames();
-    }
-
-    /** Cancels the active interaction when the browser loses focus. */
     function handleWindowBlur(): void {
       const session = sessionRef.current;
 
-      if (session) cancelPointerSession(session, 'window-blur');
+      if (session) cancelSession(session, 'window-blur');
     }
 
-    /** Cancels the active interaction when the document becomes hidden. */
     function handleDocumentVisibilityChange(): void {
       const session = sessionRef.current;
 
       if (session && document.visibilityState === 'hidden') {
-        cancelPointerSession(session, 'document-hidden');
+        cancelSession(session, 'document-hidden');
       }
     }
 
-    window.addEventListener('pointermove', updatePointerSession, { passive: false });
-    window.addEventListener('pointerup', endPointerSession, true);
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    // Finish before target handlers can release capture and trigger recovery.
+    window.addEventListener('pointerup', handleEnd, true);
     window.addEventListener('pointercancel', handlePointerCancel, true);
-    window.addEventListener('lostpointercapture', handlePointerCaptureLoss);
+    window.addEventListener('lostpointercapture', handleCaptureLoss);
     window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
 
-    return function stopObservingPointerSession() {
-      window.removeEventListener('pointermove', updatePointerSession);
-      window.removeEventListener('pointerup', endPointerSession, true);
+    return function unmount() {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd, true);
       window.removeEventListener('pointercancel', handlePointerCancel, true);
-      window.removeEventListener('lostpointercapture', handlePointerCaptureLoss);
+      window.removeEventListener('lostpointercapture', handleCaptureLoss);
       window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
       window.clearTimeout(suppressClickTimerRef.current);
@@ -221,39 +201,35 @@ export function usePointerSession() {
 
       if (!session) return;
 
-      cancelPointerSession(session, 'unmount', false);
+      cancelSession(session, 'unmount');
     };
-  }, [cancelPointerSession, runPointerSessionFrame, stopPointerSessionFrames]);
+  }, [cancelSession, stopFrames]);
 
   return { activeType, startPointerSession, suppressNextClick, isClickSuppressed };
 }
 
-/** Tests whether pointer movement has reached the interaction's activation threshold. */
+function isReleasedMousePointer(event: PointerEvent) {
+  return event.pointerType === 'mouse' && event.buttons === 0;
+}
+
 function hasCrossedPointerThreshold(session: ActivePointerSession, event: PointerEvent) {
   return session.axis === 'horizontal'
     ? Math.abs(event.clientX - session.startX) >= POINTER_THRESHOLD
     : Math.hypot(event.clientX - session.startX, event.clientY - session.startY) >= POINTER_THRESHOLD;
 }
 
-/** Identifies a late mouse move after release, which must not reacquire capture. */
-function isReleasedMousePointer(event: PointerEvent) {
-  return event.pointerType === 'mouse' && event.buttons === 0;
-}
-
-/** Attempts pointer capture and reports failure when the browser rejects it. */
 function tryCapturePointer(element: HTMLElement, pointerId: number) {
   try {
-    element.setPointerCapture?.(pointerId);
-    return element.hasPointerCapture?.(pointerId) ?? true;
+    element.setPointerCapture(pointerId);
+    return element.hasPointerCapture(pointerId);
   } catch {
     return false;
   }
 }
 
-/** Releases pointer capture safely when the browser may already have released it. */
-function releasePointer(element: HTMLElement, pointerId: number) {
+function releasePointer(session: ActivePointerSession) {
   try {
-    if (element.hasPointerCapture?.(pointerId)) element.releasePointerCapture(pointerId);
+    session.captureElement.releasePointerCapture(session.pointerId);
   } catch {
     // The browser may have already released this pointer.
   }
