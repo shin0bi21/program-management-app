@@ -1,4 +1,4 @@
-# Backend API overview
+# Backend API Overview
 
 The application API is mounted under `/api` in
 [index.ts](../../backend/src/index.ts). Use the source map below to find a
@@ -6,7 +6,7 @@ capability; route files own methods, paths, middleware, and permissions, while
 validation schemas own accepted fields. This guide records cross-domain contracts
 that a caller or maintainer must understand alongside those definitions.
 
-## Find an API owner
+## Find an API Owner
 
 All mount paths below are relative to `/api`. Some routers share a mount while
 owning separate capabilities.
@@ -34,7 +34,7 @@ Domain services own allowed file types. All APIs use the normal
 [error response](errors.md#response-contract) and [authorization](authorization.md)
 boundaries unless an endpoint explicitly defines a different response, such as a file.
 
-## Hours and tasks
+## Hours and Tasks
 
 Task-linked hours create/update responses include `updatedTask` when the actor has
 `read:tasks`. The canonical projection is read inside the hours transaction after
@@ -50,7 +50,7 @@ an empty selection is unrestricted, while its dashboard uses a single `cycleId`.
 The [Hours](../../backend/tests/hours/hours.test.ts) and
 [Tasks](../../backend/tests/tasks/tasks.test.ts) suites own the boundary cases.
 
-## Youth profiles and lead signup
+## Youth Profiles and Lead Signup
 
 [Shared DOB validation](../../backend/src/validation/dateOfBirth.ts) requires a
 real date before today's Toronto date without an intake age restriction. Public
@@ -83,7 +83,7 @@ cross-domain selection contract.
 
 ## Programming
 
-### Program-cycle assignments
+### Program-Cycle Assignments
 
 Programs and cycles share cohort relationships. Assignment edits replace the
 checked set atomically while preserving retained cohort IDs. Removing a
@@ -99,7 +99,7 @@ coordinate dependent inserts with removal. Keep this ordering aligned with
 session scheduling; [assignment tests](../../backend/tests/programs/assignments.test.ts)
 cover atomic replacement and concurrency.
 
-### Session creation and ranges
+### Session Creation and Ranges
 
 A program's `enrollmentRequired` flag controls enrollment versus open attendance;
 it does not grant staff program access. Sessions use program scheduling defaults
@@ -122,7 +122,7 @@ multi-year ranges and real calendar dates in years 0001–9999 are supported.
 [session list service](../../backend/src/services/programming/sessions/sessionListService.ts)
 own range validation and filtering.
 
-#### Move a future session date
+#### Move a Future Session Date
 
 The focused date command preserves the program and local start/end times,
 including overnight day spans. Both the source and destination must be future,
@@ -134,7 +134,7 @@ placement for cache reconciliation. See the strict request in
 [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) and the
 [session-move tests](../../backend/tests/cohorts/sessionMove.test.ts).
 
-### Roster eligibility
+### Roster Eligibility
 
 Roster lookup returns all eligible candidates independently of Youth table
 pagination, plus existing enrollments even after aging out so they can be
@@ -145,7 +145,7 @@ an invalid batch atomically. See [roster service](../../backend/src/services/pro
 [enrollment service](../../backend/src/services/programming/cohorts/enrollmentService.ts),
 and [roster tests](../../backend/tests/cohorts/cohortRoster.test.ts).
 
-## Outreach and public homepage
+## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
 even when a program's session list is empty. Signup availability is independent

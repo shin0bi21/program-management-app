@@ -1,4 +1,4 @@
-# Continuous integration
+# Continuous Integration
 
 Required GitHub checks are the merge gate. Open the pull request's **Checks**
 section to inspect its results; use [Testing](testing.md#choose-a-runner) to
@@ -6,17 +6,17 @@ choose the local equivalent of a failed check.
 
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
-pull requests to `main` are rejected. See [Review and merge changes](changes.md#shipping) and
+pull requests to `main` are rejected. See [Review and Merge Changes](review-and-merge.md#shipping) and
 [Deployment](deployment.md) for those procedures.
 
-## Workflow topology
+## Workflow Topology
 
 | Workflow | Trigger | Responsibility | Merge role |
 |---|---|---|---|
-| [CI](../../.github/workflows/ci.yml) | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
-| [Playwright](../../.github/workflows/playwright.yml) | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
-| [Documentation](../../.github/workflows/docs.yml) | Pull requests to `develop` or `main` changing `docs/`, the root README, or the docs workflow | Standalone Starlight tooling tests, static build, and search index | Separate docs validation; no publishing or application deployment |
-| [Deploy Production](../../.github/workflows/deploy.yml) | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
+| [CI](../../../.github/workflows/ci.yml) | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
+| [Playwright](../../../.github/workflows/playwright.yml) | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
+| [Documentation](../../../.github/workflows/docs.yml) | Pull requests to `develop` or `main` changing `docs/`, the root README, or the docs workflow | Standalone Starlight tooling tests, static build, and search index | Separate docs validation; no publishing or application deployment |
+| [Deploy Production](../../../.github/workflows/deploy.yml) | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
 
 The supported branch flow is:
 
@@ -29,7 +29,7 @@ feature branch -> pull request -> develop -> release pull request -> main -> dep
 Direct feature pull requests to `main` are rejected. Shipping authorization ends at
 `develop`; deployment requires separate explicit authorization.
 
-## Pull-request execution graph
+## Pull-Request Execution Graph
 
 The main CI workflow classifies the diff once, then runs independent selected work concurrently:
 
@@ -45,7 +45,7 @@ Release pull requests also run the independent `Enforce develop → main only`
 job. Keeping this repository policy in its own job gives branch protection a
 stable required-check identity without coupling it to lint or shell analysis.
 
-[`scripts/ci/select-tests.ts`](../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
+[`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests.
 
@@ -54,7 +54,7 @@ Backend verification owns type checking, migrations, migration status, generated
 Production image and Compose checks are selected by changed production inputs for
 feature pull requests. Release pull requests to `main` run all production checks.
 
-### Changed-path routing
+### Changed-Path Routing
 
 The shared selector applies these rules locally and in CI:
 
@@ -71,18 +71,18 @@ The shared selector applies these rules locally and in CI:
 
 Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate both production images and the production Compose configuration.
 
-## Test-layer ownership
+## Test-Layer Ownership
 
 [Testing](testing.md) owns runner commands, suite boundaries, and Node, jsdom,
 and browser environment selection. The workflow table above identifies which
 checks run on pull requests and which are scheduled or manual.
 
-## Diagnose a failed check
+## Diagnose a Failed Check
 
 1. Open the failed job and step in **Checks** or **Actions**.
 2. Run its [repository test runner](testing.md#choose-a-runner). For migration,
    generated-type, build, image, Compose, or nginx failures, use the exact
-   command in the failed workflow step. [Local development](local-development.md)
+   command in the failed workflow step. [Local Development](../local-development/README.md)
    covers the required containers, dependencies, and migration commands.
 3. Push a fix for a reproducible failure. Use **Re-run failed jobs** for an
    infrastructure or transient failure after confirming the commit has not
@@ -92,7 +92,7 @@ Changed pattern checks run in the quality job alongside static analysis.
 Scheduled Playwright retains failure traces. Deployment failures and
 reruns belong to the [deployment guide](deployment.md#monitoring-and-rerunning-a-deployment).
 
-## Required checks
+## Required Checks
 
 Repository rulesets require a pull request for both integration branches:
 
@@ -130,13 +130,13 @@ Before changing CI:
 5. Inspect the first GitHub run at job level; local checks cannot fully verify triggers, services, permissions, caches, or rulesets.
 6. Update this guide when workflow ownership, routing, gates, or operation changes.
 
-Use the [CI report](reports.md#ci-report) to measure performance. Compare queue
+Use the [CI Report](reports.md#ci-report) to measure performance. Compare queue
 time, required-job wall time, runner consumption, and reliability separately;
 record comparable sample sizes before claiming an improvement.
 
-## Dependency updates
+## Dependency Updates
 
-[Dependabot](../../.github/dependabot.yml) opens weekly updates targeting
+[Dependabot](../../../.github/dependabot.yml) opens weekly updates targeting
 `develop` for root, backend, and frontend npm packages, GitHub Actions, and
 Docker images. Dependency Review and CodeQL workflows are not configured;
 any future scans should remain outside the production deployment path.

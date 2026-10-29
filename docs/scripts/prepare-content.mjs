@@ -38,12 +38,23 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
   const sidebar = buildSidebar(routes, navigationEntries);
 
   await mkdir(output, { recursive: true });
-  for (const entry of await readdir(output)) {
-    await rm(path.join(output, entry), { recursive: true, force: true });
-  }
+  const existing = [];
+  await collectMarkdownFiles(output, '', existing);
+
+  // Keep watched directories and unchanged entries intact during live reloads.
   for (const file of generated) {
+    const previous = await readFile(file.destination, 'utf8').catch(error => {
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    });
+    if (previous === file.document) continue;
+
     await mkdir(path.dirname(file.destination), { recursive: true });
     await writeFile(file.destination, file.document, 'utf8');
+  }
+  for (const relative of existing) {
+    const destination = path.resolve(output, relative);
+    if (!destinations.has(destination)) await rm(destination);
   }
 
   return {
@@ -54,7 +65,7 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
 }
 
 async function collectSources(root) {
-  const candidates = ['README.md', 'docs/README.md'];
+  const candidates = ['README.md'];
 
   for (const directory of documentationDirectories) {
     await collectMarkdownFiles(root, directory, candidates);
@@ -75,7 +86,6 @@ async function collectMarkdownFiles(root, directory, candidates) {
 
 function generatedPath(sourcePath) {
   if (sourcePath === 'README.md') return 'index.md';
-  if (sourcePath === 'docs/README.md') return 'website.md';
   if (/^docs\/(?:backend|frontend|workflows)\/(?:.+\/)?README\.md$/i.test(sourcePath)) {
     return `${sourcePath.slice(5, -'README.md'.length)}index.md`;
   }
@@ -85,7 +95,6 @@ function generatedPath(sourcePath) {
 
 function routeForSource(sourcePath) {
   if (sourcePath === 'README.md') return '/';
-  if (sourcePath === 'docs/README.md') return '/website/';
   const relative = sourcePath.slice('docs/'.length).replace(/\.mmd$/i, '.md').replace(/\.md$/i, '');
   if (/^(?:backend|frontend|workflows)\/(?:.+\/)?README$/i.test(relative)) {
     return `/${relative.slice(0, -'README'.length)}`;

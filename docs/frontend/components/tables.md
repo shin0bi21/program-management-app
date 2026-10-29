@@ -2,7 +2,7 @@
 
 A page-owned `*Table` owns one remote cursor-paginated collection and its table-specific presentation. The route page supplies shared controls, selection, and actions; the page table owns fetching, pagination, table states, and the shared `Table` integration.
 
-## Define table columns
+## Define Table Columns
 
 Keep columns in the page-table owner unless the route header needs them for column visibility or row actions need page-owned dialogs. In that case, initialize the colocated table hook from the route and pass its output back to the table component.
 
@@ -32,7 +32,7 @@ const columns = useMemo<TableColumnDef<Example>[]>(() => [
 ], [edit, requestDelete]);
 ```
 
-## Load remote table data
+## Load Remote Table Data
 
 Wrap the typed API adapter with `useInfiniteListQuery`. Include every server-owned search, filter, and sort input in the query key, forward cancellation and cursors, and request 25 rows unless the domain documents another size.
 
@@ -57,7 +57,7 @@ export function useExampleTableData(
 Keep filtering and sorting on the server before cursor pagination. Never fetch an unbounded
 collection or client-sort a cursor-paginated response.
 
-## Render the table
+## Render the Table
 
 ```tsx
 export default function ExampleTable(props: ExampleTableProps) {
@@ -100,7 +100,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 
 The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not own generic selection state. Keep cross-view, cross-resource, filter-resistant, or mutation-aware selection in the page or domain hook, then pass that state through the page table. A row disappearing from one paginated or filtered result does not necessarily mean the domain selection should be cleared.
 
-## Connect page controls
+## Connect Page Controls
 
 The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
 
@@ -110,12 +110,12 @@ message; the table does not implement draft search or preference persistence.
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table rows](table-rows.md).
 
-## Test the table
+## Test the Table
 
 Cover domain columns, permission-aware actions, selection wiring and table-state propagation.
 The data hook covers its query inputs, cursors, cancellation and row shaping; shared `Table`
 and `useInfiniteListQuery` tests cover rendering and pagination mechanics. Use browser tests
-for resizing, sticky layout and real scrolling. See [Testing](../../workflows/testing.md).
+for resizing, sticky layout and real scrolling. See [Testing](../../workflows/delivery/testing.md).
 
 ## Scaffolding
 

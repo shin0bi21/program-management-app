@@ -1,8 +1,8 @@
-# UI basics
+# UI Basics
 
 Components own rendered interfaces and user interactions. Start with the page guide when a route coordinates several components. Use this guide when changing a rendered surface or deciding whether to extract one.
 
-## Keep component and test contracts focused
+## Keep Component and Test Contracts Focused
 
 A component owns its rendering, accessibility and presentation-level interactions. A focused hook owns stateful policy, asynchronous transitions or coordinated callbacks. Keep one-off props and simple local state in the component.
 
@@ -23,7 +23,7 @@ Lifecycle is conditional. A hook that installs an observer tests its options, ca
 
 A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
 
-Use jsdom for semantic focus and keyboard interactions it can observe. Use Playwright when correctness depends on real focus geometry, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/testing.md) explains runner selection.
+Use jsdom for semantic focus and keyboard interactions it can observe. Use Playwright when correctness depends on real focus geometry, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/delivery/testing.md) explains runner selection.
 
 For render-sensitive surfaces, trace which components rerender during scrolling, pointer movement, filtering, selection, and mutations. Keep transient values that do not affect the visible UI in refs. Preserve references for unaffected rows and cells; use memoization only when stable inputs prevent meaningful work. Check virtualization at the largest supported viewport and use targeted render-count or browser evidence when performance is part of the contract. Functional tests alone do not establish render performance.
 
@@ -31,19 +31,19 @@ For listeners, observers, timers, subscriptions, and external instances, identif
 
 <a id="extract-a-focused-owner"></a>
 
-## Choose a component owner
+## Choose a Component Owner
 
 Use [Frontend ownership](../architecture/ownership.md#choose-the-narrowest-owner) for placement
 and promotion. Extract a component when a rendered region has a clear name and an independent
 contract; do not add a wrapper or hook merely to shorten its parent.
 
-## Follow the rendered surface
+## Follow the Rendered Surface
 
 | Surface | Guide |
 |---|---|
 | Type and status labels | [Type and status labels](#type-and-status-labels) |
 | Application sidebar and route navigation | [App navigation](navigation.md) |
-| Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
+| Page header and body regions | [Pages](../pages/composition.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables.md) |
 | Table rows and mutations | [Table rows](table-rows.md) |
 | Date ranges, calendar items and timeline views | [Calendars](calendars.md) |
@@ -53,7 +53,7 @@ contract; do not add a wrapper or hook merely to shorten its parent.
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
 
-## Type and status labels
+## Type and Status Labels
 
 Badges are non-interactive labels. Use [Badge](../../../frontend/src/common/components/Badge/Badge.tsx)
 for type labels and [StatusBadge](../../../frontend/src/common/components/StatusBadge/StatusBadge.tsx)
@@ -70,8 +70,8 @@ Primitive tests cover content and appearance classes; domain tests cover record-
 mapping. Consumers cover supplied values and placement without repeating primitive tests.
 Use browser tests for clipping, density, and selection geometry.
 
-## Scaffold a rendered surface
+## Scaffold a Rendered Surface
 
 The table, calendar, dashboard, and modal presets generate implementation and colocated
-test outlines together. Follow [Frontend scaffolding](../scaffolding.md) to compose a new
+test outlines together. Follow [Frontend scaffolding](../pages/scaffolding.md) to compose a new
 page and its component owners; each surface guide describes its specific contract.

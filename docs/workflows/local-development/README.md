@@ -1,12 +1,12 @@
-# Local development
+# Operate Local Services
 
 This is the source of truth for day-to-day operation of the local Docker
 stack. For a new machine or a fresh checkout, complete
-[Set up the local environment](setup.md) first.
+[Install the Tools](tools.md) first.
 
 Run all commands from the repository root.
 
-## Start and stop
+## Start and Stop
 
 ```bash
 docker compose up -d
@@ -22,8 +22,8 @@ The application is available at:
 - Developer documentation: <http://localhost:4321> (standalone `docs` container)
 
 Start only documentation with `docker compose up -d docs`; it does not need the
-application backend or database. See [Documentation website](../README.md) for
-local search preview and dependency refresh commands.
+application backend or database. Markdown edits reload automatically. After changing
+the docs lockfile, run `docker compose exec docs npm ci` and restart the docs service.
 
 Stop the stack without deleting data:
 
@@ -31,7 +31,7 @@ Stop the stack without deleting data:
 docker compose down
 ```
 
-## Which command to use
+## Which Command to Use
 
 | Change or task | Command |
 |---|---|
@@ -59,7 +59,7 @@ The backend uses `ts-node` without a file watcher. Source changes therefore
 need a backend restart. A container restart does not reload values supplied by
 Compose's `env_file`; recreate the backend after changing the root `.env`.
 
-## Migrations and database types
+## Migrations and Database Types
 
 Apply pending development migrations with:
 
@@ -78,11 +78,11 @@ docker compose exec backend npm run db:status
 
 ## Tests
 
-See [Testing](testing.md) for the full application suite, static analysis,
+See [Testing](../delivery/testing.md) for the full application suite, static analysis,
 backend and frontend umbrella runners, focused runners, and test ownership.
-Use [Reports](reports.md) for CI performance and repository-size commands.
+Use [Reports](../delivery/reports.md) for CI performance and repository-size commands.
 
-## Logs and diagnostics
+## Logs and Diagnostics
 
 For the ordered browser-to-backend tracing workflow and Node debugger setup,
 see [Debugging](debugging.md). The commands below are the local service
@@ -120,13 +120,7 @@ stack frames. It organizes evidence without assigning a speculative root cause.
 Use logs to identify the failing service before restarting or rebuilding
 unrelated services.
 
-## Production data snapshots
-
-Use [Refresh local data](data-snapshots.md) for downloading, validating,
-applying, and recovering a local production-data copy. That guide owns the
-privacy constraints and backup procedure; uploaded files are not copied.
-
-## Destructive reset
+## Destructive Reset
 
 When local database or dependency volumes are intentionally disposable, reset
 the complete development stack with:

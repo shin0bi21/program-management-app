@@ -21,7 +21,7 @@
 - Start application work at the routing overview in `README.md`.
 - Read `docs/frontend/README.md` before changing frontend ownership, component, hook, query, or test structure, then follow the narrowest focused guide under `docs/frontend/`.
 - Read `docs/backend/README.md` before changing backend behavior, then follow the narrowest focused guide under `docs/backend/` for middleware, authentication, authorization, services, policies, database, errors, testing, API, or integrations.
-- Enter through `docs/workflows/README.md`, then read `docs/workflows/local-development.md` for local Docker, dependency, migration, and restart procedures.
+- Choose the workflow category from `README.md`; read `docs/workflows/local-development/README.md` for local Docker, dependency, migration, and restart procedures.
 - Use `.agents/skills/maintain-ci/` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations. That skill routes the canonical CI documentation.
 
 ## Stable invariants
@@ -50,4 +50,4 @@
 
 ## Testing
 
-- Use `docs/workflows/testing.md` as the canonical repository testing guide. Follow its suite ownership, focused/full runner selection, evidence-reuse, CI-gate, browser-test, and shell-check rules together with the affected frontend or backend owner guide.
+- Use `docs/workflows/delivery/testing.md` as the canonical repository testing guide. Follow its suite ownership, focused/full runner selection, evidence-reuse, CI-gate, browser-test, and shell-check rules together with the affected frontend or backend owner guide.

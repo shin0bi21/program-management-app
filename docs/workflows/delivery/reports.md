@@ -2,7 +2,7 @@
 
 Repository reports summarize existing state; they do not change application code, CI configuration, containers, or production.
 
-## CI report
+## CI Report
 
 Use the CI report to measure recent merge-gate performance from GitHub pull requests and Actions runs:
 
@@ -15,9 +15,9 @@ npm run report:ci -- --since 2026-07-01 --json
 
 The default report examines the five most recent pull requests merged to `develop` or `main`. It reports queue time, merge-gate wall time, summed runner time, success rate, and reruns. CI-changing pull requests become timeline boundaries so comparisons do not blend different pipeline shapes. Successful first attempts drive timing summaries; cancelled runs are excluded and reruns remain visible.
 
-The command requires authenticated GitHub CLI access. Run `gh auth status` if it cannot retrieve repository or Actions data. See [Continuous integration](ci.md) for workflow behavior and failure reproduction.
+The command requires authenticated GitHub CLI access. Run `gh auth status` if it cannot retrieve repository or Actions data. See [Continuous Integration](ci.md) for workflow behavior and failure reproduction.
 
-## Deployment history report
+## Deployment History Report
 
 Render the deployment-path timing table from the committed per-run JSON:
 
@@ -38,7 +38,7 @@ selected component combination. Repeat `--type` to select combinations such as
 frontend plus backend. Date bounds are inclusive and use each deployment job's
 UTC start date.
 
-## LOC report
+## LOC Report
 
 Use the LOC report for a repository-size breakdown. It excludes `.git`, `node_modules`, and `dist` output, and separates TypeScript and React source from their tests:
 

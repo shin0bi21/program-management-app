@@ -4,7 +4,7 @@ A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`.
 
 The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 
-## Load filtered ranges
+## Load Filtered Ranges
 
 Follow the [Tasks calendar](../../../frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx).
 Send the complete page filter object with the range query. The backend applies the filters;
@@ -56,7 +56,7 @@ When a shaping hook exists, its test owns that shaping and reference preservatio
 `useDataBuffer` tests own generic range loading, accumulation, stale-result protection,
 mutation overrides and cleanup.
 
-## Bound the timeline by cycle dates
+## Bound the Timeline by Cycle Dates
 
 Programming, Tasks, and Hours derive `dateRange={{ start, end }}` from their page's
 multi-select Cycle filter using
@@ -85,7 +85,7 @@ endpoint under the consuming page's read permission. Persist selected IDs accord
 [page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles), without a
 separate date-range control.
 
-## Assign calendar and item ownership
+## Assign Calendar and Item Ownership
 
 The shared `TimelineCalendar` owns row/period virtualization, grid semantics, navigation, range geometry, pointer sessions, clipping, previews, autoscroll, and optional row selection. A row can represent a resource, program, room, or another domain axis. Consumers declare data, capabilities, content, and domain callbacks; they do not reproduce shared mechanics.
 
@@ -138,7 +138,7 @@ loads and places ranges in America/Toronto, while item details use the program t
 its [date-boundary tests](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/sessionCalendarDates.test.ts)
 own that conversion contract.
 
-## Present item details
+## Present Item Details
 
 Use the shared [badge primitives](README.md#type-and-status-labels) for type and lifecycle
 labels. Keep summaries concise and place additional information in hover or keyboard-focus
@@ -151,7 +151,7 @@ and [tests](../../../frontend/src/pages/Programming/Sessions/components/SessionC
 own badge order, program-local date/time formatting, and cross-midnight labels. Hours
 item details omit a redundant cycle label; other Hours surfaces keep their cycle context.
 
-## Find domain behavior
+## Find Domain Behavior
 
 A shared calendar guide does not own form defaults, table labels, dashboard cohort selection,
 or server assignment policy. Follow their implementations and colocated tests:
@@ -164,7 +164,7 @@ or server assignment policy. Follow their implementations and colocated tests:
 | Session movement capabilities and buffer reconciliation | [Session calendar](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionCalendar.tsx) |
 | Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) and [move regression tests](../../../backend/tests/cohorts/sessionMove.test.ts) |
 
-## Save and reconcile changes
+## Save and Reconcile Changes
 
 Send add, move, resize, status, and delete events through narrow APIs. Move and resize requests contain only the changed range and optional destination resource; the backend re-reads authoritative state.
 
@@ -177,7 +177,7 @@ Persist durable filters with page preferences. Keep browser-local calendar posit
 Cover range shaping, filters, item capabilities, selection and callback-to-action wiring.
 Mutation tests cover buffer, selection and dashboard reconciliation. Shared calendar and
 buffer tests own their mechanics; use browser tests for drag, resize, clipping and scrolling.
-See [Testing](../../workflows/testing.md).
+See [Testing](../../workflows/delivery/testing.md).
 
 ## Scaffolding
 

@@ -2,7 +2,7 @@
 
 An overlay appears above the current interface. Choose the pattern by how the user enters it and whether it blocks the page.
 
-## Choose the overlay
+## Choose the Overlay
 
 | Pattern | Use it for | Behaviour |
 |---|---|---|
@@ -12,7 +12,7 @@ An overlay appears above the current interface. Choose the pattern by how the us
 
 “Popover” is the technical name for an anchored floating surface. In human-facing documentation, prefer the more specific term, such as “action menu,” “filter menu” or “date picker.” Use “floating menu” when several anchored patterns share the same rule.
 
-## Use shared overlay behaviour
+## Use Shared Overlay Behaviour
 
 Use shared overlay primitives when their contracts fit. They centralize portal rendering, positioning, dismissal, keyboard behaviour and focus return. A portalled surface needs its own root CSS class because it renders outside its caller's document subtree.
 
@@ -20,7 +20,7 @@ Anchored forms use `FloatingMenuPanel` with `keyboardMode="form"` and an accessi
 
 The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
 
-## Filter menus
+## Filter Menus
 
 `FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local checklist draft, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.
 
@@ -34,4 +34,4 @@ or an outside click.
 Test target, open-state and callback wiring at the trigger. Shared overlay tests own
 positioning, dismissal, keyboard behavior and focus return. Use browser tests when correctness
 depends on portal placement, clipping or real pointer and focus behavior. See
-[Testing](../../workflows/testing.md).
+[Testing](../../workflows/delivery/testing.md).

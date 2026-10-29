@@ -1,4 +1,4 @@
-# Refresh local data from production
+# Refresh Local Data from Production
 
 Use one local command to copy the production database into the development
 Docker stack. The command connects over SSH, downloads into a private temporary
@@ -11,13 +11,13 @@ only the configured local administrator can sign in afterward. Email and Google
 Sheets operations inside the development containers are blocked. Uploaded images
 and attachments are not copied; their database records remain, so files may be unavailable locally.
 
-## Before the first refresh
+## Before the First Refresh
 
 Run commands from the repository root.
 
 1. Start Docker Desktop and the local database: `docker compose up -d db`.
 2. Ensure the local backend image and its dependencies are available. Follow
-   [Local development](local-development.md) if the stack has not been set up.
+   [Local Development](../local-development/tools.md) if the stack has not been set up.
 3. In the repository's untracked `.env`, configure `ADMIN_EMAIL` and
    `ADMIN_PASSWORD` for your local login. Do not paste these into chat or commit
    them. An existing account matching `ADMIN_EMAIL` is reset locally; otherwise
@@ -37,7 +37,7 @@ remote Docker endpoints and does not use a production Compose configuration.
 The development and test databases are separate; this process targets only the
 configured development database.
 
-## Refresh in one command
+## Refresh in One Command
 
 ```bash
 bash scripts/dev/refresh-local-data.sh \
@@ -65,9 +65,9 @@ Validation creates and removes a temporary staging database. It leaves the app's
 current development database in place. A later `--apply` run downloads a new
 snapshot; it does not reuse the validation run's data.
 
-## What the script does, step by step
+## What the Script Does, Step by Step
 
-The [refresh script](../../scripts/dev/refresh-local-data.sh) locks the operation,
+The [refresh script](../../../scripts/dev/refresh-local-data.sh) locks the operation,
 verifies the SSH download and archive, and restores into an isolated staging
 database. It applies local migrations with checksum enforcement, regenerates
 database types, clears copied authentication credentials, and prepares the local
@@ -80,7 +80,7 @@ Both modes remove temporary downloads. The script reports progress and backup
 names without printing credentials or live records. Production reads still
 consume server resources; use a quiet period for large databases.
 
-## After a successful refresh
+## After a Successful Refresh
 
 1. Keep the printed `local_snapshot_backup_*` name until you have checked the app.
    This backup lives in local PostgreSQL, not on the Desktop.
@@ -100,7 +100,7 @@ The downloaded temporary archive is removed automatically; any Desktop archive
 created earlier by the standalone download command is a separate file and is not
 deleted by this refresh.
 
-## If a refresh fails
+## If a Refresh Fails
 
 A download, restore, migration, or authentication-preparation failure happens
 before the database switch. The original development database stays in place,
@@ -151,7 +151,7 @@ until you have checked the refreshed app, then remove older backups deliberately
 using PostgreSQL tools. Do not use `docker compose down -v` for this workflow;
 that would also delete the database volume containing the backups.
 
-## Download a file without refreshing local data
+## Download a File Without Refreshing Local Data
 
 The standalone download command remains available when you intentionally want
 an archive to keep or transfer. It is separate from the normal refresh command:

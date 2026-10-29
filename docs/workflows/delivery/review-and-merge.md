@@ -1,4 +1,4 @@
-# Review and merge changes
+# Review and Merge Changes
 
 Work proceeds through implementation, concern mapping, review and verification,
 then explicitly authorized shipping to `develop`. Production deployment needs
@@ -55,7 +55,7 @@ or merges.
 
 <a id="1-confirm-the-approved-concern"></a>
 
-### Confirm the approved concern
+### Confirm the Approved Concern
 
 Start with a current map and completed review. Do not ship unresolved high- or
 medium-severity findings. Fix, explicitly accept, or assign each remaining
@@ -67,7 +67,7 @@ remote state.
 
 <a id="2-ship-one-concern"></a>
 
-### Ship one concern
+### Ship One Concern
 
 1. Create or reuse its GitHub issue and start an issue-numbered branch from
    synchronized `develop`. Isolate only the approved concern.
@@ -86,7 +86,7 @@ check waiting, and reconciliation.
 
 <a id="3-continue-the-concern-map"></a>
 
-### Continue the concern map
+### Continue the Concern Map
 
 Only after issue closure, branch cleanup, and clean synchronized `develop`,
 revalidate the remaining map and prepare the next concern. Continue only when
