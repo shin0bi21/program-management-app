@@ -127,6 +127,5 @@ export const handleUpdateSession = async (req: Request, res: Response) => {
 };
 
 export const handleDeleteSession = async (req: Request, res: Response) => {
-  await deleteSession(req.params.sessionId, actor(req));
-  res.json({ id: req.params.sessionId });
+  res.json(await deleteSession(req.params.sessionId, actor(req)));
 };

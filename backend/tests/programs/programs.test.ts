@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { deleteTestUser, seedTestUser, sql } from '../shared/db';
+import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -60,7 +60,7 @@ describe('Programs API', () => {
       });
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual(expect.objectContaining({
+    expect(res.body.program).toEqual(expect.objectContaining({
       id: expect.any(String),
       name: createdName,
       enrollmentRequired: false,
@@ -71,7 +71,7 @@ describe('Programs API', () => {
       defaultEndTime: '19:30',
       timezone: 'America/Toronto',
     }));
-    createdProgramId = res.body.id;
+    createdProgramId = res.body.program.id;
   });
 
   it('allows admins to edit a program', async () => {
@@ -87,13 +87,52 @@ describe('Programs API', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(expect.objectContaining({
+    expect(res.body.program).toEqual(expect.objectContaining({
       id: createdProgramId,
       description: 'Updated program description',
       enrollmentRequired: true,
       minAge: 15,
       maxAge: 19,
     }));
+  });
+
+  it('returns canonical retained cohorts and youth memberships after a program edit without expanding read capabilities', async () => {
+    const [program] = await sql<{ id: string }[]>`INSERT INTO programs (name) VALUES (${`Program envelope ${Date.now()}`}) RETURNING id`;
+    const { cohortId, cycleId } = await seedTestCohort({ programId: program.id });
+    const youth = await seedTestUser({ role: 'youth', firstName: 'Envelope', lastName: 'Youth' });
+    await sql`INSERT INTO youth_profiles (user_id) VALUES (${youth.userId})`;
+    await sql`INSERT INTO cohort_enrollments (cohort_id, youth_id) VALUES (${cohortId}, ${youth.userId})`;
+    const name = `Renamed program ${Date.now()}`;
+
+    try {
+      const saved = await request(app).put(`/api/programs/${program.id}`).set('Authorization', `Bearer ${adminToken}`)
+        .send({ name, enrollmentRequired: true, minAge: 13, maxAge: 18 });
+      expect(saved.status).toBe(200);
+      const cohorts = await request(app).get('/api/cohorts').query({ programId: program.id, limit: 25 })
+        .set('Authorization', `Bearer ${adminToken}`);
+      const youthRows = await request(app).get('/api/youth').query({ search: 'Envelope Youth', limit: 25 })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(cohorts.status).toBe(200);
+      expect(youthRows.status).toBe(200);
+      expect(saved.body.updatedCohorts).toEqual(cohorts.body.rows);
+      expect(saved.body.updatedCohorts[0]).toMatchObject({ id: cohortId, programName: name, minAge: 13, maxAge: 18 });
+      expect(saved.body.updatedYouth).toEqual(youthRows.body.rows);
+      expect(saved.body.updatedYouth[0].cohorts).toEqual(expect.arrayContaining([expect.objectContaining({ id: cohortId, programName: name })]));
+      expect(saved.body.removedCohortIds).toEqual([]);
+      expect(saved.body.createdCohortIds).toEqual([]);
+
+      const writer = generateToken(adminUserId, 'admin', undefined, ['write:programs']);
+      const restricted = await request(app).put(`/api/programs/${program.id}`).set('Authorization', `Bearer ${writer}`)
+        .send({ name, enrollmentRequired: true, minAge: 13, maxAge: 18 });
+      expect(restricted.status).toBe(200);
+      expect(restricted.body.updatedCohorts).toEqual([]);
+      expect(restricted.body.updatedYouth).toEqual([]);
+    } finally {
+      await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${youth.userId}`;
+      await deleteTestUser(youth.userId);
+      await deleteTestCohort(cohortId, cycleId);
+      await sql`DELETE FROM programs WHERE id = ${program.id}`;
+    }
   });
 
   it('rejects program creation by staff', async () => {
@@ -114,13 +153,13 @@ describe('Programs API', () => {
     expect(response.status).toBe(201);
 
     try {
-      expect(response.body.enrollmentRequired).toBe(true);
-      expect(response.body).not.toHaveProperty('rosterMode');
+      expect(response.body.program.enrollmentRequired).toBe(true);
+      expect(response.body.program).not.toHaveProperty('rosterMode');
 
-      const [stored] = await sql`SELECT enrollment_required FROM programs WHERE id = ${response.body.id}`;
+      const [stored] = await sql`SELECT enrollment_required FROM programs WHERE id = ${response.body.program.id}`;
       expect(stored.enrollmentRequired).toBe(true);
     } finally {
-      await sql`DELETE FROM programs WHERE id = ${response.body.id}`;
+      await sql`DELETE FROM programs WHERE id = ${response.body.program.id}`;
     }
   });
 

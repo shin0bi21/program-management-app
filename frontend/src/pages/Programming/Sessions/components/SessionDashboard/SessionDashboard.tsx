@@ -1,5 +1,5 @@
 import type { CohortSession } from '../../types';
-import type { PageErrorItem } from '../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import type { PageMessageValue } from '../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
 import SessionNotesDashboardCard from './SessionNotesDashboardCard/SessionNotesDashboardCard';
@@ -11,7 +11,7 @@ interface SessionDashboardProps {
   canWriteAttendance: boolean;
   canWriteSessions: boolean;
   onAddAttendance: (session: CohortSession) => void;
-  onErrorsChange?: (errors: PageErrorItem[]) => void;
+  onErrorsChange?: (errors: PageMessageValue[]) => void;
 }
 
 export default function SessionDashboard({
@@ -21,7 +21,7 @@ export default function SessionDashboard({
 
   return <>
     <SessionAttendanceDashboardCard session={session} canWrite={canWriteAttendance} onManage={onAddAttendance} />
-    <SessionNotesDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onErrorChange={setNotesError} />
-    <SessionAttachmentsDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onErrorChange={setAttachmentsError} />
+    <SessionNotesDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onMessageChange={setNotesError} />
+    <SessionAttachmentsDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onMessageChange={setAttachmentsError} />
   </>;
 }

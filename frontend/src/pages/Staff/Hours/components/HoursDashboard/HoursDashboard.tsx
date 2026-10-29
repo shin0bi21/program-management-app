@@ -4,20 +4,20 @@ import type { ProgramCycle } from '../../../../../common/features/programming/cy
 import { formatShortDateRange } from '../../../../../common/utils/date';
 import HoursDashboardCard from './HoursDashboardCard/HoursDashboardCard';
 import useHoursOverviewData from './hooks/useHoursOverviewData';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 
 interface HoursDashboardProps {
   queryKey: readonly unknown[];
   staff: StaffResource | null;
   cycle: ProgramCycle | null;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function HoursDashboard({
   queryKey,
   staff,
   cycle,
-  onErrorChange,
+  onMessageChange,
 }: HoursDashboardProps) {
   const overviewData = useHoursOverviewData(
     queryKey,
@@ -29,8 +29,8 @@ export default function HoursDashboard({
     () => retry ? { label: 'Retry', onClick: retry } : undefined,
     [retry],
   );
-  usePageErrorReporter(
-    onErrorChange,
+  usePageMessageReporter(
+    onMessageChange,
     overviewData.status === 'error' ? overviewData.message : null,
     retryAction,
   );

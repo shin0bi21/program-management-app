@@ -76,6 +76,20 @@ describe('useAccountModal', () => {
     expect(order).toEqual(['success']);
   });
 
+  it('preserves the project manager role when editing an account', async () => {
+    const manager: User = { ...account, role: 'project_manager' };
+    vi.mocked(updateAccount).mockResolvedValue(manager);
+    render(<AccountFormHarness account={manager} onSuccess={vi.fn()} onClose={vi.fn()} />);
+
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('form', { name: 'Account form' }));
+    });
+
+    expect(updateAccount).toHaveBeenCalledWith(expect.objectContaining({
+      id: manager.id, role: 'project_manager', programIds: manager.programIds,
+    }));
+  });
+
   it('initializes edit values and reports update failures without closing', async () => {
     vi.mocked(updateAccount).mockRejectedValue(new Error('Email already exists'));
     const onSuccess = vi.fn();

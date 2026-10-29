@@ -1,3 +1,4 @@
+import type { CohortMutationResult } from '../../cohorts.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FormField from '../../../../../common/components/FormField/FormField';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
@@ -12,7 +13,7 @@ interface EditCohortModalProps {
   cohort: ProgramCohort | null;
   cycles: ProgramCycle[];
   onClose: () => void;
-  onUpdated: () => void | Promise<void>;
+  onUpdated: (result: CohortMutationResult) => void | Promise<void>;
 }
 
 export default function EditCohortModal({ cohort, cycles, onClose, onUpdated }: EditCohortModalProps) {

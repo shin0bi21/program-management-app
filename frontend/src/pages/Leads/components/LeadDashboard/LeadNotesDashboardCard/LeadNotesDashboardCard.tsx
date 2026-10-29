@@ -8,23 +8,23 @@ import NoteRow from '../../../../../common/features/Notes/NoteRow/NoteRow';
 import type { Lead } from '../../../types';
 import useLeadNotes from './useLeadNotes';
 import './LeadNotesDashboardCard.css';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import LeadNoteEditModal from './LeadNoteEditModal';
 import LeadNoteModal from '../../LeadNoteModal/LeadNoteModal';
 import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
 
-export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }: {
+export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange }: {
   lead: Lead | null;
   canWrite: boolean;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
   const notes = useLeadNotes(lead);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: notes.retry }), [notes.retry]);
   const title = lead && !notes.loading && !notes.error
     ? `Notes (${notes.notes.length})`
     : 'Notes';
-  usePageErrorReporter(onErrorChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
+  usePageMessageReporter(onMessageChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
   return <>
     <DashboardCard
       title={title}

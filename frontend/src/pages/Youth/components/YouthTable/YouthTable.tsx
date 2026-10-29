@@ -1,6 +1,7 @@
+import tableRefreshMessage from '../../../../common/components/Table/tableRefreshMessage';
 import { useEffect } from 'react';
 import Table from '../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../common/components/Table/Table.types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthSortKey } from '../../types';
@@ -18,20 +19,20 @@ interface YouthTableProps {
   onRowSelect: (profile: YouthProfile) => void;
   onSortingChange: (sorting: ListSort<YouthSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function YouthTable({
   columns, filters,
   hiddenColumnKeys, sorting, columnWidths, selectedProfileId,
-  onSelectedProfileResolved, onRowSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
+  onSelectedProfileResolved, onRowSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: YouthTableProps) {
   const tableData = useYouthTableData(filters, sorting);
   const selectedProfile = tableData.rows.find(profile => profile.id === selectedProfileId) ?? null;
   const hasFilters = Boolean(
     filters?.search || filters?.programIds?.length || filters?.cycleIds?.length,
   );
-  usePageErrorReporter(onErrorChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry });
+  usePageMessageReporter(onMessageChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry }, tableRefreshMessage(tableData.refreshNotice));
 
   useEffect(() => {
     if (!tableData.loading) onSelectedProfileResolved(selectedProfile);
@@ -44,7 +45,7 @@ export default function YouthTable({
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? { title: 'Youth profiles unavailable', onRetry: tableData.retry } : undefined}
+    unavailable={tableData.error && !tableData.rows.length ? { title: 'Youth profiles unavailable', onRetry: tableData.retry } : undefined}
     emptyMessage={hasFilters
       ? 'No youth profiles match these filters'
       : 'No youth profiles found'}

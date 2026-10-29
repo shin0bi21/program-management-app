@@ -9,7 +9,7 @@ HTTP request → route + middleware → controller → service → PostgreSQL
 
 Dependencies flow from routes through middleware and controllers to services and the database. Controllers do not contain business logic or SQL; services do not depend on controllers or routes. Every Express 4 async route handler uses `asyncHandler`.
 
-## Development flow
+## Development Flow
 
 1. Define stored data, invariants, authorized actors, record scope, API shapes, and important failures.
 2. Add a forward-only migration when persistence changes and regenerate database types through the migration workflow.
@@ -20,7 +20,7 @@ Dependencies flow from routes through middleware and controllers to services and
 7. Add authoritative feature tests and register new paths in changed-suite routing.
 8. Update the API overview when area responsibilities change, restart after TypeScript changes, and run the focused runner.
 
-## API areas
+## API Areas
 
 See the [API overview](api.md) for application areas and where to find request contracts.
 Route files remain authoritative for methods, paths, validation, and permissions.
@@ -40,7 +40,7 @@ Route files remain authoritative for methods, paths, validation, and permissions
 | `backend/src/db/` | Shared PostgreSQL client and transaction helpers |
 | `backend/src/types/` | Runtime-independent contracts and generated database types |
 
-## Feature structure
+## Feature Structure
 
 ```text
 backend/
@@ -64,13 +64,13 @@ Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`
 | Owner | Guide |
 |---|---|
 | API areas and request contracts | [API overview](api.md) |
-| Shared filter and selector lookups | [Reference data](reference-data.md) |
+| Shared filter and selector lookups | [Reference Data](reference-data.md) |
 | Request middleware and ordering | [Middleware](middleware.md) |
 | Authentication, tokens, and RBAC | [Auth](auth.md) |
-| Product access, record scope, and policy enforcement | [Authorization and policies](authorization.md) |
+| Product access, record scope, and policy enforcement | [Authorization and Policies](authorization.md) |
 | Services, commands, transactions, and report rendering | [Services](services.md) |
 | Persistence, migrations, and audits | [Database](database.md) |
 | Typed errors and request failures | [Errors](errors.md) |
 | Backend test ownership | [Testing](testing.md) |
-| Client-to-database request sequence | [HTTP flow](http.mmd) |
+| Client-to-database request sequence | [HTTP Flow](http.mmd) |
 | Google Sheets | [Integration](integrations/google-sheets.md) |

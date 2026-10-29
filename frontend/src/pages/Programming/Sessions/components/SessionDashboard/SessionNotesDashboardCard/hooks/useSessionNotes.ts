@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
 import type { CohortSession, SessionNote } from '../../../../types';
 
-export function useSessionNotes({ queryKey, session, onErrorChange }: {
+export function useSessionNotes({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
   const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
@@ -20,7 +20,7 @@ export function useSessionNotes({ queryKey, session, onErrorChange }: {
     enabled: session !== null,
   });
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: query.refetch }), [query.refetch]);
-  usePageErrorReporter(onErrorChange, query.error ? 'Could not load session notes.' : null, retryAction);
+  usePageMessageReporter(onMessageChange, query.error ? 'Could not load session notes.' : null, retryAction);
 
   useEffect(() => {
     setNoteTarget(null);

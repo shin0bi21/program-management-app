@@ -1,12 +1,19 @@
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
+import { getCohortRowsByIds } from '../cohorts/cohortRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessSession } from '../../../policies/programAccessPolicy';
+import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
+import { getSessionRowsByIds } from './sessionRecordQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetAttendanceInput } from '../../../validation/cohortSchemas';
 
 export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, sessionId);
-  const sessions = await sql<{ enrollmentRequired: boolean }[]>`
+  return readSessionRoster(sql, sessionId);
+}
+
+async function readSessionRoster(database: typeof sql, sessionId: string) {
+  const sessions = await database<{ enrollmentRequired: boolean }[]>`
     SELECT p.enrollment_required
     FROM cohort_sessions cs
     INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
@@ -16,7 +23,7 @@ export async function getSessionRoster(sessionId: string, actor: AccessTokenPayl
   if (!sessions.length) throw new NotFoundError('Session not found');
 
   if (!sessions[0].enrollmentRequired) {
-    return sql`
+    return database`
       SELECT
         u.id AS youth_id,
         u.first_name,
@@ -30,7 +37,7 @@ export async function getSessionRoster(sessionId: string, actor: AccessTokenPayl
     `;
   }
 
-  return sql`
+  return database`
       SELECT
         u.id AS youth_id,
         u.first_name,
@@ -59,18 +66,24 @@ export async function setSessionAttendance(
   actor: AccessTokenPayload,
 ) {
   await assertCanAccessSession(actor, sessionId);
-  await sql.begin(async tx => {
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
-      SELECT cs.id, p.enrollment_required
+    const sessions = await trx<{ id: string; cohortId: string; enrollmentRequired: boolean }[]>`
+      SELECT cs.id, cs.cohort_id, p.enrollment_required
       FROM cohort_sessions cs
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
       INNER JOIN programs p ON p.id = pc.program_id
       WHERE cs.id = ${sessionId}
+        AND ${programAccessPredicate(actor, sql`pc.program_id`)}
+      FOR UPDATE OF cs
     `;
     if (!sessions.length) throw new NotFoundError('Session not found');
 
     const submittedIds = data.records.map(record => record.youthId);
+    const previousAttendance = await trx<{ youthId: string }[]>`
+      SELECT youth_id FROM attendance_records WHERE session_id = ${sessionId}
+    `;
+    const affectedYouthIds = [...new Set([...submittedIds, ...previousAttendance.map(record => record.youthId)])];
 
     if (!sessions[0].enrollmentRequired) {
       if (data.records.some(record => record.status !== 'present')) {
@@ -137,7 +150,16 @@ export async function setSessionAttendance(
           updated_at = NOW()
       `;
     }
-  });
 
-  return getSessionRoster(sessionId, actor);
+    const [session] = await getSessionRowsByIds(trx, actor, [sessionId]);
+    if (!session) throw new NotFoundError('Session not found');
+    const roster = await readSessionRoster(trx, sessionId);
+    const updatedYouth = actor.permissions.includes('read:youth_profiles')
+      ? await getYouthRowsByIds(trx, affectedYouthIds)
+      : undefined;
+    const updatedCohort = actor.permissions.includes('read:programs')
+      ? (await getCohortRowsByIds(trx, actor, [sessions[0].cohortId]))[0]
+      : undefined;
+    return { roster, session, updatedYouth, updatedCohort };
+  });
 }

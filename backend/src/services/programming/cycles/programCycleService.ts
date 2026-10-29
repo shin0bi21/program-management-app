@@ -1,8 +1,11 @@
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertAssignmentUnused } from '../cohorts/assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramCycleInput } from '../../../validation/cohortSchemas';
+import { getCycleRow } from './cycleRecordQuery';
+import { getCohortRowsByIds, getCohortYouthIds } from '../cohorts/cohortRecordQuery';
 
 export { getCycleReferenceData as getProgramCycles } from '../../referenceData/cycleReferenceData';
 
@@ -19,14 +22,22 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
     const [cycle] = await trx<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on, created_by, updated_by)
       VALUES (${data.name}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
-      RETURNING id, name, starts_on::text AS starts_on, ends_on::text AS ends_on
+      RETURNING id
     `;
-    await trx`
+    const created = await trx<{ id: string }[]>`
       INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
       SELECT program_id, ${cycle.id}, ${actor.userId}, ${actor.userId}
       FROM UNNEST(${sql.array(data.programIds)}::uuid[]) AS selected(program_id)
+      RETURNING id
     `;
-    return cycle;
+    return {
+      cycle: await getCycleRow(trx, cycle.id),
+      updatedCohorts: actor.permissions.includes('read:programs')
+        ? await getCohortRowsByIds(trx, actor, created.map(cohort => cohort.id)) : [],
+      createdCohortIds: created.map(cohort => cohort.id),
+      removedCohortIds: [] as string[],
+      updatedYouth: [],
+    };
   });
 }
 
@@ -80,21 +91,30 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     `;
     if (sessionsOutsideDates.length) throw new ConflictError('Cycle dates must contain all existing sessions');
 
-    const [updated] = await trx`
+    await trx`
       UPDATE program_cycles
       SET name = ${data.name}, starts_on = ${data.startsOn}, ends_on = ${data.endsOn}, updated_at = NOW(), updated_by = ${actor.userId}
       WHERE id = ${id}
-      RETURNING id, name, starts_on::text AS starts_on, ends_on::text AS ends_on
     `;
     for (const cohort of removed) {
       await trx`DELETE FROM program_cohorts WHERE id = ${cohort.id}`;
     }
-    await trx`
+    const created = await trx<{ id: string }[]>`
       INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
       SELECT program_id, ${id}, ${actor.userId}, ${actor.userId}
       FROM UNNEST(${sql.array(data.programIds)}::uuid[]) AS selected(program_id)
       ON CONFLICT (program_id, cycle_id) DO NOTHING
+      RETURNING id
     `;
-    return updated;
+    const retained = current.filter(cohort => data.programIds.includes(cohort.programId));
+    return {
+      cycle: await getCycleRow(trx, id),
+      updatedCohorts: actor.permissions.includes('read:programs')
+        ? await getCohortRowsByIds(trx, actor, [...retained, ...created].map(cohort => cohort.id)) : [],
+      createdCohortIds: created.map(cohort => cohort.id),
+      removedCohortIds: removed.map(cohort => cohort.id),
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, await getCohortYouthIds(trx, [...retained, ...created].map(cohort => cohort.id))) : [],
+    };
   });
 }

@@ -1,3 +1,4 @@
+import type { UpdatedSessionResult } from '../../sessions.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import { sessionDateTime } from '../../utils/sessionSchedule';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
@@ -11,7 +12,7 @@ interface EditSessionModalProps {
   session: CohortSession | null;
   timezone?: string;
   onClose: () => void;
-  onUpdated: () => void | Promise<void>;
+  onUpdated: (result: UpdatedSessionResult) => void | Promise<void>;
 }
 
 export default function EditSessionModal({ session, onClose, onUpdated, timezone = 'America/Toronto' }: EditSessionModalProps) {

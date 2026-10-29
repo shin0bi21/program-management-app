@@ -245,7 +245,7 @@ describe('Table', () => {
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Loading...' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading rows' })).toBeInTheDocument();
   });
 
   it('keeps the header and renders the shared unavailable state with retry', () => {
@@ -294,7 +294,7 @@ describe('Table', () => {
     expect(existingRow).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Updating rows' })).toBeInTheDocument();
     expect(existingRow.closest('tbody')).toHaveAttribute('inert');
-    expect(screen.queryByRole('cell', { name: 'Loading...' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading rows' })).not.toBeInTheDocument();
   });
 
   it('supports mouse and keyboard row selection', () => {

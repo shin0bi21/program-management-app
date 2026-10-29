@@ -16,6 +16,7 @@ vi.mock('../../sessions.api', () => api);
 const session: CohortSession = {
       id: 'session-1',
       cohortId: 'cohort-1',
+      cycleId: 'cycle-1',
       sessionTypeId: 'type-regular',
       sessionTypeName: 'Regular',
   theme: 'Communication',
@@ -43,7 +44,7 @@ describe('SessionAttendanceModal', () => {
       status: 'present',
       notes: null,
     }]);
-    api.setSessionAttendance.mockResolvedValue([]);
+    api.setSessionAttendance.mockResolvedValue({ roster: [], session });
     api.searchAttendanceYouth.mockResolvedValue([]);
   });
 

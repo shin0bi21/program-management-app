@@ -4,7 +4,7 @@ import Button from '../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../../common/components/FilterCard/FilterCard';
 import PageBody from '../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
@@ -25,7 +25,7 @@ import './Youth.css';
 
 export default function Youth() {
   // Page-local errors.
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions, role } = useAuth();
@@ -66,7 +66,7 @@ export default function Youth() {
   });
 
   // Page actions.
-  const { reconcileCreatedYouth, reconcileSavedYouth, refreshAttendance } = useYouthActions({
+  const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions({
     onYouthReconciled: reconcileSavedProfile,
   });
 
@@ -128,7 +128,7 @@ export default function Youth() {
             onClearAll={filters.clear}
           /> : undefined}
         />
-        <PageErrorOverlay errors={[
+        <PageMessageOverlay messages={[
           preferencesError,
           programsError,
           cyclesError,
@@ -152,7 +152,7 @@ export default function Youth() {
             onSortingChange={table.setSorting}
             columnWidths={table.columnWidths}
             onColumnWidthsChange={table.setColumnWidths}
-            onErrorChange={setViewError}
+            onMessageChange={setViewError}
           />}
           dashboard={<YouthDashboard
             profile={selectedProfile}
@@ -186,7 +186,7 @@ export default function Youth() {
         youth={selectedProfile}
         cohort={attendanceTarget}
         onClose={closeAttendanceModal}
-        onSaved={refreshAttendance}
+        onSaved={reconcileAttendance}
       />
       {attendanceReportTarget && <YouthReportModal
         cohort={attendanceReportTarget.cohort}

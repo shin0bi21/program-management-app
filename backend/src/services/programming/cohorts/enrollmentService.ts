@@ -4,6 +4,8 @@ import { assertCanAccessCohort } from '../../../policies/programAccessPolicy';
 import { lockAssignmentProgram } from './assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/cohortSchemas';
+import { getCohortRowsByIds } from './cohortRecordQuery';
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 
 export async function enrollYouth(cohortId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
   await assertCanAccessCohort(actor, cohortId);
@@ -54,7 +56,7 @@ export async function enrollYouth(cohortId: string, data: EnrollYouthInput, acto
       throw new ConflictError('One or more youth profiles do not meet this cohort age range');
     }
 
-    return trx`
+    const enrollments = await trx`
       INSERT INTO cohort_enrollments (
         cohort_id, youth_id, created_by, updated_by
       )
@@ -78,6 +80,13 @@ export async function enrollYouth(cohortId: string, data: EnrollYouthInput, acto
         created_at,
         updated_at
     `;
+    const [cohort] = await getCohortRowsByIds(trx, actor, [cohortId]);
+    return {
+      enrollments,
+      cohort,
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, data.youthIds) : [],
+    };
   });
 }
 
@@ -87,24 +96,31 @@ export async function withdrawYouth(
   actor: AccessTokenPayload,
 ) {
   await assertCanAccessCohort(actor, cohortId);
-  const rows = await sql`
-    UPDATE cohort_enrollments
-    SET
-      withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
-      updated_at = NOW(),
-      updated_by = ${actor.userId}
-    WHERE cohort_id = ${cohortId}
-      AND youth_id = ${youthId}
-      AND withdrawn_on IS NULL
-    RETURNING
-      id,
-      cohort_id,
-      youth_id,
-      enrolled_on::text AS enrolled_on,
-      withdrawn_on::text AS withdrawn_on,
-      created_at,
-      updated_at
-  `;
-  if (!rows.length) throw new NotFoundError('Active cohort enrollment not found');
-  return rows[0];
+  return sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const [assignment] = await trx<{ programId: string }[]>`
+      SELECT program_id FROM program_cohorts WHERE id = ${cohortId}
+    `;
+    if (!assignment) throw new NotFoundError('Cohort not found');
+    await lockAssignmentProgram(trx, assignment.programId, actor);
+    await trx`SELECT id FROM program_cohorts WHERE id = ${cohortId} FOR UPDATE`;
+
+    const [enrollment] = await trx`
+      UPDATE cohort_enrollments
+      SET withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
+          updated_at = NOW(), updated_by = ${actor.userId}
+      WHERE cohort_id = ${cohortId} AND youth_id = ${youthId} AND withdrawn_on IS NULL
+      RETURNING id, cohort_id, youth_id, enrolled_on::text AS enrolled_on,
+        withdrawn_on::text AS withdrawn_on, created_at, updated_at
+    `;
+    if (!enrollment) throw new NotFoundError('Active cohort enrollment not found');
+
+    const [cohort] = await getCohortRowsByIds(trx, actor, [cohortId]);
+    return {
+      enrollment,
+      cohort,
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, [youthId]) : [],
+    };
+  });
 }

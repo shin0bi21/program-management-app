@@ -1,8 +1,8 @@
-# Backend services
+# Backend Services
 
 Services own database access and business behavior. Group related files by product area and capability, such as `services/programming/sessions/` or `services/staff/hours/`.
 
-## Choose the file
+## Choose the File
 
 - `<domain>Service.ts` loads, sets, and deletes one record. It also owns focused commands such as status or placement changes.
 - `<domain>ListService.ts` owns collection search, filters, sorting, and cursor pagination.
@@ -17,7 +17,26 @@ See the [API source map](api.md#find-an-api-owner) for domain owners and
 [program-cycle assignments](api.md#program-cycle-assignments) for a transaction
 that spans several related services.
 
-## Write the public operations first
+## Serve Table Collections
+
+A table collection returns `{ rows, nextCursor }`, using the shared
+[cursor schema](../../backend/src/validation/listQuerySchemas.ts) and
+[pagination helpers](../../backend/src/services/shared/cursorPagination.ts). Default to
+50 rows, accept at most 50, and fetch one extra row to determine whether another page
+exists. Apply permission scope, search, and filters before the cursor and limit.
+
+Order by the selected server sort value plus a durable ID tie-breaker. Use the same
+values and direction in the cursor predicate; names that compare equally must not
+skip or duplicate rows across pages. Reject malformed cursors and unsupported sort
+keys at the request boundary.
+
+Keep full-record selector lookups and small reference projections separate from table
+collections. Existing combined endpoints may retain array lookups, but table adapters
+must request the bounded cursor contract explicitly. A small current row count is not
+an exception to table pagination. Share the canonical row projection with mutation
+responses, following the frontend [row contract](../frontend/components/table-rows.md).
+
+## Write the Public Operations First
 
 Order a main service so it is easy to scan:
 
@@ -31,7 +50,7 @@ When the same full-record form adds and edits a record, expose one `set<Domain>`
 
 Name a command after the record it changes. Session attendance belongs to `sessionAttendanceService.ts`; the Youth workflow that changes one youth across sessions belongs to `youthAttendanceService.ts`.
 
-## Keep writes safe
+## Keep Writes Safe
 
 - Use parameterized `sql` templates.
 - Open one transaction for a multi-write or audited command. Pass `trx` to nested helpers instead of opening another transaction.
@@ -45,14 +64,14 @@ Name a command after the record it changes. Session attendance belongs to `sessi
 
 Use the repository error classes for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
 
-## Handle audits and external work
+## Handle Audits and External Work
 
 - Write the audit snapshot in the same transaction as the database change.
 - Include the relationship IDs needed to understand the change.
 - Do not keep a database transaction open while sending email, calling a provider, or writing a file unless that integration explicitly requires it.
 - Decide what happens when the database succeeds but the external operation fails, including retry and duplicate handling.
 
-## Render reports
+## Render Reports
 
 Keep report data and file rendering in separate owners.
 

@@ -137,26 +137,26 @@ describe('Cohorts and attendance API', () => {
     expect(created.status).toBe(201);
 
     const updated = await request(app)
-      .put(`/api/cohorts/cycles/${created.body.id}`)
+      .put(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: `${cycleName} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
     expect(updated.status).toBe(200);
-    expect(updated.body).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
+    expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
 
     const deniedDelete = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(deniedDelete.status).toBe(403);
 
     const deleted = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(deleted.status).toBe(200);
-    expect(deleted.body).toEqual({ id: created.body.id });
-    expect(await sql`SELECT id FROM program_cycles WHERE id = ${created.body.id}`).toHaveLength(0);
+    expect(deleted.body).toEqual({ id: created.body.cycle.id });
+    expect(await sql`SELECT id FROM program_cycles WHERE id = ${created.body.cycle.id}`).toHaveLength(0);
 
     const missing = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(missing.status).toBe(404);
   });
@@ -251,7 +251,7 @@ describe('Cohorts and attendance API', () => {
       .send({ youthIds: [youthId, secondYouthId] });
 
     expect(response.status).toBe(201);
-    expect(response.body).toEqual(expect.arrayContaining([
+    expect(response.body.enrollments).toEqual(expect.arrayContaining([
       expect.objectContaining({
         cohortId,
         youthId,
@@ -690,7 +690,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ records: [{ youthId, status: 'present' }] });
     expect(checkedIn.status).toBe(200);
-    expect(checkedIn.body).toEqual([
+    expect(checkedIn.body.roster).toEqual([
       expect.objectContaining({ youthId, status: 'present' }),
     ]);
 
@@ -705,7 +705,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ records: [{ youthId: secondYouthId, status: 'present' }] });
     expect(replaced.status).toBe(200);
-    expect(replaced.body).toEqual([
+    expect(replaced.body.roster).toEqual([
       expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
     ]);
   });
@@ -834,7 +834,7 @@ describe('Cohorts and attendance API', () => {
       });
 
     expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(expect.arrayContaining([
+    expect(saved.body.roster).toEqual(expect.arrayContaining([
       expect.objectContaining({ youthId, status: 'present' }),
       expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
     ]));
@@ -1163,7 +1163,7 @@ describe('Cohorts and attendance API', () => {
       .send({ records: [{ youthId, status: 'present' }] });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual(expect.arrayContaining([
+    expect(response.body.roster).toEqual(expect.arrayContaining([
       expect.objectContaining({ youthId, status: 'present' }),
       expect.objectContaining({ youthId: secondYouthId, status: null }),
     ]));
@@ -1277,7 +1277,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual(expect.objectContaining({
+    expect(response.body.enrollment).toEqual(expect.objectContaining({
       cohortId,
       youthId,
       withdrawnOn: today,

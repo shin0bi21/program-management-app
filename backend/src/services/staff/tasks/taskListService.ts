@@ -2,7 +2,7 @@ import { sql } from '../../../db/client';
 import { taskReadScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
-import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
+import { cursorPage, decodeCursor, DEFAULT_BATCH_SIZE } from '../../shared/cursorPagination';
 import {
   attachTaskDetails,
   loadTaskLoggedHours,
@@ -35,8 +35,8 @@ export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuer
       ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
       : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
     ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
-    LIMIT ${(query.limit ?? 25) + 1}
+    LIMIT ${(query.limit ?? DEFAULT_BATCH_SIZE) + 1}
   `;
   const detailed = attachTaskDetails(rows, await loadTaskLoggedHours(rows.map(row => row.id)), actor);
-  return cursorPage(detailed, query.limit ?? 25);
+  return cursorPage(detailed, query.limit ?? DEFAULT_BATCH_SIZE);
 }

@@ -9,5 +9,9 @@ export default function useCohortSelection() {
     setSelectedCohort(current => current?.id === cohortId ? null : current);
   }, []);
 
-  return { selectedCohort, setSelectedCohort, removeSelectedCohort };
+  const syncSelectedCohort = useCallback((cohort: ProgramCohort) => {
+    setSelectedCohort(current => current?.id === cohort.id ? cohort : current);
+  }, []);
+
+  return { syncSelectedCohort, selectedCohort, setSelectedCohort, removeSelectedCohort };
 }

@@ -6,8 +6,12 @@ import {
   deleteHours,
   setHours,
   type SetHoursInput,
+  type HoursMutationResult,
   updateHoursPlacement,
 } from '../../hours.api';
+
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import type { Task } from '../../../Tasks/types';
 
 import type {
   HoursCalendarCache,
@@ -59,11 +63,24 @@ export default function useHoursActions({
     void queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'dashboard'] });
   }, [queryClient, hoursQueryKey]);
 
-  const refreshRelatedData = useCallback(async (taskId: string | null) => {
-    const refreshes = [queryClient.invalidateQueries({ queryKey: hoursQueryKey })];
-    if (taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: taskQueryKey }));
-    await Promise.all(refreshes);
-  }, [queryClient, taskQueryKey, hoursQueryKey]);
+  const syncTasks = useCallback((tasks: Task[] = []) => {
+    tasks.forEach(task => replaceInfiniteListRow(queryClient, [...taskQueryKey, 'table'], task));
+    if (!tasks.length) return;
+
+    void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
+    void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'hours-options'] });
+  }, [queryClient, taskQueryKey]);
+
+  const syncHours = useCallback((saved: HoursMutationResult, created = false) => {
+    if (created) {
+      void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
+    } else {
+      replaceInfiniteListRow(queryClient, hoursTableQueryKey, saved.tableRow);
+    }
+
+    calendarCacheRef.current.upsert(saved.staffId, saved.workDate, saved.tableRow.item);
+    refreshOverview();
+  }, [hoursTableQueryKey, queryClient, refreshOverview]);
 
   const saveHours = useCallback(async (input: SetHoursInput, entryId?: string) => {
     if (entryId && !startEntryAction(entryId)) return;
@@ -72,13 +89,12 @@ export default function useHoursActions({
       const saved = entryId
         ? await setHours(input, entryId)
         : await setHours(input);
-      calendarCacheRef.current.upsert(saved.staffId, saved.workDate, saved);
-      refreshOverview();
-      await refreshRelatedData(saved.taskId);
+      syncHours(saved, !entryId);
+      syncTasks(saved.updatedTasks);
     } finally {
       if (entryId) finishEntryAction(entryId);
     }
-  }, [finishEntryAction, refreshOverview, refreshRelatedData, startEntryAction]);
+  }, [finishEntryAction, startEntryAction, syncHours, syncTasks]);
 
   const moveHours = useCallback(async ({
     item,
@@ -92,19 +108,15 @@ export default function useHoursActions({
 
     try {
       const updated = await updateHoursPlacement(item.id, { workDate: destination.date });
-      calendarCacheRef.current.upsert(destination.resourceId, destination.date, updated);
-      refreshOverview();
-
-      const refreshes = [queryClient.invalidateQueries({ queryKey: hoursTableQueryKey })];
-      if (item.taskId) refreshes.push(queryClient.invalidateQueries({ queryKey: taskQueryKey }));
-      await Promise.all(refreshes);
+      syncHours(updated);
+      syncTasks(updated.updatedTasks);
     } catch {
       calendarCacheRef.current.upsert(source.resourceId, source.date, item);
       setMoveError('Unable to move logged hours. The hours were returned to their original day.');
     } finally {
       finishEntryAction(item.id);
     }
-  }, [finishEntryAction, queryClient, refreshOverview, startEntryAction, taskQueryKey, hoursTableQueryKey]);
+  }, [finishEntryAction, startEntryAction, syncHours, syncTasks]);
 
   const requestDelete = useCallback((target: HoursEntryTarget) => setConfirmAction({
     title: 'Delete logged hours',
@@ -115,16 +127,17 @@ export default function useHoursActions({
       if (!startEntryAction(target.item.id)) return;
 
       try {
-        await deleteHours(target.item.id);
+        const deleted = await deleteHours(target.item.id);
+        removeInfiniteListRow(queryClient, hoursTableQueryKey, target.item.id);
         calendarCacheRef.current.remove(target.item.id);
         onEntryRemoved?.(target.item.id);
         refreshOverview();
-        await refreshRelatedData(target.item.taskId);
+        syncTasks(deleted.updatedTasks);
       } finally {
         finishEntryAction(target.item.id);
       }
     },
-  }), [finishEntryAction, onEntryRemoved, refreshOverview, refreshRelatedData, startEntryAction]);
+  }), [finishEntryAction, hoursTableQueryKey, onEntryRemoved, queryClient, refreshOverview, startEntryAction, syncTasks]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 

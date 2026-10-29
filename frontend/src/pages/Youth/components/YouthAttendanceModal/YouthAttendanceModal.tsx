@@ -1,3 +1,4 @@
+import type { YouthAttendanceResult } from './youthAttendance.api';
 import type { FormEvent } from 'react';
 import { faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -25,7 +26,7 @@ export default function YouthAttendanceModal({
   cohort: AttendanceCohort | null;
   canManageSessionNotes?: boolean;
   onClose: () => void;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
   const {
     attendance,

@@ -82,7 +82,7 @@ describe('tasks API', () => {
     getTasksCalendarData(filters, { start: '2026-08-10', end: '2026-08-12' });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(1,
-      '/tasks/list?sort=startDate&direction=asc&limit=25&start=2026-01-01&end=2026-12-31', undefined);
+      '/tasks/list?sort=startDate&direction=asc&limit=50&start=2026-01-01&end=2026-12-31', undefined);
     expect(apiClient.get).toHaveBeenNthCalledWith(2,
       '/tasks/calendar?start=2026-08-10&end=2026-08-12', undefined);
   });

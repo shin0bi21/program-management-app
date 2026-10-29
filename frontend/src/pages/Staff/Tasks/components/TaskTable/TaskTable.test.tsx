@@ -26,7 +26,7 @@ const baseProps = {
   filters: { staffIds: [], programIds: [], categories: [], statuses: [], search: '' },
   sorting: { key: 'dueDate' as const, direction: 'asc' as const }, columnWidths: {}, selectedTaskId: null,
   onTaskSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
-  onErrorChange: vi.fn(),
+  onMessageChange: vi.fn(),
 };
 
 describe('TaskTable', () => {
@@ -76,7 +76,7 @@ describe('TaskTable', () => {
       emptyMessage: 'No tasks match these filters',
       unavailable: { title: 'Tasks unavailable', onRetry: tableState.retry },
     }));
-    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+    expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load tasks.',
       action: { label: 'Retry', onClick: tableState.retry },
     });

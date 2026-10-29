@@ -1,6 +1,6 @@
 import { BadRequestError } from '../../errors';
 
-export const DEFAULT_BATCH_SIZE = 25;
+export const DEFAULT_BATCH_SIZE = 50;
 export const MAX_BATCH_SIZE = 50;
 
 export interface ListCursor {

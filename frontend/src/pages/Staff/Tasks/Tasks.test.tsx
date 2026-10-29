@@ -110,11 +110,6 @@ describe('Tasks', () => {
     vi.mocked(getTaskReferenceData).mockResolvedValue({
       ...taskReferenceChoices,
     });
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', categoryLabel: 'Planning / Prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
-    });
     vi.mocked(deleteTask).mockResolvedValue();
     vi.mocked(updateTaskState).mockResolvedValue({
       ...task,
@@ -293,7 +288,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
       expect.objectContaining({ staffIds: ['staff-2'] }),
       expect.anything(),
-      expect.objectContaining({ limit: 25 }),
+      expect.objectContaining({ limit: 50 }),
     ));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
 
@@ -441,7 +436,7 @@ describe('Tasks', () => {
   it('keeps the hours target until close after completing its task and does not reopen on selection', async () => {
     const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
     const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
-    vi.mocked(setHours).mockResolvedValue({ updatedTask: completedTask } as Awaited<ReturnType<typeof setHours>>);
+    vi.mocked(setHours).mockResolvedValue({ updatedTasks: [completedTask] } as Awaited<ReturnType<typeof setHours>>);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task, nextTask], nextCursor: null });
     renderTasks();
 

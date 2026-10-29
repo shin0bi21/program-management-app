@@ -85,7 +85,7 @@ describe('useSignUpLeadModal', () => {
       { ...cohort, id: 'cohort-completed', state: 'completed' },
       { ...cohort, id: 'cohort-open', enrollmentRequired: false },
     ]);
-    vi.mocked(signUpLead).mockResolvedValue({ ...lead, status: 'signed_up' });
+    vi.mocked(signUpLead).mockResolvedValue({ lead: { ...lead, status: 'signed_up' } });
   });
 
   it('loads active enrollment cohorts and applies the lead age boundary', async () => {
@@ -111,7 +111,7 @@ describe('useSignUpLeadModal', () => {
   it('submits the selected cohort and note category before reporting success', async () => {
     const onSuccess = vi.fn();
     const updatedLead = { ...lead, status: 'signed_up' as const };
-    vi.mocked(signUpLead).mockResolvedValue(updatedLead);
+    vi.mocked(signUpLead).mockResolvedValue({ lead: updatedLead });
     const { result } = renderWorkflow(lead, onSuccess);
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -122,7 +122,7 @@ describe('useSignUpLeadModal', () => {
     await act(() => result.current.submit());
 
     expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health', lead.dateOfBirth);
-    expect(onSuccess).toHaveBeenCalledWith(updatedLead);
+    expect(onSuccess).toHaveBeenCalledWith({ lead: updatedLead });
     expect(result.current.submitStatus).toBe('success');
     expect(result.current.statusMessage).toBe(
       'Youth profile successfully created and added to Future Ready - Summer 2026.',
@@ -181,7 +181,7 @@ describe('useSignUpLeadModal', () => {
   it('shows an API failure and permits a retry', async () => {
     vi.mocked(signUpLead)
       .mockRejectedValueOnce(new Error('Signup unavailable'))
-      .mockResolvedValueOnce({ ...lead, status: 'signed_up' });
+      .mockResolvedValueOnce({ lead: { ...lead, status: 'signed_up' } });
     const { result } = renderWorkflow(lead);
     await waitFor(() => expect(result.current.loading).toBe(false));
 

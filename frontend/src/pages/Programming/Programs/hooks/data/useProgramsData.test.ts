@@ -1,0 +1,54 @@
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { getCycleReferences } from '../../../../../common/features/referenceData/referenceData.api';
+import { getPrograms } from '../../../../../common/features/programs/programs.api';
+import useProgramsData from './useProgramsData';
+
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({
+  getCycleReferences: vi.fn(),
+}));
+vi.mock('../../../../../common/features/programs/programs.api', () => ({
+  getPrograms: vi.fn(),
+}));
+
+const cycle = {
+  id: 'cycle-1',
+  name: 'Fall 2026',
+  startsOn: '2026-09-01',
+  endsOn: '2027-01-31',
+  state: 'upcoming' as const,
+};
+
+describe('useProgramsData', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getPrograms).mockResolvedValue([]);
+    vi.mocked(getCycleReferences).mockResolvedValue([cycle]);
+  });
+
+  it('loads cycles and removes a deleted cycle from page state', async () => {
+    const { result } = renderHook(() => useProgramsData(), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+
+    await waitFor(() => expect(result.current.cycles).toEqual([cycle]));
+    expect(result.current.cyclesLoading).toBe(false);
+    expect(getPrograms).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
+
+    act(() => result.current.removeCycle(cycle.id));
+    await waitFor(() => expect(result.current.cycles).toEqual([]));
+  });
+
+  it('reports cycle loading failures and retries them', async () => {
+    vi.mocked(getCycleReferences)
+      .mockRejectedValueOnce(new Error('Cycle service unavailable'))
+      .mockResolvedValueOnce([cycle]);
+    const { result } = renderHook(() => useProgramsData(), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+
+    await waitFor(() => expect(result.current.cyclesError).toBe('Cycle service unavailable'));
+    await act(async () => result.current.refreshCycles());
+
+    await waitFor(() => expect(result.current.cycles).toEqual([cycle]));
+    expect(result.current.cyclesError).toBe('');
+  });
+});

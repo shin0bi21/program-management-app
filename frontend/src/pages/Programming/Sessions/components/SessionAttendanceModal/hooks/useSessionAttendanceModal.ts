@@ -5,6 +5,7 @@ import {
   getSessionRoster,
   searchAttendanceYouth,
   setSessionAttendance,
+  type SessionAttendanceResult,
 } from '../../../sessions.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 
@@ -16,7 +17,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseSessionAttendanceModalOptions {
   session: CohortSession | null;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
 export default function useSessionAttendanceModal({
@@ -128,8 +129,9 @@ export default function useSessionAttendanceModal({
     setSubmitStatus('submitting');
     setStatusMessage(`Saving attendance for ${sessionName}...`);
 
+    let saved: SessionAttendanceResult;
     try {
-      await setSessionAttendance(session.id, attendance);
+      saved = await setSessionAttendance(session.id, attendance);
     } catch (cause) {
       setStatusMessage(getErrorMessage(cause, 'Could not save attendance'));
       setSubmitStatus('error');
@@ -139,7 +141,7 @@ export default function useSessionAttendanceModal({
 
     let refreshFailed = false;
     try {
-      await onSaved();
+      await onSaved(saved);
     } catch {
       refreshFailed = true;
     }

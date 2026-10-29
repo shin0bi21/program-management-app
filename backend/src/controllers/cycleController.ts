@@ -2,12 +2,18 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { deleteProgramCycle, getProgramCycles, setProgramCycle } from '../services/programming/cycles/programCycleService';
 
-import type { SetProgramCycleInput } from '../validation/cohortSchemas';
+import { listCycles } from '../services/programming/cycles/cycleListService';
+
+import type { SetProgramCycleInput, CycleListQuery } from '../validation/cohortSchemas';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetProgramCycles = async (_req: Request, res: Response) => {
   res.json(await getProgramCycles());
+};
+
+export const handleGetCycleList = async (req: Request, res: Response) => {
+  res.json(await listCycles(req.query as unknown as CycleListQuery));
 };
 
 export const handleSetProgramCycle = async (req: Request, res: Response) => {

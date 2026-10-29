@@ -1,3 +1,4 @@
+import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getSessions } from '../../../sessions.api';
 import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
@@ -20,8 +21,15 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     search,
   };
   const query = useInfiniteListQuery<CohortSession>({
+    ordering: {
+      direction: sorting.direction,
+      getValue: session => ({
+        program: session.programName.toLowerCase(), cohort: session.cohortName.toLowerCase(), theme: session.theme.toLowerCase(),
+        date: new Date(session.startsAt), time: new Date(session.startsAt), type: session.sessionTypeName.toLowerCase(), status: session.state,
+      }[sorting.key]),
+    },
     queryKey: [...queryKey, filters, sorting],
-    queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: 25 }),
+    queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE }),
     errorMessage: 'Could not load sessions',
     enabled,
   });
@@ -37,5 +45,6 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     retryNextPage: query.retryNextPage,
     loadNextPage: query.loadNextPage,
     retry: query.retry,
+    ...(query.refreshNotice ? { refreshNotice: query.refreshNotice } : {}),
   };
 }

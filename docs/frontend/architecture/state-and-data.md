@@ -1,4 +1,4 @@
-# Frontend state and data
+# Frontend State and Data
 
 Give each value one owner. Choose that owner by how long the value lives and who changes it.
 
@@ -6,7 +6,7 @@ Use the [ownership guide](ownership.md) for placement and promotion. This guide 
 state lifetimes and data flow; the component that composes a child does not automatically
 own that child's queries.
 
-## Choose the state owner
+## Choose the State Owner
 
 | Value | Owner | Examples |
 |---|---|---|
@@ -20,7 +20,7 @@ For durable page controls, follow the [page preference contract](../pages/prefer
 
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
 
-## Separate page controls from view data
+## Separate Page Controls from View Data
 
 Page data hooks load reference data needed across the page, such as filter options and
 resources used by selection or dialogs. Page controls own the user's choices, not the
@@ -47,11 +47,11 @@ the page responsible for scrolling or restoration. Add calendar controls to a pa
 only when the page actually coordinates or persists those choices, not to mirror the
 table group.
 
-Follow [Page preferences](../pages/preferences.md) for the control contract,
+Follow [Page Preferences](../pages/preferences.md) for the control contract,
 [Tables](../components/tables.md) for collection ownership, and
 [Calendars](../components/calendars.md) for range loading and calendar interaction state.
 
-## Fetch remote data
+## Fetch Remote Data
 
 Backend data follows one visible path:
 
@@ -73,13 +73,13 @@ name> is no longer available.` An existing record with no children instead shows
 its normal empty state. Do not replace a rejected request with empty data or
 render internal diagnostics as user-facing copy.
 
-## Test adapters and pure policy
+## Test Adapters and Pure Policy
 
 API-adapter tests own the exact method, path, query or body serialization, cancellation forwarding, typed response shaping, and boundary normalization. Mock the centralized HTTP client rather than exercising these contracts through browser UI or a query hook.
 
 Pure utilities and finite policy or capability rules use representative inputs, contract boundaries, and invalid values that the owner handles. Cover every finite case when omission would change permissions, available actions, or persisted values. Use Vitest's Node environment when the owner does not need browser globals.
 
-## Reconcile mutations
+## Reconcile Mutations
 
 Use the record returned by the backend after a mutation. Do not rebuild it from form values.
 
@@ -87,11 +87,11 @@ When loads or mutations can overlap, define how stale responses are ignored or r
 
 The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
 
-## Keep application selection with its domain
+## Keep Application Selection with Its Domain
 
 A controlled shared component receives the selected key and emits a selection event. When selection must survive filters or pagination, span table and calendar views, follow a resource, or reconcile after mutation and deletion, keep it in the route page or a focused domain selection hook. Do not add application selection state to a shared rendering component.
 
-## Test state and data
+## Test State and Data
 
 | Owner | Cover |
 |---|---|
@@ -105,4 +105,4 @@ For example, a domain hook proves that `pageParam: 'next'` becomes `cursor: 'nex
 `useInfiniteListQuery` proves that pages accumulate without duplicate rows. Test the behavior
 the owner adds, not TanStack Query itself. Simple state wiring stays in its component test.
 
-Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).
+Use the helpers and isolation rules in [Test Ownership](../../workflows/delivery/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).

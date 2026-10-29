@@ -31,7 +31,7 @@ describe('useYouthTableData', () => {
       undefined,
       { cycleIds: ['cycle-1'] },
       { signal: expect.any(AbortSignal) },
-      expect.objectContaining({ key: 'lastName', direction: 'desc', limit: 25 }),
+      expect.objectContaining({ key: 'lastName', direction: 'desc', limit: 50 }),
     );
   });
 });

@@ -1,10 +1,10 @@
-# Modals and forms
+# Modals and Forms
 
 A page-owned modal owns one form draft, validation, submission lifecycle, and failure recovery. The route page owns the modal target and entry paths; shared `Modal` owns generic dialog semantics, focus, Escape handling, and focus return.
 
 Keep one-off props beside the component. A non-trivial workflow hook owns initialization, draft transitions, validation, submit locking, API errors, reset, and the authoritative success callback.
 
-## Open the modal from its owner
+## Open the Modal from Its Owner
 
 Represent mutually exclusive add and edit lifecycles with one discriminated page state plus `null` for closed.
 
@@ -25,7 +25,7 @@ const closeExampleModal = () => setExampleModalState(null);
 
 Inventory page actions, table rows, calendar cells/items, and dashboard cards that open the modal. Pass known context in and lock fields the entry path already decided.
 
-## Render the modal
+## Render the Modal
 
 ```tsx
 function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
@@ -54,7 +54,7 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 
-## Manage fields, data and mutations
+## Manage Fields, Data and Mutations
 
 - Align required, optional, derived, fixed, and dependent fields across persistence, backend validation, API types, form state, labels, disabled states, and submit guards.
 - Let the backend derive fields owned by selected records instead of duplicating them in the request.
@@ -71,7 +71,7 @@ One owner controls each mutation. A page-private modal may call its typed API an
 Cover field and status wiring in the component. The workflow tests cover initialization,
 dependent fields, contextual locks, command payloads, duplicate-submit guards and failure
 recovery. Shared `Modal` tests own dialog mechanics; route tests cover entry context and
-success callbacks. See [Testing](../../workflows/testing.md).
+success callbacks. See [Testing](../../workflows/delivery/testing.md).
 
 ## Scaffolding
 

@@ -32,7 +32,7 @@ describe('useEditSessionModal', () => {
 
   it('normalizes the update command and awaits owner reconciliation', async () => {
     const session = makeCohortSession();
-    vi.mocked(updateSession).mockResolvedValue(session);
+    vi.mocked(updateSession).mockResolvedValue({ session });
     let resolveRefresh!: () => void;
     const onUpdated = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
@@ -59,7 +59,7 @@ describe('useEditSessionModal', () => {
       endsAt: '2026-08-10T19:00:00Z',
       description: null,
     });
-    expect(onUpdated).toHaveBeenCalledOnce();
+    expect(onUpdated).toHaveBeenCalledWith({ session });
     expect(result.current).toMatchObject({
       status: 'success',
       statusMessage: 'Session updated successfully.',
@@ -70,7 +70,7 @@ describe('useEditSessionModal', () => {
     const session = makeCohortSession();
     vi.mocked(updateSession)
       .mockRejectedValueOnce(new Error('Session overlaps another session'))
-      .mockResolvedValueOnce(session);
+      .mockResolvedValueOnce({ session });
     const onUpdated = vi.fn();
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
     act(() => result.current.setSessionTypeId('type-1'));
@@ -109,7 +109,7 @@ describe('useEditSessionModal', () => {
   it('locks same-tick submissions until the save workflow settles', async () => {
     let resolveUpdate!: () => void;
     vi.mocked(updateSession).mockReturnValue(new Promise(resolve => {
-      resolveUpdate = () => resolve(makeCohortSession());
+      resolveUpdate = () => resolve({ session: makeCohortSession() });
     }));
     const onUpdated = vi.fn().mockResolvedValue(undefined);
     const session = makeCohortSession();

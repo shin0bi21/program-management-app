@@ -7,13 +7,13 @@ export function accountAccessPredicate(actor: AccessTokenPayload, targetRole: Re
 }
 
 export function assertCanCreateAccount(actor: AccessTokenPayload, role: UserRole) {
-  if (actor.role !== 'admin' || !['admin', 'staff'].includes(role)) {
+  if (actor.role !== 'admin' || !['admin', 'project_manager', 'staff'].includes(role)) {
     throw new ForbiddenError('Insufficient permissions for this account');
   }
 }
 
 export function assertCanManageAccount(actor: AccessTokenPayload, targetRole: UserRole) {
   if (actor.role === 'admin') return;
-  if (actor.role === 'staff' && targetRole === 'youth') return;
+  if (['staff', 'project_manager'].includes(actor.role) && targetRole === 'youth') return;
   throw new ForbiddenError('Insufficient permissions for this account');
 }

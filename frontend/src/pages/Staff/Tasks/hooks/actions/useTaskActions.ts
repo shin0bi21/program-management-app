@@ -135,8 +135,8 @@ export default function useTaskActions({
     setActionError('');
 
     if (input.source === 'task') {
-      if (saved.updatedTask) {
-        syncTask(saved.updatedTask);
+      if (saved.updatedTasks?.length) {
+        saved.updatedTasks.forEach(task => syncTask(task));
       } else {
         // A committed save must not invite duplicate submission if its task projection is unavailable.
         setActionError('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
@@ -145,7 +145,12 @@ export default function useTaskActions({
       refreshTaskOverview();
     }
 
-    await queryClient.invalidateQueries({ queryKey: hoursQueryKey });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'table'] }),
+      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'calendar'] }),
+      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'dashboard'] }),
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'hours-options'] }),
+    ]);
   }, [queryClient, hoursQueryKey, refreshTaskOverview, syncTask]);
 
   return {

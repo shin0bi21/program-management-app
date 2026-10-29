@@ -123,9 +123,9 @@ export default function Table<T>({
       style={{ maxHeight }}
     >
       <table
-        className="table"
+        className={`table${loading ? ' table--loading' : ''}`}
         aria-label={ariaLabel}
-        aria-busy={refreshing || undefined}
+        aria-busy={loading || refreshing || undefined}
         style={{ width: '100%', minWidth: totalWidth }}
       >
         <colgroup>

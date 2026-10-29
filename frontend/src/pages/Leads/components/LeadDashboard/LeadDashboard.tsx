@@ -2,12 +2,12 @@ import PrimaryContactDashboardCard from '../../../../common/features/contacts/co
 import IntakeInformationDashboardCard from './IntakeInformationDashboardCard';
 import type { Lead } from '../../types';
 import LeadNotesDashboardCard from './LeadNotesDashboardCard/LeadNotesDashboardCard';
-import type { PageErrorChangeHandler } from '../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import type { PageMessageChangeHandler } from '../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 
-export default function LeadDashboard({ lead, canWrite, onErrorChange }: {
+export default function LeadDashboard({ lead, canWrite, onMessageChange }: {
   lead: Lead | null;
   canWrite: boolean;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
   return <>
     <PrimaryContactDashboardCard contact={lead ? {
@@ -15,6 +15,6 @@ export default function LeadDashboard({ lead, canWrite, onErrorChange }: {
       relationship: lead.contactRelationship,
     } : null} selected={lead !== null} />
     <IntakeInformationDashboardCard notes={lead?.notes} selected={lead !== null} />
-    <LeadNotesDashboardCard lead={lead} canWrite={canWrite} onErrorChange={onErrorChange} />
+    <LeadNotesDashboardCard lead={lead} canWrite={canWrite} onMessageChange={onMessageChange} />
   </>;
 }

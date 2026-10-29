@@ -8,7 +8,7 @@ Dashboard cards use two shared sizes: **normal** is the default; **short** is fo
 Hours and Tasks. Programming's program overview and session cards use normal cards.
 The [card shell contract](#keep-the-card-shell-stable) applies in every data state.
 
-## Load dashboard data
+## Load Dashboard Data
 
 Place each data hook beside its smallest consumer. A query used by one card belongs in that card’s `hooks/` directory and is called by that card. Keep a query at dashboard level only when multiple cards consume its results. Cards that render data already supplied by the page do not need a separate data hook. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
@@ -23,7 +23,7 @@ function ScheduleDashboard({ selected, onAction }: ScheduleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
-## Keep the card shell stable
+## Keep the Card Shell Stable
 
 Every dashboard card keeps its declared shared height across breakpoints and states:
 normal uses `--dashboard-card-height`; the optional `dashboard-card--short` modifier
@@ -36,9 +36,6 @@ Keep the heading and actions outside the scrolling data region. The shared
 Custom compact metric layouts bound scrolling to the data column; their action
 column stays outside that scrollport. Longer notes or lists never grow the whole card.
 
-Programming Settings reuses the card shell for full management tables, not overview
-summaries. Its explicitly named management panels fill the desktop content region
-and size to their table on mobile; the normal/short summary heights do not apply.
 
 The [shared shell styles](../../../frontend/src/common/components/DashboardCard/DashboardCard.css)
 own padding, header spacing, and short-card typography. Both sizes use the same outer
@@ -75,21 +72,15 @@ refresh; a new target must never display the previous target's values or actions
 Disable actions that need unavailable data, and scope open reports/dialogs to their
 target so a selection change cannot present an old report under a new title.
 
-## Separate selection intent from data availability
+## Separate Selection Intent from Data Availability
 
-Choose the dashboard from the user's explicit selection intent, not whether the
-selected record happens to be in a loaded table page or calendar buffer. Selecting
-a Session opens the Session dashboard immediately using the clicked record; its
-private queries show loading in their own cards. If that record leaves the buffer,
-the Session cards remain and show “No session selected.” Only explicitly selecting
-a program row switches to Program Overview. An item click that also selects its
-owning row is context synchronization, not an explicit program-dashboard request.
+Sessions always renders its session dashboard; selecting a session supplies its record
+immediately, while selecting a calendar program row only updates scheduling context.
+If a selected session leaves the buffer, the session cards remain with their empty state.
+Programs owns the program overview and roster/report entry points, driven by its selected
+program. Shared tables and calendars report selection events without owning these workflows.
 
-Keep this coordination in the route or its selection hook. Shared tables/calendars
-report selection events; they do not own domain dashboard modes. Resolve a clicked
-full record in the selection update rather than waiting for a child's later effect.
-
-## Assign dashboard ownership
+## Assign Dashboard Ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.
 - Keep table and calendar selection semantics equivalent when both views select the same domain record.

@@ -90,20 +90,20 @@ describe('SessionDashboard', () => {
       queryKey,
       session,
       canWrite: false,
-      onErrorChange: expect.any(Function),
+      onMessageChange: expect.any(Function),
     }));
     expect(childCardProps.attachments).toHaveBeenCalledWith(expect.objectContaining({
       queryKey,
       session,
       canWrite: false,
-      onErrorChange: expect.any(Function),
+      onMessageChange: expect.any(Function),
     }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
     expect(onAddAttendance).toHaveBeenCalledWith(session);
 
     const notesProps = childCardProps.notes.mock.lastCall![0];
-    act(() => notesProps.onErrorChange!({ message: 'Could not load notes' }));
+    act(() => notesProps.onMessageChange!({ message: 'Could not load notes' }));
 
     await waitFor(() => expect(onErrorsChange).toHaveBeenCalledWith([
       { message: 'Could not load notes' },

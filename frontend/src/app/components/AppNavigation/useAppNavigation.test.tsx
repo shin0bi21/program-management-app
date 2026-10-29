@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { useAppNavigation } from './useAppNavigation';
 
-const floatingMenus = vi.hoisted(() => Array.from({ length: 3 }, () => ({
+const floatingMenus = vi.hoisted(() => Array.from({ length: 4 }, () => ({
   isOpen: false,
   toggle: vi.fn(),
   close: vi.fn(),
@@ -77,9 +77,9 @@ describe('useAppNavigation', () => {
 
   it.each([
     [['read:sessions'], true],
-    [['read:programs'], false],
+    [['read:programs'], true],
     [[], false],
-  ] as const)('derives Programming access from session read permission: %j', (permissions, visible) => {
+  ] as const)('derives Programming access from its child read permissions: %j', (permissions, visible) => {
     auth.permissions = [...permissions];
 
     const { result } = renderHook(() => useAppNavigation(), { wrapper });
@@ -108,7 +108,7 @@ describe('useAppNavigation', () => {
     act(() => result.current.toggleMenu('staff'));
     expect(floatingMenus[1].toggle).toHaveBeenCalledOnce();
     expect(floatingMenus[1].close).not.toHaveBeenCalled();
-    [0, 2].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
+    [0, 2, 3].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
 
     floatingMenus.forEach(menu => menu.close.mockClear());
     act(() => result.current.setMobileOpen(true));

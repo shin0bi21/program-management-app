@@ -93,7 +93,7 @@ describe('useAccountActions', () => {
     act(() => result.current.syncYouthInvitation());
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: tableQueryKey });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
   });
 
   it('refreshes resource identity and assignment scope after editing an account', () => {

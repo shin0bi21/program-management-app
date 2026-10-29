@@ -19,6 +19,90 @@ describe('Accounts API', () => {
     await deleteTestUser(adminUser.userId);
   });
 
+  describe('project manager role', () => {
+    it('grants exactly staff permissions plus program management', async () => {
+      const grants = await sql<{ role: string; permission: string }[]>`
+        SELECT role.name AS role, permission.name AS permission
+        FROM user_roles role
+        INNER JOIN user_role_has_permissions grant_row ON grant_row.role_id = role.id
+        INNER JOIN user_permissions permission ON permission.id = grant_row.permission_id
+        WHERE role.name IN ('staff', 'project_manager')
+      `;
+      const staffPermissions = grants.filter(grant => grant.role === 'staff').map(grant => grant.permission);
+      const managerPermissions = grants.filter(grant => grant.role === 'project_manager').map(grant => grant.permission);
+
+      expect(staffPermissions.length).toBeGreaterThan(0);
+      expect(managerPermissions.sort()).toEqual([...new Set([...staffPermissions, 'write:programs'])].sort());
+    });
+
+    it('lets administrators invite, filter and edit project managers without changing their role', async () => {
+      const email = `invite-manager-${Date.now()}@test.local`;
+      const created = await request(app).post('/api/accounts')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ firstName: 'Project', lastName: 'Manager', email, role: 'project_manager' });
+
+      expect(created.status).toBe(201);
+      try {
+        const listed = await request(app).get('/api/accounts')
+          .query({ roles: 'project_manager', search: email })
+          .set('Authorization', `Bearer ${adminToken}`);
+        expect(listed.status).toBe(200);
+        expect(listed.body).toEqual([expect.objectContaining({ id: created.body.id, role: 'project_manager' })]);
+
+        const updated = await request(app).post('/api/accounts')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ id: created.body.id, firstName: 'Updated', lastName: 'Manager', email, role: 'project_manager' });
+        expect(updated.status).toBe(201);
+        expect(updated.body).toMatchObject({ firstName: 'Updated', role: 'project_manager' });
+      } finally {
+        await deleteTestUser(created.body.id);
+      }
+    });
+
+    it('limits managers to youth account results and youth account management', async () => {
+      const manager = await seedTestUser({ role: 'project_manager' });
+      const youth = await seedTestUser({ role: 'youth' });
+      const managerToken = generateToken(manager.userId, 'project_manager', manager.email);
+
+      try {
+        const listed = await request(app).get('/api/accounts')
+          .set('Authorization', `Bearer ${managerToken}`);
+        expect(listed.status).toBe(200);
+        expect(listed.body.every((account: { role: string }) => account.role === 'youth')).toBe(true);
+
+        const employeeResults = await request(app).get('/api/accounts')
+          .query({ roles: 'admin,project_manager,staff' })
+          .set('Authorization', `Bearer ${managerToken}`);
+        expect(employeeResults.status).toBe(200);
+        expect(employeeResults.body).toEqual([]);
+
+        const youthStatus = await request(app).patch(`/api/accounts/${youth.userId}`)
+          .set('Authorization', `Bearer ${managerToken}`);
+        expect(youthStatus.status).toBe(200);
+        expect(youthStatus.body.status).toBe('inactive');
+
+        const employeeStatus = await request(app).patch(`/api/accounts/${manager.userId}`)
+          .set('Authorization', `Bearer ${managerToken}`);
+        expect(employeeStatus.status).toBe(403);
+
+        for (const role of ['staff', 'project_manager', 'admin']) {
+          const denied = await request(app).post('/api/accounts')
+            .set('Authorization', `Bearer ${managerToken}`)
+            .send({ firstName: 'Denied', lastName: 'Employee', email: `denied-${role}-${Date.now()}@test.local`, role });
+          expect(denied.status).toBe(403);
+        }
+
+        const deniedEdit = await request(app).post('/api/accounts')
+          .set('Authorization', `Bearer ${managerToken}`)
+          .send({ id: manager.userId, firstName: 'Denied', lastName: 'Employee', email: manager.email, role: 'admin' });
+        expect(deniedEdit.status).toBe(403);
+      } finally {
+        await deleteTestUser(youth.userId);
+        await deleteTestUser(manager.userId);
+      }
+    });
+  });
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // GET /api/accounts
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

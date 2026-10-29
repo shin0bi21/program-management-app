@@ -1,10 +1,19 @@
 import { z } from 'zod';
+import { cursorListFields } from './listQuerySchemas';
 
 export const programQuerySchema = z.object({
   query: z.object({
     scope: z.enum(['assigned']).optional(),
   }),
 });
+
+export const programListQuerySchema = z.object({
+  query: programQuerySchema.shape.query.extend({
+    ...cursorListFields(['name'], 'name', 'asc'),
+  }),
+});
+
+export type ProgramListQuery = z.infer<typeof programListQuerySchema.shape.query>;
 
 const programBodySchema = z.object({
     name: z.string().trim().min(1, 'Program name is required').max(120),

@@ -13,6 +13,7 @@ describe('Page-authorized reference data', () => {
   let sharedId: string;
   let unrelatedId: string;
   let inactiveId: string;
+  let managerId: string;
   let assignedProgramId: string;
   let otherProgramId: string;
   let cycleId: string;
@@ -29,6 +30,8 @@ describe('Page-authorized reference data', () => {
     const shared = await seedTestUser({ role: 'staff', firstName: 'Reference', lastName: 'Coworker' });
     const unrelated = await seedTestUser({ role: 'staff', firstName: 'Reference', lastName: 'Unrelated' });
     const inactive = await seedTestUser({ role: 'staff' });
+    const manager = await seedTestUser({ role: 'project_manager' });
+    managerId = manager.userId;
     adminId = admin.userId;
     staffId = staff.userId;
     sharedId = shared.userId;
@@ -47,7 +50,7 @@ describe('Page-authorized reference data', () => {
     otherProgramId = other.id;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
-      VALUES (${staffId}, ${assignedProgramId}), (${sharedId}, ${assignedProgramId})
+      VALUES (${staffId}, ${assignedProgramId}), (${sharedId}, ${assignedProgramId}), (${managerId}, ${assignedProgramId})
     `;
     const [cycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
@@ -61,7 +64,7 @@ describe('Page-authorized reference data', () => {
   });
 
   afterAll(async () => {
-    for (const id of [adminId, staffId, sharedId, unrelatedId, inactiveId]) await deleteTestUser(id);
+    for (const id of [adminId, staffId, sharedId, unrelatedId, inactiveId, managerId]) await deleteTestUser(id);
     await sql`DELETE FROM programs WHERE id IN (${assignedProgramId}, ${otherProgramId})`;
     await sql`DELETE FROM program_cycles WHERE id = ${cycleId}`;
     await sql`DELETE FROM schools WHERE id = ${schoolId}`;
@@ -155,6 +158,23 @@ describe('Page-authorized reference data', () => {
       expect.objectContaining({ id: unrelatedId, writable: true }),
     ]));
     expect(admin.body.map((resource: { id: string }) => resource.id)).not.toContain(inactiveId);
+  });
+
+  it.each(['tasks', 'hours'])('keeps project managers in %s resources with staff read and write scope', async feature => {
+    const permissions = [`read:${feature}`, `write:${feature}`];
+    const manager = await get(`/reference-data/staff?feature=${feature}`, permissions, managerId, 'project_manager');
+
+    expect(manager.status).toBe(200);
+    expect(manager.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: managerId, role: 'project_manager', writable: true }),
+      expect.objectContaining({ id: sharedId, writable: false }),
+    ]));
+    expect(manager.body.map((resource: { id: string }) => resource.id)).not.toContain(unrelatedId);
+
+    const staff = await get(`/reference-data/staff?feature=${feature}`, permissions);
+    expect(staff.body).toContainEqual(expect.objectContaining({ id: managerId, writable: false }));
+    const admin = await get(`/reference-data/staff?feature=${feature}`, permissions, adminId, 'admin');
+    expect(admin.body).toContainEqual(expect.objectContaining({ id: managerId, writable: true }));
   });
 
   it('requires a valid staff feature and independently checks the service capability', async () => {

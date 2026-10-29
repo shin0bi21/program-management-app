@@ -35,7 +35,7 @@ function renderCalendar({
   staffIds = [] as string[],
   canWrite = true,
   selectedTaskId = null as string | null,
-  onErrorChange = vi.fn(),
+  onMessageChange = vi.fn(),
 } = {}) {
   const actions: TaskCalendarActions = {
     isTaskPending: vi.fn(() => false),
@@ -70,9 +70,9 @@ function renderCalendar({
     actions={actions}
     calendarCacheRef={calendarCacheRef}
     {...callbacks}
-    onErrorChange={onErrorChange}
+    onMessageChange={onMessageChange}
   />);
-  return { actions, calendarCacheRef, onErrorChange, ...callbacks };
+  return { actions, calendarCacheRef, onMessageChange, ...callbacks };
 }
 
 describe('TaskCalendar', () => {
@@ -233,14 +233,14 @@ describe('TaskCalendar', () => {
 
   it('removes mutation callbacks in read-only mode and reports range-load errors', async () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
-    const { onErrorChange } = renderCalendar({ canWrite: false });
+    const { onMessageChange } = renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     expect(calendarState.props?.onItemResize).toBeUndefined();
     expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Task request failed',
       action: expect.objectContaining({ label: 'Retry' }),
     })));

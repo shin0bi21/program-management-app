@@ -2,7 +2,7 @@ import Badge from '../Badge/Badge';
 import './StatusBadge.css';
 
 interface StatusBadgeProps {
-  status: 'upcoming' | 'active' | 'overdue' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'active' | 'inactive' | 'overdue' | 'completed' | 'cancelled';
   label: string;
 }
 

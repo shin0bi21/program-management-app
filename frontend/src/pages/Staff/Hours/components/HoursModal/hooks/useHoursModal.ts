@@ -170,7 +170,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
 
   // Source-specific remote options.
   const taskQuery = useQuery({
-    queryKey: ['tasks', draft.resourceId, 'hours'],
+    queryKey: ['tasks', 'hours-options', draft.resourceId],
     queryFn: ({ signal }) => loadTasks(draft.resourceId, { signal }),
     enabled: isOpen && draft.source === 'task' && Boolean(draft.resourceId) && !taskLocked,
   });

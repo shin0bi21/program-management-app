@@ -1,5 +1,5 @@
 import type { Task } from '../../types';
-import { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 
@@ -10,7 +10,7 @@ interface TaskDashboardProps {
   today: string;
   selectedTask: Task | null;
   onLogHours?: () => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function TaskDashboard({
@@ -20,7 +20,7 @@ export default function TaskDashboard({
   today,
   selectedTask,
   onLogHours,
-  onErrorChange,
+  onMessageChange,
 }: TaskDashboardProps) {
   return <>
     <TaskOverviewDashboardCard
@@ -28,7 +28,7 @@ export default function TaskDashboard({
       resourceId={resourceId}
       resourceName={resourceName}
       today={today}
-      onErrorChange={onErrorChange}
+      onMessageChange={onMessageChange}
     />
     <TaskHoursLoggedDashboardCard task={selectedTask} onLogHours={onLogHours} />
   </>;

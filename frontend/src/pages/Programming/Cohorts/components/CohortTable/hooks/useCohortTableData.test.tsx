@@ -46,7 +46,7 @@ describe('useCohortTableData', () => {
 
     await waitFor(() => expect(result.current.rows).toEqual([cohort]));
     expect(getCohortPage).toHaveBeenCalledWith(
-      filters, { ...sorting, cursor: undefined, limit: 25 }, { signal: expect.any(AbortSignal) },
+      filters, { ...sorting, cursor: undefined, limit: 50 }, { signal: expect.any(AbortSignal) },
     );
     act(() => result.current.loadNextPage());
     await waitFor(() => expect(getCohortPage).toHaveBeenLastCalledWith(

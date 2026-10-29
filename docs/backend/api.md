@@ -1,4 +1,4 @@
-# Backend API overview
+# Backend API Overview
 
 The application API is mounted under `/api` in
 [index.ts](../../backend/src/index.ts). Use the source map below to find a
@@ -6,7 +6,7 @@ capability; route files own methods, paths, middleware, and permissions, while
 validation schemas own accepted fields. This guide records cross-domain contracts
 that a caller or maintainer must understand alongside those definitions.
 
-## Find an API owner
+## Find an API Owner
 
 All mount paths below are relative to `/api`. Some routers share a mount while
 owning separate capabilities.
@@ -15,7 +15,7 @@ owning separate capabilities.
 |---|---|---|---|
 | Authentication `/auth` | [authRoutes](../../backend/src/routes/authRoutes.ts) | [authSchemas](../../backend/src/validation/authSchemas.ts) | [Auth](../../backend/src/services/auth/) |
 | Accounts `/accounts` | [accountRoutes](../../backend/src/routes/accountRoutes.ts) | [accountSchemas](../../backend/src/validation/accountSchemas.ts) | [Accounts](../../backend/src/services/accounts/) |
-| Shared lookups `/reference-data` | [referenceDataRoutes](../../backend/src/routes/referenceDataRoutes.ts) | [referenceDataSchemas](../../backend/src/validation/referenceDataSchemas.ts) | [Reference data](reference-data.md) |
+| Shared lookups `/reference-data` | [referenceDataRoutes](../../backend/src/routes/referenceDataRoutes.ts) | [referenceDataSchemas](../../backend/src/validation/referenceDataSchemas.ts) | [Reference Data](reference-data.md) |
 | Logged hours `/hours` | [hoursRoutes](../../backend/src/routes/hoursRoutes.ts) | [hoursSchemas](../../backend/src/validation/hoursSchemas.ts) | [Hours](../../backend/src/services/staff/hours/) |
 | Assigned tasks `/tasks` | [taskRoutes](../../backend/src/routes/taskRoutes.ts) | [taskSchemas](../../backend/src/validation/taskSchemas.ts) | [Tasks](../../backend/src/services/staff/tasks/) |
 | Youth profiles `/youth` | [youthRoutes](../../backend/src/routes/youthRoutes.ts) | [youthSchemas](../../backend/src/validation/youthSchemas.ts) | [Youth](../../backend/src/services/youth/) |
@@ -34,12 +34,13 @@ Domain services own allowed file types. All APIs use the normal
 [error response](errors.md#response-contract) and [authorization](authorization.md)
 boundaries unless an endpoint explicitly defines a different response, such as a file.
 
-## Hours and tasks
+## Hours and Tasks
 
-Task-linked hours create/update responses include `updatedTask` when the actor has
-`read:tasks`. The canonical projection is read inside the hours transaction after
-its writes, so the caller can reconcile totals and any completion without a second
-request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts) and
+Task-linked hours mutations include `updatedTasks` when the actor has
+`read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
+create/update/placement responses also return their canonical `tableRow`; deletion
+returns the affected task rows. Projections are read inside the write transaction,
+so callers reconcile totals and completion without a second list request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts) and
 [Hours integration tests](../../backend/tests/hours/hours.test.ts).
 
 Table and calendar filters must agree without widening policy scope. Hours use
@@ -50,7 +51,7 @@ an empty selection is unrestricted, while its dashboard uses a single `cycleId`.
 The [Hours](../../backend/tests/hours/hours.test.ts) and
 [Tasks](../../backend/tests/tasks/tasks.test.ts) suites own the boundary cases.
 
-## Youth profiles and lead signup
+## Youth Profiles and Lead Signup
 
 [Shared DOB validation](../../backend/src/validation/dateOfBirth.ts) requires a
 real date before today's Toronto date without an intake age restriction. Public
@@ -83,7 +84,14 @@ cross-domain selection contract.
 
 ## Programming
 
-### Program-cycle assignments
+The Programs page owns program and cycle management; Sessions owns scheduling and
+attendance. These pages use the programming APIs independently of Settings. Staff
+retain assigned-program roster/session access. Project managers have all-program
+scope and staff permissions plus `write:programs`; administrators retain their broader
+account and staff-resource authority. Every endpoint still checks its own capability.
+Program/cycle options used elsewhere remain shared reference data.
+
+### Program-Cycle Assignments
 
 Programs and cycles share cohort relationships. Assignment edits replace the
 checked set atomically while preserving retained cohort IDs. Removing a
@@ -95,11 +103,12 @@ Program defaults affect future session creation, not existing timestamps.
 and [cycle service](../../backend/src/services/programming/cycles/programCycleService.ts)
 own the shared lock order: programs, cycles, then cohort relationships. Cycle
 editing locks current programs in ID order before its cycle. Child foreign keys
-coordinate dependent inserts with removal. Keep this ordering aligned with
+coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before cohort
+and session rows, serializing them with session moves. Keep this ordering aligned with
 session scheduling; [assignment tests](../../backend/tests/programs/assignments.test.ts)
 cover atomic replacement and concurrency.
 
-### Session creation and ranges
+### Session Creation and Ranges
 
 A program's `enrollmentRequired` flag controls enrollment versus open attendance;
 it does not grant staff program access. Sessions use program scheduling defaults
@@ -122,7 +131,7 @@ multi-year ranges and real calendar dates in years 0001–9999 are supported.
 [session list service](../../backend/src/services/programming/sessions/sessionListService.ts)
 own range validation and filtering.
 
-#### Move a future session date
+#### Move a Future Session Date
 
 The focused date command preserves the program and local start/end times,
 including overnight day spans. Both the source and destination must be future,
@@ -134,7 +143,7 @@ placement for cache reconciliation. See the strict request in
 [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) and the
 [session-move tests](../../backend/tests/cohorts/sessionMove.test.ts).
 
-### Roster eligibility
+### Roster Eligibility
 
 Roster lookup returns all eligible candidates independently of Youth table
 pagination, plus existing enrollments even after aging out so they can be
@@ -145,7 +154,7 @@ an invalid batch atomically. See [roster service](../../backend/src/services/pro
 [enrollment service](../../backend/src/services/programming/cohorts/enrollmentService.ts),
 and [roster tests](../../backend/tests/cohorts/cohortRoster.test.ts).
 
-## Outreach and public homepage
+## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
 even when a program's session list is empty. Signup availability is independent
