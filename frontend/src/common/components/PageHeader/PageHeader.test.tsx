@@ -10,7 +10,7 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'Create Lead' })).toBeInTheDocument();
   });
 
-  it('renders controls in one columns-to-view region', () => {
+  it('renders controls with search and filters at the right of view and columns', () => {
     const { container } = render(
       <PageHeader
         title="Accounts"
@@ -31,9 +31,9 @@ describe('PageHeader', () => {
     ]);
     expect(Array.from(controls!.children).map(child => child.className)).toEqual([
       'page-header-columns',
+      'page-header-view',
       'page-header-filters',
       'page-header-search',
-      'page-header-view',
     ]);
   });
 });
