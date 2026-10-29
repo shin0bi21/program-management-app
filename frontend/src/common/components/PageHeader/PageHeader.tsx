@@ -22,9 +22,9 @@ export default function PageHeader({ title, actions, filters, search, view, colu
       {hasControls && (
         <div className="page-header-controls">
           {columns && <div className="page-header-columns">{columns}</div>}
+          {view && <div className="page-header-view">{view}</div>}
           {filters && <div className="page-header-filters">{filters}</div>}
           {search && <div className="page-header-search">{search}</div>}
-          {view && <div className="page-header-view">{view}</div>}
         </div>
       )}
     </header>
