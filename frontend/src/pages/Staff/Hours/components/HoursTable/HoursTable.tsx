@@ -26,7 +26,7 @@ export default function HoursTable({
   onColumnWidthsChange, onErrorChange,
 }: HoursTableProps) {
   const query = useHoursTableData(queryKey, filters, sorting);
-  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
+  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
 
   return <Table
     ariaLabel="Hours entries"
@@ -46,6 +46,7 @@ export default function HoursTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
+    nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}
     onLoadNextPage={query.loadNextPage}
     emptyMessage="No hours found"
   />;

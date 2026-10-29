@@ -20,7 +20,7 @@ interface UserTableProps {
 export default function UserTable(props: UserTableProps) {
   const tableData = useUserTableData(props.queryKey, props.filters, props.sorting);
   const hasFilters = Boolean(props.filters?.search || props.filters?.roles?.length || props.filters?.statuses?.length);
-  usePageErrorReporter(props.onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
+  usePageErrorReporter(props.onErrorChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry });
   return <Table
     ariaLabel="Accounts"
     columns={props.columns}
@@ -38,6 +38,7 @@ export default function UserTable(props: UserTableProps) {
     onColumnWidthsChange={props.onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
   />;
 }

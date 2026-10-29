@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import UnavailableState from '../UnavailableState/UnavailableState';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import TableBody from './components/TableBody';
 import TableHeader from './components/TableHeader';
@@ -11,6 +12,9 @@ import {
 } from './Table.types';
 import { clampColumnWidth } from './table.utils';
 import './Table.css';
+
+const EMPTY_KEYS: string[] = [];
+const EMPTY_WIDTHS: Record<string, number> = {};
 
 export default function Table<T>({
   ariaLabel,
@@ -27,14 +31,15 @@ export default function Table<T>({
   scrollToSelected = false,
   onRowSelect,
   sorting,
-  sortableColumns = [],
+  sortableColumns = EMPTY_KEYS,
   onSortingChange,
   hasNextPage = false,
   loadingNextPage = false,
   onLoadNextPage,
-  columnWidths = {},
+  nextPageUnavailable,
+  columnWidths = EMPTY_WIDTHS,
   onColumnWidthsChange,
-  hiddenColumnKeys = [],
+  hiddenColumnKeys = EMPTY_KEYS,
 }: TableProps<T>) {
   const updateVisibleColumnWidths = useCallback((nextWidths: Record<string, number>) => {
     if (!onColumnWidthsChange) return;
@@ -105,7 +110,7 @@ export default function Table<T>({
   const sentinelRef = useTableInfiniteScroll({
     rootRef: wrapperRef,
     dataLength: data.length,
-    hasNextPage,
+    hasNextPage: hasNextPage && !nextPageUnavailable,
     loadingNextPage,
     refreshing,
     onLoadNextPage,
@@ -164,6 +169,11 @@ export default function Table<T>({
         </div>
       )}
       <div ref={sentinelRef} className="table-scroll-sentinel" aria-hidden="true" />
+      {nextPageUnavailable && !loadingNextPage && (
+        <div className="table-next-page-status">
+          <UnavailableState title="More rows unavailable" onRetry={nextPageUnavailable.onRetry} />
+        </div>
+      )}
       {loadingNextPage && <div className="table-next-page-status" role="status">Loading more…</div>}
     </div>
   );

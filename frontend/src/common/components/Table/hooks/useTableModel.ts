@@ -132,14 +132,19 @@ export default function useTableModel<T>({
     getRowId: row => keyExtractor(row),
   });
 
+  const leafColumns = table.getAllLeafColumns();
+  // TanStack columns retain identity while their controlled sizing and visibility change.
+  const resolvedColumnWidths = useMemo(() => Object.fromEntries(
+    leafColumns.map(column => [column.id, column.getSize()]),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [leafColumns, columnWidths, columnVisibility]);
+
   return {
     headers: table.getHeaderGroups()[0].headers,
     rows: table.getRowModel().rows,
     isResizing: Boolean(table.getState().columnSizingInfo.isResizingColumn),
     resizeColumnByStep,
-    resolvedColumnWidths: Object.fromEntries(
-      table.getAllLeafColumns().map(column => [column.id, column.getSize()]),
-    ),
+    resolvedColumnWidths,
     toggleSort,
     totalWidth: table.getTotalSize(),
   };

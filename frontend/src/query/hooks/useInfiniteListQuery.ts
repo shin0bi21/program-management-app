@@ -4,7 +4,7 @@ import {
   type QueryFunctionContext,
   type QueryKey,
 } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { CursorPage } from '../types';
 import { getErrorMessage } from '../../http/errors';
 
@@ -32,10 +32,21 @@ export default function useInfiniteListQuery<T extends { id: string }>({
     initialPageParam: null as string | null,
     getNextPageParam: page => page.nextCursor ?? undefined,
   });
-  const rows = [...new Map(
+  const rows = useMemo(() => [...new Map(
     (query.data?.pages.flatMap(page => page.rows) ?? []).map(row => [row.id, row]),
-  ).values()];
-  const { refetch } = query;
+  ).values()], [query.data]);
+  const { refetch, fetchNextPage } = query;
+  const nextPageError = query.isFetchNextPageError && query.error
+    ? getErrorMessage(query.error, errorMessage)
+    : '';
+  const loadNextPage = useCallback(() => {
+    if (!enabled || !query.hasNextPage || query.isFetching || query.isError) return;
+    void fetchNextPage();
+  }, [enabled, fetchNextPage, query.hasNextPage, query.isFetching, query.isError]);
+  const retryNextPage = useCallback(() => {
+    if (!enabled || !query.hasNextPage || query.isFetching) return;
+    void fetchNextPage();
+  }, [enabled, fetchNextPage, query.hasNextPage, query.isFetching]);
   const retry = useCallback(() => { void refetch(); }, [refetch]);
 
   return {
@@ -43,9 +54,11 @@ export default function useInfiniteListQuery<T extends { id: string }>({
     loading: query.isLoading,
     refreshing: query.isFetching && !query.isFetchingNextPage && !query.isLoading,
     loadingNextPage: query.isFetchingNextPage,
-    hasNextPage: Boolean(query.hasNextPage),
-    loadNextPage: () => { void query.fetchNextPage(); },
+    hasNextPage: enabled && Boolean(query.hasNextPage) && !query.isError,
+    loadNextPage,
+    retryNextPage,
+    nextPageError,
     retry,
-    error: query.error ? getErrorMessage(query.error, errorMessage) : '',
+    error: query.error && !query.isFetchNextPageError ? getErrorMessage(query.error, errorMessage) : '',
   };
 }

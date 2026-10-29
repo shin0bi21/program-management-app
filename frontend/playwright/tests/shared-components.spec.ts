@@ -154,6 +154,28 @@ test.describe('Table', () => {
     await expect(component.getByTestId('load-count')).toHaveText('1');
   });
 
+  test('retains rows and pauses a visible sentinel through failed explicit retries', async ({ mount }) => {
+    const component = await mount('Table/NextPageFailure');
+    const wrapper = component.locator('.table-wrapper');
+    await expect(component.getByText('Person 30', { exact: true })).toBeAttached();
+    await wrapper.evaluate(element => element.scrollTo({ top: element.scrollHeight }));
+
+    await expect(component.getByText('More rows unavailable')).toBeVisible();
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('1');
+    await expect(component.getByText('Person 1', { exact: true })).toBeAttached();
+    await component.getByRole('button', { name: 'Retry' }).click();
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('2');
+    await expect(component.getByRole('button', { name: 'Retry' })).toBeVisible();
+
+    await wrapper.evaluate(element => element.scrollTo({ top: 0 }));
+    await wrapper.evaluate(element => element.scrollTo({ top: element.scrollHeight }));
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('2');
+    await component.getByRole('button', { name: 'Retry' }).click();
+    await expect(component.getByText('Person 60', { exact: true })).toBeAttached();
+    await expect(component.getByText('More rows unavailable')).toHaveCount(0);
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('3');
+  });
+
   test('keeps its header sticky during vertical scrolling', async ({ mount }) => {
     const component = await mount('Table/InfiniteScroll');
     const wrapper = component.locator('.table-wrapper');
