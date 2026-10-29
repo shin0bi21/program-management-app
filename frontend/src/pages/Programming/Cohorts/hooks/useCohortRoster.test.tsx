@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getCohortRosterYouth } from '../cohorts.api';
 import type { ProgramCohort } from '../types';
-import { makeYouthProfile } from '../../../../tests/factories/youth';
+import { makeCohortRosterYouth } from '../../../../tests/factories/cohortRoster';
 import { useCohortRoster } from './useCohortRoster';
 
 vi.mock('../cohorts.api', () => ({ getCohortRosterYouth: vi.fn() }));
@@ -43,26 +43,12 @@ describe('useCohortRoster', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCohortRosterYouth).mockResolvedValue([
-      makeYouthProfile({
+      makeCohortRosterYouth({
         id: 'enrolled',
         firstName: 'Enrolled',
-        cohorts: [{
-          id: cohort.id,
-          name: cohort.name,
-          programId: cohort.programId,
-          programName: cohort.programName,
-          enrollmentRequired: true,
-          startsOn: cohort.startsOn,
-          endsOn: cohort.endsOn,
-          enrolledOn: cohort.startsOn,
-          withdrawnOn: null,
-          presentCount: 0,
-          lateCount: 0,
-          absentCount: 0,
-          lastAttendedOn: null,
-        }],
+        cohorts: [{ id: cohort.id, withdrawnOn: null }],
       }),
-      makeYouthProfile({ id: 'available', firstName: 'Available' }),
+      makeCohortRosterYouth({ id: 'available', firstName: 'Available' }),
     ]);
   });
 

@@ -8,6 +8,7 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 
 import { signUpLead } from '../../leads.api';
+import { getDateKeyInTimeZone } from '../../../../common/utils/date';
 import type { Lead } from '../../types';
 import useSignUpLeadModal from './useSignUpLeadModal';
 
@@ -139,6 +140,11 @@ describe('useSignUpLeadModal', () => {
     expect(signUpLead).not.toHaveBeenCalled();
     expect(result.current.statusMessage).toBe('Date of birth is required');
 
+    act(() => result.current.changeDateOfBirth(getDateKeyInTimeZone()));
+    await act(() => result.current.submit());
+    expect(signUpLead).not.toHaveBeenCalled();
+    expect(result.current.statusMessage).toBe('Date of birth must be before today');
+
     act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
     expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
     act(() => result.current.selectCohort('cohort-too-old'));
@@ -146,7 +152,7 @@ describe('useSignUpLeadModal', () => {
     expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-too-old', 'general', `${new Date().getFullYear() - 16}-01-01`);
   });
 
-  it('clears enrollment when the DOB changes and allows an older lead to create a profile', async () => {
+  it('allows profile signup outside all cohort age bounds without enrolling', async () => {
     const { result } = renderWorkflow(lead);
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.selectCohort('cohort-1'));

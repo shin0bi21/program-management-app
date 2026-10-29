@@ -1,5 +1,5 @@
 import FormField from '../../../../common/components/FormField/FormField';
-import { getDateKeyInTimeZone } from '../../../../common/utils/date';
+import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
@@ -31,6 +31,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
   onClose: () => void;
   onSuccess: (lead: Lead) => void | Promise<void>;
 }) {
+  const birthDateBounds = getDateOfBirthBounds();
   const workflow = useSignUpLeadModal({
     queryKey,
     lead,
@@ -104,7 +105,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
           </section>
 
           <FormField id="sign-up-dateOfBirth" label="Date of Birth *">
-            <input id="sign-up-dateOfBirth" type="date" required max={getDateKeyInTimeZone()} value={workflow.dateOfBirth} onChange={event => workflow.changeDateOfBirth(event.target.value)} disabled={workflow.submissionComplete} />
+            <input id="sign-up-dateOfBirth" type="date" required {...birthDateBounds} value={workflow.dateOfBirth} onChange={event => workflow.changeDateOfBirth(event.target.value)} disabled={workflow.submissionComplete} />
           </FormField>
 
           <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">

@@ -32,8 +32,18 @@ describe('useYouthTable', () => {
     }));
 
     expect(result.current.columns.map(column => column.id)).toEqual([
-      'firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status',
+      'firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status',
     ]);
+  });
+
+  it('shows DOB on its calendar day and leaves unknown dates empty', () => {
+    const { result } = renderHook(() => useYouthTable({ canWrite: false, onEdit: vi.fn(), onAddNote: vi.fn() }));
+    const column = result.current.columns.find(column => column.id === 'dateOfBirth')!;
+    if (!('accessorFn' in column)) throw new Error('DOB column requires an accessor');
+
+    expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: '2012-06-15T00:00:00.000Z' }), 0)).toBe('Jun 15, 2012');
+    expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: '0080-06-15' }), 0)).toBe('Jun 15, 80');
+    expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: null }), 0)).toBe('—');
   });
 
   it('maps writable row actions and emits the selected profile', () => {
@@ -49,14 +59,5 @@ describe('useYouthTable', () => {
     menu.items[1].onClick();
     expect(onEdit).toHaveBeenCalledWith(profile);
     expect(onAddNote).toHaveBeenCalledWith(profile);
-  });
-
-  it('displays the authoritative age instead of recalculating the birth date', () => {
-    const { result } = renderHook(() => useYouthTable({ canWrite: false, onEdit: vi.fn(), onAddNote: vi.fn() }));
-    const ageColumn = result.current.columns.find(column => column.id === 'age')!;
-    if (!('accessorFn' in ageColumn)) throw new Error('Age column requires an accessor');
-
-    expect(ageColumn.accessorFn?.(makeYouthProfile({ dateOfBirth: '2000-01-01', age: 14 }), 0)).toBe(14);
-    expect(ageColumn.accessorFn?.(makeYouthProfile({ age: null }), 0)).toBe('—');
   });
 });

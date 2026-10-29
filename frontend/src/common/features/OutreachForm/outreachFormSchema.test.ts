@@ -22,11 +22,11 @@ describe('outreachFormSchema', () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it.each(['2014-10-28', '2011-10-28', '2006-10-29'])('accepts eligible date %s on the Toronto date', dateOfBirth => {
+  it.each(['1980-01-01', '2014-10-29', '2006-10-28', '2026-10-27'])('accepts any real past date %s on the Toronto date', dateOfBirth => {
     expect(outreachFormSchema.safeParse({ ...validForm, dateOfBirth }).success).toBe(true);
   });
 
-  it.each(['', '2014-10-29', '2006-10-28', '2012-02-30', '2027-01-01'])('rejects missing, invalid or ineligible date %s', dateOfBirth => {
+  it.each(['', '0000-01-01', '2012-02-30', '2026-10-28', '2027-01-01'])('rejects missing, invalid, today, or future date %s', dateOfBirth => {
     const result = outreachFormSchema.safeParse({ ...validForm, dateOfBirth });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0].path).toEqual(['dateOfBirth']);

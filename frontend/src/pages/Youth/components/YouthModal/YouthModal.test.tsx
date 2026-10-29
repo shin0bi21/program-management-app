@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
+import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 
 vi.mock('../../youth.api', () => ({
   setYouth: vi.fn(),
+  setYouthContacts: vi.fn(),
 }));
 
 const schoolState = vi.hoisted(() => ({
@@ -32,7 +34,7 @@ vi.mock('../../../../auth/authContext', () => ({
   useAuth: () => authState,
 }));
 
-import { setYouth } from '../../youth.api';
+import { setYouth, setYouthContacts } from '../../youth.api';
 
 const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 
@@ -50,6 +52,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {
 function fillRequiredFields(firstName = 'Jamie', lastName = 'Test') {
   fireEvent.change(document.getElementById('firstName')!, { target: { value: firstName } });
   fireEvent.change(document.getElementById('lastName')!, { target: { value: lastName } });
+  fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2012-08-19' } });
 }
 
 function submitForm() {
@@ -58,7 +61,9 @@ function submitForm() {
 
 describe('YouthModal', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockSetYouth.mockResolvedValue(makeYouthProfile());
+    vi.mocked(setYouthContacts).mockResolvedValue(makeYouthProfile());
     schoolState.schools = [];
     schoolState.upsertSchool.mockReset();
     schoolState.removeSchool.mockReset();
@@ -75,6 +80,7 @@ describe('YouthModal', () => {
       renderModal();
 
       expect(screen.getByLabelText('Address (optional)')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Grade')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('City')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Province')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Postal Code')).not.toBeInTheDocument();
@@ -98,7 +104,7 @@ describe('YouthModal', () => {
     });
 
     it('pre-fills first and last name when editing', () => {
-      renderModal({ youthData: makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith' }) });
+      renderModal({ youthData: makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' }) });
       expect(screen.getByDisplayValue('Jordan')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Smith')).toBeInTheDocument();
     });
@@ -157,6 +163,41 @@ describe('YouthModal', () => {
   });
 
   describe('interactions', () => {
+    it('requires birthdate and exposes its validation error accessibly', async () => {
+      renderModal();
+      fillRequiredFields();
+      const input = screen.getByLabelText('Date of Birth *');
+      expect(input).toBeRequired();
+      fireEvent.change(input, { target: { value: '' } });
+      submitForm();
+
+      await waitFor(() => expect(input).toHaveAccessibleDescription('Date of birth is required'));
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(mockSetYouth).not.toHaveBeenCalled();
+    });
+
+    it('uses yesterday as maximum and accepts an adult DOB when creating', async () => {
+      renderModal();
+      fillRequiredFields();
+      const input = screen.getByLabelText('Date of Birth *');
+      const bounds = getDateOfBirthBounds();
+      expect(input).not.toHaveAttribute('min');
+      expect(input).toHaveAttribute('max', bounds.max);
+      fireEvent.change(input, { target: { value: '1980-01-01' } });
+      submitForm();
+
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: '1980-01-01' })));
+    });
+
+    it('allows a historical profile birthdate outside intake ages when editing', async () => {
+      renderModal({ youthData: makeYouthProfile({ dateOfBirth: '1980-01-01' }) });
+      const input = screen.getByLabelText('Date of Birth *');
+      expect(input).not.toHaveAttribute('min');
+      submitForm();
+
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: '1980-01-01' })));
+    });
+
     it('shows validation error when submitting without first name', async () => {
       renderModal();
       submitForm();
@@ -202,6 +243,7 @@ describe('YouthModal', () => {
         expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
           firstName: 'Jamie',
           lastName: 'Test',
+          dateOfBirth: '2012-08-19',
         }));
       });
     });
@@ -256,7 +298,7 @@ describe('YouthModal', () => {
     });
 
     it('includes id in payload when updating', async () => {
-      const profile = makeYouthProfile({ id: 'youth-99', firstName: 'Jordan', lastName: 'Smith' });
+      const profile = makeYouthProfile({ id: 'youth-99', firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' });
       renderModal({ youthData: profile });
       submitForm();
       await waitFor(() => {
@@ -276,15 +318,11 @@ describe('YouthModal', () => {
       submitForm();
 
       await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
-          id: 'youth-99',
-          firstName: 'Jordan',
-          lastName: 'Smith',
-          contacts: [{
-            phoneNumber: '519-555-0101',
-            type: 'parent',
-          }],
-        }));
+        expect(setYouthContacts).toHaveBeenCalledWith('youth-99', [{
+          phoneNumber: '519-555-0101',
+          type: 'parent',
+        }]);
+        expect(mockSetYouth).not.toHaveBeenCalled();
       });
     });
 
@@ -301,13 +339,13 @@ describe('YouthModal', () => {
       fireEvent.click(screen.getByRole('menuitemradio', { name: 'Guardian' }));
       submitForm();
 
-      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
-        contacts: [{ phoneNumber: '519-555-0101', type: 'guardian' }],
-      })));
+      await waitFor(() => expect(setYouthContacts).toHaveBeenCalledWith('youth-99', [
+        { phoneNumber: '519-555-0101', type: 'guardian' },
+      ]));
     });
 
     it('does not submit the cohort-derived status when updating', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith' });
+      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' });
       renderModal({ youthData: profile });
       submitForm();
       await waitFor(() => {

@@ -190,12 +190,12 @@ describe('Public lead API', () => {
     ]));
   });
 
-  it.each([11, 20])('rejects age %i outside the supported program range', async (age) => {
+  it.each([11, 20])('accepts age %i without assigning a program', async (age) => {
     const res = await request(app)
       .post('/api/public/leads')
       .send({
         youthFirstName: 'Age',
-        youthLastName: 'Boundary',
+        youthLastName,
         dateOfBirth: birthDateForAge(age),
         school: 'Test Secondary',
         submittedByRole: 'parent',
@@ -204,10 +204,7 @@ describe('Public lead API', () => {
         contactRelationship: 'parent',
       });
 
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'body.dateOfBirth' }),
-    ]));
+    expect(res.status).toBe(201);
   });
 
   it('rejects emergency as an Outreach relationship', async () => {

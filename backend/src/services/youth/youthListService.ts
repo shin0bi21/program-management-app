@@ -17,9 +17,8 @@ export async function listYouth(filters: YouthQuery) {
   const sortValue = ({
     firstName: sql`LOWER(u.first_name)`,
     lastName: sql`LOWER(u.last_name)`,
-    age: sql`COALESCE(LPAD(EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, yp.date_of_birth))::int::text, 4, '0'), '')`,
+    dateOfBirth: sql`COALESCE(yp.date_of_birth::text, '')`,
     school: sql`LOWER(COALESCE(s.name, ''))`,
-    grade: sql`COALESCE(LPAD(yp.grade_level::text, 4, '0'), '')`,
     program: sql`LOWER(COALESCE((SELECT MIN(p_sort.name) FROM cohort_enrollments ce_sort INNER JOIN program_cohorts pc_sort ON pc_sort.id = ce_sort.cohort_id INNER JOIN programs p_sort ON p_sort.id = pc_sort.program_id WHERE ce_sort.youth_id = u.id AND ce_sort.withdrawn_on IS NULL), ''))`,
     status: youthActiveStatus,
   }[filters.sort]!);

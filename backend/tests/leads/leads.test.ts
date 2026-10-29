@@ -258,16 +258,15 @@ describe('Leads API', () => {
     ]));
   });
 
-  it.each([11, 20])('rejects age %i outside the supported Lead range', async (age) => {
+  it.each([11, 20])('accepts age %i before a program assignment', async (age) => {
     const res = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, dateOfBirth: birthDateForAge(age) });
+      .send({ ...payload, youthFirstName: 'Age', youthLastName: 'Boundary', dateOfBirth: birthDateForAge(age) });
 
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'body.dateOfBirth' }),
-    ]));
+    expect(res.status).toBe(201);
+    expect(res.body.dateOfBirth).toBe(birthDateForAge(age));
+    expect(res.body.age).toBe(age);
   });
 
   it('lists leads for staff', async () => {

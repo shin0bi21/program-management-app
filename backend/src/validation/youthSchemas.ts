@@ -1,5 +1,24 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
+import { dateOfBirthSchema } from './dateOfBirth';
+
+const youthContactSchema = z.object({
+  id: z.string().uuid('Invalid contact ID').optional(),
+  phoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
+  type: z.enum(['parent', 'sibling', 'guardian', 'emergency']).default('parent'),
+});
+
+export const setYouthContactsSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid youth ID') }),
+  body: z.object({
+    contacts: z.array(youthContactSchema).refine(contacts => {
+      const ids = contacts.flatMap(contact => contact.id ? [contact.id.toLowerCase()] : []);
+      return new Set(ids).size === ids.length;
+    }, { message: 'Contacts cannot contain duplicate IDs' }),
+  }).strict(),
+});
+
+export type SetYouthContactsInput = z.infer<typeof setYouthContactsSchema.shape.body>;
 
 const commaSeparated = (schema: z.ZodType<string>) => z.preprocess(value => {
   if (value === undefined) return [];
@@ -13,7 +32,7 @@ export const youthQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
-    ...cursorListFields(['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'], 'firstName', 'asc'),
+    ...cursorListFields(['firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status'], 'firstName', 'asc'),
   }),
 });
 
@@ -58,12 +77,8 @@ export const setYouthSchema = z.object({
       .min(1, 'Last name is required')
       .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
     email: z.string().trim().email('Invalid email format').optional(),
-    dateOfBirth: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-      .optional(),
+    dateOfBirth: dateOfBirthSchema.nullable().optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
-    gradeLevel: z.number().int().min(0).max(12).optional(),
     addresses: z
       .array(
         z.object({
@@ -72,15 +87,7 @@ export const setYouthSchema = z.object({
         }),
       )
       .optional(),
-    contacts: z
-      .array(
-        z.object({
-          id: z.string().uuid('Invalid contact ID').optional(),
-          phoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
-          type: z.enum(['parent', 'sibling', 'guardian', 'emergency']).default('parent'),
-        }),
-      )
-      .optional(),
+    contacts: z.array(youthContactSchema).optional(),
   }),
 });
 

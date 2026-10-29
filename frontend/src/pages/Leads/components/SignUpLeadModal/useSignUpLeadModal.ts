@@ -12,7 +12,7 @@ import { getErrorMessage } from '../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
-import { calculateOutreachAge } from '../../../../common/features/OutreachForm/dateOfBirth';
+import { calculateAge, dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
 
@@ -31,7 +31,7 @@ export default function useSignUpLeadModal({
 }: UseSignUpLeadModalOptions) {
   const [cohortId, setCohortId] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(lead?.dateOfBirth ?? '');
-  const age = calculateOutreachAge(dateOfBirth);
+  const age = calculateAge(dateOfBirth);
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory>('general');
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);
@@ -72,9 +72,10 @@ export default function useSignUpLeadModal({
 
   const visibleCohorts = useMemo(() => {
     if (!lead) return cohorts;
+    if (!dateOfBirthSchema.safeParse(dateOfBirth).success) return [];
+
     const ageEligible = cohorts.filter(cohort => (
       typeof age === 'number'
-      && age >= 0
       && (cohort.minAge == null || age >= cohort.minAge)
       && (cohort.maxAge == null || age <= cohort.maxAge)
     ));
@@ -86,8 +87,9 @@ export default function useSignUpLeadModal({
   const submit = async () => {
     if (!lead || !submitLock.tryLock()) return;
 
-    if (age === null || age < 0) {
-      setError(dateOfBirth ? 'Enter a valid date of birth that is not in the future' : 'Date of birth is required');
+    const birthDateResult = dateOfBirthSchema.safeParse(dateOfBirth);
+    if (!birthDateResult.success) {
+      setError(birthDateResult.error.issues[0].message);
       setSubmitStatus('error');
       submitLock.unlock();
       return;

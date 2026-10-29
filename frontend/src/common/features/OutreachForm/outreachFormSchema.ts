@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { outreachDateOfBirthSchema } from './dateOfBirth';
+import { dateOfBirthSchema } from '../youth/dateOfBirth';
 
 const namePattern = /^[a-zA-Z\s'-]+$/;
 
 export const outreachFormSchema = z.object({
   youthFirstName: z.string().trim().min(1, 'First name is required').regex(namePattern, 'Enter a valid first name'),
   youthLastName: z.string().trim().min(1, 'Last name is required').regex(namePattern, 'Enter a valid last name'),
-  dateOfBirth: outreachDateOfBirthSchema,
+  dateOfBirth: dateOfBirthSchema,
   school: z.string().trim().min(1, 'School is required'),
   contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
   contactRelationship: z.enum(['parent', 'guardian', 'sibling'], { error: 'Relationship is required' }),
