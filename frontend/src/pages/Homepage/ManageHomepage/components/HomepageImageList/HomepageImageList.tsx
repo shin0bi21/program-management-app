@@ -3,6 +3,7 @@ import { faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
+import Button from '../../../../../common/components/Button/Button';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 import type { ManagedHomepageImage } from '../../types';
@@ -14,6 +15,7 @@ interface HomepageImageListProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onAdd: () => void;
   onEdit: (image: ManagedHomepageImage) => void;
   onDelete: (image: ManagedHomepageImage) => void;
   onReorder: (sourceImageId: string, targetImageId: string) => void | Promise<void>;
@@ -24,6 +26,7 @@ export default function HomepageImageList({
   loading,
   error,
   onRetry,
+  onAdd,
   onEdit,
   onDelete,
   onReorder,
@@ -38,10 +41,13 @@ export default function HomepageImageList({
 
   return (
     <section
-      className="homepage-management-section homepage-management-images"
+      className="homepage-management-card homepage-management-section homepage-management-images"
       aria-labelledby="homepage-images-title"
     >
-      <h2 id="homepage-images-title">Manage Images</h2>
+      <div className="homepage-management-section__header">
+        <h2 id="homepage-images-title">Manage Images</h2>
+        <Button size="sm" onClick={onAdd}>+ Add</Button>
+      </div>
       <div className="homepage-image-list" role="list" aria-label="Homepage hero images">
         {loading ? (
           <p className="homepage-management-empty">Loading images…</p>
