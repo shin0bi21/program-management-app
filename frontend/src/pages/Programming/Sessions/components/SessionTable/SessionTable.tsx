@@ -32,7 +32,7 @@ export default function SessionTable({
 }: SessionTableProps) {
   const query = useSessionTableData(queryKey, filters, sorting, true);
   const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
-  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
+  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)
     || Boolean(filters.cycleIds?.length)
@@ -60,6 +60,7 @@ export default function SessionTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
+    nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}
     onLoadNextPage={query.loadNextPage}
   />;
 }

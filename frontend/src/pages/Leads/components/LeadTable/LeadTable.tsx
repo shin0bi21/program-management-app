@@ -24,7 +24,7 @@ export default function LeadTable({
   selectedLeadId, onLeadSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
 }: LeadTableProps) {
   const query = useLeadTableData(queryKey, filters, sorting);
-  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
+  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
   const hasFilters = Boolean(filters && (
     filters.search?.trim()
     || filters.statuses?.length
@@ -52,6 +52,7 @@ export default function LeadTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
+    nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}
     onLoadNextPage={query.loadNextPage}
   />;
 }

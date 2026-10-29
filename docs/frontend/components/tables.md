@@ -76,7 +76,9 @@ export default function ExampleTable(props: ExampleTableProps) {
     } : undefined}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
+    sortableColumns={EXAMPLE_TABLE_KEYS}
     sorting={props.sorting}
     onSortingChange={props.onSortingChange}
     columnWidths={props.columnWidths}
@@ -93,6 +95,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
 - Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
+- A next-page failure keeps loaded rows available. Pass `nextPageError` through `nextPageUnavailable` with `retryNextPage`; automatic pagination stays paused until an explicit retry succeeds. Report `error || nextPageError` to the page overlay with the matching retry action. Collection failures continue to use the body `unavailable` state.
 - Use controlled table selection only when selection has application meaning.
 
 The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not own generic selection state. Keep cross-view, cross-resource, filter-resistant, or mutation-aware selection in the page or domain hook, then pass that state through the page table. A row disappearing from one paginated or filtered result does not necessarily mean the domain selection should be cleared.

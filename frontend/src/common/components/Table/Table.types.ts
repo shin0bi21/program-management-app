@@ -70,6 +70,7 @@ export interface TableProps<T> {
   hasNextPage?: boolean;
   loadingNextPage?: boolean;
   onLoadNextPage?: () => void;
+  nextPageUnavailable?: { onRetry: () => void };
 
   /* === Column sizing / visibility === */
   columnWidths?: ColumnSizingState;

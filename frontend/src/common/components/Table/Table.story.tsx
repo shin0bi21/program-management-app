@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import useInfiniteListQuery from '../../../query/hooks/useInfiniteListQuery';
+import { useCallback, useRef, useState } from 'react';
 import type { ColumnSizingState } from '@tanstack/react-table';
 import Table from './Table';
 import type { TableColumnDef } from './Table.types';
@@ -48,4 +50,34 @@ export function InfiniteScroll() {
       <output data-testid="load-count">{loadCount}</output>
     </div>
   );
+}
+
+
+export function NextPageFailure() {
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  return <QueryClientProvider client={client}><FailingCollection /></QueryClientProvider>;
+}
+
+function FailingCollection() {
+  const attempts = useRef(0);
+  const query = useInfiniteListQuery<StoryRow>({
+    queryKey: ['browser-table-failure'],
+    errorMessage: 'Could not load rows',
+    queryFn: async ({ pageParam }) => {
+      if (pageParam === null) return { rows: makeRows(1, 30), nextCursor: 'next' };
+
+      attempts.current += 1;
+      if (attempts.current < 3) throw new Error('Could not load more rows');
+      return { rows: makeRows(31, 30), nextCursor: null };
+    },
+  });
+
+  return <div style={{ padding: 24, width: 760 }}>
+    <Table ariaLabel="Recoverable table" columns={columns} data={query.rows}
+      keyExtractor={row => row.id} maxHeight="320px" loading={query.loading}
+      hasNextPage={query.hasNextPage} loadingNextPage={query.loadingNextPage}
+      onLoadNextPage={query.loadNextPage}
+      nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined} />
+    <output data-testid="pagination-attempts">{attempts.current}</output>
+  </div>;
 }

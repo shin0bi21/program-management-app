@@ -13,7 +13,7 @@ const tableState = vi.hoisted<ReturnType<typeof useUserTableData>>(() => ({
   refreshing: false,
   error: '',
   hasNextPage: false,
-  loadingNextPage: false,
+  loadingNextPage: false, nextPageError: '', retryNextPage: vi.fn(),
   loadNextPage: vi.fn(),
   retry: vi.fn(),
 }));
@@ -51,7 +51,7 @@ describe('UserTable', () => {
     vi.clearAllMocks();
     Object.assign(tableState, {
       rows: [], loading: false, refreshing: false, error: '',
-      hasNextPage: false, loadingNextPage: false,
+      hasNextPage: false, loadingNextPage: false, nextPageError: '',
     });
     tableProps.current = null;
   });
@@ -87,6 +87,19 @@ describe('UserTable', () => {
 
     tableProps.current?.onSortingChange?.({ key: 'email', direction: 'desc' });
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'email', direction: 'desc' });
+  });
+
+  it('routes next-page failure recovery to the footer and page overlay while retaining rows', () => {
+    tableState.nextPageError = 'Unable to load more accounts.';
+    render(<UserTable {...baseProps} />);
+
+    expect(tableProps.current?.unavailable).toBeUndefined();
+    expect(tableProps.current?.data).toBe(tableState.rows);
+    expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
+    expect(onErrorChange).toHaveBeenLastCalledWith({
+      message: 'Unable to load more accounts.',
+      action: { label: 'Retry', onClick: tableState.retryNextPage },
+    });
   });
 
   it('maps query failures to the unavailable state and page error retry action', () => {

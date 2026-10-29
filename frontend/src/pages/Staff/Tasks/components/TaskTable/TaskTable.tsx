@@ -26,7 +26,7 @@ export default function TaskTable({
   selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
 }: TaskTableProps) {
   const query = useTaskTableData(queryKey, filters, sorting, today);
-  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
+  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
   const hasFilters = filters.staffIds.length > 0
     || filters.programIds.length > 0
     || filters.categories.length > 0
@@ -51,6 +51,7 @@ export default function TaskTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
+    nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}
     onLoadNextPage={query.loadNextPage}
   />;
 }

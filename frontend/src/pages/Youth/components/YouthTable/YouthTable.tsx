@@ -31,7 +31,7 @@ export default function YouthTable({
   const hasFilters = Boolean(
     filters?.search || filters?.programIds?.length || filters?.cycleIds?.length,
   );
-  usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
+  usePageErrorReporter(onErrorChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry });
 
   useEffect(() => {
     if (!tableData.loading) onSelectedProfileResolved(selectedProfile);
@@ -58,6 +58,7 @@ export default function YouthTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
   />;
 }
