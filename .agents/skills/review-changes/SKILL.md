@@ -7,7 +7,7 @@ description: Review tracked and untracked repository changes for correctness, re
 
 Review the current working tree without creating issues, branches, commits, pull requests, merges, or remote changes. Keep review repeatable so findings can be fixed and reviewed again before shipping.
 
-Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) for test ownership, focused runner selection, and evidence reuse.
+Read the [review and merge guide](../../../docs/workflows/changes.md#review) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) for test ownership, focused runner selection, and evidence reuse.
 
 ## 1. Establish scope
 
@@ -38,7 +38,7 @@ Keep the primary reviewer on the strongest available model and reasoning tier. U
 
 ## 2. Load owning documentation
 
-Use the repository docs as the review contract. Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) and [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) as directed above, then the focused owner guides for the changed surfaces:
+Use the repository docs as the review contract. Read the [review and merge guide](../../../docs/workflows/changes.md#review) and [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) as directed above, then the focused owner guides for the changed surfaces:
 
 - For frontend changes, start at [`docs/frontend/README.md`](../../../docs/frontend/README.md). Follow its links for ownership, components, state, rendering, and affected page or component surfaces.
 - For backend changes, start at [`docs/backend/README.md`](../../../docs/backend/README.md). Read the applicable middleware, service, policy, database, testing, error, auth, API, or integration guides.

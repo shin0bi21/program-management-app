@@ -67,42 +67,18 @@ snapshot; it does not reuse the validation run's data.
 
 ## What the script does, step by step
 
-1. **Check the destination.** Verify the local Docker connection, the fixed
-   development Compose configuration, the database container, required tools,
-   local administrator settings, and outbound restrictions. Acquire a lock so
-   two refreshes cannot run together.
-2. **Download consistently.** Run `pg_dump` inside the production PostgreSQL
-   container over SSH. Stream a custom-format archive into a private temporary
-   directory on this computer. No dump file is left on the server.
-3. **Verify the download.** Check the download result, archive format, checksum,
-   and PostgreSQL archive contents before attempting a restore.
-4. **Restore separately.** Create a uniquely named `local_snapshot_*` database
-   and restore into it with errors treated as failures. The app still uses its
-   original local database.
-5. **Apply local migrations.** Run the repository's strict migration workflow
-   against staging. Checksum drift or a migration failure aborts the refresh;
-   the script does not bypass migration checks. Database types are regenerated
-   by the normal migration command and may appear in the working tree.
-6. **Prepare local authentication.** Clear copied refresh tokens, verification
-   codes, password reset tokens, trusted devices, and revocation records.
-   Disable copied password hashes and reset or create the configured local
-   administrator. Retain names, notes, memberships, sessions, and relationships.
-7. **Stop here for validation.** With `--validate-only`, discard staging and
-   the temporary download and report the result. No database switch occurs.
-8. **Preserve the old database.** With `--apply`, stop the local backend and
-   disconnect database clients. Rename the current development database to a
-   unique rollback backup. Do not overwrite or delete that backup.
-9. **Switch to prepared data.** Rename staging to the configured development
-   database name. Rotate local signing secrets so old access tokens cannot be
-   reused. Restart the backend with outbound operations disabled and verify its
-   health endpoint. The frontend continues using its normal local API URL.
-10. **Clean temporary files.** Delete the downloaded archive and temporary
-    working directory. Report the retained backup database name. Sign out or
-    refresh the browser, then sign in using the local `.env` administrator.
+The [refresh script](../../scripts/dev/refresh-local-data.sh) locks the operation,
+verifies the SSH download and archive, and restores into an isolated staging
+database. It applies local migrations with checksum enforcement, regenerates
+database types, clears copied authentication credentials, and prepares the local
+administrator. Generated types may appear in the working tree.
 
-The script prints progress, not passwords, signing secrets, or individual live
-records. Production reads still consume server resources; use a quiet period
-for large databases.
+Validation discards staging. Applying stops the local backend, preserves the old
+database under a unique backup name, switches to staging, rotates local signing
+secrets, and verifies the restarted backend with outbound operations disabled.
+Both modes remove temporary downloads. The script reports progress and backup
+names without printing credentials or live records. Production reads still
+consume server resources; use a quiet period for large databases.
 
 ## After a successful refresh
 
