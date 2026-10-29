@@ -72,11 +72,11 @@ describe('ManageHomepage', () => {
   });
 
   // Commands and dialogs.
-  it('opens the page-owned image editor from the Manage Images card', async () => {
+  it('opens the page-owned image editor from the Images card', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const images = screen.getByRole('region', { name: 'Manage Images' });
+    const images = screen.getByRole('region', { name: 'Images' });
     await user.click(within(images).getByRole('button', { name: '+ Add' }));
 
     expect(screen.getByRole('dialog', { name: 'Manage Images' })).toBeInTheDocument();

@@ -45,7 +45,7 @@ export default function HomepageImageList({
       aria-labelledby="homepage-images-title"
     >
       <div className="homepage-management-section__header">
-        <h2 id="homepage-images-title">Manage Images</h2>
+        <h2 id="homepage-images-title">Images</h2>
         <Button size="sm" onClick={onAdd}>+ Add</Button>
       </div>
       <div className="homepage-image-list" role="list" aria-label="Homepage hero images">
