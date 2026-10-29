@@ -44,6 +44,7 @@ needs a substantial multi-file set.
 | Sidebar navigation or route visibility | [App Navigation](components/navigation.md) |
 | A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
 | Page shell, data loading, or coordinated filters | [Page Composition](pages/composition.md) |
+| Page-level errors and retry actions | [Page Message Overlays](components/message-overlays.md) |
 | Page test ownership and suite organization | [Page Testing](pages/testing.md) |
 | Saved preferences, field rules, or grouped page controls | [Page Preferences](pages/preferences.md) |
 | Shared components, type labels, and status badges | [UI Basics](components/README.md) |

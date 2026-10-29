@@ -1,6 +1,7 @@
+import type { ProgramCohort } from '../Programming/Cohorts/types';
 import { apiClient } from '../../http/client';
 import type { RequestOptions } from '../../http/client';
-import type { CursorPage, CursorRequest } from '../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../query/types';
 import type {
   DiscoverySource,
   Lead,
@@ -38,7 +39,7 @@ export const getLeads = (
   if (pagination) {
     params.set('sort', pagination.key);
     params.set('direction', pagination.direction);
-    params.set('limit', String(pagination.limit ?? 25));
+    params.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
     if (pagination.cursor) params.set('cursor', pagination.cursor);
   }
   const query = params.toString();
@@ -52,13 +53,15 @@ export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<L
 export const updateLeadStatus = (id: string, status: EditableLeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
 export const deleteLead = (id: string) => apiClient.delete<{ id: string }>(`/leads/${id}`);
+export interface LeadSignUpResult { lead: Lead; updatedCohort?: ProgramCohort }
+
 export const signUpLead = (
   id: string,
   cohortId: string | null,
   noteCategory?: 'general' | 'health' | 'preference',
   dateOfBirth?: string,
 ) =>
-  apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }), ...(dateOfBirth && { dateOfBirth }) });
+  apiClient.post<LeadSignUpResult>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }), ...(dateOfBirth && { dateOfBirth }) });
 export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts
     ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)

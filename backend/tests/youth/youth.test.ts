@@ -1022,6 +1022,15 @@ describe('Youth API', () => {
         expect.objectContaining({ id: firstSessionId, status: 'late', notes: 'Arrived after kickoff' }),
         expect.objectContaining({ id: secondSessionId, status: null }),
       ]));
+      const profile = await request(app).get(`/api/youth?id=${youthId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(response.body.youth).toEqual(profile.body);
+      const listedSessions = await request(app).get('/api/cohorts/sessions')
+        .set('Authorization', `Bearer ${adminToken}`).query({ limit: 50 });
+      expect(response.body.updatedSessions).toEqual(expect.arrayContaining([
+        listedSessions.body.rows.find((session: { id: string }) => session.id === firstSessionId),
+      ]));
+      expect(response.body.updatedCohort).toEqual(expect.objectContaining({ id: softSkillsCohortId }));
       const otherAttendance = await sql<{ status: string }[]>`
         SELECT status FROM attendance_records
         WHERE session_id = ${firstSessionId} AND youth_id = ${otherYouthId}

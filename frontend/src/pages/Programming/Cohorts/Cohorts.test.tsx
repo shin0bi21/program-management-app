@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramReference } from '../../../common/features/referenceData/referenceData.api';
 import Cohorts from './Cohorts';
+import type { ProgramCohort } from './types';
 
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import type { CohortPreference } from './hooks/useCohortControls';
@@ -30,7 +31,7 @@ const preferenceApi = vi.hoisted(() => ({
 
 vi.mock('./cohorts.api', () => ({
   getCohorts: api.getCohorts,
-  getCohortPage: api.getCohorts,
+  getCohortPage: (...args: unknown[]) => api.getCohorts(...args).then((rows: ProgramCohort[]) => ({ rows, nextCursor: null })),
   createCohort: api.createCohort,
   deleteCohort: api.deleteCohort,
 }));

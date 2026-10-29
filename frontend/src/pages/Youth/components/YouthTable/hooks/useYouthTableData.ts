@@ -1,3 +1,5 @@
+import { TABLE_PAGE_SIZE } from '../../../../../query/types';
+import { compareListSortValues } from '../../../../../query/listOrdering';
 import { getYouth } from '../../../youth.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { YouthFilters, YouthSortKey } from '../../../types';
@@ -9,6 +11,19 @@ export default function useYouthTableData(
   sorting: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' },
 ) {
   const query = useInfiniteListQuery<YouthProfile>({
+    ordering: {
+      direction: sorting.direction,
+      getValue: profile => ({
+        firstName: profile.firstName.toLowerCase(),
+        lastName: profile.lastName.toLowerCase(),
+        dateOfBirth: profile.dateOfBirth ?? '',
+        school: profile.schoolName?.toLowerCase() ?? '',
+        program: profile.cohorts
+          .filter(cohort => cohort.enrolledOn !== null && cohort.withdrawnOn === null)
+          .map(cohort => cohort.programName).sort(compareListSortValues)[0]?.toLowerCase() ?? '',
+        status: profile.status,
+      }[sorting.key]),
+    },
     queryKey: ['youth', 'table', filters, sorting],
     queryFn: ({ signal, pageParam }) => {
       if (!filters) throw new Error('Youth table filters must be initialized before loading rows');
@@ -16,7 +31,7 @@ export default function useYouthTableData(
         undefined,
         filters,
         { signal },
-        { ...sorting, cursor: pageParam ?? undefined, limit: 25 },
+        { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
       );
     },
     errorMessage: 'Failed to load youth profiles',
@@ -34,5 +49,6 @@ export default function useYouthTableData(
     retryNextPage: query.retryNextPage,
     loadNextPage: query.loadNextPage,
     retry: query.retry,
+    ...(query.refreshNotice ? { refreshNotice: query.refreshNotice } : {}),
   };
 }

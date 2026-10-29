@@ -3,6 +3,7 @@ import useInfiniteListQuery from '../../../query/hooks/useInfiniteListQuery';
 import { useCallback, useRef, useState } from 'react';
 import type { ColumnSizingState } from '@tanstack/react-table';
 import Table from './Table';
+import '../PageBody/PageBody.css';
 import type { TableColumnDef } from './Table.types';
 
 interface StoryRow {
@@ -79,5 +80,18 @@ function FailingCollection() {
       onLoadNextPage={query.loadNextPage}
       nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined} />
     <output data-testid="pagination-attempts">{attempts.current}</output>
+  </div>;
+}
+
+export function InitialLoading() {
+  const [loaded, setLoaded] = useState(false);
+  return <div style={{ height: 480, display: 'flex', flexDirection: 'column' }}>
+    <button onClick={() => setLoaded(true)}>Finish loading</button>
+    <div className="page-body">
+      <div className="page-table" role="region" aria-label="Loading table area">
+        <Table ariaLabel="Loading example" columns={columns.slice(0, 1)}
+          data={loaded ? makeRows(1, 2) : []} loading={!loaded} keyExtractor={row => row.id} />
+      </div>
+    </div>
   </div>;
 }

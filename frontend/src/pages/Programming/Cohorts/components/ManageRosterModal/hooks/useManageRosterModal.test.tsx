@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enrollYouth, withdrawYouth } from '../../../cohorts.api';
 import type { ProgramCohort } from '../../../types';
+import { makeYouthProfile } from '../../../../../../tests/factories/youth';
 import { makeCohortRosterYouth } from '../../../../../../tests/factories/cohortRoster';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { useManageRosterModal } from './useManageRosterModal';
 
 vi.mock('../../../cohorts.api', () => ({
@@ -18,37 +20,50 @@ const cohort: ProgramCohort = {
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
   attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
 };
+const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 const youth = makeCohortRosterYouth({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
 
 describe('useManageRosterModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(enrollYouth).mockResolvedValue([]);
-    vi.mocked(withdrawYouth).mockResolvedValue({} as never);
+    vi.mocked(enrollYouth).mockResolvedValue({ cohort, updatedYouth: [] });
+    vi.mocked(withdrawYouth).mockResolvedValue({ cohort, updatedYouth: [] });
   });
 
   it('enrolls an unchecked youth and reconciles both roster owners', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }));
+    const client = createTestQueryClient();
+    const savedCohort = { ...cohort, enrolledCount: 6 };
+    const savedYouth = makeYouthProfile({ id: youth.id });
+    vi.mocked(enrollYouth).mockResolvedValue({ cohort: savedCohort, updatedYouth: [savedYouth] });
+    const cohortKey = ['cohorts', 'table', 'filtered'];
+    const youthKey = ['youth', 'table', 'filtered'];
+    client.setQueryData(cohortKey, { pages: [{ rows: [cohort], nextCursor: null }], pageParams: [null] });
+    client.setQueryData(youthKey, { pages: [{ rows: [{ ...savedYouth, firstName: 'Old' }], nextCursor: null }], pageParams: [null] });
+    const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }), { wrapper: createQueryClientWrapper(client) });
 
     await act(() => result.current.addYouth(youth));
 
     expect(enrollYouth).toHaveBeenCalledWith('cohort-1', { youthIds: ['youth-1'] });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledWith({ cohort: savedCohort, updatedYouth: [savedYouth] });
+    expect(client.getQueryState(cohortKey)?.isInvalidated).toBe(false);
+    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
+    expect(client.getQueryData(cohortKey)).toEqual({ pages: [{ rows: [savedCohort], nextCursor: null }], pageParams: [null] });
+    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
   });
 
   it('locks enrollment while a youth update is pending', async () => {
     let finishEnrollment: () => void = () => {};
     vi.mocked(enrollYouth).mockReturnValue(new Promise(resolve => {
-      finishEnrollment = () => resolve([]);
+      finishEnrollment = () => resolve({ cohort, updatedYouth: [] });
     }));
     const { result } = renderHook(() => useManageRosterModal({
       cohort,
       refresh: vi.fn(),
       onSuccess: vi.fn(),
-    }));
+    }), { wrapper: wrapper() });
 
     act(() => {
       void result.current.addYouth(youth);
@@ -65,7 +80,7 @@ describe('useManageRosterModal', () => {
   it('withdraws youth after confirmation and preserves attendance history', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }));
+    const { result } = renderHook(() => useManageRosterModal({ cohort, refresh, onSuccess }), { wrapper: wrapper() });
 
     act(() => result.current.requestWithdrawal(youth));
     expect(result.current.confirmAction?.message).toContain('attendance history will be kept');
@@ -83,12 +98,12 @@ describe('useManageRosterModal', () => {
       cohort,
       refresh: vi.fn().mockRejectedValue(new Error('Refresh failed')),
       onSuccess: vi.fn(),
-    }));
+    }), { wrapper: wrapper() });
 
     await act(() => result.current.addYouth(youth));
     expect(result.current.actionError).toBe('Enrollment failed');
 
-    vi.mocked(enrollYouth).mockResolvedValueOnce([]);
+    vi.mocked(enrollYouth).mockResolvedValueOnce({ cohort, updatedYouth: [] });
     await act(() => result.current.addYouth(youth));
     expect(result.current.actionError).toContain('was enrolled, but the roster could not refresh');
   });
@@ -98,7 +113,7 @@ describe('useManageRosterModal', () => {
     const options = { refresh: vi.fn(), onSuccess: vi.fn() };
     const { result, rerender } = renderHook(
       ({ target }) => useManageRosterModal({ ...options, cohort: target }),
-      { initialProps: { target: cohort } },
+      { initialProps: { target: cohort }, wrapper: wrapper() },
     );
 
     await act(() => result.current.addYouth(youth));

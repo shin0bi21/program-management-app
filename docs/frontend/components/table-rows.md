@@ -33,10 +33,10 @@ The canonical table row is the complete projection rendered by the list endpoint
 Every command that updates an existing table-owned record returns its authoritative canonical row after the write. When one command directly changes existing rows owned by multiple application areas, use an endpoint-specific response envelope containing each changed canonical row; do not return a generic invalidation hint or make the client reconstruct a row from cached input.
 
 ```ts
-interface CompleteWorkResult {
-  hours: HoursListRow;
-  updatedTask?: Task;
-}
+type HoursMutationResult = HoursEntry & {
+  tableRow: HoursTableRow;
+  updatedTasks?: Task[];
+};
 ```
 
 The typed frontend API adapter owns this response shape. If calendar or detail consumers use another representation, derive it from an authoritative response projection or include that projection explicitly in the endpoint-specific envelope. Never synthesize server-owned row fields from stale cache data merely to avoid changing the API.
@@ -53,7 +53,9 @@ The typed frontend API adapter owns this response shape. If calendar or detail c
 Replacement updates every loaded variant containing the row and leaves other variants
 unchanged. Preserve its current membership and position even when a filter or sort value
 changes, along with unaffected row and page references. The next natural query restores
-server ordering, membership and pagination. Do not inspect active controls to choose between
+server ordering, membership and pagination. Shared table queries reconcile writes that complete during pending reads, including
+new query variants with no cached rows, so an older response cannot restore outdated
+or deleted records. Do not inspect active controls to choose between
 replacement and refetch, or enter a refreshing state for a row update.
 
 Reconcile selection and calendar buffers through their narrow adapters. Invalidate affected
@@ -78,6 +80,25 @@ const setStatus = useCallback(async (example: Example, status: ExampleStatus) =>
 The synchronization helper receives complete authoritative rows; it does not fetch missing
 rows or derive server-owned fields. If a command cannot return that projection, correct its
 backend response instead of falling back to a table refresh.
+
+## Explain Retained Ordering
+
+Each table query declares the active sort value and direction through `ordering`.
+When an authoritative edit changes that value, compare its retained position with the
+previous and next loaded rows, including neighbors across page boundaries. Compare
+numbers numerically, dates by time, and normalized strings by the server's ordering;
+use the server's durable ID tie-breaker for equal values. A violated neighbor comparison
+reports “This table’s data is out of order.” through
+[Page Message Overlays](message-overlays.md), with an optional Refresh callback.
+
+Do not show the warning for unrelated fields, filter-only changes, or sort edits that
+still fit their position. A single loaded row has no neighbor that proves a violation.
+Clear the warning when later edits or deletions restore the loaded order. Keep rows in
+place until the user refreshes; never sort the cached collection locally.
+
+Manual refresh atomically replaces the collection with one fresh first page and its
+cursor. Keep the existing rows and warning if it fails. Edits completed during refresh are reconciled before publication; show the warning
+only if their retained position still violates the loaded sort order.
 
 ## Handle Concurrency and Failure
 

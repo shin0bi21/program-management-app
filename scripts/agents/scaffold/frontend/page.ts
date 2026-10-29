@@ -21,18 +21,18 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     directory,
     join(context.frontendRoot, 'common/components/PageBody/PageBody'),
   );
-  const pageErrorOverlayImport = context.relativeImport(
+  const pageMessageOverlayImport = context.relativeImport(
     directory,
-    join(context.frontendRoot, 'common/components/PageErrorOverlay/PageErrorOverlay'),
+    join(context.frontendRoot, 'common/components/PageMessageOverlay/PageMessageOverlay'),
   );
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
 import PageBody from '${pageBodyImport}';
-import PageErrorOverlay from '${pageErrorOverlayImport}';
+import PageMessageOverlay from '${pageMessageOverlayImport}';
 import PageHeader from '${pageHeaderImport}';
 import ${hookName} from './hooks/data/${hookName}';
 
 export default function ${name}() {
-  // TODO: Page-local error state.
+  // TODO: Page-local message state.
 
   // TODO: Permissions and application services.
 
@@ -55,14 +55,14 @@ export default function ${name}() {
   const dashboard = <p>${name} dashboard</p>;
   const primaryView = <p>${name} content</p>;
 
-  // TODO: Derived errors and presentation state.
-  const pageErrors = [];
+  // TODO: Derived messages and presentation state.
+  const pageMessages = [];
 
   // Render.
   return (
     <main className="page-container">
       <PageHeader title="${name}" />
-      <PageErrorOverlay errors={pageErrors} />
+      <PageMessageOverlay messages={pageMessages} />
       <PageBody
         ariaLabel="${name} overview"
         dashboard={dashboard}
@@ -83,7 +83,7 @@ describe('${name}', () => {
 
   // Rendered states.
   it.todo('composes loaded page controls, content, and dialogs');
-  it.todo('reports page-owned failures through the shared error presentation');
+  it.todo('reports page-owned failures through the shared message overlay');
 
   // Controls and views.
   it.todo('passes one page filter contract to every data view');

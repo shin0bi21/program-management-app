@@ -7,7 +7,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -43,8 +43,8 @@ const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 export default function Tasks() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions } = useAuth();
@@ -158,7 +158,7 @@ export default function Tasks() {
       onTaskSelect={selection.selectTask}
       onSortingChange={preferences.table.setSorting}
       onColumnWidthsChange={preferences.table.setColumnWidths}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -181,7 +181,7 @@ export default function Tasks() {
       onResourceSelect={selection.selectResource}
       onAddTask={openAddTaskModal}
       onEditTask={openEditTaskModal}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -241,7 +241,7 @@ export default function Tasks() {
           /> : undefined}
       />
 
-      <PageErrorOverlay errors={[
+      <PageMessageOverlay messages={[
         actions.actionError,
         preferences.error,
         pageData.referenceDataError ? {
@@ -266,7 +266,7 @@ export default function Tasks() {
           today={today}
           selectedTask={selection.selectedTask}
           onLogHours={loggableTask ? () => openHoursModal(loggableTask) : undefined}
-          onErrorChange={setDashboardError}
+          onMessageChange={setDashboardError}
         /> : null}
         {...viewContent}
       />}

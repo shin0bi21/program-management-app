@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { CohortListFilters, CohortSortKey, ProgramCohort } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -17,7 +17,7 @@ interface CohortTableProps {
   onRowSelect: (cohort: ProgramCohort | null) => void;
   onSortingChange: (sorting: ListSort<CohortSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function CohortTable({
@@ -31,17 +31,13 @@ export default function CohortTable({
   onRowSelect,
   onSortingChange,
   onColumnWidthsChange,
-  onErrorChange,
+  onMessageChange,
 }: CohortTableProps) {
   const tableData = useCohortTableData(queryKey, filters, sorting);
   const hasFilters = Boolean(filters?.programId || filters?.search || filters?.status);
-  usePageErrorReporter(onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
+  usePageMessageReporter(onMessageChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry }, tableRefreshMessage(tableData.refreshNotice));
 
-  useEffect(() => {
-    if (!tableData.loading && selectedKey && !tableData.rows.some(cohort => cohort.id === selectedKey)) {
-      onRowSelect(null);
-    }
-  }, [onRowSelect, selectedKey, tableData.loading, tableData.rows]);
+
 
   return <Table
     ariaLabel="Cohorts"
@@ -61,6 +57,7 @@ export default function CohortTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
     emptyMessage={hasFilters ? 'No cohorts match your search and filters' : 'No cohorts yet'}
   />;

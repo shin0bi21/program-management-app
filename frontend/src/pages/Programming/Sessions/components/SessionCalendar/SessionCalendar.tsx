@@ -3,12 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import type { Program } from '../../../../../common/features/programs/types';
-import type { MoveSessionResult } from '../../sessions.api';
 import { getSessions } from '../../sessions.api';
-import type { CohortSession, SessionListFilters } from '../../types';
+import type { CohortSession, SessionCalendarCache, SessionListFilters } from '../../types';
 import { getSessionRange } from './sessionCalendarDates';
 import { getSessionRequestRange } from '../../utils/sessionDateRange';
 import { intersectDateRanges } from '../../../../../common/utils/dateRange';
@@ -27,17 +26,18 @@ interface SessionCalendarProps {
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
+  calendarCacheRef: React.MutableRefObject<SessionCalendarCache>;
   pendingSessionIds?: string[];
-  onSessionMove?: (session: CohortSession, date: string) => Promise<(CohortSession & MoveSessionResult) | null>;
+  onSessionMove?: (session: CohortSession, date: string) => Promise<CohortSession | null>;
   onAddSession?: (program: Program, date: string) => void;
   onSessionEdit?: (session: CohortSession) => void;
   onSessionDelete?: (session: CohortSession) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function SessionCalendar({
   queryKey, filters, programs, selectedProgramId, selectedSessionId, onProgramSelect,
-  onSessionsLoaded, onSessionSelect, onSessionMove, pendingSessionIds = [], onAddSession, onSessionEdit, onSessionDelete, onErrorChange,
+  onSessionsLoaded, onSessionSelect, onSessionMove, calendarCacheRef, pendingSessionIds = [], onAddSession, onSessionEdit, onSessionDelete, onMessageChange,
 }: SessionCalendarProps) {
   const queryClient = useQueryClient();
   const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
@@ -64,8 +64,21 @@ export default function SessionCalendar({
     getItemRange: getSessionRange,
     errorMessage: 'Unable to load sessions calendar data',
   });
+  useEffect(() => {
+    calendarCacheRef.current = {
+      upsert: session => {
+        if (filters.cycleIds?.length && !filters.cycleIds.includes(session.cycleId)) {
+          calendar.removeItem(session.id);
+          return;
+        }
+        calendar.upsertItem(session.programId, getSessionRange(session).start, session);
+      },
+      remove: calendar.removeItem,
+    };
+    return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
+  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef, filters.cycleIds]);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
-  usePageErrorReporter(onErrorChange, calendar.error, retryAction);
+  usePageMessageReporter(onMessageChange, calendar.error, retryAction);
 
   const sessions = useMemo(() => Object.values(calendar.items).flatMap(items => items ?? []), [calendar.items]);
   useEffect(() => {
@@ -96,14 +109,7 @@ export default function SessionCalendar({
       })}
       canItemMove={({ row, destinationRow }) => row.id === destinationRow.id}
       onItemMove={onSessionMove ? async ({ item: session, nextRange }) => {
-        const updated = await onSessionMove(session, nextRange.start);
-        if (!updated) return;
-
-        if (filters.cycleIds?.length && !filters.cycleIds.includes(updated.cycleId)) {
-          calendar.removeItem(updated.id);
-        } else {
-          calendar.upsertItem(updated.programId, getSessionRange(updated).start, updated);
-        }
+        await onSessionMove(session, nextRange.start);
       } : undefined}
       renderRow={({ row }) => <span>{row.name}</span>}
       selectedRowId={selectedProgramId}

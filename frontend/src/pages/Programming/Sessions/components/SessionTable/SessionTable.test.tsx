@@ -28,7 +28,7 @@ const baseProps = {
   sorting: { key: 'date' as const, direction: 'desc' as const }, columnWidths: {}, selectedSessionId: '',
   onSessionSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
   onSelectedSessionResolved: vi.fn(),
-  onErrorChange: vi.fn(),
+  onMessageChange: vi.fn(),
 };
 
 describe('SessionTable', () => {
@@ -63,7 +63,7 @@ describe('SessionTable', () => {
       selectedKey: 'session-1', scrollToSelected: true, emptyMessage: 'No sessions yet',
       unavailable: { title: 'Sessions unavailable', onRetry: tableState.retry },
     }));
-    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+    expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Could not load sessions',
       action: { label: 'Retry', onClick: tableState.retry },
     });

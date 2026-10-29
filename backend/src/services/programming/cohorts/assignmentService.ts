@@ -1,7 +1,9 @@
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { programAccessPredicate } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
+import { getCohortRowsByIds, getCohortYouthIds } from './cohortRecordQuery';
 
 export async function setProgramCycles(programId: string, cycleIds: string[], actor: AccessTokenPayload) {
   return sql.begin(async tx => {
@@ -28,14 +30,24 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
     for (const cohort of removed) {
       await trx`DELETE FROM program_cohorts WHERE id = ${cohort.id}`;
     }
-    await trx`
+    const created = await trx<{ id: string }[]>`
       INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
       SELECT ${programId}, cycle_id, ${actor.userId}, ${actor.userId}
       FROM UNNEST(${sql.array(cycleIds)}::uuid[]) AS selected(cycle_id)
       ON CONFLICT (program_id, cycle_id) DO NOTHING
+      RETURNING id
     `;
 
-    return { programId, cycleIds: cycles.map(cycle => cycle.id) };
+    const retained = current.filter(cohort => cycleIds.includes(cohort.cycleId));
+    return {
+      programId,
+      cycleIds: cycles.map(cycle => cycle.id),
+      updatedCohorts: await getCohortRowsByIds(trx, actor, [...retained, ...created].map(cohort => cohort.id)),
+      createdCohortIds: created.map(cohort => cohort.id),
+      removedCohortIds: removed.map(cohort => cohort.id),
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, await getCohortYouthIds(trx, [...retained, ...created].map(cohort => cohort.id))) : [],
+    };
   });
 }
 

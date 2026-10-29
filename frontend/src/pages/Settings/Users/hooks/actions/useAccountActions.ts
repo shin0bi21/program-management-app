@@ -6,7 +6,7 @@ import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../qu
 import { revokeAccountInvite, toggleAccountStatus } from '../../accounts.api';
 import { referenceDataKeys } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
-const YOUTH_QUERY_KEY = ['youth'] as const;
+const YOUTH_QUERY_KEY = ['youth', 'table'] as const;
 
 interface AccountActionOptions {
   accountTableQueryKey: readonly unknown[];

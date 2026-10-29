@@ -1,7 +1,7 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { User, UserFilters, UserSortKey } from './types';
-import type { CursorPage, CursorRequest } from '../../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
 
 interface InviteUserInput {
   firstName: string;
@@ -23,7 +23,7 @@ export function getAccounts(filters: UserFilters = {}, pagination?: CursorReques
   if (pagination) {
     params.set('sort', pagination.key);
     params.set('direction', pagination.direction);
-    params.set('limit', String(pagination.limit ?? 25));
+    params.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
     if (pagination.cursor) params.set('cursor', pagination.cursor);
   }
   const query = params.toString();

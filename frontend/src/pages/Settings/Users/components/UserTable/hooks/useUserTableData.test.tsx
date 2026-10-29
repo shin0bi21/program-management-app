@@ -32,7 +32,7 @@ describe('useUserTableData', () => {
     rerender({ readyFilters: filters });
     await waitFor(() => expect(result.current.rows).toEqual([account]));
     expect(getAccounts).toHaveBeenCalledWith(
-      filters, { ...sorting, cursor: undefined, limit: 25 }, { signal: expect.any(AbortSignal) },
+      filters, { ...sorting, cursor: undefined, limit: 50 }, { signal: expect.any(AbortSignal) },
     );
   });
 

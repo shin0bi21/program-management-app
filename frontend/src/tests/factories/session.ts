@@ -4,6 +4,7 @@ export function makeCohortSession(overrides: Partial<CohortSession> = {}): Cohor
   return {
     id: 'session-1',
     cohortId: 'cohort-1',
+    cycleId: 'cycle-1',
     sessionTypeId: 'type-1',
     sessionTypeName: 'Regular',
     theme: 'Communication',

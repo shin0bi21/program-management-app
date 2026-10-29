@@ -277,7 +277,7 @@ describe('Tasks API', () => {
         .get(`/api/tasks/${created.body.id}`)
         .set('Authorization', `Bearer ${firstStaffToken}`);
       expect(completed.status).toBe(200);
-      expect(hours.body.updatedTask).toEqual(completed.body);
+      expect(hours.body.updatedTasks[0]).toEqual(completed.body);
       expect(completed.body).toEqual({
         ...created.body,
         state: 'completed', status: 'completed', statusLabel: 'Completed',

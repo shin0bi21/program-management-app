@@ -1,7 +1,7 @@
 # Frontend Pages
 
 Start here when building or changing a route. Collection pages share a shell,
-persisted controls, data views, and page-level errors. Authentication,
+persisted controls, data views, and page-level messages. Authentication,
 informational, and public pages keep the regions their task requires.
 
 | Task | Guide |

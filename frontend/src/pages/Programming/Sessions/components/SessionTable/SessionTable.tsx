@@ -1,6 +1,7 @@
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import {
   SESSION_TABLE_KEYS,
@@ -23,16 +24,16 @@ interface SessionTableProps {
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onSelectedSessionResolved: (session: CohortSession | null) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function SessionTable({
   queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
-  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved, onErrorChange,
+  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved, onMessageChange,
 }: SessionTableProps) {
   const query = useSessionTableData(queryKey, filters, sorting, true);
   const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
-  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
+  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)
     || Boolean(filters.cycleIds?.length)

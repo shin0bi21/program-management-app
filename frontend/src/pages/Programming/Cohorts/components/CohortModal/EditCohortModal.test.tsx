@@ -26,7 +26,7 @@ describe('EditCohortModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('initializes from the cohort and saves the selected cycle', async () => {
-    vi.mocked(updateCohort).mockResolvedValue(cohort);
+    vi.mocked(updateCohort).mockResolvedValue({ cohort, updatedYouth: [] });
     const onUpdated = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     render(<EditCohortModal cohort={cohort} cycles={cycles} onClose={vi.fn()} onUpdated={onUpdated} />);

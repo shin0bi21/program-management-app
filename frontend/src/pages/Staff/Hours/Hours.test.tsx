@@ -9,7 +9,6 @@ import {
   getHoursTableData,
   getHoursReferenceData,
   getHoursCalendarData,
-  setHours,
 } from './hours.api';
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
@@ -458,13 +457,6 @@ describe('Hours', () => {
 
   // Commands and dialogs.
   it('bridges the page Add action to the shared entry modal', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-new', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', categoryLabel: 'Planning / Prep', taskId: null, taskTitle: null, sessionId: null,
-      sessionLabel: null, workDate, hours: 1, note: 'Route bridge',
-    });
     renderHours();
     await screen.findAllByLabelText('Zoe Wilson');
 
@@ -498,12 +490,6 @@ describe('Hours', () => {
     vi.mocked(setPreference).mockImplementation((_key, value) => new Promise(resolve => {
       finishSave = () => resolve(value);
     }));
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'meeting', categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null,
-      sessionLabel: null, workDate: '2026-08-09', hours: 2, note: 'Planning meeting',
-    });
     renderHours();
 
     fireEvent.click(await screen.findByRole('button', {

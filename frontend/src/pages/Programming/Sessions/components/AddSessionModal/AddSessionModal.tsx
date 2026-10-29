@@ -1,3 +1,4 @@
+import type { CreatedSessionResult } from '../../sessions.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -11,7 +12,7 @@ interface AddSessionModalProps {
   initialProgramId?: string;
   initialDate?: string;
   onClose: () => void;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: CreatedSessionResult) => void | Promise<void>;
 }
 
 export default function AddSessionModal({ onClose, ...options }: AddSessionModalProps) {

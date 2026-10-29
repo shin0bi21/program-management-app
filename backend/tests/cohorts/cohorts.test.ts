@@ -251,7 +251,7 @@ describe('Cohorts and attendance API', () => {
       .send({ youthIds: [youthId, secondYouthId] });
 
     expect(response.status).toBe(201);
-    expect(response.body).toEqual(expect.arrayContaining([
+    expect(response.body.enrollments).toEqual(expect.arrayContaining([
       expect.objectContaining({
         cohortId,
         youthId,
@@ -690,7 +690,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ records: [{ youthId, status: 'present' }] });
     expect(checkedIn.status).toBe(200);
-    expect(checkedIn.body).toEqual([
+    expect(checkedIn.body.roster).toEqual([
       expect.objectContaining({ youthId, status: 'present' }),
     ]);
 
@@ -705,7 +705,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ records: [{ youthId: secondYouthId, status: 'present' }] });
     expect(replaced.status).toBe(200);
-    expect(replaced.body).toEqual([
+    expect(replaced.body.roster).toEqual([
       expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
     ]);
   });
@@ -834,7 +834,7 @@ describe('Cohorts and attendance API', () => {
       });
 
     expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(expect.arrayContaining([
+    expect(saved.body.roster).toEqual(expect.arrayContaining([
       expect.objectContaining({ youthId, status: 'present' }),
       expect.objectContaining({ youthId: secondYouthId, status: 'present' }),
     ]));
@@ -1163,7 +1163,7 @@ describe('Cohorts and attendance API', () => {
       .send({ records: [{ youthId, status: 'present' }] });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual(expect.arrayContaining([
+    expect(response.body.roster).toEqual(expect.arrayContaining([
       expect.objectContaining({ youthId, status: 'present' }),
       expect.objectContaining({ youthId: secondYouthId, status: null }),
     ]));
@@ -1277,7 +1277,7 @@ describe('Cohorts and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual(expect.objectContaining({
+    expect(response.body.enrollment).toEqual(expect.objectContaining({
       cohortId,
       youthId,
       withdrawnOn: today,

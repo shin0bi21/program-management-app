@@ -36,6 +36,7 @@ export const navigation = [
           { label: 'Dashboards', source: 'docs/frontend/components/dashboards.md' },
           { label: 'Forms', source: 'docs/frontend/components/modals-and-forms.md' },
           { label: 'Overlays', source: 'docs/frontend/components/overlays.md' },
+          { label: 'Message Overlays', source: 'docs/frontend/components/message-overlays.md' },
           { label: 'App Navigation', source: 'docs/frontend/components/navigation.md' },
         ],
       },

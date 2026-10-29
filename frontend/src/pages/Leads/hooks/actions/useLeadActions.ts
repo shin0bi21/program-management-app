@@ -2,11 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
-import { deleteLead, updateLeadStatus } from '../../leads.api';
+import { deleteLead, updateLeadStatus, type LeadSignUpResult } from '../../leads.api';
 import type { EditableLeadStatus, Lead } from '../../types';
 
-const COHORT_QUERY_KEY = ['cohorts'] as const;
-const YOUTH_QUERY_KEY = ['youth'] as const;
+const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
+const COHORT_OPTIONS_QUERY_KEY = ['cohorts', 'options'] as const;
+const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
 interface UseLeadActionsOptions {
   tableQueryKey: readonly unknown[];
@@ -75,11 +76,14 @@ export default function useLeadActions({
     },
   }), [nextActionGeneration, onLeadRemoved, queryClient, tableQueryKey]);
 
-  const reconcileSignUp = useCallback(async (lead: Lead) => {
-    syncLead(lead);
+  const reconcileSignUp = useCallback(async (saved: LeadSignUpResult) => {
+    syncLead(saved.lead);
+    if (saved.updatedCohort) {
+      replaceInfiniteListRow(queryClient, COHORT_TABLE_QUERY_KEY, saved.updatedCohort);
+    }
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY }),
     ]);
   }, [queryClient, syncLead]);
 

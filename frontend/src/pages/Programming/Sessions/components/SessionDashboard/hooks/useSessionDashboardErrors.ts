@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { PageErrorItem } from '../../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import type { PageMessageValue } from '../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 
-export function useSessionDashboardErrors(onErrorsChange?: (errors: PageErrorItem[]) => void) {
-  const [notesError, setNotesError] = useState<PageErrorItem | null>(null);
-  const [attachmentsError, setAttachmentsError] = useState<PageErrorItem | null>(null);
+export function useSessionDashboardErrors(onErrorsChange?: (errors: PageMessageValue[]) => void) {
+  const [notesError, setNotesError] = useState<PageMessageValue>(null);
+  const [attachmentsError, setAttachmentsError] = useState<PageMessageValue>(null);
 
   useEffect(() => {
     if (!onErrorsChange) return undefined;
-    onErrorsChange([notesError, attachmentsError].filter((error): error is PageErrorItem => error !== null));
+    onErrorsChange([notesError, attachmentsError].filter(message => message !== null));
     return () => onErrorsChange([]);
   }, [attachmentsError, notesError, onErrorsChange]);
 

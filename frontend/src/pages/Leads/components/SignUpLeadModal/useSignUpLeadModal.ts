@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
+import type { LeadSignUpResult } from '../../leads.api';
 import { calculateAge, dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
@@ -21,7 +22,7 @@ const noCohorts: ProgramCohort[] = [];
 interface UseSignUpLeadModalOptions {
   queryKey: readonly unknown[];
   lead: Lead | null;
-  onSuccess: (lead: Lead) => void | Promise<void>;
+  onSuccess: (result: LeadSignUpResult) => void | Promise<void>;
 }
 
 export default function useSignUpLeadModal({
@@ -101,9 +102,9 @@ export default function useSignUpLeadModal({
     setError('');
     setSuccessMessage('');
 
-    let updatedLead: Lead;
+    let saved: LeadSignUpResult;
     try {
-      updatedLead = lead.notes?.trim()
+      saved = lead.notes?.trim()
         ? await signUpLead(lead.id, selectedCohort?.id || null, noteCategory, dateOfBirth)
         : await signUpLead(lead.id, selectedCohort?.id || null, undefined, dateOfBirth);
     } catch (cause) {
@@ -115,7 +116,7 @@ export default function useSignUpLeadModal({
 
     let refreshFailed = false;
     try {
-      await onSuccess(updatedLead);
+      await onSuccess(saved);
     } catch {
       refreshFailed = true;
     }

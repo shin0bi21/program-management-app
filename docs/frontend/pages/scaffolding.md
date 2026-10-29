@@ -93,10 +93,10 @@ application shell
     ├── main.page-container
     │   ├── PageHeader
     │   │   ├── actions
-    │   │   ├── search
     │   │   ├── columns and view controls
-    │   │   └── filters
-    │   ├── PageErrorOverlay
+    │   │   ├── filters
+    │   │   └── search
+    │   ├── PageMessageOverlay
     │   └── PageBody
     │       ├── dashboard or summary
     │       └── table, calendar or timeline

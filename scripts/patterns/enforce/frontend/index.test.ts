@@ -544,7 +544,7 @@ test('rejects a historical list-view owner', () => {
   const violations = violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskListView/hooks/useTasks.ts',
-    'useInfiniteListQuery({ limit: 25 });',
+    "import { TABLE_PAGE_SIZE } from '../../../../../../../query/types'; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
   );
 
   assert.match(violations.join('\n'), /\*ListView and \*TableView owners are not supported/);
@@ -554,7 +554,7 @@ test('rejects a historical table-view owner', () => {
   const violations = violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskTableView/hooks/useTasks.ts',
-    'useInfiniteListQuery({ limit: 25 });',
+    "import { TABLE_PAGE_SIZE } from '../../../../../../../query/types'; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
   );
 
   assert.match(violations.join('\n'), /\*ListView and \*TableView owners are not supported/);
@@ -564,7 +564,7 @@ test('requires infinite-list queries in a canonical table to use its hooks direc
   const violations = violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskTable/useTasks.ts',
-    'useInfiniteListQuery({ limit: 25 });',
+    "import { TABLE_PAGE_SIZE } from '../../../../../../../query/types'; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
   );
 
   assert.match(violations.join('\n'), /remote-table hook/);
@@ -574,7 +574,7 @@ test('accepts an infinite-list hook colocated under a canonical table', () => {
   assert.deepEqual(violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTasks.ts',
-    'useInfiniteListQuery({ limit: 25 });',
+    "import { TABLE_PAGE_SIZE } from '../../../../../../../query/types'; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
   ), []);
 });
 
@@ -582,7 +582,7 @@ test('rejects deferred search inside a remote table-data hook', () => {
   const violations = violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTaskTableData.ts',
-    'useDeferredValue(search); useInfiniteListQuery({ limit: 25 });',
+    "import { TABLE_PAGE_SIZE } from '../../../../../../../query/types'; useDeferredValue(search); useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
   );
 
   assert.match(violations.join('\n'), /receive page-applied search/);
@@ -640,7 +640,7 @@ test('accepts a canonical table renderer', () => {
   assert.deepEqual(violationsFor(
     checkPaginatedTables,
     'frontend/src/pages/Staff/Tasks/components/TaskTable/TaskTable.tsx',
-    'export function TaskTable() { return <Table />; }',
+    'export function TaskTable() { tableRefreshMessage(notice); return <Table hasNextPage={false} loadingNextPage={false} onLoadNextPage={load} nextPageUnavailable={failure} />; }',
   ), []);
 });
 
@@ -667,7 +667,32 @@ test('requires the complete paginated-table contract', () => {
     '<Table hasNextPage={hasNextPage} />',
   );
 
-  assert.match(violations[0], /loadingNextPage, onLoadNextPage/);
+  assert.match(violations.join("\n"), /loadingNextPage, onLoadNextPage/);
+});
+
+test('rejects page tables that bypass pagination or next-page recovery entirely', () => {
+  const violations = violationsFor(
+    checkPaginatedTables,
+    'frontend/src/pages/Programming/Programs/components/CycleTable/CycleTable.tsx',
+    '<Table data={cycles} />',
+  );
+
+  assert.match(violations.join('\n'), /hasNextPage, loadingNextPage, onLoadNextPage/);
+  assert.match(violations.join('\n'), /nextPageUnavailable/);
+});
+
+test('requires out-of-order warning configuration and page-message wiring', () => {
+  const hookViolations = violationsFor(checkPaginatedTables,
+    'frontend/src/pages/Youth/components/YouthTable/hooks/useYouthTableData.ts',
+    "import { TABLE_PAGE_SIZE } from '../../query/types'; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE });",
+  );
+  assert.match(hookViolations.join('\n'), /sort value and direction/);
+
+  const tableViolations = violationsFor(checkPaginatedTables,
+    'frontend/src/pages/Youth/components/YouthTable/YouthTable.tsx',
+    '<Table hasNextPage={false} loadingNextPage={false} onLoadNextPage={load} nextPageUnavailable={undefined} />',
+  );
+  assert.match(tableViolations.join('\n'), /page message owner/);
 });
 
 test('reports missing TimelineCalendar ownership, buffering, and lifecycle wiring', () => {
@@ -720,4 +745,21 @@ test('requires frontend architecture and integration documentation to remain cen
     violationsFor(checkCentralizedFrontendDocumentation, 'docs/frontend/example.md'),
     [],
   );
+});
+
+
+test('requires the canonical table page-size constant instead of a literal or local value', () => {
+  for (const source of [
+    'useInfiniteListQuery({ limit: 25 });',
+    'useInfiniteListQuery({ limit: 50 });',
+    "const TABLE_PAGE_SIZE = 50; useInfiniteListQuery({ limit: TABLE_PAGE_SIZE, ordering: { getValue: row => row.name, direction: 'asc' } });",
+  ]) {
+    const violations = violationsFor(
+      checkPaginatedTables,
+      'frontend/src/pages/Staff/Tasks/components/TaskTable/hooks/useTaskTableData.ts',
+      source,
+    );
+
+    assert.match(violations.join('\n'), /TABLE_PAGE_SIZE from query\/types/);
+  }
 });

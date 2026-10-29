@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import type { AccessTokenPayload } from '../../../types/auth';
+import { getCohortRowsByIds } from '../../programming/cohorts/cohortRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
@@ -232,10 +234,11 @@ export async function deleteLead(id: string, actorId: string) {
   });
 }
 
-export async function signUpLead(id: string, data: SignUpLeadInput, actorId: string) {
+export async function signUpLead(id: string, data: SignUpLeadInput, actor: AccessTokenPayload) {
+  const actorId = actor.userId;
   const transactionId = crypto.randomUUID();
 
-  const convertedYouthId = await sql.begin(async tx => {
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const leads = await trx<{
       id: string;
@@ -379,12 +382,12 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actorId: str
       { status: lead.status, convertedYouthId: null, dateOfBirth: lead.dateOfBirth },
       { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
-    return youthId;
+    const [leadRecord] = await trx`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
+    const [updatedCohort] = data.cohortId && actor.permissions.includes('read:programs')
+      ? await getCohortRowsByIds(trx, actor, [data.cohortId])
+      : [];
+    return { lead: leadRecord, ...(updatedCohort ? { updatedCohort } : {}) };
   });
-
-  const rows = await sql`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
-  if (!rows.length) throw new NotFoundError('Signed-up lead not found');
-  return { ...rows[0], convertedYouthId };
 }
 
 function applyLeadFilters(filters: LeadQuery) {

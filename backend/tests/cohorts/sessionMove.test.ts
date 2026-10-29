@@ -60,17 +60,63 @@ describe('Future session date moves', () => {
   it('preserves local times across DST and leaves unrelated session fields unchanged', async () => {
     const response = await move('2030-03-10');
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({ id: sessionId, cohortId, cycleId,
+    expect(response.body.session).toMatchObject({ id: sessionId, cohortId, cycleId,
       startsAt: '2030-03-10T21:30:00.000Z', endsAt: '2030-03-10T23:30:00.000Z' });
     const [session] = await sql`SELECT theme, description, session_type_id FROM cohort_sessions WHERE id = ${sessionId}`;
     expect(session).toMatchObject({ theme: 'Keep my theme', description: 'Keep my description', sessionTypeId: regularType });
+  });
+
+  it('returns the canonical session row with fields changed after an earlier client read', async () => {
+    await sql`UPDATE cohort_sessions SET theme = 'Latest authoritative theme', description = 'Latest description'
+      WHERE id = ${sessionId}`;
+
+    const response = await move('2030-03-10');
+
+    expect(response.status).toBe(200);
+    expect(response.body.session).toMatchObject({
+      id: sessionId, cohortId, cycleId, programId, sessionTypeId: regularType,
+      theme: 'Latest authoritative theme', description: 'Latest description',
+      enrollmentRequired: true, attendanceMarkedCount: 0, attendedCount: 0, attendanceRate: null, state: 'upcoming',
+    });
+    expect(response.body.session.programName).toEqual(expect.any(String));
+    expect(response.body.session.sessionTypeName).toEqual(expect.any(String));
+  });
+
+  it('returns canonical rows after full edits and deletion without stale next-session metadata', async () => {
+    const edited = await request(app).put(`/api/cohorts/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ sessionTypeId: regularType, theme: 'Edited theme', startsAt: '2030-03-03T22:30:00Z', endsAt: '2030-03-04T00:30:00Z', description: 'Edited description' });
+
+    expect(edited.status).toBe(200);
+    expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId, attendanceMarkedCount: 0 });
+    expect(edited.body.updatedCohorts).toEqual([expect.objectContaining({ id: cohortId, nextSessionId: sessionId })]);
+
+    const list = await request(app).get(`/api/cohorts/sessions?cohortId=${cohortId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(list.status).toBe(200);
+    expect(list.body.find((row: { id: string }) => row.id === sessionId)).toEqual(edited.body.session);
+
+    const removed = await request(app).delete(`/api/cohorts/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(removed.status).toBe(200);
+    expect(removed.body).toMatchObject({ id: sessionId, updatedCohorts: [expect.objectContaining({ id: cohortId, nextSessionId: null })] });
+  });
+
+  it('omits cross-area cohort rows without program-read capability', async () => {
+    const writer = generateToken(userId, 'admin', 'session-writer@test.local', ['write:sessions']);
+
+    const response = await move('2030-03-10', writer);
+
+    expect(response.status).toBe(200);
+    expect(response.body.session).toMatchObject({ id: sessionId, theme: 'Keep my theme' });
+    expect(response.body).not.toHaveProperty('updatedCohorts');
   });
 
   it('preserves the local day span of an overnight session across DST', async () => {
     await sql`UPDATE cohort_sessions SET ends_at = '2030-03-04T09:00:00Z' WHERE id = ${sessionId}`;
     const response = await move('2030-03-09');
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({ startsAt: '2030-03-09T22:30:00.000Z', endsAt: '2030-03-10T08:00:00.000Z' });
+    expect(response.body.session).toMatchObject({ startsAt: '2030-03-09T22:30:00.000Z', endsAt: '2030-03-10T08:00:00.000Z' });
   });
 
   it('rejects nonexistent and repeated destination wall-clock times', async () => {
@@ -83,7 +129,11 @@ describe('Future session date moves', () => {
   it('resolves another assigned cycle for an unrecorded session', async () => {
     const response = await move('2032-01-12');
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({ cohortId: nextCohortId, cycleId: nextCycleId });
+    expect(response.body.session).toMatchObject({ cohortId: nextCohortId, cycleId: nextCycleId });
+    expect(response.body.updatedCohorts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: cohortId, nextSessionId: null }),
+      expect.objectContaining({ id: nextCohortId, nextSessionId: sessionId }),
+    ]));
   });
 
   it('rejects past sources, cancelled sessions, and past destinations', async () => {

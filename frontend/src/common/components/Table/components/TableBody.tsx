@@ -3,6 +3,7 @@ import type { Row } from '@tanstack/react-table';
 import TableRow from './TableRow';
 import type { TableNavigationKey } from '../Table.types';
 import UnavailableState from '../../UnavailableState/UnavailableState';
+import LoadingSpinner from '../../LoadingSpinner/LoadingSpinner';
 
 interface TableBodyProps<T> {
   rows: Row<T>[];
@@ -52,7 +53,12 @@ export default function TableBody<T>({
   if (loading) {
     content = (
       <tr className="table-loading-row">
-        <td colSpan={visibleColumnCount} className="table-state-cell">Loading...</td>
+        <td colSpan={visibleColumnCount} className="table-state-cell">
+          <div className="table-loading-status" role="status" aria-label="Loading rows">
+            <LoadingSpinner />
+            <span className="sr-only">Loading rows…</span>
+          </div>
+        </td>
       </tr>
     );
   } else if (unavailable) {
@@ -88,5 +94,5 @@ export default function TableBody<T>({
     });
   }
 
-  return <tbody ref={bodyRef} aria-busy={refreshing || undefined}>{content}</tbody>;
+  return <tbody ref={bodyRef} aria-busy={loading || refreshing || undefined}>{content}</tbody>;
 }

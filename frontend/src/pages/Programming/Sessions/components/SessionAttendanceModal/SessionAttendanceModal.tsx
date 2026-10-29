@@ -1,3 +1,4 @@
+import type { SessionAttendanceResult } from '../../sessions.api';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { CohortSession } from '../../types';
@@ -10,7 +11,7 @@ import useSessionAttendanceModal from './hooks/useSessionAttendanceModal';
 interface SessionAttendanceModalProps {
   session: CohortSession | null;
   onClose: () => void;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
 export default function SessionAttendanceModal({

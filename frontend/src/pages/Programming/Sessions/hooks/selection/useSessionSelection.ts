@@ -45,6 +45,11 @@ export default function useSessionSelection() {
     if (selectedSessionId === sessionId) clearSelectedSession();
   }, [clearSelectedSession, selectedSessionId]);
 
+  const syncSelectedSession = useCallback((session: CohortSession) => {
+    setSelectedTableSession(current => current?.id === session.id ? session : current);
+    setCalendarSessions(current => current.map(row => row.id === session.id ? session : row));
+  }, []);
+
   const getSelectedSession = useCallback((view: 'calendar' | 'table') => view === 'calendar'
     ? calendarSessions.find(session => session.id === selectedSessionId) ?? null
     : selectedTableSession?.id === selectedSessionId ? selectedTableSession : null,
@@ -52,6 +57,7 @@ export default function useSessionSelection() {
 
   return {
     selectedSessionId,
+    syncSelectedSession,
     dashboardMode: selectedSessionId ? 'session' : dashboardMode,
     showProgramDashboard,
     clearSelectedSession,

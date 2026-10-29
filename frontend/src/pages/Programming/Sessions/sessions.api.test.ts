@@ -5,6 +5,8 @@ import { apiClient } from '../../../http/client';
 import {
   createSession,
   moveSessionDate,
+  updateSession,
+  setSessionAttendance,
   createSessionAttachment,
   getSessionAttachmentDownloadName,
   getSessions,
@@ -30,6 +32,20 @@ describe('session API', () => {
     expect(apiClient.put).toHaveBeenCalledWith('/cohorts/sessions/session-1/date', { date: '2027-01-12' });
   });
 
+  it('forwards canonical edit and attendance command responses to their owners', async () => {
+    const saved = { id: 'session-1', theme: 'Authoritative session', attendedCount: 2 };
+    const edit = { sessionTypeId: 'type-1', theme: 'Edited', startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z' };
+    vi.mocked(apiClient.put).mockResolvedValueOnce({ session: saved });
+
+    await expect(updateSession('session-1', edit)).resolves.toEqual({ session: saved });
+    expect(apiClient.put).toHaveBeenLastCalledWith('/cohorts/sessions/session-1', edit);
+
+    const attendance = { roster: [], session: saved };
+    vi.mocked(apiClient.put).mockResolvedValueOnce(attendance);
+    await expect(setSessionAttendance('session-1', [])).resolves.toBe(attendance);
+    expect(apiClient.put).toHaveBeenLastCalledWith('/cohorts/sessions/session-1/attendance', { records: [] });
+  });
+
   it('creates by program and date so the server resolves the assigned cycle', () => {
     const data = { programId: 'program-1', sessionTypeId: 'type-1', theme: 'Art', date: '2026-10-27' };
     createSession(data);
@@ -40,7 +56,7 @@ describe('session API', () => {
     getSessions({}, undefined, { key: 'date', direction: 'asc' });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/cohorts/sessions?sort=date&direction=asc&limit=25',
+      '/cohorts/sessions?sort=date&direction=asc&limit=50',
     );
   });
 
@@ -48,7 +64,7 @@ describe('session API', () => {
     const options = { signal: new AbortController().signal };
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/cohorts/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=25', options,
+      '/cohorts/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=50', options,
     );
 
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], start: '2026-07-01', end: '2026-08-01' }, options);

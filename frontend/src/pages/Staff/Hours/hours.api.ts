@@ -2,7 +2,7 @@ import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
-import type { CursorPage, CursorRequest } from '../../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
 import type { Task } from '../Tasks/types';
 import type {
   HoursCategory,
@@ -19,7 +19,9 @@ export type SetHoursInput = SharedHoursInput & ({
 } | { source: 'task'; workDate: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: string });
 export interface UpdateHoursPlacementInput { workDate: string }
-export type SetHoursResult = HoursEntry & { updatedTask?: Task };
+export type HoursMutationResult = HoursEntry & { tableRow: HoursTableRow; updatedTasks?: Task[] };
+export type SetHoursResult = HoursMutationResult;
+export interface DeleteHoursResult { message: string; updatedTasks?: Task[] }
 
 export type HoursCalendarData = RowPeriodData<HoursItem>;
 
@@ -74,7 +76,7 @@ export function getHoursTableData(
   pagination: CursorRequest,
 ) {
   const params = new URLSearchParams({
-    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? 25),
+    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyHoursFilters(params, filters);
@@ -109,6 +111,6 @@ export function setHours(input: SetHoursInput, id?: string) {
     : apiClient.post<SetHoursResult>('/hours', input);
 }
 export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
-  return apiClient.patch<HoursEntry>(`/hours/${id}/placement`, input);
+  return apiClient.patch<HoursMutationResult>(`/hours/${id}/placement`, input);
 }
-export function deleteHours(id: string) { return apiClient.delete<{ message: string }>(`/hours/${id}`); }
+export function deleteHours(id: string) { return apiClient.delete<DeleteHoursResult>(`/hours/${id}`); }

@@ -1,5 +1,5 @@
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import useAccountData from './hooks/data/useAccountData';
 import type { AccountPageData } from './types';
 import './Account.css';
@@ -36,6 +36,6 @@ export default function Account() {
         </span>
       </div>
     </div>
-    <PageErrorOverlay errors={[programError]} />
+    <PageMessageOverlay messages={[programError]} />
   </main>;
 }
