@@ -8,7 +8,7 @@ Dashboard cards use two shared sizes: **normal** is the default; **short** is fo
 Hours and Tasks. Programming's program overview and session cards use normal cards.
 The [card shell contract](#keep-the-card-shell-stable) applies in every data state.
 
-## Load dashboard data
+## Load Dashboard Data
 
 Place each data hook beside its smallest consumer. A query used by one card belongs in that card’s `hooks/` directory and is called by that card. Keep a query at dashboard level only when multiple cards consume its results. Cards that render data already supplied by the page do not need a separate data hook. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
@@ -23,7 +23,7 @@ function ScheduleDashboard({ selected, onAction }: ScheduleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
-## Keep the card shell stable
+## Keep the Card Shell Stable
 
 Every dashboard card keeps its declared shared height across breakpoints and states:
 normal uses `--dashboard-card-height`; the optional `dashboard-card--short` modifier
@@ -75,7 +75,7 @@ refresh; a new target must never display the previous target's values or actions
 Disable actions that need unavailable data, and scope open reports/dialogs to their
 target so a selection change cannot present an old report under a new title.
 
-## Separate selection intent from data availability
+## Separate Selection Intent from Data Availability
 
 Choose the dashboard from the user's explicit selection intent, not whether the
 selected record happens to be in a loaded table page or calendar buffer. Selecting
@@ -89,7 +89,7 @@ Keep this coordination in the route or its selection hook. Shared tables/calenda
 report selection events; they do not own domain dashboard modes. Resolve a clicked
 full record in the selection update rather than waiting for a child's later effect.
 
-## Assign dashboard ownership
+## Assign Dashboard Ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.
 - Keep table and calendar selection semantics equivalent when both views select the same domain record.

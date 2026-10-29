@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, mkdir, stat, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -22,7 +22,6 @@ async function createRepository() {
   await writeFile(path.join(repoRoot, 'docs/workflows/testing.md'), '# Testing\n\nWorkflow guide.\n');
   const navigationEntries = [
     { label: 'Overview', source: 'README.md' },
-    { label: 'Website', source: 'docs/README.md' },
     { label: 'Backend', items: [
       { label: 'Overview', source: 'docs/backend/README.md' },
       { label: 'HTTP flow', source: 'docs/backend/http.mmd' },
@@ -45,7 +44,6 @@ test('builds the configured corpus, route manifest, frontmatter, and Mermaid sou
 
   assert.deepEqual(manifest.routes, {
     'README.md': '/',
-    'docs/README.md': '/website/',
     'docs/backend/README.md': '/backend/',
     'docs/backend/http.mmd': '/backend/http/',
     'docs/frontend/README.md': '/frontend/',
@@ -58,7 +56,7 @@ test('builds the configured corpus, route manifest, frontmatter, and Mermaid sou
   assert.doesNotMatch(rootOutput, /^# Product/m);
   assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /```mermaid\n%% HTTP lifecycle\nsequenceDiagram/);
   assert.equal(manifest.sources[path.join(fixture.outputDir, 'backend/index.md')], 'docs/backend/README.md');
-  assert.match(await readFile(path.join(fixture.outputDir, 'website.md'), 'utf8'), /title: "Docs index"/);
+  await assert.rejects(stat(path.join(fixture.outputDir, 'website.md')), { code: 'ENOENT' });
   assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /title: "HTTP lifecycle"/);
   assert.deepEqual(manifest.sidebar.find(group => group.label === 'Frontend'), {
     label: 'Frontend',
@@ -68,6 +66,29 @@ test('builds the configured corpus, route manifest, frontmatter, and Mermaid sou
       { slug: 'frontend/components/buttons', label: 'Buttons' },
     ],
   });
+});
+
+test('regeneration preserves watched entries while updating changed and removing retired documents', async t => {
+  const fixture = await createRepository();
+  t.after(fixture.cleanup);
+  await prepareContent(fixture);
+
+  const unchanged = path.join(fixture.outputDir, 'frontend/index.md');
+  const watchedDirectory = path.join(fixture.outputDir, 'frontend');
+  const directoryBefore = await stat(watchedDirectory);
+  const originalTime = new Date('2020-01-01T00:00:00Z');
+  await utimes(unchanged, originalTime, originalTime);
+  await writeFile(path.join(fixture.repoRoot, 'README.md'), '# Product\n\nUpdated overview.\n');
+  await rm(path.join(fixture.repoRoot, 'docs/frontend/components/buttons.md'));
+  const frontend = fixture.navigationEntries.find(entry => entry.label === 'Frontend');
+  frontend.items = frontend.items.filter(entry => entry.label !== 'Buttons');
+
+  await prepareContent(fixture);
+
+  assert.equal((await stat(unchanged)).mtimeMs, originalTime.getTime());
+  assert.equal((await stat(watchedDirectory)).ino, directoryBefore.ino);
+  assert.match(await readFile(path.join(fixture.outputDir, 'index.md'), 'utf8'), /Updated overview/);
+  await assert.rejects(stat(path.join(fixture.outputDir, 'frontend/components/buttons.md')), { code: 'ENOENT' });
 });
 
 test('fails when a Markdown document has no first-level title', async t => {
@@ -90,15 +111,15 @@ test('fails on generated path collisions before writing output', async t => {
 
 
 test('curated navigation preserves task order and rejects missing, duplicate, and unknown documents', () => {
-  const routes = { 'README.md': '/', 'docs/README.md': '/website/' };
+  const routes = { 'README.md': '/', 'docs/backend/README.md': '/backend/' };
   const overview = { label: 'Overview', source: 'README.md' };
-  const website = { label: 'Website', source: 'docs/README.md' };
+  const backend = { label: 'Backend', source: 'docs/backend/README.md' };
 
-  assert.deepEqual(buildSidebar(routes, [website, overview]), [
-    { label: 'Website', slug: 'website' },
+  assert.deepEqual(buildSidebar(routes, [backend, overview]), [
+    { label: 'Backend', slug: 'backend' },
     { label: 'Overview', slug: '' },
   ]);
-  assert.throws(() => buildSidebar(routes, [overview]), /missing from navigation: docs\/README.md/);
-  assert.throws(() => buildSidebar(routes, [overview, website, overview]), /Duplicate navigation source: README.md/);
+  assert.throws(() => buildSidebar(routes, [overview]), /missing from navigation: docs\/backend\/README.md/);
+  assert.throws(() => buildSidebar(routes, [overview, backend, overview]), /Duplicate navigation source: README.md/);
   assert.throws(() => buildSidebar(routes, [{ label: 'Unknown', source: 'missing.md' }]), /Unknown navigation source: missing.md/);
 });

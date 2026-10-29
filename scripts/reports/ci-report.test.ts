@@ -19,6 +19,10 @@ test('classifies CI ownership paths without treating application code as CI', ()
   assert.equal(isCiPath('docs/workflows/ci.md'), true);
   assert.equal(isCiPath('docs/workflows/reports.md'), true);
   assert.equal(isCiPath('docs/workflows/testing.md'), true);
+  assert.equal(isCiPath('docs/workflows/delivery/ci.md'), true);
+  assert.equal(isCiPath('docs/workflows/delivery/reports.md'), true);
+  assert.equal(isCiPath('docs/workflows/delivery/testing.md'), true);
+  assert.equal(isCiPath('docs/workflows/local-development/setup.md'), false);
   assert.equal(isCiPath('docs/backend/database.md'), false);
   assert.equal(isCiPath('frontend/package-lock.json'), true);
   assert.equal(isCiPath('frontend/src/App.tsx'), false);

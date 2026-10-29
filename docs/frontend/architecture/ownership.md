@@ -1,8 +1,8 @@
-# Frontend ownership
+# Frontend Ownership
 
 Choose the narrowest owner that can state the complete behavior. File placement follows dependency direction and rendered ownership, not file length.
 
-## Choose the narrowest owner
+## Choose the Narrowest Owner
 
 | Owner | Responsibility |
 |---|---|
@@ -33,7 +33,7 @@ Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract liv
 Cycle management forms remain with Settings; cohort forms and enrollment behavior
 remain with Cohorts.
 
-## Assign each file one location
+## Assign Each File One Location
 
 - An API adapter owns endpoint paths and request/response typing through the centralized HTTP client.
 - A utility owns pure transforms, constants, date arithmetic, or external-library adaptation.
@@ -41,9 +41,9 @@ remain with Cohorts.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
 See [Components](../components/README.md) for extraction and rendering patterns, and
-[Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries.
+[Testing](../../workflows/delivery/testing.md#frontend-test-ownership) for test boundaries.
 
-## Validate uncertain inputs
+## Validate Uncertain Inputs
 
 Validate and normalize where uncertainty enters:
 
@@ -55,7 +55,7 @@ Validate and normalize where uncertainty enters:
 
 Inside a typed owner, do not manufacture required values with placeholders, cast arbitrary strings into finite unions, or preserve compatibility branches for impossible states. Correct the boundary instead.
 
-## Test at the owning boundary
+## Test at the Owning Boundary
 
 Colocate each component, hook, API adapter, and page test with its narrowest public owner. Test behavior where it is owned and add consumer wiring coverage only when correctness crosses owners.
 

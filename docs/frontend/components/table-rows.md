@@ -1,8 +1,8 @@
-# Table rows
+# Table Rows
 
 Use authoritative server rows to update a table without disrupting its current position or selection.
 
-## Render rows
+## Render Rows
 
 - Use a durable record ID as the row key.
 - Render values from the complete typed row returned by the list endpoint; do not cast transport data inside cells.
@@ -13,7 +13,7 @@ Use authoritative server rows to update a table without disrupting its current p
 
 Columns may render cells directly. Extract a row-owned component only when a region has meaningful interaction, accessibility, or independently testable behavior; do not create a wrapper merely to mirror table markup.
 
-## Own query keys
+## Own Query Keys
 
 Give each remote table a stable list-key prefix that contains only cursor-list variants. Keep overview, dashboard, calendar, options, and direct-record queries on sibling keys rather than beneath a broad prefix that mutation code might invalidate accidentally.
 
@@ -26,7 +26,7 @@ const EXAMPLE_CALENDAR_QUERY_KEY = [...EXAMPLE_QUERY_KEY, 'calendar'] as const;
 
 Action owners receive the narrow keys they actually reconcile. Do not expose a `refreshExamples()` helper that invalidates the domain root when an operation affects only one row or one aggregate.
 
-## Define mutation responses
+## Define Mutation Responses
 
 The canonical table row is the complete projection rendered by the list endpoint. It may be the same shape as the domain record, or it may include joined names, capabilities, labels, and other server-derived fields. The backend list service and command service must share the row projection and mapping so command responses cannot drift from list responses.
 
@@ -41,7 +41,7 @@ interface CompleteWorkResult {
 
 The typed frontend API adapter owns this response shape. If calendar or detail consumers use another representation, derive it from an authoritative response projection or include that projection explicitly in the endpoint-specific envelope. Never synthesize server-owned row fields from stale cache data merely to avoid changing the API.
 
-## Reconcile row operations
+## Reconcile Row Operations
 
 | Operation | Cached rows | List request |
 |---|---|---|
@@ -79,7 +79,7 @@ The synchronization helper receives complete authoritative rows; it does not fet
 rows or derive server-owned fields. If a command cannot return that projection, correct its
 backend response instead of falling back to a table refresh.
 
-## Handle concurrency and failure
+## Handle Concurrency and Failure
 
 - Prevent overlapping mutations for the same row when the UI can trigger them.
 - Do not reconcile a failed response or leave an optimistic row change without an explicit rollback contract.
@@ -92,5 +92,5 @@ Row tests cover values, accessible action names, emitted records and permissions
 tests cover focused payloads and the operation table above: affected variants change,
 unaffected references remain stable, and only permitted queries are invalidated. Cover
 selection and other required reconciliation, failed and duplicate actions, and preservation
-of fields changed after the client's original read. See [Testing](../../workflows/testing.md)
+of fields changed after the client's original read. See [Testing](../../workflows/delivery/testing.md)
 for shared boundaries and runners.

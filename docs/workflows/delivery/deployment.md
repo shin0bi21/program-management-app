@@ -1,11 +1,11 @@
-# Deploy, verify, and recover
+# Deploy, Verify, and Recover
 
 Deployment requires separate explicit authorization from feature shipping.
 Release through a pull request from `develop` to `main`; merging it automatically
-deploys production. See [access and credentials](access.md) for initial setup or
+deploys production. See [access and credentials](../production/access.md) for initial setup or
 authentication failures.
 
-## Release to production
+## Release to Production
 
 1. Confirm the approved release scope is merged into `develop`, its checks have
    passed, and migration or operational prerequisites are understood. Resolve
@@ -30,7 +30,7 @@ main push → SSH to Lightsail → scripts/deploy/main.sh → public smoke check
 <a id="ci-and-automatic-deployment"></a>
 <a id="troubleshooting-checklist"></a>
 
-## Monitoring and rerunning a deployment
+## Monitoring and Rerunning a Deployment
 
 Record the failed job/step and target commit before retrying. The workflow checks
 required secret names before SSH, rejects an uncommitted server working tree,
@@ -39,70 +39,24 @@ It then requests the public health endpoint and homepage with bounded retries.
 
 | Failure | Next action |
 |---|---|
-| Missing secret or SSH connection | Follow [deployment access](access.md#deployment-access) |
-| GitHub fetch rejected | Follow [server GitHub access](access.md#server-github-access) |
+| Missing secret or SSH connection | Follow [deployment access](../production/access.md#deployment-access) |
+| GitHub fetch rejected | Follow [server GitHub access](../production/github-authentication.md#server-github-access) |
 | Dirty server checkout | Inspect and preserve the changes; resolve their ownership before retrying |
 | Build, migration, or service replacement | Inspect the failed step and `logs/deploy.log` on Lightsail |
-| Public health/homepage check | Inspect production container status and logs, then verify HTTPS reachability |
-| Login verification email | Follow [email recovery](access.md#restore-verification-email) |
+| Public health/homepage check | Follow [nginx and TLS diagnostics](../production/nginx-and-tls.md#identify-the-failing-boundary) |
+| Login verification email | Follow [email recovery](../production/email-recovery.md#restore-verification-email) |
 
 After correcting a configuration or transient failure for an authorized release,
 use **Re-run jobs → Re-run failed jobs**. A new commit is not needed. Check whether
 `main` has advanced first: the deployment fetches current `origin/main`, so rerunning
 an older Actions run can deploy newer code. Confirm that target is authorized.
 
-## Manual access and deployment
+## Manual Access and Deployment
 
-Use manual deployment only for an authorized release or recovery. Connect from
-the workstation holding the authorized key:
+Administrators performing an authorized manual release or recovery should follow
+[Manual Access and Deployment](../admin/manual-deployment.md).
 
-```bash
-ssh -i ~/.ssh/be-original-key.pem ubuntu@18.216.104.46
-```
-
-On Lightsail, enter the production checkout and inspect it:
-
-```bash
-cd /home/ubuntu/my-webapp
-git status --short
-./scripts/deploy/main.sh --preview
-```
-
-Preview fetches the latest remote `main` into a temporary Git repository and
-compares it with the recorded component revisions using the current checkout's
-deployment tooling. It does not update the checkout, index, refs, deployment
-logs/lock, revision markers, images, services, or database, and does not load
-`.env`. Temporary Git data is removed on success or failure. Repository transport
-settings still apply; a fetch failure stops preview without starting deployment.
-
-Local edits are excluded and produce a notice; actual deployment still rejects
-a dirty checkout. Missing revision markers select the full flow without creating
-the state directory. Preview is advisory: another deployment or a new `main`
-commit can change the later result. It does not execute fetched deployment scripts.
-The former `--plan` flag is no longer accepted.
-
-Once the preview target and selected work match the authorized release:
-
-```bash
-./scripts/deploy/main.sh
-curl -fsS https://be-original.ca/health
-curl -fsS https://be-original.ca/ > /dev/null
-```
-
-The script fetches again; recheck its printed target if `main` advanced. Finish
-with the same user-facing verification as an automatic release.
-
-For manual container inspection, always name the production Compose file:
-
-```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs --tail=100 backend nginx
-```
-
-The default Compose file runs development services. The deployment script selects
-the production file internally; bare manual Compose commands do not.
-
-## Recovery boundaries
+## Recovery Boundaries
 
 Stop on a failed deployment and inspect its last successful phase before changing
 state again. Preserve the target commit, Actions output, and deployment log.
@@ -123,7 +77,7 @@ state again. Preserve the target commit, Actions output, and deployment log.
   operator-led recovery compatible with the current database; do not guess a
   database downgrade or rewrite an applied migration.
 
-## Deployment selection and Docker caching
+## Deployment Selection and Docker Caching
 
 The script compares the target commit with the last successful frontend, backend,
 and infrastructure revisions in `.deploy-state/`:
@@ -142,7 +96,7 @@ a selected build can reuse unchanged layers. A full deployment is not a
 `--no-cache` build; dependency installation occurs during image building, not
 each container start.
 
-The executable owners are [the deployment workflow](../../.github/workflows/deploy.yml)
-and [the script entry point](../../scripts/deploy/main.sh), with numbered steps
+The executable owners are [the deployment workflow](../../../.github/workflows/deploy.yml)
+and [the script entry point](../../../scripts/deploy/main.sh), with numbered steps
 beside it for synchronization, selection, migration safeguards, replacement, and
 cleanup. [CI](ci.md) owns pull-request validation and required checks.

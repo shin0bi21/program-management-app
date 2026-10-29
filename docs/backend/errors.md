@@ -1,4 +1,4 @@
-# Backend errors
+# Backend Errors
 
 Unless stated otherwise, source paths in this document are relative to `backend/`.
 
@@ -10,7 +10,7 @@ Unless stated otherwise, source paths in this document are relative to `backend/
 
 Never `res.json()` an error. Just throw and the rest is handled.
 
-### Error semantics and user messages
+### Error Semantics and User Messages
 
 We adapt [Google AIP-193: Errors](https://google.aip.dev/193) for consistent
 error classification and separation of diagnostic information from user-facing
@@ -61,7 +61,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 
 <a id="1-error-classes"></a>
 
-## Choose an error
+## Choose an Error
 
 | Error | Status | Use |
 |---|---|---|
@@ -79,7 +79,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 
 Types live in [errors.ts](../../backend/src/errors.ts). A new error type extends `AppError` and sets its status and name. Raw PostgreSQL unique violations (`23505`) become `ConflictError`; connection failures become `DbConnectionError`. Unknown failures become `InternalServerError`. Classification preserves the original cause for server logs.
 
-## Response contract
+## Response Contract
 
 Every error response has an `error` message and the request ID assigned by middleware. Validation errors also include field details:
 
@@ -95,21 +95,21 @@ For production 5xx responses, the handler sends `clientMessage` when explicitly 
 
 The `/health` probe has its own status contract: `{ status: 'ok'|'degraded', db: 'connected'|'unavailable' }`, with 200 or 503.
 
-## Connect the error path
+## Connect the Error Path
 
 Wrap every Express 4 async controller or middleware in `asyncHandler` so rejected promises reach the global handler. Controllers normally need no catch block.
 
-Follow [middleware ordering](middleware.md#request-ordering), with `handleError` last. The [HTTP flow](http.mmd) shows the complete request path; [errorMiddleware.ts](../../backend/src/middleware/errorMiddleware.ts) owns classification and serialization.
+Follow [middleware ordering](middleware.md#request-ordering), with `handleError` last. The [HTTP Flow](http.mmd) shows the complete request path; [errorMiddleware.ts](../../backend/src/middleware/errorMiddleware.ts) owns classification and serialization.
 
-## Trace failures
+## Trace Failures
 
 The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`, including request ID, method, path, status, error class, message, and the classified error with its stack and cause. If headers were already sent, it logs without attempting another response.
 
 `requestId` runs first, accepts an incoming `X-Request-ID` or generates a UUID, and returns it in the response header and error body. Use that ID to correlate a client report with server logs.
 
-Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/debugging.md).
+Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/local-development/debugging.md).
 
-## Logging rules
+## Logging Rules
 
 Request-path failures must be thrown as the appropriate application error and
 allowed to reach the global error handler. Do not catch and re-log the same
@@ -129,7 +129,7 @@ unnecessarily complete request bodies. Do not add temporary success-path
 `console.log` calls as permanent tracing. If a request needs correlation, use
 its existing request ID rather than inventing a second identifier.
 
-## Frontend errors
+## Frontend Errors
 
 Typed errors used by the HTTP client live in `frontend/src/http/errors.ts`
 and `frontend/src/auth/accessToken.ts`:

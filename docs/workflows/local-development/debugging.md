@@ -2,9 +2,9 @@
 
 Use this guide to trace a local failure from the browser through the API and
 backend process. The error types, response contract, middleware flow, and
-request-ID design are owned by [Error handling](../backend/errors.md).
+request-ID design are owned by [Error handling](../../backend/errors.md).
 
-## Trace a client or API failure
+## Trace a Client or API Failure
 
 1. In the browser developer tools, inspect the failing request under
    **Network**. Record its method, URL, status, response body, and
@@ -50,13 +50,13 @@ migration, dependency, and staleness diagnostics. For a large captured log,
 use `bash scripts/dev/condense-logs.sh <path>` or pipe pasted output into the
 same script.
 
-## Production login fails while sending a verification email
+## Production Login Fails While Sending a Verification Email
 
-Use [Restore verification email](access.md#restore-verification-email) for
+Use [Restore Verification Email](../production/email-recovery.md#restore-verification-email) for
 production SMTP credential failures. Local debugging commands below use the
 development Compose configuration and must not be copied into production.
 
-## Attach the backend debugger
+## Attach the Backend Debugger
 
 The development backend starts Node Inspector on container port `9229`, which
 Compose publishes to `localhost:9229`. Start the stack and attach a Node
@@ -72,8 +72,8 @@ request. Restart the backend after changing backend source before reproducing:
 docker compose restart backend
 ```
 
-## Logging rules
+## Logging Rules
 
 Let request failures reach the global error handler. Follow the
-[backend logging rules](../backend/errors.md#logging-rules) for background
+[backend logging rules](../../backend/errors.md#logging-rules) for background
 failures, sensitive-data redaction, and request-ID correlation.

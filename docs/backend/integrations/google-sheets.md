@@ -1,10 +1,10 @@
-# Google Sheets scripts
+# Google Sheets Scripts
 
 Use the helpers in [backend/scripts/googleSheets](../../../backend/scripts/googleSheets/)
 for one-off spreadsheet imports and exports. They are script-only utilities, outside the
 Express request path.
 
-## Set up access
+## Set Up Access
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create a service account
    under **IAM & Admin → Service Accounts** and download its JSON key.
@@ -18,12 +18,12 @@ Express request path.
 4. Share the spreadsheet with the service account email. Grant Viewer for reads or Editor
    for writes. Keep the key and `.env` out of Git.
 5. Recreate the local backend container after changing `.env`, following
-   [Local development](../../workflows/local-development.md#which-command-to-use).
+   [Local Development](../../workflows/local-development/README.md#which-command-to-use).
 
 `GOOGLE_SERVICE_ACCOUNT_JSON` is required only when running Sheets scripts. Normal server
 operation does not need it.
 
-## Check the connection
+## Check the Connection
 
 Run from the repository root with the local backend container running:
 
@@ -41,7 +41,7 @@ metadata and prints the spreadsheet title and tab names.
 | Permission denied | Share the spreadsheet with the service account email |
 | Spreadsheet not found | Check the spreadsheet ID and account access |
 
-## Read or change cells
+## Read or Change Cells
 
 | Helper | Behavior |
 |---|---|
@@ -54,7 +54,7 @@ See the [helper implementation](../../../backend/scripts/googleSheets/index.ts) 
 [option types](../../../backend/scripts/googleSheets/types.ts) for the complete API.
 Use `getSheetsClient()` from the same module for operations outside these helpers.
 
-## Add a script
+## Add a Script
 
 Place scripts under `backend/scripts/`. For example, `backend/scripts/read-roster.ts`:
 

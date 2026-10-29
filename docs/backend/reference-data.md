@@ -1,4 +1,4 @@
-# Shared reference data
+# Shared Reference Data
 
 Reference data supplies the small projections used by filters and selectors across
 route families. Each shared lookup has one query under
@@ -6,7 +6,7 @@ route families. Each shared lookup has one query under
 contract. Feature services compose those lookups when necessary; they do not copy
 their SQL into each feature's reference endpoint.
 
-## Projections and access
+## Projections and Access
 
 All paths below are relative to `/api`. Authentication, rate limiting, request
 validation where applicable, and the normal error middleware still apply.
@@ -32,7 +32,7 @@ staff-resource read policy. The required `feature` determines both read
 authorization and the domain-specific `writable` flag. A Tasks capability must not
 authorize an Hours lookup or make an Hours resource writable.
 
-## Compose feature-owned options
+## Compose Feature-Owned Options
 
 Keep domain choices beside their feature. `/tasks/reference-data` returns only
 `categories` and `statuses`; `/hours/reference-data` returns only `categories` and
@@ -44,7 +44,7 @@ labels. `GET /cohorts/sessions/reference-data` requires `read:sessions` and comp
 the existing assigned-program query with session types. This feature endpoint
 does not grant access to program management.
 
-## Frontend ownership and reconciliation
+## Frontend Ownership and Reconciliation
 
 `common/features/referenceData/referenceData.api.ts` owns projection types and
 endpoint serialization. `hooks/useReferenceData.ts` owns query keys and forwards
@@ -71,7 +71,7 @@ including an error with cached rows, must not trigger an unbounded collection
 request. An empty cycle selection means all available cycles, while a successful
 empty cycle lookup means no calendar range is available.
 
-## Verification ownership
+## Verification Ownership
 
 `backend/tests/referenceData/` covers route permissions, strict projections,
 assignment/resource scope, and feature-specific staff capabilities. Feature tests

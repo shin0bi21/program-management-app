@@ -4,7 +4,7 @@ Run tests from the repository root. Prefer repository runners: they provide the
 same stable interface locally and in CI and prepare the Docker-backed backend
 test environment when needed.
 
-## Choose a runner
+## Choose a Runner
 
 | Need | Command |
 |---|---|
@@ -30,14 +30,14 @@ revision:
 bash scripts/tests/test-app.sh --changed HEAD~1
 ```
 
-The shared selector in [`scripts/ci/select-tests.ts`](../../scripts/ci/select-tests.ts)
+The shared selector in [`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts)
 routes recognized backend domains to focused Jest suites and uses Vitest's
 dependency graph for frontend changes. Shared infrastructure, configuration,
 dependencies, migrations, runner changes, and unknown paths conservatively
-escalate to the relevant full suite. See [Continuous integration](ci.md) for
+escalate to the relevant full suite. See [Continuous Integration](ci.md) for
 the complete routing and merge-gate contract.
 
-## During implementation
+## During Implementation
 
 Use the narrowest focused runner that covers the owner you are changing. The
 current runners are listed under `scripts/tests/backend/` and
@@ -66,7 +66,7 @@ fresh evidence when the tested files and relevant environment have not changed;
 otherwise rerun it. For shell changes, run `bash -n` and ShellCheck (included in
 `test-static.sh`). Report every check run and anything left unverified.
 
-## Frontend test ownership
+## Frontend Test Ownership
 
 | Behavior | Runner |
 |---|---|
@@ -94,11 +94,11 @@ table tests cover keyboard selection, a domain table covers selection wiring,
 and a page covers updating its dashboard from the selected record.
 
 For surface-specific ownership rules, start at the
-[frontend guide](../frontend/README.md#find-the-right-guide). It routes pages,
+[frontend guide](../../frontend/README.md#find-the-right-guide). It routes pages,
 components, hooks, tables, calendars, overlays, navigation, and preferences to
 their authoritative testing guidance.
 
-## Organize tests for reading
+## Organize Tests for Reading
 
 Keep suites colocated with their owner. There is no required execution order
 between a page suite, its hooks, and its child components. Each test must arrange
@@ -113,18 +113,18 @@ Group longer suites by the owner's behavior, keeping failures and boundary cases
 beside the success case they qualify. Hook suites follow initialization, input
 changes, completion/failure, and cleanup where applicable. Component suites group
 rendered states and public interactions. Page suites follow the
-[page test reading order](../frontend/pages/README.md#test-page-coordination).
+[page test reading order](../../frontend/pages/testing.md#test-page-coordination).
 Use short section comments or describe blocks only when they help navigation;
 omit empty sections and leave small cohesive suites flat. These are reading
 conventions, not a requirement to add every lifecycle case to every owner.
 
-## Scaffold implementation and tests together
+## Scaffold Implementation and Tests Together
 
 Frontend presets generate colocated implementation and test owners together.
-See [Frontend scaffolding](../frontend/scaffolding.md) for commands, generated
+See [Frontend Scaffolding](../../frontend/pages/scaffolding.md) for commands, generated
 layouts, and how to turn test outlines into meaningful coverage.
 
-## Browser component tests
+## Browser Component Tests
 
 Install Chromium once, then use the repository runner:
 
@@ -141,7 +141,7 @@ the backend or database. Stories are colocated as `*.story.tsx`; specs live in
 `America/Toronto` and on manual dispatch. It is not part of normal pull-request
 CI; failed scheduled runs retain traces for 14 days.
 
-## Test ownership
+## Test Ownership
 
 - Repository-tool tests live beside their scripts. Register new script folders in the root lint command and `scripts/tests/test-static.sh`; the snapshot download/refresh tests in `scripts/dev/` use mocked SSH and Docker commands and never require live data.
 - Backend suites live in `backend/tests/<domain>/` and share helpers from
@@ -162,8 +162,8 @@ CI; failed scheduled runs retain traces for 14 days.
 
 Pattern checks enforce repository structure and ownership independently of the
 application suites. Use `--all` only for an intentional repository-wide scrub;
-see the [frontend guide](../frontend/README.md#find-the-right-guide) for rule
-ownership and [Continuous integration](ci.md) for pull-request behavior.
+see the [frontend guide](../../frontend/README.md#find-the-right-guide) for rule
+ownership and [Continuous Integration](ci.md) for pull-request behavior.
 
-See [Local development](local-development.md) for dependencies, container
+See [Local Development](../local-development/README.md) for dependencies, container
 lifecycle, logs, migrations, and database resets.

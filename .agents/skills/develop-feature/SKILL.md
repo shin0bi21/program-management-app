@@ -44,12 +44,12 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 - Keep finite values, nullable fields, identifiers, permissions, errors, and canonical domain vocabulary aligned across persistence, backend types, HTTP contracts, frontend adapters, and UI state.
 - Prefer explicit invariants and loud failures over fallback chains that manufacture required values.
 - Reject compressed business logic. Extract named decisions and helpers so policy, filtering, mutation, and formatting rules are independently readable and testable.
-- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary. Follow the ownership examples in `docs/workflows/testing.md`; do not repeat shared UI/query mechanics or move controlled domain state into a shared component test.
+- Add tests at the narrowest owner plus consumer wiring tests where correctness crosses a boundary. Follow the ownership examples in `docs/workflows/delivery/testing.md`; do not repeat shared UI/query mechanics or move controlled domain state into a shared component test.
 - When a decision establishes a reusable repository pattern, update the narrowest canonical owner guide in the same change.
 
 ## Execute and verify
 
-- Follow `docs/workflows/testing.md` for test ownership, runner selection, and evidence reuse.
+- Follow `docs/workflows/delivery/testing.md` for test ownership, runner selection, and evidence reuse.
 - During implementation, use the narrow runner under `scripts/tests/backend/` or `scripts/tests/frontend/` that owns the changed feature. Record the tested diff and do not rerun an unchanged suite for the same diff.
 - When affected suites are unclear, run `bash scripts/tests/test-app.sh --plan-changed`, then execute the selected suites. Use `--changed` when that selected set is itself the appropriate verification.
 - Before handoff, run `node scripts/agents/snapshot-changes.ts --json` and record its workspace fingerprint, changed-path inventory, and selected checks with the verification evidence. Regenerate the snapshot after any further change.
@@ -63,4 +63,4 @@ Keep the primary orchestrator on the strongest available model and reasoning tie
 3. When mapping is authorized, hand the complete working tree and acceptance ledger to `map-changes` and use its result as the source of truth even when it contains only one concern.
 4. Never treat implementation or "full implementation" as authorization to enter `ship-changes`. Shipping and deployment each require a separate explicit request.
 
-Follow [Review and merge changes](../../../docs/workflows/changes.md) for review and separately authorized shipping boundaries. Deployment remains a separate workflow requiring separate explicit authorization.
+Follow [Review and merge changes](../../../docs/workflows/delivery/review-and-merge.md) for review and separately authorized shipping boundaries. Deployment remains a separate workflow requiring separate explicit authorization.

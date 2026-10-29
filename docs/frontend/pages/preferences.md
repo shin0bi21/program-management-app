@@ -1,4 +1,4 @@
-# Page preferences
+# Page Preferences
 
 Use the shared `usePreferences` hook for controls that survive navigation. Declare each
 field with a named rule such as `preferenceOption`, `preferenceOptions`, `preferenceText`,
@@ -6,7 +6,7 @@ or `preferenceIds` from `common/features/Preferences/preferences.ts`; the rule s
 default and repairs invalid values. Keep page-specific fields, allowed values, role rules and
 option sources in the page's preference or control hook.
 
-## Declare fields
+## Declare Fields
 
 Use the preference-specific named exports directly. Keep these names consistent across
 pages instead of introducing generic aliases such as `oneOf`, `values` or `choice`.
@@ -43,7 +43,7 @@ Use only the fields the page owns. See the
 [Hours preference hook](../../../frontend/src/pages/Staff/Hours/hooks/preferences/useHoursPreferences.ts)
 for a complete caller, including independently loaded option sources.
 
-## Expose page controls
+## Expose Page Controls
 
 Read the returned `preferences` value and submit partial changes with `updatePreferences`.
 Do not duplicate persisted fields in local state or implement restoration, save merging or
@@ -70,7 +70,7 @@ defaults and persistence choices.
 The preference pattern check enforces these groups. The page scaffold points new durable
 controls to this contract without inventing preference keys or filters for a new page.
 
-## Recover invalid values
+## Recover Invalid Values
 
 Missing or malformed fields use their rule's fallback. Valid empty arrays and explicit
 nullable selections remain empty. For list fields, remove invalid entries while keeping valid
@@ -90,7 +90,7 @@ create a saved record until an edit. Existing invalid records and stale selectio
 through the normal save queue. Preferences remain cached for the session so automatic background
 loads cannot overwrite local choices.
 
-## Derive timeline bounds from cycles
+## Derive Timeline Bounds from Cycles
 
 Persist `cycleIds` through the normal multi-select rules, then derive the range from
 authoritative cycle options. No selected IDs means all available cycles. Keep loading

@@ -1,6 +1,6 @@
-# Authorization and policies
+# Authorization and Policies
 
-## Define the contract before coding
+## Define the Contract Before Coding
 
 Separate these decisions explicitly:
 
@@ -14,13 +14,13 @@ Do not infer one decision from another. In particular, shared program membership
 
 <a id="translate-the-access-contract"></a>
 
-## Put authority in one place
+## Put Authority in One Place
 
 - Keep route capability checks permission-based.
 - Put resource discovery, read scope, mutation scope, and assignment assertions in named modules under `backend/src/policies/`. Reuse resource predicates across domains only when the relationship is identical; keep domain transitions and assignment rules in their domain policy.
 - Services compose those policies at authoritative boundaries. Do not scatter equivalent role, ownership, program, cohort, or assignment checks through services.
 
-## Enforce reads and writes
+## Enforce Reads and Writes
 
 - Apply read predicates in both resource discovery and record queries. Direct filters must not reveal resources excluded from discovery.
 - Keep resource-wide visibility distinct from record metadata. A relationship exposing the whole resource must not accidentally re-filter its records by that relationship's metadata.
@@ -30,13 +30,13 @@ Do not infer one decision from another. In particular, shared program membership
 - Reuse the same capability for add targets, cell actions, item mechanics, row menus, modal choices, dashboard actions, and cross-resource moves.
 - When readable resources include non-writable coworkers, initialize personal workflows and dashboards from the actor's writable resource rather than incidental response order. Still allow explicit selection of readable coworkers for read-only dashboards when the product requires it.
 
-## Avoid authority leaks
+## Avoid Authority Leaks
 
 - Frontend controls, requested resource IDs, query filters, and client-supplied assignee IDs are never authorization.
 - Do not infer mutation authority from read visibility, role names in a consumer, response order, or record metadata.
 - Keep administrator breadth and staff self-scope explicit in policy code.
 
-## Add or change a permission
+## Add or Change a Permission
 
 Roles group permissions. Route checks use the access token's permission set;
 [authentication](auth.md#how-permissions-flow-into-a-token) owns how that set is
@@ -50,6 +50,6 @@ issued and refreshed. `requirePermission(...)` requires all named capabilities;
 4. Update the frontend [Permission union](../../frontend/src/auth/authContext.ts).
 5. Test missing capabilities and the affected roles' record scope.
 
-## Verify the matrix
+## Verify the Matrix
 
 Cover administrator, own resource, shared readable resource, and unrelated resource. When resource visibility is broader than record metadata, include a record with no matching program or domain association to prove the boundary is truly the resource row. Verify reads, direct filtered reads, create, update, move/reassign, delete, returned capability fields, and absent consumer controls as applicable.

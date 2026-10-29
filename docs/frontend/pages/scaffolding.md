@@ -1,4 +1,4 @@
-# Frontend scaffolding
+# Frontend Scaffolding
 
 `npm run scaffold:frontend` generates colocated test outlines alongside each
 implementation owner automatically; no separate test command or flag is needed.
@@ -16,7 +16,7 @@ The presets keep source and test ownership aligned:
 | `calendar` | Domain calendar adapter and its component suite |
 | `dashboard` | Card composition and its component suite |
 
-Collection pages use the five behavior groups in the [page guide](pages/README.md#test-page-coordination).
+Collection pages use the five behavior groups in the [page guide](testing.md#test-page-coordination).
 Component and hook suites follow their own contracts, rather than repeating the
 page groups or the implementation's statement order. Optional presentation hooks,
 row/action components, and browser stories are added beside their real owners
@@ -56,6 +56,51 @@ when the new page needs those owners; each includes its own test outlines.
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
 inapplicable cases. Use the shared QueryClient helpers for query-backed tests.
-Use the [testing guide](../workflows/testing.md) for runner selection.
-See each [frontend owner guide](README.md#find-the-right-guide) for
+Use the [testing guide](../../workflows/delivery/testing.md) for runner selection.
+See each [frontend owner guide](../README.md#find-the-right-guide) for
 the supported source layout and preset commands.
+
+## Scaffold a Page
+
+Preview an authenticated collection page at the root or within a route family:
+
+```bash
+npm run scaffold:frontend -- page Leads --dry-run
+npm run scaffold:frontend -- page Staff/Schedules --dry-run
+```
+
+Remove `--dry-run` to generate the skeleton below.
+
+Tests are generated automatically. The calendar-page example above combines page
+and component presets with separate test owners.
+
+The page preset generates the route and its test plus `hooks/data/use<Page>Data.ts` and
+its test, and calls the data hook during the page-data phase. Replace the data placeholders
+with real reference queries; omit the hook and its test when the page needs no page-wide
+remote data.
+
+Keep the route entry, its test and optional route styles at the page root. Follow
+[Components](../components/README.md), [State and Data](../architecture/state-and-data.md), and
+[Frontend Ownership](../architecture/ownership.md) for child directories, hooks and shared
+code. Colocate each test with its owner.
+
+The generated route follows this DOM skeleton:
+
+```text
+application shell
+├── app navigation
+└── route page
+    ├── main.page-container
+    │   ├── PageHeader
+    │   │   ├── actions
+    │   │   ├── search
+    │   │   ├── columns and view controls
+    │   │   └── filters
+    │   ├── PageErrorOverlay
+    │   └── PageBody
+    │       ├── dashboard or summary
+    │       └── table, calendar or timeline
+    └── overlays
+        ├── modal or dialog
+        └── floating menu or tooltip
+```
