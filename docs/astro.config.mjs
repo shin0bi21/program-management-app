@@ -11,6 +11,11 @@ const manifest = await prepareContent({ gitRef });
 
 export default defineConfig({
   output: 'static',
+  redirects: {
+    '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',
+    '/backend/policies/': '/backend/authorization/',
+    '/backend/reports/': '/backend/services/#render-reports',
+  },
   markdown: {
     processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),
   },

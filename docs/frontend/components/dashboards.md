@@ -4,20 +4,16 @@ A page-owned `*Dashboard` composes selected-record details and aggregate overvie
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
-Dashboard cards use two shared heights: **normal (125px)** is the default;
-**short (75px)** uses the `dashboard-card--short` modifier, including through
-`DashboardCard`'s `className`. Hours and Tasks opt into short cards. Other pages,
-including Programming's program overview and session cards, use normal cards.
-Keep the same height through loading, empty, error, and populated states, with
-overflow handled inside the card. Define the values in the shared brand tokens
-rather than adding page-specific pixel heights.
+Dashboard cards use two shared sizes: **normal** is the default; **short** is for
+Hours and Tasks. Programming's program overview and session cards use normal cards.
+The [card shell contract](#keep-the-card-shell-stable) applies in every data state.
 
 ## Load dashboard data
 
 Place each data hook beside its smallest consumer. A query used by one card belongs in that card’s `hooks/` directory and is called by that card. Keep a query at dashboard level only when multiple cards consume its results. Cards that render data already supplied by the page do not need a separate data hook. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
 ```tsx
-function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
+function ScheduleDashboard({ selected, onAction }: ScheduleDashboardProps) {
   return <>
     <ExampleDetailsDashboardCard example={selected} onAction={onAction} />
     <ExampleOverviewDashboardCard resourceId={selected?.id ?? null} />
@@ -30,8 +26,9 @@ Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. 
 ## Keep the card shell stable
 
 Every dashboard card keeps its declared shared height across breakpoints and states:
-normal uses `--dashboard-card-height` (125px); the optional `dashboard-card--short`
-modifier uses `--dashboard-card-height-short` (75px). Use `DashboardCard`; a custom
+normal uses `--dashboard-card-height`; the optional `dashboard-card--short` modifier
+uses `--dashboard-card-height-short`. The [brand tokens](../../../frontend/src/common/styles/brand.css)
+own their values. Use `DashboardCard`; a custom
 metric layout must retain its `dashboard-card` shell and the same size modifier in
 all states. Do not introduce content-sized, percentage, or page-specific pixel heights.
 Keep the heading and actions outside the scrolling data region. The shared
@@ -43,16 +40,12 @@ Programming Settings reuses the card shell for full management tables, not overv
 summaries. Its explicitly named management panels fill the desktop content region
 and size to their table on mobile; the normal/short summary heights do not apply.
 
-The shared shell also owns spacing. Both sizes use 16px outer padding, with header
-titles and actions aligned to the top so the taller header adds no extra top inset.
-Normal cards use a minimum 32px header row to reserve room for actions and a 4px
-gap before the data region. Short cards use a minimum 20px header,
-and an 8px header-to-data gap. Their compact metrics use 0.74rem labels, a 7px
-label-to-value gap, and 1rem values, so numbers match date ranges and cycle names.
-Use the shared short-card typography variables in Hours and Tasks. Do not override
-shell padding or header margins in page CSS.
-Long titles or wrapped actions may expand the header; the data region scrolls in
-the remaining space.
+The [shared shell styles](../../../frontend/src/common/components/DashboardCard/DashboardCard.css)
+own padding, header spacing, and short-card typography. Both sizes use the same outer
+padding and top-aligned titles/actions. Short-card metric values keep numbers the same
+size as date ranges and cycle names. Use the shared variables in Hours and Tasks;
+do not override shell padding or header margins in page CSS. Long titles or wrapped
+actions may expand the header; the data region scrolls in the remaining space.
 
 Keep card components and their titles, metric labels, and action slots mounted when
 the selection changes. Only the data/value region changes between states. Avoid
@@ -121,13 +114,13 @@ Preview a page-owned dashboard with the dashboard preset:
 npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboard --dry-run
 ```
 
-Remove `--dry-run` to generate `ExampleDashboard.tsx` and its test. Add the card and hook shown below only when they have their own behavior or query.
+Remove `--dry-run` to generate `ScheduleDashboard.tsx` and its test. Add the card and hook shown below only when they have their own behavior or query.
 
 ```text
 components/
-  ExampleDashboard/
-    ExampleDashboard.tsx
-    ExampleDashboard.test.tsx
+  ScheduleDashboard/
+    ScheduleDashboard.tsx
+    ScheduleDashboard.test.tsx
     ExampleOverviewDashboardCard/          optional
       ExampleOverviewDashboardCard.tsx
       ExampleOverviewDashboardCard.test.tsx

@@ -67,10 +67,8 @@ Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`
 | Shared filter and selector lookups | [Reference data](reference-data.md) |
 | Request middleware and ordering | [Middleware](middleware.md) |
 | Authentication, tokens, and RBAC | [Auth](auth.md) |
-| Product access and record scope | [Authorization](authorization.md) |
-| Policy placement and enforcement | [Policies](policies.md) |
-| Services, commands, and transactions | [Services](services.md) |
-| Report data and file rendering | [Reports](reports.md) |
+| Product access, record scope, and policy enforcement | [Authorization and policies](authorization.md) |
+| Services, commands, transactions, and report rendering | [Services](services.md) |
 | Persistence, migrations, and audits | [Database](database.md) |
 | Typed errors and request failures | [Errors](errors.md) |
 | Backend test ownership | [Testing](testing.md) |

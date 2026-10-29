@@ -111,6 +111,8 @@ test('creates focused table, calendar, and dashboard owners under page component
   assert.match(read(tableFiles[3]), /filters, sorting, page size, cursor, and AbortSignal/);
   assert.match(read(calendarFiles[1]), /TimelineCalendar tests retain generic/);
   assert.match(read(dashboardFiles[1]), /Cards own private queries/);
+  assert.match(read(dashboardFiles[0]), /return \(\s*<>/);
+  assert.doesNotMatch(read(dashboardFiles[0]), /<section|<div/);
   [...tableFiles, ...calendarFiles, ...dashboardFiles].forEach(assertParses);
 });
 

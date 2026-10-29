@@ -20,6 +20,15 @@ Anchored forms use `FloatingMenuPanel` with `keyboardMode="form"` and an accessi
 
 The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
 
+## Filter menus
+
+`FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local checklist draft, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.
+
+Applying or clearing filters keeps the popup and current category open, including
+when refreshed table or calendar results change their scroll position. The user
+can continue adjusting filters or dismiss the popup with its trigger, Escape,
+or an outside click.
+
 ## Testing
 
 Test target, open-state and callback wiring at the trigger. Shared overlay tests own

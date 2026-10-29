@@ -104,9 +104,9 @@ The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not o
 
 The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
 
-Keep a draft search value until `SearchInput` commits it through its Search button or Enter key. Save the trimmed search with the other preferences. Pass it through the same filter object used by the query key, API adapter and filtered-empty message. Clear resets the draft and saves an empty search. Do not debounce or defer search.
-
-Use the [grouped page-control contract](../pages/preferences.md) for search, filters and table preferences. Submit partial changes through `updatePreferences`; the shared preference hook composes rapid edits against its current value and persists the complete snapshot.
+Consume the [grouped page-control contract](../pages/preferences.md#expose-page-controls).
+Use the page's applied filters consistently in the query key, API inputs, and filtered-empty
+message; the table does not implement draft search or preference persistence.
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table rows](table-rows.md).
 
