@@ -1,0 +1,65 @@
+.checklist {
+  display: grid;
+  gap: 2px;
+  padding-block: 5px;
+}
+
+.checklist .checklist-option,
+.checklist .checklist-option[role="menuitemcheckbox"] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--brand-ink);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklist-option:hover:not(.disabled):not(:disabled) {
+  background: var(--ink-05);
+}
+
+.checklist-option:focus-visible,
+.checklist-option:has(input:focus-visible) {
+  outline: 2px solid var(--brand-primary, currentColor);
+  outline-offset: -2px;
+}
+
+.checklist-option.disabled,
+.checklist-option:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.checklist-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.checklist-indicator {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  place-items: center;
+  border: 1px solid var(--ink-20);
+  border-radius: 4px;
+  color: var(--color-white);
+  font-size: .65rem;
+}
+
+.checklist-indicator.checked {
+  border-color: var(--brand-ink);
+  background: var(--brand-ink);
+}
