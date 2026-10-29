@@ -97,7 +97,7 @@ Apply the [lowest-owner hook rule](../architecture/ownership.md) within the cale
 | `components/Item/hooks/` | That item's complete move/resize workflows, hover/focus details, and action-menu workflow |
 | `components/Cell/hooks/` | That cell's activation and action-menu workflow |
 
-Item's separate `useItemMove` and `useItemResize` hooks own pointer and keyboard guards, snapping, previews, autoscroll, permission checks against supplied props, completion, and cancellation. They construct their own result payloads and report them through callbacks. Row binds the original record and layout, then relays interaction requests/results to Calendar. A row-header click uses Row's same selection handler directly; an item click reaches it through Item's `onSelect` callback. Item handles selection before activation and consumes suppressed clicks before either action.
+Item's separate `useItemMove` and `useItemResize` hooks own pointer and keyboard guards, snapping, previews, autoscroll, permission checks against supplied props, completion, and cancellation. They construct their own result payloads and report them through callbacks. Row binds the original record and layout, then relays interaction requests/results to Calendar. Row reports explicit row-header selection with the `row` source; an item reaches Row's selection handler through Item's `onSelect` callback with the `item` source. Item handles selection before activation and consumes suppressed clicks before either action.
 
 Calendar passes configuration, a read-only view of current interaction data, and callbacks down through Grid and Row. Item reports changes up through Row; it does not import parent components or invoke a calendar instance API. Calendar publishes updated interaction data after commit so sessions surviving a source item's unmount still read the current rows, periods, and domain callbacks.
 
@@ -112,6 +112,11 @@ The shared pointer service owns native listener registration, pointer capture, t
 Move and resize capture the persistent calendar viewport. Transient capture loss pauses autoscroll but retains the interaction for pointerup or recapture on the next held-pointer move. Released mouse movement must not recapture it. A new interaction can replace a retained session after capture loss.
 
 Keep the item border width constant across selection and menu-open states. Draw the selection ring outside the border so text placement and item geometry do not change. The positioned wrapper must allow the ring to remain visible; clip summary content inside the item button.
+
+Row selection reports whether it came from the row header (`row`) or an item (`item`).
+Consumers may use the source to distinguish explicitly opening a resource dashboard
+from synchronizing the owning row during item activation. Clicking an already selected
+row header still reports that explicit intent.
 
 Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
 

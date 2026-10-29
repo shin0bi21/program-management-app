@@ -80,7 +80,7 @@ describe('Row', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop' }));
 
-    expect(onRowSelect).toHaveBeenCalledWith({ id: 'staff-1' });
+    expect(onRowSelect).toHaveBeenCalledWith({ id: 'staff-1' }, 'item');
     expect(onItemActivate).toHaveBeenCalledWith({
       row: { id: 'staff-1' },
       data: item,

@@ -94,11 +94,14 @@ describe('TimelineCalendar', () => {
 
     expect(screen.getByRole('button', { name: 'Alex Morgan' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Zoe Wilson' }));
-    expect(onRowSelect).toHaveBeenCalledWith(rows[0]);
+    expect(onRowSelect).toHaveBeenCalledWith(rows[0], 'row');
     onRowSelect.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'entry-1' }));
-    expect(onRowSelect).toHaveBeenCalledWith(rows[0]);
+    expect(onRowSelect).toHaveBeenCalledWith(rows[0], 'item');
     expect(onItemClick).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
+    expect(onRowSelect).toHaveBeenLastCalledWith(rows[1], 'row');
   });
 
   it('positions one-period and multi-period items through one item layer and build contract', () => {
