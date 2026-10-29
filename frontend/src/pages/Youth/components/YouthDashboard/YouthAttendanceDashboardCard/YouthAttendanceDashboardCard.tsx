@@ -40,14 +40,15 @@ export default function YouthAttendanceDashboardCard({
   return (
     <DashboardCard
       title="Attendance"
-      action={selected ? (
+      action={(
         <YouthDashboardTabs
           activeTab={activeTab}
+          disabled={!selected}
           ariaLabel="Attendance view"
           onChange={setActiveTab}
           options={attendanceTabs}
         />
-      ) : undefined}
+      )}
       emptyMessage={!selected
         ? 'Select a row to view attendance.'
         : activeTab === 'active'

@@ -40,21 +40,33 @@ describe('TaskHoursLoggedDashboardCard', () => {
     expect(onLogHours).toHaveBeenCalledOnce();
   });
   it('keeps its shell but closes an open report when the task changes or clears', () => {
-    const view = render(<TaskHoursLoggedDashboardCard task={task} />);
+    const onLogHours = vi.fn();
+    const view = render(<TaskHoursLoggedDashboardCard task={task} onLogHours={onLogHours} />);
+    const loggedLabel = screen.getByText('Logged');
+    const breakdownAction = screen.getByRole('button', { name: 'See Breakdown' });
+    const logAction = screen.getByRole('button', { name: 'Log Hours' });
     const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog', { name: task.title })).toBeInTheDocument();
 
-    view.rerender(<TaskHoursLoggedDashboardCard task={{ ...task, id: 'task-2', title: 'New task' }} />);
+    view.rerender(<TaskHoursLoggedDashboardCard task={{ ...task, id: 'task-2', title: 'New task' }} onLogHours={onLogHours} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')).toBe(card);
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog', { name: 'New task' })).toBeInTheDocument();
 
-    view.rerender(<TaskHoursLoggedDashboardCard task={null} />);
+    view.rerender(<TaskHoursLoggedDashboardCard task={null} onLogHours={onLogHours} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+    expect(screen.getByText('Logged')).toBe(loggedLabel);
+    expect(loggedLabel.nextSibling).toHaveTextContent('—');
+    expect(screen.getByRole('button', { name: 'See Breakdown' })).toBe(breakdownAction);
+    expect(breakdownAction).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBe(logAction);
+    expect(logAction).toBeDisabled();
+    fireEvent.click(logAction);
+    expect(onLogHours).not.toHaveBeenCalled();
   });
 
 });

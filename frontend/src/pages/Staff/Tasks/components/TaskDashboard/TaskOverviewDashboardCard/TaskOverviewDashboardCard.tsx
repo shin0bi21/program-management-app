@@ -122,7 +122,7 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
     <article className="dashboard-card dashboard-card--short task-overview-card" aria-busy={loading || undefined}>
       <h2 className="task-overview-card__accessible-title">Task Overview</h2>
       <div className="dashboard-card__compact-layout task-overview-card__layout">
-        <div>
+        <div className="task-overview-card__data">
           <dl className="task-overview-card__metrics">
             <div><dt>Assigned</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.assigned}</dd></div>
             <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.upcoming}</dd></div>
