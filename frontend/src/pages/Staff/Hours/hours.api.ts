@@ -90,7 +90,7 @@ function applyHoursFilters(params: URLSearchParams, filters: HoursFilters) {
   if (filters.categories.length) params.set('categories', filters.categories.join(','));
   if (filters.programIds.length) params.set('programIds', filters.programIds.join(','));
   if (filters.types.length) params.set('types', filters.types.join(','));
-  if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
   if (filters.search) params.set('search', filters.search);
 }
 

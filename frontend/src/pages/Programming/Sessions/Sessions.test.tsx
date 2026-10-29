@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +6,7 @@ import type { Program } from '../../../common/features/programs/types';
 import type { SessionPreference } from './hooks/useSessionControls';
 import Sessions from './Sessions';
 import type { SessionListFilters } from './types';
+import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
 
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
@@ -308,36 +309,72 @@ describe('Sessions', () => {
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
   });
 
-  it('applies one date range to table queries and preserves it when switching to calendar', async () => {
+  it('uses all cycle bounds for table and calendar and has no Date Range filter', async () => {
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-08-01' } });
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-08-31' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-    fireEvent.keyDown(document, { key: 'Escape' });
-    const dateRange = { start: '2026-08-01', end: '2026-08-31' };
+    const dateRange = { start: '2026-07-01', end: '2026-12-01' };
     await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
       expect.objectContaining({ dateRange }), expect.any(Object), expect.any(Object),
     ));
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
   });
 
-  // Selection and page-spanning actions.
+  it('does not create a fallback calendar when no cycles exist', async () => {
+    getCycleReferences.mockResolvedValue([]);
+    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+  });
+
   it('keeps session filters and the calendar available with session read permission alone', async () => {
     auth.permissions = ['read:sessions'];
     preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
 
-    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify({
+      start: '2026-07-01', end: '2026-12-01',
+    }));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
   });
 
+  it.each(['empty', 'failed'] as const)('does not fetch an unbounded table when cycle metadata is %s', async state => {
+    getSessions.mockClear();
+    if (state === 'empty') getCycleReferences.mockResolvedValue([]);
+    else getCycleReferences.mockRejectedValue(new Error('Cycle service unavailable'));
+
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+
+    expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(getSessions).not.toHaveBeenCalled();
+  });
+
+  it.each(['table', 'calendar'] as const)('blocks the %s after cycle refresh fails even with cached dates', async view => {
+    preferenceApi.value = { ...preferenceApi.value!, view };
+    const { queryClient } = render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+
+    if (view === 'table') await screen.findByRole('table', { name: 'Sessions' });
+    else await screen.findByTestId('sessions-calendar-view');
+
+    getCycleReferences.mockRejectedValue(new Error('Cycle refresh unavailable'));
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: referenceDataKeys.cycles });
+    });
+
+    expect(queryClient.getQueryData(referenceDataKeys.cycles)).not.toEqual([]);
+    expect(await screen.findByText('Cycles unavailable.')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+  });
+
+  // Selection and page-spanning actions.
   it('sends multiple selected cycles to the table and calendar', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);

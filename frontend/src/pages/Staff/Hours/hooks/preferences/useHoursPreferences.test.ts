@@ -44,8 +44,7 @@ describe('useHoursPreferences', () => {
   it('waits for dependencies and restores one complete admin preference', async () => {
     savedPreference.preference = {
       view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
-      dateRange: { start: '2026-03-01', end: '2026-03-31' },
-      types: ['task'], cycleId: 'cycle-2', hiddenColumns: ['note'], columnWidths: { note: 240 },
+      types: ['task'], cycleIds: ['cycle-2'], hiddenColumns: ['note'], columnWidths: { note: 240 },
       sorting: { key: 'hours', direction: 'asc' },
     };
     const { result, rerender } = renderHook(
@@ -62,8 +61,8 @@ describe('useHoursPreferences', () => {
     expect(result.current.view).toBe('table');
     expect(result.current.filters).toEqual(expect.objectContaining({
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
-      types: ['task'], cycleId: 'cycle-2',
-      dateRange: { start: '2026-03-01', end: '2026-03-31' },
+      types: ['task'], cycleIds: ['cycle-2'],
+      dateRange: { start: '2026-09-02', end: '2026-12-31' },
     }));
     expect(result.current.table).toEqual(expect.objectContaining({
       hiddenColumns: ['note'], columnWidths: { note: 240 },
@@ -73,7 +72,7 @@ describe('useHoursPreferences', () => {
 
   it('removes an admin-only saved staff filter for a staff user', async () => {
     savedPreference.preference = {
-      view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleId: 'cycle-1',
+      view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
     };
     const { result } = renderHook(() => useHoursPreferences({
       role: 'staff', resources, programs, cycles, categories, types, loadingDependencies: false,
@@ -91,7 +90,7 @@ describe('useHoursPreferences', () => {
       programIds: ['general', 'program-1', 'removed-program'],
       categories: ['meeting', 'removed-category' as never],
       types: ['task', 'removed-type' as never],
-      cycleId: 'cycle-1',
+      cycleIds: ['cycle-1'],
       sorting: { key: 'removedColumn' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => useHoursPreferences({
@@ -115,7 +114,7 @@ describe('useHoursPreferences', () => {
       programIds: ['removed-program'],
       categories: ['planning_prep'],
       types: ['session'],
-      cycleId: 'removed-cycle',
+      cycleIds: ['removed-cycle'],
     };
     const { result, rerender } = renderHook(
       ({ optionsError, cyclesError }) => useHoursPreferences({
@@ -132,7 +131,7 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters).toMatchObject({
       staffIds: ['removed-staff'], programIds: ['removed-program'],
-      categories: ['planning_prep'], types: ['session'], cycleId: 'removed-cycle',
+      categories: ['planning_prep'], types: ['session'], cycleIds: ['removed-cycle'],
     });
     act(() => result.current.setView('table'));
 
@@ -140,13 +139,13 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.filters).toMatchObject({
       staffIds: [], programIds: [], categories: [], types: [],
     }));
-    expect(result.current.filters.cycleId).toBe('removed-cycle');
+    expect(result.current.filters.cycleIds).toEqual(['removed-cycle']);
 
     rerender({ optionsError: false, cyclesError: false });
-    await waitFor(() => expect(result.current.filters.cycleId).toBeNull());
+    await waitFor(() => expect(result.current.filters.cycleIds).toEqual([]));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
-      view: 'table', staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
+      view: 'table', staffIds: [], programIds: [], categories: [], types: [], cycleIds: [],
     })));
   });
 
@@ -158,7 +157,7 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.view).toBe('calendar');
-    expect(result.current.filters).toMatchObject({ staffIds: [], cycleId: 'cycle-1' });
+    expect(result.current.filters).toMatchObject({ staffIds: [], cycleIds: [], dateRange: { start: '2026-07-01', end: '2026-12-31' } });
     expect(result.current.filters.definitions.map(category => category.id)).toEqual([
       'staff', 'program', 'cycle', 'type', 'entryType',
     ]);
@@ -176,25 +175,60 @@ describe('useHoursPreferences', () => {
       result.current.filters.apply('staff', ['staff-1']);
       result.current.filters.apply('entryType', ['meeting']);
       result.current.filters.apply('type', ['task']);
-      result.current.filters.selectCycle('cycle-2');
-      result.current.filters.setDateRange({ start: '2026-08-01', end: '2026-08-31' });
+      result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']);
     });
     expect(result.current.filters).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
+      staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
     }));
 
     expect(result.current.table).toMatchObject({
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
-      dateRange: { start: '2026-08-01', end: '2026-08-31' },
-      search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleId: 'cycle-2',
+      search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     })));
 
     act(() => result.current.filters.clear());
     await waitFor(() => expect(result.current.filters).toEqual(expect.objectContaining({
-      staffIds: [], programIds: [], categories: [], types: [], cycleId: null,
+      staffIds: [], programIds: [], categories: [], types: [], cycleIds: [],
     })));
   });
+  it('retires legacy cycle and custom-date fields without losing sibling preferences', async () => {
+    savedPreference.preference = Object.assign({ view: 'table' as const, search: 'retained', programIds: ['program-1'] }, {
+      cycleId: 'cycle-2', dateRange: { start: '2026-03-01', end: '2026-03-31' },
+    });
+    const { result } = renderHook(() => useHoursPreferences({
+      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
+      optionsError: false, cyclesError: false, tableKeys,
+    }));
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters).toMatchObject({
+      cycleIds: [], programIds: ['program-1'], dateRange: { start: '2026-07-01', end: '2026-12-31' },
+    });
+    expect(result.current.search.appliedValue).toBe('retained');
+    expect(result.current.view).toBe('table');
+    await waitFor(() => expect(setPreference).toHaveBeenCalledWith('hours-filters', expect.not.objectContaining({ cycleId: expect.anything() })));
+    const calls = vi.mocked(setPreference).mock.calls;
+    const saved = calls[calls.length - 1]?.[1];
+    expect(saved).not.toHaveProperty('dateRange');
+  });
+
+  it('derives the full multi-year cycle span and no range when there are no cycles', async () => {
+    const distantCycles = [
+      { ...cycles[0], startsOn: '2020-01-01', endsOn: '2020-12-31' },
+      { ...cycles[1], startsOn: '2028-01-01', endsOn: '2028-12-31' },
+    ];
+    const { result, rerender } = renderHook(({ availableCycles }) => useHoursPreferences({
+      role: 'admin', resources, programs, cycles: availableCycles, categories, types, loadingDependencies: false,
+      optionsError: false, cyclesError: false, tableKeys,
+    }), { initialProps: { availableCycles: distantCycles } });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.dateRange).toEqual({ start: '2020-01-01', end: '2028-12-31' });
+
+    rerender({ availableCycles: [] });
+    expect(result.current.filters.dateRange).toBeUndefined();
+  });
+
 });

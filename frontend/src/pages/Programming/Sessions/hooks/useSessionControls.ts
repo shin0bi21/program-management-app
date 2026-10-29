@@ -1,10 +1,10 @@
-import type { DateRange } from '../../../../common/utils/dateRange';
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
+import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import {
-  preferenceDateRange,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
@@ -21,7 +21,6 @@ type SessionView = 'calendar' | 'table';
 
 export interface SessionPreference {
   view: SessionView;
-  dateRange?: DateRange;
   programIds: string[];
   cycleIds: string[];
   sessionTypeIds: string[];
@@ -57,7 +56,6 @@ export function useSessionControls({
     key: 'session-filters',
     waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,
     fields: {
-      dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
@@ -68,7 +66,8 @@ export function useSessionControls({
       hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
-  const { view, dateRange, programIds, cycleIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
+  const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
+  const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const applySearch = () => setAppliedSearch(search.trim());
   const clearSearch = () => {
@@ -77,9 +76,9 @@ export function useSessionControls({
   };
 
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'cycle', label: 'Cycle', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
-    { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
+    { id: 'program', label: 'Program', options: toFilterOptions(programs) },
+    { id: 'cycle', label: 'Cycle', options: toFilterOptions(cycles) },
+    { id: 'type', label: 'Type', options: toFilterOptions(sessionTypes) },
     { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
   ], [cycles, programs, sessionTypes]);
 
@@ -119,7 +118,6 @@ export function useSessionControls({
     },
     filters: {
       dateRange,
-      setDateRange: (dateRange: DateRange) => updatePreferences({ dateRange }),
       programIds,
       cycleIds,
       sessionTypeIds,

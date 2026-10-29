@@ -1,15 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { intersectDateRanges, isDateRange } from './dateRange';
-import { preferenceDateRange } from '../features/Preferences/preferences';
 
 describe('date ranges', () => {
-  it('accepts real inclusive ranges and repairs invalid saved dates', () => {
-    const fallback = { start: '2026-01-01', end: '2026-12-31' };
+  it('accepts real inclusive ranges and rejects invalid dates', () => {
     expect(isDateRange({ start: '2028-02-29', end: '2028-02-29' })).toBe(true);
     for (const value of [null, { start: '2026-02-29', end: '2026-03-01' }, { start: '2026-12-31', end: '2026-01-01' }]) {
       expect(isDateRange(value)).toBe(false);
-      expect(preferenceDateRange(fallback)(value)).toEqual(fallback);
     }
   });
 
@@ -19,11 +16,8 @@ describe('date ranges', () => {
     expect(intersectDateRanges({ start: '2026-03-31', end: '2026-04-01' }, bounds)).toEqual({ start: '2026-03-31', end: '2026-03-31' });
     expect(intersectDateRanges({ start: '2026-04-01', end: '2026-04-30' }, bounds)).toBeNull();
   });
-  it('accepts 366 inclusive days, including leap years, and rejects a 367th day', () => {
-    expect(isDateRange({ start: '2028-01-01', end: '2028-12-31' })).toBe(true);
-    expect(isDateRange({ start: '2028-01-01', end: '2029-01-01' })).toBe(false);
-    const fallback = { start: '2026-01-01', end: '2026-12-31' };
-    expect(preferenceDateRange(fallback)({ start: '1000-01-01', end: '9999-12-31' })).toEqual(fallback);
+  it('accepts the full span across multiple years', () => {
+    expect(isDateRange({ start: '2028-01-01', end: '2030-12-31' })).toBe(true);
   });
 
   it('supports real calendar years from 0001 and rejects year zero', () => {

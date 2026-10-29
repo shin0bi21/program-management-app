@@ -1,6 +1,7 @@
 import { act, renderHook as renderBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { TaskReferenceData } from '../../tasks.api';
 import type { TaskResource, TaskProgram } from '../../types';
 type TestTaskOptions = TaskReferenceData & { resources: TaskResource[]; programs: TaskProgram[] };
@@ -37,6 +38,9 @@ const options: TestTaskOptions = {
     { value: 'completed', label: 'Completed' },
   ],
 };
+const cycles: ProgramCycle[] = [
+  { id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active' },
+];
 const tableKeys = [
   'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
 ] as const;
@@ -45,6 +49,8 @@ interface UsePreferencesOptions {
   currentOptions?: TestTaskOptions;
   optionsLoading?: boolean;
   optionsError?: boolean;
+  cyclesLoading?: boolean;
+  cyclesError?: boolean;
 }
 
 function usePreferences(settings: UsePreferencesOptions = {}) {
@@ -63,6 +69,7 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
     referenceDataLoading: settings.optionsLoading ?? false,
     referenceDataError: settings.optionsError ?? false,
     tableKeys,
+    cycles, cyclesLoading: settings.cyclesLoading ?? false, cyclesError: settings.cyclesError ?? false,
   });
 }
 
@@ -113,17 +120,33 @@ describe('useTaskPreferences', () => {
     expect(getPreference).toHaveBeenCalledWith('task-preferences', expect.anything());
   });
 
-  it('restores and saves the shared date range without changing the active view', async () => {
-    savedPreference.preference = { view: 'table', dateRange: { start: '2026-04-01', end: '2026-06-30' } };
+  it('restores cycle selections, removes stale IDs, and saves only cycle IDs', async () => {
+    savedPreference.preference = { view: 'table', cycleIds: ['cycle-1', 'removed-cycle'] };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.dateRange).toEqual({ start: '2026-04-01', end: '2026-06-30' });
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
 
-    const nextRange = { start: '2026-07-01', end: '2026-09-30' };
-    act(() => result.current.filters.setDateRange(nextRange));
+    act(() => result.current.filters.apply('cycle', []));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
-      expect.objectContaining({ dateRange: nextRange, view: 'table' })));
+      expect.objectContaining({ cycleIds: [], view: 'table' })));
+    expect(vi.mocked(setPreference).mock.lastCall?.[1]).not.toHaveProperty('dateRange');
+  });
+
+  it('waits for cycles and preserves saved IDs during cycle failures until options recover', async () => {
+    savedPreference.preference = { cycleIds: ['cycle-1', 'removed-cycle'] };
+    const { result, rerender } = renderHook(
+      ({ cyclesLoading, cyclesError }) => usePreferences({ cyclesLoading, cyclesError }),
+      { initialProps: { cyclesLoading: true, cyclesError: false } },
+    );
+    expect(result.current.ready).toBe(false);
+
+    rerender({ cyclesLoading: false, cyclesError: true });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
+
+    rerender({ cyclesLoading: false, cyclesError: false });
+    await waitFor(() => expect(result.current.filters.cycleIds).toEqual(['cycle-1']));
   });
 
   it('uses defaults for the page visit when loading saved preferences fails', async () => {
@@ -156,9 +179,10 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.filters.definitions.map(definition => definition.id)).toEqual([
-      'staff', 'program', 'category', 'status',
+      'staff', 'program', 'cycle', 'category', 'status',
     ]);
     act(() => {
+      result.current.filters.apply('cycle', ['cycle-1']);
       result.current.filters.apply('staff', ['staff-1']);
       result.current.filters.apply('program', ['program-1']);
       result.current.filters.apply('category', ['planning_prep']);
@@ -206,7 +230,7 @@ describe('useTaskPreferences', () => {
       sorting: expected.sorting,
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
-      ...expected, staffIds: [], programIds: [], categories: [], statuses: [],
+      ...expected, cycleIds: [], staffIds: [], programIds: [], categories: [], statuses: [],
     })));
   });
 

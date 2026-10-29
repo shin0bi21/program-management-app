@@ -15,7 +15,6 @@ import {
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { createTestQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
-import { getDefaultDateRange } from '../../../common/utils/dateRange';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
@@ -72,7 +71,7 @@ describe('Hours', () => {
     vi.clearAllMocks();
     auth.role = 'staff';
     auth.permissions = ['read:hours', 'write:hours'];
-    preferenceHook.preference = { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
+    preferenceHook.preference = { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-1'] };
     vi.mocked(getPreference).mockImplementation(async () => preferenceHook.preference);
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getUser).mockReturnValue({
@@ -122,7 +121,7 @@ describe('Hours', () => {
           const resource = resources.get(resourceId)!;
           return { id: item.id, resourceId, date, item, staffFirstName: resource.firstName, staffLastName: resource.lastName, staffName: resource.name };
         }))).filter(row => (!filters.staffIds.length || filters.staffIds.includes(row.resourceId))
-          && (!filters.cycleId || row.item.cycleId === filters.cycleId)
+          && (!filters.cycleIds?.length || filters.cycleIds.includes(row.item.cycleId))
           && (!search || [row.staffName, row.item.note, row.item.programName, row.item.sessionLabel, row.item.taskTitle]
             .some(value => value?.toLowerCase().includes(search))));
       if (pagination.key === 'firstName') rows.sort((left, right) => left.staffFirstName.localeCompare(right.staffFirstName));
@@ -181,7 +180,7 @@ describe('Hours', () => {
   });
 
   it('shows a readable coworker row without exposing hours write controls', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-1' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-1'] };
     vi.mocked(getHoursCalendarData).mockResolvedValue({
         'staff-1': { '2026-08-09': [{
           id: 'entry-own', programId: null, programName: null,
@@ -225,7 +224,7 @@ describe('Hours', () => {
 
   // Saved preferences and the current view.
   it('switches between the persisted Hours views', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
     render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -235,7 +234,7 @@ describe('Hours', () => {
     expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
     await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
-      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-fall', search: '' },
+      { dateRange: { start: '2026-09-02', end: '2026-12-31' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-fall'], search: '' },
       { signal: expect.any(AbortSignal) },
       expect.objectContaining({ key: 'date', direction: 'desc', limit: 25 }),
     ));
@@ -245,36 +244,48 @@ describe('Hours', () => {
   });
 
   // Filter configuration.
-  it('applies one page date range to table and calendar while retaining cycle membership', async () => {
-    preferenceHook.preference = { view: 'table', cycleId: 'cycle-fall' };
-    render(
-      <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
-        <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
-      </MemoryRouter></QueryClientProvider>,
-    );
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
-    const from = screen.getByLabelText('From');
-    fireEvent.change(from, { target: { value: '2026-08-01' } });
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-08-31' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-    fireEvent.keyDown(document, { key: 'Escape' });
+  it('uses selected cycle bounds for table and calendar and exposes no Date Range control', async () => {
+    preferenceHook.preference = { view: 'table', cycleIds: ['cycle-fall'] };
+    render(<QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+      <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+    </MemoryRouter></QueryClientProvider>);
 
-    const dateRange = { start: '2026-08-01', end: '2026-08-31' };
-    await waitFor(() => expect(getHoursTableData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dateRange, cycleId: 'cycle-fall' }),
+    const dateRange = { start: '2026-09-02', end: '2026-12-31' };
+    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
+      expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }),
       expect.anything(), expect.anything(),
     ));
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dateRange, cycleId: 'cycle-fall' }), expect.anything(),
+      expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }), expect.anything(),
     ));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Date Range' }));
-    expect(screen.getByLabelText('From')).toHaveValue(dateRange.start);
-    expect(screen.getByLabelText('To')).toHaveValue(dateRange.end);
+    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+  });
+
+  it('does not mount a fallback calendar when no cycles exist', async () => {
+    vi.mocked(getCycleReferences).mockResolvedValue([]);
+    render(<QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+      <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+    </MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
+    expect(screen.queryByRole('grid', { name: 'Staff hours calendar' })).not.toBeInTheDocument();
+    expect(getHoursCalendarData).not.toHaveBeenCalled();
+  });
+
+  it.each(['empty', 'failed'])('does not issue unbounded table requests when cycles are %s', async state => {
+    preferenceHook.preference = { view: 'table' };
+    if (state === 'empty') vi.mocked(getCycleReferences).mockResolvedValue([]);
+    else vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycles failed'));
+    render(<QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
+      <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
+    </MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
+    expect(getHoursTableData).not.toHaveBeenCalled();
+    expect(getHoursCalendarData).not.toHaveBeenCalled();
   });
 
   it('loads cycle and staff references for hours-only readers', async () => {
@@ -304,7 +315,7 @@ describe('Hours', () => {
     fireEvent.keyDown(search, { key: 'Enter' });
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith({
-      dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: 'workshop',
+      dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search: 'workshop',
     }, {
       start: expect.any(String),
       end: expect.any(String),
@@ -320,7 +331,7 @@ describe('Hours', () => {
       </MemoryRouter></QueryClientProvider>,
     );
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
-      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: [], types: [], cycleId: 'cycle-1', search: '' },
+      { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
     ));
 
@@ -330,14 +341,14 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
-      { dateRange: getDefaultDateRange(), staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleId: 'cycle-1', search: '' },
+      { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
     ));
   });
 
   // Selection and page-spanning actions.
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleId: 'cycle-fall' };
+    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
     vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': {
         '2026-08-09': [{
           id: 'summer-entry', programId: null, programName: null,
@@ -445,7 +456,7 @@ describe('Hours', () => {
       staffIds: [],
       programIds: [],
       categories: [],
-      cycleId: 'cycle-1',
+      cycleIds: ['cycle-1'],
     };
     vi.mocked(getHoursCalendarData).mockResolvedValue({
       'staff-1': {
@@ -496,7 +507,6 @@ describe('Hours', () => {
   });
 
   it('bridges a calendar cell target to a locked, dated entry modal', async () => {
-    const workDate = dayKey(new Date());
     const { container } = render(
       <QueryClientProvider client={createTestQueryClient()}><MemoryRouter>
         <AuthContext.Provider value={auth}><Hours /></AuthContext.Provider>
@@ -504,9 +514,9 @@ describe('Hours', () => {
     );
     await screen.findAllByLabelText('Zoe Wilson');
 
-    fireEvent.click(container.querySelector(
-      `[data-row-id="staff-1"][data-period="${workDate}"]`,
-    )!);
+    const cell = container.querySelector<HTMLElement>('[data-row-id="staff-1"][data-period]')!;
+    const workDate = cell.dataset.period;
+    fireEvent.click(cell);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();

@@ -87,19 +87,29 @@ create a saved record until an edit. Existing invalid records and stale selectio
 through the normal save queue. Preferences remain cached for the session so automatic background
 loads cannot overwrite local choices.
 
-## Share an applied date range across views
+## Derive timeline bounds from cycles
 
-Programming, Tasks, and Hours own one date-range filter in their page controls.
-Limit the applied span to 366 inclusive days, allowing leap years. The UI and backend accept real dates in calendar years 0001–9999 and reject year zero. Cycle dates do not restrict the range. Reject longer drafts and repair oversized saved ranges to the current calendar year before mounting the calendar.
-Persist its inclusive `start` and `end` dates with `preferenceDateRange()` alongside
-other page preferences. Missing or invalid dates default to the current calendar year.
-Open Filters → Date Range to edit native From/To date inputs; they remain drafts until Apply is selected. Date presets use the regular checklist styling, with Custom last and native From/To date inputs below. They populate the same draft fields and also require Apply; save the resulting dates rather than a rolling preset identity. Pages supply This Month, This Year, Current Cycle, and Current Pay Period presets to the generic filter. Cycle and pay-period options require loaded cycle data. Presets exceeding the 366-day maximum are disabled. Switching between table and calendar preserves the applied range. Clear all resets the date range to the current calendar year along with the other filter categories.
+Programming, Tasks, and Hours use the regular multi-select Cycle filter. Persist only
+`cycleIds`, then derive inclusive bounds with `getCycleDateRange`: the earliest start
+and latest end of the selected cycles. No selected IDs means all available cycles;
+the full span can cross gaps and exceed a year. Keep cycle loading and failures with
+the page's data owner, and wait for authoritative cycles before restoring preferences.
+Do not mount a fallback timeline when no cycle bounds are available. Show an empty
+calendar state when no cycles exist and an unavailable state when cycles cannot load.
 
-Pass the range in the page's single filter object to both consumers. Tables filter
-server-side before cursor pagination. Calendars use the same range as their timeline
-bounds and intersect buffered requests with it. Do not add a second range picker inside
-the calendar. Cycle membership remains an independent filter; overlapping cycles make
-cycle IDs and dates different contracts. Dashboards retain their existing summary scope.
+Pass the derived range through the page's single filter object to both table and calendar.
+Date filtering remains server-side before cursor pagination. Calendar requests intersect
+their buffered windows with these bounds. Changing cycle selections replaces the calendar
+buffer; switching views keeps the selection. Clear all uses every available cycle.
+There is no separate Date Range filter, custom date input, preset, or saved date range.
+The normal preference rules discard obsolete date-range keys and repair invalid cycle IDs.
+Hours also retires its old single `cycleId` preference; valid sibling preferences survive.
+
+Programming and Hours additionally filter records by selected cycle membership. Tasks
+use cycle dates as a time window without assigning tasks to cycles. Hours dashboard
+cycle focus is separate from the multi-cycle collection filter; choosing an entry updates
+that focus without changing calendar or table bounds. Cycle metadata comes from the
+shared reference endpoint under the consuming page's read permission.
 
 ## Testing
 
@@ -111,4 +121,4 @@ than repeating separate shared debounce, rapid-merge or load-failure tests. Reta
 role defaults, independent option-source wiring, dependent filter changes and local drafts.
 Route tests cover restored controls and view wiring.
 
-`FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local draft, checklist or date fields, validation, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.
+`FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local checklist draft, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.

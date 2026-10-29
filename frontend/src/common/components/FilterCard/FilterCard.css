@@ -24,8 +24,3 @@
     display: none;
   }
 }
-
-.filter-card-date-fields { display: grid; gap: 10px; padding: 8px 6px; }
-.filter-card-date-fields label { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 8px; }
-.filter-card-date-fields input { min-width: 0; width: 100%; font: inherit; }
-.filter-card-date-fields p { margin: 0; font-size: .8rem; }

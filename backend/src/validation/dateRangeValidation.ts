@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-export const MAX_DATE_RANGE_DAYS = 366;
-export const DATE_RANGE_LIMIT_MESSAGE = `Date range cannot exceed ${MAX_DATE_RANGE_DAYS} days`;
-const DAY_MS = 86_400_000;
-
 export function isCalendarDate(value: string) {
   if (!/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
@@ -15,13 +11,6 @@ export function calendarDateSchema(label = 'Date') {
   return z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} must use YYYY-MM-DD`)
     .refine(isCalendarDate, `${label} must be a valid calendar date`);
-}
-
-export function exceedsDateRangeLimit(start?: string, end?: string) {
-  if (!start || !end || !isCalendarDate(start) || !isCalendarDate(end) || start > end) return false;
-
-  const days = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS + 1;
-  return days > MAX_DATE_RANGE_DAYS;
 }
 
 // Gregorian era parts are consistent across the host and Docker Node/ICU builds.

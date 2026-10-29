@@ -1,4 +1,3 @@
-import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import Button from '../../../common/components/Button/Button';
@@ -36,7 +35,6 @@ const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Programming() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const dateRangePresets = useDateRangePresets();
   const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
 
   // Permissions and application services.
@@ -169,7 +167,11 @@ export default function Programming() {
     onErrorChange={setViewError}
   />;
 
-  const calendar = <SessionCalendar
+  const cycleState = <p className="page-empty">{cyclesError ? 'Cycles unavailable.' : 'No cycles available.'}</p>;
+  const hasCycleBounds = Boolean(filters.dateRange) && !cyclesError;
+  const calendar = !hasCycleBounds
+    ? cycleState
+    : <SessionCalendar
     key={JSON.stringify([sessionFilters, actions.calendarRevision])}
     programs={programs}
     selectedProgramId={selectedProgram?.id}
@@ -189,7 +191,7 @@ export default function Programming() {
     onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
     onErrorChange={setViewError}
   />;
-  const viewContent = view === 'table' ? { table } : { calendar };
+  const viewContent = view === 'table' ? { table: hasCycleBounds ? table : cycleState } : { calendar };
 
   return (
     <>
@@ -218,7 +220,6 @@ export default function Programming() {
 
           filters={filtersReady ? (
             <FilterCard
-              dateRange={{ presets: dateRangePresets, value: filters.dateRange, onApply: filters.setDateRange }}
               categories={filters.definitions}
               values={{
                 program: selectedProgramIds,

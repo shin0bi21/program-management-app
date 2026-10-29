@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { hoursCategorySchema } from './hoursSchemas';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema, DATE_RANGE_LIMIT_MESSAGE, exceedsDateRangeLimit } from './dateRangeValidation';
+import { calendarDateSchema } from './dateRangeValidation';
 
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
 
@@ -42,9 +42,6 @@ export const taskListQuerySchema = z.object({
   }).refine(({ start, end }) => !start || !end || start <= end, {
     message: 'End date must be on or after start date',
     path: ['end'],
-  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
-    message: DATE_RANGE_LIMIT_MESSAGE,
-    path: ['end'],
   }),
 });
 
@@ -55,9 +52,6 @@ export const taskCalendarQuerySchema = z.object({
     end: calendarDateSchema('End date'),
   }).refine(query => query.start <= query.end, {
     message: 'End date must be on or after start date',
-    path: ['end'],
-  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
-    message: DATE_RANGE_LIMIT_MESSAGE,
     path: ['end'],
   }),
 });

@@ -1,4 +1,3 @@
-import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
 import { useCallback, useMemo, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
@@ -48,7 +47,6 @@ const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 
 export default function Hours() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const dateRangePresets = useDateRangePresets();
   const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
 
   // Permissions.
@@ -85,12 +83,12 @@ export default function Hours() {
     categories: preferences.filters.categories,
     programIds: preferences.filters.programIds,
     types: preferences.filters.types,
-    cycleId: preferences.filters.cycleId ?? undefined,
+    cycleIds: preferences.filters.cycleIds,
     search: preferences.search.appliedValue,
   }), [
     preferences.filters.dateRange,
     preferences.filters.categories,
-    preferences.filters.cycleId,
+    preferences.filters.cycleIds,
     preferences.filters.programIds,
     preferences.filters.staffIds,
     preferences.filters.types,
@@ -110,8 +108,6 @@ export default function Hours() {
   const selection = useHoursSelection({
     resources: pageData.resources,
     currentUserResource: pageData.currentUserResource,
-    cycleId: preferences.filters.cycleId,
-    onCycleSelect: preferences.filters.selectCycle,
   });
 
   const actions = useHoursActions({
@@ -149,8 +145,10 @@ export default function Hours() {
   });
 
   // View configuration.
-  const selectedCycle = pageData.cycles.find(cycle => cycle.id === preferences.filters.cycleId) ?? null;
-  const overviewCycle = selectedCycle
+  const dashboardCycle = pageData.cycles.find(cycle => cycle.id === selection.dashboardCycleId);
+  const firstFilteredCycle = pageData.cycles.find(cycle => preferences.filters.cycleIds.includes(cycle.id));
+  const overviewCycle = dashboardCycle
+    ?? firstFilteredCycle
     ?? pageData.cycles.find(cycle => cycle.state === 'active')
     ?? pageData.cycles[0]
     ?? null;
@@ -188,9 +186,11 @@ export default function Hours() {
     />
   );
 
+  const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
+  const hasCycleBounds = Boolean(hoursFilters.dateRange) && !pageData.cyclesError;
   const viewContent = preferences.view === 'table'
-    ? { table: hoursTable }
-    : { calendar: hoursCalendar };
+    ? { table: hasCycleBounds ? hoursTable : viewUnavailable }
+    : { calendar: hasCycleBounds ? hoursCalendar : viewUnavailable };
 
   // Render.
   return <>
@@ -231,14 +231,13 @@ export default function Hours() {
         /> : undefined}
 
         filters={preferences.ready ? <FilterCard
-          dateRange={{ presets: dateRangePresets, value: preferences.filters.dateRange, onApply: preferences.filters.setDateRange }}
             categories={preferences.filters.definitions}
             values={{
               staff: preferences.filters.staffIds,
               entryType: preferences.filters.categories,
               program: preferences.filters.programIds,
               type: preferences.filters.types,
-              cycle: preferences.filters.cycleId ? [preferences.filters.cycleId] : [],
+              cycle: preferences.filters.cycleIds,
             }}
             onApply={preferences.filters.apply}
             onClearAll={preferences.filters.clear}

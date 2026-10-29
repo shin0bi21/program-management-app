@@ -56,12 +56,19 @@ When a shaping hook exists, its test owns that shaping and reference preservatio
 `useDataBuffer` tests own generic range loading, accumulation, stale-result protection,
 mutation overrides and cleanup.
 
-## Bound the timeline by page dates
+## Bound the timeline by cycle dates
 
-Pass `dateRange={{ start, end }}` to `TimelineCalendar` for an inclusive daily timeline of at most 366 days. Build that bounded set of period descriptors once; virtualization continues to render only visible columns.
-The page owns the range control and persistence, shared with its table view. A range
-change replaces that page calendar's buffer through its applied-filter key. Clamp stored
-positions and navigation targets to the selected bounds; Today is disabled when today lies outside the range. Consumers without explicit bounds retain the existing
+Programming, Tasks, and Hours derive `dateRange={{ start, end }}` from their page's
+multi-select Cycle filter: earliest selected start through latest selected end, or the
+full span of all cycles when nothing is selected. There is no one-year maximum. Build
+the bounded set of period descriptors once; virtualization renders only visible columns
+and rows, while buffered requests load data as needed. Cycle selection and persistence
+follow [page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles).
+
+A range change replaces the page calendar's buffer through its applied-filter key.
+Clamp stored positions and navigation targets to those bounds; Today is disabled when
+outside them. Pages show an empty or unavailable state instead of mounting a calendar
+without cycle bounds. Generic consumers without explicit bounds retain the existing
 period-count contract.
 
 Data buffers preload beyond visible periods. Intersect every buffered request with the

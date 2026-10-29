@@ -33,7 +33,7 @@ const baseProps = {
     categories: ['meeting' as const],
     programIds: ['program-1'],
     types: ['other' as const],
-    cycleId: 'cycle-1',
+    cycleIds: ['cycle-1'],
     search: '',
   },
   sorting: { key: 'date' as const, direction: 'desc' as const },
@@ -114,7 +114,7 @@ describe('HoursTable', () => {
       emptyMessage: 'No hours found',
     }));
 
-    rerender(<HoursTable {...baseProps} filters={{ ...noOtherFilters, cycleId: undefined }} />);
+    rerender(<HoursTable {...baseProps} filters={{ ...noOtherFilters, cycleIds: [] }} />);
     expect(tableProps.current).toEqual(expect.objectContaining({
       emptyMessage: 'No hours found',
     }));
