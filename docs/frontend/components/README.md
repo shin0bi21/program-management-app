@@ -53,6 +53,14 @@ contract; do not add a wrapper or hook merely to shorten its parent.
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
 
+## Checklists
+
+Use `Checklist` for controlled lists of labeled choices. It shares the checkbox-row
+appearance between forms and filters, accepting options, selected values, a toggle
+callback, and a disabled state. Forms use native checkboxes; `inMenu` preserves menu
+checkbox semantics and the floating menu's keyboard navigation. Callers own drafts,
+single/multiple selection rules, loading/errors, and submission.
+
 ## Type and Status Labels
 
 Badges are non-interactive labels. Use [Badge](../../../frontend/src/common/components/Badge/Badge.tsx)
