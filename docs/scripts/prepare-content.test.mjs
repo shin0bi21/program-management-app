@@ -43,6 +43,21 @@ test('builds the configured corpus, route manifest, frontmatter, and Mermaid sou
   assert.doesNotMatch(rootOutput, /^# Product/m);
   assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /```mermaid\n%% HTTP lifecycle\nsequenceDiagram/);
   assert.equal(manifest.sources[path.join(fixture.outputDir, 'backend/index.md')], 'docs/backend/README.md');
+  assert.match(await readFile(path.join(fixture.outputDir, 'website.md'), 'utf8'), /title: "Docs Index"/);
+  assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /title: "HTTP Lifecycle"/);
+  assert.deepEqual(manifest.sidebar.find(group => group.label === 'Frontend'), {
+    label: 'Frontend',
+    items: [
+      { slug: 'frontend', label: 'Overview' },
+      {
+        label: 'Components',
+        items: [
+          { slug: 'frontend/components', label: 'Overview' },
+          { slug: 'frontend/components/buttons' },
+        ],
+      },
+    ],
+  });
 });
 
 test('fails when a Markdown document has no first-level title', async t => {

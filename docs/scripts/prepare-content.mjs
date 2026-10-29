@@ -29,7 +29,7 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
 
     const body = sourcePath.endsWith('.mmd') ? `\`\`\`mermaid\n${content.trimEnd()}\n\`\`\`` : stripFirstH1(content);
     const editUrl = `https://github.com/${repositorySlug}/edit/${encodeURIComponent(gitRef)}/${sourcePath}`;
-    const document = `---\ntitle: ${yamlString(title)}\neditUrl: ${yamlString(editUrl)}\n---\n\n${body.trimStart()}\n`;
+    const document = `---\ntitle: ${yamlString(capitalizeTitle(title))}\neditUrl: ${yamlString(editUrl)}\n---\n\n${body.trimStart()}\n`;
     generated.push({ destination, document, sourcePath, route: routeForSource(sourcePath) });
     routes[sourcePath] = routeForSource(sourcePath);
   }
@@ -45,8 +45,29 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
 
   return {
     routes,
+    sidebar: documentationDirectories.map(directory => sidebarGroup(directory, sources, routes)),
     sources: Object.fromEntries(generated.map(file => [file.destination, file.sourcePath])),
   };
+}
+
+function capitalizeTitle(title) {
+  return title.replace(/(^|[\s-])([a-z])/g, (_match, separator, letter) => separator + letter.toUpperCase());
+}
+
+function sidebarGroup(directory, sources, routes) {
+  const prefix = `${directory}/`;
+  const children = sources.filter(source => source.startsWith(prefix));
+  const directPages = children.filter(source => !source.slice(prefix.length).includes('/'));
+  const subdirectories = [...new Set(children
+    .filter(source => source.slice(prefix.length).includes('/'))
+    .map(source => source.slice(prefix.length).split('/')[0]))];
+  const items = directPages.map(source => ({
+    slug: routes[source].slice(1, -1),
+    ...(source.endsWith('/README.md') ? { label: 'Overview' } : {}),
+  }));
+
+  items.push(...subdirectories.map(child => sidebarGroup(`${directory}/${child}`, sources, routes)));
+  return { label: capitalizeTitle(path.posix.basename(directory).replace(/[-_]+/g, ' ')), items };
 }
 
 async function collectSources(root) {
