@@ -27,6 +27,7 @@ describe('HomepageSignupSetting', () => {
 
   it('lets homepage writers change signup availability', async () => {
     render(<HomepageSignupSetting />);
+    expect(screen.getByRole('heading', { name: 'Manage Signup Form' })).toBeInTheDocument();
     const toggle = screen.getByRole('switch', { name: 'Disable signups' });
     expect(toggle).toHaveAttribute('aria-checked', 'true');
     await userEvent.click(toggle);

@@ -1,4 +1,3 @@
-import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
@@ -23,10 +22,7 @@ export default function ManageHomepage() {
   return (
     <>
       <main className="page-container homepage-management-page">
-        <PageHeader
-          title="Manage Homepage"
-          actions={<Button size="sm" onClick={modals.image.openNew}>+ Add</Button>}
-        />
+        <PageHeader title="Manage Homepage" />
         <PageErrorOverlay errors={[homepage.error ? {
           message: homepage.error,
           action: { label: 'Retry', onClick: homepage.refresh },
@@ -39,6 +35,7 @@ export default function ManageHomepage() {
             loading={homepage.loading}
             error={homepage.error}
             onRetry={homepage.refresh}
+            onAdd={modals.image.openNew}
             onEdit={modals.image.openEdit}
             onDelete={modals.deletion.open}
             onReorder={homepage.reorderImages}
