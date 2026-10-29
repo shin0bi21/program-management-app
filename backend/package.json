@@ -29,7 +29,6 @@
     "db:status": "npx tsx db/scripts/migration_status.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
-    "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

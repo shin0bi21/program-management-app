@@ -19,7 +19,7 @@ COPY backend/package*.json ./
 RUN npm ci
 COPY tsconfig.base.json /tsconfig.base.json
 COPY backend/. .
-RUN npm run build && test -f dist/db/scripts/backfill-homepage-image-variants.js
+RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM base AS prod
