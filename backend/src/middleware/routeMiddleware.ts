@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ValidationError } from '../errors';
 
@@ -18,7 +18,7 @@ import { ValidationError } from '../errors';
  * router.get('/', asyncHandler(handleGetUsers));
  */
 export const asyncHandler =
-  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) =>
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
   (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
