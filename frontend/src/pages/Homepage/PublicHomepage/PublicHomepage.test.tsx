@@ -78,30 +78,7 @@ describe('PublicHomepage', () => {
     mockUseSectionRouting.mockClear();
   });
 
-  it('hides signup navigation and content when signup is disabled', () => {
-    homepageState.signupEnabled = false;
-    render(
-      <MemoryRouter>
-        <PublicHomepage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('link', { name: 'Sign Up' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Interested?' })).not.toBeInTheDocument();
-  });
-
-  it('composes public navigation with loaded homepage content', () => {
-    render(
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <PublicHomepage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('navigation', { name: 'Page sections' })).toBeInTheDocument();
-    expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /programming/i })).toBeInTheDocument();
-  });
-
+  // Entry and readiness.
   it('defers direct section routing until managed content has loaded', () => {
     homepageState.imagesLoading = true;
     const view = render(
@@ -125,6 +102,31 @@ describe('PublicHomepage', () => {
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
   });
 
+  // Rendered states.
+  it('composes public navigation with loaded homepage content', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <PublicHomepage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Page sections' })).toBeInTheDocument();
+    expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /programming/i })).toBeInTheDocument();
+  });
+
+  it('hides signup navigation and content when signup is disabled', () => {
+    homepageState.signupEnabled = false;
+    render(
+      <MemoryRouter>
+        <PublicHomepage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Sign Up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Interested?' })).not.toBeInTheDocument();
+  });
+
   it('renders hero images independently while programming loads', () => {
     homepageState.programsLoading = true;
     render(
@@ -136,6 +138,7 @@ describe('PublicHomepage', () => {
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
     expect(screen.getByText('Loading programs…')).toBeInTheDocument();
   });
+
   it('keeps signup available when photos fail', () => {
     homepageState.imagesError = 'Photos unavailable';
     render(<MemoryRouter><PublicHomepage /></MemoryRouter>);
@@ -152,5 +155,4 @@ describe('PublicHomepage', () => {
     expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
     expect(screen.getByRole('alert', { name: 'Signup availability' })).toHaveTextContent(homepageState.signupError);
   });
-
 });

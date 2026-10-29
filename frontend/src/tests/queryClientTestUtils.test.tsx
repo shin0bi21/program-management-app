@@ -21,10 +21,15 @@ describe('queryClientTestUtils', () => {
   });
 
   it('returns the client that provides the rendered component', () => {
-    const { queryClient } = renderWithQueryClient(<span>Query-backed content</span>);
+    let providedClient: ReturnType<typeof createTestQueryClient> | undefined;
+    function ClientProbe() {
+      providedClient = useQueryClient();
+      return <span>Query-backed content</span>;
+    }
+    const { queryClient } = renderWithQueryClient(<ClientProbe />);
 
     expect(screen.getByText('Query-backed content')).toBeInTheDocument();
-    expect(queryClient.getQueryCache()).toBeDefined();
+    expect(providedClient).toBe(queryClient);
   });
 
   it('creates a reusable hook wrapper for a supplied client', () => {

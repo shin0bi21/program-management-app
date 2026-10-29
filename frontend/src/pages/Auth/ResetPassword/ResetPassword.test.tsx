@@ -40,4 +40,16 @@ describe('ResetPassword', () => {
     expect(await screen.findByText('Passwords do not match')).toBeInTheDocument();
     expect(resetPassword).not.toHaveBeenCalled();
   });
+
+  it('submits matching rendered passwords through the reset workflow', async () => {
+    vi.mocked(resetPassword).mockResolvedValue({});
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'new-password' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'new-password' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Reset password' }).closest('form')!);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Password reset successful');
+    expect(resetPassword).toHaveBeenCalledOnce();
+  });
 });

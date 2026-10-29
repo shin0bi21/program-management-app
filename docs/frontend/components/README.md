@@ -88,3 +88,8 @@ Do not add a wrapper or hook merely to shorten its parent.
 Use [Frontend ownership](../architecture/ownership.md) to choose its location and
 [Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries and runners.
 The surface guides above describe only their specific contracts.
+
+The table, calendar, dashboard, and modal presets generate implementation and
+colocated test outlines together automatically. See the
+[paired scaffolding example](../../workflows/testing.md#scaffold-implementation-and-tests-together)
+for composing a new page and its component owners.

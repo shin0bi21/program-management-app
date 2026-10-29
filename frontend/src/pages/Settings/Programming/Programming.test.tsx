@@ -52,7 +52,7 @@ describe('Programming settings', () => {
     }]);
   });
 
-  // Page data.
+  // Rendered states.
   it('lists programs and cycles with edit actions', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -81,7 +81,7 @@ describe('Programming settings', () => {
     expect(programmingApi.getCycleReferences).toHaveBeenLastCalledWith({ signal: expect.any(AbortSignal) });
   });
 
-  // Modal and confirmation workflows.
+  // Commands and dialogs.
   it('opens assignment management for the selected existing program', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -128,7 +128,6 @@ describe('Programming settings', () => {
     expect(screen.getByText('Cycle deleted')).toBeInTheDocument();
   });
 
-  // Derived errors and presentation state.
   it('keeps an assigned cycle visible when deletion is rejected', async () => {
     const user = userEvent.setup();
     programmingApi.deleteProgramCycle.mockRejectedValue(new Error('Cycle cannot be deleted because it is still in use'));

@@ -1,5 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { renderWithQueryClient } from '../../../../tests/queryClientTestUtils';
+import { screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getYouth } from '../../youth.api';
@@ -19,7 +19,6 @@ describe('YouthTable selection reconciliation', () => {
   it('reports only the selected profile without mirroring every rows array into the page', async () => {
     const profile = makeYouthProfile();
     vi.mocked(getYouth).mockResolvedValue({ rows: [profile], nextCursor: null } as never);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     function Harness() {
       const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
@@ -40,7 +39,7 @@ describe('YouthTable selection reconciliation', () => {
       </>;
     }
 
-    render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>);
+    renderWithQueryClient(<Harness />);
 
     await screen.findByText(profile.firstName);
     await waitFor(() => expect(getYouth).toHaveBeenCalledTimes(1));

@@ -1,84 +1,54 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CohortSession } from '../../types';
+import { makeCohortSession } from '../../../../../tests/factories/session';
+import type SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
+import type SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
+import type SessionNotesDashboardCard from './SessionNotesDashboardCard/SessionNotesDashboardCard';
 import SessionDashboard from './SessionDashboard';
 
-const getSessionNotes = vi.fn();
-const getSessionRoster = vi.fn();
-const getSessionAttachments = vi.fn();
-const getSessionAttachmentFile = vi.fn();
-const updateSessionAttachment = vi.fn();
-const deleteSessionAttachment = vi.fn();
-const zoomIn = vi.fn();
-const zoomOut = vi.fn();
-const resetZoom = vi.fn();
-const destroyPanzoom = vi.fn();
-const initializePanzoom = vi.fn((_element: unknown, _options?: unknown) => ({
-  destroy: destroyPanzoom,
-  reset: resetZoom,
-  zoomIn,
-  zoomOut,
-  zoomWithWheel: vi.fn(),
+type AttendanceCardProps = ComponentProps<typeof SessionAttendanceDashboardCard>;
+type NotesCardProps = ComponentProps<typeof SessionNotesDashboardCard>;
+type AttachmentsCardProps = ComponentProps<typeof SessionAttachmentsDashboardCard>;
+
+const childCardProps = vi.hoisted(() => ({
+  attendance: vi.fn<(props: AttendanceCardProps) => void>(),
+  notes: vi.fn<(props: NotesCardProps) => void>(),
+  attachments: vi.fn<(props: AttachmentsCardProps) => void>(),
 }));
 
-vi.mock('@panzoom/panzoom', () => ({
-  default: (element: unknown, options?: unknown) => initializePanzoom(element, options),
+vi.mock('./SessionAttendanceDashboardCard/SessionAttendanceDashboardCard', () => ({
+  default: (props: AttendanceCardProps) => {
+    childCardProps.attendance(props);
+
+    return <button onClick={() => props.session && props.onManage(props.session)}>Manage attendance</button>;
+  },
 }));
 
-vi.mock('../../sessions.api', () => ({
-  getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
-  getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
-  createSessionNote: vi.fn(),
-  updateSessionNote: vi.fn(),
-  deleteSessionNote: vi.fn(),
-  getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
-  createSessionAttachment: vi.fn(),
-  deleteSessionAttachment: (...args: unknown[]) => deleteSessionAttachment(...args),
-  updateSessionAttachment: (...args: unknown[]) => updateSessionAttachment(...args),
-  getSessionAttachmentFile: (...args: unknown[]) => getSessionAttachmentFile(...args),
-  downloadSessionAttachment: vi.fn(),
+vi.mock('./SessionNotesDashboardCard/SessionNotesDashboardCard', () => ({
+  default: (props: NotesCardProps) => {
+    childCardProps.notes(props);
+
+    return <div data-testid="notes-card" />;
+  },
 }));
 
-const session: CohortSession = {
-  id: 'session-1',
-  cohortId: 'cohort-1',
-  sessionTypeId: 'type-regular',
-  sessionTypeName: 'Regular',
-  cohortName: 'Summer 2026',
-  programId: 'program-1',
-  programName: 'Soft Skills',
-  enrollmentRequired: true,
-  theme: 'Communication',
-  startsAt: '2026-07-28T21:00:00.000Z',
-  endsAt: '2026-07-28T23:00:00.000Z',
-  cancelledAt: null,
-  description: null,
-  state: 'upcoming',
-  attendedCount: 4,
-  attendanceMarkedCount: 5,
-  attendanceRate: 80,
-};
+vi.mock('./SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard', () => ({
+  default: (props: AttachmentsCardProps) => {
+    childCardProps.attachments(props);
+
+    return <div data-testid="attachments-card" />;
+  },
+}));
 
 describe('SessionDashboard', () => {
   beforeEach(() => {
-    getSessionNotes.mockResolvedValue([]);
-    getSessionRoster.mockResolvedValue([]);
-    getSessionAttachments.mockResolvedValue([]);
-    getSessionAttachmentFile.mockResolvedValue(new Blob(['image'], { type: 'image/png' }));
-    updateSessionAttachment.mockResolvedValue({});
-    deleteSessionAttachment.mockResolvedValue({});
-    Object.defineProperty(URL, 'createObjectURL', {
-      configurable: true,
-      value: vi.fn(() => 'blob:attachment-preview'),
-    });
-    Object.defineProperty(URL, 'revokeObjectURL', {
-      configurable: true,
-      value: vi.fn(),
-    });
+    childCardProps.attendance.mockClear();
+    childCardProps.notes.mockClear();
+    childCardProps.attachments.mockClear();
   });
 
-  it('keeps every card visible before a session is selected', () => {
+  it('keeps every card composed before a session is selected', () => {
     render(
       <SessionDashboard
         sessionQueryKey={['sessions']}
@@ -89,131 +59,54 @@ describe('SessionDashboard', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Attachments' })).toBeInTheDocument();
-    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(childCardProps.attendance).toHaveBeenCalledWith(expect.objectContaining({ session: null }));
+    expect(screen.getByTestId('notes-card')).toBeInTheDocument();
+    expect(screen.getByTestId('attachments-card')).toBeInTheDocument();
   });
 
-  it('summarizes attendance and delegates the add action', async () => {
+  it('forwards selected context and card errors, and delegates attendance management', async () => {
+    const session = makeCohortSession();
+    const queryKey = ['sessions', 'program-1'] as const;
     const onAddAttendance = vi.fn();
+    const onErrorsChange = vi.fn();
+
     render(
       <SessionDashboard
-        sessionQueryKey={['sessions']}
+        sessionQueryKey={queryKey}
         session={session}
         canWriteAttendance
-        canWriteSessions
+        canWriteSessions={false}
         onAddAttendance={onAddAttendance}
+        onErrorsChange={onErrorsChange}
       />,
     );
 
-    expect(screen.getByText('4/5')).toBeInTheDocument();
+    expect(childCardProps.attendance).toHaveBeenCalledWith({
+      session,
+      canWrite: true,
+      onManage: onAddAttendance,
+    });
+    expect(childCardProps.notes).toHaveBeenCalledWith(expect.objectContaining({
+      queryKey,
+      session,
+      canWrite: false,
+      onErrorChange: expect.any(Function),
+    }));
+    expect(childCardProps.attachments).toHaveBeenCalledWith(expect.objectContaining({
+      queryKey,
+      session,
+      canWrite: false,
+      onErrorChange: expect.any(Function),
+    }));
+
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
     expect(onAddAttendance).toHaveBeenCalledWith(session);
-    expect(await screen.findByText('No notes.')).toBeInTheDocument();
-    const addNotes = screen.getByRole('button', { name: 'Add notes' });
-    expect(addNotes).toBeEnabled();
-    fireEvent.click(addNotes);
-    expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
-    expect(await screen.findByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
-  });
 
-  it('shows consistent note metadata and linked youth details', async () => {
-    getSessionNotes.mockResolvedValue([{
-      id: 'note-1',
-      sessionId: session.id,
-      category: 'achievement',
-      details: 'Maya led the opening activity.',
-      createdAt: '2026-07-28T23:30:00.000Z',
-      updatedAt: '2026-07-28T23:30:00.000Z',
-      createdByName: 'Programming Demo',
-      youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
-    }]);
+    const notesProps = childCardProps.notes.mock.lastCall![0];
+    act(() => notesProps.onErrorChange!({ message: 'Could not load notes' }));
 
-    render(
-      <SessionDashboard
-        sessionQueryKey={['sessions']}
-        session={session}
-        canWriteAttendance
-        canWriteSessions
-        onAddAttendance={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByRole('heading', { name: 'Session Notes (1)' })).toBeInTheDocument();
-    expect(screen.getByText('Achievement')).toBeInTheDocument();
-    expect(screen.getByText('Jul 28, 2026')).toBeInTheDocument();
-    expect(screen.queryByText('Maya led the opening activity.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit session note' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete session note' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
-    expect(screen.getByRole('heading', { name: 'Session Note' })).toBeInTheDocument();
-    expect(screen.getByText(/Programming Demo/)).toBeInTheDocument();
-    expect(screen.getByText('Maya led the opening activity.')).toBeInTheDocument();
-    expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
-  });
-
-  it('shows attachment titles with view, edit, and delete actions', async () => {
-    const attachment = {
-      id: 'attachment-1',
-      sessionId: session.id,
-      title: 'Workshop photo',
-      description: 'Youth presenting their work.',
-      originalFilename: 'IMG_0042.png',
-      mimeType: 'image/png',
-      fileSize: 2048,
-      createdAt: '2026-07-28T23:30:00.000Z',
-      updatedAt: '2026-07-28T23:30:00.000Z',
-      createdByName: 'Programming Demo',
-      youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
-    };
-    getSessionAttachments.mockResolvedValue([attachment]);
-
-    render(
-      <SessionDashboard
-        sessionQueryKey={['sessions']}
-        session={session}
-        canWriteAttendance
-        canWriteSessions
-        onAddAttendance={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByText('Workshop photo')).toBeInTheDocument();
-    expect(screen.queryByText(/IMG_0042/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View Workshop photo' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Workshop photo' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Workshop photo' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'View Workshop photo' }));
-    expect(await screen.findByRole('img', { name: 'Workshop photo' })).toHaveAttribute('src', 'blob:attachment-preview');
-    expect(screen.queryByText('Youth presenting their work.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Programming Demo')).not.toBeInTheDocument();
-    expect(screen.queryByText('2 KB')).not.toBeInTheDocument();
-    await waitFor(() => expect(initializePanzoom).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(zoomIn).toHaveBeenCalledWith({ animate: true });
-    expect(zoomOut).toHaveBeenCalledWith({ animate: true });
-    expect(resetZoom).toHaveBeenCalledWith({ animate: true });
-    fireEvent.click(screen.getByText('Close', { selector: 'button' }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Workshop photo' }));
-    expect(screen.getByRole('heading', { name: 'Edit Attachment' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Title')).toHaveValue('Workshop photo');
-    expect(screen.queryByLabelText('File')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Renamed photo' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(updateSessionAttachment).toHaveBeenCalledWith(
-      session.id,
-      attachment.id,
-      {
-        title: 'Renamed photo',
-        description: attachment.description,
-        youthIds: ['youth-1'],
-      },
-    ));
+    await waitFor(() => expect(onErrorsChange).toHaveBeenCalledWith([
+      { message: 'Could not load notes' },
+    ]));
   });
 });

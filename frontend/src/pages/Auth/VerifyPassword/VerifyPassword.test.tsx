@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,5 +49,20 @@ describe('VerifyPassword', () => {
       'New verification code sent to your email',
     );
     expect(resend2FA).toHaveBeenCalledWith('user-1');
+  });
+
+  it('submits a valid rendered code through the verification workflow', async () => {
+    vi.mocked(verify2FA).mockResolvedValue({
+      token: 'token',
+      user: { id: 'user-1', firstName: 'Test', lastName: 'User', email: 'test@example.com' },
+    });
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText('Verification code'), { target: { value: '123456' } });
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('button', { name: 'Verify' }).closest('form')!);
+    });
+    expect(verify2FA).toHaveBeenCalledOnce();
+    expect(authLogin).toHaveBeenCalledOnce();
   });
 });

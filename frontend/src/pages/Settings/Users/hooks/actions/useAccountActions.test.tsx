@@ -1,9 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
-import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { User } from '../../types';
-import { createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { revokeAccountInvite, toggleAccountStatus } from '../../accounts.api';
 import useAccountActions from './useAccountActions';
 import { referenceDataKeys } from '../../../../../common/features/referenceData/hooks/useReferenceData';
@@ -24,7 +23,7 @@ const account: User = {
 };
 const tableQueryKey = ['accounts', 'table'] as const;
 
-function renderActions(queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+function renderActions(queryClient = createTestQueryClient()) {
   return {
     queryClient,
     ...renderHook(() => useAccountActions({ accountTableQueryKey: tableQueryKey }), {

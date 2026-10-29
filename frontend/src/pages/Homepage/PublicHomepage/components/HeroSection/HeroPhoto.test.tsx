@@ -15,6 +15,7 @@ describe('HeroPhoto', () => {
     expect(document.querySelector('source')).toHaveAttribute('srcset', '/mobile.webp');
     fireEvent.error(image);
     expect(document.querySelector('source')).not.toBeInTheDocument();
+    expect(image).toHaveAttribute('src', '/desktop.webp');
     fireEvent.error(image);
     expect(screen.getByRole('status')).toHaveTextContent('Photo unavailable');
   });

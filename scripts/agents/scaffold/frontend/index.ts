@@ -97,6 +97,8 @@ function usage(): string {
   npm run scaffold:frontend -- calendar <owner-path> <NameCalendar> [--dry-run]
   npm run scaffold:frontend -- dashboard <owner-path> <NameDashboard> [--dry-run]
 
+Every preset generates implementation files and colocated test outlines together.
+
 Examples:
   npm run scaffold:frontend -- page Leads
   npm run scaffold:frontend -- page Staff/Schedules

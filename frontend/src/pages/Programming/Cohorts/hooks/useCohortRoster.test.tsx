@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,13 +31,6 @@ const cohort: ProgramCohort = {
   uniqueAttendeeCount: 0,
 };
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-  };
-};
-
 describe('useCohortRoster', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,7 +47,7 @@ describe('useCohortRoster', () => {
   it('loads cohort roster candidates and preserves controls while cohort identity is unchanged', async () => {
     const { result, rerender } = renderHook(
       ({ target }: { target: ProgramCohort | null }) => useCohortRoster(target),
-      { initialProps: { target: cohort }, wrapper: createWrapper() },
+      { initialProps: { target: cohort }, wrapper: createQueryClientWrapper(createTestQueryClient()) },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));

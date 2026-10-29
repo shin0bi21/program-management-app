@@ -96,7 +96,7 @@ describe('Youth', () => {
     });
   });
 
-  // Permissions and application services.
+  // Entry and readiness.
   it('loads program and cycle filter metadata with youth read permission alone', async () => {
     authState.permissions = ['read:youth_profiles'];
     render(<Youth />);
@@ -132,7 +132,7 @@ describe('Youth', () => {
     expect(document.querySelector('[data-column-id="actions"]')).not.toBeInTheDocument();
   });
 
-  // Page data, preferences, and filters.
+  // Controls and views.
   it('passes restored search and cycle filters to the youth table and clears the cycle from the header', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       search: 'Jamie',
@@ -163,7 +163,7 @@ describe('Youth', () => {
     }));
   });
 
-  // Selection and page-spanning actions.
+  // Selection and coordination.
   it('shows the selected profile contact and profile notes', async () => {
     youthApi.getYouthProfileNotes.mockResolvedValue([{
       id: 'profile-note-1', youthId: 'youth-1', category: 'general',
@@ -205,6 +205,18 @@ describe('Youth', () => {
     expect(screen.getByRole('heading', { name: 'Profile Notes (1)' })).toBeInTheDocument();
   });
 
+  it('reconciles an authoritative contact save into the selected dashboard', async () => {
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
+
+    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
+  });
+
+  // Commands and dialogs.
   it('opens the cohort attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
       cohorts: [{
@@ -226,18 +238,6 @@ describe('Youth', () => {
     expect(screen.getByTestId('youth-report-modal')).toHaveTextContent(`Summer 2026 · ${profile.id}`);
   });
 
-  it('reconciles an authoritative contact save into the selected dashboard', async () => {
-    render(<Youth />);
-    await screen.findByRole('button', { name: 'Filters' });
-
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
-    fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
-
-    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
-  });
-
-  // Modal and confirmation workflows.
   it('shows success feedback after saving a new profile note without opening its details', async () => {
     youthApi.setYouthProfileNote.mockResolvedValue({
       id: 'profile-note-new', youthId: 'youth-1', category: 'general',
@@ -289,4 +289,5 @@ describe('Youth', () => {
 
     expect(screen.getByTestId('youth-modal')).toHaveTextContent('contact');
   });
+
 });

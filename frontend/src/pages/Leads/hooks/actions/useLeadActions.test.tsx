@@ -1,6 +1,6 @@
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
+import type { QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { deleteLead, updateLeadStatus } from '../../leads.api';
 import type { Lead } from '../../types';
@@ -19,8 +19,8 @@ function seedVariant(client: QueryClient, rows: Lead[]) {
 }
 
 function setup() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const client = createTestQueryClient();
+  const wrapper = createQueryClientWrapper(client);
   return { client, wrapper };
 }
 

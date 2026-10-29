@@ -1,12 +1,14 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import type { SessionPreference } from './hooks/useSessionControls';
+import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import Sessions from './Sessions';
-import type { SessionListFilters } from './types';
 import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
+import { makeCohortSession } from '../../../tests/factories/session';
 
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
@@ -84,59 +86,22 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
     programs,
     onProgramSelect,
     filters,
-  }: {
-    selectedProgramId?: string | null;
-    onSessionMove?: unknown;
-    onAddSession?: (program: Program, date: string) => void;
-    filters: SessionListFilters;
-    programs: Program[];
-    onProgramSelect: (program: Program) => void;
-    onSessionSelect: (session: {
-      id: string;
-      cohortId: string;
-      sessionTypeId: string;
-      sessionTypeName: string;
-      theme: string;
-      cohortName: string;
-      programId: string;
-      programName: string;
-      enrollmentRequired: true;
-      startsAt: string;
-      endsAt: string;
-      cancelledAt: null;
-      description: string;
-      attendanceMarkedCount: number;
-      attendedCount: number;
-      attendanceRate: number | null;
-      state: 'upcoming';
-    }) => void;
-  }) => (
+  }: ComponentProps<typeof SessionCalendar>) => (
     <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
-      <button type="button" onClick={() => onProgramSelect(programs[0])}>Program row</button>
+      <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
       {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
       <button
         type="button"
         onClick={() =>
-          onSessionSelect({
-            id: 'session-1',
-            cohortId: 'cohort-1',
+          onSessionSelect(makeCohortSession({
             sessionTypeId: 'type-1',
-            sessionTypeName: 'Regular',
             theme: 'Communication',
-            cohortName: 'Summer 2026',
             programId: 'program-1',
             programName: 'Soft Skills',
-
-            enrollmentRequired: true,
             startsAt: '2026-07-28T21:00:00.000Z',
             endsAt: '2026-07-28T23:30:00.000Z',
-            cancelledAt: null,
             description: 'Planned communication exercise',
-            attendanceMarkedCount: 0,
-            attendedCount: 0,
-            attendanceRate: null,
-            state: 'upcoming',
-          })
+          }))
         }
       >
         Calendar session
@@ -198,28 +163,15 @@ describe('Sessions', () => {
         uniqueAttendeeCount: 0,
       },
     ]);
-    getSessions.mockResolvedValue([
-      {
-        id: 'session-1',
-        cohortId: 'cohort-1',
-        sessionTypeId: 'type-regular',
-        sessionTypeName: 'Regular',
-        theme: 'Communication',
-        cohortName: 'Summer 2026',
-        programId: 'program-1',
-        programName: 'Soft Skills',
-
-        enrollmentRequired: true,
-        startsAt: '2026-07-28T21:00:00.000Z',
-        endsAt: '2026-07-28T23:30:00.000Z',
-        cancelledAt: null,
-        description: 'Planned communication exercise',
-        attendanceMarkedCount: 0,
-        attendedCount: 0,
-        attendanceRate: null,
-        state: 'upcoming',
-      },
-    ]);
+    getSessions.mockResolvedValue([makeCohortSession({
+      sessionTypeId: 'type-regular',
+      theme: 'Communication',
+      programId: 'program-1',
+      programName: 'Soft Skills',
+      startsAt: '2026-07-28T21:00:00.000Z',
+      endsAt: '2026-07-28T23:30:00.000Z',
+      description: 'Planned communication exercise',
+    })]);
     getSessionRoster.mockResolvedValue([
       {
         youthId: 'youth-1',
@@ -235,54 +187,7 @@ describe('Sessions', () => {
     deleteSession.mockResolvedValue({ id: 'session-1' });
   });
 
-  // Page data.
-  it('shows open attendance as a check-in count', async () => {
-    getSessions.mockResolvedValue([
-      {
-        id: 'drop-in-session',
-        cohortId: 'drop-in-cohort',
-        sessionTypeId: 'type-field-trip',
-        sessionTypeName: 'Field Trip',
-        theme: 'Friday Drop In',
-        cohortName: 'Summer 2026',
-        programId: 'drop-in',
-        programName: 'Drop In',
-        enrollmentRequired: false,
-        startsAt: '2026-07-31T21:00:00.000Z',
-        endsAt: '2026-07-31T23:00:00.000Z',
-        cancelledAt: null,
-        description: null,
-        attendanceMarkedCount: 3,
-        attendedCount: 3,
-        attendanceRate: 100,
-        state: 'upcoming',
-      },
-    ]);
-
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText('Select a program to view its current cohort.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add attachments' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add notes' })).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByText('Friday Drop In'));
-
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
-    expect(screen.getByText('3 check-ins')).toBeInTheDocument();
-    expect(await screen.findByText('No notes.')).toBeInTheDocument();
-    expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(screen.getByText('Field Trip')).toBeInTheDocument();
-    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
-    expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
-  });
-
-  // Saved preferences and the current view.
+  // Entry and readiness.
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
     let finishLoading!: (value: SessionPreference | null) => void;
     preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
@@ -309,28 +214,6 @@ describe('Sessions', () => {
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
   });
 
-  it('uses all cycle bounds for table and calendar and has no Date Range filter', async () => {
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    const dateRange = { start: '2026-07-01', end: '2026-12-01' };
-    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dateRange }), expect.any(Object), expect.any(Object),
-    ));
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
-  });
-
-  it('does not create a fallback calendar when no cycles exist', async () => {
-    getCycleReferences.mockResolvedValue([]);
-    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
-    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
-  });
-
   it('keeps session filters and the calendar available with session read permission alone', async () => {
     auth.permissions = ['read:sessions'];
     preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
@@ -342,6 +225,64 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+  });
+
+  it('enables calendar moves only for session writers', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    const view = render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'true');
+    auth.permissions = auth.permissions.filter(permission => permission !== 'write:sessions');
+    view.rerender(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
+  });
+
+  // Rendered states.
+  it('shows open attendance as a check-in count', async () => {
+    getSessions.mockResolvedValue([makeCohortSession({
+      id: 'drop-in-session',
+      cohortId: 'drop-in-cohort',
+      sessionTypeId: 'type-field-trip',
+      sessionTypeName: 'Field Trip',
+      theme: 'Friday Drop In',
+      programId: 'drop-in',
+      programName: 'Drop In',
+      enrollmentRequired: false,
+      startsAt: '2026-07-31T21:00:00.000Z',
+      endsAt: '2026-07-31T23:00:00.000Z',
+      attendanceMarkedCount: 3,
+      attendedCount: 3,
+      attendanceRate: 100,
+    })]);
+
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Select a program to view its current cohort.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add attachments' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add notes' })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByText('Friday Drop In'));
+
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
+    expect(screen.getByText('3 check-ins')).toBeInTheDocument();
+    expect(await screen.findByText('No notes.')).toBeInTheDocument();
+    expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
+    expect(screen.getByText('Field Trip')).toBeInTheDocument();
+    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
+    expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
+  });
+
+  it('does not create a fallback calendar when no cycles exist', async () => {
+    getCycleReferences.mockResolvedValue([]);
+    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
   });
 
   it.each(['empty', 'failed'] as const)('does not fetch an unbounded table when cycle metadata is %s', async state => {
@@ -374,7 +315,7 @@ describe('Sessions', () => {
     expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
   });
 
-  // Selection and page-spanning actions.
+  // Controls and views.
   it('sends multiple selected cycles to the table and calendar', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
@@ -397,6 +338,56 @@ describe('Sessions', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-1,cycle-2');
   });
+
+  it('uses all cycle bounds for table and calendar and has no Date Range filter', async () => {
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    const dateRange = { start: '2026-07-01', end: '2026-12-01' };
+    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ dateRange }), expect.any(Object), expect.any(Object),
+    ));
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
+  });
+
+  it('switches between table and calendar views on the same page', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    render(
+      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
+        <Sessions />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
+    const pageHeader = screen.getByRole('heading', { name: 'Programming' }).closest('header');
+    const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
+    expect(pageHeader).not.toBeNull();
+    expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(viewSelector);
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
+
+    await waitFor(() => expect(preferenceApi.value).toEqual(expect.objectContaining({ view: 'table' })));
+
+    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByText('Communication'));
+
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
+  });
+
+  // Selection and coordination.
 
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
@@ -425,7 +416,26 @@ describe('Sessions', () => {
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
-  // Modal and confirmation workflows.
+  it('switches the dashboard between a program row and a session without losing cohort access', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    auth.permissions.push('write:enrollments');
+    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
+    expect(await screen.findByRole('heading', { name: 'Soft Skills - Summer 2026 Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
+    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
+    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
+  });
+
+  // Commands and dialogs.
   it('highlights a linked session and opens attendance from its actions menu', async () => {
     render(
       <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
@@ -487,15 +497,6 @@ describe('Sessions', () => {
     expect(screen.getByLabelText('Session Date')).not.toHaveAttribute('max');
   });
 
-  it('enables calendar moves only for session writers', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    const view = render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'true');
-    auth.permissions = auth.permissions.filter(permission => permission !== 'write:sessions');
-    view.rerender(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
-  });
-
   it('opens a session with the calendar date and program default times', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
@@ -505,57 +506,6 @@ describe('Sessions', () => {
     expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
   });
 
-  it('switches the dashboard between a program row and a session without losing cohort access', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    auth.permissions.push('write:enrollments');
-    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
-    expect(await screen.findByRole('heading', { name: 'Soft Skills - Summer 2026 Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
-    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
-    expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
-  });
-
-  // Table, calendar, dashboard, and body initialization.
-  it('switches between table and calendar views on the same page', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
-    const pageHeader = screen.getByRole('heading', { name: 'Programming' }).closest('header');
-    const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
-    expect(pageHeader).not.toBeNull();
-    expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    fireEvent.click(viewSelector);
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
-
-    await waitFor(() => expect(preferenceApi.value).toEqual(expect.objectContaining({ view: 'table' })));
-
-    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
-
-    fireEvent.click(await screen.findByText('Communication'));
-
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
-  });
 });
