@@ -122,3 +122,8 @@ role defaults, independent option-source wiring, dependent filter changes and lo
 Route tests cover restored controls and view wiring.
 
 `FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local checklist draft, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.
+
+Applying or clearing filters keeps the popup and current category open, including
+when refreshed table or calendar results change their scroll position. The user
+can continue adjusting filters or dismiss the popup with its trigger, Escape,
+or an outside click.
