@@ -101,6 +101,7 @@ export class DataBuffer<TItemData> {
   private loadedEnd: CalendarPeriod | null = null;
   private initialized = false;
   private initializing: Promise<void> | null = null;
+  private initialPeriods: readonly CalendarPeriod[] = [];
   private queues: Record<'left' | 'right', Promise<void>> = {
     left: Promise.resolve(),
     right: Promise.resolve(),
@@ -126,6 +127,7 @@ export class DataBuffer<TItemData> {
     if (this.initialized || !renderedPeriods.length) return Promise.resolve();
     if (this.initializing) return this.initializing;
 
+    this.initialPeriods = renderedPeriods;
     this.initializing = this.runInitialization(renderedPeriods);
 
     return this.initializing;
@@ -161,7 +163,7 @@ export class DataBuffer<TItemData> {
     this.queues[direction] = this.queues[direction]
       .catch(() => undefined)
       .then(async () => {
-        await initialization?.catch(() => undefined);
+        await (initialization ?? this.initialize(this.initialPeriods));
         await this.replenishIfNeeded(direction);
       });
 
@@ -346,12 +348,32 @@ export class DataBuffer<TItemData> {
       if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
     });
 
-    this.mergeData(incoming);
+    this.mergeData(incoming, range);
   }
 
-  /** Merges server records, replacing old indexed locations and preserving current overrides. */
-  private mergeData(incoming: RowPeriodData<TItemData>): void {
+  /** Reconciles the authoritative requested range, including absent rows and buckets. */
+  private mergeData(incoming: RowPeriodData<TItemData>, range: PeriodRange): void {
     const getItemId = this.getItemId;
+
+    Object.entries(this.data).forEach(([rowId, periods]) => {
+      Object.entries(periods).forEach(([periodKey, items]) => {
+        const retained = items.filter(item => {
+          const itemRange = this.getItemRange?.(item);
+
+          return itemRange
+            ? this.adapter.getRangeAnchor(itemRange, range.start, range.end) === undefined
+            : !this.adapter.includes(range.start, range.end, periodKey);
+        });
+
+        if (retained.length === items.length) return;
+
+        this.data = {
+          ...this.data,
+          [rowId]: { ...this.data[rowId], [periodKey]: retained },
+        };
+      });
+    });
+    this.rebuildItemIndex();
 
     Object.entries(incoming).forEach(([rowId, periods]) => {
       Object.entries(periods).forEach(([periodKey, items]) => {
@@ -362,22 +384,9 @@ export class DataBuffer<TItemData> {
 
         const row = this.data[rowId] ?? {};
 
-        if (getItemId) {
-          const replacedItems = row[periodKey] ?? [];
-
-          replacedItems.forEach(item => {
-            const itemId = getItemId(item);
-            const location = this.itemLocations.get(itemId);
-
-            if (location?.rowId === rowId && location.periodKey === periodKey) {
-              this.itemLocations.delete(itemId);
-            }
-          });
-        }
-
         this.data = {
           ...this.data,
-          [rowId]: { ...row, [periodKey]: items },
+          [rowId]: { ...row, [periodKey]: [...(row[periodKey] ?? []), ...items] },
         };
 
         if (getItemId) {
