@@ -552,12 +552,32 @@ describe('Tasks API', () => {
     expect(incompleteRange.status).toBe(400);
   });
 
+  it('returns tasks across a multi-year table and calendar read range', async () => {
+    const ids: string[] = [];
+    for (const date of ['2024-02-29', '2027-12-31']) {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ title: 'Multi-year range task', category: 'outreach', startDate: date, dueDate: date, staffId: firstStaffId }));
+      expect(created.status).toBe(201);
+      ids.push(created.body.id);
+    }
+
+    for (const endpoint of ['list', 'calendar']) {
+      const response = await request(app).get(`/api/tasks/${endpoint}`)
+        .query({ start: '2024-01-01', end: '2027-12-31', staffIds: firstStaffId, search: 'Multi-year range task' })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(response.status).toBe(200);
+      const rows = endpoint === 'list' ? response.body.rows : response.body;
+      expect(rows.map((task: { id: string }) => task.id)).toEqual(ids);
+    }
+  });
+
   it.each([
     'start=2026-06-12',
     'end=2026-06-15',
     'start=2026-06-15&end=2026-06-12',
     'start=2026-02-30&end=2026-03-01',
-    'start=2024-01-01&end=2025-01-01',
     'start=0000-01-01&end=0000-01-02',
   ])('rejects an invalid table range: %s', async query => {
     const response = await request(app)

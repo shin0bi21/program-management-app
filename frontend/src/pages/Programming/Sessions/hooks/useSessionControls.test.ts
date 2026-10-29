@@ -194,21 +194,24 @@ describe('useSessionControls', () => {
       view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [],
     })));
   });
-  it('restores and applies date bounds separately from cycle membership', async () => {
+  it('derives full cycle bounds and discards obsolete date preferences', async () => {
+    const spanningCycles = [cycles[0], { ...cycles[1], endsOn: '2028-12-31' }];
     preferenceApi.getPreference.mockResolvedValue({
       cycleIds: ['cycle-1'], dateRange: { start: '2026-07-01', end: '2026-07-31' },
     });
     const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
+      role: 'admin', programs, programsLoading: false, cycles: spanningCycles, cyclesLoading: false,
       sessionTypes, sessionTypesLoading: false, tableKeys,
     }), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-07-31' });
-    act(() => result.current.filters.setDateRange({ start: '2026-08-01', end: '2026-08-31' }));
-    act(() => result.current.setView('table'));
-    expect(result.current.filters).toMatchObject({
-      cycleIds: ['cycle-1'], dateRange: { start: '2026-08-01', end: '2026-08-31' },
-    });
-  });
+    expect(result.current.filters.dateRange).toEqual({ start: cycles[0].startsOn, end: cycles[0].endsOn });
 
+    act(() => result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']));
+    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2028-12-31' });
+    act(() => result.current.filters.clear());
+    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2028-12-31' });
+    act(() => result.current.setView('table'));
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
+      expect.not.objectContaining({ dateRange: expect.anything() })));
+  });
 });

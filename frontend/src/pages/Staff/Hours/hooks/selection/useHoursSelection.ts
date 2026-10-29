@@ -7,22 +7,19 @@ import type { HoursTableRow } from '../../types';
 export default function useHoursSelection({
   resources,
   currentUserResource,
-  cycleId,
-  onCycleSelect,
 }: {
   resources: readonly StaffResource[];
   currentUserResource: StaffResource | null;
-  cycleId: string | null;
-  onCycleSelect: (cycleId: string) => void;
 }) {
+  const [dashboardCycleId, setDashboardCycleId] = useState<string | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   const selectRow = useCallback((row: HoursTableRow) => {
     setSelectedRowId(row.id);
     setSelectedStaffId(row.resourceId);
-    if (row.item.cycleId !== cycleId) onCycleSelect(row.item.cycleId);
-  }, [cycleId, onCycleSelect]);
+    setDashboardCycleId(row.item.cycleId);
+  }, []);
 
   const selectStaff = useCallback((staffId: string) => {
     setSelectedStaffId(staffId);
@@ -33,6 +30,7 @@ export default function useHoursSelection({
     ?? currentUserResource;
 
   return {
+    dashboardCycleId,
     selectedRowId,
     selectedStaff,
     selectRow,

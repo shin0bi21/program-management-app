@@ -27,7 +27,7 @@ interface UsePeriodVirtualizationOptions {
 
 /**
  * Builds the period range, renders its virtual window, and restores/persists horizontal position.
- * Requires: periodDefinition produces chronological periods; an applied dateRange contains 1–366 ordered dates.
+ * Requires: periodDefinition produces chronological periods; an applied dateRange contains valid chronological dates.
  * Example: scrolling right exposes a new period and reports it without rendering the entire range.
  */
 export function usePeriodVirtualization({
@@ -215,7 +215,7 @@ export function normalizePeriodVirtualizationOptions(periodCount: number, oversc
 
 /**
  * Builds daily periods for an applied range or uses the configured initial window.
- * Throws when an applied range contains invalid dates or exceeds 366 inclusive days.
+ * Throws when an applied range contains invalid or reversed dates.
  * Example: Feb 28–Mar 1 in a leap year produces three daily periods.
  */
 function buildCalendarPeriods(

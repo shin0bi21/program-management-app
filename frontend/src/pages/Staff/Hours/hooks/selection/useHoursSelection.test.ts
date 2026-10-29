@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import useHoursSelection from './useHoursSelection';
@@ -11,9 +11,8 @@ const resources = [
 
 describe('useHoursSelection', () => {
   it('aligns a selected row with dashboard staff and cycle, then clears it on resource selection', () => {
-    const onCycleSelect = vi.fn();
     const { result } = renderHook(() => useHoursSelection({
-      resources, currentUserResource: resources[0], cycleId: 'cycle-1', onCycleSelect,
+      resources, currentUserResource: resources[0],
     }));
     const row = {
       id: 'entry-1', resourceId: 'staff-2', date: '2026-08-19',
@@ -24,7 +23,7 @@ describe('useHoursSelection', () => {
     act(() => result.current.selectRow(row));
     expect(result.current.selectedRowId).toBe('entry-1');
     expect(result.current.selectedStaff?.id).toBe('staff-2');
-    expect(onCycleSelect).toHaveBeenCalledWith('cycle-2');
+    expect(result.current.dashboardCycleId).toBe('cycle-2');
 
     act(() => result.current.selectStaff('staff-1'));
     expect(result.current.selectedRowId).toBeNull();

@@ -102,7 +102,7 @@ function renderCalendar({
   const result = render(
       <HoursCalendar
         resources={resources}
-        filters={{ staffIds, categories: [], programIds: [], types: [], cycleId: 'cycle-1', search, ...filters }}
+        filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
         canWrite={canWrite}
         isEntryPending={() => false}
         selectedStaffId="staff-1"
@@ -136,6 +136,16 @@ describe('HoursCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     calendarState.props = null;
+  });
+
+  it('removes a moved or saved entry when its resolved cycle is outside the active selection', () => {
+    const { calendarCacheRef } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
+    const item = buildItem({ cycleId: 'cycle-1' });
+    act(() => calendarCacheRef.current.upsert(resource.id, '2026-08-10', item));
+    expect(calendarState.props!.items[resource.id]).toEqual([{ date: '2026-08-10', item }]);
+
+    act(() => calendarCacheRef.current.upsert(resource.id, '2026-08-11', { ...item, cycleId: 'cycle-2' }));
+    expect(calendarState.props!.items[resource.id] ?? []).toEqual([]);
   });
 
   it('configures resources, item density, capabilities, and cell actions', () => {
@@ -191,7 +201,7 @@ describe('HoursCalendar', () => {
     expect(calendarState.props?.dateRange).toEqual({ start: '2026-08-01', end: '2026-08-31' });
     expect(getHoursCalendarData).toHaveBeenCalledWith({
       staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'],
-      types: ['other'], cycleId: 'cycle-1', search: 'workshop',
+      types: ['other'], cycleIds: ['cycle-1'], search: 'workshop',
       dateRange: { start: '2026-08-01', end: '2026-08-31' },
     }, {
       start: expect.any(String),

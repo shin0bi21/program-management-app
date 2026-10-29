@@ -1,11 +1,3 @@
-import type { DateRange } from '../../utils/dateRange';
-
-export interface DateRangePreset {
-  id: string;
-  label: string;
-  range: DateRange;
-}
-
 export interface FilterCardOption {
   value: string;
   label: string;

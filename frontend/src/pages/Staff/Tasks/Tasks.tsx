@@ -1,4 +1,4 @@
-import useDateRangePresets from '../../../common/features/programming/cycles/useDateRangePresets';
+import { getCycleDateRange } from '../../../common/features/programming/cycles/cycleDateRange';
 import { useCallback, useMemo, useState } from 'react';
 
 import Button from '../../../common/components/Button/Button';
@@ -44,7 +44,6 @@ const HOURS_QUERY_KEY = ['hours'] as const;
 
 export default function Tasks() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const dateRangePresets = useDateRangePresets();
   const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
 
   // Permissions.
@@ -66,18 +65,25 @@ export default function Tasks() {
     programsLoading: pageData.programsLoading,
     programsError: Boolean(pageData.programsError),
     tableKeys: TASK_TABLE_KEYS,
+    cycles: pageData.cycles,
+    cyclesLoading: pageData.cyclesLoading,
+    cyclesError: Boolean(pageData.cyclesError),
   });
 
   // Filter configuration.
+  const dateRange = useMemo(
+    () => getCycleDateRange(pageData.cycles, preferences.filters.cycleIds),
+    [pageData.cycles, preferences.filters.cycleIds],
+  );
   const taskFilters = useMemo<TasksFilters>(() => ({
-    dateRange: preferences.filters.dateRange,
+    dateRange,
     search: preferences.search.appliedValue,
     staffIds: preferences.filters.staffIds,
     programIds: preferences.filters.programIds,
     categories: preferences.filters.categories,
     statuses: preferences.filters.statuses,
   }), [
-    preferences.filters.dateRange,
+    dateRange,
     preferences.filters.categories,
     preferences.filters.programIds,
     preferences.filters.staffIds,
@@ -179,9 +185,11 @@ export default function Tasks() {
     />
   );
 
+  const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
+  const hasCycleBounds = Boolean(dateRange) && !pageData.cyclesError;
   const viewContent = preferences.view === 'table'
-    ? { table: taskTable }
-    : { calendar: taskCalendar };
+    ? { table: hasCycleBounds ? taskTable : viewUnavailable }
+    : { calendar: hasCycleBounds ? taskCalendar : viewUnavailable };
 
   // Render.
   return <>
@@ -220,10 +228,10 @@ export default function Tasks() {
           />
           : undefined}
         filters={preferences.ready ? <FilterCard
-          dateRange={{ presets: dateRangePresets, value: preferences.filters.dateRange, onApply: preferences.filters.setDateRange }}
             categories={preferences.filters.definitions}
             values={{
               staff: preferences.filters.staffIds,
+              cycle: preferences.filters.cycleIds,
               program: preferences.filters.programIds,
               category: preferences.filters.categories,
               status: preferences.filters.statuses,
@@ -242,6 +250,10 @@ export default function Tasks() {
         } : null,
         pageData.resourcesError ? { message: 'Unable to load task staff.' } : null,
         pageData.programsError ? { message: 'Unable to load task programs.' } : null,
+        pageData.cyclesError ? {
+          message: 'Unable to load cycles.',
+          details: 'Cycle date bounds could not be loaded.',
+        } : null,
         viewError,
         dashboardError,
       ]} />

@@ -106,12 +106,23 @@ describe('usePeriodVirtualization', () => {
     expect(scrollToOffset).toHaveBeenLastCalledWith(200, { align: 'start' });
   });
 
-  it('rejects an oversized range before constructing its day periods', () => {
+  it('covers a multi-year range while exposing only its virtual window', () => {
+    mockWindow([0, 1, 2]);
+    const { result } = renderHook(() => usePeriodVirtualization({
+      periodDefinition: dayPeriodDefinition, initialDate: new Date(2026, 0, 1), initialOffset: 0,
+      periodCount: 2500, dateRange: { start: '2026-01-01', end: '2028-12-31' },
+      overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
+    }));
+    expect(result.current.allPeriods).toHaveLength(1096);
+    expect(result.current.allPeriods[result.current.allPeriods.length - 1]?.key).toBe('2028-12-31');
+    expect(result.current.periods).toHaveLength(3);
+  });
+
+  it('rejects reversed dates before constructing periods', () => {
     expect(() => renderHook(() => usePeriodVirtualization({
       periodDefinition: dayPeriodDefinition, initialDate: new Date(2026, 0, 1), initialOffset: 0,
-      periodCount: 2500, dateRange: { start: '1000-01-01', end: '9999-12-31' },
+      periodCount: 2500, dateRange: { start: '2027-01-01', end: '2026-12-31' },
       overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
     }))).toThrow('Calendar date range must contain valid ordered dates');
   });
-
 });

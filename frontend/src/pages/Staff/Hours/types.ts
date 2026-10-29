@@ -57,7 +57,7 @@ export interface HoursFilters {
   categories: HoursCategory[];
   programIds: string[];
   types: HoursEntryType[];
-  cycleId?: string;
+  cycleIds?: string[];
   search: string;
 }
 

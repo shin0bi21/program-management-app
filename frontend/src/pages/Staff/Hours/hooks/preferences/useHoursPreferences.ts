@@ -1,15 +1,13 @@
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import { useMemo, useState } from 'react';
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 
-import type { DateRange } from '../../../../../common/utils/dateRange';
+import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
   preferenceOption,
-  preferenceDateRange,
   preferenceOptions,
   preferenceIds,
-  optionalPreferenceId,
   preferenceText,
   preferenceSorting,
   preferenceColumnWidths,
@@ -22,7 +20,7 @@ import type {
   HoursProgram,
   HoursSortKey,
 } from '../../types';
-import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
+import type { CycleReference } from '../../../../../common/features/referenceData/referenceData.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
 type HoursView = 'calendar' | 'table';
@@ -34,8 +32,7 @@ interface HoursPreferences {
   programIds: string[];
   categories: HoursCategory[];
   types: HoursEntryType[];
-  cycleId: string | null;
-  dateRange: DateRange;
+  cycleIds: string[];
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   hiddenColumns: string[];
@@ -60,7 +57,7 @@ export default function useHoursPreferences({
   role: string | null;
   resources: readonly StaffResource[];
   programs: readonly HoursProgram[];
-  cycles: readonly ProgramCycle[];
+  cycles: readonly CycleReference[];
   categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
   types: ReadonlyArray<{ value: HoursEntryType; label: string }>;
   loadingDependencies: boolean;
@@ -72,12 +69,10 @@ export default function useHoursPreferences({
 }) {
   const canVerifyOptions = !loadingDependencies && !optionsError;
   const canVerifyCycles = !loadingDependencies && !cyclesError;
-  const defaultCycleId = cycles.find(cycle => cycle.state === 'active')?.id ?? cycles[0]?.id ?? null;
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'hours-filters',
     waiting: loadingDependencies || role === null,
     fields: {
-      dateRange: preferenceDateRange(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
       staffIds: preferenceIds(role !== 'admin' ? [] : !loadingDependencies && !resourcesError
@@ -93,12 +88,13 @@ export default function useHoursPreferences({
         [],
         canVerifyOptions ? types.map(type => type.value) : null,
       ),
-      cycleId: optionalPreferenceId(canVerifyCycles ? cycles.map(cycle => cycle.id) : undefined, defaultCycleId),
+      cycleIds: preferenceIds(canVerifyCycles ? cycles.map(cycle => cycle.id) : undefined),
       sorting: preferenceSorting(tableKeys, { key: 'date', direction: 'desc' }),
       columnWidths: preferenceColumnWidths(tableKeys),
       hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
+  const dateRange = useMemo(() => getCycleDateRange(cycles, preferences.cycleIds), [cycles, preferences.cycleIds]);
   const [searchDraft, setSearchValue] = useState<string | null>(null);
   const searchValue = searchDraft ?? preferences.search;
 
@@ -134,7 +130,6 @@ export default function useHoursPreferences({
     {
       id: 'cycle',
       label: 'Cycle',
-      selectionMode: 'single',
       options: toFilterOptions(cycles),
     },
     { id: 'type', label: 'Type', options: [...types] },
@@ -146,7 +141,7 @@ export default function useHoursPreferences({
     if (id === 'program') updatePreferences({ programIds: selected });
     if (id === 'entryType') updatePreferences({ categories: selected as HoursCategory[] });
     if (id === 'type') updatePreferences({ types: selected as HoursEntryType[] });
-    if (id === 'cycle') updatePreferences({ cycleId: selected[0] ?? null });
+    if (id === 'cycle') updatePreferences({ cycleIds: selected });
   };
 
   const clearFilters = () => updatePreferences({
@@ -154,12 +149,8 @@ export default function useHoursPreferences({
     programIds: [],
     categories: [],
     types: [],
-    cycleId: null,
+    cycleIds: [],
   });
-
-  const selectCycle = (cycleId: string) => {
-    updatePreferences({ cycleId });
-  };
 
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {
     updatePreferences({ sorting });
@@ -191,13 +182,11 @@ export default function useHoursPreferences({
       programIds: preferences.programIds,
       categories: preferences.categories,
       types: preferences.types,
-      cycleId: preferences.cycleId,
-      dateRange: preferences.dateRange,
-      setDateRange: (dateRange: DateRange) => updatePreferences({ dateRange }),
+      cycleIds: preferences.cycleIds,
+      dateRange,
       definitions: filterDefinitions,
       apply: applyFilter,
       clear: clearFilters,
-      selectCycle,
     },
 
     table: {

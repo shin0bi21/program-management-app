@@ -65,7 +65,11 @@ Account identity/status edits invalidate staff references; assignment edits also
 invalidate assigned program labels and Sessions scheduling references.
 
 Distinguish failed lookups from successful empty results. Do not erase saved
-filter IDs because a reference source failed. Keep reference failures visible rather than treating them as a successful empty list.
+filter IDs because a reference source failed. Sessions, Tasks, and Hours require
+cycle bounds before querying either their table or calendar; a failed source,
+including an error with cached rows, must not trigger an unbounded collection
+request. An empty cycle selection means all available cycles, while a successful
+empty cycle lookup means no calendar range is available.
 
 ## Verification ownership
 
@@ -74,4 +78,4 @@ assignment/resource scope, and feature-specific staff capabilities. Feature test
 cover their local choices and composition. Frontend adapter tests verify paths,
 scope serialization, and cancellation; shared hook tests verify cache keys and
 scope separation. Page tests cover permission-specific wiring, reference failures,
-rather than repeating generic query-cache mechanics.
+and query gating rather than repeating generic query-cache mechanics.

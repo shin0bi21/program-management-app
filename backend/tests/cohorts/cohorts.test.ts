@@ -1040,6 +1040,19 @@ describe('Cohorts and attendance API', () => {
     ]);
   });
 
+  it('returns sessions across a multi-year read range', async () => {
+    const response = await request(app).get('/api/cohorts/sessions')
+      .query({
+        start: `${addDays(today, -400)}T00:00:00.000Z`,
+        end: `${addDays(today, 400)}T00:00:00.000Z`,
+        cohortId: openCohortId,
+      })
+      .set('Authorization', `Bearer ${staffToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([expect.objectContaining({ id: openSessionId })]);
+  });
+
   it('rejects a session range whose end is chronologically before its start', async () => {
     const response = await request(app)
       .get('/api/cohorts/sessions')

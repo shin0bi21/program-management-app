@@ -1,5 +1,4 @@
-import type { DateRange } from '../../../../../common/utils/dateRange';
-import type { StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import type { TaskReferenceData } from '../../tasks.api';
 import { useMemo, useState } from 'react';
@@ -7,7 +6,6 @@ import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import {
-  preferenceDateRange,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
@@ -27,7 +25,7 @@ import {
 type TasksView = 'calendar' | 'table';
 
 interface TaskPreferences {
-  dateRange: DateRange;
+  cycleIds: string[];
   view: TasksView;
   search: string;
   staffIds: string[];
@@ -52,6 +50,9 @@ interface UseTaskPreferencesOptions {
   programsLoading: boolean;
   programsError: boolean;
   tableKeys: readonly TaskSortKey[];
+  cycles: CycleReference[];
+  cyclesLoading: boolean;
+  cyclesError: boolean;
 }
 
 export default function useTaskPreferences({
@@ -65,13 +66,16 @@ export default function useTaskPreferences({
   programsLoading,
   programsError,
   tableKeys,
+  cycles,
+  cyclesLoading,
+  cyclesError,
 }: UseTaskPreferencesOptions) {
   const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
-    waiting: referenceDataLoading || resourcesLoading || programsLoading,
+    waiting: referenceDataLoading || cyclesLoading || resourcesLoading || programsLoading,
     fields: {
-      dateRange: preferenceDateRange(),
+      cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
       staffIds: preferenceIds(resourcesLoading || resourcesError ? undefined : resources.map(resource => resource.id)),
@@ -121,11 +125,13 @@ export default function useTaskPreferences({
       label: 'Program',
       options: toFilterOptions(programs),
     },
+    { id: 'cycle', label: 'Cycle', options: toFilterOptions(cycles) },
     { id: 'category', label: 'Category', options: referenceData?.categories ?? [] },
     { id: 'status', label: 'Status', options: referenceData?.statuses ?? [] },
-  ], [referenceData, resources, programs]);
+  ], [referenceData, cycles, resources, programs]);
 
   const applyFilter = (id: string, selected: string[]) => {
+    if (id === 'cycle') updatePreferences({ cycleIds: selected });
     if (id === 'staff') updatePreferences({ staffIds: selected });
     if (id === 'program') updatePreferences({ programIds: selected });
     if (id === 'category') updatePreferences({
@@ -137,13 +143,12 @@ export default function useTaskPreferences({
   };
 
   const clearFilters = () => updatePreferences({
+    cycleIds: [],
     staffIds: [],
     programIds: [],
     categories: [],
     statuses: [],
   });
-
-  const setDateRange = (dateRange: DateRange) => updatePreferences({ dateRange });
 
   // Table sorting.
   const setSorting = (sorting: ListSort<TaskSortKey>) => {
@@ -176,8 +181,7 @@ export default function useTaskPreferences({
     },
 
     filters: {
-      dateRange: preferences.dateRange,
-      setDateRange,
+      cycleIds: preferences.cycleIds,
       staffIds: preferences.staffIds,
       programIds: preferences.programIds,
       categories: preferences.categories,

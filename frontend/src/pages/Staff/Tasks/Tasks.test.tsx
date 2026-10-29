@@ -78,7 +78,7 @@ const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
 const task = makeTask({ startDate: today, dueDate: today });
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
-  permissions: ['read:tasks', 'write:tasks'],
+  permissions: ['read:tasks', 'write:tasks', 'read:programs'],
   login: vi.fn(), logout: vi.fn(),
 };
 
@@ -120,18 +120,50 @@ describe('Tasks', () => {
   });
 
   // Permissions and application services.
-  it('shares the restored page date range between the table query and calendar timeline', async () => {
-    const dateRange = { start: '2026-04-01', end: '2026-06-30' };
-    vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, dateRange });
+  it('shares cycle-derived bounds longer than a year between table and calendar', async () => {
+    const dateRange = { start: '2024-01-01', end: '2027-12-31' };
+    vi.mocked(getCycleReferences).mockResolvedValue([
+      { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
+      { id: 'cycle-2', name: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
+    ]);
+    vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, cycleIds: ['cycle-1', 'cycle-2'] });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
 
     await screen.findByRole('table', { name: 'Tasks' });
-    expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
-      expect.anything(), expect.anything());
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
+      expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
+  });
+
+  it('uses all cycle dates when none are selected and offers Cycle without Date Range', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    await screen.findByRole('table', { name: 'Tasks' });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({
+      dateRange: { start: '2025-01-01', end: '2027-12-31' },
+    }), expect.anything(), expect.anything()));
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ cycleIds: ['cycle-1'] })));
+    expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
+  });
+
+  it('shows an empty calendar without mounting an unbounded timeline when no cycles exist', async () => {
+    calendarTestState.view = 'calendar';
+    vi.mocked(getCycleReferences).mockResolvedValue([]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
+    expect(calendarTestState.props).toBeNull();
+    expect(getTasksCalendarData).not.toHaveBeenCalled();
   });
 
   it('loads shared references for task-only readers without program permissions', async () => {
@@ -144,6 +176,28 @@ describe('Tasks', () => {
     expect(getCycleReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
     expect(getStaffReferences).toHaveBeenCalledWith('tasks', { signal: expect.any(AbortSignal) });
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+  });
+
+  it('reports cycle failures without mounting an unbounded timeline', async () => {
+    calendarTestState.view = 'calendar';
+    vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByText('Cycles unavailable.')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load cycles.')).toBeInTheDocument();
+    expect(calendarTestState.props).toBeNull();
+  });
+
+  it.each(['empty', 'failed'])('does not widen table queries when cycles are %s', async state => {
+    if (state === 'empty') vi.mocked(getCycleReferences).mockResolvedValue([]);
+    else vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+
+    expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
+    expect(getTasksTableData).not.toHaveBeenCalled();
+    expect(getTasksCalendarData).not.toHaveBeenCalled();
   });
 
   it('puts Staff first and sends the applied staff filter to the table request', async () => {

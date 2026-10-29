@@ -59,9 +59,19 @@ export default function HoursCalendar({
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageErrorReporter(onErrorChange, calendar.error, retryAction);
   useEffect(() => {
-    calendarCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
+    calendarCacheRef.current = {
+      upsert: (resourceId, date, item) => {
+        // A move can resolve to an unselected cycle inside the displayed date span.
+        if (filters.cycleIds?.length && !filters.cycleIds.includes(item.cycleId)) {
+          calendar.removeItem(item.id);
+          return;
+        }
+        calendar.upsertItem(resourceId, date, item);
+      },
+      remove: calendar.removeItem,
+    };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
+  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef, filters.cycleIds]);
   const visibleResources = useMemo(() => filters.staffIds.length
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
     : resources, [filters.staffIds, resources]);

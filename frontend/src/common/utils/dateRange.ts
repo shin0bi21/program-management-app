@@ -1,5 +1,3 @@
-export const MAX_DATE_RANGE_DAYS = 366;
-
 export interface DateRange {
   start: string;
   end: string;
@@ -12,25 +10,11 @@ export function isDateKey(value: unknown): value is string {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-export function getDateRangeError(range: { start?: unknown; end?: unknown }): string | null {
-  if (!isDateKey(range.start) || !isDateKey(range.end) || range.start > range.end) {
-    return 'Choose valid dates with the end on or after the start.';
-  }
-
-  const days = (Date.parse(`${range.end}T00:00:00Z`) - Date.parse(`${range.start}T00:00:00Z`)) / 86_400_000 + 1;
-  return days > MAX_DATE_RANGE_DAYS
-    ? `Choose a date range of one year or less (maximum ${MAX_DATE_RANGE_DAYS} days).`
-    : null;
-}
-
 export function isDateRange(value: unknown): value is DateRange {
   if (!value || typeof value !== 'object') return false;
-  return getDateRangeError(value as Partial<DateRange>) === null;
-}
 
-export function getDefaultDateRange(): DateRange {
-  const year = new Date().getFullYear();
-  return { start: `${year}-01-01`, end: `${year}-12-31` };
+  const { start, end } = value as Partial<DateRange>;
+  return isDateKey(start) && isDateKey(end) && start <= end;
 }
 
 export function localDateFromKey(key: string): Date {

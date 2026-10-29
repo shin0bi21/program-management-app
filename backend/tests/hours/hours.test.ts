@@ -274,12 +274,49 @@ describe('Hours API', () => {
     expect(response.status).toBe(200);
   });
 
-  it('rejects a table range longer than 366 inclusive days', async () => {
+  it('accepts a multi-year table range for cycle-driven calendars', async () => {
     const response = await request(app)
       .get('/api/hours/table?start=2024-01-01&end=2025-01-01')
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
+  });
+
+  it('filters table and calendar collections by any selected cycle without widening staff scope', async () => {
+    const marker = `Multi-cycle hours ${firstStaffId}`;
+    const createdIds: string[] = [];
+    for (const date of [workDate, upcomingWorkDate]) {
+      const created = await request(app)
+        .post('/api/hours')
+        .set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate: date, hours: 1, note: marker });
+      expect(created.status).toBe(201);
+      createdIds.push(created.body.id);
+    }
+
+    for (const [selectedCycles, expectedIds] of [
+      [[], createdIds],
+      [[activeCycleId], [createdIds[0]]],
+      [[activeCycleId, upcomingCycleId], createdIds],
+    ] as Array<[string[], string[]]>) {
+      const query = new URLSearchParams({ search: marker, cycleIds: selectedCycles.join(',') });
+      const table = await request(app).get(`/api/hours/table?${query}`).set('Authorization', `Bearer ${firstStaffToken}`);
+      const calendar = await request(app).get(`/api/hours/calendar?${query}`).set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(table.status).toBe(200);
+      expect(calendar.status).toBe(200);
+      expect(table.body.rows.map((row: { id: string }) => row.id).sort()).toEqual([...expectedIds].sort());
+      const calendarIds = Object.values(calendar.body).flatMap(periods => Object.values(periods as Record<string, Array<{ id: string }>>).flat()).map(entry => entry.id);
+      expect(calendarIds.sort()).toEqual([...expectedIds].sort());
+    }
+
+    const unrelated = await request(app)
+      .get(`/api/hours/table?cycleIds=${activeCycleId},${upcomingCycleId}&staffIds=${unrelatedStaffId}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(unrelated.status).toBe(200);
+    expect(unrelated.body.rows).toEqual([]);
+
+    const invalidCycle = await request(app).get('/api/hours/table?cycleIds=not-a-uuid').set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(invalidCycle.status).toBe(400);
   });
 
   it('lists assigned open-program sessions and derives session time metadata', async () => {
@@ -354,7 +391,7 @@ describe('Hours API', () => {
     expect(general.status).toBe(201);
 
     const filterSets = [
-      `categories=other`, `programIds=general`, `types=other`, `staffIds=${firstStaffId}`, `cycleId=${activeCycleId}`,
+      `categories=other`, `programIds=general`, `types=other`, `staffIds=${firstStaffId}`, `cycleIds=${activeCycleId}`,
     ];
     for (const filter of filterSets) {
       const table = await request(app).get(`/api/hours/table?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
@@ -961,11 +998,11 @@ describe('Hours API', () => {
     expect(invalidId.status).toBe(400);
   });
 
-  it('rejects hours ranges larger than one year', async () => {
+  it('accepts calendar ranges spanning more than one year', async () => {
     const response = await request(app)
       .get('/api/hours/calendar?start=2025-01-01&end=2026-01-02')
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
   });
 });

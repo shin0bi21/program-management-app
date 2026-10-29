@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema, DATE_RANGE_LIMIT_MESSAGE, exceedsDateRangeLimit } from './dateRangeValidation';
+import { calendarDateSchema } from './dateRangeValidation';
 
 export const hoursCategorySchema = z.enum([
   'program_delivery',
@@ -27,7 +27,7 @@ const hoursFilterFields = {
   categories: commaSeparated(hoursCategorySchema),
   programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
   types: commaSeparated(z.enum(['task', 'session', 'other'])),
-  cycleId: z.string().uuid('Invalid cycle ID').optional(),
+  cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
   search: z.string().trim().max(120).optional().default(''),
 };
 
@@ -41,9 +41,6 @@ export const hoursCalendarQuerySchema = z.object({
     path: ['end'],
   }).refine(({ start, end }) => !start || !end || start <= end, {
     message: 'Start date must be on or before end date',
-    path: ['end'],
-  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
-    message: DATE_RANGE_LIMIT_MESSAGE,
     path: ['end'],
   }),
 });
@@ -59,9 +56,6 @@ export const hoursTableQuerySchema = z.object({
     path: ['end'],
   }).refine(({ start, end }) => !start || !end || start <= end, {
     message: 'Start date must be on or before end date',
-    path: ['end'],
-  }).refine(({ start, end }) => !exceedsDateRangeLimit(start, end), {
-    message: DATE_RANGE_LIMIT_MESSAGE,
     path: ['end'],
   }),
 });

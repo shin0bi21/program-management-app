@@ -10,9 +10,17 @@ const dateQuerySchemas = [
 ] as const;
 
 describe.each(dateQuerySchemas)('%s page date ranges', (_name, schema) => {
-  it('accepts 366 inclusive dates in a leap year and rejects the 367th date', () => {
+  it('accepts leap-year and multi-year read ranges', () => {
     expect(schema.safeParse({ query: { start: '2024-01-01', end: '2024-12-31' } }).success).toBe(true);
-    expect(schema.safeParse({ query: { start: '2024-01-01', end: '2025-01-01' } }).success).toBe(false);
+    expect(schema.safeParse({ query: { start: '2024-01-01', end: '2027-12-31' } }).success).toBe(true);
+  });
+
+  it.each([
+    { start: '2024-01-01' },
+    { end: '2027-12-31' },
+    { start: '2027-12-31', end: '2024-01-01' },
+  ])('rejects incomplete or reversed read ranges %p', query => {
+    expect(schema.safeParse({ query }).success).toBe(false);
   });
 
   it.each(['0001-01-01', '0099-12-31', '0100-02-28', '2000-02-29', '9999-12-31'])(
@@ -39,9 +47,19 @@ describe('Session timestamp page date ranges', () => {
   it.each([
     ['2024-01-01T00:00:00-05:00', '2025-01-02T00:00:00-05:00'],
     ['2026-01-01T23:59:59-05:00', '2027-01-03T00:00:00-05:00'],
-    ['2024-03-09T00:00:00-05:00', '2025-03-11T00:00:00-04:00'],
-  ])('rejects 367 Toronto dates regardless of elapsed hours: %s through %s', (start, end) => {
-    expect(sessionListQuerySchema.safeParse({ query: { start, end } }).success).toBe(false);
+    ['2024-03-09T00:00:00-05:00', '2027-03-11T00:00:00-05:00'],
+  ])('accepts long read ranges across Toronto dates and daylight saving changes: %s through %s', (start, end) => {
+    expect(sessionListQuerySchema.safeParse({ query: { start, end } }).success).toBe(true);
+  });
+
+  it.each([
+    { start: '2024-01-01T00:00:00Z' },
+    { end: '2027-12-31T00:00:00Z' },
+    { start: '2027-01-01T00:00:00Z', end: '2024-01-01T00:00:00Z' },
+    { start: '2024-01-01T00:00:00Z', end: '2024-01-01T00:00:00Z' },
+    { start: '2026-02-30T00:00:00Z', end: '2027-01-01T00:00:00Z' },
+  ])('rejects incomplete, reversed, empty or nonexistent ranges %p', query => {
+    expect(sessionListQuerySchema.safeParse({ query }).success).toBe(false);
   });
 
   it('accepts equivalent instants with different offsets', () => {
@@ -68,7 +86,7 @@ describe('Session timestamp page date ranges', () => {
 });
 
 describe('Task lifecycle dates', () => {
-  it('does not cap task duration when capping page queries', () => {
+  it('continues to accept multi-year task duration', () => {
     expect(setTaskSchema.safeParse({ body: {
       title: 'Long-running task', category: 'outreach',
       staffId: '11111111-1111-4111-8111-111111111111',
