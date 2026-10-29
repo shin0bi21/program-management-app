@@ -115,6 +115,26 @@ describe('Leads API', () => {
     }));
   });
 
+  it('returns an empty note collection for an existing lead and 404 for a missing lead', async () => {
+    const lead = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'No Notes' });
+    expect(lead.status).toBe(201);
+
+    const empty = await request(app)
+      .get(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(empty.status).toBe(200);
+    expect(empty.body).toEqual([]);
+
+    const missing = await request(app)
+      .get('/api/leads/00000000-0000-4000-8000-000000000000/notes')
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(missing.status).toBe(404);
+    expect(missing.body.error).toBe('Lead not found');
+  });
+
   it('creates editable follow-up notes without changing Lead status', async () => {
     const lead = await request(app)
       .post('/api/leads')
