@@ -464,7 +464,7 @@ test('continues resizing after leaving and re-entering the calendar viewport', a
   await expect(page.locator('.timeline-calendar-portal .item-preview')).toHaveCount(0);
 });
 
-test('commits resize when pointer capture is lost before pointerup', async ({ page, mount }) => {
+test('recovers resize when viewport capture is lost before pointerup', async ({ page, mount }) => {
   const component = await mount(storyId);
   const handle = component.getByRole('button', { name: 'Resize end of ranged-task' });
   const handleBox = await handle.boundingBox();
@@ -473,19 +473,9 @@ test('commits resize when pointer capture is lost before pointerup', async ({ pa
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(handleBox.x + handleBox.width / 2 + 150, handleBox.y + handleBox.height / 2, { steps: 4 });
-  await handle.evaluate(element => {
-    element.dispatchEvent(new PointerEvent('lostpointercapture', {
-      bubbles: true,
-      pointerId: 1,
-      pointerType: 'mouse',
-      buttons: 0,
-    }));
-    window.dispatchEvent(new PointerEvent('pointerup', {
-      pointerId: 1,
-      pointerType: 'mouse',
-      buttons: 0,
-    }));
-  });
+  await component.getByRole('grid').evaluate(element => element.releasePointerCapture(1));
+  await page.mouse.move(handleBox.x + 170, handleBox.y + handleBox.height / 2);
+  await page.mouse.up();
 
   await expect(component.getByTestId('resize-record')).not.toHaveValue('');
   await expect(page.locator('.timeline-calendar-portal .item-preview')).toHaveCount(0);
@@ -567,7 +557,7 @@ test('cancels ranged movement and resize without committing', async ({ page, mou
   await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
 });
 
-test('recovers ranged movement when pointer capture is lost before pointerup', async ({ page, mount }) => {
+test('recovers ranged movement when viewport capture is lost before pointerup', async ({ page, mount }) => {
   const component = await mount(storyId);
   const viewport = component.getByLabel('Browser-tested row calendar');
   const item = component.getByRole('button', { name: 'Ranged task' });
@@ -577,11 +567,7 @@ test('recovers ranged movement when pointer capture is lost before pointerup', a
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 5 });
-  await viewport.dispatchEvent('lostpointercapture', {
-    pointerId: 1,
-    pointerType: 'mouse',
-    buttons: 1,
-  });
+  await viewport.evaluate(element => element.releasePointerCapture(1));
   await page.mouse.move(box.x + box.width / 2 + 160, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
 

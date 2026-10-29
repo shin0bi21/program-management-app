@@ -62,11 +62,34 @@ describe('item resize workflow', () => {
     result.current.endHandle?.onPointerDown?.({ ...fixture.event, currentTarget: handle } as unknown as ReactPointerEvent<HTMLButtonElement>);
     const session = fixture.startPointerSession.mock.calls[0]![0];
 
+    expect(session.captureElement).toBe(fixture.viewport);
     act(() => { session.onActivate(pointer('pointermove', 250)); session.onMove(pointer('pointermove', 250)); });
     expect(document.querySelector('.item-resize-preview')).toHaveTextContent('Calendar item');
     act(() => session.onEnd(pointer('pointerup', 250)));
 
     expect(fixture.onResize).toHaveBeenCalledWith(expect.objectContaining({ nextRange: { start: '2026-08-19', end: '2026-08-21' }, edge: 'end' }));
+    expect(fixture.suppressNextClick).toHaveBeenCalledOnce();
+    expect(document.querySelector('.timeline-calendar-portal')).toBeNull();
+  });
+
+  it.each(['start', 'end'] as const)('skips an unchanged %s resize while suppressing its click', edge => {
+    const fixture = setup();
+    const handle = document.createElement('button');
+    fixture.source.appendChild(handle);
+    const { result } = renderHook(() => useItemResize(fixture.calendar, fixture.hideDetails));
+    const handleProps = edge === 'start' ? result.current.startHandle : result.current.endHandle;
+    handleProps?.onPointerDown?.({ ...fixture.event, currentTarget: handle } as unknown as ReactPointerEvent<HTMLButtonElement>);
+    const session = fixture.startPointerSession.mock.calls[0]![0];
+    const originalX = edge === 'start' ? 30 : 130;
+
+    act(() => {
+      session.onActivate(pointer('pointermove', 250));
+      session.onMove(pointer('pointermove', 250));
+      session.onMove(pointer('pointermove', originalX));
+      session.onEnd(pointer('pointerup', originalX));
+    });
+
+    expect(fixture.onResize).not.toHaveBeenCalled();
     expect(fixture.suppressNextClick).toHaveBeenCalledOnce();
     expect(document.querySelector('.timeline-calendar-portal')).toBeNull();
   });

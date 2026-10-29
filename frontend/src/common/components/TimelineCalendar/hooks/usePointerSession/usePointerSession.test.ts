@@ -1,5 +1,6 @@
 // This suite owns the shared pointer threshold, exclusivity, capture, completion, and cleanup lifecycle.
 import { act, renderHook } from '@testing-library/react';
+import { createElement, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePointerSession } from './usePointerSession';
 
@@ -56,7 +57,9 @@ describe('usePointerSession', () => {
     const onMove = vi.fn();
     const onEnd = vi.fn();
     const onCancel = vi.fn();
-    const { result } = renderHook(() => usePointerSession());
+    const { result, rerender } = renderHook(() => usePointerSession(), {
+      wrapper: ({ children }) => createElement(StrictMode, null, children),
+    });
 
     act(() => expect(result.current.startPointerSession({
       type: 'item-move',
@@ -69,7 +72,8 @@ describe('usePointerSession', () => {
       onEnd,
       onCancel,
     })).toBe(true));
-    expect(result.current.activeType).toBe('item-move');
+    expect(result.current.activeType).toBeNull();
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
     act(() => expect(result.current.startPointerSession({
       type: 'item-resize',
       pointerId: 8,
@@ -84,10 +88,18 @@ describe('usePointerSession', () => {
 
     act(() => dispatchPointer('pointermove', { pointerId: 7, clientX: 109, clientY: 100 }));
     expect(onActivate).not.toHaveBeenCalled();
+    expect(result.current.activeType).toBeNull();
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
     act(() => dispatchPointer('pointermove', { pointerId: 7, clientX: 110, clientY: 100 }));
     expect(source.setPointerCapture).toHaveBeenCalledWith(7);
     expect(onActivate).toHaveBeenCalledOnce();
     expect(onMove).toHaveBeenCalledOnce();
+    expect(result.current.activeType).toBe('item-move');
+    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+
+    rerender();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(result.current.activeType).toBe('item-move');
 
     act(() => dispatchPointer('pointerup', { pointerId: 7, clientX: 110, clientY: 100 }));
     expect(source.releasePointerCapture).toHaveBeenCalledWith(7);
@@ -96,7 +108,7 @@ describe('usePointerSession', () => {
     expect(result.current.activeType).toBeNull();
   });
 
-  it('ignores foreign capture loss and recovers genuine capture loss on the next move', async () => {
+  it('ignores foreign capture loss and resumes frames after recapturing', async () => {
     const captureOwner = document.createElement('div');
     const foreignElement = document.createElement('button');
     document.body.append(captureOwner, foreignElement);
@@ -147,23 +159,17 @@ describe('usePointerSession', () => {
     });
     expect(onCancel).not.toHaveBeenCalled();
     expect(result.current.activeType).toBe('item-move');
+    expect(cancelAnimationFrame).toHaveBeenCalled();
 
     act(() => dispatchPointer('pointermove', {
-      pointerId: 7,
-      pointerType: 'mouse',
-      buttons: 1,
-      clientX: 130,
-      clientY: 100,
+      pointerId: 7, pointerType: 'mouse', buttons: 1, clientX: 130, clientY: 100,
     }));
     expect(captureOwner.setPointerCapture).toHaveBeenCalledTimes(2);
     expect(onMove).toHaveBeenCalledTimes(2);
-
-    act(() => dispatchPointer('pointercancel', { pointerId: 7, clientX: 130, clientY: 100 }));
-    expect(onCancel).toHaveBeenCalledWith('pointer-cancel');
-    expect(result.current.activeType).toBeNull();
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
   });
 
-  it('waits for pointerup instead of recapturing after the mouse button is already released', () => {
+  it('retains a released session for pointerup without recapturing', () => {
     const captureOwner = document.createElement('div');
     document.body.append(captureOwner);
     captureOwner.setPointerCapture = vi.fn();
@@ -193,9 +199,7 @@ describe('usePointerSession', () => {
       clientY: 100,
     }));
     act(() => dispatchPointerFrom(captureOwner, 'lostpointercapture', {
-      pointerId: 7,
-      pointerType: 'mouse',
-      buttons: 0,
+      pointerId: 7, pointerType: 'mouse', buttons: 0,
     }));
     act(() => dispatchPointer('pointermove', {
       pointerId: 7,
@@ -218,6 +222,29 @@ describe('usePointerSession', () => {
     }));
     expect(onEnd).toHaveBeenCalledOnce();
     expect(onCancel).not.toHaveBeenCalled();
+    expect(result.current.activeType).toBeNull();
+  });
+
+  it('replaces a session after failed capture so a missed release cannot block the next drag', () => {
+    const source = document.createElement('div');
+    source.setPointerCapture = vi.fn(() => { throw new DOMException('Pointer is no longer active'); });
+    source.hasPointerCapture = vi.fn(() => false);
+    const onCancel = vi.fn();
+    const { result } = renderHook(() => usePointerSession());
+    const options = {
+      type: 'item-move' as const, pointerId: 7, startX: 100, startY: 100,
+      captureElement: source, onActivate: vi.fn(), onMove: vi.fn(), onEnd: vi.fn(), onCancel,
+    };
+
+    act(() => { result.current.startPointerSession(options); });
+    act(() => dispatchPointer('pointermove', {
+      pointerId: 7, pointerType: 'mouse', buttons: 1, clientX: 120, clientY: 100,
+    }));
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    act(() => expect(result.current.startPointerSession({ ...options, pointerId: 8 })).toBe(true));
+    expect(onCancel).toHaveBeenCalledWith('replaced-after-capture-loss');
     expect(result.current.activeType).toBeNull();
   });
 
