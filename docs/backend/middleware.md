@@ -82,4 +82,4 @@ Every Express 4 async middleware or controller must use `asyncHandler`. Throw ty
 6. Mount new routers in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 7. Test the middleware behavior at its narrowest owner and the route chain where ordering or integration matters.
 
-Authentication and permission internals are documented in [Auth](auth.md). Record-level authorization remains in [Authorization](authorization.md) and [Policies](policies.md). Backend test ownership is documented in [Testing](testing.md).
+Authentication and permission internals are documented in [Auth](auth.md). Record-level authorization remains in [Authorization and policies](authorization.md). Backend test ownership is documented in [Testing](testing.md).

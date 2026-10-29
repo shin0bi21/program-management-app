@@ -2,11 +2,9 @@
 
 Give each value one owner. Choose that owner by how long the value lives and who changes it.
 
-Place state and data hooks with their smallest consumer. Lift them to a parent only when
-that parent coordinates their lifecycle or multiple children actually consume them. A page
-or dashboard that composes children does not automatically own their queries. For example,
-an overview card owns its private query hook and query-state presentation; a card rendering
-an already-selected record needs no extra data hook.
+Use the [ownership guide](ownership.md) for placement and promotion. This guide defines
+state lifetimes and data flow; the component that composes a child does not automatically
+own that child's queries.
 
 ## Choose the state owner
 

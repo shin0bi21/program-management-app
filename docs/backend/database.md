@@ -97,3 +97,14 @@ await audit(trx, userId, transactionId, 'youth_profiles', profileId, 'UPDATE', o
 Generate one `transactionId` per save operation and pass it through nested writes to group their audit rows. Store before/after snapshots and relationship IDs needed to understand or undo the change. Inserts have no old snapshot; deletes have no new snapshot.
 
 Follow [service transaction ownership](services.md#keep-writes-safe) when composing writes. Security events use the separate [auth log](auth.md#record-auth-events), whose failures do not roll back authentication.
+
+### Historical snapshots
+
+Audit snapshots preserve the schema at the time of the event. Older Lead and
+Youth rows may contain retired `age`, `gradeLevel`, or `ageGroup` fields. Do not
+rewrite those audit rows or transaction IDs, or replay retired fields into live
+tables. Historical age must use DOB and the event date, not today's date;
+birthdays do not themselves generate audit events. DOB backfills and column
+removals are recorded in migration history without per-record audit entries.
+See the [Lead DOB migration tests](../../backend/tests/leads/leadBirthDateBackfill.test.ts)
+for the legacy backfill contract.

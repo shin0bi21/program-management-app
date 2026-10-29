@@ -41,7 +41,7 @@ export default function ${name}() {
   // TODO: Pass loaded options to preferences and page children.
 
   // TODO: Saved preferences, when this page has durable controls.
-  // Use a page hook backed by usePreferences; follow docs/frontend/pages/README.md.
+  // Use a page hook backed by usePreferences; follow docs/frontend/pages/preferences.md.
   // Return grouped search, filters, and table controls, with ready/error at the top level.
   // Keep view/setView at the top level when multiple views are supported.
 
