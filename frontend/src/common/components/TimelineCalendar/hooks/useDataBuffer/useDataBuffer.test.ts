@@ -60,6 +60,18 @@ describe('useDataBuffer', () => {
     expect(load.mock.calls.map(([range]) => range.direction)).toEqual(['initial', 'initial', 'right']);
   });
 
+  it('clears an initial failure when later scrolling successfully initializes the buffer', async () => {
+    const load = vi.fn().mockRejectedValueOnce(new Error('initial offline')).mockResolvedValue({});
+    const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
+    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    await waitFor(() => expect(result.current.error).toBe('initial offline'));
+
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right'));
+
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(result.current.error).toBeNull());
+  });
+
   it('retains both edge failures until each failed operation succeeds', async () => {
     const load = vi.fn().mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error('left offline'))

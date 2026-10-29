@@ -99,6 +99,11 @@ export function useDataBuffer<TItem>({
           || operationRevisionsRef.current.get(key) !== revision) return;
 
         failuresRef.current.delete(key);
+        // A successful edge load also confirms its prerequisite window initialization recovered.
+        if (key === 'left' || key === 'right') {
+          failuresRef.current.delete('initial');
+          failuresRef.current.delete('reset');
+        }
 
         setError(failuresRef.current.values().next().value?.message ?? null);
       })
@@ -119,6 +124,8 @@ export function useDataBuffer<TItem>({
 
   /** Extends the buffered window when virtualization exposes a new edge. */
   const onPeriodsBuilt = useCallback((periods: readonly CalendarPeriod[], direction: 'left' | 'right') => {
+    if (!periods.length) return;
+
     runBufferOperation(direction, () => getBuffer().periodsBuilt(periods, direction));
   }, [getBuffer, runBufferOperation]);
 
