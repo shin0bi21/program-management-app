@@ -47,13 +47,6 @@ docker compose down
 | Add a database migration | `docker compose exec backend npm run db:migrate` |
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
-| Run the full repository test suite | `bash scripts/tests/test-app.sh` |
-| Run suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
-| Install the Playwright browser | `cd frontend && npm run test:browser:install` |
-| Run browser component tests | `cd frontend && npm run test:browser` |
-| Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
-| Check changed architecture patterns | `node scripts/patterns/check-patterns.ts --changed` |
-| Report repository lines of code | `npm run report:loc` |
 
 Never edit an applied migration. Add a new migration instead.
 
@@ -87,6 +80,7 @@ docker compose exec backend npm run db:status
 
 See [Testing](testing.md) for the full application suite, static analysis,
 backend and frontend umbrella runners, focused runners, and test ownership.
+Use [Reports](reports.md) for CI performance and repository-size commands.
 
 ## Logs and diagnostics
 

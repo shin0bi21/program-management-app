@@ -122,20 +122,6 @@ docker compose restart backend
 
 ## Logging rules
 
-Request-path failures must be thrown as the appropriate application error and
-allowed to reach the global error handler. Do not catch and re-log the same
-error in controllers or services, and do not send an ad hoc error response.
-The global handler is the single owner of request-error severity, stack output,
-redaction, response shape, and request-ID correlation.
-
-Code that runs outside the request error flow, such as process handlers,
-background cleanup, or fire-and-forget logging, must log once with:
-
-- Include a stable subsystem or operation prefix.
-- Include the non-sensitive identifiers needed to locate the operation.
-- Include the original `Error` or rejection value so its stack remains available.
-
-Never log tokens, cookies, passwords, authorization headers, raw secrets, or
-unnecessarily complete request bodies. Do not add temporary success-path
-`console.log` calls as permanent tracing. If a request needs correlation, use
-its existing request ID rather than inventing a second identifier.
+Let request failures reach the global error handler. Follow the
+[backend logging rules](../backend/errors.md#logging-rules) for background
+failures, sensitive-data redaction, and request-ID correlation.

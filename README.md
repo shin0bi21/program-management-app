@@ -4,15 +4,12 @@ A full-stack platform for outreach, youth profiles, programming, attendance, sta
 
 ## Documentation
 
-Documentation follows the application structure. Enter the broad owner, read its overview, then follow its routing table to the narrowest guide for the work.
+Start with the guide for the area you are changing. Directory READMEs route readers to
+focused guides; those guides own the patterns and examples.
 
-Each directory README owns only its level’s overview and routing. Focused child documents own their component, layer, or workflow patterns and examples.
-
-Start each README with a plain-language description and the guidance readers need most. Put directory layouts and links to related guides at the end so they support the explanation instead of interrupting it.
-
-Write rules as standalone sentences that a person can scan and an agent can execute without
-reconstructing context across list items. Use tables for concise comparisons, concrete examples
-to ground unfamiliar ownership terms, and links instead of repeating details owned elsewhere.
+Lead with the task, useful structure, or decision. Keep each rule in one place and link to
+it elsewhere. Prefer a short example or table over repeated explanation; keep implementation
+details in source unless they explain a constraint the reader needs to act on.
 
 | Area | Start here |
 |---|---|

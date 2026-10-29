@@ -49,6 +49,9 @@ Name a command after the record it changes. Session attendance belongs to `sessi
 - Lock the current row with `FOR UPDATE` when permissions, state, assignments, or delete rules must stay valid during the write.
 - Apply policy checks, related-record validation, the write, and its audit inside the same transaction when they must succeed together.
 - Keep focused commands narrow. A status, placement, reorder, or assignment command updates only the fields it owns.
+- Validate replacement-list identifiers and reject duplicates before removing omitted
+  children. A stale or foreign identifier must fail the whole command rather than
+  silently dropping submitted records.
 - Preserve unchanged data and deterministic response ordering.
 
 Use the repository error classes for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.

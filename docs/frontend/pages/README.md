@@ -1,9 +1,5 @@
 # Frontend pages
 
-A route page assembles one screen. It loads page data and saved controls, defines filters,
-coordinates selection and actions, composes the active view, and opens dialogs. Child tables,
-calendars and dashboards own their data presentation.
-
 ## Build the page in scaffold order
 
 Keep the route component in this execution order, omitting phases the page does not need:
@@ -20,21 +16,13 @@ Keep the route component in this execution order, omitting phases the page does 
 10. Derive errors and other presentation values.
 11. Render the page shell followed by dialogs.
 
-Keep state beside the phase that owns it. Selection state belongs with selection; a modal
-target and its open and close handlers belong together in that modal workflow. Do not collect
-every `useState` call at the top when that separates state from its lifecycle.
+Keep state and handlers beside the workflow that owns them.
 
 The generated page scaffold uses the same sections. See the
 [Tasks page](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours page](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
 
-Organize route tests under the same section names and in the same order, omitting phases the page does not need. Constants and pure helpers do not need a route-test section unless they expose page behavior. Within each phase, order tests from the default or successful path through permission, empty, failure and recovery variants.
-
-## Load page data
-
-Load only the remote options and records needed to coordinate the whole page. A table or
-calendar keeps its own collection query. Preserve the dependency path
-`data → preferences → selection → actions`.
+## Page data and controls
 
 Group page-wide reference loading in `hooks/data/use<Page>Data.ts`, with its test beside it.
 This hook composes the page's queries and existing domain hooks while preserving each
@@ -74,14 +62,9 @@ Route tests own cross-view reconciliation and dialog entry wiring. Child owners 
 
 ## Compose page components
 
-Every authenticated route renders one `main.page-container`. Put `PageHeader` first,
-`PageErrorOverlay` next and `PageBody` last. Render dialogs after the page shell.
-
-The route supplies page-wide actions and controls to `PageHeader`, then supplies the dashboard
-or summary and one active data view to `PageBody`. Route pages do not recreate those shared
-wrappers. Follow the component-specific guides for the children themselves.
-
-Route tests cover active-view selection, child prop wiring, derived page errors, the final page shell and dialogs. Mock a child at its public prop boundary when its callback starts a route workflow. Child tests own their internal rendering and interaction.
+Render one `main.page-container` with `PageHeader`, `PageErrorOverlay` and `PageBody` in that
+order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
+or summary plus one active data view to the body.
 
 ## Scaffolding
 

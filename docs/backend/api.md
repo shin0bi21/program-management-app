@@ -1,6 +1,7 @@
-# Backend API reference
+# Backend API overview
 
-Paths are relative to `/api`. Protected endpoints require the permissions declared by the route and summarized in the [RBAC model](auth.md#3-rbac-model). Route files under [`backend/src/routes/`](../../backend/src/routes/) are authoritative for exact paths, validation middleware, and required permissions.
+The API serves the application under `/api`. It covers authentication, accounts,
+youth profiles, programming, outreach, staff work, and application settings.
 
 Single-file uploads use `multipart/form-data`, put the binary file in the `file` field, and accept files up to 15 MB. Each endpoint's service validates its supported file types and any accompanying multipart fields.
 
@@ -135,7 +136,7 @@ nonwithdrawn enrollment or open-roster attendance.
 | Method | Path | Purpose | Required permission |
 |---|---|---|---|
 | `GET` | `/cohorts/sessions/reference-data` | Assigned scheduling programs and session types | `read:sessions` |
-| `GET` | `/cohorts/cycles` | List program cycles | `read:programs` |
+| `GET` | `/cohorts/cycles` | List program cycles for management | `read:programs` |
 | `POST` | `/cohorts/cycles` | Create a program cycle | `write:programs` |
 | `PUT` | `/cohorts/cycles/:cycleId` | Update a program cycle | `write:programs` |
 | `DELETE` | `/cohorts/cycles/:cycleId` | Delete an unused program cycle | `write:programs` |

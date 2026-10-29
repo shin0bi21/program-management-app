@@ -21,8 +21,6 @@ function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
-Overview-hook tests own query keys, enabled conditions, server inputs, cancellation and domain response shaping. They do not repeat generic TanStack Query fetching, caching, retry or refresh semantics.
-
 ## Assign dashboard ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.

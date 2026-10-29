@@ -40,9 +40,8 @@ remain with Cohorts.
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
-The [components guide](../components/README.md) owns component and hook extraction,
-rendering contracts, styling boundaries and component-level testing. This guide owns only
-where the resulting owner belongs.
+See [Components](../components/README.md) for extraction and rendering patterns, and
+[Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries.
 
 ## Validate uncertain inputs
 
