@@ -119,9 +119,7 @@ export default function Programming() {
   // Table configuration.
   const columns = useSessionTable({
     programs,
-    canWriteAttendance,
     canWriteSessions,
-    onTakeAttendance: setAttendanceTarget,
     onEdit: setEditTarget,
     onDelete: actions.requestDelete,
   });

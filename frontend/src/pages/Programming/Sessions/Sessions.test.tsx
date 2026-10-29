@@ -408,7 +408,7 @@ describe('Sessions', () => {
     const initialRequestCount = getSessions.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete Session' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
@@ -439,7 +439,7 @@ describe('Sessions', () => {
   });
 
   // Commands and dialogs.
-  it('highlights a linked session and opens attendance from its actions menu', async () => {
+  it('highlights a linked session and opens attendance from its dashboard', async () => {
     render(
       <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
         <Sessions />
@@ -459,8 +459,7 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByText('Communication'));
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Communication' }));
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Take Attendance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
 
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
