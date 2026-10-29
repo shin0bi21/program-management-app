@@ -27,4 +27,3 @@ record actions to their [row/action owner](../components/table-rows.md#testing),
 and query inputs and lifecycle to the [data owner](../architecture/state-and-data.md#test-state-and-data).
 Shared table suites own keyboard navigation, width behavior, and rendering mechanics.
 Do not repeat those matrices in every route test.
-

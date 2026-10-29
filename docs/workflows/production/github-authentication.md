@@ -57,4 +57,3 @@ After access and the authorized deployment are verified, revoke superseded
 tokens only when no other service depends on them. Fetch success alone does not
 prove deployment success. See [GitHub token guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 and [Git credential helpers](https://git-scm.com/docs/gitcredentials).
-
