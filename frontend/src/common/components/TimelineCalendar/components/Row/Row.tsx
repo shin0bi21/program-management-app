@@ -43,7 +43,7 @@ interface RowProps<TRow, TItemData> {
   rowIndex: number;
   renderRow: (context: { row: TRow; index: number }) => ReactNode;
   selected: boolean;
-  onRowSelect?: (row: TRow) => void;
+  onRowSelect?: (row: TRow, source?: 'row' | 'item') => void;
 
   // Item data and rendering
   items: readonly TItemData[];
@@ -85,7 +85,7 @@ const Row = memo(function Row<TRow, TItemData>(props: RowProps<TRow, TItemData>)
     onCellClick, getCellActions,
   } = props;
   const selectRow = () => {
-    if (!selected) onRowSelect?.(row);
+    if (!selected) onRowSelect?.(row, 'item');
   };
 
   const positionedItems = positionItems(items, periods, getItemRange);
@@ -108,7 +108,7 @@ const Row = memo(function Row<TRow, TItemData>(props: RowProps<TRow, TItemData>)
             type="button"
             className="row-select"
             aria-pressed={selected}
-            onClick={selectRow}
+            onClick={() => onRowSelect?.(row, 'row')}
           >
             {renderRow({ row, index: rowIndex })}
           </button>

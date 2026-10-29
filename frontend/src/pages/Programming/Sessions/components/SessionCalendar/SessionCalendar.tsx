@@ -24,7 +24,7 @@ interface SessionCalendarProps {
   programs: Program[];
   selectedProgramId?: string | null;
   selectedSessionId: string;
-  onProgramSelect?: (program: Program) => void;
+  onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
   pendingSessionIds?: string[];

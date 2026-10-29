@@ -21,6 +21,20 @@ function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
+## Separate selection intent from data availability
+
+Choose the dashboard from the user's explicit selection intent, not whether the
+selected record happens to be in a loaded table page or calendar buffer. Selecting
+a Session opens the Session dashboard immediately using the clicked record; its
+private queries show loading in their own cards. If that record leaves the buffer,
+the Session cards remain and show “No session selected.” Only explicitly selecting
+a program row switches to Program Overview. An item click that also selects its
+owning row is context synchronization, not an explicit program-dashboard request.
+
+Keep this coordination in the route or its selection hook. Shared tables/calendars
+report selection events; they do not own domain dashboard modes. Resolve a clicked
+full record in the selection update rather than waiting for a child's later effect.
+
 ## Assign dashboard ownership
 
 - The page defines whether selection comes from the current actor, a resource, a table row, or a calendar item.

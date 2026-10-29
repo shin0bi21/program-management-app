@@ -8,15 +8,21 @@ export default function useSessionSelection() {
   const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
   const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
   const selectedSessionId = searchParams.get('session') ?? '';
+  const [dashboardMode, setDashboardMode] = useState<'program' | 'session'>(selectedSessionId ? 'session' : 'program');
 
   const clearSelectedSession = useCallback(() => {
+    if (selectedSessionId) setDashboardMode('session');
+
     const next = new URLSearchParams(searchParams);
     next.delete('session');
     setSearchParams(next);
     setSelectedTableSession(null);
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, selectedSessionId, setSearchParams]);
 
-  const selectSession = useCallback((session: Pick<CohortSession, 'id'>) => {
+  const selectSession = useCallback((session: CohortSession) => {
+    setDashboardMode('session');
+    setSelectedTableSession(session);
+
     const next = new URLSearchParams(searchParams);
     next.set('session', session.id);
     setSearchParams(next);
@@ -28,6 +34,11 @@ export default function useSessionSelection() {
       : [...current, session]);
     selectSession(session);
   }, [selectSession]);
+
+  const showProgramDashboard = useCallback(() => {
+    clearSelectedSession();
+    setDashboardMode('program');
+  }, [clearSelectedSession]);
 
   const removeSelectedSession = useCallback((sessionId: string) => {
     setCalendarSessions(current => current.filter(session => session.id !== sessionId));
@@ -41,6 +52,8 @@ export default function useSessionSelection() {
 
   return {
     selectedSessionId,
+    dashboardMode: selectedSessionId ? 'session' : dashboardMode,
+    showProgramDashboard,
     clearSelectedSession,
     selectSession,
     selectCalendarSession,

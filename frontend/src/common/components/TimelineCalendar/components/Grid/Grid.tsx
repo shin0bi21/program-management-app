@@ -36,7 +36,7 @@ interface GridProps<TRow, TItemData> {
   getRowId: (row: TRow) => string;
   renderRow: (context: { row: TRow; index: number }) => ReactNode;
   selectedRowId?: string | null;
-  onRowSelect?: (row: TRow) => void;
+  onRowSelect?: (row: TRow, source?: 'row' | 'item') => void;
 
   // Item data and rendering
   items: RowItemData<TItemData>;

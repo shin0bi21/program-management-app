@@ -79,8 +79,8 @@ export default function Programming() {
     if (!referencesLoading && !referencesError && selectedProgramId
       && !programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(null);
   }, [programs, referencesError, referencesLoading, selectedProgramId, setSelectedProgramId]);
-  const selectProgram = (program: Program) => {
-    selection.clearSelectedSession();
+  const selectProgram = (program: Program, source?: 'row' | 'item') => {
+    if (source !== 'item') selection.showProgramDashboard();
     setSelectedProgramId(program.id);
   };
   const selectSession = (session: CohortSession) => {
@@ -143,7 +143,7 @@ export default function Programming() {
     onManageRoster={setRosterTarget}
     onViewReport={setReportTarget}
   />;
-  const dashboard = selectedSession ? <SessionDashboard
+  const dashboard = selection.dashboardMode === 'session' ? <SessionDashboard
     sessionQueryKey={SESSION_QUERY_KEY}
     session={selectedSession}
     canWriteAttendance={canWriteAttendance}

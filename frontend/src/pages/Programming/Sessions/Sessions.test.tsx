@@ -80,6 +80,7 @@ vi.mock('../../../common/features/Preferences/preferences.api', () => ({
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   default: ({
     onSessionSelect,
+    onSessionsLoaded,
     onSessionMove,
     selectedProgramId,
     onAddSession,
@@ -89,6 +90,8 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
   }: ComponentProps<typeof SessionCalendar>) => (
     <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
       <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
+      <button type="button" onClick={() => onSessionsLoaded?.([])}>Evict buffered sessions</button>
+      <button type="button" onClick={() => onProgramSelect?.(programs[0], 'item')}>Item owning row</button>
       {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
       <button
         type="button"
@@ -410,7 +413,7 @@ describe('Sessions', () => {
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
     expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
@@ -506,6 +509,23 @@ describe('Sessions', () => {
     expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
   });
 
+  it('keeps the Session dashboard empty after buffer eviction until a program row is explicitly selected', async () => {
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Item owning row' }));
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Evict buffered sessions' }));
+    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
+    expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
+    expect(await screen.findByRole('heading', { name: /Overview/ })).toBeInTheDocument();
+  });
 
 });
