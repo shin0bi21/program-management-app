@@ -38,7 +38,8 @@ Edit the existing files in `backend/`, `frontend/`, and `workflows/`. The reposi
 root README provides the site's overview; this file describes the website itself.
 Build tooling derives Starlight content in ignored `src/content/docs/`, adding
 titles and translating repository links into website routes. Never edit or commit
-those generated copies.
+those generated copies. Page titles and sidebar group labels are capitalized by
+the generator; directory README links appear as Overview within their section.
 
 The website preserves code blocks and tables. Mermaid diagrams are currently
 shown as source code. Source-file links open the private GitHub repository and

@@ -45,10 +45,8 @@ export default defineConfig({
       customCss: ['./src/styles/custom.css'],
       sidebar: [
         { label: 'Overview', slug: '' },
-        { label: 'Docs website', slug: 'website' },
-        { label: 'Frontend', items: [{ autogenerate: { directory: 'frontend' } }] },
-        { label: 'Backend', items: [{ autogenerate: { directory: 'backend' } }] },
-        { label: 'Workflows & runbooks', items: [{ autogenerate: { directory: 'workflows' } }] },
+        { label: 'Docs Website', slug: 'website' },
+        ...manifest.sidebar,
       ],
     }),
   ],
