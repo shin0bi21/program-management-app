@@ -29,7 +29,7 @@ export default function UserTable(props: UserTableProps) {
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
+    unavailable={tableData.error && !tableData.rows.length ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
     emptyMessage={hasFilters ? 'No accounts match these filters' : 'No accounts found'}
     keyExtractor={account => account.id}
     sorting={props.sorting}

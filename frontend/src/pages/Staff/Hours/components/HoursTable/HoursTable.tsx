@@ -36,7 +36,7 @@ export default function HoursTable({
     data={query.rows}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Hours unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.rows.length ? { title: 'Hours unavailable', onRetry: query.retry } : undefined}
     keyExtractor={row => row.id}
     selectedKey={selectedRowId}
     onRowSelect={onRowSelect}

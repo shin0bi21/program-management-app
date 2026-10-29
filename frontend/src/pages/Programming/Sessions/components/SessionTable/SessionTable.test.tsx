@@ -53,7 +53,7 @@ describe('SessionTable', () => {
     }));
   });
 
-  it('resolves the selected row and distinguishes unfiltered failures', async () => {
+  it('retains the selected row after a refresh failure', async () => {
     tableState.sessions = [session];
     tableState.error = 'Could not load sessions';
     render(<SessionTable {...baseProps} selectedSessionId="session-1" />);
@@ -61,11 +61,21 @@ describe('SessionTable', () => {
     await waitFor(() => expect(baseProps.onSelectedSessionResolved).toHaveBeenCalledWith(session));
     expect(tableProps.current).toEqual(expect.objectContaining({
       selectedKey: 'session-1', scrollToSelected: true, emptyMessage: 'No sessions yet',
-      unavailable: { title: 'Sessions unavailable', onRetry: tableState.retry },
+      unavailable: undefined,
     }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Could not load sessions',
       action: { label: 'Retry', onClick: tableState.retry },
     });
   });
+
+  it('keeps the initial failure unavailable when no rows were loaded', () => {
+    tableState.error = 'Could not load sessions';
+    render(<SessionTable {...baseProps} />);
+
+    expect(tableProps.current).toEqual(expect.objectContaining({
+      unavailable: { title: 'Sessions unavailable', onRetry: tableState.retry },
+    }));
+  });
+
 });

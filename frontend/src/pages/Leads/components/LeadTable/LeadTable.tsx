@@ -41,7 +41,7 @@ export default function LeadTable({
     data={query.leads}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Leads unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.leads.length ? { title: 'Leads unavailable', onRetry: query.retry } : undefined}
     emptyMessage={hasFilters ? 'No leads match these filters' : 'No leads yet'}
     keyExtractor={lead => lead.id}
     selectedKey={selectedLeadId ?? undefined}

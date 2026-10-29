@@ -45,7 +45,7 @@ export default function YouthTable({
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? { title: 'Youth profiles unavailable', onRetry: tableData.retry } : undefined}
+    unavailable={tableData.error && !tableData.rows.length ? { title: 'Youth profiles unavailable', onRetry: tableData.retry } : undefined}
     emptyMessage={hasFilters
       ? 'No youth profiles match these filters'
       : 'No youth profiles found'}

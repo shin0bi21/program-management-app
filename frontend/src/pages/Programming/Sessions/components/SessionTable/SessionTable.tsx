@@ -48,7 +48,7 @@ export default function SessionTable({
     data={query.sessions}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Sessions unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.sessions.length ? { title: 'Sessions unavailable', onRetry: query.retry } : undefined}
     emptyMessage={hasFilters ? 'No sessions match your search and filters' : 'No sessions yet'}
     keyExtractor={session => session.id}
     selectedKey={selectedSessionId || null}
