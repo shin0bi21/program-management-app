@@ -43,9 +43,10 @@ Programming Settings reuses the card shell for full management tables, not overv
 summaries. Its explicitly named management panels fill the desktop content region
 and size to their table on mobile; the normal/short summary heights do not apply.
 
-The shared shell also owns spacing. Normal cards use 16px padding, a minimum 32px
-header row to reserve room for actions, and a 4px gap before the data region.
-Short cards retain the original Hours card's 16px padding, a minimum 20px header,
+The shared shell also owns spacing. Both sizes use 16px outer padding, with header
+titles and actions aligned to the top so the taller header adds no extra top inset.
+Normal cards use a minimum 32px header row to reserve room for actions and a 4px
+gap before the data region. Short cards use a minimum 20px header,
 and an 8px header-to-data gap. Their compact metrics use 0.74rem labels, a 7px
 label-to-value gap, and 1rem values, so numbers match date ranges and cycle names.
 Use the shared short-card typography variables in Hours and Tasks. Do not override
