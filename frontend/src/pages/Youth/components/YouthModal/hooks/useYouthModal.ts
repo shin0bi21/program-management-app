@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { setYouth } from '../../../youth.api';
+import { setYouth, setYouthContacts } from '../../../youth.api';
 import { getErrorMessage } from '../../../../../http/errors';
 import { useContacts } from '../../../../../common/features/contacts/hooks/useContacts';
 import { useAddresses } from './useAddresses';
 import { useSchools } from '../../../../../common/features/SchoolModal/hooks/useSchools';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
-import { youthSchema, type YouthFormData } from '../youthSchema';
+import { youthSchema, youthContactSchema, type YouthFormData } from '../youthSchema';
 import type { YouthProfile } from '../../../types';
 
 const defaultValues: YouthFormData = {
@@ -17,7 +17,6 @@ const defaultValues: YouthFormData = {
   email: '',
   dateOfBirth: '',
   schoolId: '',
-  gradeLevel: undefined,
 };
 
 interface UseYouthModalProps {
@@ -26,9 +25,10 @@ interface UseYouthModalProps {
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
   includeLoginEmail?: boolean;
+  mode?: 'full' | 'contact';
 }
 
-export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false }: UseYouthModalProps) {
+export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false, mode = 'full' }: UseYouthModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const { tryLock, unlock } = useSubmitLock();
 
@@ -40,7 +40,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     watch,
     formState: { errors },
   } = useForm<YouthFormData>({
-    resolver: zodResolver(youthSchema),
+    resolver: zodResolver(mode === 'contact' ? youthContactSchema : youthSchema),
     defaultValues,
   });
 
@@ -75,7 +75,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
       email: youthData.account?.email || '',
       dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
       schoolId: youthData.schoolId || '',
-      gradeLevel: youthData.gradeLevel ?? undefined,
     });
 
     initAddresses(youthData.addresses);
@@ -101,7 +100,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     setSubmitStatus('submitting');
     setError('');
 
-    const addressError = validateAddresses();
+    const addressError = mode === 'contact' ? undefined : validateAddresses();
     if (addressError) {
       setError(addressError);
       setSubmitStatus('error');
@@ -119,19 +118,23 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
 
     let savedYouth: YouthProfile;
     try {
-      const payload = {
-        ...(youthData && { id: youthData.id }),
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        ...(includeLoginEmail && data.email && { email: data.email.trim() }),
-        ...(data.dateOfBirth && { dateOfBirth: data.dateOfBirth }),
-        ...(data.schoolId && { schoolId: data.schoolId }),
-        ...(data.gradeLevel != null && !Number.isNaN(data.gradeLevel) && { gradeLevel: data.gradeLevel }),
-        addresses: getAddressPayload(),
-        contacts: getContactPayload(),
-      };
+      if (mode === 'contact') {
+        if (!youthData) throw new Error('Select a youth profile to update contacts.');
+        savedYouth = await setYouthContacts(youthData.id, getContactPayload());
+      } else {
+        const payload = {
+          ...(youthData && { id: youthData.id }),
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          ...(includeLoginEmail && data.email && { email: data.email.trim() }),
+          dateOfBirth: data.dateOfBirth,
+          ...(data.schoolId && { schoolId: data.schoolId }),
+          addresses: getAddressPayload(),
+          contacts: getContactPayload(),
+        };
 
-      savedYouth = await setYouth(payload);
+        savedYouth = await setYouth(payload);
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
       setSubmitStatus('error');

@@ -4,6 +4,7 @@ import {
   handleGetYouthSessionNotes,
   handleInviteYouth,
   handleSetYouth,
+  handleSetYouthContacts,
   handleGetYouthProfileNotes,
   handleSetYouthProfileNote,
   handleDeleteYouthProfileNote,
@@ -16,6 +17,7 @@ import { validateRequest, asyncHandler } from '../middleware/routeMiddleware';
 import {
   inviteYouthSchema,
   setYouthSchema,
+  setYouthContactsSchema,
   youthQuerySchema,
   youthSessionNotesSchema,
   youthCohortAttendanceSchema,
@@ -33,6 +35,7 @@ router.get('/:id/notes', authenticateToken, requirePermission('read:youth_profil
 router.post('/:id/notes', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(createYouthProfileNoteSchema), asyncHandler(handleSetYouthProfileNote));
 router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(updateYouthProfileNoteSchema), asyncHandler(handleSetYouthProfileNote));
 router.delete('/:id/notes/:noteId', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(deleteYouthProfileNoteSchema), asyncHandler(handleDeleteYouthProfileNote));
+router.put('/:id/contacts', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(setYouthContactsSchema), asyncHandler(handleSetYouthContacts));
 router.post('/', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(setYouthSchema), asyncHandler(handleSetYouth));
 router.post('/:id/invite', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(inviteYouthSchema), asyncHandler(handleInviteYouth));
 

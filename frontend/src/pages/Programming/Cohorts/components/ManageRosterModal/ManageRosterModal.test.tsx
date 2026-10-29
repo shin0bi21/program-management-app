@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { makeYouthProfile } from '../../../../../tests/factories/youth';
+import { makeCohortRosterYouth } from '../../../../../tests/factories/cohortRoster';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import ManageRosterModal from './ManageRosterModal';
 
@@ -25,11 +25,11 @@ describe('ManageRosterModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getCohortRosterYouth.mockResolvedValue([
-      makeYouthProfile({
+      makeCohortRosterYouth({
         id: 'youth-1', firstName: 'Already', lastName: 'Enrolled', dateOfBirth: '2012-01-01', age: 14,
-        cohorts: [{ id: cohort.id, name: cohort.name, programId: cohort.programId, programName: cohort.programName, enrollmentRequired: cohort.enrollmentRequired, startsOn: cohort.startsOn, endsOn: cohort.endsOn, enrolledOn: cohort.startsOn, withdrawnOn: null, presentCount: 0, lateCount: 0, absentCount: 0, lastAttendedOn: null }],
+        schoolName: null, cohorts: [{ id: cohort.id, withdrawnOn: null }],
       }),
-      makeYouthProfile({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2010-01-01', age: 15, schoolName: 'Central School' }),
+      makeCohortRosterYouth({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2010-01-01', age: 15, schoolName: 'Central School' }),
     ]);
     api.enrollYouth.mockResolvedValue({});
     api.withdrawYouth.mockResolvedValue({});

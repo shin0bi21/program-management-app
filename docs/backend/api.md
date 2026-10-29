@@ -82,12 +82,42 @@ Task validation, policies, services, and `backend/tests/tasks/` are authoritativ
 |---|---|---|
 | `GET` | `/` | List youth or retrieve one profile with `?id=<uuid>` |
 | `POST` | `/` | Create or update a youth profile |
+| `PUT` | `/:id/contacts` | Replace only primary contacts and return the current profile |
 | `PATCH` | `/:id` | Change youth status |
 | `POST` | `/:id/invite` | Invite a youth account |
 | `GET` | `/:id/cohorts/:cohortId/attendance` | Read youth-centric cohort attendance |
 | `PUT` | `/:id/cohorts/:cohortId/attendance` | Replace youth-centric cohort attendance |
 | `GET/POST` | `/:id/notes` | List or create youth profile notes |
 | `PUT/DELETE` | `/:id/notes/:noteId` | Update or delete a youth profile note |
+
+Youth profiles expose `dateOfBirth` without an age field or age sort. The Youth
+table displays Date of Birth and supports server-side `dateOfBirth` sorting; unknown
+DOBs display as a dash. The Youth UI omits age and grade. School grade and the former grade-derived age group are no longer
+stored or returned. Program eligibility still calculates age from DOB when needed.
+
+Existing audit rows and transaction IDs remain unchanged: their JSON snapshots may
+still contain historical Lead `age`, Youth `gradeLevel`, or `ageGroup` fields. New
+profile snapshots use DOB without those retired fields. Derived age changes on a
+birthday do not create audit events; historical age must be calculated using DOB
+and the event date, not today's date. The DOB backfill and column-removal migrations
+are tracked in `schema_migrations` without creating per-record audit entries. Any
+future undo/replay must map legacy snapshots to the current schema rather than
+writing retired fields back to live tables.
+
+The frontend Youth profile form requires a real DOB before today's Toronto date,
+without an age restriction. The backend API temporarily accepts an
+omitted or null `dateOfBirth`; supplied dates must still be real past dates. On
+creation, omission stores null; on an existing profile, omission preserves the
+saved DOB and explicit null clears it. Profiles remain valid and editable as people
+age, including historical profiles. Age eligibility is checked when assigning a
+program/cohort and is never a permanent database age constraint. Database DOB remains nullable until the
+remaining unknown dates are backfilled and a separate constraint change is approved.
+`PUT /youth/:id/contacts` requires `write:youth_profiles` and accepts only
+`{ contacts: [...] }`; it preserves all profile fields, including a legacy null
+DOB, and returns the authoritative profile after saving. Existing contact IDs must
+belong to this profile’s active contacts. Foreign, inactive, or missing IDs return
+`404`; duplicate IDs return `400`. Rejected requests preserve profiles, contacts,
+relationships, and audit records.
 
 `GET /youth` accepts comma-separated program and cycle UUIDs alongside search
 and cursor filters. Program and cycle selections must match the same
@@ -200,16 +230,21 @@ Lead workflow endpoints:
 | `POST` | `/leads/:id/sign-up` | Create the youth profile and set the system-owned `signed_up` status |
 
 Lead intake stores `dateOfBirth` instead of an entered age. Public and internal
-create/update requests require a real birth date whose completed Toronto age is 12–19;
+create/update requests require a real birth date before today's Toronto date, with no
+intake age restriction;
 the removed `age` request field is rejected. Responses include nullable `dateOfBirth` and
 nullable derived `age`; existing Leads keep unknown birth dates rather than guessing from
-previous ages, and have no age-based program recommendation until DOB is supplied.
+previous ages. A follow-up migration recovers missing DOBs from known linked Youth
+profiles for signed-up Leads, preserving any DOB already stored on the Lead. Unresolved
+DOBs remain null, without an age-based program recommendation until supplied.
 
 Lead signup uses the stored birth date or the supplied `dateOfBirth`. A legacy Lead with
 no birth date must provide one before profile creation. Signup copies the exact date into
 the Youth profile and saves any correction on the Lead in the same audited transaction.
-Profile creation without cohort enrollment permits ages outside intake's 12–19 range;
-a selected cohort must still permit enrollment and match its current age bounds.
+Profile creation has no age restriction; a selected cohort must still permit
+enrollment and match its current program age bounds. Public intake, internal Leads,
+and Youth profile requests reuse the shared DOB schema in `validation/dateOfBirth.ts`;
+it validates the date itself, while assignment services own age eligibility.
 
 Every Lead note has the `follow_up` category. Note details are editable and notes may be deleted independently of Lead status. Lead status is managed separately; staff may assign `new`, `contacted`, `eligible`, `ineligible`, `deferred`, or `closed`, while `signed_up` remains system-controlled.
 
@@ -236,4 +271,5 @@ Roster additions require `write:enrollments` and validate current age limits and
 inside the enrollment transaction. An ineligible member rejects the entire batch. The UI
 requires enrollment-write and youth-read permissions for Manage Roster; assignment editing
 continues to require `write:programs`. The roster's age limits are read-only and configured
-on the program. Youth list ages and age sorting use the same Toronto date boundary.
+on the program. These eligibility-specific ages remain separate from the Youth profile
+response, which does not calculate or expose age.

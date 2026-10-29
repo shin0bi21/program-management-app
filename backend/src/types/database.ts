@@ -7,8 +7,6 @@ import type { ColumnType } from "kysely";
 
 export type AccountStatus = "active" | "inactive" | "invited";
 
-export type AgeGroup = "junior_youth" | "senior_youth";
-
 export type AttendanceStatus = "absent" | "excused" | "late" | "present";
 
 export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
@@ -493,11 +491,9 @@ export interface YouthProfileNotes {
 }
 
 export interface YouthProfiles {
-  age_group: AgeGroup | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: number | null;
   id: Generated<string>;
   school_id: string | null;
   updated_at: Generated<Timestamp>;

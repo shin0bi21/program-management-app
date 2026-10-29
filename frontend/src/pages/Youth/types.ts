@@ -8,7 +8,6 @@ export interface YouthProfile {
     status: 'invited' | 'active' | 'inactive';
   } | null;
   dateOfBirth: string | null;
-  age: number | null;
   schoolId: string | null;
   schoolName: string | null;
   cohorts: Array<{
@@ -26,8 +25,6 @@ export interface YouthProfile {
     absentCount: number;
     lastAttendedOn: string | null;
   }>;
-  gradeLevel: number | null;
-  ageGroup: 'junior_youth' | 'senior_youth' | null;
   lastAttendedOn: string | null;
   createdAt: string;
   addresses: Array<{
@@ -59,5 +56,5 @@ export interface YouthFilters {
   cycleIds?: string[];
 }
 
-export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status'] as const;
 export type YouthSortKey = typeof YOUTH_TABLE_KEYS[number];

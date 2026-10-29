@@ -1,30 +1,26 @@
-import { leadAge, leadDateOfBirthSchema, leadIntakeDateOfBirthSchema } from '../../src/validation/leadDateOfBirth';
+import { dateOfBirthSchema } from '../../src/validation/dateOfBirth';
 import { createLeadSchema, signUpLeadSchema, updateLeadSchema } from '../../src/validation/leadSchemas';
 import { publicLeadSchema } from '../../src/validation/publicSchemas';
 
 describe('Lead date of birth validation', () => {
   afterEach(() => jest.useRealTimers());
 
-  it('uses the Toronto birthday and accepts both intake age boundaries', () => {
+  it('uses the Toronto date and accepts past DOBs regardless of age', () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-10-29T02:00:00Z'));
 
-    expect(leadAge('2014-10-28')).toBe(12);
-    expect(leadAge('2014-10-29')).toBe(11);
-    expect(leadIntakeDateOfBirthSchema.safeParse('2014-10-28').success).toBe(true);
-    expect(leadIntakeDateOfBirthSchema.safeParse('2006-10-29').success).toBe(true);
-    expect(leadIntakeDateOfBirthSchema.safeParse('2014-10-29').success).toBe(false);
-    expect(leadIntakeDateOfBirthSchema.safeParse('2006-10-28').success).toBe(false);
+    expect(dateOfBirthSchema.safeParse('2026-10-28').success).toBe(false);
+    expect(dateOfBirthSchema.safeParse('2026-10-27').success).toBe(true);
+    expect(dateOfBirthSchema.safeParse('1980-01-01').success).toBe(true);
   });
 
   it.each(['2012-02-30', '2011-02-29', '0000-01-01', '2012-2-02', '', '2099-01-01'])(
     'rejects impossible, malformed, or future DOB %s', dateOfBirth => {
-      expect(leadDateOfBirthSchema.safeParse(dateOfBirth).success).toBe(false);
+      expect(dateOfBirthSchema.safeParse(dateOfBirth).success).toBe(false);
     },
   );
 
-  it('handles leap-day birthdays as calendar dates', () => {
-    expect(leadAge('2012-02-29', '2026-02-28')).toBe(13);
-    expect(leadAge('2012-02-29', '2026-03-01')).toBe(14);
+  it('accepts real leap-day birth dates', () => {
+    expect(dateOfBirthSchema.safeParse('2012-02-29').success).toBe(true);
   });
 
   it('requires DOB on all intake forms and rejects obsolete age inputs', () => {
@@ -40,7 +36,7 @@ describe('Lead date of birth validation', () => {
     }
   });
 
-  it('allows signup DOB correction beyond the intake age range', () => {
+  it('allows profile signup outside program age bounds when no cohort is selected', () => {
     const params = { id: '00000000-0000-4000-8000-000000000001' };
     expect(signUpLeadSchema.safeParse({ params, body: { dateOfBirth: '2000-01-01' } }).success).toBe(true);
     expect(signUpLeadSchema.safeParse({ params, body: { age: 14 } }).success).toBe(false);

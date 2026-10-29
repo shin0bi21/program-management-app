@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
-import { setYouth } from '../../../youth.api';
+import { setYouth, setYouthContacts } from '../../../youth.api';
 import { useYouthModal } from './useYouthModal';
 
 const subEntities = vi.hoisted(() => ({
@@ -16,7 +16,7 @@ const subEntities = vi.hoisted(() => ({
   getContactPayload: vi.fn(() => [{ phoneNumber: '4165550100', type: 'parent' as const }]),
 }));
 
-vi.mock('../../../youth.api', () => ({ setYouth: vi.fn() }));
+vi.mock('../../../youth.api', () => ({ setYouth: vi.fn(), setYouthContacts: vi.fn() }));
 vi.mock('../../../../../common/features/SchoolModal/hooks/useSchools', () => ({
   useSchools: () => ({
     schools: [],
@@ -53,7 +53,6 @@ const formData = {
   email: ' youth@example.com ',
   dateOfBirth: '2012-08-19',
   schoolId: 'school-1',
-  gradeLevel: 8,
 };
 
 describe('useYouthModal', () => {
@@ -81,12 +80,31 @@ describe('useYouthModal', () => {
       email: 'youth@example.com',
       dateOfBirth: '2012-08-19',
       schoolId: 'school-1',
-      gradeLevel: 8,
       addresses: [{ address: '123 Main Street' }],
       contacts: [{ phoneNumber: '4165550100', type: 'parent' }],
     });
     expect(result.current.submitStatus).toBe('success');
     expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'youth-1' }));
+  });
+
+  it('saves legacy contacts without validating or writing other profile fields', async () => {
+    const legacy = makeYouthProfile({ dateOfBirth: null });
+    const saved = makeYouthProfile({ firstName: 'Authoritative', dateOfBirth: null });
+    vi.mocked(setYouthContacts).mockResolvedValue(saved);
+    subEntities.validateAddresses.mockReturnValue('Legacy address is invalid');
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useYouthModal({
+      isOpen: true, youthData: legacy, mode: 'contact', onClose: vi.fn(), onSuccess,
+    }));
+
+    await act(async () => result.current.rhfHandleSubmit(result.current.onValid)());
+
+    expect(subEntities.validateAddresses).not.toHaveBeenCalled();
+    expect(subEntities.getAddressPayload).not.toHaveBeenCalled();
+    expect(setYouth).not.toHaveBeenCalled();
+    expect(setYouthContacts).toHaveBeenCalledWith(legacy.id, [{ phoneNumber: '4165550100', type: 'parent' }]);
+    expect(onSuccess).toHaveBeenCalledWith(saved);
+    expect(result.current.submitStatus).toBe('success');
   });
 
   it('stops before the API when nested profile data is invalid', async () => {

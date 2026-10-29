@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enrollYouth, withdrawYouth } from '../../../cohorts.api';
 import type { ProgramCohort } from '../../../types';
-import { makeYouthProfile } from '../../../../../../tests/factories/youth';
+import { makeCohortRosterYouth } from '../../../../../../tests/factories/cohortRoster';
 import { useManageRosterModal } from './useManageRosterModal';
 
 vi.mock('../../../cohorts.api', () => ({
@@ -18,7 +18,7 @@ const cohort: ProgramCohort = {
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
   attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
 };
-const youth = makeYouthProfile({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
+const youth = makeCohortRosterYouth({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
 
 describe('useManageRosterModal', () => {
   beforeEach(() => {
@@ -52,7 +52,7 @@ describe('useManageRosterModal', () => {
 
     act(() => {
       void result.current.addYouth(youth);
-      void result.current.addYouth(makeYouthProfile({ id: 'youth-2' }));
+      void result.current.addYouth(makeCohortRosterYouth({ id: 'youth-2' }));
     });
 
     expect(result.current.pendingYouthId).toBe('youth-1');
