@@ -38,8 +38,20 @@ Edit the existing files in `backend/`, `frontend/`, and `workflows/`. The reposi
 root README provides the site's overview; this file describes the website itself.
 Build tooling derives Starlight content in ignored `src/content/docs/`, adding
 titles and translating repository links into website routes. Never edit or commit
-those generated copies. Page titles and sidebar group labels are capitalized by
-the generator; directory README links appear as Overview within their section.
+those generated copies. Page titles preserve the authored heading, including casing.
+
+The [navigation map](scripts/navigation.mjs) groups guides by reader task without
+requiring matching folders or changing their URLs. Add every published guide to
+that map exactly once; generation rejects missing, duplicate, and unknown entries.
+Keep labels brief and use sentence case. Use the existing area overview to route
+readers rather than adding an index file for every navigation group.
+
+When merging or moving a guide, update repository links and skill references in the
+same change. Add its former website route to `redirects` in
+[the site configuration](astro.config.mjs), pointing to the relevant section where
+appropriate. Preserve linked section IDs or update their callers; a page redirect
+alone does not repair a renamed heading. Run both the repository link check and
+the docs build, which checks rendered targets and anchors.
 
 The website preserves code blocks and tables. Mermaid diagrams are currently
 shown as source code. Source-file links open the private GitHub repository and
@@ -49,6 +61,20 @@ links; it defaults to `main`.
 Only this README, the repository root README, and the three documentation areas
 are included. Environment files, application source, dependencies, and agent
 instructions are not copied into the site.
+
+## Write and maintain a guide
+
+Give each guide one reader purpose: explain an architectural decision, define a
+shared contract, or walk through a task. Split when those purposes or audiences
+differ; merge thin guides that describe one responsibility. Keep ownership rules
+in their owner guide and link to them from consumers and agent skills.
+
+Keep implementation details in source and tests unless the reader needs them to
+make a decision. Document meaningful constraints and the reason for exceptions;
+avoid parallel endpoint inventories, styling values, or historical incident
+narratives in current instructions. Operational tasks identify the environment,
+prerequisites, steps, expected results, outcome verification, and recovery path.
+Update the applicable guide in the same change as its contract or procedure.
 
 ## Further reading
 
