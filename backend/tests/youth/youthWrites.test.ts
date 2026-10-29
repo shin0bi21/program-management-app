@@ -124,6 +124,13 @@ describe('Youth birth date writes and focused contacts', () => {
     });
   });
 
+  it('rejects emergency as a relationship in both profile and focused contact writes', async () => {
+    const contacts = [{ phoneNumber: '4165550100', type: 'emergency' }];
+
+    expect((await saveProfile({ ...profile, contacts })).status).toBe(400);
+    expect((await saveContacts({ contacts })).status).toBe(400);
+  });
+
   describe('PUT /api/youth/:id/contacts', () => {
     it('requires authentication and the explicit write capability', async () => {
       const unauthenticated = await request(app).put(`/api/youth/${legacyId}/contacts`).send({ contacts: [] });
@@ -158,10 +165,10 @@ describe('Youth birth date writes and focused contacts', () => {
       }));
 
       const contactId = saved.body.contacts[0].id;
-      const updated = await saveContacts({ contacts: [{ id: contactId.toUpperCase(), phoneNumber: '4165550101', type: 'emergency' }] });
+      const updated = await saveContacts({ contacts: [{ id: contactId.toUpperCase(), phoneNumber: '4165550101', type: 'sibling' }] });
       expect(updated.status).toBe(200);
       expect(updated.body.contacts).toEqual([
-        expect.objectContaining({ id: contactId, phoneNumber: '4165550101', type: 'emergency' }),
+        expect.objectContaining({ id: contactId, phoneNumber: '4165550101', type: 'sibling' }),
       ]);
       const cleared = await saveContacts({ contacts: [] });
       expect(cleared.status).toBe(200);
@@ -181,7 +188,7 @@ describe('Youth birth date writes and focused contacts', () => {
         contacts: [
           { phoneNumber: '4165550300', type: 'parent' },
           { phoneNumber: '4165550301', type: 'guardian' },
-          { phoneNumber: '4165550302', type: 'emergency' },
+          { phoneNumber: '4165550302', type: 'sibling' },
         ],
       });
       expect(target.status).toBe(201);
@@ -238,7 +245,7 @@ describe('Youth birth date writes and focused contacts', () => {
       const response = await saveContacts({ contacts: [
         { phoneNumber: newPhoneNumber, type: 'parent' },
         { id: retainedId, phoneNumber: '4165550310', type: 'guardian' },
-        { id: invalidId, phoneNumber: '4165550311', type: 'emergency' },
+        { id: invalidId, phoneNumber: '4165550311', type: 'sibling' },
       ] }, target.body.id);
 
       expect(response.status).toBe(invalidKind === 'duplicate' ? 400 : 404);
