@@ -180,11 +180,19 @@ describe('Programs', () => {
     const table = screen.getByRole('table', { name: 'Programs' });
     expect(within(table).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(['Updated Skills', 'Tennis']);
 
+    programsApi.getProgramList.mockRejectedValueOnce(new Error('Refresh failed'));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeVisible();
+    expect(screen.getByRole('cell', { name: 'Updated Skills' })).toBeVisible();
+    expect(screen.getByRole('cell', { name: 'Tennis' })).toBeVisible();
+    expect(screen.getByText('This table’s data is out of order.')).toBeVisible();
+
     programsApi.getProgramList.mockResolvedValue({ rows: [neighbor, saved], nextCursor: null });
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => expect(screen.queryByText('This table’s data is out of order.')).not.toBeInTheDocument());
-    expect(programsApi.getProgramList).toHaveBeenCalledTimes(2);
+    expect(programsApi.getProgramList).toHaveBeenCalledTimes(3);
     expect(within(table).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(['Tennis', 'Updated Skills']);
     expect(screen.getByRole('heading', { name: 'Updated Skills - Fall 2026 Overview' })).toBeInTheDocument();
   });

@@ -30,7 +30,7 @@ export default function CycleTable({ columns, isOpen, enabled, onClose, onAdd, o
       data={query.rows}
       loading={query.loading}
       refreshing={query.refreshing}
-      unavailable={query.error ? { title: 'Cycles unavailable', onRetry: query.retry } : undefined}
+      unavailable={query.error && !query.rows.length ? { title: 'Cycles unavailable', onRetry: query.retry } : undefined}
       hasNextPage={query.hasNextPage}
       loadingNextPage={query.loadingNextPage}
       nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}

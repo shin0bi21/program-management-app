@@ -27,7 +27,7 @@ export default function ProgramTable(props: ProgramTableProps) {
     data={query.rows}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Programs unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.rows.length ? { title: 'Programs unavailable', onRetry: query.retry } : undefined}
     keyExtractor={program => program.id}
     selectedKey={props.selectedProgramId}
     onRowSelect={props.onProgramSelect}
