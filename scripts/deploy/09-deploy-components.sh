@@ -11,7 +11,6 @@ deploy_backend() {
   fi
 
   restart_backend
-  run_backend_post_deploy
 }
 
 deploy_frontend() {
@@ -25,7 +24,6 @@ deploy_infrastructure() {
   build_frontend_image
   run_migration_flow
   restart_backend
-  run_backend_post_deploy
   restart_frontend
 }
 

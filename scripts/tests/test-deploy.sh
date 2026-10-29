@@ -127,4 +127,38 @@ write_test_file README.md "documentation only"
 DOCUMENTATION_REVISION_SHA="$(commit_test_state documentation)"
 assert_plan documentation-only "$DOCUMENTATION_REVISION_SHA" "$INFRASTRUCTURE_REVISION_SHA" "$INFRASTRUCTURE_REVISION_SHA" "$INFRASTRUCTURE_REVISION_SHA" false false false false
 
+# Exercise service orchestration without allowing a post-deploy command to reach Docker.
+(
+  steps=()
+  # shellcheck disable=SC2317,SC2329
+  require_database() { steps+=(database); }
+  # shellcheck disable=SC2317,SC2329
+  run_migration_status() { steps+=(status); }
+  # shellcheck disable=SC2317,SC2329
+  run_migration_flow() { steps+=(migrate); }
+  # shellcheck disable=SC2317,SC2329
+  build_backend_image() { steps+=(build-backend); }
+  # shellcheck disable=SC2317,SC2329
+  build_frontend_image() { steps+=(build-frontend); }
+  # shellcheck disable=SC2317,SC2329
+  restart_backend() { steps+=(backend); }
+  # shellcheck disable=SC2317,SC2329
+  restart_frontend() { steps+=(frontend); }
+  # shellcheck disable=SC2317,SC2329
+  docker() { echo "FAIL: unexpected Docker call: $*" >&2; return 1; }
+
+  MIGRATIONS_CHANGED=false
+  deploy_backend > /dev/null
+  [ "${steps[*]}" = "database status backend" ] || { echo "FAIL: backend deployment steps"; exit 1; }
+
+  steps=()
+  MIGRATIONS_CHANGED=true
+  deploy_backend > /dev/null
+  [ "${steps[*]}" = "database migrate backend" ] || { echo "FAIL: backend migration deployment steps"; exit 1; }
+
+  steps=()
+  deploy_infrastructure > /dev/null
+  [ "${steps[*]}" = "build-backend build-frontend migrate backend frontend" ] || { echo "FAIL: infrastructure deployment steps"; exit 1; }
+)
+
 echo "Deploy planner tests passed!"

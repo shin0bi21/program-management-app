@@ -34,12 +34,6 @@ restart_backend() {
   echo "Backend is healthy."
 }
 
-run_backend_post_deploy() {
-  echo ""
-  echo "Ensuring homepage image variants exist..."
-  docker compose exec -T backend node dist/db/scripts/backfill-homepage-image-variants.js
-}
-
 restart_frontend() {
   local old_id
   old_id="$(docker compose ps -q nginx 2>/dev/null || true)"
