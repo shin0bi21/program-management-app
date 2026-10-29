@@ -9,7 +9,7 @@ export type AccountStatus = "active" | "inactive" | "invited";
 
 export type AttendanceStatus = "absent" | "excused" | "late" | "present";
 
-export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
+export type ContactType = "guardian" | "parent" | "sibling";
 
 export type DiscoverySource = "community_outreach" | "friend_family" | "online" | "other" | "school";
 

@@ -5,7 +5,7 @@ import { dateOfBirthSchema } from './dateOfBirth';
 const youthContactSchema = z.object({
   id: z.string().uuid('Invalid contact ID').optional(),
   phoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
-  type: z.enum(['parent', 'sibling', 'guardian', 'emergency']).default('parent'),
+  type: z.enum(['parent', 'sibling', 'guardian']).default('parent'),
 });
 
 export const setYouthContactsSchema = z.object({

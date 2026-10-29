@@ -115,7 +115,9 @@ program/cohort and is never a permanent database age constraint. Database DOB re
 remaining unknown dates are backfilled and a separate constraint change is approved.
 `PUT /youth/:id/contacts` requires `write:youth_profiles` and accepts only
 `{ contacts: [...] }`; it preserves all profile fields, including a legacy null
-DOB, and returns the authoritative profile after saving. Existing contact IDs must
+DOB, and returns the authoritative profile after saving. A primary contact is also
+the emergency contact; `type` describes the relationship and accepts only `parent`,
+`sibling`, or `guardian`. Existing contact IDs must
 belong to this profile’s active contacts. Foreign, inactive, or missing IDs return
 `404`; duplicate IDs return `400`. Rejected requests preserve profiles, contacts,
 relationships, and audit records.
