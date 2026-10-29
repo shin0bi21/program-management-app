@@ -23,7 +23,7 @@ describe('useEditCohortModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('initializes from the target and owns successful cohort updates', async () => {
-    vi.mocked(updateCohort).mockResolvedValue(cohort);
+    vi.mocked(updateCohort).mockResolvedValue({ cohort, updatedYouth: [] });
     const onUpdated = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useEditCohortModal({ cohort, onUpdated }));
 

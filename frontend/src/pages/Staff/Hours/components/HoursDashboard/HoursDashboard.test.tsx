@@ -37,9 +37,9 @@ describe('HoursDashboard', () => {
   });
 
   it('renders loading and error states through both dashboard cards', () => {
-    const onErrorChange = vi.fn();
+    const onMessageChange = vi.fn();
     overviewData.mockReturnValue({ status: 'loading' });
-    const { rerender } = render(<HoursDashboard {...baseProps} onErrorChange={onErrorChange} />);
+    const { rerender } = render(<HoursDashboard {...baseProps} onMessageChange={onMessageChange} />);
     expect(screen.getAllByRole('status')).toHaveLength(4);
     expect(screen.getByText('Current Pay Period')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
@@ -48,13 +48,13 @@ describe('HoursDashboard', () => {
     const card = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
     const retry = vi.fn();
     overviewData.mockReturnValue({ status: 'error', message: 'Overview offline', retry });
-    rerender(<HoursDashboard {...baseProps} cycle={{ ...cycle, id: 'cycle-2' }} onErrorChange={onErrorChange} />);
+    rerender(<HoursDashboard {...baseProps} cycle={{ ...cycle, id: 'cycle-2' }} onMessageChange={onMessageChange} />);
     expect(screen.getAllByText('Hours overview unavailable')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toBe(card);
     expect(screen.getByText('Current Pay Period')).toBeInTheDocument();
     expect(screen.getByText('Biweekly Average')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
-    expect(onErrorChange).toHaveBeenLastCalledWith({
+    expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Overview offline',
       action: { label: 'Retry', onClick: retry },
     });

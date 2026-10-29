@@ -97,7 +97,9 @@ describe('Program cycle assignments', () => {
 
     const response = await setCycles(cycleIds);
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ programId, cycleIds: [...cycleIds].sort() });
+    expect(response.body).toEqual(expect.objectContaining({ programId, cycleIds: [...cycleIds].sort() }));
+    expect(response.body.updatedCohorts).toEqual(expect.arrayContaining([expect.objectContaining({ id: original.id })]));
+    expect(response.body.createdCohortIds).toHaveLength(1);
     expect(await sql`SELECT id FROM program_cohorts WHERE id = ${original.id}`).toHaveLength(1);
     expect((await sql`SELECT description FROM programs WHERE id = ${programId}`)[0].description).toBe('Unrelated edit');
     expect((await setCycles([])).status).toBe(200);

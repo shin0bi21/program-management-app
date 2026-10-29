@@ -803,10 +803,67 @@ describe('Hours API', () => {
     expect(tasks.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
     ]));
-    expect(entry.body.updatedTask).toEqual(tasks.body.find((row: { id: string }) => row.id === task.body.id));
+    expect(entry.body.updatedTasks[0]).toEqual(tasks.body.find((row: { id: string }) => row.id === task.body.id));
 
     await request(app).delete(`/api/hours/${entry.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
     await request(app).delete(`/api/tasks/${task.body.id}`).set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  it('returns canonical rows and every affected task when hours are moved, reassigned, and deleted', async () => {
+    const tasks: string[] = [];
+    let entryId: string | undefined;
+    const note = `Canonical hours ${Date.now()}`;
+    const payload = { source: 'task', staffId: firstStaffId, workDate, hours: 2, note };
+    const taskRecord = async (id: string) => {
+      const result = await request(app).get(`/api/tasks/${id}`).set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(result.status).toBe(200);
+      return result.body;
+    };
+    const tableRow = async () => {
+      const result = await request(app).get('/api/hours/table').query({ search: note })
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(result.status).toBe(200);
+      expect(result.body.rows).toHaveLength(1);
+      return result.body.rows[0];
+    };
+
+    try {
+      for (const title of ['First hours task', 'Second hours task']) {
+        const task = await request(app).post('/api/tasks').set('Authorization', `Bearer ${adminToken}`)
+          .send({ title, category: 'planning_prep', programId, startDate: workDate, dueDate: placementWorkDate, staffId: firstStaffId });
+        expect(task.status).toBe(201);
+        tasks.push(task.body.id);
+      }
+      const created = await request(app).post('/api/hours').set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ ...payload, taskId: tasks[0] });
+      expect(created.status).toBe(201);
+      entryId = created.body.id;
+      expect(created.body.tableRow).toEqual(await tableRow());
+      expect(created.body.updatedTasks).toEqual([await taskRecord(tasks[0])]);
+
+      const moved = await request(app).patch(`/api/hours/${entryId}/placement`)
+        .set('Authorization', `Bearer ${firstStaffToken}`).send({ workDate: placementWorkDate });
+      expect(moved.status).toBe(200);
+      expect(moved.body.tableRow).toEqual(await tableRow());
+      expect(moved.body.updatedTasks).toEqual([await taskRecord(tasks[0])]);
+      expect(moved.body.updatedTasks[0].loggedHoursByDate).toEqual([{ date: placementWorkDate, hours: 2 }]);
+
+      const updated = await request(app).put(`/api/hours/${entryId}`).set('Authorization', `Bearer ${firstStaffToken}`)
+        .send({ ...payload, taskId: tasks[1], hours: 3 });
+      expect(updated.status).toBe(200);
+      expect(updated.body.tableRow).toEqual(await tableRow());
+      expect(updated.body.updatedTasks).toEqual([await taskRecord(tasks[0]), await taskRecord(tasks[1])]);
+      expect(updated.body.updatedTasks.map((task: { hoursLogged: number }) => task.hoursLogged)).toEqual([0, 3]);
+
+      const deleted = await request(app).delete(`/api/hours/${entryId}`).set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(deleted.status).toBe(200);
+      expect(deleted.body.updatedTasks).toEqual([await taskRecord(tasks[1])]);
+      expect(deleted.body.updatedTasks[0].hoursLogged).toBe(0);
+      entryId = undefined;
+    } finally {
+      if (entryId) await request(app).delete(`/api/hours/${entryId}`).set('Authorization', `Bearer ${firstStaffToken}`);
+      for (const id of tasks) await request(app).delete(`/api/tasks/${id}`).set('Authorization', `Bearer ${adminToken}`);
+    }
   });
 
   it('requires task-write permission to complete a task while logging time', async () => {
@@ -852,7 +909,7 @@ describe('Hours API', () => {
         workDate, hours: 1, note: 'Hours without task read permission',
       });
     expect(savedHours.status).toBe(201);
-    expect(savedHours.body).not.toHaveProperty('updatedTask');
+    expect(savedHours.body).not.toHaveProperty('updatedTasks');
     await request(app).delete(`/api/hours/${savedHours.body.id}`).set('Authorization', `Bearer ${firstStaffToken}`);
 
     await request(app)
@@ -965,6 +1022,10 @@ describe('Hours API', () => {
       hours: 2.5,
       note: 'Newer saved note',
     }));
+    const listed = await request(app).get('/api/hours/table').query({ search: 'Newer saved note' })
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    expect(listed.status).toBe(200);
+    expect(placementUpdate.body.tableRow).toEqual(listed.body.rows.find((row: { id: string }) => row.id === created.body.id));
   });
 
   it('allows staff to update and delete their own entry', async () => {

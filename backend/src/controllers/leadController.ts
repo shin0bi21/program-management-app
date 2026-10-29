@@ -26,8 +26,8 @@ export const handleUpdateLeadStatus = async (req: Request, res: Response) => {
 };
 
 export const handleSignUpLead = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.status(201).json(await signUpLead(req.params.id, req.body as SignUpLeadInput, actorId));
+  const actor = (req as AuthRequest).user!;
+  res.status(201).json(await signUpLead(req.params.id, req.body as SignUpLeadInput, actor));
 };
 
 export const handleDeleteLead = async (req: Request, res: Response) => {

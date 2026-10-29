@@ -166,7 +166,7 @@ describe('Sessions', () => {
         uniqueAttendeeCount: 0,
       },
     ]);
-    getSessions.mockResolvedValue([makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeCohortSession({
       sessionTypeId: 'type-regular',
       theme: 'Communication',
       programId: 'program-1',
@@ -174,7 +174,7 @@ describe('Sessions', () => {
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       description: 'Planned communication exercise',
-    })]);
+    })], nextCursor: null });
     getSessionRoster.mockResolvedValue([
       {
         youthId: 'youth-1',
@@ -200,7 +200,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading page preferences…');
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
@@ -241,7 +241,7 @@ describe('Sessions', () => {
 
   // Rendered states.
   it('shows open attendance as a check-in count', async () => {
-    getSessions.mockResolvedValue([makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeCohortSession({
       id: 'drop-in-session',
       cohortId: 'drop-in-cohort',
       sessionTypeId: 'type-field-trip',
@@ -255,7 +255,7 @@ describe('Sessions', () => {
       attendanceMarkedCount: 3,
       attendedCount: 3,
       attendanceRate: 100,
-    })]);
+    })], nextCursor: null });
 
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>

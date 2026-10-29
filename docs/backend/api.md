@@ -15,7 +15,7 @@ owning separate capabilities.
 |---|---|---|---|
 | Authentication `/auth` | [authRoutes](../../backend/src/routes/authRoutes.ts) | [authSchemas](../../backend/src/validation/authSchemas.ts) | [Auth](../../backend/src/services/auth/) |
 | Accounts `/accounts` | [accountRoutes](../../backend/src/routes/accountRoutes.ts) | [accountSchemas](../../backend/src/validation/accountSchemas.ts) | [Accounts](../../backend/src/services/accounts/) |
-| Shared lookups `/reference-data` | [referenceDataRoutes](../../backend/src/routes/referenceDataRoutes.ts) | [referenceDataSchemas](../../backend/src/validation/referenceDataSchemas.ts) | [Reference data](reference-data.md) |
+| Shared lookups `/reference-data` | [referenceDataRoutes](../../backend/src/routes/referenceDataRoutes.ts) | [referenceDataSchemas](../../backend/src/validation/referenceDataSchemas.ts) | [Reference Data](reference-data.md) |
 | Logged hours `/hours` | [hoursRoutes](../../backend/src/routes/hoursRoutes.ts) | [hoursSchemas](../../backend/src/validation/hoursSchemas.ts) | [Hours](../../backend/src/services/staff/hours/) |
 | Assigned tasks `/tasks` | [taskRoutes](../../backend/src/routes/taskRoutes.ts) | [taskSchemas](../../backend/src/validation/taskSchemas.ts) | [Tasks](../../backend/src/services/staff/tasks/) |
 | Youth profiles `/youth` | [youthRoutes](../../backend/src/routes/youthRoutes.ts) | [youthSchemas](../../backend/src/validation/youthSchemas.ts) | [Youth](../../backend/src/services/youth/) |
@@ -36,10 +36,11 @@ boundaries unless an endpoint explicitly defines a different response, such as a
 
 ## Hours and Tasks
 
-Task-linked hours create/update responses include `updatedTask` when the actor has
-`read:tasks`. The canonical projection is read inside the hours transaction after
-its writes, so the caller can reconcile totals and any completion without a second
-request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts) and
+Task-linked hours mutations include `updatedTasks` when the actor has
+`read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
+create/update/placement responses also return their canonical `tableRow`; deletion
+returns the affected task rows. Projections are read inside the write transaction,
+so callers reconcile totals and completion without a second list request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts) and
 [Hours integration tests](../../backend/tests/hours/hours.test.ts).
 
 Table and calendar filters must agree without widening policy scope. Hours use
@@ -95,7 +96,8 @@ Program defaults affect future session creation, not existing timestamps.
 and [cycle service](../../backend/src/services/programming/cycles/programCycleService.ts)
 own the shared lock order: programs, cycles, then cohort relationships. Cycle
 editing locks current programs in ID order before its cycle. Child foreign keys
-coordinate dependent inserts with removal. Keep this ordering aligned with
+coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before cohort
+and session rows, serializing them with session moves. Keep this ordering aligned with
 session scheduling; [assignment tests](../../backend/tests/programs/assignments.test.ts)
 cover atomic replacement and concurrency.
 

@@ -182,7 +182,7 @@ describe('useTaskActions', () => {
     expect(rendered.onTaskSynced).not.toHaveBeenCalled();
 
     await act(async () => {
-      savedHours.resolve({ updatedTask } as Awaited<ReturnType<typeof setHours>>);
+      savedHours.resolve({ updatedTasks: [updatedTask] } as Awaited<ReturnType<typeof setHours>>);
       await saving;
     });
 
@@ -199,7 +199,7 @@ describe('useTaskActions', () => {
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
 
   it('does not synchronize a task when saving hours fails', async () => {
@@ -245,6 +245,6 @@ describe('useTaskActions', () => {
     expect(rendered.onTaskSynced).not.toHaveBeenCalled();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
 });

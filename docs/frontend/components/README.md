@@ -33,7 +33,7 @@ For listeners, observers, timers, subscriptions, and external instances, identif
 
 ## Choose a Component Owner
 
-Use [Frontend ownership](../architecture/ownership.md#choose-the-narrowest-owner) for placement
+Use [Frontend Ownership](../architecture/ownership.md#choose-the-narrowest-owner) for placement
 and promotion. Extract a component when a rendered region has a clear name and an independent
 contract; do not add a wrapper or hook merely to shorten its parent.
 
@@ -41,15 +41,16 @@ contract; do not add a wrapper or hook merely to shorten its parent.
 
 | Surface | Guide |
 |---|---|
-| Type and status labels | [Type and status labels](#type-and-status-labels) |
-| Application sidebar and route navigation | [App navigation](navigation.md) |
+| Type and status labels | [Type and Status Labels](#type-and-status-labels) |
+| Application sidebar and route navigation | [App Navigation](navigation.md) |
 | Page header and body regions | [Pages](../pages/composition.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables.md) |
-| Table rows and mutations | [Table rows](table-rows.md) |
+| Table rows and mutations | [Table Rows](table-rows.md) |
 | Date ranges, calendar items and timeline views | [Calendars](calendars.md) |
 | Summary cards and overview data | [Dashboards](dashboards.md) |
+| Page-level messages and retry actions | [Message Overlays](message-overlays.md) |
 | Dialogs, floating menus and tooltips | [Overlays](overlays.md) |
-| Modal forms and submission workflows | [Modals and forms](modals-and-forms.md) |
+| Modal forms and submission workflows | [Modals and Forms](modals-and-forms.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
 
@@ -81,5 +82,5 @@ Use browser tests for clipping, density, and selection geometry.
 ## Scaffold a Rendered Surface
 
 The table, calendar, dashboard, and modal presets generate implementation and colocated
-test outlines together. Follow [Frontend scaffolding](../pages/scaffolding.md) to compose a new
+test outlines together. Follow [Frontend Scaffolding](../pages/scaffolding.md) to compose a new
 page and its component owners; each surface guide describes its specific contract.

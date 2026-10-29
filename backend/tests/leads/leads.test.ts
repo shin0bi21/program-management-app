@@ -60,6 +60,7 @@ describe('Leads API', () => {
     `;
     eligibleProgramId = program.id;
     eligibleProgramName = program.name;
+    await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${staffUserId}, ${eligibleProgramId})`;
     ({ cohortId: eligibleProgramCohortId, cycleId: eligibleProgramCycleId } = await seedTestCohort({
       programId: eligibleProgramId,
       name: `Lead Conversion ${Date.now()}`,
@@ -461,12 +462,18 @@ describe('Leads API', () => {
       .send({ cohortId: eligibleProgramCohortId, noteCategory: 'preference' });
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual(expect.objectContaining({
+    expect(res.body.lead).toEqual(expect.objectContaining({
       id: lead.id,
       status: 'signed_up',
       convertedYouthId: expect.any(String),
     }));
-    convertedYouthId = res.body.convertedYouthId;
+    convertedYouthId = res.body.lead.convertedYouthId;
+    const cohortRows = await request(app).get('/api/cohorts').query({ limit: 25 })
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(cohortRows.status).toBe(200);
+    expect(res.body.updatedCohort).toEqual(cohortRows.body.rows.find((row: { id: string }) => row.id === eligibleProgramCohortId));
+    expect(res.body.updatedCohort.enrolledCount).toBe(1);
+
 
     const [profile] = await sql<{ firstName: string; dateOfBirth: string }[]>`
       SELECT u.first_name, yp.date_of_birth::text AS date_of_birth
@@ -530,6 +537,26 @@ describe('Leads API', () => {
     expect(edit.body.error).toBe('Signed-up leads must be edited through their youth profile');
   });
 
+  it('does not expose a cohort projection without its read capability during signup', async () => {
+    const created = await request(app).post('/api/leads').set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'ProjectionPermission' });
+    expect(created.status).toBe(201);
+    const token = generateToken(staffUserId, 'staff', undefined, ['write:outreach', 'write:youth_profiles', 'write:enrollments']);
+    const signedUp = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
+      .set('Authorization', `Bearer ${token}`).send({ cohortId: eligibleProgramCohortId, noteCategory: 'general' });
+    try {
+      expect(signedUp.status).toBe(201);
+      expect(signedUp.body.lead).toMatchObject({ id: created.body.id, status: 'signed_up' });
+      expect(signedUp.body).not.toHaveProperty('updatedCohort');
+    } finally {
+      await sql`DELETE FROM leads WHERE id = ${created.body.id}`;
+      if (signedUp.body.lead?.convertedYouthId) {
+        await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${signedUp.body.lead.convertedYouthId}`;
+        await sql`DELETE FROM users WHERE id = ${signedUp.body.lead.convertedYouthId}`;
+      }
+    }
+  });
+
   it('can create a youth profile without enrolling it in a cohort', async () => {
     const created = await request(app)
       .post('/api/leads')
@@ -546,7 +573,8 @@ describe('Leads API', () => {
       .send({ cohortId: null });
 
     expect(res.status).toBe(201);
-    convertedYouthWithoutCohortId = res.body.convertedYouthId;
+    convertedYouthWithoutCohortId = res.body.lead.convertedYouthId;
+    expect(res.body).not.toHaveProperty('updatedCohort');
     const [{ count }] = await sql<{ count: number }[]>`
       SELECT COUNT(*)::int AS count
       FROM cohort_enrollments
@@ -585,13 +613,13 @@ describe('Leads API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ cohortId: null, noteCategory: 'general' });
     expect(signedUp.status).toBe(201);
-    expect(signedUp.body).toEqual(expect.objectContaining({
+    expect(signedUp.body.lead).toEqual(expect.objectContaining({
       id: externalLead.id,
       convertedYouthId: expect.any(String),
       recommendedProgramId: eligibleProgramId,
       status: 'signed_up',
     }));
-    convertedExternalYouthId = signedUp.body.convertedYouthId;
+    convertedExternalYouthId = signedUp.body.lead.convertedYouthId;
   });
 
   it('allows staff to choose an age-eligible cohort outside the recommended program', async () => {
@@ -611,7 +639,8 @@ describe('Leads API', () => {
       .send({ cohortId: otherProgramCohortId });
 
     expect(res.status).toBe(201);
-    crossProgramYouthId = res.body.convertedYouthId;
+    crossProgramYouthId = res.body.lead.convertedYouthId;
+    expect(res.body).not.toHaveProperty('updatedCohort');
     const [enrollment] = await sql<{ cohortId: string }[]>`
       SELECT cohort_id FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId!}
     `;
@@ -655,9 +684,9 @@ describe('Leads API', () => {
     const signedUp = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`).send({ dateOfBirth: correctedDateOfBirth });
     expect(signedUp.status).toBe(201);
-    const youthId = signedUp.body.convertedYouthId;
+    const youthId = signedUp.body.lead.convertedYouthId;
     try {
-      expect(signedUp.body.dateOfBirth).toBe(correctedDateOfBirth);
+      expect(signedUp.body.lead.dateOfBirth).toBe(correctedDateOfBirth);
       const [profile] = await sql<{ dateOfBirth: string }[]>`
         SELECT date_of_birth::text AS date_of_birth FROM youth_profiles WHERE user_id = ${youthId}
       `;

@@ -1,6 +1,6 @@
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 
 import HomepageSignupSetting from './components/HomepageSignupSetting/HomepageSignupSetting';
@@ -23,7 +23,7 @@ export default function ManageHomepage() {
     <>
       <main className="page-container homepage-management-page">
         <PageHeader title="Manage Homepage" />
-        <PageErrorOverlay errors={[homepage.error ? {
+        <PageMessageOverlay messages={[homepage.error ? {
           message: homepage.error,
           action: { label: 'Retry', onClick: homepage.refresh },
         } : null]} />

@@ -1,5 +1,6 @@
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { Task, TasksFilters } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -18,15 +19,15 @@ interface TaskTableProps {
   onTaskSelect: (task: Task) => void;
   onSortingChange: (sorting: ListSort<TaskSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function TaskTable({
   queryKey, columns, hiddenColumnKeys, filters, today, sorting, columnWidths,
-  selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
+  selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: TaskTableProps) {
   const query = useTaskTableData(queryKey, filters, sorting, today);
-  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
+  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   const hasFilters = filters.staffIds.length > 0
     || filters.programIds.length > 0
     || filters.categories.length > 0

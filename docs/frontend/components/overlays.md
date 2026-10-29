@@ -18,7 +18,16 @@ Use shared overlay primitives when their contracts fit. They centralize portal r
 
 Anchored forms use `FloatingMenuPanel` with `keyboardMode="form"` and an accessible label. This exposes a dialog, preserves native input editing and Tab between controls, and keeps Escape dismissal. Option-only menus retain menu keyboard navigation.
 
-The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and forms](modals-and-forms.md).
+The route or component that opens an overlay owns its target and open state. The overlay owns its internal interaction. Keep blocking form workflows in [Modals and Forms](modals-and-forms.md).
+
+## Page Messages
+
+Use `PageMessageOverlay` for non-blocking page errors and warnings. Route pages collect
+messages from child owners through `usePageMessageReporter`; grouped messages preserve
+errors alongside a table refresh warning. Errors use alert semantics; warnings use status
+semantics and an amber appearance. Messages can include details, an explanatory tooltip,
+and an action disabled while work is pending. Keep essential guidance in the visible message.
+Dismissal hides the current message set until its content changes or messages clear.
 
 ## Filter Menus
 

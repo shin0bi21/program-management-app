@@ -1,3 +1,8 @@
+import { lockAssignmentProgram } from '../programming/cohorts/assignmentService';
+import { getYouthRowsByIds } from './youthRecordQuery';
+import { getSessionRowsByIds } from '../programming/sessions/sessionRecordQuery';
+import { getCohortRowsByIds } from '../programming/cohorts/cohortRecordQuery';
+import { programAccessPredicate } from '../../policies/programAccessPolicy';
 import { asTransactionSql, sql } from '../../db/client';
 import { ConflictError, NotFoundError } from '../../errors';
 import { assertCanAccessCohort } from '../../policies/programAccessPolicy';
@@ -56,10 +61,24 @@ export async function setYouthCohortAttendance(
 ) {
   await assertCanAccessCohort(actor, cohortId);
 
-  await sql.begin(async tx => {
+  const updatedRows = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+    const [assignment] = await trx<{ programId: string }[]>`
+      SELECT program_id FROM program_cohorts WHERE id = ${cohortId}
+    `;
+    if (!assignment) throw new NotFoundError('Cohort not found');
+
+    // Session moves also take the program lock before touching cohort or session rows.
+    await lockAssignmentProgram(trx, assignment.programId, actor);
+    const lockedCohort = await trx<{ id: string }[]>`
+      SELECT pc.id FROM program_cohorts pc
+      WHERE pc.id = ${cohortId} AND ${programAccessPredicate(actor, sql`pc.program_id`)}
+      FOR UPDATE OF pc
+    `;
+    if (!lockedCohort.length) throw new NotFoundError('Cohort not found');
+
     const cohort = await getYouthCohortContext(trx, youthId, cohortId);
-    const sessions = await getYouthAttendanceSessions(trx, youthId, cohortId);
+    const sessions = await getYouthAttendanceSessions(trx, youthId, cohortId, true);
     const sessionIds = new Set(sessions.map(session => session.id));
 
     if (
@@ -99,9 +118,18 @@ export async function setYouthCohortAttendance(
         )
       `;
     }
+    const [youth] = await getYouthRowsByIds(trx, [youthId]);
+    if (!youth) throw new NotFoundError('Youth profile not found');
+    const updatedSessions = actor.permissions.includes('read:sessions')
+      ? await getSessionRowsByIds(trx, actor, [...sessionIds])
+      : undefined;
+    const updatedCohort = actor.permissions.includes('read:programs')
+      ? (await getCohortRowsByIds(trx, actor, [cohortId]))[0]
+      : undefined;
+    return { youth, updatedSessions, updatedCohort };
   });
 
-  return getYouthCohortAttendance(youthId, cohortId, actor);
+  return { ...await getYouthCohortAttendance(youthId, cohortId, actor), ...updatedRows };
 }
 
 async function getYouthCohortContext(
@@ -143,6 +171,7 @@ function getYouthAttendanceSessions(
   database: typeof sql,
   youthId: string,
   cohortId: string,
+  lock = false,
 ) {
   return database<YouthAttendanceSession[]>`
     SELECT
@@ -178,5 +207,6 @@ function getYouthAttendanceSessions(
         )
       )
     ORDER BY cs.starts_at DESC, cs.id DESC
+    ${lock ? sql`FOR UPDATE OF cs` : sql``}
   `;
 }

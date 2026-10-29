@@ -1,3 +1,4 @@
+import { makeYouthProfile } from '../../../../../tests/factories/youth';
 // Scope: verifies youth-attendance loading, selection, and save coordination.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,7 +31,7 @@ describe('useYouthAttendance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getYouthCohortAttendance).mockResolvedValue(attendance);
-    vi.mocked(setYouthCohortAttendance).mockResolvedValue(attendance);
+    vi.mocked(setYouthCohortAttendance).mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
   });
 
   it('loads attendance and saves the selected session status', async () => {
@@ -51,7 +52,7 @@ describe('useYouthAttendance', () => {
       status: 'present',
       notes: 'Existing note',
     }]);
-    expect(onSaved).toHaveBeenCalledOnce();
+    expect(onSaved).toHaveBeenCalledWith({ ...attendance, youth: makeYouthProfile() });
     expect(result.current.submitStatus).toBe('success');
   });
 });

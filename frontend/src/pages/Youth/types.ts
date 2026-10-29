@@ -12,6 +12,7 @@ export interface YouthProfile {
   schoolName: string | null;
   cohorts: Array<{
     id: string;
+    cycleId: string;
     name: string;
     programId: string;
     programName: string;

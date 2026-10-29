@@ -67,7 +67,7 @@ Route tests own cross-view reconciliation and dialog entry wiring. Child owners 
 
 ## Compose Page Components
 
-For a collection page, render one `main.page-container` with `PageHeader`, `PageErrorOverlay` and `PageBody` in that
+For a collection page, render one `main.page-container` with `PageHeader`, `PageMessageOverlay` and `PageBody` in that
 order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
 or summary plus one active data view to the body.
 
@@ -75,4 +75,5 @@ The shared header orders desktop controls from left to right as columns, view, f
 then search, omitting unavailable controls. Keep search rightmost and filters beside it.
 On mobile, search occupies a full-width row below the other controls.
 
-Follow [Page Testing](testing.md) for coordination coverage.
+Follow [Page Message Overlays](../components/message-overlays.md) for page-level errors and retry actions,
+and [Page Testing](testing.md) for coordination coverage.

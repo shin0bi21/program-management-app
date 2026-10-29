@@ -30,7 +30,7 @@ describe('useSessionTableData', () => {
     expect(getSessions).toHaveBeenCalledWith(
       filters,
       { signal: expect.any(AbortSignal) },
-      { ...sorting, cursor: undefined, limit: 25 },
+      { ...sorting, cursor: undefined, limit: 50 },
     );
   });
 

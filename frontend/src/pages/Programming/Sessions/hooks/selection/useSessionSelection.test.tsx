@@ -25,6 +25,22 @@ describe('useSessionSelection', () => {
     expect(result.current.getSelectedSession('calendar')).toEqual(session);
   });
 
+  it('replaces selected records from an authoritative mutation without changing selection', () => {
+    const session = makeCohortSession();
+    const saved = makeCohortSession({ theme: 'Updated theme', attendedCount: 3 });
+    const { result } = renderHook(useSessionSelection, { wrapper: Router });
+    act(() => {
+      result.current.setSelectedTableSession(session);
+      result.current.setCalendarSessions([session]);
+    });
+
+    act(() => result.current.syncSelectedSession(saved));
+
+    expect(result.current.selectedSessionId).toBe(session.id);
+    expect(result.current.getSelectedSession('table')).toBe(saved);
+    expect(result.current.getSelectedSession('calendar')).toBe(saved);
+  });
+
   it('clears a removed selected session from every selection owner', () => {
     const session = makeCohortSession();
     const { result } = renderHook(useSessionSelection, { wrapper: Router });

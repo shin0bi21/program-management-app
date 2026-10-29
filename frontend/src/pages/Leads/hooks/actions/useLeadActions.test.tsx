@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { deleteLead, updateLeadStatus } from '../../leads.api';
 import type { Lead } from '../../types';
+import type { ProgramCohort } from '../../../Programming/Cohorts/types';
 import useLeadActions from './useLeadActions';
 
 vi.mock('../../leads.api', () => ({ deleteLead: vi.fn(), updateLeadStatus: vi.fn() }));
@@ -51,4 +52,33 @@ it('removes a confirmed lead from cached table variants', async () => {
 
   expect(deleteLead).toHaveBeenCalledWith(lead.id);
   expect(client.getQueryData<{ pages: { rows: Lead[] }[] }>(variantKey)?.pages[0].rows).toEqual([otherLead]);
+});
+
+it('reconciles signup rows without refetching existing leads or cohorts and invalidates only the created youth list', async () => {
+  const { client, wrapper } = setup();
+  const leadVariant = seedVariant(client, [lead, otherLead]);
+  const cohort: ProgramCohort = {
+    id: 'cohort-1', programId: 'program-1', programName: 'Future Ready', enrollmentRequired: true,
+    minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycleName: 'Summer', name: 'Summer',
+    startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active', enrolledCount: 1,
+    nextSessionAt: null, nextSessionId: null, averageAttendance: null,
+    attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+  };
+  const cohortVariant = ['cohorts', 'table', { programId: 'program-1' }];
+  const untouched = { ...cohort, id: 'cohort-2' };
+  client.setQueryData(cohortVariant, { pages: [{ rows: [{ ...cohort, enrolledCount: 0 }, untouched], nextCursor: null }], pageParams: [null] });
+  const onLeadSynced = vi.fn();
+  const invalidate = vi.spyOn(client, 'invalidateQueries');
+  const { result } = renderHook(() => useLeadActions({ tableQueryKey: tableKey, onLeadSynced }), { wrapper });
+  const signedUp = { ...lead, status: 'signed_up' as const, convertedYouthId: 'youth-1' };
+
+  await act(async () => result.current.reconcileSignUp({ lead: signedUp, updatedCohort: cohort }));
+
+  expect(client.getQueryData<{ pages: { rows: Lead[] }[] }>(leadVariant)?.pages[0].rows).toEqual([signedUp, otherLead]);
+  expect(client.getQueryData<{ pages: { rows: ProgramCohort[] }[] }>(cohortVariant)?.pages[0].rows).toEqual([cohort, untouched]);
+  expect(client.getQueryData<{ pages: { rows: ProgramCohort[] }[] }>(cohortVariant)?.pages[0].rows[1]).toBe(untouched);
+  expect(onLeadSynced).toHaveBeenCalledWith(signedUp);
+  expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+    ['youth', 'table'], ['cohorts', 'options'],
+  ]);
 });

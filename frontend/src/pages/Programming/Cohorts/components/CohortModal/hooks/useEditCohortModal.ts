@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
-import { updateCohort } from '../../../cohorts.api';
+import { updateCohort, type CohortMutationResult } from '../../../cohorts.api';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { ProgramCohort } from '../../../types';
@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseEditCohortModalOptions {
   cohort: ProgramCohort | null;
-  onUpdated: () => void | Promise<void>;
+  onUpdated: (result: CohortMutationResult) => void | Promise<void>;
 }
 
 export function useEditCohortModal({ cohort, onUpdated }: UseEditCohortModalOptions) {
@@ -34,8 +34,8 @@ export function useEditCohortModal({ cohort, onUpdated }: UseEditCohortModalOpti
     setStatusMessage('Updating cohort...');
 
     try {
-      await updateCohort(cohort.id, { cycleId });
-      await onUpdated();
+      const saved = await updateCohort(cohort.id, { cycleId });
+      await onUpdated(saved);
       setStatusMessage('Cohort updated successfully.');
       setStatus('success');
     } catch (cause) {

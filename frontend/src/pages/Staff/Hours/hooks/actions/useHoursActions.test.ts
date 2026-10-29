@@ -6,6 +6,8 @@ import {
   setHours,
   updateHoursPlacement,
 } from '../../hours.api';
+import { makeTask } from '../../../../../tests/factories/task';
+import type { HoursTableRow } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import {
   createQueryClientWrapper,
@@ -44,17 +46,29 @@ function renderActions() {
   return { ...rendered, client, onEntryRemoved, upsert, remove };
 }
 
-const saved = {
+const entry = {
   id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
   cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
   category: 'meeting' as const, categoryLabel: 'Meeting', taskId: 'task-1', taskTitle: 'Prepare workshop',
   sessionId: null, sessionLabel: null, workDate: '2026-08-19', hours: 2, note: 'Planning',
 };
 
+const tableRow: HoursTableRow = {
+  id: entry.id, resourceId: entry.staffId, date: entry.workDate,
+  staffFirstName: 'Zoe', staffLastName: 'Wilson', staffName: 'Zoe Wilson',
+  item: makeHoursItem({ ...entry }),
+};
+const updatedTask = makeTask({ hoursLogged: 2 });
+const saved = { ...entry, tableRow, updatedTasks: [updatedTask] };
+
+function cacheRows<T>(rows: T[]) {
+  return { pages: [{ rows, nextCursor: null }], pageParams: [undefined] };
+}
+
 describe('useHoursActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('creates and edits through the exact adapter signatures then refreshes every affected owner', async () => {
+  it('invalidates only the creation list and replaces edits across cached variants without disturbing unrelated rows', async () => {
     vi.mocked(setHours).mockResolvedValue(saved);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -64,25 +78,41 @@ describe('useHoursActions', () => {
 
     await act(async () => rendered.result.current.saveHours(input));
     expect(setHours).toHaveBeenLastCalledWith(input);
-    await act(async () => rendered.result.current.saveHours(input, 'entry-1'));
-    expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
-    expect(rendered.upsert).toHaveBeenCalledWith(
-      'staff-1',
-      '2026-08-19',
-      expect.objectContaining({ id: 'entry-1', categoryLabel: 'Meeting' }),
-    );
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
+    invalidate.mockClear();
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'dashboard'] });
+    const old = { ...tableRow, item: makeHoursItem({ id: tableRow.id, hours: 1 }) };
+    const untouched = { ...tableRow, id: 'untouched' };
+    const firstKey = ['hours', 'table', { sort: 'date' }];
+    const secondKey = ['hours', 'table', { search: 'Planning' }];
+    rendered.client.setQueryData(firstKey, cacheRows([old, untouched]));
+    rendered.client.setQueryData(secondKey, cacheRows([old]));
+    rendered.client.setQueryData(['tasks', 'table', {}], cacheRows([makeTask()]));
+
+    await act(async () => rendered.result.current.saveHours(input, 'entry-1'));
+
+    expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
+    expect(rendered.client.getQueryData(firstKey)).toEqual(cacheRows([tableRow, untouched]));
+    expect(rendered.client.getQueryData<ReturnType<typeof cacheRows<HoursTableRow>>>(firstKey)?.pages[0].rows[1]).toBe(untouched);
+    expect(rendered.client.getQueryData(secondKey)).toEqual(cacheRows([tableRow]));
+    expect(rendered.client.getQueryData(['tasks', 'table', {}])).toEqual(cacheRows([updatedTask]));
+    expect(rendered.upsert).toHaveBeenLastCalledWith('staff-1', '2026-08-19', tableRow.item);
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+      ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
+    ]);
   });
 
   it('owns confirmation and deletion reconciliation together', async () => {
-    vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted' });
+    vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted', updatedTasks: [updatedTask] });
     const rendered = renderActions();
     const target = {
       resourceId: 'staff-1', date: '2026-08-19', item: makeHoursItem({ id: 'entry-1', taskId: 'task-1' }),
     };
+
+    const untouched = { ...tableRow, id: 'untouched' };
+    rendered.client.setQueryData(['hours', 'table', {}], cacheRows([tableRow, untouched]));
+    rendered.client.setQueryData(['tasks', 'table', {}], cacheRows([makeTask()]));
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
 
     act(() => rendered.result.current.requestDelete(target));
     expect(rendered.result.current.confirmAction).toEqual(expect.objectContaining({ title: 'Delete logged hours' }));
@@ -91,6 +121,11 @@ describe('useHoursActions', () => {
     expect(deleteHours).toHaveBeenCalledWith('entry-1');
     expect(rendered.remove).toHaveBeenCalledWith('entry-1');
     expect(rendered.onEntryRemoved).toHaveBeenCalledWith('entry-1');
+    expect(rendered.client.getQueryData(['hours', 'table', {}])).toEqual(cacheRows([untouched]));
+    expect(rendered.client.getQueryData(['tasks', 'table', {}])).toEqual(cacheRows([updatedTask]));
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+      ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
+    ]);
   });
 
   it('blocks another action for the same entry while one is pending', async () => {
@@ -128,6 +163,28 @@ describe('useHoursActions', () => {
 
     expect(rendered.result.current.isEntryPending(item.id)).toBe(false);
     expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', { workDate: '2026-08-19' });
+  });
+
+  it('reconciles placement from the authoritative row and task without list invalidation', async () => {
+    vi.mocked(updateHoursPlacement).mockResolvedValue(saved);
+    const rendered = renderActions();
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
+    const stale = { ...tableRow, item: makeHoursItem({ id: tableRow.id, note: 'Stale note' }) };
+    rendered.client.setQueryData(['hours', 'table', {}], cacheRows([stale]));
+    rendered.client.setQueryData(['tasks', 'table', {}], cacheRows([makeTask()]));
+
+    await act(async () => rendered.result.current.moveHours({
+      item: stale.item,
+      source: { resourceId: stale.resourceId, date: '2026-08-18' },
+      destination: { resourceId: stale.resourceId, date: saved.workDate },
+    }));
+
+    expect(rendered.client.getQueryData(['hours', 'table', {}])).toEqual(cacheRows([saved.tableRow]));
+    expect(rendered.client.getQueryData(['tasks', 'table', {}])).toEqual(cacheRows([updatedTask]));
+    expect(rendered.upsert).toHaveBeenLastCalledWith(saved.staffId, saved.workDate, saved.tableRow.item);
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+      ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
+    ]);
   });
 
   it('restores an optimistic move and releases the entry after placement fails', async () => {

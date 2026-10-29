@@ -6,7 +6,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -47,8 +47,8 @@ const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 
 export default function Hours() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions, role } = useAuth();
@@ -165,7 +165,7 @@ export default function Hours() {
       onRowSelect={selection.selectRow}
       onSortingChange={preferences.table.setSorting}
       onColumnWidthsChange={preferences.table.setColumnWidths}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -183,7 +183,7 @@ export default function Hours() {
       onDelete={actions.requestDelete}
       onAdd={openAddHoursModal}
       onMove={actions.moveHours}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -244,7 +244,7 @@ export default function Hours() {
             onClearAll={preferences.filters.clear}
           /> : undefined}
       />
-      <PageErrorOverlay errors={[
+      <PageMessageOverlay messages={[
         pageData.optionsError ? {
           message: 'Could not load hour options.',
           details: 'Staff, programs, hour categories, and hour types could not be loaded.',
@@ -258,13 +258,13 @@ export default function Hours() {
         viewError,
         dashboardError,
       ]} />
-      {!preferences.ready ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading saved filters…</p> : <PageBody
+      {!preferences.ready ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading page preferences…</p> : <PageBody
         ariaLabel="Hours overview and entries"
         dashboard={<HoursDashboard
           queryKey={HOURS_QUERY_KEY}
           staff={selection.selectedStaff}
           cycle={overviewCycle}
-          onErrorChange={setDashboardError}
+          onMessageChange={setDashboardError}
         />}
         {...viewContent}
       />}

@@ -50,6 +50,5 @@ export async function handleUpdateHoursPlacement(req: Request, res: Response) {
 }
 
 export async function handleDeleteHours(req: Request, res: Response) {
-  await deleteHours(req.params.id, (req as AuthRequest).user!);
-  res.status(200).json({ message: 'Logged hours deleted' });
+  res.status(200).json(await deleteHours(req.params.id, (req as AuthRequest).user!));
 }

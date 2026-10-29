@@ -1,5 +1,6 @@
+import tableRefreshMessage from '../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../common/components/Table/Table.types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadSortKey } from '../../types';
@@ -16,15 +17,15 @@ interface LeadTableProps {
   onLeadSelect: (lead: Lead) => void;
   onSortingChange: (sorting: ListSort<LeadSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function LeadTable({
   queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths,
-  selectedLeadId, onLeadSelect, onSortingChange, onColumnWidthsChange, onErrorChange,
+  selectedLeadId, onLeadSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: LeadTableProps) {
   const query = useLeadTableData(queryKey, filters, sorting);
-  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
+  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   const hasFilters = Boolean(filters && (
     filters.search?.trim()
     || filters.statuses?.length

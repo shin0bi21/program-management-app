@@ -26,7 +26,7 @@ const task = { id: 'task-1', title: 'Prepare workshop' } as Task;
 describe('TaskDashboard', () => {
   it('passes selection and callbacks to the overview and hours cards', () => {
     const onLogHours = vi.fn();
-    const onErrorChange = vi.fn();
+    const onMessageChange = vi.fn();
     render(<TaskDashboard
       queryKey={['tasks']}
       resourceId="staff-1"
@@ -34,13 +34,13 @@ describe('TaskDashboard', () => {
       today="2026-08-11"
       selectedTask={task}
       onLogHours={onLogHours}
-      onErrorChange={onErrorChange}
+      onMessageChange={onMessageChange}
     />);
 
     expect(screen.getByText('Task overview card')).toBeInTheDocument();
     expect(screen.getByText('Task hours card')).toBeInTheDocument();
     expect(overviewProps.current).toEqual({
-      queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11', onErrorChange,
+      queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11', onMessageChange,
     });
     expect(hoursProps.current).toEqual({ task, onLogHours });
   });

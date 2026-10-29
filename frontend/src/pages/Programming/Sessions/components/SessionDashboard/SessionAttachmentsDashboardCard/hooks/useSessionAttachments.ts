@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
 import type { CohortSession, SessionAttachment } from '../../../../types';
 
-export function useSessionAttachments({ queryKey, session, onErrorChange }: {
+export function useSessionAttachments({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
   const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
   const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
@@ -20,7 +20,7 @@ export function useSessionAttachments({ queryKey, session, onErrorChange }: {
     enabled: session !== null,
   });
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: query.refetch }), [query.refetch]);
-  usePageErrorReporter(onErrorChange, query.error ? 'Could not load session attachments.' : null, retryAction);
+  usePageMessageReporter(onMessageChange, query.error ? 'Could not load session attachments.' : null, retryAction);
 
   useEffect(() => {
     setAttachmentTarget(null);

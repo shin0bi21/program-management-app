@@ -7,7 +7,7 @@ import { makeCohortSession } from '../../../../../tests/factories/session';
 import { buildDayPeriod } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import type { Program } from '../../../../../common/features/programs/types';
-import type { CohortSession, SessionListFilters } from '../../types';
+import type { CohortSession, SessionCalendarCache, SessionListFilters } from '../../types';
 import SessionCalendar from './SessionCalendar';
 import SessionItem from './SessionItem/SessionItem';
 
@@ -32,9 +32,11 @@ const period = buildDayPeriod(new Date(2026, 7, 10));
 function renderCalendar(filters: SessionListFilters = {}, editable = true) {
   const callbacks = {
     onSessionSelect: vi.fn(), onSessionEdit: vi.fn(), onSessionDelete: vi.fn(),
-    onAddSession: vi.fn(), onProgramSelect: vi.fn(), onSessionsLoaded: vi.fn(), onErrorChange: vi.fn(),
+    onAddSession: vi.fn(), onProgramSelect: vi.fn(), onSessionsLoaded: vi.fn(), onMessageChange: vi.fn(),
   };
+  const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
   const rendered = render(<SessionCalendar
+    calendarCacheRef={calendarCacheRef}
     queryKey={['sessions', 'calendar']}
     filters={filters}
     programs={programs}
@@ -45,7 +47,7 @@ function renderCalendar(filters: SessionListFilters = {}, editable = true) {
     onSessionEdit={editable ? callbacks.onSessionEdit : undefined}
     onSessionDelete={editable ? callbacks.onSessionDelete : undefined}
   />);
-  return { ...rendered, ...callbacks };
+  return { ...rendered, ...callbacks, calendarCacheRef };
 }
 
 function buildSessionItem(): ReactElement<Parameters<typeof SessionItem>[0]> {
@@ -123,10 +125,14 @@ describe('SessionCalendar', () => {
   it('enables future session moves within the same program and reconciles the visible buffer', async () => {
     const future = makeCohortSession({ startsAt: '2099-08-10T21:00:00Z', endsAt: '2099-08-10T23:00:00Z' });
     const updated = { ...future, cycleId: 'cycle-1', startsAt: '2099-08-11T21:00:00Z', endsAt: '2099-08-11T23:00:00Z' };
-    const move = vi.fn().mockResolvedValue(updated);
+    const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
+    const move = vi.fn().mockImplementation(async () => {
+      calendarCacheRef.current.upsert(updated);
+      return updated;
+    });
     api.getSessions.mockResolvedValue([future]);
     const day = buildDayPeriod(new Date(2099, 7, 10));
-    render(<SessionCalendar queryKey={['sessions', 'calendar']} filters={{}} programs={programs}
+    render(<SessionCalendar calendarCacheRef={calendarCacheRef} queryKey={['sessions', 'calendar']} filters={{}} programs={programs}
       selectedSessionId={future.id} onSessionSelect={vi.fn()} onSessionMove={move} />);
     act(() => calendarState.props!.onInitialPeriods!([day]));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([future]));
@@ -144,13 +150,29 @@ describe('SessionCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([updated]));
   });
 
+  it('reconciles saved rows through its cache adapter and excludes an unselected cycle', async () => {
+    const { calendarCacheRef } = renderCalendar({ cycleIds: ['cycle-1'] });
+    act(() => calendarState.props!.onInitialPeriods!([period]));
+    await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([session]));
+
+    act(() => calendarCacheRef.current.upsert(makeCohortSession({ cycleId: 'cycle-2' })));
+    await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
+
+    const saved = makeCohortSession({ theme: 'Authoritative edit' });
+    act(() => calendarCacheRef.current.upsert(saved));
+    await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([saved]));
+
+    act(() => calendarCacheRef.current.remove(saved.id));
+    await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
+  });
+
   it('reports load failure and retries the range through the page error owner', async () => {
     api.getSessions.mockRejectedValueOnce(new Error('Could not load sessions'));
     const rendered = renderCalendar();
     act(() => calendarState.props!.onInitialPeriods!([period]));
 
     expect(await screen.findByText('Sessions calendar unavailable')).toBeInTheDocument();
-    await waitFor(() => expect(rendered.onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(rendered.onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Could not load sessions', action: expect.objectContaining({ label: 'Retry' }),
     })));
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

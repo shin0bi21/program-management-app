@@ -13,6 +13,7 @@ export default defineConfig({
   output: 'static',
   redirects: {
     '/workflows/': '/#documentation',
+    '/frontend/pages/message-overlays/': '/frontend/components/message-overlays/',
     '/frontend/scaffolding/': '/frontend/pages/scaffolding/',
     '/website/': '/workflows/local-development/',
     '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',

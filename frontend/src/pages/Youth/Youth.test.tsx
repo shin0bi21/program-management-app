@@ -174,6 +174,7 @@ describe('Youth', () => {
         lastAttendedOn: '2026-07-21',
         cohorts: [{
           id: 'cohort-1',
+    cycleId: 'cycle-1',
           name: 'Summer 2026',
           programId: 'program-1',
           programName: 'Soft Skills',
@@ -220,7 +221,7 @@ describe('Youth', () => {
   it('opens the cohort attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
       cohorts: [{
-        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
@@ -260,7 +261,7 @@ describe('Youth', () => {
   it('opens youth-centric attendance management from a cohort summary', async () => {
     const profile = makeYouthProfile({
       cohorts: [{
-        id: 'cohort-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',

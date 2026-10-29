@@ -33,7 +33,7 @@ const filters: UserFilters = { search: 'sam', roles: ['staff'], statuses: ['acti
 const sorting = { key: 'name' as const, direction: 'asc' as const };
 const onSortingChange = vi.fn();
 const onColumnWidthsChange = vi.fn();
-const onErrorChange = vi.fn();
+const onMessageChange = vi.fn();
 const baseProps = {
   queryKey,
   filters,
@@ -43,7 +43,7 @@ const baseProps = {
   columnWidths: { name: 240 },
   onSortingChange,
   onColumnWidthsChange,
-  onErrorChange,
+  onMessageChange,
 };
 
 describe('UserTable', () => {
@@ -96,7 +96,7 @@ describe('UserTable', () => {
     expect(tableProps.current?.unavailable).toBeUndefined();
     expect(tableProps.current?.data).toBe(tableState.rows);
     expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
-    expect(onErrorChange).toHaveBeenLastCalledWith({
+    expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load more accounts.',
       action: { label: 'Retry', onClick: tableState.retryNextPage },
     });
@@ -109,7 +109,7 @@ describe('UserTable', () => {
     expect(tableProps.current).toEqual(expect.objectContaining({
       unavailable: { title: 'Accounts unavailable', onRetry: tableState.retry },
     }));
-    expect(onErrorChange).toHaveBeenLastCalledWith({
+    expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load accounts.',
       action: { label: 'Retry', onClick: tableState.retry },
     });

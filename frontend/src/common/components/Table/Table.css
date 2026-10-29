@@ -217,3 +217,17 @@
   padding: 0.5rem;
   text-align: center;
 }
+
+.table--loading {
+  height: 100%;
+}
+
+.table--loading thead {
+  height: 1px;
+}
+
+.table-loading-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

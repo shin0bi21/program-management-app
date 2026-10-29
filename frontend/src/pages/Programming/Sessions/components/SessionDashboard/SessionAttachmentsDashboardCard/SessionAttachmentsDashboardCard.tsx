@@ -5,7 +5,7 @@ import type { CohortSession } from '../../../types';
 import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentModal';
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';
-import { type PageErrorChangeHandler } from '../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import { useSessionAttachments } from './hooks/useSessionAttachments';
 
@@ -13,14 +13,14 @@ export default function SessionAttachmentsDashboardCard({
   queryKey,
   session,
   canWrite,
-  onErrorChange,
+  onMessageChange,
 }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
   canWrite: boolean;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
-  const workflow = useSessionAttachments({ queryKey, session, onErrorChange });
+  const workflow = useSessionAttachments({ queryKey, session, onMessageChange });
   const { query, attachmentTarget, editAttachment, detailAttachment, confirmAction, loadAttachments, openAdd, openEdit, closeEditor, setDetailAttachment, requestDelete, setConfirmAction } = workflow;
 
   return <>

@@ -179,10 +179,32 @@ describe('Cohort roster eligibility', () => {
   it('accepts both exact age boundaries', async () => {
     const response = await enroll([youth.minimum, youth.maximum]);
     expect(response.status).toBe(201);
-    expect(response.body).toEqual(expect.arrayContaining([
+    expect(response.body.enrollments).toEqual(expect.arrayContaining([
       expect.objectContaining({ youthId: youth.minimum }),
       expect.objectContaining({ youthId: youth.maximum }),
     ]));
+    const listed = await request(app).get('/api/cohorts')
+      .query({ programId: boundedProgramId, limit: 50 })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(listed.body.rows.find((cohort: { id: string }) => cohort.id === boundedId)).toEqual(response.body.cohort);
+    expect(response.body.updatedYouth).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: youth.minimum }), expect.objectContaining({ id: youth.maximum }),
+    ]));
+  });
+
+  it('returns canonical roster changes without exposing Youth rows to enrollment-only tokens', async () => {
+    const token = generateToken(adminId, 'admin', undefined, ['write:enrollments']);
+    const enrolled = await request(app).post(`/api/cohorts/${unboundedId}/enrollments`)
+      .set('Authorization', `Bearer ${token}`).send({ youthIds: [youth.eligible] });
+    expect(enrolled.status).toBe(201);
+    expect(enrolled.body.cohort.id).toBe(unboundedId);
+    expect(enrolled.body.updatedYouth).toEqual([]);
+
+    const withdrawn = await request(app).patch(`/api/cohorts/${unboundedId}/enrollments/${youth.eligible}/withdraw`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(withdrawn.status).toBe(200);
+    expect(withdrawn.body.cohort.enrolledCount).toBe(enrolled.body.cohort.enrolledCount - 1);
+    expect(withdrawn.body.updatedYouth).toEqual([]);
   });
 
   it('waits for a concurrent program edit and validates its committed age bounds', async () => {

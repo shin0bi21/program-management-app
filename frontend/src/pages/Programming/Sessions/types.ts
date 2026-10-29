@@ -4,6 +4,7 @@ import type { AttendanceStatus } from '../../../common/features/AttendanceStatus
 export interface CohortSession {
   id: string;
   cohortId: string;
+  cycleId: string;
   sessionTypeId: string;
   sessionTypeName: string;
   theme: string;
@@ -107,4 +108,9 @@ export interface SessionAttachment {
   updatedAt: string;
   createdByName: string | null;
   youth: SessionAttachmentYouth[];
+}
+
+export interface SessionCalendarCache {
+  upsert: (session: CohortSession) => void;
+  remove: (sessionId: string) => void;
 }

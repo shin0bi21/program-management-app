@@ -1,5 +1,6 @@
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { HoursFilters, HoursTableRow } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -17,16 +18,16 @@ interface HoursTableProps {
   onRowSelect: (row: HoursTableRow) => void;
   onSortingChange: (sorting: ListSort<HoursSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function HoursTable({
   queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
-  onColumnWidthsChange, onErrorChange,
+  onColumnWidthsChange, onMessageChange,
 }: HoursTableProps) {
   const query = useHoursTableData(queryKey, filters, sorting);
-  usePageErrorReporter(onErrorChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry });
+  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table
     ariaLabel="Hours entries"

@@ -17,6 +17,25 @@ See the [API source map](api.md#find-an-api-owner) for domain owners and
 [program-cycle assignments](api.md#program-cycle-assignments) for a transaction
 that spans several related services.
 
+## Serve Table Collections
+
+A table collection returns `{ rows, nextCursor }`, using the shared
+[cursor schema](../../backend/src/validation/listQuerySchemas.ts) and
+[pagination helpers](../../backend/src/services/shared/cursorPagination.ts). Default to
+50 rows, accept at most 50, and fetch one extra row to determine whether another page
+exists. Apply permission scope, search, and filters before the cursor and limit.
+
+Order by the selected server sort value plus a durable ID tie-breaker. Use the same
+values and direction in the cursor predicate; names that compare equally must not
+skip or duplicate rows across pages. Reject malformed cursors and unsupported sort
+keys at the request boundary.
+
+Keep full-record selector lookups and small reference projections separate from table
+collections. Existing combined endpoints may retain array lookups, but table adapters
+must request the bounded cursor contract explicitly. A small current row count is not
+an exception to table pagination. Share the canonical row projection with mutation
+responses, following the frontend [row contract](../frontend/components/table-rows.md).
+
 ## Write the Public Operations First
 
 Order a main service so it is easy to scan:

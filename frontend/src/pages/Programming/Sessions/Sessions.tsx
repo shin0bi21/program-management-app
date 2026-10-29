@@ -6,7 +6,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -35,8 +35,8 @@ const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Programming() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const [dashboardErrors, setDashboardErrors] = useState<PageErrorItem[]>([]);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [dashboardErrors, setDashboardErrors] = useState<PageMessageValue[]>([]);
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
@@ -88,7 +88,7 @@ export default function Programming() {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
-  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
+  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
   const applyFilter = (category: string, selected: string[]) => {
     selection.clearSelectedSession();
     setSelectedProgramId(null);
@@ -163,7 +163,7 @@ export default function Programming() {
     onSessionSelect={selectSession}
     onSortingChange={tableControls.setSorting}
     onColumnWidthsChange={tableControls.setColumnWidths}
-    onErrorChange={setViewError}
+    onMessageChange={setViewError}
   />;
 
   const cycleState = <p className="page-empty">{cyclesError ? 'Cycles unavailable.' : 'No cycles available.'}</p>;
@@ -183,12 +183,13 @@ export default function Programming() {
       setSelectedProgramId(session.programId);
       selection.selectCalendarSession(session);
     }}
+    calendarCacheRef={actions.calendarCacheRef}
     pendingSessionIds={actions.pendingSessionIds}
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
     onSessionEdit={canWriteSessions ? setEditTarget : undefined}
     onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
     onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
-    onErrorChange={setViewError}
+    onMessageChange={setViewError}
   />;
   const viewContent = view === 'table' ? { table: hasCycleBounds ? table : cycleState } : { calendar };
 
@@ -246,7 +247,7 @@ export default function Programming() {
             ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={tableControls.hiddenColumns} onHiddenColumnKeysChange={tableControls.setHiddenColumns} />
             : undefined}
         />
-        <PageErrorOverlay errors={[
+        <PageMessageOverlay messages={[
           controls.error,
           actions.moveError,
           referencesError,
@@ -256,7 +257,7 @@ export default function Programming() {
           ...dashboardErrors,
         ]} />
 
-        {!filtersReady ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading saved filters…</p> : <PageBody
+        {!filtersReady ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading page preferences…</p> : <PageBody
           ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
           dashboard={dashboard}
           {...viewContent}
@@ -266,14 +267,14 @@ export default function Programming() {
       <SessionAttendanceModal
         session={attendanceTarget}
         onClose={closeSessionAttendanceModal}
-        onSaved={actions.refreshAttendance}
+        onSaved={actions.syncAttendance}
       />
 
       <EditSessionModal
         session={editTarget}
         timezone={programs.find(program => program.id === editTarget?.programId)?.timezone ?? 'America/Toronto'}
         onClose={closeEditSessionModal}
-        onUpdated={actions.refreshSessionQueries}
+        onUpdated={actions.syncUpdatedSession}
       />
 
       {addSessionTarget && <AddSessionModal
@@ -281,17 +282,13 @@ export default function Programming() {
         initialProgramId={addSessionTarget.programId}
         initialDate={addSessionTarget.date}
         onClose={closeAddSessionModal}
-        onSaved={async () => {
-          await Promise.all([actions.refreshSessionQueries(), refreshCohorts()]);
-        }}
+        onSaved={actions.refreshCreatedSessions}
       />}
 
       {canReadCohorts && <ManageRosterModal
         cohort={rosterTarget}
         onClose={() => setRosterTarget(null)}
-        onSuccess={async () => {
-          await actions.refreshAttendance();
-        }}
+        onSuccess={saved => setRosterTarget(saved.cohort)}
       />}
       {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
       <ConfirmModal

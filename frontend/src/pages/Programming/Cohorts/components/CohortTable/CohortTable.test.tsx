@@ -34,7 +34,7 @@ const sorting = { key: 'start' as const, direction: 'desc' as const };
 const onRowSelect = vi.fn();
 const onSortingChange = vi.fn();
 const onColumnWidthsChange = vi.fn();
-const onErrorChange = vi.fn();
+const onMessageChange = vi.fn();
 const baseProps = {
   queryKey,
   filters,
@@ -46,7 +46,7 @@ const baseProps = {
   onRowSelect,
   onSortingChange,
   onColumnWidthsChange,
-  onErrorChange,
+  onMessageChange,
 };
 
 const cohort: ProgramCohort = {
@@ -62,7 +62,7 @@ describe('CohortTable', () => {
     vi.clearAllMocks();
     Object.assign(tableState, {
       rows: [], loading: true, refreshing: false, error: '',
-      hasNextPage: false, loadingNextPage: false,
+      hasNextPage: false, loadingNextPage: false, nextPageError: '',
     });
     tableProps.current = null;
   });
@@ -100,7 +100,7 @@ describe('CohortTable', () => {
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'end', direction: 'asc' });
   });
 
-  it('clears selection only after loaded rows confirm the selected cohort is missing', () => {
+  it('preserves domain selection when the selected cohort leaves the current page', () => {
     const view = render(<CohortTable {...baseProps} />);
     expect(onRowSelect).not.toHaveBeenCalled();
 
@@ -110,8 +110,16 @@ describe('CohortTable', () => {
 
     Object.assign(tableState, { rows: [] });
     view.rerender(<CohortTable {...baseProps} />);
-    expect(onRowSelect).toHaveBeenCalledOnce();
-    expect(onRowSelect).toHaveBeenCalledWith(null);
+    expect(onRowSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps loaded rows and exposes explicit next-page retry in the table and overlay', () => {
+    Object.assign(tableState, { rows: [cohort], loading: false, nextPageError: 'Next page failed' });
+    render(<CohortTable {...baseProps} />);
+
+    expect(tableProps.current?.data).toEqual([cohort]);
+    expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
+    expect(onMessageChange).toHaveBeenLastCalledWith({ message: 'Next page failed', action: { label: 'Retry', onClick: tableState.retryNextPage } });
   });
 
   it('maps query failures to the unavailable state and page error retry action', () => {
@@ -121,7 +129,7 @@ describe('CohortTable', () => {
     expect(tableProps.current).toEqual(expect.objectContaining({
       unavailable: { title: 'Cohorts unavailable', onRetry: tableState.retry },
     }));
-    expect(onErrorChange).toHaveBeenLastCalledWith({
+    expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load cohorts.',
       action: { label: 'Retry', onClick: tableState.retry },
     });

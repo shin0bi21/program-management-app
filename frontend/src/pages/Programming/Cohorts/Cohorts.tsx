@@ -6,7 +6,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../common/components/DashboardCard/DashboardCard';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
@@ -17,15 +17,14 @@ import useCohortTable from './components/CohortTable/hooks/useCohortTable';
 import EditCohortModal from './components/CohortModal/EditCohortModal';
 import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
 import useCohortActions from './hooks/actions/useCohortActions';
+import { COHORT_TABLE_QUERY_KEY } from './hooks/actions/cohortCache';
 import useCohortData from './hooks/data/useCohortData';
 import useCohortSelection from './hooks/selection/useCohortSelection';
 import { useCohortControls } from './hooks/useCohortControls';
 import './Cohorts.css';
 
-const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
-
 export default function Cohorts() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
@@ -57,6 +56,7 @@ export default function Cohorts() {
   const actions = useCohortActions({
     tableQueryKey: COHORT_TABLE_QUERY_KEY,
     onCohortRemoved: selection.removeSelectedCohort,
+    onCohortSynced: selection.syncSelectedCohort,
   });
 
   // Add cohort modal.
@@ -120,7 +120,7 @@ export default function Cohorts() {
           ) : undefined}
         />
 
-        <PageErrorOverlay errors={[programsError, cyclesError, preferenceError, viewError]} />
+        <PageMessageOverlay messages={[programsError, cyclesError, preferenceError, viewError]} />
         {!controlsReady ? <p role="status">Loading saved cohort preferences…</p> : <PageBody
           ariaLabel="Programming cohorts and overview"
           table={
@@ -135,7 +135,7 @@ export default function Cohorts() {
               onSortingChange={table.setSorting}
               columnWidths={table.columnWidths}
               onColumnWidthsChange={table.setColumnWidths}
-              onErrorChange={setViewError}
+              onMessageChange={setViewError}
             />
           }
           dashboard={
@@ -176,13 +176,13 @@ export default function Cohorts() {
         cycles={cycles}
         initialProgramId={selectedProgramId}
         onClose={closeCohortModal}
-        onCreated={actions.refreshCohorts}
+        onCreated={actions.cohortCreated}
       />
 
       <ManageRosterModal
         cohort={rosterTarget}
         onClose={closeRosterModal}
-        onSuccess={actions.refreshRoster}
+        onSuccess={result => selection.syncSelectedCohort(result.cohort)}
       />
 
       {reportTarget && <YouthReportModal cohort={reportTarget} onClose={closeReportModal} />}
@@ -191,7 +191,7 @@ export default function Cohorts() {
         cohort={editCohortTarget}
         cycles={cycles}
         onClose={closeEditCohortModal}
-        onUpdated={actions.refreshCohorts}
+        onUpdated={actions.syncCohort}
       />
 
       <ConfirmModal
