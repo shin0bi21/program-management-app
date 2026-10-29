@@ -46,7 +46,7 @@ export default function CohortTable({
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? { title: 'Cohorts unavailable', onRetry: tableData.retry } : undefined}
+    unavailable={tableData.error && !tableData.rows.length ? { title: 'Cohorts unavailable', onRetry: tableData.retry } : undefined}
     keyExtractor={cohort => cohort.id}
     selectedKey={selectedKey}
     onRowSelect={cohort => onRowSelect(cohort)}

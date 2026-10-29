@@ -40,7 +40,7 @@ export default function TaskTable({
     data={query.rows}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Tasks unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.rows.length ? { title: 'Tasks unavailable', onRetry: query.retry } : undefined}
     emptyMessage={filters.search || hasFilters ? 'No tasks match these filters' : 'No tasks assigned'}
     keyExtractor={task => task.id}
     selectedKey={selectedTaskId}
