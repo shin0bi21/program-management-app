@@ -59,9 +59,19 @@ export default function HoursCalendar({
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageErrorReporter(onErrorChange, calendar.error, retryAction);
   useEffect(() => {
-    calendarCacheRef.current = { upsert: calendar.upsertItem, remove: calendar.removeItem };
+    calendarCacheRef.current = {
+      upsert: (resourceId, date, item) => {
+        // A move can resolve to an unselected cycle inside the displayed date span.
+        if (filters.cycleIds?.length && !filters.cycleIds.includes(item.cycleId)) {
+          calendar.removeItem(item.id);
+          return;
+        }
+        calendar.upsertItem(resourceId, date, item);
+      },
+      remove: calendar.removeItem,
+    };
     return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef]);
+  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef, filters.cycleIds]);
   const visibleResources = useMemo(() => filters.staffIds.length
     ? resources.filter(resource => filters.staffIds.includes(resource.id))
     : resources, [filters.staffIds, resources]);
@@ -77,16 +87,16 @@ export default function HoursCalendar({
     source: { resourceId: row.id, date: originalRange.start },
     destination: { resourceId: destinationRow.id, date: nextRange.start },
   });
-  const renderHoursItem = useCallback((resource: StaffResource, date: string, item: HoursEntry) => (
+  const buildItem = useCallback(({ row, range, data, calendar: itemCalendar }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
     <HoursItem
-      item={item}
-      onEdit={canWrite && resource.writable && !isEntryPending(item.id) ? () => onEdit({ resourceId: resource.id, date, item }) : undefined}
-      onDelete={canWrite && resource.writable && !isEntryPending(item.id) ? () => onDelete({ resourceId: resource.id, date, item }) : undefined}
+      calendar={itemCalendar}
+      item={data.item}
+      onEdit={canWrite && row.writable && !isEntryPending(data.item.id)
+        ? () => onEdit({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
+      onDelete={canWrite && row.writable && !isEntryPending(data.item.id)
+        ? () => onDelete({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
     />
   ), [canWrite, isEntryPending, onDelete, onEdit]);
-  const buildItem = useCallback(({ row, range, data }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
-    renderHoursItem(row, range.start, data.item)
-  ), [renderHoursItem]);
   const openCellEntry = useCallback((
     { row, period }: CalendarCellContext<StaffResource, HoursCalendarItem>,
     source: 'regular' | 'task' | 'session',
@@ -100,6 +110,7 @@ export default function HoursCalendar({
       items={visibleItems}
       getItemRange={data => ({ start: data.date, end: data.date })}
       initialDate={initialDate}
+      dateRange={filters.dateRange}
       positionStorageKey={HOURS_CALENDAR_POSITION_KEY}
       ariaLabel="Staff hours calendar"
       rowHeader="Name"

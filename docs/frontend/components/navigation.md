@@ -15,8 +15,6 @@ Keep route authorization and navigation visibility aligned with the same backend
 
 Desktop and mobile navigation expose one destination contract. Selecting a destination closes the mobile sidebar and every open flyout. A location change also closes stale flyouts. The logo returns to the public homepage; authentication actions remain in the navigation footer.
 
-`useAppNavigation.test.tsx` owns permission capability derivation, group aggregation, route-family and exact-path activity, mutually exclusive menu coordination, closing after navigation or location changes, and mobile-state cleanup. `AppNavigation.test.tsx` owns representative authenticated and unauthenticated navigation trees, destination labels, grouping and order, capability values reaching rendered controls, exact path navigation, homepage/login/logout actions, and mobile open/backdrop wiring.
-
 ## Add or change a visible application destination
 
 1. Mount the lazy route in `frontend/src/app/App.tsx` and protect it with the backend-aligned required permission.
@@ -29,6 +27,11 @@ Public authentication routes and redirect-only aliases remain route concerns and
 
 Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners provide positioning, focus, keyboard navigation, outside/Escape dismissal, and focus return. App navigation owns only which menu is open, its domain destinations, and the callbacks and anchor refs passed to the shared primitives.
 
-For example, the hook test proves that `read:tasks` enables both Tasks and its Staff group. The component test proves that Staff destinations follow their capability and canonical URL, while the Tasks route test does not assert its sidebar entry.
+## Testing
 
-Navigation tests do not repeat shared floating-menu positioning, dismissal, focus or keyboard tests. Use Playwright only when correctness depends on the responsive breakpoint, real sidebar layout, clipping, or portal/focus geometry. The cross-cutting [testing guide](../../workflows/testing.md#frontend-test-ownership) owns runner selection and the narrowest-owner rule.
+`useAppNavigation.test.tsx` covers permission-derived groups, active routes and menu cleanup.
+`AppNavigation.test.tsx` covers destination labels and order, visibility, exact URLs,
+authentication actions and mobile controls. Keep sidebar assertions here rather than in
+route-page tests. Shared floating-menu tests own their mechanics; use browser tests for
+responsive layout, clipping and focus geometry. See
+[Testing](../../workflows/testing.md#frontend-test-ownership).

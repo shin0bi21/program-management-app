@@ -33,7 +33,7 @@ interface HomepageProgramRow {
   programId: string;
   programName: string;
   programDescription: string | null;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
   sessionId: string | null;
@@ -44,7 +44,7 @@ interface HomepageProgramRow {
 export type PublicLeadInput = {
   youthFirstName: string;
   youthLastName: string;
-  age: number;
+  dateOfBirth: string;
   school: string;
   submittedByRole: 'youth' | 'parent' | 'guardian';
   discoverySource: 'online' | 'friend_family' | 'school' | 'community_outreach' | 'other';
@@ -109,7 +109,7 @@ export async function submitPublicLead(data: PublicLeadInput) {
     return createExternalLead({
       youthFirstName: data.youthFirstName.trim(),
       youthLastName: data.youthLastName.trim(),
-      age: data.age,
+      dateOfBirth: data.dateOfBirth,
       school: data.school.trim(),
       discoverySource: data.discoverySource,
       contactPhoneNumber: data.contactPhoneNumber.trim(),
@@ -334,7 +334,7 @@ async function homepagePrograms() {
       p.id AS program_id,
       p.name AS program_name,
       p.description AS program_description,
-      p.roster_mode,
+      p.enrollment_required,
       p.min_age,
       p.max_age,
       ranked.session_id,
@@ -355,7 +355,7 @@ async function homepagePrograms() {
     id: string;
     name: string;
     description: string | null;
-    rosterMode: 'enrolled' | 'open';
+    enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
     sessions: Array<{ id: string; theme: string; startsAt: string }>;
@@ -368,7 +368,7 @@ async function homepagePrograms() {
         id: row.programId,
         name: row.programName,
         description: row.programDescription,
-        rosterMode: row.rosterMode,
+        enrollmentRequired: row.enrollmentRequired,
         minAge: row.minAge,
         maxAge: row.maxAge,
         sessions: [],

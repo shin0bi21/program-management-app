@@ -30,7 +30,7 @@ describe('SessionAttendanceDashboardCard', () => {
   it('uses check-in language for open sessions', () => {
     render(
       <SessionAttendanceDashboardCard
-        session={{ ...session, rosterMode: 'open', attendanceMarkedCount: 5 }}
+        session={{ ...session, enrollmentRequired: false, attendanceMarkedCount: 5 }}
         canWrite={false}
         onManage={vi.fn()}
       />,

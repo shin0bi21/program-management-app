@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import TimelineCalendar from './TimelineCalendar';
 import Item from './components/Item/Item';
 import type { ItemMoveContext, ItemResizeContext, RowItemData } from './types';
@@ -35,26 +34,6 @@ const initialItems: RowItemData<StoryItem> = {
     { id: 'ranged-task', label: 'Ranged task', start: '2026-08-08', end: '2026-08-12' },
   ],
 };
-
-function StoryItemContent({ item }: { item: StoryItem }) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onMouseEnter={() => setDetailsOpen(true)}
-        onMouseLeave={() => setDetailsOpen(false)}
-        onPointerDown={() => setDetailsOpen(false)}
-      >
-        {item.label}
-      </button>
-      {detailsOpen && createPortal(
-        <div role="tooltip">{item.label} details</div>,
-        document.body,
-      )}
-    </>
-  );
-}
 
 function moveItem(
   current: RowItemData<StoryItem>,
@@ -114,19 +93,16 @@ export function Interactive({ withItemShell = false }: { withItemShell?: boolean
         getRowId={row => row.id}
         getItemId={item => item.id}
         renderRow={({ row }) => <span>{row.name}</span>}
-        buildItem={({ data: item }) => withItemShell
-          ? <Item
-            id={item.id}
-            ariaLabel={item.label}
-            summary={item.label}
-            detailTitle={item.label}
-            details={[{ label: 'Details', value: 'Calendar item details' }]}
-            onEdit={() => setItemAction(`edit:${item.id}`)}
-            onDelete={() => setItemAction(`delete:${item.id}`)}
-          />
-          : item.id === 'ranged-task'
-          ? <button type="button">{item.label}</button>
-          : <StoryItemContent item={item} />}
+        buildItem={({ data: item, calendar }) => <Item
+          calendar={calendar}
+          id={item.id}
+          ariaLabel={item.label}
+          summary={item.label}
+          detailTitle={item.label}
+          details={[{ label: 'Details', value: 'Calendar item details' }]}
+          onEdit={withItemShell ? () => setItemAction(`edit:${item.id}`) : undefined}
+          onDelete={withItemShell ? () => setItemAction(`delete:${item.id}`) : undefined}
+        />}
         getItemCapabilities={({ data: item }) => ({
           draggable: true,
           resizable: item.start !== item.end,
@@ -175,7 +151,7 @@ export function RangeLaneSizing() {
       getRowId={row => row.id}
       getItemId={item => item.id}
       renderRow={({ row }) => <span>{row.name}</span>}
-      buildItem={({ data: item }) => <Item id={item.id} ariaLabel={item.label} summary={item.label} detailTitle={item.label} details={[]} />}
+      buildItem={({ data: item, calendar }) => <Item calendar={calendar} id={item.id} ariaLabel={item.label} summary={item.label} detailTitle={item.label} details={[]} />}
     />
   </div>;
 }
@@ -205,7 +181,7 @@ export function ItemDensity() {
       getRowId={row => row.id}
       getItemId={item => item.id}
       renderRow={({ row }) => <span>{row.name}</span>}
-      buildItem={({ data: item }) => <Item
+      buildItem={({ data: item, calendar }) => <Item calendar={calendar}
         id={item.id}
         ariaLabel={item.label}
         summary={item.label}

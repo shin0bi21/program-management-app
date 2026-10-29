@@ -1,14 +1,12 @@
-import { useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import FloatingMenuPanel from '../../../FloatingMenu/FloatingMenuPanel';
-import { useFloatingMenu } from '../../../FloatingMenu/hooks/useFloatingMenu';
+import useCellActions, { CELL_MENU_WIDTH } from './hooks/useCellActions/useCellActions';
 import type { CalendarCellAction, CalendarCellContext } from '../../types';
-
-const CELL_MENU_WIDTH = 180;
 
 interface CellProps<TRow, TItemData> {
   className?: string;
   context: CalendarCellContext<TRow, TItemData>;
   rowId: string;
+
   onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
 }
@@ -20,38 +18,9 @@ export default function Cell<TRow, TItemData>({
   onCellClick,
   getCellActions,
 }: CellProps<TRow, TItemData>) {
-  const cellActions = getCellActions?.(context) ?? [];
-  const hasCellActions = cellActions.length > 0;
-  const interactive = Boolean(onCellClick || hasCellActions);
-
-  const cellRef = useRef<HTMLDivElement>(null);
-  const cellMenu = useFloatingMenu(
-    cellRef,
-    { side: 'bottom', align: 'start' },
-    { widthEstimate: CELL_MENU_WIDTH, heightEstimate: 90 },
-  );
-
-  const activateCell = (point?: { x: number; y: number }) => {
-    if (!hasCellActions) {
-      onCellClick?.(context);
-      return;
-    }
-
-    if (point) cellMenu.openAtPoint(point.x, point.y);
-    else cellMenu.toggle();
-  };
-
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    activateCell({ x: event.clientX, y: event.clientY });
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-
-    event.preventDefault();
-    activateCell();
-  };
+  const {
+    cellActions, hasCellActions, interactive, cellRef, cellMenu, handleClick, handleKeyDown, selectAction,
+  } = useCellActions({ context, onCellClick, getCellActions });
 
   let ariaLabel: string | undefined;
 
@@ -84,11 +53,7 @@ export default function Cell<TRow, TItemData>({
               type="button"
               role="menuitem"
               key={action.id}
-              onClick={event => {
-                event.stopPropagation();
-                cellMenu.close();
-                action.onSelect();
-              }}
+              onClick={event => selectAction(event, action)}
             >
               {action.label}
             </button>

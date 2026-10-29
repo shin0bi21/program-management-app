@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import type { Lead } from '../../../types';
@@ -20,7 +20,7 @@ const lead: Lead = {
   convertedYouthId: null,
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
-  age: 14,
+  age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: null,
   recommendedProgramName: null,
@@ -48,6 +48,38 @@ describe('LeadNotesDashboardCard', () => {
     vi.clearAllMocks();
     api.getLeadNotes.mockResolvedValue([existingNote]);
     api.updateLeadNote.mockResolvedValue({ ...existingNote, details: 'Reached guardian.' });
+  });
+
+  it('keeps the notes shell mounted while a new lead loads and removes previous note actions', async () => {
+    let resolveNotes!: (notes: typeof existingNote[]) => void;
+    const pendingNotes = new Promise<typeof existingNote[]>(resolve => { resolveNotes = resolve; });
+    api.getLeadNotes.mockResolvedValueOnce([existingNote]).mockReturnValueOnce(pendingNotes);
+    const { rerender } = render(<LeadNotesDashboardCard lead={lead} canWrite />);
+    await screen.findByText('Notes (1)');
+    const card = screen.getByText('Notes (1)').closest('.dashboard-card');
+
+    rerender(<LeadNotesDashboardCard lead={{ ...lead, id: 'lead-2' }} canWrite />);
+
+    expect(screen.getByRole('status', { name: 'Loading follow-up notes…' })).toBeInTheDocument();
+    expect(screen.getByText('Notes').closest('.dashboard-card')).toBe(card);
+    expect(screen.queryByRole('button', { name: 'View follow-up note' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No follow-up notes recorded.')).not.toBeInTheDocument();
+
+    await act(async () => { resolveNotes([]); });
+    expect(await screen.findByText('No follow-up notes recorded.')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('keeps cached notes visible during a same-lead background refresh', async () => {
+    api.getLeadNotes.mockResolvedValueOnce([existingNote]).mockReturnValueOnce(new Promise(() => {}));
+    const { queryClient } = render(<LeadNotesDashboardCard lead={lead} canWrite />);
+    await screen.findByText('Notes (1)');
+
+    act(() => { void queryClient.invalidateQueries({ queryKey: ['leads', lead.id, 'notes'] }); });
+
+    await waitFor(() => expect(api.getLeadNotes).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('button', { name: 'View follow-up note' })).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('edits note details without offering category changes', async () => {

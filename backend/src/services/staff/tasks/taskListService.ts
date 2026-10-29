@@ -27,6 +27,9 @@ export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuer
     ${taskRecordFrom}
     WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${predicate}
+      AND ${query.start && query.end
+        ? sql`task.start_date <= ${query.end}::date AND task.due_date >= ${query.start}::date`
+        : sql`TRUE`}
     ) listed
     WHERE ${cursor ? (direction === 'asc'
       ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`

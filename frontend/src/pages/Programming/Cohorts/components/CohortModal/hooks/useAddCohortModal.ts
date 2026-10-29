@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
 import { createCohort } from '../../../cohorts.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
@@ -9,7 +9,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseAddCohortModalOptions {
   isOpen: boolean;
-  programs: Program[];
+  programs: ProgramReference[];
   cycles: ProgramCycle[];
   initialProgramId: string;
   onCreated: () => void | Promise<void>;

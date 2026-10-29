@@ -29,7 +29,8 @@ export default function Cohorts() {
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
-  const canWriteCohorts = permissions.includes('write:cohorts');
+  const canWriteCohorts = permissions.includes('write:programs');
+  const canManageRoster = permissions.includes('write:enrollments') && permissions.includes('read:youth_profiles');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data and preferences.
@@ -78,6 +79,7 @@ export default function Cohorts() {
   // Table configuration.
   const columns = useCohortTable({
     canWrite: canWriteCohorts,
+    canManageRoster,
     onManageRoster: setRosterTarget,
     onEdit: setEditCohortTarget,
     onDelete: actions.requestDelete,
@@ -141,19 +143,27 @@ export default function Cohorts() {
               title="Youth Overview"
               className="cohort-overview-card"
               emptyMessage="No cohort selected."
-              action={selection.selectedCohort ? <Button
-                size="sm"
-                variant="secondary"
-                disabled={!canViewYouthReport || selection.selectedCohort.rosterMode === 'open'}
-                title={selection.selectedCohort.rosterMode === 'open' ? 'Drop In reporting is coming soon.' : undefined}
-                onClick={() => setReportTarget(selection.selectedCohort)}
-              >View Report</Button> : undefined}
             >
               {selection.selectedCohort ? (
-                <dl className="cohort-overview">
-                  <div><dt>{selection.selectedCohort.rosterMode === 'enrolled' ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.rosterMode === 'enrolled' ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
-                  <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
-                </dl>
+                <>
+                  <dl className="cohort-overview">
+                    <div><dt>{selection.selectedCohort.enrollmentRequired ? 'Enrollment:' : 'Youth attended:'}</dt><dd>{selection.selectedCohort.enrollmentRequired ? selection.selectedCohort.enrolledCount : selection.selectedCohort.uniqueAttendeeCount}</dd></div>
+                    <div><dt>Average attendance:</dt><dd>{selection.selectedCohort.averageAttendance === null ? '—' : `${selection.selectedCohort.averageAttendance}%`}</dd></div>
+                  </dl>
+                  <div className="cohort-overview__actions">
+                    {canManageRoster && selection.selectedCohort.enrollmentRequired && <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setRosterTarget(selection.selectedCohort)}
+                    >Manage Roster</Button>}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!canViewYouthReport || !selection.selectedCohort.enrollmentRequired}
+                      onClick={() => setReportTarget(selection.selectedCohort)}
+                    >Attendance Report</Button>
+                  </div>
+                </>
               ) : undefined}
             </DashboardCard>
           }

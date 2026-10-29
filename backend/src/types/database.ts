@@ -7,11 +7,9 @@ import type { ColumnType } from "kysely";
 
 export type AccountStatus = "active" | "inactive" | "invited";
 
-export type AgeGroup = "junior_youth" | "senior_youth";
-
 export type AttendanceStatus = "absent" | "excused" | "late" | "present";
 
-export type ContactType = "emergency" | "guardian" | "parent" | "sibling";
+export type ContactType = "guardian" | "parent" | "sibling";
 
 export type DiscoverySource = "community_outreach" | "friend_family" | "online" | "other" | "school";
 
@@ -43,7 +41,7 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
 
-export type ProgramRosterMode = "enrolled" | "open";
+export type ProgramTimezone = "America/Toronto";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
@@ -191,12 +189,12 @@ export interface LeadNotes {
 }
 
 export interface Leads {
-  age: number;
   contact_phone_number: string;
   contact_relationship: ContactType;
   converted_youth_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  date_of_birth: Timestamp | null;
   discovery_source: DiscoverySource;
   expression_of_interest_id: string | null;
   id: Generated<string>;
@@ -235,12 +233,16 @@ export interface ProgramCycles {
 }
 
 export interface Programs {
+  default_day_of_week: Generated<string>;
+  default_end_time: Generated<string>;
+  default_start_time: Generated<string>;
   description: string | null;
+  enrollment_required: Generated<boolean>;
   id: Generated<string>;
   max_age: number | null;
   min_age: number | null;
   name: string;
-  roster_mode: Generated<ProgramRosterMode>;
+  timezone: Generated<ProgramTimezone>;
 }
 
 export interface SchemaMigrations {
@@ -489,11 +491,9 @@ export interface YouthProfileNotes {
 }
 
 export interface YouthProfiles {
-  age_group: AgeGroup | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
   date_of_birth: Timestamp | null;
-  grade_level: number | null;
   id: Generated<string>;
   school_id: string | null;
   updated_at: Generated<Timestamp>;

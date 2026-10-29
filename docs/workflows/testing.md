@@ -76,16 +76,104 @@ otherwise rerun it. For shell changes, run `bash -n` and ShellCheck (included in
 
 Place tests with the narrowest owner of the behavior. A consumer should test
 only the coordination or domain outcome it adds, not repeat a child's mechanics.
+Apply the same ownership boundaries as implementation: a hook suite owns its
+policy and lifecycle; a component suite owns rendered states and event wiring;
+a page suite owns composition, entry context, and coordination across children.
+Running a real hook or child in a consumer test is fine when the assertions
+describe the consumer's contract. Keep detailed payload, normalization, cache,
+and lifecycle cases in their owning suites instead of repeating them through
+the page. Use small typed stubs when only inputs or callbacks matter, and
+explicit API response fixtures rather than recreating server filtering or sorting.
 Cover lifecycle and error states only when they are part of that owner's
 contract. Describe observable behavior and avoid arbitrary sleeps, private
 implementation assertions, and mocks that bypass the boundary under test.
-Use owner-specific suite sections when ordering materially clarifies the tested
-lifecycle; do not add a file-level comment that merely restates the filename or suite name.
+Test observable contracts, not private methods or a copy of the implementation.
+Shared mechanics have one authoritative suite; each consumer covers only the
+configuration, inputs, callbacks, or domain outcome it adds. For example, shared
+table tests cover keyboard selection, a domain table covers selection wiring,
+and a page covers updating its dashboard from the selected record.
 
 For surface-specific ownership rules, start at the
 [frontend guide](../frontend/README.md#find-the-right-guide). It routes pages,
 components, hooks, tables, calendars, overlays, navigation, and preferences to
 their authoritative testing guidance.
+
+## Organize tests for reading
+
+Keep suites colocated with their owner. There is no required execution order
+between a page suite, its hooks, and its child components. Each test must arrange
+its own starting state and pass independently; do not use an earlier test to load
+data, select a record, or complete a mutation for the next test.
+
+Within each test, separate setup, action, and observable assertions with blank
+lines. A test may exercise several transitions when that sequence is the contract,
+such as changing a target during a pending request.
+
+Group longer suites by the owner's behavior, keeping failures and boundary cases
+beside the success case they qualify. Hook suites follow initialization, input
+changes, completion/failure, and cleanup where applicable. Component suites group
+rendered states and public interactions. Page suites follow the
+[page test reading order](../frontend/pages/README.md#test-page-coordination).
+Use short section comments or describe blocks only when they help navigation;
+omit empty sections and leave small cohesive suites flat. These are reading
+conventions, not a requirement to add every lifecycle case to every owner.
+
+## Scaffold implementation and tests together
+
+`npm run scaffold:frontend` generates colocated test outlines alongside each
+implementation owner automatically; no separate test command or flag is needed.
+The presets keep source and test ownership aligned:
+
+| Preset | Implementation and test owners |
+|---|---|
+| `page` | Route composition plus a separate page-data hook suite |
+| `table` | Domain table configuration plus a separate collection-data hook suite |
+| `modal` | Form rendering/event wiring plus a separate workflow hook suite |
+| `calendar` | Domain calendar adapter and its component suite |
+| `dashboard` | Card composition and its component suite |
+
+Pages use the five behavior groups in the [page guide](../frontend/pages/README.md#test-page-coordination).
+Component and hook suites follow their own contracts, rather than repeating the
+page groups or the implementation's statement order. Optional presentation hooks,
+row/action components, and browser stories are added beside their real owners
+when needed; these presets do not invent them for every page.
+
+For a new calendar page, scaffold the route and its calendar component:
+
+```bash
+npm run scaffold:frontend -- page Youth/Placements
+npm run scaffold:frontend -- calendar frontend/src/pages/Youth/Placements/components PlacementCalendar
+```
+
+These commands generate the following paired owners:
+
+```text
+pages/Youth/Placements/
+  Placements.tsx
+  Placements.test.tsx
+  hooks/data/
+    usePlacementsData.ts
+    usePlacementsData.test.ts
+  components/PlacementCalendar/
+    PlacementCalendar.tsx
+    PlacementCalendar.test.tsx
+```
+
+The page suite covers filters, selection, and dialog coordination. The page-data
+suite covers its reference queries. The calendar suite covers domain range inputs,
+item mapping, and callback wiring; shared calendar mechanics stay in shared suites.
+Connect the generated calendar to the page when implementing the feature; the
+component preset does not edit its parent or register a route.
+
+Append `--dry-run` to preview either command without writing files. Every preset
+refuses to overwrite existing files. Add table, dashboard, or modal presets only
+when the new page needs those owners; each includes its own test outlines.
+
+Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
+the relevant prompts with scenario fixtures and observable assertions; remove
+inapplicable cases. Use the shared QueryClient helpers for query-backed tests.
+See each [frontend owner guide](../frontend/README.md#find-the-right-guide) for
+the supported source layout and preset commands.
 
 ## Browser component tests
 
@@ -106,6 +194,7 @@ CI; failed scheduled runs retain traces for 14 days.
 
 ## Test ownership
 
+- Repository-tool tests live beside their scripts. Register new script folders in the root lint command and `scripts/tests/test-static.sh`; the snapshot download/refresh tests in `scripts/dev/` use mocked SSH and Docker commands and never require live data.
 - Backend suites live in `backend/tests/<domain>/` and share helpers from
   `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they

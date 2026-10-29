@@ -16,9 +16,13 @@ const programs: Program[] = [{
   id: 'program-1',
   name: 'Future Ready',
   description: null,
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 }];
 const tableKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
 

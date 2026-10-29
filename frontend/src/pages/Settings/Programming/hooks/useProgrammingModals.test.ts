@@ -14,9 +14,9 @@ describe('useProgrammingModals', () => {
       id: 'program-1',
       name: 'Skills',
       description: null,
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: null,
-      maxAge: null,
+      maxAge: null, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }));
     expect(result.current.program.target?.id).toBe('program-1');
     act(() => result.current.program.close());

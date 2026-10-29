@@ -6,6 +6,7 @@ import type { DbRow } from '../../types/db';
 import { audit } from '../shared/auditService';
 import { setAddresses } from './youthAddressService';
 import { setContacts } from './youthContactService';
+import type { SetYouthContactsInput } from '../../validation/youthSchemas';
 import { youthRecordColumns, youthRecordFrom, type YouthRecordRow } from './youthRecordQuery';
 
 // ============================================================================
@@ -29,16 +30,14 @@ export interface SetYouthInput {
   firstName: string;
   lastName: string;
   email?: string;
-  dateOfBirth?: string;
+  dateOfBirth?: string | null;
   schoolId?: string;
-  gradeLevel?: number;
   addresses?: Array<{ id?: string; address: string }>;
   contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
 export async function setYouthProfile(data: SetYouthInput, actorId: string) {
-  const { id, firstName, lastName, dateOfBirth, schoolId, gradeLevel, addresses, contacts } = data;
-  const ageGroup = gradeLevel != null ? (gradeLevel <= 5 ? 'junior_youth' : 'senior_youth') : null;
+  const { id, firstName, lastName, dateOfBirth, schoolId, addresses, contacts } = data;
   const transactionId = crypto.randomUUID();
 
   const userId = await sql.begin(async (tx) => {
@@ -53,12 +52,18 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
         WHERE id = ${id}
         LIMIT 1
       `;
-      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>>[]>`
-        SELECT user_id, date_of_birth, school_id, grade_level, age_group
+      const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id'>>[]>`
+        SELECT user_id, date_of_birth, school_id
         FROM youth_profiles
         WHERE user_id = ${id}
         LIMIT 1
+        FOR UPDATE
       `;
+
+      // An omitted DOB preserves the saved value; explicit null represents an unknown DOB.
+      const nextDateOfBirth = dateOfBirth === undefined
+        ? existingProfiles[0]?.dateOfBirth ?? null
+        : dateOfBirth;
 
       const users = await trx<DbRow<Users>[]>`
         INSERT INTO users (id, first_name, last_name, role_id, created_at, updated_at)
@@ -92,21 +97,17 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
       );
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group, created_at, updated_at)
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, created_at, updated_at)
         VALUES (
           ${persistedUserId},
-          ${dateOfBirth || null},
+          ${nextDateOfBirth},
           ${schoolId || null},
-          ${gradeLevel ?? null},
-          ${ageGroup},
           COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${persistedUserId}), NOW()),
           NOW()
         )
         ON CONFLICT (user_id) DO UPDATE SET
           date_of_birth = EXCLUDED.date_of_birth,
           school_id = EXCLUDED.school_id,
-          grade_level = EXCLUDED.grade_level,
-          age_group = EXCLUDED.age_group,
           updated_at = EXCLUDED.updated_at
       `;
       await audit(
@@ -121,11 +122,9 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
               userId: existingProfiles[0].userId,
               dateOfBirth: existingProfiles[0].dateOfBirth,
               schoolId: existingProfiles[0].schoolId,
-              gradeLevel: existingProfiles[0].gradeLevel,
-              ageGroup: existingProfiles[0].ageGroup,
             }
           : null,
-        { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup },
+        { userId: persistedUserId, dateOfBirth: nextDateOfBirth, schoolId: schoolId || null },
       );
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
@@ -138,10 +137,10 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
       await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, grade_level, age_group)
-        VALUES (${persistedUserId}, ${dateOfBirth || null}, ${schoolId || null}, ${gradeLevel ?? null}, ${ageGroup})
+        INSERT INTO youth_profiles (user_id, date_of_birth, school_id)
+        VALUES (${persistedUserId}, ${dateOfBirth ?? null}, ${schoolId || null})
       `;
-      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth || null, schoolId: schoolId || null, gradeLevel: gradeLevel ?? null, ageGroup });
+      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth ?? null, schoolId: schoolId || null });
     }
 
     if (id) {
@@ -156,6 +155,45 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
   });
 
   const savedYouth = await getYouthProfile(userId);
+  if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
+  return savedYouth;
+}
+
+
+export async function setYouthContacts(id: string, data: SetYouthContactsInput, actorId: string) {
+  const transactionId = crypto.randomUUID();
+  const contacts = data.contacts.map(contact => ({
+    ...contact,
+    ...(contact.id ? { id: contact.id.toLowerCase() } : {}),
+  }));
+
+  await sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const profiles = await trx`
+      SELECT yp.user_id
+      FROM youth_profiles yp
+      INNER JOIN users u ON u.id = yp.user_id
+      INNER JOIN user_roles role ON role.id = u.role_id
+      WHERE yp.user_id = ${id} AND role.name = 'youth'
+      FOR UPDATE OF yp
+    `;
+    if (!profiles.length) throw new NotFoundError('Youth profile not found');
+
+    const activeContacts = await trx<{ contactId: string }[]>`
+      SELECT contact_id
+      FROM user_has_contacts
+      WHERE user_id = ${id} AND active = true
+    `;
+    const activeContactIds = new Set(activeContacts.map(contact => contact.contactId));
+    const hasUnavailableContact = contacts.some(contact => (
+      contact.id !== undefined && !activeContactIds.has(contact.id)
+    ));
+    if (hasUnavailableContact) throw new NotFoundError('One or more youth contacts were not found');
+
+    await setContacts(id, contacts, actorId, transactionId, trx);
+  });
+
+  const savedYouth = await getYouthProfile(id);
   if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
   return savedYouth;
 }

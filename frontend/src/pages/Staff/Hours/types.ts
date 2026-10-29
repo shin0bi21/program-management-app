@@ -1,3 +1,4 @@
+import type { DateRange } from '../../../common/utils/dateRange';
 // Domain values and records.
 export type HoursCategory =
   | 'program_delivery'
@@ -8,16 +9,7 @@ export type HoursCategory =
   | 'maintenance'
   | 'other';
 
-export interface StaffResource {
-  id: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  role: string;
-  writable: boolean;
-}
-
-export interface HoursProgram { id: string; name: string }
+export type { StaffReference as StaffResource, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
 export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
 export interface HoursEntry {
   id: string;
@@ -60,11 +52,12 @@ export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursEntryType = 'task' | 'session' | 'other';
 
 export interface HoursFilters {
+  dateRange?: DateRange;
   staffIds: string[];
   categories: HoursCategory[];
   programIds: string[];
   types: HoursEntryType[];
-  cycleId?: string;
+  cycleIds?: string[];
   search: string;
 }
 

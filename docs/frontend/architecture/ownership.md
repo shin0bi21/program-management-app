@@ -17,6 +17,16 @@ Never import a page from common code. Pages and their nested components may impo
 
 Keep each frontend feature and component with its implementation, tests, and focused supporting files. This guide decides where that owner belongs and when behaviour should move to a nested or shared owner.
 
+Place a component-private hook under that component's `hooks/` directory. Choose the lowest owner that contains the complete responsibility and can preserve its lifecycle; do not collect descendant hooks at a parent merely because the parent renders those descendants.
+
+Lift a hook to the nearest common owner when it coordinates multiple children, shared resources, or a lifecycle that must survive a child's unmount. Import shared contracts from their owner without introducing runtime dependencies back to parent components or circular module dependencies. A child receives parent-coordinated behavior through props rather than importing the parent's implementation.
+
+A shared coordinator may retain a child's workflow callbacks for an active session. In that case,
+the child can keep its interaction logic while the coordinator owns shared listeners and session
+lifetime. Pass configuration down and report changes up through explicit callbacks; do not give
+children an imperative parent-instance API. The [calendar guide](../components/calendars.md)
+shows this split for virtualized item movement and resizing.
+
 Program cycles are a shared programming capability used by Programming, Settings,
 Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract live in
 [`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).
@@ -30,9 +40,8 @@ remain with Cohorts.
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
-The [components guide](../components/README.md) owns component and hook extraction,
-rendering contracts, styling boundaries and component-level testing. This guide owns only
-where the resulting owner belongs.
+See [Components](../components/README.md) for extraction and rendering patterns, and
+[Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries.
 
 ## Validate uncertain inputs
 

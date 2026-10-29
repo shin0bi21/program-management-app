@@ -10,7 +10,7 @@ vi.mock('../../leads.api', () => ({ createLead: vi.fn(), updateLead: vi.fn() }))
 const values = {
   youthFirstName: ' Avery ',
   youthLastName: ' Outreach ',
-  age: 14,
+  dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: ' Test School ',
   programId: 'program-1',
   contactPhoneNumber: ' 416-555-0142 ',
@@ -43,7 +43,7 @@ describe('useLeadModal', () => {
     expect(createLead).toHaveBeenCalledWith({
       youthFirstName: 'Avery',
       youthLastName: 'Outreach',
-      age: 14,
+      dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
       school: 'Test School',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian',

@@ -8,7 +8,7 @@ import type { SessionNoteTarget, SessionNoteUnlinkTarget } from '../types';
 
 export default function YouthSessionNoteDialogs({
   youth,
-  rosterMode,
+  enrollmentRequired,
   noteTarget,
   detailTarget,
   unlinkTarget,
@@ -21,7 +21,7 @@ export default function YouthSessionNoteDialogs({
   onConfirmUnlink,
 }: {
   youth: YouthProfile | null;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   noteTarget: SessionNoteTarget | null;
   detailTarget: SessionNote | null;
   unlinkTarget: SessionNoteUnlinkTarget | null;
@@ -36,7 +36,7 @@ export default function YouthSessionNoteDialogs({
   return (
     <>
       <SessionNoteModal
-        session={noteTarget ? { id: noteTarget.session.id, rosterMode } : null}
+        session={noteTarget ? { id: noteTarget.session.id, enrollmentRequired } : null}
         note={noteTarget?.note ?? null}
         initialYouthId={noteTarget?.note ? undefined : youth?.id}
         hideYouthSelection

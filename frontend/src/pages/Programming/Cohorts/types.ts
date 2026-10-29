@@ -2,7 +2,7 @@ export interface ProgramCohort {
   id: string;
   programId: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
   cycleId: string;
@@ -25,6 +25,7 @@ export interface CohortRosterYouth {
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
+  age: number | null;
   schoolName: string | null;
   cohorts: Array<{
     id: string;

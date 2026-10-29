@@ -3,12 +3,14 @@ import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons
 
 interface ToolbarProps {
   year: number;
+
   onToday?: () => void;
+  todayDisabled?: boolean;
   onPrevious?: () => void;
   onNext?: () => void;
 }
 
-export default function Toolbar({ year, onToday, onPrevious, onNext }: ToolbarProps) {
+export default function Toolbar({ year, onToday, todayDisabled = false, onPrevious, onNext }: ToolbarProps) {
   return (
     <div className="header" aria-label="Calendar navigation">
       {onPrevious && onNext && (
@@ -22,7 +24,7 @@ export default function Toolbar({ year, onToday, onPrevious, onNext }: ToolbarPr
         </div>
       )}
       {onToday && (
-        <button type="button" className="today" onClick={onToday}>
+        <button type="button" className="today" onClick={onToday} disabled={todayDisabled}>
           Today
         </button>
       )}

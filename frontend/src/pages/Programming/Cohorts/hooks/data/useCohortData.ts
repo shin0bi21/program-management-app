@@ -1,36 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-
-import { getProgramCycles } from '../../../../../common/features/programming/cycles/cycles.api';
-import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
-import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
+import { useCycleReferences, useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
 export default function useCohortData() {
-  const { programs, loading: programsLoading, error: programsError } = usePrograms({ assignedOnly: true });
-  const [cycles, setCycles] = useState<ProgramCycle[]>([]);
-  const [cyclesError, setCyclesError] = useState<string | null>(null);
-
-  const loadCycles = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const nextCycles = await getProgramCycles(signal ? { signal } : undefined);
-      setCycles(nextCycles);
-      setCyclesError(null);
-    } catch (cause) {
-      if (signal?.aborted) return;
-      setCyclesError(cause instanceof Error ? cause.message : 'Could not load cycles');
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadCycles(controller.signal);
-    return () => controller.abort();
-  }, [loadCycles]);
+  const programs = useProgramReferences({ assignedOnly: true });
+  const cycles = useCycleReferences();
 
   return {
-    programs,
-    programsLoading,
-    programsError,
-    cycles,
-    cyclesError,
+    programs: programs.rows,
+    programsLoading: programs.loading,
+    programsError: programs.error,
+    cycles: cycles.rows,
+    cyclesError: cycles.error,
   };
 }

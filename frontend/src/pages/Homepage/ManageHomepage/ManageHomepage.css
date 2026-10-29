@@ -3,7 +3,6 @@
   height: 100dvh;
   min-height: 0;
   flex-direction: column;
-  gap: 1.5rem;
   overflow: hidden;
 }
 
@@ -14,17 +13,23 @@
   min-height: 0;
 }
 
-.homepage-signup-setting {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  min-width: 0;
+.homepage-management-card {
   padding: 1rem 1.25rem;
   border: var(--border-line-soft);
   border-radius: var(--radius-md);
   background: var(--color-card-surface);
   box-shadow: var(--shadow-card);
+}
+
+.homepage-signup-setting {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .homepage-signup-setting h2 {

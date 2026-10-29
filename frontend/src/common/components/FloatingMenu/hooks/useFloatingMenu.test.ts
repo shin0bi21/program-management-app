@@ -132,4 +132,36 @@ describe('useFloatingMenu', () => {
     fireEvent.scroll(window);
     expect(result.current.isOpen).toBe(false);
   });
+
+  it('keeps a dismissed menu closed when a queued resize callback runs', () => {
+    let notifyResize = () => {};
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) {
+        notifyResize = callback;
+      }
+
+      observe = vi.fn();
+      disconnect = vi.fn();
+    });
+
+    const trigger = document.createElement('button');
+    const menu = document.createElement('div');
+    document.body.append(trigger, menu);
+    const { result } = renderHook(() => useFloatingMenu(
+      { current: trigger },
+      { side: 'bottom', align: 'start' },
+    ));
+    (result.current.menuRef as { current: HTMLDivElement | null }).current = menu;
+
+    act(() => result.current.open());
+    expect(result.current.isOpen).toBe(true);
+
+    act(() => {
+      result.current.close();
+      notifyResize();
+    });
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.position).toBeNull();
+  });
 });

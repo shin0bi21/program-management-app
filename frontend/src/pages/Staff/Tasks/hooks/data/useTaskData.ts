@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { getTaskReferenceData } from '../../tasks.api';
 
 export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
@@ -9,7 +10,10 @@ export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
     queryFn: ({ signal }) => getTaskReferenceData({ signal }),
   });
 
-  const resources = query.data?.resources;
+  const cyclesQuery = useCycleReferences();
+  const programsQuery = useProgramReferences();
+  const staffQuery = useStaffReferences('tasks');
+  const resources = staffQuery.rows;
 
   const writableResources = useMemo(
     () => resources?.filter(resource => resource.writable) ?? [],
@@ -17,10 +21,18 @@ export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   );
 
   return {
+    cycles: cyclesQuery.rows,
+    cyclesLoading: cyclesQuery.loading,
+    cyclesError: cyclesQuery.error,
     referenceData: query.data,
     referenceDataLoading: query.isLoading,
     referenceDataError: query.error,
-    resources: resources ?? [],
+    resources,
+    resourcesLoading: staffQuery.loading,
+    resourcesError: staffQuery.error,
+    programs: programsQuery.rows,
+    programsLoading: programsQuery.loading,
+    programsError: programsQuery.error,
     writableResources,
   };
 }

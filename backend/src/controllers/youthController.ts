@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { listYouth } from '../services/youth/youthListService';
-import { getYouthProfile, setYouthProfile } from '../services/youth/youthService';
+import { getYouthProfile, setYouthContacts, setYouthProfile } from '../services/youth/youthService';
 import { listSessionNotesForYouth } from '../services/programming/sessions/sessionNoteService';
 import { inviteYouthAccount } from '../services/accounts/accountService';
-import type { YouthQuery } from '../validation/youthSchemas';
+import type { SetYouthContactsInput, YouthQuery } from '../validation/youthSchemas';
 import { deleteYouthProfileNote, getYouthProfileNotes, setYouthProfileNote } from '../services/youth/youthProfileNoteService';
 import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
 import { getYouthCohortAttendance, setYouthCohortAttendance } from '../services/youth/youthAttendanceService';
@@ -24,6 +24,11 @@ export const handleSetYouth = async (req: Request, res: Response) => {
     saved = { ...saved, account };
   }
   res.status(id ? 200 : 201).json(saved);
+};
+
+export const handleSetYouthContacts = async (req: Request, res: Response) => {
+  const actorId = (req as AuthRequest).user!.userId;
+  res.json(await setYouthContacts(req.params.id, req.body as SetYouthContactsInput, actorId));
 };
 
 export const handleGetYouthSessionNotes = async (req: Request, res: Response) => {

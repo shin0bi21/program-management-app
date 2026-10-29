@@ -28,9 +28,7 @@ describe('useSessionTable', () => {
 
   it('provides canonical data columns without actions for read-only users', () => {
     const { result } = renderHook(() => useSessionTable({
-      canWriteAttendance: false,
       canWriteSessions: false,
-      onTakeAttendance: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -38,38 +36,39 @@ describe('useSessionTable', () => {
     expect(result.current.map(column => column.id)).toEqual([
       'program', 'cohort', 'theme', 'date', 'time', 'type', 'status',
     ]);
+    expect(result.current.find(column => column.id === 'cohort')?.header).toBe('Cycle');
   });
 
-  it.each([
-    [true, false, ['attendance']],
-    [false, true, ['edit', 'delete']],
-    [true, true, ['attendance', 'edit', 'delete']],
-  ])('maps attendance=%s and session=%s permissions', (canWriteAttendance, canWriteSessions, ids) => {
+  it('formats dates and hours in the program timezone', () => {
     const { result } = renderHook(() => useSessionTable({
-      canWriteAttendance,
-      canWriteSessions,
-      onTakeAttendance: vi.fn(),
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
+      programs: [{ id: 'program-1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
+        defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' }],
+      canWriteSessions: false,
+      onEdit: vi.fn(), onDelete: vi.fn(),
     }));
-    const actionColumn = result.current.find(column => column.id === 'actions')!;
-
-    render(<>{renderCell(actionColumn, makeCohortSession())}</>);
-    expect(menu.items.map(item => item.id)).toEqual(ids);
+    const session = makeCohortSession({ startsAt: '2026-08-10T02:00:00Z', endsAt: '2026-08-10T03:00:00Z' });
+    const dateColumn = result.current.find(column => column.id === 'date')!;
+    const timeColumn = result.current.find(column => column.id === 'time')!;
+    if (!('accessorFn' in dateColumn) || !('accessorFn' in timeColumn)) throw new Error('Missing accessors');
+    expect(dateColumn.accessorFn!(session, 0)).toBe('Aug 9, 2026');
+    expect(timeColumn.accessorFn!(session, 0)).toMatch(/10:00.*11:00/);
   });
 
-  it('emits exact attendance, edit, and delete callbacks', () => {
+  it('provides Edit and Delete actions with the exact session callbacks', () => {
     const session = makeCohortSession();
-    const callbacks = { onTakeAttendance: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn() };
+    const callbacks = { onEdit: vi.fn(), onDelete: vi.fn() };
     const { result } = renderHook(() => useSessionTable({
-      canWriteAttendance: true,
       canWriteSessions: true,
       ...callbacks,
     }));
 
     render(<>{renderCell(result.current.find(column => column.id === 'actions')!, session)}</>);
+    expect(menu.items.map(({ id, label }) => ({ id, label }))).toEqual([
+      { id: 'edit', label: 'Edit' },
+      { id: 'delete', label: 'Delete' },
+    ]);
+
     menu.items.forEach(item => item.onClick());
-    expect(callbacks.onTakeAttendance).toHaveBeenCalledWith(session);
     expect(callbacks.onEdit).toHaveBeenCalledWith(session);
     expect(callbacks.onDelete).toHaveBeenCalledWith(session);
     expect(menu.items.find(item => item.id === 'delete')).toMatchObject({ variant: 'danger' });

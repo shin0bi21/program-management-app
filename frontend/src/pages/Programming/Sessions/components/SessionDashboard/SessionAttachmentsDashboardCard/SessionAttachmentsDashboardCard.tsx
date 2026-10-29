@@ -26,11 +26,12 @@ export default function SessionAttachmentsDashboardCard({
   return <>
     <DashboardCard
       title="Attachments"
+      loading={Boolean(session) && query.isLoading}
+      loadingLabel="Loading attachments…"
       emptyMessage={session ? 'No attachments.' : 'No session selected.'}
       action={canWrite ? <Button size="sm" variant="secondary" disabled={!session} aria-label="Add attachments" onClick={openAdd}>+ Add</Button> : undefined}
     >
-      {session ? query.isLoading ? <p role="status">Loading attachments…</p>
-        : query.error ? <UnavailableState compact title="Session attachments unavailable" onRetry={query.refetch} />
+      {session ? query.error ? <UnavailableState compact title="Session attachments unavailable" onRetry={query.refetch} />
         : query.data?.length ? <div className="session-attachment-list">{query.data.map(attachment => <SessionAttachmentRow
           key={attachment.id}
           attachment={attachment}

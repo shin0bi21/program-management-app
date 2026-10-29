@@ -24,8 +24,8 @@ const emptyCounts = () => ({ present: 0, late: 0, absent: 0, excused: 0, unmarke
 
 export async function getCohortYouthReport(cohortId: string, actor: AccessTokenPayload, youthId?: string) {
   await assertCanAccessCohort(actor, cohortId);
-  const cohorts = await sql<{ id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' }[]>`
-    SELECT cohort.id, cycle.name, program.name AS program_name, program.roster_mode
+  const cohorts = await sql<{ id: string; name: string; programName: string; enrollmentRequired: boolean }[]>`
+    SELECT cohort.id, cycle.name, program.name AS program_name, program.enrollment_required
     FROM program_cohorts cohort
     INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
     INNER JOIN programs program ON program.id = cohort.program_id
@@ -73,7 +73,7 @@ export async function getCohortYouthReport(cohortId: string, actor: AccessTokenP
       AND (${youthId ?? null}::uuid IS NULL OR roster.youth_id = ${youthId ?? null})
       AND session.cancelled_at IS NULL
       AND session.ends_at <= NOW()
-      AND (program.roster_mode = 'enrolled' OR attendance.id IS NOT NULL)
+      AND (program.enrollment_required = TRUE OR attendance.id IS NOT NULL)
     ORDER BY session.starts_at
   `;
 

@@ -27,7 +27,6 @@ export default function YouthNotesDashboardCard({
     : 'Profile Notes';
   let content: ReactNode;
   if (!selected) content = <p className="dashboard-card__empty">Select a row to view notes.</p>;
-  else if (profileNotesLoading) content = <p className="dashboard-card__empty">Loading profile notes…</p>;
   else if (profileNotesError) content = <UnavailableState compact title="Profile notes unavailable" onRetry={onRetry} />;
   else if (!profileNotes.length) content = <p className="dashboard-card__empty">No profile notes recorded.</p>;
   else content = <div className="note-list">{profileNotes.map(note => (
@@ -43,6 +42,8 @@ export default function YouthNotesDashboardCard({
   return (
     <DashboardCard
       title={title}
+      loading={selected && profileNotesLoading}
+      loadingLabel="Loading profile notes…"
       action={canManageProfileNotes ? <Button size="sm" variant="secondary" aria-label="Add profile note" disabled={!selected} onClick={onAddProfileNote}>+ Add</Button> : undefined}
     >
       {content}

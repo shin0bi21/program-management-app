@@ -1,7 +1,9 @@
+import { addDays, dayKey } from './utils/periods';
 // This suite owns TimelineCalendar composition, grid semantics, selection, and item construction.
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TimelineCalendar from './TimelineCalendar';
+import Item from './components/Item/Item';
 import type { TimelineCalendarProps } from './types';
 
 interface TestRow { id: string; name: string }
@@ -23,7 +25,7 @@ function renderCalendar(overrides: Partial<CalendarProps> = {}) {
     getItemId: item => item.id,
     getItemRange: item => ({ start: item.start, end: item.end }),
     renderRow: ({ row }) => row.name,
-    buildItem: ({ data }) => <button type="button">{data.id}</button>,
+    buildItem: ({ data, calendar }) => <Item calendar={calendar} id={data.id} ariaLabel={data.id} summary={data.id} detailTitle={data.id} details={[]} />,
     ...overrides,
   };
   return render(<TimelineCalendar {...props} />);
@@ -87,20 +89,25 @@ describe('TimelineCalendar', () => {
       items: { 'staff-1': [pointItem('entry-1', '2026-08-09')] },
       selectedRowId: 'staff-2',
       onRowSelect,
-      buildItem: ({ data }) => <button type="button" onClick={onItemClick}>{data.id}</button>,
+      onItemActivate: onItemClick,
     });
 
     expect(screen.getByRole('button', { name: 'Alex Morgan' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Zoe Wilson' }));
-    expect(onRowSelect).toHaveBeenCalledWith(rows[0]);
+    expect(onRowSelect).toHaveBeenCalledWith(rows[0], 'row');
     onRowSelect.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'entry-1' }));
-    expect(onRowSelect).toHaveBeenCalledWith(rows[0]);
+    expect(onRowSelect).toHaveBeenCalledWith(rows[0], 'item');
     expect(onItemClick).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
+    expect(onRowSelect).toHaveBeenLastCalledWith(rows[1], 'row');
   });
 
   it('positions one-period and multi-period items through one item layer and build contract', () => {
-    const buildItem = vi.fn(({ data }: { data: TestItem }) => <span>{data.id}</span>);
+    const buildItem = vi.fn<CalendarProps['buildItem']>(({ data, calendar }) => (
+      <Item calendar={calendar} id={data.id} ariaLabel={data.id} summary={data.id} detailTitle={data.id} details={[]} />
+    ));
     const { container } = renderCalendar({
       items: {
         'staff-1': [
@@ -122,4 +129,14 @@ describe('TimelineCalendar', () => {
       range: { start: '2026-08-09', end: '2026-08-09' },
     }));
   });
+  it.each([
+    [0, 7, false], [-7, 0, false], [-7, -1, true], [1, 7, true],
+  ])('disables Today only outside the inclusive range (%s, %s)', (startOffset, endOffset, disabled) => {
+    const today = new Date();
+    renderCalendar({ dateRange: { start: dayKey(addDays(today, startOffset)), end: dayKey(addDays(today, endOffset)) } });
+    const button = screen.getByRole('button', { name: 'Today' });
+    if (disabled) expect(button).toBeDisabled();
+    else expect(button).toBeEnabled();
+  });
+
 });

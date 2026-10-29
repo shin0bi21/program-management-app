@@ -1,3 +1,5 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
+import { sessionDateTime } from '../../utils/sessionSchedule';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -5,21 +7,17 @@ import ModalFormFooter from '../../../../../common/components/Modal/components/M
 import type { CohortSession } from '../../types';
 import { useEditSessionModal } from './hooks/useEditSessionModal';
 
-const localDateTime = (value: string) => {
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-
 interface EditSessionModalProps {
   session: CohortSession | null;
+  timezone?: string;
   onClose: () => void;
   onUpdated: () => void | Promise<void>;
 }
 
-export default function EditSessionModal({ session, onClose, onUpdated }: EditSessionModalProps) {
+export default function EditSessionModal({ session, onClose, onUpdated, timezone = 'America/Toronto' }: EditSessionModalProps) {
   const {
     status, statusMessage, submissionComplete, sessionTypeId, setSessionTypeId, sessionTypes, submit,
-  } = useEditSessionModal(session, onUpdated);
+  } = useEditSessionModal(session, onUpdated, timezone);
 
   return (
     <Modal
@@ -40,39 +38,31 @@ export default function EditSessionModal({ session, onClose, onUpdated }: EditSe
       )}
     >
       {session && (
-        <form id="edit-session-form" onSubmit={(event) => void submit(event)}>
+        <form key={session.id} id="edit-session-form" onSubmit={(event) => void submit(event)}>
           <FormField id="edit-session-type" label="Type">
             <FloatingSelect
               id="edit-session-type"
               value={sessionTypeId}
               onChange={setSessionTypeId}
-              options={sessionTypes.map(type => ({ value: type.id, label: type.name }))}
+              options={toFilterOptions(sessionTypes)}
               disabled={submissionComplete}
             />
           </FormField>
           <FormField id="edit-session-theme" label="Title / Theme">
             <input id="edit-session-theme" name="theme" required defaultValue={session.theme} maxLength={160} disabled={submissionComplete} />
           </FormField>
+          <FormField id="edit-session-date" label="Session Date">
+            <input id="edit-session-date" name="date" type="date" required
+              defaultValue={sessionDateTime(session.startsAt, timezone).date} disabled={submissionComplete} />
+          </FormField>
           <div className="form-row edit-session-time-row">
-            <FormField id="edit-session-start" label="Starts at">
-              <input
-                id="edit-session-start"
-                name="startsAt"
-                type="datetime-local"
-                required
-                defaultValue={localDateTime(session.startsAt)}
-                disabled={submissionComplete}
-              />
+            <FormField id="edit-session-start" label="Start Time">
+              <input id="edit-session-start" name="startTime" type="time" required
+                defaultValue={sessionDateTime(session.startsAt, timezone).time} disabled={submissionComplete} />
             </FormField>
-            <FormField id="edit-session-end" label="Ends at">
-              <input
-                id="edit-session-end"
-                name="endsAt"
-                type="datetime-local"
-                required
-                defaultValue={localDateTime(session.endsAt)}
-                disabled={submissionComplete}
-              />
+            <FormField id="edit-session-end" label="End Time">
+              <input id="edit-session-end" name="endTime" type="time" required
+                defaultValue={sessionDateTime(session.endsAt, timezone).time} disabled={submissionComplete} />
             </FormField>
           </div>
           <FormField id="edit-session-description" label="Description">

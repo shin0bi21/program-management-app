@@ -50,18 +50,26 @@ describe('Programs API', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: ` ${createdName} `,
-        rosterMode: 'open',
+        enrollmentRequired: false,
         minAge: 14,
         maxAge: 18,
+        defaultDayOfWeek: 'wednesday',
+        defaultStartTime: '17:30',
+        defaultEndTime: '19:30',
+        timezone: 'America/Toronto',
       });
 
     expect(res.status).toBe(201);
     expect(res.body).toEqual(expect.objectContaining({
       id: expect.any(String),
       name: createdName,
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: 14,
       maxAge: 18,
+      defaultDayOfWeek: 'wednesday',
+      defaultStartTime: '17:30',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     }));
     createdProgramId = res.body.id;
   });
@@ -73,7 +81,7 @@ describe('Programs API', () => {
       .send({
         name: createdName,
         description: 'Updated program description',
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
         minAge: 15,
         maxAge: 19,
       });
@@ -82,7 +90,7 @@ describe('Programs API', () => {
     expect(res.body).toEqual(expect.objectContaining({
       id: createdProgramId,
       description: 'Updated program description',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 15,
       maxAge: 19,
     }));
@@ -97,11 +105,48 @@ describe('Programs API', () => {
     expect(res.status).toBe(403);
   });
 
+  it('defaults new programs to requiring enrollment', async () => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: `Default enrollment ${Date.now()}` });
+
+    expect(response.status).toBe(201);
+
+    try {
+      expect(response.body.enrollmentRequired).toBe(true);
+      expect(response.body).not.toHaveProperty('rosterMode');
+
+      const [stored] = await sql`SELECT enrollment_required FROM programs WHERE id = ${response.body.id}`;
+      expect(stored.enrollmentRequired).toBe(true);
+    } finally {
+      await sql`DELETE FROM programs WHERE id = ${response.body.id}`;
+    }
+  });
+
+  it.each(['yes', 'enrolled', 1, null])('rejects non-boolean enrollment requirement %p', async (enrollmentRequired) => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Invalid enrollment requirement', enrollmentRequired });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects the removed roster mode request field', async () => {
+    const response = await request(app)
+      .post('/api/programs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Obsolete enrollment request', rosterMode: 'open' });
+
+    expect(response.status).toBe(400);
+  });
+
   it('rejects program edits by staff', async () => {
     const res = await request(app)
       .put(`/api/programs/${softSkillsProgramId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: 'Staff Program', rosterMode: 'enrolled' });
+      .send({ name: 'Staff Program', enrollmentRequired: true });
 
     expect(res.status).toBe(403);
   });
@@ -120,6 +165,28 @@ describe('Programs API', () => {
     expect(reversedRange.status).toBe(400);
   });
 
+  it('rejects invalid scheduling defaults', async () => {
+    for (const defaults of [
+      { defaultStartTime: '25:00' },
+      { defaultStartTime: '20:00', defaultEndTime: '19:00' },
+      { defaultDayOfWeek: 'holiday' },
+      { timezone: 'America/Vancouver' },
+    ]) {
+      const response = await request(app).post('/api/programs')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Invalid scheduling defaults', ...defaults });
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it('rejects unsupported timezones at the database boundary', async () => {
+    await expect(sql`UPDATE programs SET timezone = 'torotto' WHERE id = ${createdProgramId}`)
+      .rejects.toMatchObject({ code: '22P02' });
+
+    const [program] = await sql`SELECT timezone FROM programs WHERE id = ${createdProgramId}`;
+    expect(program.timezone).toBe('America/Toronto');
+  });
+
   it('returns only assigned programs to staff', async () => {
     const res = await request(app)
       .get('/api/programs?scope=assigned')
@@ -136,7 +203,7 @@ describe('Programs API', () => {
     ]));
     expect(res.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Job Readiness', minAge: 16, maxAge: 19 }),
-      expect.objectContaining({ name: 'Drop In', rosterMode: 'open' }),
+      expect.objectContaining({ name: 'Drop In', enrollmentRequired: false }),
     ]));
   });
 

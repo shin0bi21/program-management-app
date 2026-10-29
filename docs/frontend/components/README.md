@@ -8,6 +8,35 @@ A component owns its rendering, accessibility and presentation-level interaction
 
 Use a hook when behaviour needs restoration, derived state, effects, subscriptions, observers or asynchronous coordination. Do not create a hook only to rename a `useState` value.
 
+Keep a multi-step interaction workflow together in its owning hook, including event guards, transitions, completion, cancellation, and cleanup. Components render the affordances and forward events through small adapters; simple presentation handlers and pure helpers can remain in the component. Separate unrelated interaction lifecycles instead of collecting every event in one interactions hook.
+
+Follow the [ownership guide](../architecture/ownership.md) for where each hook lives.
+
+Follow the [Waterloo design recipe](https://student.cs.uwaterloo.ca/~cs135/assign/style_guide/cs135_style.pdf)
+for extracted helpers: state their purpose, define their contract and requirements, work
+through examples, implement the function, and verify it with tests. In TypeScript, the
+signature supplies the type contract. Place a concise purpose comment immediately above
+the helper, including requirements or effects the types cannot express and a representative
+input/output example. Executable examples and relevant boundary cases belong in colocated
+tests; component-private helpers can be verified through the owning component's behavior.
+Place helpers below the component, in the order their callers use them.
+
+For an interaction hook, document the full workflow's purpose, requirements, and example
+at the hook boundary. Keep internal lifecycle-method comments to a short purpose statement;
+add requirements or effects only where needed. Its colocated tests cover the lifecycle's
+examples and boundary cases.
+
+```ts
+/**
+ * Produces the arithmetic mean of values.
+ * Requires: values is nonempty and contains only finite numbers.
+ * Example: mean([2, 4, 6]) => 4.
+ */
+function mean(values: readonly number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+```
+
 Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
 
 Lifecycle is conditional. A hook that installs an observer tests its options, callback guards, meaningful dependency changes, and cleanup. A badge that only renders a label and modifier tests those outputs; it does not need mount, rerender, and unmount tests.
@@ -37,6 +66,7 @@ Extract a component when a rendered region has a clear name and an independent c
 
 | Surface | Guide |
 |---|---|
+| Type and status labels | [Badges](badges.md) |
 | Application sidebar and route navigation | [App navigation](navigation.md) |
 | Page header and body regions | [Pages](../pages/README.md#compose-page-components) |
 | Remote tables and pagination | [Tables](tables.md) |
@@ -47,3 +77,19 @@ Extract a component when a rendered region has a clear name and an independent c
 | Modal forms and submission workflows | [Modals and forms](modals-and-forms.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
+
+## Extract a focused owner
+
+A component owns rendering, accessibility and presentation interactions. Extract a component
+when a region has a clear name and an independent contract. Keep simple local state there;
+use a focused hook for restoration, effects, subscriptions or asynchronous coordination.
+Do not add a wrapper or hook merely to shorten its parent.
+
+Use [Frontend ownership](../architecture/ownership.md) to choose its location and
+[Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries and runners.
+The surface guides above describe only their specific contracts.
+
+The table, calendar, dashboard, and modal presets generate implementation and
+colocated test outlines together automatically. See the
+[paired scaffolding example](../../workflows/testing.md#scaffold-implementation-and-tests-together)
+for composing a new page and its component owners.

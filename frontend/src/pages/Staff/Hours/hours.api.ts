@@ -1,3 +1,4 @@
+import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { RowPeriodData } from '../../../common/components/TimelineCalendar/types';
@@ -10,8 +11,6 @@ import type {
   HoursItem,
   HoursEntryType,
   HoursTableRow,
-  StaffResource,
-  HoursProgram,
 } from './types';
 
 interface SharedHoursInput { staffId: string; hours: number; note: string }
@@ -34,8 +33,6 @@ export interface HoursSession {
 }
 
 export interface HoursReferenceData {
-  resources: StaffResource[];
-  programs: HoursProgram[];
   categories: Array<{ value: HoursCategory; label: string }>;
   types: Array<{ value: HoursEntryType; label: string }>;
 }
@@ -59,7 +56,10 @@ export function getHoursCalendarData(
   range: { start: string; end: string },
   opts?: RequestOptions,
 ) {
-  const params = new URLSearchParams(range);
+  const requestedRange = intersectDateRanges(range, filters.dateRange);
+  if (!requestedRange) return Promise.resolve<HoursCalendarData>({});
+
+  const params = new URLSearchParams({ ...requestedRange });
   applyHoursFilters(params, filters);
   return apiClient.get<HoursCalendarData>(`/hours/calendar?${params}`, opts);
 }
@@ -78,6 +78,10 @@ export function getHoursTableData(
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyHoursFilters(params, filters);
+  if (filters.dateRange) {
+    params.set('start', filters.dateRange.start);
+    params.set('end', filters.dateRange.end);
+  }
   return apiClient.get<CursorPage<HoursTableRow>>(`/hours/table?${params}`, opts);
 }
 
@@ -86,7 +90,7 @@ function applyHoursFilters(params: URLSearchParams, filters: HoursFilters) {
   if (filters.categories.length) params.set('categories', filters.categories.join(','));
   if (filters.programIds.length) params.set('programIds', filters.programIds.join(','));
   if (filters.types.length) params.set('types', filters.types.join(','));
-  if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
   if (filters.search) params.set('search', filters.search);
 }
 

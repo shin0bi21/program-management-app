@@ -47,8 +47,8 @@ export async function createSessionNote(
   await assertCanAccessSession(actor, sessionId);
   const noteId = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const sessions = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-      SELECT cs.id, p.roster_mode
+    const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT cs.id, p.enrollment_required
       FROM cohort_sessions cs
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
       INNER JOIN programs p ON p.id = pc.program_id
@@ -60,7 +60,7 @@ export async function createSessionNote(
     await assertYouthEligibility(
       trx,
       sessionId,
-      sessions[0].rosterMode,
+      sessions[0].enrollmentRequired,
       data.youthIds,
     );
 
@@ -107,8 +107,8 @@ export async function updateSessionNote(
   await assertCanAccessSession(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const notes = await trx<{ id: string; rosterMode: 'enrolled' | 'open' }[]>`
-      SELECT sn.id, p.roster_mode
+    const notes = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT sn.id, p.enrollment_required
       FROM session_notes sn
       INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
       INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
@@ -122,7 +122,7 @@ export async function updateSessionNote(
     await assertYouthEligibility(
       trx,
       sessionId,
-      notes[0].rosterMode,
+      notes[0].enrollmentRequired,
       data.youthIds,
     );
 
@@ -197,7 +197,7 @@ export async function listSessionNotesForYouth(
       sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
       cs.theme AS session_theme, cs.starts_at, pc.id AS cohort_id,
-      cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.roster_mode,
+      cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.enrollment_required,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(
@@ -228,11 +228,11 @@ export async function listSessionNotesForYouth(
 async function assertYouthEligibility(
   trx: ReturnType<typeof asTransactionSql>,
   sessionId: string,
-  rosterMode: 'enrolled' | 'open',
+  enrollmentRequired: boolean,
   youthIds: string[],
 ) {
   if (!youthIds.length) return;
-  const eligibleYouth = rosterMode === 'open'
+  const eligibleYouth = !enrollmentRequired
     ? await trx<{ youthId: string }[]>`
         SELECT ar.youth_id
         FROM attendance_records ar

@@ -33,7 +33,7 @@ export default function Youth() {
   const canManageAttendance = permissions.includes('read:attendance')
     && permissions.includes('write:attendance')
     && permissions.includes('read:sessions');
-  const canViewAttendanceReport = permissions.includes('read:cohorts')
+  const canViewAttendanceReport = permissions.includes('read:programs')
     && permissions.includes('read:attendance')
     && permissions.includes('read:sessions');
 

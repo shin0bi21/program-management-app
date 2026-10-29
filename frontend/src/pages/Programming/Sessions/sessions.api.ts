@@ -1,10 +1,11 @@
+import type { Program } from '../../../common/features/programs/types';
+import { getSessionRequestRange } from './utils/sessionDateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 import type {
   AttendanceYouth,
   CohortSession,
-  GenerateSessionsInput,
   SessionAttachment,
   SessionListFilters,
   SessionNote,
@@ -13,10 +14,6 @@ import type {
   SessionType,
 } from './types';
 import type { CursorPage, CursorRequest } from '../../../query/types';
-
-interface GenerateSessionsResult {
-  sessions: Array<{ id: string }>;
-}
 
 interface SessionCalendarFilters extends SessionListFilters {
   start: string;
@@ -53,9 +50,19 @@ export function searchAttendanceYouth(search: string, opts?: RequestOptions) {
     : apiClient.get<AttendanceYouth[]>(path);
 }
 
-export function generateSessions(cohortId: string, data: GenerateSessionsInput) {
-  return apiClient.post<GenerateSessionsResult>(`/cohorts/${cohortId}/sessions/generate`, data);
+export interface CreateSessionInput {
+  programId: string;
+  sessionTypeId: string;
+  theme: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
 }
+
+export function createSession(data: CreateSessionInput) {
+  return apiClient.post('/cohorts/sessions', data);
+}
+
 
 export function getSessionTypes(opts?: RequestOptions) {
   return opts
@@ -75,6 +82,11 @@ export function getSessions(
   pagination?: CursorRequest<SessionSortKey>,
 ) {
   const query = new URLSearchParams();
+  if (pagination && filters.dateRange) {
+    const range = getSessionRequestRange(filters.dateRange.start, filters.dateRange.end);
+    query.set('start', range.start);
+    query.set('end', range.end);
+  }
   if ('start' in filters) query.set('start', filters.start);
   if ('end' in filters) query.set('end', filters.end);
   if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
@@ -214,6 +226,28 @@ export function updateSession(sessionId: string, data: UpdateSessionInput) {
   return apiClient.put(`/cohorts/sessions/${sessionId}`, data);
 }
 
+export interface MoveSessionResult {
+  id: string;
+  cohortId: string;
+  cohortName: string;
+  cycleId: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export function moveSessionDate(sessionId: string, date: string) {
+  return apiClient.put<MoveSessionResult>(`/cohorts/sessions/${sessionId}/date`, { date });
+}
+
 export function deleteSession(sessionId: string) {
   return apiClient.delete(`/cohorts/sessions/${sessionId}`);
+}
+
+export interface SessionReferenceData {
+  programs: Program[];
+  sessionTypes: SessionType[];
+}
+
+export function getSessionReferenceData(opts?: RequestOptions) {
+  return apiClient.get<SessionReferenceData>('/cohorts/sessions/reference-data', opts);
 }

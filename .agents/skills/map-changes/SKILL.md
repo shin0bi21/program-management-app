@@ -58,7 +58,9 @@ Produce the safest concern order. For each concern, the downstream loop is:
 3. obtain explicit shipping authorization;
 4. isolate, commit, and open a pull request for the approved concern;
 5. pass required full CI and merge into `develop`;
-6. return to clean synchronized `develop` and revalidate the remaining map before starting the next concern.
+6. return to clean synchronized `develop`;
+7. verify the completed issue is closed and its feature branch is deleted locally and remotely, following `ship-changes`, before preparing the next concern.
+8. revalidate the remaining map before starting the next concern.
 
 Production deployment follows only after separate explicit authorization.
 

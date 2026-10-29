@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   HOMEPAGE_SECTIONS,
@@ -26,7 +26,7 @@ export function useSectionRouting({ disabled = false }: UseSectionRoutingOptions
   const routeScrollTargetId = useRef<string | null>(null)
   const observedPathRef = useRef<string | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (disabled) return
 
     if (observedPathRef.current === location.pathname) {
@@ -57,7 +57,8 @@ export function useSectionRouting({ disabled = false }: UseSectionRoutingOptions
     }
   }, [disabled, location.pathname])
 
-  useEffect(() => {
+  // Layout cleanup stops URL updates when Suspense hides the homepage for a lazy route.
+  useLayoutEffect(() => {
     if (disabled) return
 
     const sectionElements = HOMEPAGE_SECTIONS

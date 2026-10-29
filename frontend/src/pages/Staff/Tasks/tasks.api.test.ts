@@ -73,6 +73,34 @@ describe('tasks API', () => {
     );
   });
 
+  it('uses the applied page range for table requests and the visible range for calendar requests', () => {
+    const filters = {
+      staffIds: [], programIds: [], categories: [], statuses: [], search: '',
+      dateRange: { start: '2026-01-01', end: '2026-12-31' },
+    };
+    getTasksTableData(filters, undefined, { key: 'startDate', direction: 'asc' });
+    getTasksCalendarData(filters, { start: '2026-08-10', end: '2026-08-12' });
+
+    expect(apiClient.get).toHaveBeenNthCalledWith(1,
+      '/tasks/list?sort=startDate&direction=asc&limit=25&start=2026-01-01&end=2026-12-31', undefined);
+    expect(apiClient.get).toHaveBeenNthCalledWith(2,
+      '/tasks/calendar?start=2026-08-10&end=2026-08-12', undefined);
+  });
+
+  it('clips buffered requests to the page range and skips requests entirely outside it', async () => {
+    const filters = {
+      staffIds: [], programIds: [], categories: [], statuses: [], search: '',
+      dateRange: { start: '2026-08-01', end: '2026-08-31' },
+    };
+    getTasksCalendarData(filters, { start: '2026-07-15', end: '2026-09-15' });
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/tasks/calendar?start=2026-08-01&end=2026-08-31', undefined);
+    vi.mocked(apiClient.get).mockClear();
+
+    await expect(getTasksCalendarData(filters, { start: '2026-09-01', end: '2026-09-15' })).resolves.toEqual([]);
+    expect(apiClient.get).not.toHaveBeenCalled();
+  });
+
   it('loads all task reference data in one request', () => {
     const controller = new AbortController();
     getTaskReferenceData({ signal: controller.signal });

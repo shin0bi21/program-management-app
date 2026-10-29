@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
@@ -9,6 +10,7 @@ import { useAuth } from '../../../../auth/authContext';
 import type { YouthProfile } from '../../types';
 import SchoolModal, { type SchoolAction } from '../../../../common/features/SchoolModal/SchoolModal';
 import { useYouthModal } from './hooks/useYouthModal';
+import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import './YouthModal.css';
 
 interface YouthModalProps {
@@ -50,9 +52,10 @@ export default function YouthModal({
     submitStatus,
     error,
     handleClose,
-  } = useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail: showLoginEmail });
+  } = useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail: showLoginEmail, mode });
 
   const contactOnly = mode === 'contact';
+  const birthDateBounds = getDateOfBirthBounds();
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   let title = 'Add Youth Profile';
   let submitLabel = 'Add Profile';
@@ -124,11 +127,8 @@ export default function YouthModal({
               </div>
 
               <div className="form-row">
-                <FormField id="dateOfBirth" label="Date of Birth">
-                  <input id="dateOfBirth" type="date" disabled={submissionComplete} {...register('dateOfBirth')} />
-                </FormField>
-                <FormField id="gradeLevel" label="Grade" error={errors.gradeLevel?.message}>
-                  <input id="gradeLevel" type="number" min="0" max="12" placeholder="0–12" disabled={submissionComplete} {...register('gradeLevel', { valueAsNumber: true })} />
+                <FormField id="dateOfBirth" label="Date of Birth *" error={errors.dateOfBirth?.message}>
+                  <input id="dateOfBirth" type="date" required {...birthDateBounds} disabled={submissionComplete} {...register('dateOfBirth')} />
                 </FormField>
               </div>
 
@@ -148,7 +148,7 @@ export default function YouthModal({
                 <FloatingSelect
                   id="school"
                   value={schoolId ?? ''}
-                  options={schools.map(school => ({ value: school.id, label: school.name }))}
+                  options={toFilterOptions(schools)}
                   onChange={setSchoolId}
                   placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
                   disabled={submissionComplete || schoolsLoading}

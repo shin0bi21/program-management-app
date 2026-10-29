@@ -23,7 +23,7 @@ const cohort = {
   name: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
-  rosterMode: 'enrolled' as const,
+  enrollmentRequired: true,
   startsOn: '2026-06-01',
   endsOn: '2026-08-31',
   enrolledOn: '2026-06-01',
@@ -39,7 +39,7 @@ const attendance = {
     id: cohort.id,
     name: cohort.name,
     programName: cohort.programName,
-    rosterMode: cohort.rosterMode,
+    enrollmentRequired: cohort.enrollmentRequired,
   },
   sessions: [
     {

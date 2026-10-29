@@ -87,6 +87,30 @@ create a saved record until an edit. Existing invalid records and stale selectio
 through the normal save queue. Preferences remain cached for the session so automatic background
 loads cannot overwrite local choices.
 
+## Derive timeline bounds from cycles
+
+Programming, Tasks, and Hours use the regular multi-select Cycle filter. Persist only
+`cycleIds`, then derive inclusive bounds with `getCycleDateRange`: the earliest start
+and latest end of the selected cycles. No selected IDs means all available cycles;
+the full span can cross gaps and exceed a year. Keep cycle loading and failures with
+the page's data owner, and wait for authoritative cycles before restoring preferences.
+Do not mount a fallback timeline when no cycle bounds are available. Show an empty
+calendar state when no cycles exist and an unavailable state when cycles cannot load.
+
+Pass the derived range through the page's single filter object to both table and calendar.
+Date filtering remains server-side before cursor pagination. Calendar requests intersect
+their buffered windows with these bounds. Changing cycle selections replaces the calendar
+buffer; switching views keeps the selection. Clear all uses every available cycle.
+There is no separate Date Range filter, custom date input, preset, or saved date range.
+The normal preference rules discard obsolete date-range keys and repair invalid cycle IDs.
+Hours also retires its old single `cycleId` preference; valid sibling preferences survive.
+
+Programming and Hours additionally filter records by selected cycle membership. Tasks
+use cycle dates as a time window without assigning tasks to cycles. Hours dashboard
+cycle focus is separate from the multi-cycle collection filter; choosing an entry updates
+that focus without changing calendar or table bounds. Cycle metadata comes from the
+shared reference endpoint under the consuming page's read permission.
+
 ## Testing
 
 Shared preference tests own normalization, restoration, recovery and asynchronous persistence.
@@ -96,3 +120,10 @@ rules. Consolidate each page's field-rule examples and callback-to-save assertio
 than repeating separate shared debounce, rapid-merge or load-failure tests. Retain page-owned
 role defaults, independent option-source wiring, dependent filter changes and local drafts.
 Route tests cover restored controls and view wiring.
+
+`FilterCard` owns the trigger, popup, category list, navigation, and Clear all. `FilterCategoryCard` owns each category’s local checklist draft, back arrow, title, and Clear/Apply footer. Inactive categories stay mounted during an open filter session so Back preserves drafts; closing the popup discards unapplied edits. Pages own applied values.
+
+Applying or clearing filters keeps the popup and current category open, including
+when refreshed table or calendar results change their scroll position. The user
+can continue adjusting filters or dismiss the popup with its trigger, Escape,
+or an outside click.

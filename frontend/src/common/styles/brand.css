@@ -4,6 +4,9 @@
    ============================================================ */
 
 :root {
+  --dashboard-card-height: 125px;
+  --dashboard-card-height-short: 75px;
+
   /* ── Brand palette ──────────────────────────────────────── */
   --color-ink:          #12161f;
   --color-white:         #ffffff;

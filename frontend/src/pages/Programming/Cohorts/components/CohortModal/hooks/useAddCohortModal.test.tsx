@@ -10,8 +10,8 @@ vi.mock('../../../cohorts.api', () => ({
 }));
 
 const programs = [
-  { id: 'program-1', name: 'Soft Skills', description: null, rosterMode: 'enrolled' as const, minAge: 12, maxAge: 15 },
-  { id: 'program-2', name: 'Job Readiness', description: null, rosterMode: 'enrolled' as const, minAge: 16, maxAge: 19 },
+  { id: 'program-1', name: 'Soft Skills' },
+  { id: 'program-2', name: 'Job Readiness' },
 ];
 const cycles = [
   { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-08-31', state: 'active' as const },

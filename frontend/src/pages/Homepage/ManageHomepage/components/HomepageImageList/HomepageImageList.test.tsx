@@ -34,6 +34,7 @@ const defaultProps = {
   loading: false,
   error: null,
   onRetry: vi.fn(),
+  onAdd: vi.fn(),
   onEdit: vi.fn(),
   onDelete: vi.fn(),
   onReorder: vi.fn(),

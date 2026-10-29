@@ -1,11 +1,8 @@
-import { memo, type MutableRefObject, type ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import Row from '../Row/Row';
-import type { ItemMoveStart } from '../../hooks/useItemMove/useItemMove';
 import type {
-  ItemResize,
-  ItemResizeTarget,
-} from '../../hooks/useItemResize/useItemResize';
-import type {
+  ItemStateRef,
+  ItemEnvironment,
   BuildItemContext,
   CalendarCellAction,
   CalendarCellContext,
@@ -14,75 +11,99 @@ import type {
   ItemCapabilities,
   ItemCapabilityContext,
   ItemRange,
+  ItemMoveContext,
+  ItemResizeContext,
   RowItemData,
 } from '../../types';
 
 interface GridProps<TRow, TItemData> {
-  rows: readonly TRow[];
-  firstRowIndex: number;
-  periods: readonly CalendarPeriod[];
-  leadingPeriodWidth: number;
-  items: RowItemData<TItemData>;
-  getItemRange: (item: TItemData) => ItemRange;
+  // Grid layout
   gridColumns: string;
   rowHeight: number;
+  leadingPeriodWidth: number;
   topSpacerHeight: number;
   bottomSpacerHeight: number;
-  rowHeader: ReactNode;
-  getRowId: (row: TRow) => string;
-  getItemId: (item: TItemData) => string;
-  renderRow: (context: { row: TRow; index: number }) => ReactNode;
-  selectedRowId?: string | null;
-  onRowSelect?: (row: TRow) => void;
-  buildItem: (context: BuildItemContext<TRow, TItemData>) => ReactNode;
-  getItemCapabilities?: (context: ItemCapabilityContext<TRow, TItemData>) => ItemCapabilities;
-  onItemActivate?: (context: ItemActivateContext<TRow, TItemData>) => void;
-  itemResizeEnabled: boolean;
-  beginItemResize: (resize: ItemResize<TRow, TItemData>) => void;
-  resizeByKeyboard: (resize: ItemResizeTarget<TRow, TItemData>, direction: -1 | 1) => void;
-  suppressResizeClickRef: MutableRefObject<boolean>;
-  itemMoveEnabled: boolean;
-  beginItemMove: (move: ItemMoveStart<TRow, TItemData>) => void;
-  suppressMoveClickRef: MutableRefObject<boolean>;
-  onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
-  getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
+
+  // Period headers
+  periods: readonly CalendarPeriod[];
   formatPeriodLabel: (period: CalendarPeriod) => string;
   today: Date;
+
+  // Rows and selection
+  rows: readonly TRow[];
+  firstRowIndex: number;
+  rowHeader: ReactNode;
+  getRowId: (row: TRow) => string;
+  renderRow: (context: { row: TRow; index: number }) => ReactNode;
+  selectedRowId?: string | null;
+  onRowSelect?: (row: TRow, source?: 'row' | 'item') => void;
+
+  // Item data and rendering
+  items: RowItemData<TItemData>;
+  getItemId: (item: TItemData) => string;
+  getItemRange: (item: TItemData) => ItemRange;
+  buildItem: (context: BuildItemContext<TRow, TItemData>) => ReactNode;
+  getItemCapabilities?: (context: ItemCapabilityContext<TRow, TItemData>) => ItemCapabilities;
+
+  // Item interactions
+  itemMoveEnabled: boolean;
+  itemResizeEnabled: boolean;
+  itemEnvironment: ItemEnvironment;
+  itemState: ItemStateRef<TRow, TItemData>;
+  onItemActivate?: (context: ItemActivateContext<TRow, TItemData>) => void;
+  onItemMove: (context: ItemMoveContext<TRow, TItemData>) => void;
+  onItemResize: (context: ItemResizeContext<TRow, TItemData>) => void;
+
+  // Cell actions
+  onCellClick?: (context: CalendarCellContext<TRow, TItemData>) => void;
+  getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
 }
 
 const EMPTY_ITEMS = [] as const;
 
-function Grid<TRow, TItemData>({
-  rows,
-  firstRowIndex,
-  periods,
-  leadingPeriodWidth,
-  items,
-  getItemRange,
+type GridComponent = <TRow, TItemData>(props: GridProps<TRow, TItemData>) => ReactNode;
+
+const Grid = memo(function Grid<TRow, TItemData>({
+  // Grid layout
   gridColumns,
   rowHeight,
+  leadingPeriodWidth,
   topSpacerHeight,
   bottomSpacerHeight,
+
+  // Period headers
+  periods,
+  formatPeriodLabel,
+  today,
+
+  // Rows and selection
+  rows,
+  firstRowIndex,
   rowHeader,
   getRowId,
-  getItemId,
   renderRow,
   selectedRowId,
   onRowSelect,
+
+  // Item data and rendering
+  items,
+  getItemId,
+  getItemRange,
   buildItem,
   getItemCapabilities,
-  onItemActivate,
-  itemResizeEnabled,
-  beginItemResize,
-  resizeByKeyboard,
-  suppressResizeClickRef,
+
+  // Item interactions
   itemMoveEnabled,
-  beginItemMove,
-  suppressMoveClickRef,
+  itemResizeEnabled,
+  itemEnvironment,
+  itemState,
+  onItemActivate,
+  onItemMove,
+  onItemResize,
+
+  // Cell actions
   onCellClick,
   getCellActions,
-  formatPeriodLabel,
-  today,
 }: GridProps<TRow, TItemData>) {
   const currentPeriodKey = periods.find(period => today >= period.start && today < period.end)?.key;
 
@@ -109,29 +130,33 @@ function Grid<TRow, TItemData>({
         return (
           <Row
             key={rowId}
-            row={row}
-            rowId={rowId}
-            rowIndex={firstRowIndex + visibleIndex}
-            items={items[rowId] ?? EMPTY_ITEMS}
-            getItemRange={getItemRange}
+
             periods={periods}
             leadingPeriodWidth={leadingPeriodWidth}
             gridColumns={gridColumns}
             rowHeight={rowHeight}
-            getItemId={getItemId}
+
+            row={row}
+            rowId={rowId}
+            rowIndex={firstRowIndex + visibleIndex}
             renderRow={renderRow}
             selected={selectedRowId === rowId}
             onRowSelect={onRowSelect}
+
+            items={items[rowId] ?? EMPTY_ITEMS}
+            getItemId={getItemId}
+            getItemRange={getItemRange}
             buildItem={buildItem}
             getItemCapabilities={getItemCapabilities}
-            onItemActivate={onItemActivate}
-            itemResizeEnabled={itemResizeEnabled}
-            beginItemResize={beginItemResize}
-            resizeByKeyboard={resizeByKeyboard}
-            suppressResizeClickRef={suppressResizeClickRef}
+
             itemMoveEnabled={itemMoveEnabled}
-            beginItemMove={beginItemMove}
-            suppressMoveClickRef={suppressMoveClickRef}
+            itemResizeEnabled={itemResizeEnabled}
+            itemEnvironment={itemEnvironment}
+            itemState={itemState}
+            onItemActivate={onItemActivate}
+            onItemMove={onItemMove}
+            onItemResize={onItemResize}
+
             onCellClick={onCellClick}
             getCellActions={getCellActions}
           />
@@ -140,6 +165,6 @@ function Grid<TRow, TItemData>({
       <div style={{ height: bottomSpacerHeight }} aria-hidden="true" />
     </>
   );
-}
+}) as GridComponent;
 
-export default memo(Grid) as typeof Grid;
+export default Grid;

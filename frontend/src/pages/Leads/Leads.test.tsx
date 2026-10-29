@@ -1,16 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { renderWithQueryClient } from '../../tests/queryClientTestUtils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Leads from './Leads';
 
-const renderPage = (
-  origin: 'external' | 'internal' = 'external',
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-) => {
-  return render(
-    <QueryClientProvider client={queryClient}><Leads origin={origin} /></QueryClientProvider>,
-  );
-};
+const renderPage = (origin: 'external' | 'internal' = 'external') => (
+  renderWithQueryClient(<Leads origin={origin} />)
+);
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
@@ -35,8 +30,9 @@ vi.mock('../../auth/authContext', () => ({
 }));
 vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
-vi.mock('../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
+vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
+  ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
+  useProgramReferences: () => ({ rows: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
 }));
 
 vi.mock('../Programming/Cohorts/cohorts.api', () => ({
@@ -49,7 +45,7 @@ describe('Leads', () => {
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     signUpLead.mockResolvedValue({
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: 'youth-1',
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
       recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
       discoverySource: 'community_outreach', notes: null, status: 'signed_up',
@@ -63,7 +59,7 @@ describe('Leads', () => {
     getLeadNotes.mockResolvedValue([]);
     getLeads.mockResolvedValue([{
       id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Outreach Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
       recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
@@ -71,13 +67,44 @@ describe('Leads', () => {
     }]);
   });
 
-  // Page data.
+  // Rendered states.
   it('shows who filled out an external lead', async () => {
     renderPage();
     expect(await screen.findByRole('columnheader', { name: 'Filled Out By' })).toBeInTheDocument();
     expect(await screen.findByRole('cell', { name: 'Parent' })).toBeInTheDocument();
   });
 
+  it('does not show the filled-out-by field for internal leads', async () => {
+    const internalLead = {
+      id: 'lead-1',
+      origin: 'internal',
+      submittedByRole: 'staff',
+      convertedYouthId: null,
+      youthFirstName: 'Avery',
+      youthLastName: 'Outreach',
+      age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
+      school: 'Outreach Test School',
+      recommendedProgramId: 'program-1',
+      recommendedProgramName: 'Future Ready',
+      contactPhoneNumber: '416-555-0142',
+      contactRelationship: 'guardian',
+      discoverySource: 'community_outreach',
+      notes: null,
+      status: 'new',
+      statusUpdatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    } as const;
+    getLeads.mockResolvedValueOnce([internalLead]);
+    renderPage('internal');
+
+    await screen.findByRole('row', { name: /Avery Outreach/ });
+    expect(screen.queryByRole('columnheader', { name: 'Filled Out By' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Staff' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('menuitem', { name: /Filled Out By/ })).not.toBeInTheDocument();
+  });
+
+  // Controls and views.
   it('filters external leads by who filled out the form', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
@@ -94,16 +121,7 @@ describe('Leads', () => {
     ));
   });
 
-  // Selection and page-spanning actions.
-  it('shows primary contact details when a lead row is selected', async () => {
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
-
-    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
-    expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
-  });
-
+  // Selection and coordination.
   it('keeps the selected dashboard synchronized with status responses', async () => {
     const initialLead = (await getLeads())[0];
     const updatedLead = { ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' };
@@ -152,6 +170,15 @@ describe('Leads', () => {
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
   });
 
+  it('shows primary contact details when a lead row is selected', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+
+    expect(screen.getByText('416-555-0142')).toBeInTheDocument();
+    expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
+  });
+
   it('clears a selected dashboard after deleting that lead', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
@@ -185,6 +212,8 @@ describe('Leads', () => {
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
   });
 
+  // Commands and dialogs.
+
   it('opens the selected Lead for editing from its actions menu', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
@@ -194,37 +223,6 @@ describe('Leads', () => {
 
     expect(screen.getByRole('heading', { name: 'Edit Lead' })).toBeInTheDocument();
     expect(document.getElementById('lead-youthFirstName')).toHaveValue('Avery');
-  });
-
-  // Render.
-  it('does not show the filled-out-by field for internal leads', async () => {
-    const internalLead = {
-      id: 'lead-1',
-      origin: 'internal',
-      submittedByRole: 'staff',
-      convertedYouthId: null,
-      youthFirstName: 'Avery',
-      youthLastName: 'Outreach',
-      age: 14,
-      school: 'Outreach Test School',
-      recommendedProgramId: 'program-1',
-      recommendedProgramName: 'Future Ready',
-      contactPhoneNumber: '416-555-0142',
-      contactRelationship: 'guardian',
-      discoverySource: 'community_outreach',
-      notes: null,
-      status: 'new',
-      statusUpdatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    } as const;
-    getLeads.mockResolvedValueOnce([internalLead]);
-    renderPage('internal');
-
-    await screen.findByRole('row', { name: /Avery Outreach/ });
-    expect(screen.queryByRole('columnheader', { name: 'Filled Out By' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Staff' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: /Filled Out By/ })).not.toBeInTheDocument();
   });
 
 });

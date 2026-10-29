@@ -4,6 +4,7 @@ import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -44,7 +45,6 @@ const TASK_QUERY_KEY = ['tasks'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
-const PROGRAM_CYCLES_QUERY_KEY = ['program-cycles'] as const;
 
 export default function Hours() {
   const [viewError, setViewError] = useState<PageErrorItem | null>(null);
@@ -59,7 +59,6 @@ export default function Hours() {
   // Page data and preferences.
   const pageData = useHoursData(
     HOURS_REFERENCE_DATA_QUERY_KEY,
-    PROGRAM_CYCLES_QUERY_KEY,
     currentUserId,
   );
 
@@ -71,22 +70,26 @@ export default function Hours() {
     categories: pageData.categories,
     types: pageData.types,
     loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
-    optionsError: Boolean(pageData.optionsError),
+    optionsError: Boolean(pageData.localOptionsError),
+    resourcesError: Boolean(pageData.resourcesError),
+    programsError: Boolean(pageData.programsError),
     cyclesError: Boolean(pageData.cyclesError),
     tableKeys: HOURS_TABLE_KEYS,
   });
 
   // Filter configuration.
   const hoursFilters = useMemo<HoursFilters>(() => ({
+    dateRange: preferences.filters.dateRange,
     staffIds: preferences.filters.staffIds,
     categories: preferences.filters.categories,
     programIds: preferences.filters.programIds,
     types: preferences.filters.types,
-    cycleId: preferences.filters.cycleId ?? undefined,
+    cycleIds: preferences.filters.cycleIds,
     search: preferences.search.appliedValue,
   }), [
+    preferences.filters.dateRange,
     preferences.filters.categories,
-    preferences.filters.cycleId,
+    preferences.filters.cycleIds,
     preferences.filters.programIds,
     preferences.filters.staffIds,
     preferences.filters.types,
@@ -106,8 +109,6 @@ export default function Hours() {
   const selection = useHoursSelection({
     resources: pageData.resources,
     currentUserResource: pageData.currentUserResource,
-    cycleId: preferences.filters.cycleId,
-    onCycleSelect: preferences.filters.selectCycle,
   });
 
   const actions = useHoursActions({
@@ -145,8 +146,10 @@ export default function Hours() {
   });
 
   // View configuration.
-  const selectedCycle = pageData.cycles.find(cycle => cycle.id === preferences.filters.cycleId) ?? null;
-  const overviewCycle = selectedCycle
+  const dashboardCycle = pageData.cycles.find(cycle => cycle.id === selection.dashboardCycleId);
+  const firstFilteredCycle = pageData.cycles.find(cycle => preferences.filters.cycleIds.includes(cycle.id));
+  const overviewCycle = dashboardCycle
+    ?? firstFilteredCycle
     ?? pageData.cycles.find(cycle => cycle.state === 'active')
     ?? pageData.cycles[0]
     ?? null;
@@ -184,9 +187,11 @@ export default function Hours() {
     />
   );
 
+  const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
+  const hasCycleBounds = Boolean(hoursFilters.dateRange) && !pageData.cyclesError;
   const viewContent = preferences.view === 'table'
-    ? { table: hoursTable }
-    : { calendar: hoursCalendar };
+    ? { table: hasCycleBounds ? hoursTable : viewUnavailable }
+    : { calendar: hasCycleBounds ? hoursCalendar : viewUnavailable };
 
   // Render.
   return <>
@@ -227,17 +232,17 @@ export default function Hours() {
         /> : undefined}
 
         filters={preferences.ready ? <FilterCard
-          categories={preferences.filters.definitions}
-          values={{
-            staff: preferences.filters.staffIds,
-            entryType: preferences.filters.categories,
-            program: preferences.filters.programIds,
-            type: preferences.filters.types,
-            cycle: preferences.filters.cycleId ? [preferences.filters.cycleId] : [],
-          }}
-          onApply={preferences.filters.apply}
-          onClearAll={preferences.filters.clear}
-        /> : undefined}
+            categories={preferences.filters.definitions}
+            values={{
+              staff: preferences.filters.staffIds,
+              entryType: preferences.filters.categories,
+              program: preferences.filters.programIds,
+              type: preferences.filters.types,
+              cycle: preferences.filters.cycleIds,
+            }}
+            onApply={preferences.filters.apply}
+            onClearAll={preferences.filters.clear}
+          /> : undefined}
       />
       <PageErrorOverlay errors={[
         pageData.optionsError ? {
@@ -253,7 +258,7 @@ export default function Hours() {
         viewError,
         dashboardError,
       ]} />
-      {!preferences.ready ? <p role="status">Loading saved filters…</p> : <PageBody
+      {!preferences.ready ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading saved filters…</p> : <PageBody
         ariaLabel="Hours overview and entries"
         dashboard={<HoursDashboard
           queryKey={HOURS_QUERY_KEY}

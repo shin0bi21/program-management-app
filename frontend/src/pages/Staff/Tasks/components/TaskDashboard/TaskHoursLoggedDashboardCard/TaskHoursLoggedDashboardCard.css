@@ -14,9 +14,6 @@
 .dashboard-card.task-hours-breakdown-card {
   position: relative;
   justify-content: flex-start;
-  height: 75px;
-  min-height: 75px;
-  padding: .75rem 1rem;
 }
 
 .task-hours-breakdown__accessible-title {
@@ -33,6 +30,9 @@
 
 .task-hours-breakdown__layout {
   flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .task-hours-breakdown__summary {
@@ -41,14 +41,14 @@
 
 .task-hours-breakdown__summary dt {
   color: var(--color-muted);
-  font-size: .74rem;
+  font-size: var(--dashboard-card-label-size);
   line-height: 1.15;
 }
 
 .task-hours-breakdown__summary dd {
-  margin: 3px 0 0;
+  margin: var(--dashboard-card-value-gap) 0 0;
   color: var(--color-ink);
-  font-size: 1.35rem;
+  font-size: var(--dashboard-card-value-size);
   font-weight: 750;
   line-height: 1;
 }
@@ -129,11 +129,6 @@
 }
 
 @media (max-width: 520px) {
-  .dashboard-card.task-hours-breakdown-card {
-    height: auto;
-    min-height: 75px;
-  }
-
   .task-hours-breakdown__details {
     grid-template-columns: 1fr;
   }

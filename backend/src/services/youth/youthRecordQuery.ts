@@ -4,7 +4,7 @@ import type { DbRow } from '../../types/db';
 
 export type YouthRecordRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id' | 'grade_level' | 'age_group'>> &
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id'>> &
   DbRow<Pick<Schools, 'name'>> & {
     status: 'active' | 'inactive';
     cohorts: Array<{
@@ -12,7 +12,7 @@ export type YouthRecordRow =
       name: string;
       programId: string;
       programName: string;
-      rosterMode: 'enrolled' | 'open';
+      enrollmentRequired: boolean;
       startsOn: string;
       endsOn: string;
       enrolledOn: string | null;
@@ -46,8 +46,6 @@ export const youthRecordColumns = sql`
   yp.date_of_birth,
   yp.school_id,
   s.name AS school_name,
-  yp.grade_level,
-  yp.age_group,
   CASE WHEN uc.user_id IS NULL THEN NULL ELSE json_build_object(
     'email', uc.email,
     'status', uc.status
@@ -67,7 +65,7 @@ export const youthRecordColumns = sql`
         'name', cycle.name,
         'programId', p.id,
         'programName', p.name,
-        'rosterMode', p.roster_mode,
+        'enrollmentRequired', p.enrollment_required,
         'startsOn', cycle.starts_on,
         'endsOn', cycle.ends_on,
         'enrolledOn', participation.enrolled_on,
@@ -98,7 +96,7 @@ export const youthRecordColumns = sql`
       INNER JOIN program_cohorts open_pc ON open_pc.id = open_cs.cohort_id
       INNER JOIN programs open_program ON open_program.id = open_pc.program_id
       WHERE open_ar.youth_id = u.id
-        AND open_program.roster_mode = 'open'
+        AND open_program.enrollment_required = FALSE
         AND NOT EXISTS (
           SELECT 1
           FROM cohort_enrollments existing_enrollment

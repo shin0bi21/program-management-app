@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enrollYouth, withdrawYouth } from '../../../cohorts.api';
 import type { ProgramCohort } from '../../../types';
-import { makeYouthProfile } from '../../../../../../tests/factories/youth';
+import { makeCohortRosterYouth } from '../../../../../../tests/factories/cohortRoster';
 import { useManageRosterModal } from './useManageRosterModal';
 
 vi.mock('../../../cohorts.api', () => ({
@@ -12,13 +12,13 @@ vi.mock('../../../cohorts.api', () => ({
 }));
 
 const cohort: ProgramCohort = {
-  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
+  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycleName: 'Summer 2026', name: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
   attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
 };
-const youth = makeYouthProfile({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
+const youth = makeCohortRosterYouth({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
 
 describe('useManageRosterModal', () => {
   beforeEach(() => {
@@ -52,7 +52,7 @@ describe('useManageRosterModal', () => {
 
     act(() => {
       void result.current.addYouth(youth);
-      void result.current.addYouth(makeYouthProfile({ id: 'youth-2' }));
+      void result.current.addYouth(makeCohortRosterYouth({ id: 'youth-2' }));
     });
 
     expect(result.current.pendingYouthId).toBe('youth-1');

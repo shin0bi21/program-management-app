@@ -1,3 +1,5 @@
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../../../common/features/referenceData/referenceData.api';
+
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,9 +20,12 @@ const resources = [
 describe('useTaskData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCycleReferences).mockResolvedValue([{
+      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+    }]);
+    vi.mocked(getStaffReferences).mockResolvedValue(resources);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources,
-      programs: [],
       categories: [{ value: 'meeting', label: 'Meeting' }],
       statuses: [{ value: 'active', label: 'Active' }],
     });
@@ -39,5 +44,13 @@ describe('useTaskData', () => {
     rerender();
     expect(result.current.writableResources).toBe(writableResources);
     expect(getTaskReferenceData).toHaveBeenCalledTimes(1);
+    expect(getStaffReferences).toHaveBeenCalledWith('tasks', { signal: expect.any(AbortSignal) });
+    expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });
+    expect(getCycleReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
+    expect(result.current.cycles).toEqual([expect.objectContaining({ id: 'cycle-1' })]);
+    expect(result.current.cyclesLoading).toBe(false);
+    expect(result.current.cyclesError).toBe('');
   });
 });
+
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

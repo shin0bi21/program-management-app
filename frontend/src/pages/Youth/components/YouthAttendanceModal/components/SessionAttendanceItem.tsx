@@ -10,7 +10,7 @@ import SessionNoteCard from './SessionNoteCard';
 
 export default function SessionAttendanceItem({
   session,
-  rosterMode,
+  enrollmentRequired,
   status,
   canManageSessionNotes,
   notesExpanded,
@@ -22,7 +22,7 @@ export default function SessionAttendanceItem({
   onUnlinkNote,
 }: {
   session: YouthAttendanceSession;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   status: AttendanceStatus | '';
   canManageSessionNotes: boolean;
   notesExpanded: boolean;
@@ -34,7 +34,7 @@ export default function SessionAttendanceItem({
   onUnlinkNote: (note: SessionNote) => void;
 }) {
   const sessionLabel = session.theme;
-  const canAddNote = rosterMode === 'enrolled' || session.status === 'present';
+  const canAddNote = enrollmentRequired || session.status === 'present';
 
   return (
     <article className="youth-attendance-modal__session">
@@ -50,7 +50,7 @@ export default function SessionAttendanceItem({
           <AttendanceStatusSelect
             id={`youth-attendance-${session.id}`}
             ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.startsAt)}`}
-            rosterMode={rosterMode}
+            enrollmentRequired={enrollmentRequired}
             value={status}
             disabled={Boolean(session.cancelledAt)}
             onChange={onStatusChange}

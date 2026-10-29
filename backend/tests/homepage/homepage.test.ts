@@ -202,7 +202,7 @@ describe('Homepage management API', () => {
     );
     expect(softSkills).toEqual(expect.objectContaining({
       name: 'Soft Skills',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     }));

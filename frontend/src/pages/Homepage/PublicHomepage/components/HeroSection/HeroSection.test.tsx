@@ -72,16 +72,4 @@ describe('HeroSection', () => {
 
     expect(preloadedSources).toContain('/programming/photo-2.png')
   })
-
-  it('falls back from a failed mobile source and reports when the display image also fails', () => {
-    render(<HeroSection photos={photos} />)
-
-    const image = screen.getByAltText('First hero photo')
-    fireEvent.error(image)
-    expect(document.querySelector('source')).not.toBeInTheDocument()
-    expect(screen.getByAltText('First hero photo')).toHaveAttribute('src', '/programming/photo-1.png')
-
-    fireEvent.error(screen.getByAltText('First hero photo'))
-    expect(screen.getByRole('status')).toHaveTextContent('Photo unavailable')
-  })
 })

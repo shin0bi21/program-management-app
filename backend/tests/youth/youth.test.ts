@@ -10,6 +10,7 @@ const app = createApp();
 const baseYouth = {
   firstName: 'Jamie',
   lastName: 'Test',
+  dateOfBirth: '2012-06-15',
 };
 
 describe('Youth API', () => {
@@ -54,6 +55,45 @@ describe('Youth API', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     }, 30000);
+
+    it.each(['age', 'grade'])('rejects the removed %s sort', async sort => {
+      const res = await request(app).get('/api/youth').query({ sort })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.status).toBe(400);
+    });
+
+    it('sorts and paginates DOBs in both directions, including unknown dates and ties', async () => {
+      const records: Array<{ id: string; dateOfBirth: string }> = [];
+      try {
+        for (const dateOfBirth of [null, '2012-06-15', '2012-06-15', '2008-01-01']) {
+          const saved = await request(app).post('/api/youth')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ ...baseYouth, lastName: 'BirthdateSort', dateOfBirth });
+          expect(saved.status).toBe(201);
+          records.push({ id: saved.body.id, dateOfBirth: dateOfBirth ?? '' });
+        }
+
+        const ascending = [...records].sort((a, b) => a.dateOfBirth.localeCompare(b.dateOfBirth) || a.id.localeCompare(b.id));
+        for (const direction of ['asc', 'desc']) {
+          const actual: string[] = [];
+          let cursor: string | undefined;
+          do {
+            const response = await request(app).get('/api/youth')
+              .query({ search: 'BirthdateSort', sort: 'dateOfBirth', direction, limit: 1, ...(cursor ? { cursor } : {}) })
+              .set('Authorization', `Bearer ${adminToken}`);
+            expect(response.status).toBe(200);
+            actual.push(...response.body.rows.map((row: { id: string }) => row.id));
+            cursor = response.body.nextCursor ?? undefined;
+          } while (cursor && actual.length <= records.length);
+
+          expect(cursor).toBeUndefined();
+          const expected = direction === 'asc' ? ascending : [...ascending].reverse();
+          expect(actual).toEqual(expected.map(row => row.id));
+        }
+      } finally {
+        for (const record of records) await deleteTestYouth(record.id);
+      }
+    });
 
     it('should allow staff access', async () => {
       const staff = await seedTestUser({ email: `youth-staff-${Date.now()}@test.local`, role: 'staff' });
@@ -102,10 +142,10 @@ describe('Youth API', () => {
 
       beforeAll(async () => {
         const [otherProgram] = await sql<{ id: string }[]>`
-          SELECT id FROM programs WHERE roster_mode = 'enrolled' AND id != ${softSkillsProgramId} LIMIT 1
+          SELECT id FROM programs WHERE enrollment_required = TRUE AND id != ${softSkillsProgramId} LIMIT 1
         `;
         const [openProgram] = await sql<{ id: string }[]>`
-          SELECT id FROM programs WHERE roster_mode = 'open' LIMIT 1
+          SELECT id FROM programs WHERE enrollment_required = FALSE LIMIT 1
         `;
         openProgramId = openProgram.id;
         const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
@@ -126,7 +166,7 @@ describe('Youth API', () => {
         for (const name of ['Current', 'Past', 'Both', 'Cross', 'Withdrawn', 'Open', 'Unlinked']) {
           const response = await request(app).post('/api/youth')
             .set('Authorization', `Bearer ${adminToken}`)
-            .send({ firstName: name, lastName: 'CycleFilter' });
+            .send({ ...baseYouth, firstName: name, lastName: 'CycleFilter' });
           expect(response.status).toBe(201);
           youth[name] = response.body.id;
           youthIds.push(response.body.id);
@@ -234,7 +274,7 @@ describe('Youth API', () => {
       it('preserves planned participation in program and cycle filters', async () => {
         const created = await request(app).post('/api/youth')
           .set('Authorization', `Bearer ${adminToken}`)
-          .send({ firstName: 'Planned', lastName: 'CycleFilter' });
+          .send({ ...baseYouth, firstName: 'Planned', lastName: 'CycleFilter' });
         expect(created.status).toBe(201);
         youthIds.push(created.body.id);
         await sql`
@@ -275,10 +315,23 @@ describe('Youth API', () => {
         .send(baseYouth);
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
+      expect(res.body).not.toHaveProperty('age');
+      expect(res.body).not.toHaveProperty('gradeLevel');
+      expect(res.body).not.toHaveProperty('ageGroup');
       createdIds.push(res.body.id);
+
+      const direct = await request(app).get(`/api/youth?id=${res.body.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(direct.status).toBe(200);
+      expect(direct.body).toEqual(res.body);
+
+      const listed = await request(app).get('/api/youth').query({ search: baseYouth.firstName })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(listed.status).toBe(200);
+      expect(listed.body.find((youth: { id: string }) => youth.id === res.body.id)).toEqual(res.body);
     });
 
-    it('should create youth with optional fields (201)', async () => {
+    it('should create youth and support later enrollment (201)', async () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -286,7 +339,6 @@ describe('Youth API', () => {
           ...baseYouth,
           firstName: 'Jordan',
           dateOfBirth: '2012-06-15',
-          gradeLevel: 7,
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
@@ -413,7 +465,7 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ lastName: 'Test', status: 'active' });
+        .send({ ...baseYouth, firstName: undefined });
       expect(res.status).toBe(400);
     });
 
@@ -421,7 +473,7 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Test', status: 'active' });
+        .send({ ...baseYouth, lastName: undefined });
       expect(res.status).toBe(400);
     });
 
@@ -429,7 +481,7 @@ describe('Youth API', () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Test', lastName: 'User' });
+        .send({ ...baseYouth, firstName: 'Test', lastName: 'User' });
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('inactive');
       createdIds.push(res.body.id);
@@ -448,22 +500,6 @@ describe('Youth API', () => {
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ ...baseYouth, email: 'not-an-email' });
-      expect(res.status).toBe(400);
-    });
-
-    it('should reject gradeLevel above 12 (400)', async () => {
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ ...baseYouth, gradeLevel: 13 });
-      expect(res.status).toBe(400);
-    });
-
-    it('should reject gradeLevel below 0 (400)', async () => {
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ ...baseYouth, gradeLevel: -1 });
       expect(res.status).toBe(400);
     });
 
@@ -660,7 +696,7 @@ describe('Youth API', () => {
       const updateRes = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: youthId, firstName: 'Updated', lastName: 'Name' });
+        .send({ ...baseYouth, id: youthId, firstName: 'Updated', lastName: 'Name' });
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.id).toBe(youthId);
 
@@ -890,7 +926,7 @@ describe('Youth API', () => {
       `;
 
       const [openProgram] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE roster_mode = 'open' ORDER BY name LIMIT 1
+        SELECT id FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
       `;
       const openCohort = await seedTestCohort({
         programId: openProgram.id,
@@ -956,7 +992,7 @@ describe('Youth API', () => {
       expect(response.body.cohort).toEqual(expect.objectContaining({
         id: softSkillsCohortId,
         programName: 'Soft Skills',
-        rosterMode: 'enrolled',
+        enrollmentRequired: true,
       }));
       expect(response.body.sessions).toHaveLength(2);
       expect(response.body.sessions).toEqual(expect.arrayContaining([

@@ -1,18 +1,10 @@
-.dashboard-card.cohort-overview-card {
-  height: 116px;
-}
-
-.cohort-overview-card .dashboard-card__header {
-  margin-bottom: var(--space-2);
-}
-
 .cohort-overview {
   display: grid;
   gap: var(--space-1);
   margin: 0;
 }
 
-.cohort-overview div {
+.cohort-overview > div {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
@@ -30,14 +22,6 @@
   font-size: 1rem;
   font-weight: 750;
 }
-
-@media (max-width: 768px) {
-  .dashboard-card.cohort-overview-card {
-    height: auto;
-    min-height: 116px;
-  }
-}
-
 
 .cohort-state {
   display: inline-flex;
@@ -88,4 +72,11 @@
 .cycle-list__item span {
   color: var(--color-muted);
   font-size: 0.8rem;
+}
+
+.cohort-overview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }

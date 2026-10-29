@@ -1,0 +1,41 @@
+.program-dashboard-card .dashboard-card__header {
+  flex-wrap: wrap;
+}
+
+.program-dashboard__cohort {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.program-dashboard__actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.program-dashboard__metrics {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.program-dashboard__metrics > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.program-dashboard__metrics dt {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.program-dashboard__metrics dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+}

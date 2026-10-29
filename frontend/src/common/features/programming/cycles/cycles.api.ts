@@ -1,23 +1,19 @@
 import { apiClient } from '../../../../http/client';
-import type { RequestOptions } from '../../../../http/client';
 import type { ProgramCycle } from './types';
 
 interface SetProgramCycleInput {
   name: string;
   startsOn: string;
   endsOn: string;
+  programIds: string[];
 }
 
-export function getProgramCycles(opts?: RequestOptions) {
-  return opts
-    ? apiClient.get<ProgramCycle[]>('/cohorts/cycles', opts)
-    : apiClient.get<ProgramCycle[]>('/cohorts/cycles');
-}
+type SavedProgramCycle = Omit<ProgramCycle, 'state'>;
 
 export function setProgramCycle(data: SetProgramCycleInput, cycleId?: string) {
   return cycleId
-    ? apiClient.put<ProgramCycle>(`/cohorts/cycles/${cycleId}`, data)
-    : apiClient.post<ProgramCycle>('/cohorts/cycles', data);
+    ? apiClient.put<SavedProgramCycle>(`/cohorts/cycles/${cycleId}`, data)
+    : apiClient.post<SavedProgramCycle>('/cohorts/cycles', data);
 }
 
 export function deleteProgramCycle(cycleId: string) {

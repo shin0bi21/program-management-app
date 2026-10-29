@@ -11,6 +11,8 @@ interface FloatingMenuPanelProps {
   children: ReactNode;
   className?: string;
   width?: number;
+  keyboardMode?: 'menu' | 'form';
+  ariaLabel?: string;
 }
 
 export default function FloatingMenuPanel({
@@ -20,9 +22,20 @@ export default function FloatingMenuPanel({
   children,
   className,
   width,
+  keyboardMode = 'menu',
+  ariaLabel,
 }: FloatingMenuPanelProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (keyboardMode === 'form' && event.key !== 'Escape') {
+        if (event.key === 'Tab') {
+          const controls = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') ?? []);
+          const boundary = event.shiftKey ? controls[0] : controls[controls.length - 1];
+          if (document.activeElement === boundary) onClose();
+        }
+        return;
+      }
+
       if (event.key === 'Escape' || event.key === 'Tab') {
         onClose();
         return;
@@ -47,12 +60,13 @@ export default function FloatingMenuPanel({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [menuRef, onClose]);
+  }, [keyboardMode, menuRef, onClose]);
 
   return createPortal(
     <div
       ref={menuRef as unknown as RefObject<HTMLDivElement>}
-      role="menu"
+      role={keyboardMode === 'form' ? 'dialog' : 'menu'}
+      aria-label={ariaLabel}
       className={`floating-menu-panel${className ? ` ${className}` : ''}`}
       style={{ top: position.top, left: position.left, width }}
       onPointerDown={event => event.stopPropagation()}

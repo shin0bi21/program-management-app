@@ -90,6 +90,7 @@ export default function TaskCalendar({
 
   return <>
     <TimelineCalendar
+      dateRange={filters.dateRange}
       rows={visibleResources}
       items={calendar.items}
       onInitialPeriods={calendar.initialize}
@@ -104,9 +105,10 @@ export default function TaskCalendar({
       renderRow={({ row }) => <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>}
       selectedRowId={selectedResourceId}
       onRowSelect={row => onResourceSelect(row.id)}
-      buildItem={({ data: task }) => {
+      buildItem={({ data: task, calendar: itemCalendar }) => {
         const actionsAvailable = canWrite && task.writable && !actions.isTaskPending(task.id);
         return <TaskItem
+          calendar={itemCalendar}
           task={task}
           selected={task.id === selectedTaskId}
           onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setState(task, 'completed') : undefined}

@@ -1,20 +1,22 @@
 # Continuous integration
 
-## Purpose
+Required GitHub checks are the merge gate. Open the pull request's **Checks**
+section to inspect its results; use [Testing](testing.md#choose-a-runner) to
+choose the local equivalent of a failed check.
 
-CI is the authoritative merge gate for pull requests. It keeps fast, reproducible
-checks on the pull-request path while isolating slower or differently scoped
-automation. Repository scripts provide the stable interface shared by developers,
-agents, and GitHub Actions; package scripts remain framework-level implementation
-details. This document owns both CI architecture and its operating workflow.
+Feature work enters `develop` through a pull request. Production releases use a
+separately authorized pull request from `develop` to `main`; direct feature
+pull requests to `main` are rejected. See [Shipping](shipping.md) and
+[Deployment](deployment.md) for those procedures.
 
 ## Workflow topology
 
 | Workflow | Trigger | Responsibility | Merge role |
 |---|---|---|---|
-| `ci.yml` | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
-| `playwright.yml` | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
-| `deploy.yml` | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
+| [CI](../../.github/workflows/ci.yml) | Pull requests to `develop` or `main` | Merge-path policy, changed-path classification, affected static and pattern checks, backend/frontend verification, and conditional production validation | Required merge gate |
+| [Playwright](../../.github/workflows/playwright.yml) | Weekly schedule; manual dispatch | Real-browser component behavior and failure traces | Separate browser signal, not part of ordinary PR CI |
+| [Documentation](../../.github/workflows/docs.yml) | Pull requests to `develop` or `main` changing `docs/`, the root README, or the docs workflow | Standalone Starlight tooling tests, static build, and search index | Separate docs validation; no publishing or application deployment |
+| [Deploy Production](../../.github/workflows/deploy.yml) | Push to `main` | Production synchronization, deployment, and public-route verification | Deployment only; never implied by feature shipping |
 
 The supported branch flow is:
 
@@ -57,6 +59,8 @@ feature pull requests. Release pull requests to `main` run all production checks
 The shared selector applies these rules locally and in CI:
 
 - Documentation-only changes skip paid application jobs.
+- Documentation and Starlight changes run the separate docs workflow. Its Node 24
+  install and build use `docs/package-lock.json`, independently of app dependencies.
 - Repository automation changes run static and changed pattern checks.
 - Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
 - Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
@@ -84,77 +88,66 @@ per test file. Playwright owns behavior that depends on a real
 browser, including layout geometry, scrolling, pointer behavior, and browser focus.
 See [Testing](testing.md) for commands and focused-suite routing.
 
-## Runner boundaries
+## Diagnose a failed check
 
-Use the narrowest stable layer:
+1. Open the failed job and step in **Checks** or **Actions**.
+2. Run its [repository test runner](testing.md#choose-a-runner). For migration,
+   generated-type, build, image, Compose, or nginx failures, use the exact
+   command in the failed workflow step. [Local development](local-development.md)
+   covers the required containers, dependencies, and migration commands.
+3. Push a fix for a reproducible failure. Use **Re-run failed jobs** for an
+   infrastructure or transient failure after confirming the commit has not
+   changed.
 
-- GitHub workflows orchestrate jobs, services, matrices, permissions, caching, and artifacts.
-- `scripts/ci/` classifies changed ownership paths and produces local commands or GitHub outputs.
-- `scripts/tests/` exposes commands that work from the repository root and composes suites.
-- Package scripts invoke Vitest, Playwright, TypeScript, build tools, and backend test frameworks.
-- Focused runners support implementation feedback; umbrella runners define complete layer coverage.
+Changed pattern checks run in the quality job alongside static analysis.
+Scheduled Playwright retains failure traces. Deployment failures and
+reruns belong to the [deployment guide](deployment.md#monitoring-and-rerunning-a-deployment).
 
-A short wrapper is intentional when it gives CI and developers one canonical command,
-normalizes the working directory, or preserves a stable interface. Avoid wrappers that
-only rename another repository wrapper or are not reused by documentation, CI, or suite
-composition.
+## Required checks
 
-## Performance model and baseline
+Repository rulesets require a pull request for both integration branches:
 
-Measure these separately:
+| Target | Required checks | Merge constraint |
+|---|---|---|
+| `develop` | `Lint & Shell Analysis`; `Backend — Typecheck, Migrate & Test`; `Frontend — Typecheck & Build` | Ship reviewed feature concerns here |
+| `main` | The three standard CI checks above; `Enforce develop → main only`; `Production Compose Validation`; `Backend Production Image`; `Frontend Production Image` | Source must be `develop`; use a regular merge commit so `develop` remains in production history |
 
-- **Queue time:** creation until execution begins.
-- **Wall time:** execution begins until the last required job completes; this determines developer waiting.
-- **Runner consumption:** sum of job execution time; parallelism can reduce wall time while increasing this cost.
-- **Reliability:** failure, cancellation, and rerun rates.
-- **Delivery cycle:** pull-request creation until merge; this also includes review and human response time.
+Job-level conditions preserve check names while skipping work unrelated to the
+diff. Pull requests to `main` always run merge-path enforcement, static checks,
+both production image builds, and production Compose validation. Backend and
+frontend application jobs follow changed-path selection.
 
-On 2026-08-11, the first five successful feature-PR runs using the optimized shape had
-a mean wall time of 2m 06s and median of 2m 07s. The ten immediately preceding comparable
-successful runs had a mean of 2m 41s and median of 2m 42s. The observed early improvement
-was about 35 seconds, or 22%. This is a small same-day sample and should be treated as a
-baseline, not a durable performance guarantee.
-
-For a serial batch of ten otherwise comparable pull requests, a 35-second reduction saves
-about 5m 50s of merge-gate waiting. It does not imply equal savings in runner consumption
-or total time-to-merge.
-
-`npm run report:ci` is the canonical read-only measurement interface. It derives merge
-intervals and CI-change boundaries from GitHub pull requests, and derives queue, wall,
-runner, reliability, and rerun measurements from workflow and job timestamps. See the
-[Reports guide](reports.md#ci-report) for usage.
-
-## Reproduce a failed check
-
-Start from the failed GitHub job and run its stable repository command where one exists:
-
-| Failed job or layer | Local command |
-|---|---|
-| Lint and shell analysis | `bash scripts/tests/test-static.sh` |
-| Backend API behavior | `bash scripts/tests/backend/test-apis.sh` |
-| Frontend Vitest behavior | `bash scripts/tests/frontend/test-ui.sh` |
-| Browser component behavior | `bash scripts/tests/frontend/test-browser.sh` |
-| Full local application gate | `bash scripts/tests/test-app.sh` |
-| Changed-suite selection | `bash scripts/tests/test-app.sh --plan-changed`, then `bash scripts/tests/test-app.sh --changed` |
-| Repository patterns | `node scripts/patterns/check-patterns.ts --changed` |
-
-CI also owns framework and production steps such as backend migrations and generated-type drift checks, frontend builds, image builds, Compose validation, and nginx validation. Inspect the failed workflow step for its exact command. [Testing](testing.md) owns runner selection; [local development](local-development.md) owns Docker, migrations, dependencies, and environment diagnostics.
-
-## Inspect and rerun GitHub checks
-
-Open the pull request's **Checks** section or the repository's **Actions** tab, select the workflow run, then open the failed job and step. Use **Re-run failed jobs** for an infrastructure or transient failure after confirming the commit has not changed. Push a code fix when the failure is reproducible or caused by the diff.
+## Change CI
 
 Changed-pattern failures and non-blocking review findings appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
 
-## Change checklist
+| Owner | Responsibility |
+|---|---|
+| `.github/workflows/` | Jobs, services, permissions, caching, artifacts, and triggers |
+| `scripts/ci/` | Changed-path classification and plans |
+| `scripts/tests/` | Stable repository-root commands and suite composition |
+| Package scripts | Framework commands |
 
-When changing CI architecture or operation:
+A wrapper is useful when it provides a shared command, prepares the environment,
+or normalizes the working directory. Avoid wrappers that only rename another
+repository wrapper.
 
-1. Identify the required gate and every scheduled, push, manual, and deployment consumer.
-2. Preserve a reproducible repository-root command for locally relevant checks.
-3. Confirm permissions, timeouts, concurrency cancellation, cache inputs, dependency edges, and conditional jobs.
-4. Confirm required-check names and branch-protection expectations.
-5. Run `bash -n` and ShellCheck for changed shell scripts, plus skill, static, and affected-suite validation where possible.
-6. Preserve workflow orchestration in `.github/workflows/`, changed-path policy in `scripts/ci/`, reusable execution in `scripts/tests/`, and framework commands in package scripts.
-7. Inspect the first GitHub run at job level because triggers, services, permissions, caches, and rulesets cannot be fully verified locally.
-8. Update this document whenever workflow ownership, triggers, gates, operational procedures, or test-layer boundaries change.
+Before changing CI:
+
+1. Identify the required gate and all scheduled, push, manual, and deployment consumers.
+2. Preserve required-check names and reproducible commands for locally relevant checks.
+3. Check permissions, timeouts, concurrency cancellation, cache inputs, dependency edges, and conditional jobs.
+4. Run `bash -n` and ShellCheck for changed shell scripts, static checks, and affected suites.
+5. Inspect the first GitHub run at job level; local checks cannot fully verify triggers, services, permissions, caches, or rulesets.
+6. Update this guide when workflow ownership, routing, gates, or operation changes.
+
+Use the [CI report](reports.md#ci-report) to measure performance. Compare queue
+time, required-job wall time, runner consumption, and reliability separately;
+record comparable sample sizes before claiming an improvement.
+
+## Dependency updates
+
+[Dependabot](../../.github/dependabot.yml) opens weekly updates targeting
+`develop` for root, backend, and frontend npm packages, GitHub Actions, and
+Docker images. Dependency Review and CodeQL workflows are not configured;
+any future scans should remain outside the production deployment path.

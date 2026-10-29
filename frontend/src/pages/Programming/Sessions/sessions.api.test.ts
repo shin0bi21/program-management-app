@@ -3,18 +3,38 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
 import {
+  createSession,
+  moveSessionDate,
   createSessionAttachment,
   getSessionAttachmentDownloadName,
   getSessions,
+  getSessionReferenceData,
   searchAttendanceYouth,
 } from './sessions.api';
 
 vi.mock('../../../http/client', () => ({
-  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn() },
+  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 
 describe('session API', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('loads page-owned session options with cancellation', () => {
+    const options = { signal: new AbortController().signal };
+    getSessionReferenceData(options);
+    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/sessions/reference-data', options);
+  });
+
+  it('moves a session with a date-only command', () => {
+    moveSessionDate('session-1', '2027-01-12');
+    expect(apiClient.put).toHaveBeenCalledWith('/cohorts/sessions/session-1/date', { date: '2027-01-12' });
+  });
+
+  it('creates by program and date so the server resolves the assigned cycle', () => {
+    const data = { programId: 'program-1', sessionTypeId: 'type-1', theme: 'Art', date: '2026-10-27' };
+    createSession(data);
+    expect(apiClient.post).toHaveBeenCalledWith('/cohorts/sessions', data);
+  });
 
   it('serializes session list filters without adding a trailing question mark', () => {
     getSessions({}, undefined, { key: 'date', direction: 'asc' });
@@ -68,5 +88,16 @@ describe('session API', () => {
       title: 'Workshop / Photos.',
       mimeType: 'image/png',
     })).toBe('Workshop - Photos.png');
+  });
+});
+
+describe('session date-range filtering', () => {
+  it('uses the same inclusive local days for table requests across DST', () => {
+    getSessions({ dateRange: { start: '2026-03-08', end: '2026-03-08' } }, undefined,
+      { key: 'date', direction: 'asc', limit: 25 });
+    const path = vi.mocked(apiClient.get).mock.calls[vi.mocked(apiClient.get).mock.calls.length - 1]?.[0];
+    const url = new URL(String(path), 'http://localhost');
+    expect(url.searchParams.get('start')).toBe('2026-03-08T05:00:00Z');
+    expect(url.searchParams.get('end')).toBe('2026-03-09T04:00:00Z');
   });
 });

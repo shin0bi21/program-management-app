@@ -24,8 +24,8 @@ export async function handleGetTasksCalendarData(req: Request, res: Response) {
   res.json(await getTasksCalendarData((req as AuthRequest).user!, query));
 }
 
-export async function handleGetTaskReferenceData(req: Request, res: Response) {
-  res.json(await getTaskReferenceData((req as AuthRequest).user!));
+export async function handleGetTaskReferenceData(_req: Request, res: Response) {
+  res.json(getTaskReferenceData());
 }
 
 export async function handleSetTask(req: Request, res: Response) {

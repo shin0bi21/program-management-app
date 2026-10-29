@@ -17,6 +17,7 @@
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
     "test:hours": "jest --testPathPatterns=tests/hours",
+    "test:reference-data": "jest --testPathPatterns=tests/referenceData",
     "test:tasks": "jest --testPathPatterns=tests/tasks",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
     "db:migrate:test": "sh -c 'set -a && . ./.env.test && set +a && npx tsx db/scripts/update_schemas.ts'",
@@ -28,7 +29,6 @@
     "db:status": "npx tsx db/scripts/migration_status.ts",
     "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
-    "images:backfill-homepage": "npx tsx db/scripts/backfill-homepage-image-variants.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

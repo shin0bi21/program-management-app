@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { apiClient } from '../../http/client';
 import type { YouthProfile } from './types';
-import { getYouth, setYouth } from './youth.api';
+import { getYouth, setYouth, setYouthContacts } from './youth.api';
 
 vi.mock('../../http/client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -39,18 +39,30 @@ describe('youth API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/youth?id=youth-1');
   });
 
+  it('updates only contacts and returns the authoritative profile', async () => {
+    const profile = { id: 'youth-1', dateOfBirth: null } as YouthProfile;
+    const contacts = [{ phoneNumber: '4165550100', type: 'parent' as const }];
+    vi.mocked(apiClient.put).mockResolvedValue(profile);
+
+    expect(await setYouthContacts('youth-1', contacts)).toBe(profile);
+    expect(apiClient.put).toHaveBeenCalledWith('/youth/youth-1/contacts', { contacts });
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
   it('creates and updates profiles through the youth upsert endpoint', () => {
-    setYouth({ firstName: 'Maya', lastName: 'Thompson' });
-    setYouth({ id: 'youth-1', firstName: 'Maya', lastName: 'Lee' });
+    setYouth({ firstName: 'Maya', lastName: 'Thompson', dateOfBirth: '2012-08-19' });
+    setYouth({ id: 'youth-1', firstName: 'Maya', lastName: 'Lee', dateOfBirth: '2012-08-19' });
 
     expect(apiClient.post).toHaveBeenNthCalledWith(1, '/youth', {
       firstName: 'Maya',
       lastName: 'Thompson',
+      dateOfBirth: '2012-08-19',
     });
     expect(apiClient.post).toHaveBeenNthCalledWith(2, '/youth', {
       id: 'youth-1',
       firstName: 'Maya',
       lastName: 'Lee',
+      dateOfBirth: '2012-08-19',
     });
     expect(apiClient.put).not.toHaveBeenCalled();
   });

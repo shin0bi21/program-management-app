@@ -15,7 +15,7 @@ export interface YouthProfile {
     name: string;
     programId: string;
     programName: string;
-    rosterMode: 'enrolled' | 'open';
+    enrollmentRequired: boolean;
     startsOn: string;
     endsOn: string;
     enrolledOn: string | null;
@@ -25,8 +25,6 @@ export interface YouthProfile {
     absentCount: number;
     lastAttendedOn: string | null;
   }>;
-  gradeLevel: number | null;
-  ageGroup: 'junior_youth' | 'senior_youth' | null;
   lastAttendedOn: string | null;
   createdAt: string;
   addresses: Array<{
@@ -58,5 +56,5 @@ export interface YouthFilters {
   cycleIds?: string[];
 }
 
-export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status'] as const;
 export type YouthSortKey = typeof YOUTH_TABLE_KEYS[number];

@@ -8,6 +8,7 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 
 import { signUpLead } from '../../leads.api';
+import { getDateKeyInTimeZone } from '../../../../common/utils/date';
 import type { Lead } from '../../types';
 import useSignUpLeadModal from './useSignUpLeadModal';
 
@@ -27,6 +28,7 @@ const lead: Lead = {
   youthFirstName: 'Avery',
   youthLastName: 'Outreach',
   age: 14,
+  dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: 'program-1',
   recommendedProgramName: 'Future Ready',
@@ -43,7 +45,7 @@ const cohort = {
   id: 'cohort-1',
   programId: 'program-1',
   programName: 'Future Ready',
-  rosterMode: 'enrolled' as const,
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
@@ -81,7 +83,7 @@ describe('useSignUpLeadModal', () => {
       cohort,
       { ...cohort, id: 'cohort-too-old', minAge: 16, maxAge: 18 },
       { ...cohort, id: 'cohort-completed', state: 'completed' },
-      { ...cohort, id: 'cohort-open', rosterMode: 'open' },
+      { ...cohort, id: 'cohort-open', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue({ ...lead, status: 'signed_up' });
   });
@@ -101,6 +103,9 @@ describe('useSignUpLeadModal', () => {
       'cohort-too-old',
     ]);
     expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-1']);
+
+    act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
+    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
   });
 
   it('submits the selected cohort and note category before reporting success', async () => {
@@ -116,12 +121,46 @@ describe('useSignUpLeadModal', () => {
     });
     await act(() => result.current.submit());
 
-    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health');
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health', lead.dateOfBirth);
     expect(onSuccess).toHaveBeenCalledWith(updatedLead);
     expect(result.current.submitStatus).toBe('success');
     expect(result.current.statusMessage).toBe(
       'Youth profile successfully created and added to Future Ready - Summer 2026.',
     );
+  });
+
+  it('requires a real DOB for legacy leads and sends the entered date to signup', async () => {
+    const { result } = renderWorkflow({ ...lead, dateOfBirth: null, age: null });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dateOfBirth).toBe('');
+    expect(result.current.age).toBeNull();
+    expect(result.current.visibleCohorts).toEqual([]);
+
+    await act(() => result.current.submit());
+    expect(signUpLead).not.toHaveBeenCalled();
+    expect(result.current.statusMessage).toBe('Date of birth is required');
+
+    act(() => result.current.changeDateOfBirth(getDateKeyInTimeZone()));
+    await act(() => result.current.submit());
+    expect(signUpLead).not.toHaveBeenCalled();
+    expect(result.current.statusMessage).toBe('Date of birth must be before today');
+
+    act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
+    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
+    act(() => result.current.selectCohort('cohort-too-old'));
+    await act(() => result.current.submit());
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-too-old', 'general', `${new Date().getFullYear() - 16}-01-01`);
+  });
+
+  it('allows profile signup outside all cohort age bounds without enrolling', async () => {
+    const { result } = renderWorkflow(lead);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    act(() => result.current.selectCohort('cohort-1'));
+    act(() => result.current.changeDateOfBirth('2000-01-01'));
+    expect(result.current.cohortId).toBe('');
+    expect(result.current.visibleCohorts).toEqual([]);
+    await act(() => result.current.submit());
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'general', '2000-01-01');
   });
 
   it('starts a different lead with a clean draft', async () => {

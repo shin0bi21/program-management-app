@@ -24,7 +24,8 @@ describe('hours API', () => {
     getHoursCalendarData(
       {
         staffIds: ['staff-1'], categories: ['meeting'], programIds: ['general', 'program-1'],
-        types: ['task', 'other'], cycleId: 'cycle-1', search: 'follow up',
+        types: ['task', 'other'], cycleIds: ['cycle-1', 'cycle-2'], search: 'follow up',
+        dateRange: { start: '2026-01-01', end: '2026-12-31' },
       },
       { start: '2026-08-01', end: '2026-08-31' },
       { signal: controller.signal },
@@ -33,7 +34,7 @@ describe('hours API', () => {
 
     expect(apiClient.get).toHaveBeenNthCalledWith(
       1,
-      '/hours/calendar?start=2026-08-01&end=2026-08-31&staffIds=staff-1&categories=meeting&programIds=general%2Cprogram-1&types=task%2Cother&cycleId=cycle-1&search=follow+up',
+      '/hours/calendar?start=2026-08-01&end=2026-08-31&staffIds=staff-1&categories=meeting&programIds=general%2Cprogram-1&types=task%2Cother&cycleIds=cycle-1%2Ccycle-2&search=follow+up',
       { signal: controller.signal },
     );
     expect(apiClient.get).toHaveBeenNthCalledWith(
@@ -49,8 +50,9 @@ describe('hours API', () => {
       categories: ['outreach'],
       programIds: ['program-1'],
       types: ['task'],
-      cycleId: 'cycle-1',
+      cycleIds: ['cycle-1', 'cycle-2'],
       search: 'follow up',
+      dateRange: { start: '2026-02-01', end: '2026-04-30' },
     }, undefined, {
       key: 'date',
       direction: 'desc',
@@ -59,9 +61,22 @@ describe('hours API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/hours/table?sort=date&direction=desc&limit=25&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleId=cycle-1&search=follow+up',
+      '/hours/table?sort=date&direction=desc&limit=25&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleIds=cycle-1%2Ccycle-2&search=follow+up&start=2026-02-01&end=2026-04-30',
       undefined,
     );
+  });
+
+  it('clips buffered calendar requests to the applied date range and skips disjoint loads', async () => {
+    const filters = {
+      staffIds: [], categories: [], programIds: [], types: [], search: '',
+      dateRange: { start: '2026-08-01', end: '2026-08-31' },
+    };
+    getHoursCalendarData(filters, { start: '2026-07-20', end: '2026-08-10' });
+    expect(apiClient.get).toHaveBeenCalledWith('/hours/calendar?start=2026-08-01&end=2026-08-10', undefined);
+
+    vi.mocked(apiClient.get).mockClear();
+    expect(await getHoursCalendarData(filters, { start: '2026-09-01', end: '2026-09-30' })).toEqual({});
+    expect(apiClient.get).not.toHaveBeenCalled();
   });
 
   it('loads backend-owned reference data', () => {

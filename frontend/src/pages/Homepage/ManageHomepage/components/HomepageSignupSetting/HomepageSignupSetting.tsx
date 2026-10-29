@@ -1,4 +1,5 @@
 import { useAuth } from '../../../../../auth/authContext';
+import { DashboardCardLoading } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../common/components/Button/Button';
 import { useHomepageSignupSetting } from '../../hooks/useHomepageSignupSetting';
 
@@ -9,10 +10,10 @@ export default function HomepageSignupSetting() {
   const hasSettings = signup.signupEnabled !== undefined;
 
   return (
-    <section className="homepage-signup-setting" aria-labelledby="homepage-signup-setting-title">
+    <section className="homepage-management-card homepage-signup-setting" aria-labelledby="homepage-signup-setting-title">
       <div>
-        <h2 id="homepage-signup-setting-title">Signup form</h2>
-        {signup.loading && <p role="status">Loading signup setting…</p>}
+        <h2 id="homepage-signup-setting-title">Signup Form</h2>
+        {signup.loading && !hasSettings && <DashboardCardLoading label="Loading signup setting…" />}
         {hasSettings && <p>
           {signup.signupEnabled
             ? 'Visible on the public homepage and accepting submissions.'

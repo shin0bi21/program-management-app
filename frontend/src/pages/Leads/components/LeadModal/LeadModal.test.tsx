@@ -38,6 +38,13 @@ describe('LeadModal', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
+  it('requires a date of birth before creating a lead', async () => {
+    render(<LeadModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+    fireEvent.submit(document.getElementById('lead-form')!);
+    expect(await screen.findByText('Date of birth is required')).toBeInTheDocument();
+    expect(createLead).not.toHaveBeenCalled();
+  });
+
   it('validates and submits a normalized direct lead', async () => {
     const onClose = vi.fn();
     const onSuccess = vi.fn();
@@ -45,7 +52,7 @@ describe('LeadModal', () => {
 
     fireEvent.change(document.getElementById('lead-youthFirstName')!, { target: { value: ' Avery ' } });
     fireEvent.change(document.getElementById('lead-youthLastName')!, { target: { value: ' Outreach ' } });
-    fireEvent.change(document.getElementById('lead-age')!, { target: { value: '14' } });
+    fireEvent.change(document.getElementById('lead-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } });
     fireEvent.change(document.getElementById('lead-school')!, { target: { value: ' Test School ' } });
     fireEvent.change(document.getElementById('lead-contactPhoneNumber')!, { target: { value: ' 416-555-0142 ' } });
     fireEvent.submit(document.getElementById('lead-form')!);
@@ -60,7 +67,7 @@ describe('LeadModal', () => {
   it('prefills and updates an existing Lead', async () => {
     const lead = {
       id: 'lead-1', origin: 'internal' as const, submittedByRole: 'staff' as const, convertedYouthId: null,
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Test School',
       recommendedProgramId: null, recommendedProgramName: null,
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian' as const, discoverySource: 'online' as const, notes: null,
@@ -76,6 +83,8 @@ describe('LeadModal', () => {
     fireEvent.submit(document.getElementById('lead-form')!);
 
     await waitFor(() => expect(screen.getByText('Lead updated successfully!')).toBeInTheDocument());
+    expect(updateLead).toHaveBeenCalledWith(lead.id, expect.objectContaining({ dateOfBirth: lead.dateOfBirth }));
+    expect(updateLead.mock.calls[0][1]).not.toHaveProperty('age');
     expect(createLead).not.toHaveBeenCalled();
   });
 });

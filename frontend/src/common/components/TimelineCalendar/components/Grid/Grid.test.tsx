@@ -1,3 +1,4 @@
+import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 // This suite owns grid headers, virtual spacers, and row-to-row data mapping.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,6 +20,8 @@ vi.mock('../Row/Row', () => ({
     {row.name}:{rowIndex}:{items.map(item => item.id).join(',')}:{String(selected)}
   </div>,
 }));
+
+const fixtureTarget = { row: { id: 'staff-1', name: 'Alex' }, data: { id: 'task-1' }, range: { start: '2026-08-19', end: '2026-08-19' } };
 
 describe('Grid', () => {
   it('renders period headers and maps each visible row to its owned data', () => {
@@ -45,12 +48,12 @@ describe('Grid', () => {
       selectedRowId="staff-2"
       buildItem={() => null}
       itemResizeEnabled={false}
-      beginItemResize={vi.fn()}
-      resizeByKeyboard={vi.fn()}
-      suppressResizeClickRef={{ current: false }}
+        onItemMove={vi.fn()} onItemResize={vi.fn()}
+        itemEnvironment={makeItemCalendarProps(fixtureTarget).environment}
+        itemState={makeItemCalendarProps(fixtureTarget).stateRef}
+
       itemMoveEnabled={false}
-      beginItemMove={vi.fn()}
-      suppressMoveClickRef={{ current: false }}
+
       formatPeriodLabel={period => period.key}
       today={periods[0].start}
     />);

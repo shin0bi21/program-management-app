@@ -19,6 +19,11 @@ The application is available at:
 - Backend: <http://localhost:5001>
 - Development PostgreSQL: `localhost:5432`
 - Test PostgreSQL: `localhost:5433`
+- Developer documentation: <http://localhost:4321> (standalone `docs` container)
+
+Start only documentation with `docker compose up -d docs`; it does not need the
+application backend or database. See [Documentation website](../README.md) for
+local search preview and dependency refresh commands.
 
 Stop the stack without deleting data:
 
@@ -42,13 +47,6 @@ docker compose down
 | Add a database migration | `docker compose exec backend npm run db:migrate` |
 | Change a Dockerfile | `docker compose up -d --build <service>` |
 | Change Compose service configuration | `docker compose up -d --force-recreate <service>` |
-| Run the full repository test suite | `bash scripts/tests/test-app.sh` |
-| Run suites affected by current changes | `bash scripts/tests/test-app.sh --changed` |
-| Install the Playwright browser | `cd frontend && npm run test:browser:install` |
-| Run browser component tests | `cd frontend && npm run test:browser` |
-| Run lint and shell static analysis | `bash scripts/tests/test-static.sh` |
-| Check changed architecture patterns | `node scripts/patterns/check-patterns.ts --changed` |
-| Report repository lines of code | `npm run report:loc` |
 
 Never edit an applied migration. Add a new migration instead.
 
@@ -82,6 +80,7 @@ docker compose exec backend npm run db:status
 
 See [Testing](testing.md) for the full application suite, static analysis,
 backend and frontend umbrella runners, focused runners, and test ownership.
+Use [Reports](reports.md) for CI performance and repository-size commands.
 
 ## Logs and diagnostics
 
@@ -120,6 +119,14 @@ stack frames. It organizes evidence without assigning a speculative root cause.
 
 Use logs to identify the failing service before restarting or rebuilding
 unrelated services.
+
+## Production data snapshots
+
+Use the [data refresh workflow](data-snapshots.md) for the single SSH-to-local
+refresh command and its step-by-step process. It validates a temporary import
+before switching databases, retains the previous local database for rollback,
+and removes temporary downloads. Use `--validate-only` to check the import
+without replacing local data. Uploaded files are not copied.
 
 ## Destructive reset
 

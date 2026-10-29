@@ -76,39 +76,26 @@ export default function ${name}() {
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  // Page-local error state.
-  it.todo('starts without a page-owned error');
-
-  // Permissions and application services.
+  // Entry and readiness.
   it.todo('shows only the page actions allowed by the current permissions');
-
-  // Page data.
   it.todo('shows the page loading state while required data loads');
-  it.todo('populates page controls and content from loaded data');
-
-  // Saved preferences and the current view.
   it.todo('keeps dependent content unavailable until saved preferences are restored');
-  it.todo('restores durable controls and the current view');
 
-  // Filter configuration.
+  // Rendered states.
+  it.todo('composes loaded page controls, content, and dialogs');
+  it.todo('reports page-owned failures through the shared error presentation');
+
+  // Controls and views.
   it.todo('passes one page filter contract to every data view');
+  it.todo('connects restored controls and view changes to the active content');
 
-  // Selection and page-spanning actions.
+  // Selection and coordination.
   it.todo('shares selected context across page views');
   it.todo('reconciles selected context after a page-owned action');
 
-  // Modal and confirmation workflows.
+  // Commands and dialogs.
   it.todo('opens page-owned dialogs from their public entry points');
   it.todo('connects confirmed actions to the owning page workflow');
-
-  // Table, calendar, dashboard, and body initialization.
-  it.todo('switches composed views without repeating child behavior');
-
-  // Derived errors and presentation state.
-  it.todo('reports page-owned failures through the shared error presentation');
-
-  // Render.
-  it.todo('composes the page header, error overlay, body, and dialogs in page order');
 });
 `);
 

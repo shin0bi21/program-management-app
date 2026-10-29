@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
+import { isCalendarDate, sessionRangeCalendarDates } from './dateRangeValidation';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
-const timeSchema = z.string().regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format');
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
 const weekdaySchema = z.enum([
   'sunday',
   'monday',
@@ -40,6 +41,9 @@ export const createCycleSchema = z.object({
     name: z.string().trim().min(1).max(120),
     startsOn: dateSchema,
     endsOn: dateSchema,
+    programIds: z.array(z.string().uuid()).max(500).refine(
+      values => new Set(values).size === values.length, 'Program IDs must be unique',
+    ),
   }).refine(data => data.endsOn >= data.startsOn, {
     message: 'Cycle end date must be on or after its start date',
     path: ['endsOn'],
@@ -53,14 +57,7 @@ export const updateCohortSchema = z.object({
 });
 export const updateCycleSchema = z.object({
   params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
-  body: z.object({
-    name: z.string().trim().min(1).max(120),
-    startsOn: dateSchema,
-    endsOn: dateSchema,
-  }).refine(data => data.endsOn >= data.startsOn, {
-    message: 'Cycle end date must be on or after its start date',
-    path: ['endsOn'],
-  }),
+  body: createCycleSchema.shape.body,
 });
 export const deleteCycleSchema = z.object({
   params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
@@ -72,6 +69,10 @@ export const deleteCohortSchema = z.object({
 export const cohortYouthReportSchema = z.object({
   params: z.object({ cohortId: z.string().uuid() }),
   query: z.object({ youthId: z.string().uuid('Invalid youth ID').optional() }),
+});
+
+export const cohortRosterSchema = z.object({
+  params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
 });
 
 export const enrollYouthSchema = z.object({
@@ -89,6 +90,30 @@ export const withdrawYouthSchema = z.object({
     cohortId: z.string().uuid('Invalid cohort ID'),
     youthId: z.string().uuid('Invalid youth ID'),
   }),
+});
+
+const createSessionBodySchema = z.object({
+  sessionTypeId: z.string().uuid('Invalid session type ID'),
+  theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
+  date: z.iso.date().optional(),
+  startTime: timeSchema.optional(),
+  endTime: timeSchema.optional(),
+  description: z.string().trim().max(5000).nullable().optional(),
+});
+
+const validSessionTimes = (data: { startTime?: string; endTime?: string }) => (
+  !data.startTime || !data.endTime || data.endTime > data.startTime
+);
+const sessionTimeError = { message: 'End time must be after start time', path: ['endTime'] };
+
+export const createSessionSchema = z.object({
+  params: z.object({ cohortId: z.string().uuid('Invalid cohort ID') }),
+  body: createSessionBodySchema.refine(validSessionTimes, sessionTimeError),
+});
+
+export const createProgramSessionSchema = z.object({
+  body: createSessionBodySchema.extend({ programId: z.string().uuid('Invalid program ID') })
+    .refine(validSessionTimes, sessionTimeError),
 });
 
 export const generateSessionsSchema = z.object({
@@ -125,8 +150,8 @@ export const generateSessionsSchema = z.object({
 
 export const sessionListQuerySchema = z.object({
   query: z.object({
-    start: z.string().datetime({ offset: true }).optional(),
-    end: z.string().datetime({ offset: true }).optional(),
+    start: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'Start must use a supported calendar year').optional(),
+    end: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'End must use a supported calendar year').optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
     cohortId: z.string().uuid('Invalid cohort ID').optional(),
@@ -149,6 +174,12 @@ export const sessionListQuerySchema = z.object({
         path: ['end'],
       });
     }
+    if (data.start && data.end && Date.parse(data.end) > Date.parse(data.start)) {
+      const dates = sessionRangeCalendarDates(data.start, data.end);
+      if (!dates) {
+        context.addIssue({ code: 'custom', message: 'Session range must use supported calendar dates', path: ['end'] });
+      }
+    }
   }),
 });
 
@@ -165,6 +196,11 @@ export const saveAttendanceSchema = z.object({
     ),
   }),
 });
+export const moveSessionDateSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
+  body: z.object({ date: z.iso.date() }).strict(),
+});
+
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
@@ -173,7 +209,7 @@ export const updateSessionSchema = z.object({
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
     description: z.string().trim().max(5000).nullable().optional(),
-  }).refine(data => data.endsAt > data.startsAt, {
+  }).refine(data => Date.parse(data.endsAt) > Date.parse(data.startsAt), {
     message: 'Session end time must be after its start time',
     path: ['endsAt'],
   }),
@@ -264,7 +300,7 @@ export const sessionAttachmentParamsSchema = z.object({
 
 export type CreateCohortInput = z.infer<typeof createCohortSchema.shape.body>;
 export type UpdateCohortInput = z.infer<typeof updateCohortSchema.shape.body>;
-export type SetProgramCycleInput = z.infer<typeof createCycleSchema.shape.body>;
+export type SetProgramCycleInput = z.infer<typeof updateCycleSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
@@ -276,3 +312,7 @@ export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shap
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;
 export type CreateSessionAttachmentInput = z.infer<typeof createSessionAttachmentSchema.shape.body>;
 export type UpdateSessionAttachmentInput = z.infer<typeof updateSessionAttachmentSchema.shape.body>;
+
+export type CreateSessionInput = z.infer<typeof createSessionSchema.shape.body>;
+
+export type CreateProgramSessionInput = z.infer<typeof createProgramSessionSchema.shape.body>;

@@ -34,6 +34,7 @@ node --test \
   scripts/agents/*.test.ts \
   scripts/agents/scaffold/frontend/*.test.ts \
   scripts/ci/*.test.ts \
+  scripts/dev/*.test.ts \
   scripts/patterns/enforce/*.test.ts \
   scripts/patterns/enforce/frontend/*.test.ts \
   scripts/patterns/review/*.test.ts \

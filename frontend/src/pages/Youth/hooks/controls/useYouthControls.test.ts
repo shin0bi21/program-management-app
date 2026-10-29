@@ -2,6 +2,7 @@ import { act, renderHook as renderHookBase, waitFor } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { Program } from '../../../../common/features/programs/types';
+import { YOUTH_TABLE_KEYS } from '../../types';
 import { useYouthControls } from './useYouthControls';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 
@@ -17,14 +18,18 @@ const programs: Program[] = [{
   id: 'program-1',
   name: 'Soft Skills',
   description: null,
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 }];
 const cycles: ProgramCycle[] = [{
   id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 }];
-const tableKeys = ['firstName', 'lastName', 'age', 'school', 'grade', 'program', 'status'] as const;
+const tableKeys = YOUTH_TABLE_KEYS;
 
 describe('useYouthControls', () => {
   beforeEach(() => {
@@ -76,11 +81,12 @@ describe('useYouthControls', () => {
     ));
   });
 
-  it('applies youth defaults and maps table controls to saved preferences', async () => {
+  it.each(['age', 'grade'])('repairs removed %s preferences and saves current table controls', async removedColumn => {
     preferenceApi.getPreference.mockResolvedValue({
       programIds: [],
-      columnWidths: { firstName: 220, status: 'wide' } as never,
-      sorting: { key: 'removedColumn', direction: 'desc' },
+      columnWidths: { firstName: 220, [removedColumn]: 100, status: 'wide' } as never,
+      hiddenColumns: [removedColumn, 'school'],
+      sorting: { key: removedColumn, direction: 'desc' },
     });
     const { result } = renderHook(() => useYouthControls({
       role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false, tableKeys,
@@ -89,6 +95,13 @@ describe('useYouthControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.table.columnWidths).toEqual({ firstName: 220 });
+    expect(result.current.table.hiddenColumns).toEqual(['school']);
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'youth-profile-filters', expect.objectContaining({
+        columnWidths: { firstName: 220 }, hiddenColumns: ['school'],
+        sorting: { key: 'firstName', direction: 'asc' },
+      }),
+    ));
     expect(result.current.table.sorting).toEqual({ key: 'firstName', direction: 'asc' });
 
     act(() => {

@@ -1,5 +1,7 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+
+import { makeItemCalendarProps } from '../../../tests/factories/calendarItem';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,6 +24,7 @@ import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferenc
 import Tasks from './Tasks';
 import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
+import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
 
 type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
 const hoursModal = vi.hoisted(() => ({ props: null as ComponentProps<typeof HoursModal> | null }));
@@ -75,7 +78,7 @@ const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
 const task = makeTask({ startDate: today, dueDate: today });
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
-  permissions: ['read:tasks', 'write:tasks'],
+  permissions: ['read:tasks', 'write:tasks', 'read:programs'],
   login: vi.fn(), logout: vi.fn(),
 };
 
@@ -83,9 +86,18 @@ function getLastSavedPreference() {
   return vi.mocked(setPreference).mock.lastCall?.[1];
 }
 
+function renderTasks(authValue: AuthContextValue = auth) {
+  return renderWithQueryClient(
+    <MemoryRouter><AuthContext.Provider value={authValue}><Tasks /></AuthContext.Provider></MemoryRouter>,
+  );
+}
+
 describe('Tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCycleReferences).mockResolvedValue([{
+      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+    }]);
     calendarTestState.view = 'table';
     calendarTestState.props = null;
     vi.mocked(getPreference).mockImplementation(async () => ({ ...currentPreference, view: calendarTestState.view }));
@@ -93,9 +105,9 @@ describe('Tasks', () => {
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: null });
+    vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
       ...taskReferenceChoices,
     });
     vi.mocked(setHours).mockResolvedValue({
@@ -113,37 +125,63 @@ describe('Tasks', () => {
     });
   });
 
-  // Permissions and application services.
-  it('puts Staff first and sends the applied staff filter to the table request', async () => {
-    const coworker = {
-      id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
-    };
-    vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
+  // Entry and readiness.
+  it('keeps persisted controls unavailable until task options and preferences are restored', async () => {
+    let resolveReferenceData: (value: Awaited<ReturnType<typeof getTaskReferenceData>>) => void = () => undefined;
+    vi.mocked(getTaskReferenceData).mockReturnValue(new Promise(resolve => { resolveReferenceData = resolve; }));
+    renderTasks();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved task preferences…');
+    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
+
+    await act(async () => resolveReferenceData({
       ...taskReferenceChoices,
-    });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    }));
 
-    await screen.findByRole('table', { name: 'Tasks' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    const categories = screen.getAllByRole('menuitem');
-    expect(categories[0]).toHaveTextContent('Staff');
-    fireEvent.click(categories[0]);
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Smith' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ staffIds: ['staff-2'] }),
-      expect.anything(),
-      expect.objectContaining({ limit: 25 }),
-    ));
-    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
+  it('loads shared references for task-only readers without program permissions', async () => {
+    calendarTestState.view = 'calendar';
+    const restrictedAuth: AuthContextValue = { ...auth, permissions: ['read:tasks'] };
+    renderTasks(restrictedAuth);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
-    await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
+    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+  });
+
+  // Rendered states.
+  it.each(['empty', 'failed'])('does not widen table queries when cycles are %s', async state => {
+    if (state === 'empty') vi.mocked(getCycleReferences).mockResolvedValue([]);
+    else vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
+    renderTasks();
+
+    expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
+    expect(getTasksTableData).not.toHaveBeenCalled();
+    expect(getTasksCalendarData).not.toHaveBeenCalled();
+  });
+
+  it('shows an empty calendar without mounting an unbounded timeline when no cycles exist', async () => {
+    calendarTestState.view = 'calendar';
+    vi.mocked(getCycleReferences).mockResolvedValue([]);
+    renderTasks();
+
+    expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
+    expect(calendarTestState.props).toBeNull();
+    expect(getTasksCalendarData).not.toHaveBeenCalled();
+  });
+
+  it('reports cycle failures without mounting an unbounded timeline', async () => {
+    calendarTestState.view = 'calendar';
+    vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
+    renderTasks();
+
+    expect(await screen.findByText('Cycles unavailable.')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load cycles.')).toBeInTheDocument();
+    expect(calendarTestState.props).toBeNull();
   });
 
   it('shows tasks from a readable coworker resource without exposing write controls', async () => {
@@ -158,17 +196,16 @@ describe('Tasks', () => {
     };
     vi.mocked(getTaskDashboardData).mockResolvedValue([task, coworkerTask]);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
-    vi.mocked(getTaskReferenceData).mockResolvedValue({
-      resources: [
+    vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      ],
-      programs: [],
+      ]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
+    vi.mocked(getTaskReferenceData).mockResolvedValue({
       ...taskReferenceChoices,
     });
 
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     expect(await screen.findByText('Complete administration')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
@@ -192,38 +229,81 @@ describe('Tasks', () => {
 
     fireEvent.click(screen.getByText('Complete administration'));
     const overviewCard = (await screen.findByRole('heading', { name: 'Task Overview' })).closest('article')!;
-    fireEvent.click(within(overviewCard).getByRole('button', { name: 'See Breakdown' }));
+    const breakdownButton = within(overviewCard).getByRole('button', { name: 'See Breakdown' });
+    await waitFor(() => expect(breakdownButton).toBeEnabled());
+    fireEvent.click(breakdownButton);
 
     expect(screen.getByRole('dialog', { name: 'Alex Smith' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
-  // Saved preferences and the current view.
-  it('keeps persisted controls unavailable until task options and preferences are restored', async () => {
-    let resolveReferenceData: (value: Awaited<ReturnType<typeof getTaskReferenceData>>) => void = () => undefined;
-    vi.mocked(getTaskReferenceData).mockReturnValue(new Promise(resolve => { resolveReferenceData = resolve; }));
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+  // Controls and views.
+  it('shares cycle-derived bounds longer than a year between table and calendar', async () => {
+    const dateRange = { start: '2024-01-01', end: '2027-12-31' };
+    vi.mocked(getCycleReferences).mockResolvedValue([
+      { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
+      { id: 'cycle-2', name: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
+    ]);
+    vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, cycleIds: ['cycle-1', 'cycle-2'] });
+    renderTasks();
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved task preferences…');
-    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
-
-    await act(async () => resolveReferenceData({
-      resources: [{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }],
-      programs: [],
-      ...taskReferenceChoices,
-    }));
-
-    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
-    expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
+    await screen.findByRole('table', { name: 'Tasks' });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
+      expect.anything(), expect.anything()));
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+    await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
-  // Filter configuration.
+  it('uses all cycle dates when none are selected and offers Cycle without Date Range', async () => {
+    renderTasks();
+
+    await screen.findByRole('table', { name: 'Tasks' });
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({
+      dateRange: { start: '2025-01-01', end: '2027-12-31' },
+    }), expect.anything(), expect.anything()));
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ cycleIds: ['cycle-1'] })));
+    expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
+  });
+
+  it('puts Staff first and sends the applied staff filter to the table request', async () => {
+    const coworker = {
+      id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
+    };
+    vi.mocked(getStaffReferences).mockResolvedValue([coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
+    vi.mocked(getTaskReferenceData).mockResolvedValue({
+      ...taskReferenceChoices,
+    });
+    renderTasks();
+
+    await screen.findByRole('table', { name: 'Tasks' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
+    const categories = screen.getAllByRole('menuitem');
+    expect(categories[0]).toHaveTextContent('Staff');
+    fireEvent.click(categories[0]);
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Smith' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+
+    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ staffIds: ['staff-2'] }),
+      expect.anything(),
+      expect.objectContaining({ limit: 25 }),
+    ));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+    await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
+  });
+
   it('keeps applied search active when switching from table to calendar', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     const search = await screen.findByRole('textbox', { name: 'Search tasks' });
     fireEvent.change(search, { target: { value: 'missing' } });
@@ -245,8 +325,7 @@ describe('Tasks', () => {
 
   it('reloads the calendar range when applied search changes', async () => {
     calendarTestState.view = 'calendar';
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     const periods = buildInitialDayPeriods(new Date(`${task.startDate}T12:00:00`), 3);
@@ -267,10 +346,51 @@ describe('Tasks', () => {
     ));
   });
 
-  // Selection and page-spanning actions.
+  // Selection and coordination.
+
+  it('clears the selected task when a calendar row is selected', async () => {
+    calendarTestState.view = 'calendar';
+    renderTasks();
+
+    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
+    const start = new Date('2026-08-10T12:00:00');
+    const end = new Date('2026-08-12T12:00:00');
+    const row: TaskResource = {
+      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
+    };
+    const item = calendarTestState.props!.buildItem({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { selected?: boolean } };
+    expect(item.props.selected).toBe(false);
+    act(() => calendarTestState.props!.onItemActivate?.({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+    }));
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+
+    const selectedItem = calendarTestState.props!.buildItem({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
+      visibleStart: { key: task.startDate, start, end: start },
+      visibleEnd: { key: task.dueDate, start: end, end },
+    }) as { props: { selected?: boolean } };
+    expect(selectedItem.props.selected).toBe(true);
+
+    act(() => calendarTestState.props!.onRowSelect?.(row));
+    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+  });
+
+  // Commands and dialogs.
   it('passes the selected task context into the Hours workflow', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
@@ -308,8 +428,7 @@ describe('Tasks', () => {
       statusLabel: 'Active',
       completedAt: null,
     });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
@@ -319,53 +438,12 @@ describe('Tasks', () => {
     await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
   });
 
-  it('clears the selected task when a calendar row is selected', async () => {
-    calendarTestState.view = 'calendar';
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = new Date('2026-08-10T12:00:00');
-    const end = new Date('2026-08-12T12:00:00');
-    const row: TaskResource = {
-      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
-    };
-    const item = calendarTestState.props!.buildItem({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { selected?: boolean } };
-    expect(item.props.selected).toBe(false);
-    act(() => calendarTestState.props!.onItemActivate?.({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-    }));
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
-
-    const selectedItem = calendarTestState.props!.buildItem({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { selected?: boolean } };
-    expect(selectedItem.props.selected).toBe(true);
-
-    act(() => calendarTestState.props!.onRowSelect?.(row));
-    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
-  });
-
-  // Modal and confirmation workflows.
   it('keeps the hours target until close after completing its task and does not reopen on selection', async () => {
     const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
     const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
     vi.mocked(setHours).mockResolvedValue({ updatedTask: completedTask } as Awaited<ReturnType<typeof setHours>>);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task, nextTask], nextCursor: null });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
@@ -384,8 +462,7 @@ describe('Tasks', () => {
   });
 
   it('opens a new task form with today as its initial range', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
 
@@ -396,8 +473,7 @@ describe('Tasks', () => {
   });
 
   it('owns delete confirmation and delegates the confirmed task deletion', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><MemoryRouter><AuthContext.Provider value={auth}><Tasks /></AuthContext.Provider></MemoryRouter></QueryClientProvider>);
+    renderTasks();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
@@ -408,5 +484,6 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(deleteTask).toHaveBeenCalledWith(task.id));
   });
-
 });
+
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

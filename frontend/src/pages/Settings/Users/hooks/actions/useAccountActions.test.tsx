@@ -1,11 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
-import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { User } from '../../types';
-import { createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { revokeAccountInvite, toggleAccountStatus } from '../../accounts.api';
 import useAccountActions from './useAccountActions';
+import { referenceDataKeys } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
 vi.mock('../../accounts.api', () => ({
   revokeAccountInvite: vi.fn(),
@@ -23,7 +23,7 @@ const account: User = {
 };
 const tableQueryKey = ['accounts', 'table'] as const;
 
-function renderActions(queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+function renderActions(queryClient = createTestQueryClient()) {
   return {
     queryClient,
     ...renderHook(() => useAccountActions({ accountTableQueryKey: tableQueryKey }), {
@@ -46,7 +46,7 @@ describe('useAccountActions', () => {
     expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(queryKey)?.pages[0].rows).toEqual([]);
   });
 
-  it('replaces a status change in every cached table variant without refetching', async () => {
+  it('replaces a status change in table variants and refreshes active staff references', async () => {
     const savedAccount = { ...account, status: 'inactive' as const };
     const unaffectedAccount: User = {
       ...account,
@@ -80,7 +80,9 @@ describe('useAccountActions', () => {
     ]);
     expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(searchKey)?.pages[0].rows).toEqual([savedAccount]);
     expect(queryClient.getQueryData<{ pages: { rows: User[] }[] }>(activeKey)?.pages[0].rows[1]).toBe(cachedUnaffectedAccount);
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: tableQueryKey });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.staff('tasks') });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.staff('hours') });
   });
 
   it('invalidates account queries for new accounts and both domains for youth invitations', () => {
@@ -92,5 +94,18 @@ describe('useAccountActions', () => {
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: tableQueryKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth'] });
+  });
+
+  it('refreshes resource identity and assignment scope after editing an account', () => {
+    const { result, queryClient } = renderActions();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+
+    act(() => result.current.syncSavedAccount(account, false));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.staff('tasks') });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.staff('hours') });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.programs(true) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: referenceDataKeys.sessionScheduling });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: tableQueryKey });
   });
 });

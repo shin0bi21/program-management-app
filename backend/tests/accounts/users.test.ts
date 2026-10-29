@@ -354,7 +354,7 @@ describe('Accounts API', () => {
 
     it('should update an admin account with explicit program assignments', async () => {
       const [program] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE roster_mode = 'enrolled' ORDER BY name LIMIT 1
+        SELECT id FROM programs WHERE enrollment_required = TRUE ORDER BY name LIMIT 1
       `;
       const res = await request(app)
         .post('/api/accounts')
@@ -411,7 +411,7 @@ describe('Accounts API', () => {
         const programs = await sql<{ id: string }[]>`
           SELECT id
           FROM programs
-          WHERE roster_mode = 'enrolled'
+          WHERE enrollment_required = TRUE
           ORDER BY name
           LIMIT 2
         `;

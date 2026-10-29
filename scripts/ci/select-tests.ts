@@ -32,6 +32,11 @@ type BackendDomain = {
 // Each domain declares its authoritative tests and the source files they own.
 // Directories end in a slash; conventional files match exactly.
 const BACKEND_DOMAINS = {
+  referenceData: {
+    testPaths: ['tests/referenceData'],
+    sourceDirectories: ['services/referenceData/'],
+    sourceFiles: ['controllers/referenceDataController.ts', 'routes/referenceDataRoutes.ts', 'validation/referenceDataSchemas.ts'],
+  },
   accounts: {
     testPaths: ['tests/accounts'],
     sourceDirectories: ['services/accounts/'],
@@ -126,12 +131,16 @@ const BACKEND_DOMAINS = {
 type BackendSuite = keyof typeof BACKEND_DOMAINS;
 
 const RELATED_BACKEND_SUITES: Partial<Record<BackendSuite, readonly BackendSuite[]>> = {
-  tasks: ['hours'],
-  hours: ['tasks'],
+  tasks: ['hours', 'referenceData'],
+  hours: ['tasks', 'referenceData'],
+  programs: ['referenceData'],
+  schools: ['referenceData'],
+  cohorts: ['referenceData'],
+  referenceData: ['hours'],
 };
 
 const SHARED_BACKEND_FILES: Readonly<Record<string, readonly BackendSuite[]>> = {
-  'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours'],
+  'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours', 'referenceData'],
   'backend/src/controllers/homepageController.ts': ['homepage', 'outreach'],
   'backend/src/routes/homepageRoutes.ts': ['homepage', 'outreach'],
   'backend/src/services/homepageService.ts': ['homepage', 'outreach'],

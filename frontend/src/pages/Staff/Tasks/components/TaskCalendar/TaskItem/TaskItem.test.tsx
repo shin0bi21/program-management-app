@@ -35,7 +35,7 @@ describe('TaskItem', () => {
     expect(item).not.toHaveTextContent('Soft Skills');
     const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect(within(tooltip).getByText('Active', { selector: '.task-status-badge' })).toBeInTheDocument();
+    expect(within(tooltip).getByText('Active', { selector: '.status-label' })).toBeInTheDocument();
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Logged');

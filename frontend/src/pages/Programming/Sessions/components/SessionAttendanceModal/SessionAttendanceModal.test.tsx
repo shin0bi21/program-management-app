@@ -22,7 +22,7 @@ const session: CohortSession = {
   cohortName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',
   cancelledAt: null,
@@ -49,7 +49,7 @@ describe('SessionAttendanceModal', () => {
 
   it('renders session context and roster failures', async () => {
     api.getSessionRoster.mockRejectedValue(new Error('Roster unavailable'));
-    const openSession = { ...session, rosterMode: 'open' as const };
+    const openSession = { ...session, enrollmentRequired: false };
 
     render(
       <SessionAttendanceModal
@@ -78,7 +78,7 @@ describe('SessionAttendanceModal', () => {
     api.setSessionAttendance.mockReturnValue(new Promise(resolve => {
       finishSave = resolve;
     }));
-    const openSession = { ...session, rosterMode: 'open' as const, programName: 'Drop In' };
+    const openSession = { ...session, enrollmentRequired: false, programName: 'Drop In' };
     const onSaved = vi.fn();
 
     render(

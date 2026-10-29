@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -67,7 +68,7 @@ export default function TaskModal(props: TaskModalProps) {
           <FloatingSelect
             id="task-staff"
             value={modal.draft.staffId}
-            options={resources.map(resource => ({ value: resource.id, label: resource.name }))}
+            options={toFilterOptions(resources)}
             onChange={value => modal.updateDraft('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"
@@ -80,7 +81,7 @@ export default function TaskModal(props: TaskModalProps) {
             <FloatingSelect
               id="task-program"
               value={modal.draft.programId}
-              options={programs.map(program => ({ value: program.id, label: program.name }))}
+              options={toFilterOptions(programs)}
               onChange={value => modal.updateDraft('programId', value)}
               placeholder="Select a program"
               ariaLabel="Task program"

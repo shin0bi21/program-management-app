@@ -28,7 +28,7 @@ describe('useHoursTableData', () => {
     const client = createTestQueryClient();
     const filters = {
       staffIds: ['staff-1'], categories: ['meeting' as const], programIds: ['program-1'],
-      types: ['other' as const], cycleId: 'cycle-1', search: 'team',
+      types: ['other' as const], cycleIds: ['cycle-1'], search: 'team',
     };
     const sorting = { key: 'date' as const, direction: 'desc' as const };
     const { result } = renderHook(

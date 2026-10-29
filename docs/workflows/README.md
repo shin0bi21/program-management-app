@@ -10,6 +10,7 @@ Use focused local checks while implementing, required GitHub checks as the merge
 |---|---|
 | Local setup | [Setup](setup.md) |
 | Local Docker, migrations, and dependencies | [Local development](local-development.md) |
+| Refresh local data from production | [Data snapshots](data-snapshots.md) |
 | Test ownership and commands | [Testing](testing.md) |
 | Continuous integration | [CI](ci.md) |
 | Debugging | [Debugging](debugging.md) |
@@ -17,3 +18,5 @@ Use focused local checks while implementing, required GitHub checks as the merge
 | Shipping to `develop` | [Shipping](shipping.md) |
 | Reports | [Reports](reports.md) |
 | Production deployment | [Deployment](deployment.md) |
+| Production server GitHub authentication | [GitHub credentials](github-credentials.md) |
+| Documentation website | [Starlight site](../README.md) |

@@ -14,7 +14,7 @@ import type {
 interface CreateLeadInput {
   youthFirstName: string;
   youthLastName: string;
-  age: number;
+  dateOfBirth: string;
   school: string;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
@@ -56,8 +56,9 @@ export const signUpLead = (
   id: string,
   cohortId: string | null,
   noteCategory?: 'general' | 'health' | 'preference',
+  dateOfBirth?: string,
 ) =>
-  apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }) });
+  apiClient.post<Lead>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }), ...(dateOfBirth && { dateOfBirth }) });
 export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts
     ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)

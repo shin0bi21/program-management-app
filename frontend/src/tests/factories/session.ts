@@ -10,7 +10,7 @@ export function makeCohortSession(overrides: Partial<CohortSession> = {}): Cohor
     cohortName: 'Summer 2026',
     programId: 'program-1',
     programName: 'Future Ready',
-    rosterMode: 'enrolled',
+    enrollmentRequired: true,
     startsAt: '2026-08-10T17:00:00.000Z',
     endsAt: '2026-08-10T19:00:00.000Z',
     cancelledAt: null,

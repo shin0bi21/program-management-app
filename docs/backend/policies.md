@@ -2,7 +2,7 @@
 
 ## Translate the access contract
 
-- Read `authorization.md` first when the product access matrix changes. This reference owns how the backend enforces that already-defined contract.
+- Read [Authorization](authorization.md) first when the product access matrix changes. This reference owns how the backend enforces that already-defined contract.
 - Keep route capability checks permission-based. Put resource discovery, record read scope, mutation scope, and assignment assertions in named policy modules.
 - Reuse shared resource predicates across domains when the relationship is identical; keep domain-specific transition or assignment rules in the domain policy.
 - Do not scatter equivalent role-name, ownership, program, cohort, or assignment checks through services. Services should compose policy predicates or assertions at authoritative boundaries.

@@ -1,6 +1,6 @@
 ---
 name: ship-changes
-description: Ship approved repository changes through GitHub Issues, issue-numbered branches, isolated verification, commits, pull requests, required checks, merges, and safety stashes. Use when the user explicitly asks to ship, commit and merge, split and ship, or finalize reviewed working-tree changes and return safely to the base branch.
+description: Ship approved repository changes through GitHub Issues, issue-numbered branches, isolated verification, commits, pull requests, required checks, merges, issue closure, branch cleanup, and safety stashes. Use when the user explicitly asks to ship, commit and merge, split and ship, or finalize reviewed working-tree changes and return safely to the base branch.
 ---
 
 # Ship Changes
@@ -81,9 +81,11 @@ For every isolated branch:
 4. Poll at 60-second intervals, reporting each status change. Do not use an unbounded watch command that can conceal a stale check state.
 5. If the same expected check remains pending for two polls, inspect its Actions run directly with `gh run view <run-id> --json status,conclusion,jobs`. If the run is complete but the PR check rollup is still pending, re-query the PR once after one more minute; never treat the completed job as merge permission until the PR's required-check record also passes.
 6. After three unchanged polls, or if Actions is degraded or checks never register, preserve the branch and report a concrete CI-status blocker instead of waiting indefinitely or bypassing branch protection.
-7. Merge only into `develop` after checks pass and delete the remote feature branch.
+7. Merge only into `develop` after checks pass and verify that the pull request is merged.
 8. Switch local state to `develop`, fast-forward from `origin/develop`, and verify the working tree is clean and local `develop` equals its upstream.
-9. Only after that checkpoint, re-evaluate the remaining map. Continue with the next concern only when the current shipping request explicitly authorizes all remaining approved concerns; otherwise report the completed concern and wait for another handoff.
+9. Verify that the concern's issue is closed. Do not rely on `Closes #...` to close it when the PR targets a non-default branch such as `develop`; explicitly close it if it remains open and its acceptance criteria are complete. Keep broader issues open when this PR completes only part of their scope.
+10. Delete the concern's feature branch both remotely and locally, then verify both copies are absent. Confirm the branch head matches the merged PR head and contains no additional work before deleting it, including after a squash merge. Never delete unrelated branches or force-delete unshipped commits.
+11. Only after the merged-PR, closed-issue, deleted-branch, and clean synchronized-`develop` checkpoint, re-evaluate the remaining map. Continue with the next concern only when the current shipping request explicitly authorizes all remaining approved concerns; otherwise report the completed concern and wait for another handoff. If cleanup is blocked, preserve the work and report the blocker before preparing another branch.
 
 Never prepare a batch of concern branches from the pre-merge base. Logical splitting happens upfront; physical branch preparation and shipping happen one concern at a time.
 
@@ -93,7 +95,7 @@ Compare the final repository state with the original audit and safety stash. Con
 
 - issues, branches, commits, and pull requests;
 - local tests and remote checks;
-- merge status and current branch;
+- merge status, issue closure, verified local/remote feature-branch deletion, and current branch;
 - remaining working-tree changes and safety stashes.
 
 Keep recovery stashes when their contents are uncertain or intentionally deferred. Never discard user work merely to make the tree clean.

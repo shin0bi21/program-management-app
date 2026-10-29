@@ -27,24 +27,33 @@ describe('HoursDashboard', () => {
     expect(overviewData).toHaveBeenCalledWith(['hours'], 'staff-1', 'cycle-1');
   });
 
-  it('renders unavailable composition without card titles until staff is selected', () => {
+  it('retains titles and metric labels before staff is selected', () => {
     render(<HoursDashboard {...baseProps} staff={null} cycle={null} />);
 
     expect(screen.getAllByText('Select a staff member to view their hours overview.')).toHaveLength(2);
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
+    expect(screen.getByText('Current Pay Period')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
   });
 
   it('renders loading and error states through both dashboard cards', () => {
     const onErrorChange = vi.fn();
     overviewData.mockReturnValue({ status: 'loading' });
     const { rerender } = render(<HoursDashboard {...baseProps} onErrorChange={onErrorChange} />);
-    expect(screen.getAllByText('Loading hours overview…')).toHaveLength(2);
+    expect(screen.getAllByRole('status')).toHaveLength(4);
+    expect(screen.getByText('Current Pay Period')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
 
+    const card = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
     const retry = vi.fn();
     overviewData.mockReturnValue({ status: 'error', message: 'Overview offline', retry });
     rerender(<HoursDashboard {...baseProps} cycle={{ ...cycle, id: 'cycle-2' }} onErrorChange={onErrorChange} />);
     expect(screen.getAllByText('Hours overview unavailable')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toBe(card);
+    expect(screen.getByText('Current Pay Period')).toBeInTheDocument();
+    expect(screen.getByText('Biweekly Average')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
     expect(onErrorChange).toHaveBeenLastCalledWith({
       message: 'Overview offline',
       action: { label: 'Retry', onClick: retry },
@@ -72,4 +81,25 @@ describe('HoursDashboard', () => {
     expect(screen.getByText('12.00')).toBeInTheDocument();
     expect(screen.getByText('9.00')).toBeInTheDocument();
   });
+  it('keeps the same labeled card shells while a new staff overview is pending', () => {
+    overviewData.mockReturnValue({ status: 'ready', data: {
+      payPeriod: { periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 12, breakdown: [] },
+      biweeklyAverage: { periodCount: 1, averageHours: 9, breakdown: [] },
+    } });
+    const { rerender } = render(<HoursDashboard {...baseProps} />);
+    const card = screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article');
+
+    overviewData.mockReturnValue({ status: 'loading' });
+    rerender(<HoursDashboard {...baseProps} staff={{ ...staff, id: 'staff-2', name: 'Jordan Lee' }} />);
+
+    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toBe(card);
+    for (const label of ['Current Pay Period', 'Hours', 'Cycle', 'Biweekly Average']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('12.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('9.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'See Breakdown' }).every(button => button.hasAttribute('disabled'))).toBe(true);
+  });
+
 });

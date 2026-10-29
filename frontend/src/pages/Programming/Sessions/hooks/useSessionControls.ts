@@ -1,3 +1,5 @@
+import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
+import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { Program } from '../../../../common/features/programs/types';
@@ -10,7 +12,6 @@ import {
   preferenceColumnWidths,
   preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
-import type { ProgramCohort } from '../../Cohorts/types';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionSortKey, SessionType } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
@@ -37,7 +38,6 @@ interface UseSessionControlsOptions {
   cycles: ProgramCycle[];
   cyclesLoading: boolean;
   cyclesError?: string | null;
-  cohorts: ProgramCohort[];
   sessionTypes: SessionType[];
   sessionTypesLoading: boolean;
   sessionTypesError?: string | null;
@@ -46,7 +46,7 @@ interface UseSessionControlsOptions {
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 export function useSessionControls({
-  role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError, cohorts,
+  role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
   sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
@@ -67,6 +67,7 @@ export function useSessionControls({
     },
   });
   const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
+  const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const applySearch = () => setAppliedSearch(search.trim());
   const clearSearch = () => {
@@ -74,15 +75,10 @@ export function useSessionControls({
     setAppliedSearch('');
   };
 
-  // Stable option sets shared by the header and Add Sessions modal.
-  const schedulableCohorts = useMemo(() => cohorts.filter(cohort =>
-    cohort.state !== 'completed'
-    && (!programIds.length || programIds.includes(cohort.programId))
-    && (!cycleIds.length || cycleIds.includes(cohort.cycleId))), [cohorts, programIds, cycleIds]);
   const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: programs.map(program => ({ value: program.id, label: program.name })) },
-    { id: 'cycle', label: 'Cycle', options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })) },
-    { id: 'type', label: 'Type', options: sessionTypes.map(type => ({ value: type.id, label: type.name })) },
+    { id: 'program', label: 'Program', options: toFilterOptions(programs) },
+    { id: 'cycle', label: 'Cycle', options: toFilterOptions(cycles) },
+    { id: 'type', label: 'Type', options: toFilterOptions(sessionTypes) },
     { id: 'status', label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
   ], [cycles, programs, sessionTypes]);
 
@@ -113,7 +109,6 @@ export function useSessionControls({
     error,
     view,
     setView,
-    schedulableCohorts,
     search: {
       value: search,
       setValue: setSearch,
@@ -122,6 +117,7 @@ export function useSessionControls({
       clear: clearSearch,
     },
     filters: {
+      dateRange,
       programIds,
       cycleIds,
       sessionTypeIds,

@@ -22,9 +22,6 @@ export default function SignupSection() {
       <div className="section-inner">
         <div className="cohort-section-copy">
           <h2 id="cohort-section-title" className="section-title">Interested?</h2>
-          <p className="cohort-section-title">
-            We are now accepting signups for our <span>September cohort</span>.
-          </p>
           <p className="cohort-section-description">
              Leave your contact information below and we will follow up with next steps.
           </p>

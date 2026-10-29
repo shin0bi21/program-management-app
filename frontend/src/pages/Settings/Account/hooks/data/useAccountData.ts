@@ -1,6 +1,6 @@
 import { useAuth } from '../../../../../auth/authContext';
 import { getUser } from '../../../../../auth/storage';
-import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
+import { useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
 import type { AccountPageData } from '../../types';
 
@@ -8,11 +8,11 @@ export default function useAccountData(): AccountPageData {
   const user = getUser();
   const { role } = useAuth();
   const {
-    programs,
+    rows: programs,
     loading: programsLoading,
     error: programsError,
-    retry: retryPrograms,
-  } = usePrograms({ assignedOnly: true });
+    refetch: retryPrograms,
+  } = useProgramReferences({ assignedOnly: true });
 
   return {
     name: [user?.firstName, user?.lastName].filter(Boolean).join(' '),

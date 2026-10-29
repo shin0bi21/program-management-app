@@ -24,7 +24,7 @@ router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:out
 
 router.delete('/:id/notes/:noteId', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(deleteLeadNoteSchema), asyncHandler(handleDeleteLeadNote));
 
-router.post('/:id/sign-up', authenticateToken, requirePermission('write:outreach'), requirePermission('write:youth_profiles'), requirePermission('write:cohorts'), generalLimiter, validateRequest(signUpLeadSchema), asyncHandler(handleSignUpLead));
+router.post('/:id/sign-up', authenticateToken, requirePermission('write:outreach'), requirePermission('write:youth_profiles'), requirePermission('write:enrollments'), generalLimiter, validateRequest(signUpLeadSchema), asyncHandler(handleSignUpLead));
 
 router.delete('/:id', authenticateToken, requirePermission('write:outreach'), generalLimiter, validateRequest(leadIdSchema), asyncHandler(handleDeleteLead));
 

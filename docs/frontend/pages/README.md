@@ -1,9 +1,5 @@
 # Frontend pages
 
-A route page assembles one screen. It loads page data and saved controls, defines filters,
-coordinates selection and actions, composes the active view, and opens dialogs. Child tables,
-calendars and dashboards own their data presentation.
-
 ## Build the page in scaffold order
 
 Keep the route component in this execution order, omitting phases the page does not need:
@@ -20,21 +16,13 @@ Keep the route component in this execution order, omitting phases the page does 
 10. Derive errors and other presentation values.
 11. Render the page shell followed by dialogs.
 
-Keep state beside the phase that owns it. Selection state belongs with selection; a modal
-target and its open and close handlers belong together in that modal workflow. Do not collect
-every `useState` call at the top when that separates state from its lifecycle.
+Keep state and handlers beside the workflow that owns them.
 
 The generated page scaffold uses the same sections. See the
 [Tasks page](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours page](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
 
-Organize route tests under the same section names and in the same order, omitting phases the page does not need. Constants and pure helpers do not need a route-test section unless they expose page behavior. Within each phase, order tests from the default or successful path through permission, empty, failure and recovery variants.
-
-## Load page data
-
-Load only the remote options and records needed to coordinate the whole page. A table or
-calendar keeps its own collection query. Preserve the dependency path
-`data → preferences → selection → actions`.
+## Page data and controls
 
 Group page-wide reference loading in `hooks/data/use<Page>Data.ts`, with its test beside it.
 This hook composes the page's queries and existing domain hooks while preserving each
@@ -74,14 +62,37 @@ Route tests own cross-view reconciliation and dialog entry wiring. Child owners 
 
 ## Compose page components
 
-Every authenticated route renders one `main.page-container`. Put `PageHeader` first,
-`PageErrorOverlay` next and `PageBody` last. Render dialogs after the page shell.
+Render one `main.page-container` with `PageHeader`, `PageErrorOverlay` and `PageBody` in that
+order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
+or summary plus one active data view to the body.
 
-The route supplies page-wide actions and controls to `PageHeader`, then supplies the dashboard
-or summary and one active data view to `PageBody`. Route pages do not recreate those shared
-wrappers. Follow the component-specific guides for the children themselves.
+## Test page coordination
 
-Route tests cover active-view selection, child prop wiring, derived page errors, the final page shell and dialogs. Mock a child at its public prop boundary when its callback starts a route workflow. Child tests own their internal rendering and interaction.
+Page tests cover the page's observable contract at its boundaries with data,
+controls, views, and dialogs. A real hook or child may run inside the test, but its
+internal policy still belongs in its own suite. Use the following reading order
+for substantial page suites, omitting groups the page does not need:
+
+| Group | Page-owned contract |
+|---|---|
+| Entry and readiness | Permission-dependent entry/actions, required data, and preference-restoration gates |
+| Rendered states | Populated composition and page-owned empty or unavailable states |
+| Controls and views | Applied search/filters reaching views, controlled settings, and view switching |
+| Selection and coordination | Selected context shared across views and dashboards, saved-result coordination |
+| Commands and dialogs | Entry targets, confirmed commands, and dialog success callbacks |
+
+Keep failure cases beside the behavior they qualify, including readiness failures
+and rejected commands. A test spanning several owners belongs to the group for
+the page outcome it protects. The order describes how to read the suite, not the
+order in which tests depend on each other or a mandatory test count.
+
+For a table page, verify that its applied filter reaches the table and calendar
+and that a selected record supplies the dashboard or dialog target. Delegate
+domain table states and configuration to the [table owner](../components/tables.md#test-the-table),
+record actions to their [row/action owner](../components/table-rows.md#testing),
+and query inputs and lifecycle to the [data owner](../architecture/state-and-data.md#test-state-and-data).
+Shared table suites own keyboard navigation, width behavior, and rendering mechanics.
+Do not repeat those matrices in every route test.
 
 ## Scaffolding
 
@@ -93,6 +104,10 @@ npm run scaffold:frontend -- page Staff/Schedules --dry-run
 ```
 
 Remove `--dry-run` to generate the skeleton below.
+
+Tests are generated automatically. See the
+[calendar-page example](../../workflows/testing.md#scaffold-implementation-and-tests-together)
+for combining page and component presets with separate test owners.
 
 The page preset generates the route and its test plus `hooks/data/use<Page>Data.ts` and
 its test, and calls the data hook during the page-data phase. Replace the data placeholders

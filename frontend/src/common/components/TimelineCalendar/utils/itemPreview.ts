@@ -12,20 +12,11 @@ export interface ItemPreview {
   itemBounds: DOMRect;
 }
 
-function getPreviewBounds(viewport: HTMLElement): ItemPreviewBounds {
-  const bounds = viewport.getBoundingClientRect();
-  return { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
-}
-
-function getPreviewHostStyle(bounds: ItemPreviewBounds) {
-  return {
-    left: `${bounds.left}px`,
-    top: `${bounds.top}px`,
-    width: `${bounds.width}px`,
-    height: `${bounds.height}px`,
-  };
-}
-
+/**
+ * Produces a non-interactive item ghost clipped to the calendar viewport.
+ * Requires: the caller removes the returned host on completion or cancellation.
+ * Example: a move uses the returned element for pointer feedback without duplicating live controls.
+ */
 export function createItemPreview(
   viewport: HTMLElement,
   sourceElement: HTMLElement,
@@ -53,4 +44,20 @@ export function createItemPreview(
   host.appendChild(element);
   document.body.appendChild(host);
   return { host, element, bounds, itemBounds };
+}
+
+/** Measures the clipping rectangle shared by the preview host and item ghost. */
+function getPreviewBounds(viewport: HTMLElement): ItemPreviewBounds {
+  const bounds = viewport.getBoundingClientRect();
+  return { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
+}
+
+/** Converts viewport bounds into fixed portal coordinates. */
+function getPreviewHostStyle(bounds: ItemPreviewBounds) {
+  return {
+    left: `${bounds.left}px`,
+    top: `${bounds.top}px`,
+    width: `${bounds.width}px`,
+    height: `${bounds.height}px`,
+  };
 }

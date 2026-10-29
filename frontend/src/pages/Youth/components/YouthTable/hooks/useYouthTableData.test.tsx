@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getYouth } from '../../../youth.api';
@@ -9,13 +8,6 @@ import useYouthTableData from './useYouthTableData';
 vi.mock('../../../youth.api', () => ({ getYouth: vi.fn() }));
 
 const mockGetYouth = vi.mocked(getYouth);
-
-function createWrapper() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-  };
-}
 
 describe('useYouthTableData', () => {
   beforeEach(() => mockGetYouth.mockReset());
@@ -29,7 +21,7 @@ describe('useYouthTableData', () => {
         { cycleIds: ['cycle-1'] },
         { key: 'lastName', direction: 'desc' },
       ),
-      { wrapper: createWrapper() },
+      { wrapper: createQueryClientWrapper(createTestQueryClient()) },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));

@@ -27,6 +27,7 @@ describe('HomepageSignupSetting', () => {
 
   it('lets homepage writers change signup availability', async () => {
     render(<HomepageSignupSetting />);
+    expect(screen.getByRole('heading', { name: 'Signup Form' })).toBeInTheDocument();
     const toggle = screen.getByRole('switch', { name: 'Disable signups' });
     expect(toggle).toHaveAttribute('aria-checked', 'true');
     await userEvent.click(toggle);
@@ -44,7 +45,7 @@ describe('HomepageSignupSetting', () => {
     state.signupEnabled = undefined;
     state.loading = true;
     render(<HomepageSignupSetting />);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading signup setting');
+    expect(screen.getByRole('status', { name: 'Loading signup setting…' })).toBeInTheDocument();
     expect(screen.queryByText('Closed')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });

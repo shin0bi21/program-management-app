@@ -1,20 +1,21 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { usePrograms } from '../../../../common/features/programs/hooks/usePrograms';
+import { useProgramReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
 import useLeadData from './useLeadData';
 
-vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: vi.fn(),
+vi.mock('../../../../common/features/referenceData/hooks/useReferenceData', () => ({
+  useProgramReferences: vi.fn(),
 }));
 
 describe('useLeadData', () => {
   it('exposes shared program data through page-owned names', () => {
-    vi.mocked(usePrograms).mockReturnValue({
-      programs: [{ id: 'program-1', name: 'Future Ready' }],
+    vi.mocked(useProgramReferences).mockReturnValue({
+      rows: [{ id: 'program-1', name: 'Future Ready' }],
       loading: false,
       error: 'offline',
-    } as ReturnType<typeof usePrograms>);
+      upsert: vi.fn(), remove: vi.fn(), refetch: vi.fn(),
+    });
 
     const { result } = renderHook(() => useLeadData());
 

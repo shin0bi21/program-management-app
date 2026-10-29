@@ -20,7 +20,7 @@ describe('YouthSessionNoteDialogs', () => {
 
     render(<YouthSessionNoteDialogs
       youth={makeYouthProfile({ id: 'youth-1' })}
-      rosterMode="open"
+      enrollmentRequired={false}
       noteTarget={{
         session: {
           id: 'session-1',
@@ -48,7 +48,7 @@ describe('YouthSessionNoteDialogs', () => {
 
     expect(screen.getByLabelText('Session note editor')).toBeInTheDocument();
     expect(sessionNoteModalState.props).toEqual(expect.objectContaining({
-      session: { id: 'session-1', rosterMode: 'open' },
+      session: { id: 'session-1', enrollmentRequired: false },
       initialYouthId: 'youth-1',
       hideYouthSelection: true,
       onClose: onCloseNote,

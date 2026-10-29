@@ -223,12 +223,13 @@ describe('Table', () => {
       ariaLabel="Accounts"
       columns={columns}
       data={[]}
-      unavailable={{ title: 'Accounts unavailable', onRetry }}
+      unavailable={{ title: 'Accounts unavailable', message: 'Unable to load accounts', onRetry }}
       keyExtractor={row => row.id}
     />);
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByText('Accounts unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Unable to load accounts')).toBeInTheDocument();
     expect(screen.queryByText('No rows found')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -312,19 +313,5 @@ describe('Table', () => {
 
     expect(onAction).toHaveBeenCalledOnce();
     expect(onSelect).not.toHaveBeenCalled();
-  });
-
-  it('renders fetch errors inside the table while preserving its header', () => {
-    render(<Table
-      ariaLabel="Accounts"
-      columns={columns}
-      data={[]}
-      unavailable={{ title: 'Accounts unavailable', message: 'Unable to load accounts' }}
-      keyExtractor={row => row.id}
-    />);
-
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
-    expect(screen.getByText('Accounts unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Unable to load accounts')).toBeInTheDocument();
   });
 });

@@ -1,9 +1,12 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import FloatingMenuPanel from '../../../FloatingMenu/FloatingMenuPanel';
-import { useFloatingMenu } from '../../../FloatingMenu/hooks/useFloatingMenu';
-import useViewportDismissal from '../../../FloatingMenu/hooks/useViewportDismissal';
-import { calculateFloatingPositionFromRect, type FloatingPosition } from '../../../FloatingMenu/utils/floatingPosition';
+import useItemDetails from './hooks/useItemDetails/useItemDetails';
+import useItemMenu from './hooks/useItemMenu/useItemMenu';
+import type { ItemCalendarProps } from '../../types';
+import useItemMove from './hooks/useItemMove/useItemMove';
+import useItemResize from './hooks/useItemResize/useItemResize';
+import './Item.css';
 
 export interface ItemDetail {
   label: string;
@@ -19,220 +22,105 @@ export interface ItemAction {
   variant?: 'danger';
 }
 
-const HOVER_DETAILS_DELAY_MS = 120;
-const PRECISE_HOVER_QUERY = '(hover: hover) and (pointer: fine)';
+interface ItemProps<TRow, TItemData> {
+  // Timeline placement and interactions
+  calendar?: ItemCalendarProps<TRow, TItemData>;
 
-interface ItemProps {
+  // Item identity and appearance
   id: string;
   ariaLabel: string;
+  selected?: boolean;
+  className?: string;
+
+  // Summary content
   leading?: ReactNode;
   summary: ReactNode;
   trailing?: ReactNode;
+
+  // Details content
   detailTitle: ReactNode;
   details: readonly ItemDetail[];
+
+  // Menu actions
   actions?: readonly ItemAction[];
   onEdit?: () => void;
   onDelete?: () => void;
-  selected?: boolean;
-  className?: string;
 }
 
-export default function Item({
+export default function Item<TRow, TItemData>({
+  // Timeline placement and interactions
+  calendar,
+
+  // Item identity and appearance
   id,
   ariaLabel,
+  selected = false,
+  className = '',
+
+  // Summary content
   leading,
   summary,
   trailing,
+
+  // Details content
   detailTitle,
   details,
+
+  // Menu actions
   actions = [],
   onEdit,
   onDelete,
-  selected = false,
-  className = '',
-}: ItemProps) {
+}: ItemProps<TRow, TItemData>) {
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
-  const detailAnchorRef = useRef<DOMRect | null>(null);
-  const detailSizeRef = useRef<{ width: number; height: number } | null>(null);
-  const detailOpenTimerRef = useRef<number | null>(null);
-
-  const [detailPosition, setDetailPosition] = useState<FloatingPosition | null>(null);
-  const { isOpen, openAtRect, close, position, menuRef } = useFloatingMenu(
-    triggerRef,
-    { side: 'bottom', align: 'start' },
-    { widthEstimate: 150, heightEstimate: 86 },
-  );
-
-  const supportsPreciseHover = typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia(PRECISE_HOVER_QUERY).matches;
-  const showTouchDetails = isOpen && !supportsPreciseHover;
-  const detailsOpen = detailPosition !== null;
-  const hasActions = actions.length > 0 || Boolean(onEdit || onDelete);
   const detailsId = `calendar-item-details-${id}`;
+  const hasActions = actions.length > 0 || Boolean(onEdit || onDelete);
+  const itemDetails = useItemDetails(triggerRef);
+  const menu = useItemMenu({ triggerRef, hasActions, hideDetails: itemDetails.hideDetails, showDetails: itemDetails.showDetails });
 
-  useViewportDismissal(detailsOpen, () => setDetailPosition(null));
+  const move = useItemMove(calendar, itemDetails.hideDetails);
+  const resize = useItemResize(calendar, itemDetails.hideDetails);
 
-  const cancelPendingDetails = () => {
-    if (detailOpenTimerRef.current === null) return;
+  const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!calendar) return;
 
-    window.clearTimeout(detailOpenTimerRef.current);
-    detailOpenTimerRef.current = null;
+    if (calendar.environment.isClickSuppressed()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    calendar.onSelect();
   };
 
-  const hideDetails = () => {
-    cancelPendingDetails();
-
-    detailAnchorRef.current = null;
-    setDetailPosition(null);
-  };
-
-  const getVisibleItemAnchor = (clientX?: number) => {
-    const trigger = triggerRef.current;
-
-    if (!trigger) return null;
-
-    const periodCells = trigger.closest('.row')
-      ?.querySelectorAll<HTMLElement>('.cell');
-    // Ranged items can extend offscreen, so anchor details to the hovered visible period.
-    const hoveredPeriod = clientX === undefined || clientX <= 0
-      ? undefined
-      : [...(periodCells ?? [])].find(cell => {
-        const bounds = cell.getBoundingClientRect();
-
-        return clientX >= bounds.left && clientX < bounds.right;
-      });
-
-    const itemBounds = trigger.getBoundingClientRect();
-    const periodBounds = hoveredPeriod?.getBoundingClientRect();
-    const anchorLeft = periodBounds ? Math.max(periodBounds.left, itemBounds.left) : itemBounds.left;
-    const anchorRight = periodBounds ? Math.min(periodBounds.right, itemBounds.right) : itemBounds.right;
-
-    return new DOMRect(
-      anchorLeft,
-      itemBounds.top,
-      anchorRight - anchorLeft,
-      itemBounds.height,
-    );
-  };
-
-  const showDetails = (clientX?: number) => {
-    const anchorBounds = getVisibleItemAnchor(clientX);
-
-    if (!anchorBounds) return;
-
-    detailAnchorRef.current = anchorBounds;
-
-    const measuredSize = detailSizeRef.current;
-    const next = calculateFloatingPositionFromRect(
-      anchorBounds,
-      { side: 'bottom', align: 'start' },
-      {
-        widthEstimate: measuredSize?.width ?? 300,
-        heightEstimate: measuredSize?.height ?? 190,
-        offset: 8,
-      },
-    );
-
-    setDetailPosition(current => current?.top === next.top && current.left === next.left ? current : next);
-  };
-
-  const scheduleDetails = (clientX: number) => {
-    cancelPendingDetails();
-
-    detailOpenTimerRef.current = window.setTimeout(() => {
-      detailOpenTimerRef.current = null;
-      showDetails(clientX);
-    }, HOVER_DETAILS_DELAY_MS);
-  };
-
-  useLayoutEffect(() => () => {
-    if (detailOpenTimerRef.current !== null) window.clearTimeout(detailOpenTimerRef.current);
-  }, []);
-
-  useLayoutEffect(() => {
-    const detail = detailRef.current;
-
-    if (!detailsOpen || !detail) return undefined;
-
-    const reposition = () => {
-      const anchor = detailAnchorRef.current;
-
-      if (!anchor) return;
-
-      const bounds = detail.getBoundingClientRect();
-      detailSizeRef.current = { width: bounds.width, height: bounds.height };
-      const next = calculateFloatingPositionFromRect(
-        anchor,
-        { side: 'bottom', align: 'start' },
-        { widthEstimate: bounds.width, heightEstimate: bounds.height, offset: 8 },
-      );
-
-      setDetailPosition(current => current?.top === next.top && current.left === next.left ? current : next);
-    };
-
-    reposition();
-
-    if (typeof ResizeObserver === 'undefined') return undefined;
-
-    const observer = new ResizeObserver(reposition);
-    observer.observe(detail);
-
-    return () => observer.disconnect();
-  }, [detailsOpen]);
-
-  const runAction = (action: () => void) => {
-    close();
-    action();
-  };
-
-  const viewDetails = () => {
-    close();
-    showDetails();
-  };
-
-  return (
+  const handleActivate = () => calendar?.onActivate();
+  const content = (
     <>
       <button
         ref={triggerRef}
         type="button"
-        className={`calendar-item${selected ? ' selected' : ''}${isOpen ? ' menu-open' : ''}${className ? ` ${className}` : ''}`}
+        className={`calendar-item${selected ? ' selected' : ''}${menu.isOpen ? ' menu-open' : ''}${className ? ` ${className}` : ''}`}
         aria-label={`${ariaLabel}${hasActions ? '. Open actions' : ''}`}
         aria-haspopup={hasActions ? 'menu' : undefined}
-        aria-expanded={hasActions ? isOpen : undefined}
-        aria-describedby={detailPosition ? detailsId : undefined}
-        onMouseEnter={event => scheduleDetails(event.clientX)}
-        onMouseLeave={hideDetails}
-        onFocus={() => {
-          if (triggerRef.current?.matches(':focus-visible')) showDetails();
-        }}
-        onBlur={hideDetails}
-        onPointerDown={hideDetails}
-        onClick={event => {
-          hideDetails();
-
-          if (!hasActions) return;
-
-          if (isOpen) close();
-          else {
-            const anchor = getVisibleItemAnchor(event.clientX);
-
-            if (anchor) openAtRect(anchor);
-          }
-        }}
+        aria-expanded={hasActions ? menu.isOpen : undefined}
+        aria-describedby={itemDetails.position ? detailsId : undefined}
+        onMouseEnter={itemDetails.onMouseEnter}
+        onMouseLeave={itemDetails.hideDetails}
+        onFocus={itemDetails.onFocus}
+        onBlur={itemDetails.hideDetails}
+        onPointerDown={itemDetails.hideDetails}
+        onClick={menu.onClick}
       >
         {leading !== undefined && leading !== null && <strong>{leading}</strong>}
         <span className="summary">{summary}</span>
         {trailing !== undefined && trailing !== null && <span className="trailing">{trailing}</span>}
       </button>
-      {detailPosition && createPortal(
+      {itemDetails.position && createPortal(
         <div
-          ref={detailRef}
+          ref={itemDetails.detailRef}
           id={detailsId}
           role="tooltip"
           className="calendar-item-details"
-          style={{ top: detailPosition.top, left: detailPosition.left }}
+          style={{ top: itemDetails.position.top, left: itemDetails.position.left }}
         >
           <strong>{detailTitle}</strong>
           <dl>
@@ -252,22 +140,19 @@ export default function Item({
         </div>,
         document.body,
       )}
-      {position && hasActions && createPortal(
+      {menu.position && hasActions && createPortal(
         <FloatingMenuPanel
-          menuRef={menuRef}
-          position={position}
-          onClose={close}
+          menuRef={menu.menuRef}
+          position={menu.position}
+          onClose={menu.close}
           className="calendar-item-menu"
           width={150}
         >
-          {showTouchDetails && (
+          {menu.showTouchDetails && (
             <button
               type="button"
               role="menuitem"
-              onClick={event => {
-                event.stopPropagation();
-                viewDetails();
-              }}
+              onClick={menu.viewDetails}
             >
               View details
             </button>
@@ -278,10 +163,7 @@ export default function Item({
               type="button"
               role="menuitem"
               className={action.variant === 'danger' ? 'delete' : undefined}
-              onClick={event => {
-                event.stopPropagation();
-                runAction(action.onClick);
-              }}
+              onClick={event => menu.runAction(event, action.onClick)}
             >
               {action.label}
             </button>
@@ -290,10 +172,7 @@ export default function Item({
             <button
               type="button"
               role="menuitem"
-              onClick={event => {
-                event.stopPropagation();
-                runAction(onEdit);
-              }}
+              onClick={event => menu.runAction(event, onEdit)}
             >
               Edit
             </button>
@@ -303,10 +182,7 @@ export default function Item({
               type="button"
               role="menuitem"
               className="delete"
-              onClick={event => {
-                event.stopPropagation();
-                runAction(onDelete);
-              }}
+              onClick={event => menu.runAction(event, onDelete)}
             >
               Delete
             </button>
@@ -316,4 +192,38 @@ export default function Item({
       )}
     </>
   );
+
+  if (!calendar) return content;
+
+  const { layout } = calendar;
+
+  return (
+    <div
+      className={getPositionedItemClassName(calendar)}
+      data-item-density={layout.density}
+      data-item-row-id={layout.rowId}
+      data-item-start={layout.start}
+      data-item-end={layout.end}
+      style={layout.style}
+      onPointerDown={move.onPointerDown}
+      onClickCapture={handleClickCapture}
+      onClick={handleActivate}
+    >
+      {resize.startHandle && <button {...resize.startHandle} />}
+      {content}
+      {resize.endHandle && <button {...resize.endHandle} />}
+    </div>
+  );
+}
+
+/** Produces visual and interaction modifiers for the positioned item wrapper. */
+function getPositionedItemClassName<TRow, TItemData>({ layout, movable, resizable }: ItemCalendarProps<TRow, TItemData>) {
+  return [
+    'item', 'positioned-item', layout.density,
+    !layout.startsInWindow ? 'continues-before' : '',
+    !layout.endsInWindow ? 'continues-after' : '',
+    layout.hideSummary ? 'summaries-hidden' : '',
+    movable ? 'draggable' : '',
+    resizable ? 'resizable' : '',
+  ].filter(Boolean).join(' ');
 }

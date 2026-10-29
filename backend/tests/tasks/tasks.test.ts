@@ -166,42 +166,19 @@ describe('Tasks API', () => {
     })).rejects.toBe(rollback);
   });
 
-  it('returns complete policy-scoped task reference data', async () => {
-    const adminOptions = await request(app)
-      .get('/api/tasks/reference-data')
+  it('returns only task-owned reference choices', async () => {
+    const options = await request(app).get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${adminToken}`);
-    expect(adminOptions.status).toBe(200);
-    expect(adminOptions.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }),
-      expect.objectContaining({ id: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' }),
-      expect.objectContaining({ id: unrelatedStaffId }),
-    ]));
-    expect(adminOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
-    expect(adminOptions.body.categories).toEqual(expect.arrayContaining([
-      { value: 'planning_prep', label: 'Planning / Prep' },
-    ]));
-    expect(adminOptions.body.statuses).toEqual([
+    expect(options.status).toBe(200);
+    expect(Object.keys(options.body).sort()).toEqual(['categories', 'statuses']);
+    expect(options.body.categories).toContainEqual({ value: 'planning_prep', label: 'Planning / Prep' });
+    expect(options.body.statuses).toEqual([
       { value: 'upcoming', label: 'Upcoming' },
       { value: 'active', label: 'Active' },
       { value: 'overdue', label: 'Overdue' },
       { value: 'completed', label: 'Completed' },
       { value: 'cancelled', label: 'Cancelled' },
     ]);
-    expect(adminOptions.body).not.toHaveProperty('cycles');
-
-    const staffOptions = await request(app)
-      .get('/api/tasks/reference-data')
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(staffOptions.status).toBe(200);
-    expect(staffOptions.body.resources).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: firstStaffId, writable: true }),
-      expect.objectContaining({ id: secondStaffId, writable: false }),
-    ]));
-    expect(staffOptions.body.resources).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: unrelatedStaffId }),
-    ]));
-    expect(staffOptions.body.programs).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
-    expect(staffOptions.body).not.toHaveProperty('cycles');
   });
 
   it('requires explicit task capabilities at the route boundary', async () => {
@@ -216,13 +193,13 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${readOnlyToken}`)
       .send({ startDate: taskDate, dueDate: taskDate });
     const readOnlyOptions = await request(app)
-      .get('/api/tasks/reference-data')
+      .get('/api/reference-data/staff?feature=tasks')
       .set('Authorization', `Bearer ${readOnlyToken}`);
 
     expect(deniedRead.status).toBe(403);
     expect(deniedWrite.status).toBe(403);
     expect(readOnlyOptions.status).toBe(200);
-    expect(readOnlyOptions.body.resources).not.toEqual(expect.arrayContaining([
+    expect(readOnlyOptions.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ writable: true }),
     ]));
   });
@@ -532,7 +509,7 @@ describe('Tasks API', () => {
     expect(malformedId.status).toBe(400);
   });
 
-  it('returns complete tasks whose date ranges intersect the requested calendar range', async () => {
+  it('returns complete tasks whose date ranges intersect the same table and calendar range', async () => {
     const create = async (title: string, startDate: string, dueDate: string) => rememberTask(await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -540,6 +517,7 @@ describe('Tasks API', () => {
     const spanning = await create('Spans calendar range', '2026-06-10', '2026-06-20');
     const inside = await create('Inside calendar range', '2026-06-14', '2026-06-14');
     const outside = await create('Outside calendar range', '2026-06-21', '2026-06-22');
+    const boundary = await create('Boundary calendar range', '2026-06-15', '2026-06-16');
 
     const response = await request(app)
       .get(`/api/tasks/calendar?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range`)
@@ -554,10 +532,59 @@ describe('Tasks API', () => {
       expect.objectContaining({ id: outside.body.id }),
     ]));
 
+    const firstPage = await request(app)
+      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.rows.map((task: { id: string }) => task.id)).toEqual([spanning.body.id, inside.body.id]);
+    expect(firstPage.body.nextCursor).toEqual(expect.any(String));
+
+    const secondPage = await request(app)
+      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.rows.map((task: { id: string }) => task.id)).toEqual([boundary.body.id]);
+    expect(secondPage.body.nextCursor).toBeNull();
+
     const incompleteRange = await request(app)
       .get('/api/tasks/calendar?start=2026-06-12')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(incompleteRange.status).toBe(400);
+  });
+
+  it('returns tasks across a multi-year table and calendar read range', async () => {
+    const ids: string[] = [];
+    for (const date of ['2024-02-29', '2027-12-31']) {
+      const created = rememberTask(await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ title: 'Multi-year range task', category: 'outreach', startDate: date, dueDate: date, staffId: firstStaffId }));
+      expect(created.status).toBe(201);
+      ids.push(created.body.id);
+    }
+
+    for (const endpoint of ['list', 'calendar']) {
+      const response = await request(app).get(`/api/tasks/${endpoint}`)
+        .query({ start: '2024-01-01', end: '2027-12-31', staffIds: firstStaffId, search: 'Multi-year range task' })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(response.status).toBe(200);
+      const rows = endpoint === 'list' ? response.body.rows : response.body;
+      expect(rows.map((task: { id: string }) => task.id)).toEqual(ids);
+    }
+  });
+
+  it.each([
+    'start=2026-06-12',
+    'end=2026-06-15',
+    'start=2026-06-15&end=2026-06-12',
+    'start=2026-02-30&end=2026-03-01',
+    'start=0000-01-01&end=0000-01-02',
+  ])('rejects an invalid table range: %s', async query => {
+    const response = await request(app)
+      .get(`/api/tasks/list?${query}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(400);
   });
 
   it('preserves newer task content and status when placement changes', async () => {

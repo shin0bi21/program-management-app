@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { createProgram, updateProgram } from '../../../../../../common/features/programs/programs.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { CreateProgramInput, Program, ProgramWeekday } from '../../../../../../common/features/programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
@@ -9,9 +9,13 @@ import { getErrorMessage } from '../../../../../../http/errors';
 interface ProgramDraft {
   name: string;
   description: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   minAge: string;
   maxAge: string;
+  defaultDayOfWeek: ProgramWeekday;
+  defaultStartTime: string;
+  defaultEndTime: string;
+  timezone: Program['timezone'];
 }
 
 interface UseProgramModalOptions {
@@ -22,9 +26,13 @@ interface UseProgramModalOptions {
 
 function buildDraft(program: Program | null): ProgramDraft {
   return {
+    defaultDayOfWeek: program?.defaultDayOfWeek ?? 'tuesday',
+    defaultStartTime: program?.defaultStartTime ?? '17:00',
+    defaultEndTime: program?.defaultEndTime ?? '19:30',
+    timezone: program?.timezone ?? 'America/Toronto',
     name: program?.name ?? '',
     description: program?.description ?? '',
-    rosterMode: program?.rosterMode ?? 'enrolled',
+    enrollmentRequired: program?.enrollmentRequired ?? true,
     minAge: program?.minAge === null || program?.minAge === undefined
       ? ''
       : String(program.minAge),
@@ -104,14 +112,24 @@ export default function useProgramModal({ isOpen, program, onSaved }: UseProgram
       setStatusMessage(ages.error);
       return;
     }
+    if (!draft.defaultStartTime || !draft.defaultEndTime || draft.defaultEndTime <= draft.defaultStartTime) {
+      setSubmitStatus('error');
+      setStatusMessage('Default end time must be after the start time.');
+      return;
+    }
+
     if (!tryLock()) return;
 
-    const input = {
+    const input: CreateProgramInput = {
       name,
       description: draft.description.trim() || null,
-      rosterMode: draft.rosterMode,
+      enrollmentRequired: draft.enrollmentRequired,
       minAge: ages.minAge,
       maxAge: ages.maxAge,
+      defaultDayOfWeek: draft.defaultDayOfWeek,
+      defaultStartTime: draft.defaultStartTime,
+      defaultEndTime: draft.defaultEndTime,
+      timezone: draft.timezone,
     };
     setSubmitStatus('submitting');
     setStatusMessage(program ? `Updating ${name}...` : `Adding ${name}...`);

@@ -22,8 +22,15 @@ describe('cohort API', () => {
   });
 
   it('loads youth through the cohort roster contract', () => {
-    getCohortRosterYouth();
+    getCohortRosterYouth('cohort-1');
 
-    expect(apiClient.get).toHaveBeenCalledWith('/youth');
+    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/cohort-1/roster');
+  });
+
+  it('forwards cancellation when loading a cohort roster', () => {
+    const options = { signal: new AbortController().signal };
+    getCohortRosterYouth('cohort-1', options);
+
+    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/cohort-1/roster', options);
   });
 });

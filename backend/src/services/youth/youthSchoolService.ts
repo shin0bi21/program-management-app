@@ -2,13 +2,7 @@ import { sql } from '../../db/client';
 import { NotFoundError, ConflictError } from '../../errors';
 import type { SetSchoolInput } from '../../validation/schoolSchemas';
 
-export async function getSchools() {
-  return sql`
-    SELECT id, name
-    FROM schools
-    ORDER BY name ASC
-  `;
-}
+export { getSchoolReferenceData as getSchools } from '../referenceData/schoolReferenceData';
 
 export async function setSchool(data: SetSchoolInput, actorId: string) {
   const { id, name } = data;

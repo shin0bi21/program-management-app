@@ -9,7 +9,7 @@ interface YouthCohortContext {
   id: string;
   name: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
 }
 
 interface YouthAttendanceSession {
@@ -69,7 +69,7 @@ export async function setYouthCohortAttendance(
       throw new ConflictError('Cohort sessions changed while attendance was being edited');
     }
     if (
-      cohort.rosterMode === 'open'
+      !cohort.enrollmentRequired
       && data.records.some(record => record.status !== null && record.status !== 'present')
     ) {
       throw new ConflictError('Open sessions only record whether a youth attended');
@@ -113,7 +113,7 @@ async function getYouthCohortContext(
   if (!youth.length) throw new NotFoundError('Youth profile not found');
 
   const cohorts = await database<YouthCohortContext[]>`
-    SELECT pc.id, cycle.name, p.name AS program_name, p.roster_mode
+    SELECT pc.id, cycle.name, p.name AS program_name, p.enrollment_required
     FROM program_cohorts pc
     INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id
@@ -123,7 +123,7 @@ async function getYouthCohortContext(
   if (!cohorts.length) throw new NotFoundError('Cohort not found');
 
   const cohort = cohorts[0];
-  if (cohort.rosterMode === 'enrolled') {
+  if (cohort.enrollmentRequired) {
     const enrollment = await database`
       SELECT 1
       FROM cohort_enrollments
@@ -163,7 +163,7 @@ function getYouthAttendanceSessions(
       AND ar.youth_id = ${youthId}
     WHERE cs.cohort_id = ${cohortId}
       AND (
-        p.roster_mode = 'open'
+        p.enrollment_required = FALSE
         OR ar.id IS NOT NULL
         OR EXISTS (
           SELECT 1

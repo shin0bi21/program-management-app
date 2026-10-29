@@ -8,11 +8,13 @@ import { formatShortDate } from '../../../../../../common/utils/date';
 
 export default function useCohortTable({
   canWrite,
+  canManageRoster,
   onManageRoster,
   onEdit,
   onDelete,
 }: {
   canWrite: boolean;
+  canManageRoster: boolean;
   onManageRoster: (cohort: ProgramCohort) => void;
   onEdit: (cohort: ProgramCohort) => void;
   onDelete: (cohort: ProgramCohort) => void;
@@ -31,22 +33,24 @@ export default function useCohortTable({
         <span className={`cohort-state cohort-state--${cohort.state}`}>{cohort.state}</span>
       ),
     },
-    ...(canWrite ? [{
+    ...(canWrite || canManageRoster ? [{
       id: 'actions',
       size: 40,
       enableResizing: false,
       enableHiding: false,
       header: '',
-      cell: ({ row: { original: cohort } }: CellContext<ProgramCohort, unknown>) => <ActionsMenu
+      cell: ({ row: { original: cohort } }: CellContext<ProgramCohort, unknown>) => canWrite || cohort.enrollmentRequired ? <ActionsMenu
         ariaLabel={`More actions for ${cohort.name}`}
         items={[
-          ...(cohort.rosterMode === 'enrolled'
+          ...(canManageRoster && cohort.enrollmentRequired
             ? [{ id: 'manage-roster', label: 'Manage Roster', onClick: () => onManageRoster(cohort) }]
             : []),
-          { id: 'edit', label: 'Edit Cohort', onClick: () => onEdit(cohort) },
-          { id: 'delete', label: 'Delete Cohort', variant: 'danger' as const, onClick: () => onDelete(cohort) },
+          ...(canWrite ? [
+            { id: 'edit', label: 'Edit Cohort', onClick: () => onEdit(cohort) },
+            { id: 'delete', label: 'Delete Cohort', variant: 'danger' as const, onClick: () => onDelete(cohort) },
+          ] : []),
         ]}
-      />,
+      /> : null,
     }] : []),
-  ], [canWrite, onDelete, onEdit, onManageRoster]);
+  ], [canWrite, canManageRoster, onDelete, onEdit, onManageRoster]);
 }

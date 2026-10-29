@@ -11,12 +11,17 @@ export type PointerSessionCancelReason =
   | 'window-blur';
 
 interface PointerSessionOptions {
+  // Pointer identity and capture
   type: PointerSessionType;
   pointerId: number;
+  captureElement: HTMLElement;
+
+  // Activation threshold
   startX: number;
   startY: number;
   axis?: 'both' | 'horizontal';
-  captureElement: HTMLElement;
+
+  // Interaction lifecycle
   onActivate: (event: PointerEvent) => void;
   onMove: (event: PointerEvent) => void;
   onEnd: (event: PointerEvent) => void;
@@ -29,38 +34,22 @@ interface ActivePointerSession extends PointerSessionOptions {
   captureLost: boolean;
 }
 
-export type BeginPointerSession = (options: PointerSessionOptions) => boolean;
+export type StartPointerSession = (options: PointerSessionOptions) => boolean;
 
-function crossedThreshold(session: ActivePointerSession, event: PointerEvent) {
-  return session.axis === 'horizontal'
-    ? Math.abs(event.clientX - session.startX) >= POINTER_THRESHOLD
-    : Math.hypot(event.clientX - session.startX, event.clientY - session.startY) >= POINTER_THRESHOLD;
-}
-
-function isReleasedMousePointer(event: PointerEvent) {
-  return event.pointerType === 'mouse' && event.buttons === 0;
-}
-
-function capturePointer(element: HTMLElement, pointerId: number) {
-  try {
-    element.setPointerCapture?.(pointerId);
-    return element.hasPointerCapture?.(pointerId) ?? true;
-  } catch {
-    return false;
-  }
-}
-
-function releasePointer(element: HTMLElement, pointerId: number) {
-  try {
-    if (element.hasPointerCapture?.(pointerId)) element.releasePointerCapture(pointerId);
-  } catch {
-    // The browser may have already released this pointer.
-  }
-}
-
+/**
+ * Runs one calendar move or resize from pointer-down through activation, recovery, and cleanup.
+ * Requires: this hook and the capture viewport stay mounted while retained item callbacks run;
+ * the source item may unmount during virtualization.
+ * Effects: installs window/document listeners and runs onFrame while an activated pointer is captured.
+ * Example: start at (100, 100), move to (110, 100) => onActivate then onMove;
+ * capture loss pauses frames, a held move recaptures, and pointerup cleans up before onEnd.
+ * A competing start returns false unless it replaces a session whose capture was lost.
+ */
 export function usePointerSession() {
   const sessionRef = useRef<ActivePointerSession | null>(null);
   const animationFrameRef = useRef<number>();
+  const suppressClickRef = useRef(false);
+  const suppressClickTimerRef = useRef<number>();
 
   const [activeType, setActiveType] = useState<PointerSessionType | null>(null);
 
@@ -71,86 +60,92 @@ export function usePointerSession() {
     animationFrameRef.current = undefined;
   }, []);
 
-  const runFrame = useCallback(function frame() {
-    const session = sessionRef.current;
-
-    if (!session) {
-      animationFrameRef.current = undefined;
-      return;
-    }
-
-    session.onFrame?.();
-    animationFrameRef.current = requestAnimationFrame(frame);
-  }, []);
-
   const cancelSession = useCallback((
     session: ActivePointerSession,
     reason: PointerSessionCancelReason,
-    updateActiveType = true,
   ) => {
     if (sessionRef.current === session) sessionRef.current = null;
 
     stopFrames();
-    if (updateActiveType) setActiveType(null);
+    setActiveType(null);
 
-    releasePointer(session.captureElement, session.pointerId);
+    releasePointer(session);
     session.onCancel(reason);
   }, [stopFrames]);
 
-  const beginPointerSession = useCallback<BeginPointerSession>((options) => {
-    let current = sessionRef.current;
+  const startPointerSession = useCallback((options: PointerSessionOptions) => {
+    const current = sessionRef.current;
 
-    if (current?.captureLost) {
-      cancelSession(current, 'replaced-after-capture-loss');
-      current = null;
-    }
-
-    if (current) return false;
+    if (current?.captureLost) cancelSession(current, 'replaced-after-capture-loss');
+    if (sessionRef.current) return false;
 
     sessionRef.current = {
       ...options,
-      axis: options.axis ?? 'both',
       active: false,
       captureLost: false,
     };
 
-    setActiveType(options.type);
-    animationFrameRef.current = requestAnimationFrame(runFrame);
-
     return true;
-  }, [cancelSession, runFrame]);
+  }, [cancelSession]);
 
-  useEffect(() => {
-    const move = (event: PointerEvent) => {
+  const suppressNextClick = useCallback(() => {
+    suppressClickRef.current = true;
+    window.clearTimeout(suppressClickTimerRef.current);
+    suppressClickTimerRef.current = window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+  }, []);
+
+  const isClickSuppressed = useCallback(() => suppressClickRef.current, []);
+
+  useEffect(function mount() {
+    function handleMove(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
-      // A mouse move with no pressed button is a late release, not a recapture opportunity.
+      // A retained session must not recapture a mouse that has already been released.
       if (isReleasedMousePointer(event)) return;
-      if (!session.active && !crossedThreshold(session, event)) return;
+      if (!session.active && !hasCrossedPointerThreshold(session, event)) return;
 
       event.preventDefault();
 
-      if (!session.active) {
-        session.active = true;
-        session.captureLost = !capturePointer(session.captureElement, event.pointerId);
-
-        if (session.captureLost) stopFrames();
-        session.onActivate(event);
-      } else if (session.captureLost) {
-        session.captureLost = !capturePointer(session.captureElement, event.pointerId);
-
-        if (!session.captureLost) {
-          if (animationFrameRef.current === undefined) {
-            animationFrameRef.current = requestAnimationFrame(runFrame);
-          }
+      if (!session.active || session.captureLost) {
+        session.captureLost = !tryCapturePointer(session.captureElement, event.pointerId);
+        if (!session.captureLost && animationFrameRef.current === undefined) {
+          animationFrameRef.current = requestAnimationFrame(runFrame);
         }
       }
 
-      session.onMove(event);
-    };
+      if (!session.active) {
+        session.active = true;
+        setActiveType(session.type);
+        session.onActivate(event);
+      }
 
-    const end = (event: PointerEvent) => {
+      session.onMove(event);
+    }
+
+    function runFrame() {
+      const session = sessionRef.current;
+
+      if (!session) {
+        animationFrameRef.current = undefined;
+        return;
+      }
+
+      session.onFrame?.();
+      animationFrameRef.current = requestAnimationFrame(runFrame);
+    }
+
+    function handleCaptureLoss(event: PointerEvent): void {
+      const session = sessionRef.current;
+
+      if (session?.pointerId === event.pointerId && event.target === session.captureElement) {
+        // Keep the workflow alive across transient capture loss; the next held move retries.
+        session.captureLost = true;
+        stopFrames();
+      }
+    }
+
+    function handleEnd(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
@@ -159,66 +154,83 @@ export function usePointerSession() {
       stopFrames();
       setActiveType(null);
 
-      releasePointer(session.captureElement, event.pointerId);
+      releasePointer(session);
       session.onEnd(event);
-    };
+    }
 
-    const pointerCancel = (event: PointerEvent) => {
+    function handlePointerCancel(event: PointerEvent): void {
       const session = sessionRef.current;
 
       if (!session || event.pointerId !== session.pointerId) return;
 
       cancelSession(session, 'pointer-cancel');
-    };
+    }
 
-    const lostCapture = (event: PointerEvent) => {
-      const pointerId = event.pointerId;
-      const capturedSession = sessionRef.current;
-
-      if (!capturedSession || capturedSession.pointerId !== pointerId) return;
-      if (event.target !== capturedSession.captureElement) return;
-
-      // Capture loss can be transient; retain the session so the next move can recapture it.
-      capturedSession.captureLost = true;
-      stopFrames();
-    };
-
-    const windowBlur = () => {
+    function handleWindowBlur(): void {
       const session = sessionRef.current;
 
       if (session) cancelSession(session, 'window-blur');
-    };
+    }
 
-    const visibilityChange = () => {
+    function handleDocumentVisibilityChange(): void {
       const session = sessionRef.current;
 
       if (session && document.visibilityState === 'hidden') {
         cancelSession(session, 'document-hidden');
       }
-    };
+    }
 
-    window.addEventListener('pointermove', move, { passive: false });
-    window.addEventListener('pointerup', end, true);
-    window.addEventListener('pointercancel', pointerCancel, true);
-    window.addEventListener('lostpointercapture', lostCapture);
-    window.addEventListener('blur', windowBlur);
-    document.addEventListener('visibilitychange', visibilityChange);
+    window.addEventListener('pointermove', handleMove, { passive: false });
+    // Finish before target handlers can release capture and trigger recovery.
+    window.addEventListener('pointerup', handleEnd, true);
+    window.addEventListener('pointercancel', handlePointerCancel, true);
+    window.addEventListener('lostpointercapture', handleCaptureLoss);
+    window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
 
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end, true);
-      window.removeEventListener('pointercancel', pointerCancel, true);
-      window.removeEventListener('lostpointercapture', lostCapture);
-      window.removeEventListener('blur', windowBlur);
-      document.removeEventListener('visibilitychange', visibilityChange);
+    return function unmount() {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd, true);
+      window.removeEventListener('pointercancel', handlePointerCancel, true);
+      window.removeEventListener('lostpointercapture', handleCaptureLoss);
+      window.removeEventListener('blur', handleWindowBlur);
+      document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
+      window.clearTimeout(suppressClickTimerRef.current);
 
       const session = sessionRef.current;
 
       if (!session) return;
 
-      cancelSession(session, 'unmount', false);
+      cancelSession(session, 'unmount');
     };
-  }, [cancelSession, runFrame, stopFrames]);
+  }, [cancelSession, stopFrames]);
 
-  return { activeType, beginPointerSession };
+  return { activeType, startPointerSession, suppressNextClick, isClickSuppressed };
+}
+
+function isReleasedMousePointer(event: PointerEvent) {
+  return event.pointerType === 'mouse' && event.buttons === 0;
+}
+
+function hasCrossedPointerThreshold(session: ActivePointerSession, event: PointerEvent) {
+  return session.axis === 'horizontal'
+    ? Math.abs(event.clientX - session.startX) >= POINTER_THRESHOLD
+    : Math.hypot(event.clientX - session.startX, event.clientY - session.startY) >= POINTER_THRESHOLD;
+}
+
+function tryCapturePointer(element: HTMLElement, pointerId: number) {
+  try {
+    element.setPointerCapture(pointerId);
+    return element.hasPointerCapture(pointerId);
+  } catch {
+    return false;
+  }
+}
+
+function releasePointer(session: ActivePointerSession) {
+  try {
+    session.captureElement.releasePointerCapture(session.pointerId);
+  } catch {
+    // The browser may have already released this pointer.
+  }
 }

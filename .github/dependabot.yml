@@ -1,6 +1,16 @@
 version: 2
 updates:
   - package-ecosystem: npm
+    directory: /docs
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      docs-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
     directory: /
     target-branch: develop
     schedule:

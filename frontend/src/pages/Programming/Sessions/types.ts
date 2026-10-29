@@ -1,3 +1,4 @@
+import type { DateRange } from '../../../common/utils/dateRange';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 
 export interface CohortSession {
@@ -9,7 +10,7 @@ export interface CohortSession {
   cohortName: string;
   programId: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;
@@ -21,6 +22,7 @@ export interface CohortSession {
 }
 
 export interface SessionListFilters {
+  dateRange?: DateRange;
   programIds?: string[];
   cycleIds?: string[];
   sessionTypeIds?: string[];
@@ -45,18 +47,6 @@ export interface AttendanceYouth {
 }
 
 export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
-
-export interface GenerateSessionsInput {
-  sessionTypeId: string;
-  theme: string;
-  frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
-  dayOfWeek?: 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
-  dayOfMonth?: number;
-  startsOn: string;
-  endsOn?: string;
-  startTime: string;
-  endTime: string;
-}
 
 export interface SessionRosterMember {
   youthId: string;
@@ -96,7 +86,7 @@ export interface YouthSessionNote extends SessionNote {
   cohortName: string;
   programId: string;
   programName: string;
-  rosterMode: 'enrolled' | 'open';
+  enrollmentRequired: boolean;
 }
 
 export interface SessionAttachmentYouth {

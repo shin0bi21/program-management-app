@@ -10,11 +10,15 @@ import youthRoutes from '../../src/routes/youthRoutes';
 import schoolRoutes from '../../src/routes/schoolRoutes';
 import leadRoutes from '../../src/routes/leadRoutes';
 import programRoutes from '../../src/routes/programRoutes';
+import cycleRoutes from '../../src/routes/cycleRoutes';
+import sessionRoutes from '../../src/routes/sessionRoutes';
+import enrollmentRoutes from '../../src/routes/enrollmentRoutes';
 import cohortRoutes from '../../src/routes/cohortRoutes';
 import homepageRoutes, { publicHomepageRoutes } from '../../src/routes/homepageRoutes';
 import preferenceRoutes from '../../src/routes/preferenceRoutes';
 import hoursRoutes from '../../src/routes/hoursRoutes';
 import taskRoutes from '../../src/routes/taskRoutes';
+import referenceDataRoutes from '../../src/routes/referenceDataRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
@@ -30,11 +34,15 @@ export function createApp() {
   app.use('/api/schools', schoolRoutes);
   app.use('/api/leads', leadRoutes);
   app.use('/api/programs', programRoutes);
+  app.use('/api/cohorts/cycles', cycleRoutes);
+  app.use('/api/cohorts', sessionRoutes);
+  app.use('/api/cohorts', enrollmentRoutes);
   app.use('/api/cohorts', cohortRoutes);
   app.use('/api/homepage', homepageRoutes);
   app.use('/api/preferences', preferenceRoutes);
   app.use('/api/hours', hoursRoutes);
   app.use('/api/tasks', taskRoutes);
+  app.use('/api/reference-data', referenceDataRoutes);
   app.use(handleError);
   return app;
 }

@@ -1,3 +1,6 @@
+import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
+import type { TaskReferenceData } from '../../tasks.api';
 import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
@@ -16,13 +19,13 @@ import type { ListSort } from '../../../../../common/components/Table/Table.type
 import {
   type TaskCategory,
   type TaskStatus,
-  type TaskReferenceData,
   type TaskSortKey,
 } from '../../types';
 
 type TasksView = 'calendar' | 'table';
 
 interface TaskPreferences {
+  cycleIds: string[];
   view: TasksView;
   search: string;
   staffIds: string[];
@@ -40,24 +43,43 @@ interface UseTaskPreferencesOptions {
   referenceData: TaskReferenceData | undefined;
   referenceDataLoading: boolean;
   referenceDataError: boolean;
+  resources: StaffReference[];
+  programs: ProgramReference[];
+  resourcesLoading: boolean;
+  resourcesError: boolean;
+  programsLoading: boolean;
+  programsError: boolean;
   tableKeys: readonly TaskSortKey[];
+  cycles: CycleReference[];
+  cyclesLoading: boolean;
+  cyclesError: boolean;
 }
 
 export default function useTaskPreferences({
   referenceData,
   referenceDataLoading,
   referenceDataError,
+  resources,
+  programs,
+  resourcesLoading,
+  resourcesError,
+  programsLoading,
+  programsError,
   tableKeys,
+  cycles,
+  cyclesLoading,
+  cyclesError,
 }: UseTaskPreferencesOptions) {
   const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
-    waiting: referenceDataLoading,
+    waiting: referenceDataLoading || cyclesLoading || resourcesLoading || programsLoading,
     fields: {
+      cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(options?.resources.map(resource => resource.id)),
-      programIds: preferenceIds(options?.programs.map(program => program.id)),
+      staffIds: preferenceIds(resourcesLoading || resourcesError ? undefined : resources.map(resource => resource.id)),
+      programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       categories: preferenceOptions<TaskCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
         [],
@@ -96,18 +118,20 @@ export default function useTaskPreferences({
     {
       id: 'staff',
       label: 'Staff',
-      options: (referenceData?.resources ?? []).map(item => ({ value: item.id, label: item.name })),
+      options: toFilterOptions(resources),
     },
     {
       id: 'program',
       label: 'Program',
-      options: (referenceData?.programs ?? []).map(item => ({ value: item.id, label: item.name })),
+      options: toFilterOptions(programs),
     },
+    { id: 'cycle', label: 'Cycle', options: toFilterOptions(cycles) },
     { id: 'category', label: 'Category', options: referenceData?.categories ?? [] },
     { id: 'status', label: 'Status', options: referenceData?.statuses ?? [] },
-  ], [referenceData]);
+  ], [referenceData, cycles, resources, programs]);
 
   const applyFilter = (id: string, selected: string[]) => {
+    if (id === 'cycle') updatePreferences({ cycleIds: selected });
     if (id === 'staff') updatePreferences({ staffIds: selected });
     if (id === 'program') updatePreferences({ programIds: selected });
     if (id === 'category') updatePreferences({
@@ -119,6 +143,7 @@ export default function useTaskPreferences({
   };
 
   const clearFilters = () => updatePreferences({
+    cycleIds: [],
     staffIds: [],
     programIds: [],
     categories: [],
@@ -156,6 +181,7 @@ export default function useTaskPreferences({
     },
 
     filters: {
+      cycleIds: preferences.cycleIds,
       staffIds: preferences.staffIds,
       programIds: preferences.programIds,
       categories: preferences.categories,

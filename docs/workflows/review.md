@@ -1,10 +1,12 @@
 # Review
 
-Implementation, review, shipping, and deployment are distinct phases. Completing code does not authorize commits, pull requests, merges, or deployment. A clean review does not authorize shipping.
+Stop after the requested phase unless the current request explicitly includes
+the next one. Full implementation includes mapping, review, fixes, and re-review;
+it does not authorize commits, pull requests, merges, or deployment. A clean
+review does not authorize shipping.
 
-Follow [Testing](testing.md) for test ownership, focused runner selection, and evidence reuse.
-
-Treat implementation, mapping, review, fixing, shipping, and deployment as handoff boundaries. Stop after the requested phase unless the current request explicitly includes the next phase. A request for full implementation includes mapping, review, fixes, and re-review, but excludes shipping and deployment.
+Follow [Testing](testing.md) for test ownership, focused runner selection, and
+evidence reuse.
 
 ## 1. Establish the concern
 

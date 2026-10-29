@@ -15,11 +15,11 @@ export interface SetYouthInput {
   firstName: string;
   lastName: string;
   email?: string;
-  dateOfBirth?: string;
+  dateOfBirth?: string | null;
   schoolId?: string;
-  gradeLevel?: number;
   addresses?: Array<{ address: string }>;
   contacts?: Array<{
+    id?: string;
     phoneNumber: string;
     type: 'parent' | 'sibling' | 'guardian';
   }>;
@@ -73,6 +73,10 @@ function applyYouthFilters(params: URLSearchParams, filters: YouthFilters) {
 
 export function setYouth(data: SetYouthInput) {
   return apiClient.post<YouthProfile>('/youth', data);
+}
+
+export function setYouthContacts(id: string, contacts: NonNullable<SetYouthInput['contacts']>) {
+  return apiClient.put<YouthProfile>(`/youth/${id}/contacts`, { contacts });
 }
 
 export function getYouthSessionNotes(id: string, opts?: RequestOptions) {

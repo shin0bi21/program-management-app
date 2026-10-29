@@ -4,24 +4,97 @@ A page-owned `*Dashboard` composes selected-record details and aggregate overvie
 
 Name the structural owner `*Dashboard`, not `*Overview`. Name extracted cards `*DashboardCard`; a semantic qualifier such as `Overview`, `Attendance`, or `Notes` precedes that suffix.
 
+Dashboard cards use two shared heights: **normal (125px)** is the default;
+**short (75px)** uses the `dashboard-card--short` modifier, including through
+`DashboardCard`'s `className`. Hours and Tasks opt into short cards. Other pages,
+including Programming's program overview and session cards, use normal cards.
+Keep the same height through loading, empty, error, and populated states, with
+overflow handled inside the card. Define the values in the shared brand tokens
+rather than adding page-specific pixel heights.
+
 ## Load dashboard data
 
 Place each data hook beside its smallest consumer. A query used by one card belongs in that card’s `hooks/` directory and is called by that card. Keep a query at dashboard level only when multiple cards consume its results. Cards that render data already supplied by the page do not need a separate data hook. Include every server input in its stable query key, forward cancellation, and enable it only when its selection context exists.
 
 ```tsx
 function ExampleDashboard({ selected, onAction }: ExampleDashboardProps) {
-  if (!selected) return null;
-
   return <>
     <ExampleDetailsDashboardCard example={selected} onAction={onAction} />
-    <ExampleOverviewDashboardCard resourceId={selected.id} />
+    <ExampleOverviewDashboardCard resourceId={selected?.id ?? null} />
   </>;
 }
 ```
 
 Pass cards directly through `PageBody`'s dashboard slot, usually as a fragment. Do not add another dashboard layout wrapper inside the shared `page-dashboard` region. Use `DashboardCardGroup` only for a standalone grouped-card surface outside `PageBody`.
 
-Overview-hook tests own query keys, enabled conditions, server inputs, cancellation and domain response shaping. They do not repeat generic TanStack Query fetching, caching, retry or refresh semantics.
+## Keep the card shell stable
+
+Every dashboard card keeps its declared shared height across breakpoints and states:
+normal uses `--dashboard-card-height` (125px); the optional `dashboard-card--short`
+modifier uses `--dashboard-card-height-short` (75px). Use `DashboardCard`; a custom
+metric layout must retain its `dashboard-card` shell and the same size modifier in
+all states. Do not introduce content-sized, percentage, or page-specific pixel heights.
+Keep the heading and actions outside the scrolling data region. The shared
+`dashboard-card__content` owns remaining space, `min-height: 0`, and internal scrolling.
+Custom metric layouts need the same bounded scrolling; longer notes or lists never
+grow the whole card.
+
+Programming Settings reuses the card shell for full management tables, not overview
+summaries. Its explicitly named management panels fill the desktop content region
+and size to their table on mobile; the normal/short summary heights do not apply.
+
+The shared shell also owns spacing. Both sizes use 16px outer padding, with header
+titles and actions aligned to the top so the taller header adds no extra top inset.
+Normal cards use a minimum 32px header row to reserve room for actions and a 4px
+gap before the data region. Short cards use a minimum 20px header,
+and an 8px header-to-data gap. Their compact metrics use 0.74rem labels, a 7px
+label-to-value gap, and 1rem values, so numbers match date ranges and cycle names.
+Use the shared short-card typography variables in Hours and Tasks. Do not override
+shell padding or header margins in page CSS.
+Long titles or wrapped actions may expand the header; the data region scrolls in
+the remaining space.
+
+Keep card components and their titles, metric labels, and action slots mounted when
+the selection changes. Only the data/value region changes between states. Avoid
+separate early returns that replace the normal card with a plain loading article,
+change its layout, or remove its title. A target-dependent title may update to the
+new target immediately; it must not describe the previous target's data.
+
+Use `DashboardCard`'s `loading` and `loadingLabel` for a whole data region. Use
+`DashboardCardLoading` inside individual metric values when labels should remain:
+
+```tsx
+<DashboardCard title="Notes" loading={hasTarget && query.isLoading}
+  loadingLabel="Loading notes…" action={addAction}>
+  {notesContent}
+</DashboardCard>
+
+<dd>{loading ? <DashboardCardLoading label="Loading hours…" /> : hours}</dd>
+```
+
+`DashboardCardLoading` uses the existing small `LoadingSpinner`, left-aligned in the
+data/value region, with an accessible status label. The spinner owns reduced-motion behavior. Custom
+shells also expose `aria-busy` while loading. Keep a no-selection prompt distinct
+from loading, a successful empty result, and an error with retry. A disabled query's
+pending status alone does not mean a selection is loading. Do not display fabricated
+zero totals while waiting. Keep usable cached data during a same-target background
+refresh; a new target must never display the previous target's values or actions.
+Disable actions that need unavailable data, and scope open reports/dialogs to their
+target so a selection change cannot present an old report under a new title.
+
+## Separate selection intent from data availability
+
+Choose the dashboard from the user's explicit selection intent, not whether the
+selected record happens to be in a loaded table page or calendar buffer. Selecting
+a Session opens the Session dashboard immediately using the clicked record; its
+private queries show loading in their own cards. If that record leaves the buffer,
+the Session cards remain and show “No session selected.” Only explicitly selecting
+a program row switches to Program Overview. An item click that also selects its
+owning row is context synchronization, not an explicit program-dashboard request.
+
+Keep this coordination in the route or its selection hook. Shared tables/calendars
+report selection events; they do not own domain dashboard modes. Resolve a clicked
+full record in the selection update rather than waiting for a child's later effect.
 
 ## Assign dashboard ownership
 
@@ -31,6 +104,12 @@ Overview-hook tests own query keys, enabled conditions, server inputs, cancellat
 - The dashboard owns card composition and data genuinely shared by sibling cards; each card owns its private queries, rendering, and focused actions.
 - Page-wide actions stay in `PageHeader`; record-specific actions may live in the relevant card.
 - A mutation reconciles or invalidates the overview query separately from table row reconciliation.
+
+Verify a delayed response and a target change preserve the same card DOM shell, titles,
+labels, and disabled action slots without showing another target’s data. Cover empty
+and failed results separately. Browser tests own fixed height and internal overflow
+on desktop and mobile; consumer tests cover loading wiring rather than repeating
+shared geometry checks.
 
 Dashboard tests own selection-driven composition and card wiring. Card tests own loading/error/empty presentation, query-state wiring, focused actions and accessible content. Colocate query-hook tests with the hook. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
 

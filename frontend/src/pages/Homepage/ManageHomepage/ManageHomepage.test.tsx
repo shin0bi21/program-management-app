@@ -45,6 +45,7 @@ describe('ManageHomepage', () => {
     homepage.error = null;
   });
 
+  // Rendered states.
   it('composes the managed image controls from page data', () => {
     renderPage();
 
@@ -70,11 +71,13 @@ describe('ManageHomepage', () => {
     expect(homepage.refresh).toHaveBeenCalledOnce();
   });
 
-  it('opens the page-owned image editor from the page header', async () => {
+  // Commands and dialogs.
+  it('opens the page-owned image editor from the Images card', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: '+ Add' }));
+    const images = screen.getByRole('region', { name: 'Images' });
+    await user.click(within(images).getByRole('button', { name: '+ Add' }));
 
     expect(screen.getByRole('dialog', { name: 'Manage Images' })).toBeInTheDocument();
     expect(screen.getByLabelText('Image')).toBeInTheDocument();

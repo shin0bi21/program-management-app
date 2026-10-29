@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { DashboardCardLoading } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
@@ -84,22 +85,30 @@ export default function TaskOverviewDashboardCard({ queryKey, resourceId, resour
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
   usePageErrorReporter(onErrorChange, overviewData.error, retryAction);
 
-  if (overviewData.loading) {
-    return <article className="dashboard-card"><p role="status">Loading task overview…</p></article>;
-  }
-  if (overviewData.error) {
-    return <article className="dashboard-card"><UnavailableState compact title="Task overview unavailable" onRetry={overviewData.retry} /></article>;
-  }
-
-  return <TaskOverviewContent tasks={overviewData.tasks} resourceName={resourceName} today={today} />;
+  return <TaskOverviewContent
+    tasks={overviewData.tasks}
+    loading={overviewData.loading}
+    error={overviewData.error}
+    onRetry={overviewData.retry}
+    resourceId={resourceId}
+    resourceName={resourceName}
+    today={today}
+  />;
 }
 
-function TaskOverviewContent({ tasks, resourceName, today }: {
+function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resourceName, today }: {
   tasks: readonly Task[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  resourceId: string;
   resourceName: string;
   today: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openResourceId, setOpenResourceId] = useState<string | null>(null);
+
+  useEffect(() => setOpenResourceId(null), [resourceId]);
+
   const overview = useMemo(() => groupTasksForOverview(tasks, today), [tasks, today]);
   const summary = {
     assigned: overview.assignedTasks.length,
@@ -110,26 +119,30 @@ function TaskOverviewContent({ tasks, resourceName, today }: {
   const dueThisWeekIds = new Set(overview.dueThisWeekTasks.map(task => task.id));
 
   return <>
-    <article className="dashboard-card task-overview-card">
+    <article className="dashboard-card dashboard-card--short task-overview-card" aria-busy={loading || undefined}>
       <h2 className="task-overview-card__accessible-title">Task Overview</h2>
       <div className="dashboard-card__compact-layout task-overview-card__layout">
-        <dl className="task-overview-card__metrics">
-          <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
-          <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
-          <div className="task-overview-card__metric-active"><dt>Active</dt><dd>{summary.active}</dd></div>
-          <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
-        </dl>
+        <div>
+          <dl className="task-overview-card__metrics">
+            <div><dt>Assigned</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.assigned}</dd></div>
+            <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.upcoming}</dd></div>
+            <div className="task-overview-card__metric-active"><dt>Active</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.active}</dd></div>
+            <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.overdue}</dd></div>
+          </dl>
+          {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
+        </div>
         <div className="dashboard-card__compact-action task-overview-card__action">
           <Button
             size="sm"
             variant="secondary"
             aria-haspopup="dialog"
-            onClick={() => setOpen(true)}
+            disabled={loading || Boolean(error)}
+            onClick={() => setOpenResourceId(resourceId)}
           >See Breakdown</Button>
         </div>
       </div>
     </article>
-    <Modal isOpen={open} onClose={() => setOpen(false)} title={resourceName} maxWidth="560px">
+    <Modal isOpen={openResourceId === resourceId && !loading && !error} onClose={() => setOpenResourceId(null)} title={resourceName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
         <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>

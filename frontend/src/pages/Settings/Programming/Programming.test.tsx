@@ -1,12 +1,20 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
+import { getCohorts } from '../../Programming/Cohorts/cohorts.api';
 import Programming from './Programming';
 
+vi.mock('./components/ProgramCyclesModal/ProgramCyclesModal', () => ({
+  default: ({ program, onClose }: { program: Program; onClose: () => void }) => <div role="dialog" aria-label={`Assignments for ${program.name}`}><button onClick={onClose}>Close assignments</button></div>,
+}));
+
+vi.mock('../../Programming/Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
+
 const programmingApi = vi.hoisted(() => ({
-  getProgramCycles: vi.fn(),
+  getCycleReferences: vi.fn(),
   setProgramCycle: vi.fn(),
   deleteProgramCycle: vi.fn(),
 }));
@@ -20,6 +28,7 @@ const programState = vi.hoisted<{ programs: Program[]; upsertProgram: ReturnType
 }));
 
 vi.mock('../../../common/features/programming/cycles/cycles.api', () => programmingApi);
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: programmingApi.getCycleReferences }));
 vi.mock('../../../common/features/programs/programs.api', () => programsApi);
 vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
   usePrograms: () => ({
@@ -33,16 +42,17 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 describe('Programming settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCohorts).mockResolvedValue([]);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     programState.programs = [{
-      id: 'program-1', name: 'Soft Skills', description: 'Life skills', rosterMode: 'enrolled', minAge: 12, maxAge: 15,
+      id: 'program-1', name: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }];
-    programmingApi.getProgramCycles.mockResolvedValue([{
+    programmingApi.getCycleReferences.mockResolvedValue([{
       id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
     }]);
   });
 
-  // Page data.
+  // Rendered states.
   it('lists programs and cycles with edit actions', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -59,7 +69,7 @@ describe('Programming settings', () => {
 
   it('retries cycle loading without forwarding the click event as an abort signal', async () => {
     const user = userEvent.setup();
-    programmingApi.getProgramCycles
+    programmingApi.getCycleReferences
       .mockRejectedValueOnce(new Error('Cycle service unavailable'))
       .mockResolvedValueOnce([]);
     render(<MemoryRouter><Programming /></MemoryRouter>);
@@ -67,23 +77,34 @@ describe('Programming settings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle service unavailable');
     await user.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
 
-    await waitFor(() => expect(programmingApi.getProgramCycles).toHaveBeenCalledTimes(2));
-    expect(programmingApi.getProgramCycles).toHaveBeenLastCalledWith(undefined);
+    await waitFor(() => expect(programmingApi.getCycleReferences).toHaveBeenCalledTimes(2));
+    expect(programmingApi.getCycleReferences).toHaveBeenLastCalledWith({ signal: expect.any(AbortSignal) });
   });
 
-  // Modal and confirmation workflows.
+  // Commands and dialogs.
+  it('opens assignment management for the selected existing program', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><Programming /></MemoryRouter>);
+    await user.click(screen.getByRole('button', { name: 'Actions for Soft Skills' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Assigned Cycles' }));
+    expect(screen.getByRole('dialog', { name: 'Assignments for Soft Skills' })).toBeInTheDocument();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Close assignments' }));
+    expect(screen.queryByRole('dialog', { name: 'Assignments for Soft Skills' })).not.toBeInTheDocument();
+  });
+
   it('creates programs from the settings page', async () => {
     const user = userEvent.setup();
     const created = {
-      id: 'program-2', name: 'Job Readiness', description: null, rosterMode: 'enrolled' as const, minAge: 16, maxAge: 19,
+      id: 'program-2', name: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
     programsApi.createProgram.mockResolvedValue(created);
     render(<MemoryRouter><Programming /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: '+ Add Program' }));
-    await user.type(screen.getByRole('textbox', { name: 'Program name' }), 'Job Readiness');
-    await user.type(screen.getByRole('spinbutton', { name: 'Minimum age' }), '16');
-    await user.type(screen.getByRole('spinbutton', { name: 'Maximum age' }), '19');
+    await user.type(screen.getByRole('textbox', { name: 'Program Name' }), 'Job Readiness');
+    await user.type(screen.getByRole('spinbutton', { name: 'Minimum Age' }), '16');
+    await user.type(screen.getByRole('spinbutton', { name: 'Maximum Age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Add Program' }));
 
     await waitFor(() => expect(programState.upsertProgram).toHaveBeenCalledWith(created));
@@ -107,7 +128,6 @@ describe('Programming settings', () => {
     expect(screen.getByText('Cycle deleted')).toBeInTheDocument();
   });
 
-  // Derived errors and presentation state.
   it('keeps an assigned cycle visible when deletion is rejected', async () => {
     const user = userEvent.setup();
     programmingApi.deleteProgramCycle.mockRejectedValue(new Error('Cycle cannot be deleted because it is still in use'));

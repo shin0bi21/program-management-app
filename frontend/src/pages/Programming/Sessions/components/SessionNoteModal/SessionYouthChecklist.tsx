@@ -1,7 +1,7 @@
 import type { CohortSession, SessionRosterMember } from '../../types';
 
 interface SessionYouthChecklistProps {
-  rosterMode: CohortSession['rosterMode'];
+  enrollmentRequired: CohortSession['enrollmentRequired'];
   roster: readonly SessionRosterMember[];
   selectedYouthIds: readonly string[];
   loading: boolean;
@@ -11,7 +11,7 @@ interface SessionYouthChecklistProps {
 }
 
 export default function SessionYouthChecklist({
-  rosterMode,
+  enrollmentRequired,
   roster,
   selectedYouthIds,
   loading,
@@ -40,7 +40,7 @@ export default function SessionYouthChecklist({
           ))}
         </div>
       ) : (
-        <p>{rosterMode === 'open'
+        <p>{!enrollmentRequired
           ? 'No youth have checked into this session yet.'
           : 'No youth are enrolled in this cohort.'}</p>
       )}

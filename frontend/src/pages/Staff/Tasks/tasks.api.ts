@@ -1,7 +1,8 @@
+import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { CursorPage, CursorRequest } from '../../../query/types';
-import type { Task, TaskCategory, TaskReferenceData, TasksFilters } from './types';
+import type { Task, TaskCategory, TaskStatus, TasksFilters } from './types';
 
 export interface SetTaskInput {
   title: string;
@@ -25,6 +26,10 @@ export function getTasksTableData(filters: TasksFilters, opts: RequestOptions | 
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyTaskFilters(params, filters);
+  if (filters.dateRange) {
+    params.set('start', filters.dateRange.start);
+    params.set('end', filters.dateRange.end);
+  }
   return apiClient.get<CursorPage<Task>>(`/tasks/list?${params}`, opts);
 }
 
@@ -33,7 +38,10 @@ export function getTasksCalendarData(
   range: { start: string; end: string },
   opts?: RequestOptions,
 ) {
-  const params = new URLSearchParams(range);
+  const requestedRange = intersectDateRanges(range, filters.dateRange);
+  if (!requestedRange) return Promise.resolve<Task[]>([]);
+
+  const params = new URLSearchParams({ ...requestedRange });
   applyTaskFilters(params, filters);
   return apiClient.get<Task[]>(`/tasks/calendar?${params}`, opts);
 }
@@ -50,6 +58,11 @@ function applyTaskFilters(params: URLSearchParams, filters: TasksFilters) {
   if (filters.categories.length) params.set('categories', filters.categories.join(','));
   if (filters.statuses.length) params.set('statuses', filters.statuses.join(','));
   if (filters.search) params.set('search', filters.search);
+}
+
+export interface TaskReferenceData {
+  categories: Array<{ value: TaskCategory; label: string }>;
+  statuses: Array<{ value: TaskStatus; label: string }>;
 }
 
 export function getTaskReferenceData(opts?: RequestOptions) {

@@ -28,12 +28,12 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onErrorChange }
   return <>
     <DashboardCard
       title={title}
+      loading={!!lead && notes.loading}
+      loadingLabel="Loading follow-up notes…"
       action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>+ Add</Button> : undefined}
     >
       {!lead ? (
         <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>
-      ) : notes.loading ? (
-        <p role="status">Loading follow-up notes…</p>
       ) : notes.error ? (
         <UnavailableState compact title="Follow-up notes unavailable" onRetry={notes.retry} />
       ) : notes.notes.length ? (

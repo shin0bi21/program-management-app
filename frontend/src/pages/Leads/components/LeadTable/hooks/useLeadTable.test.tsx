@@ -17,7 +17,7 @@ vi.mock('../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 
 const lead: Lead = {
   id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
-  youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, school: 'Test School',
+  youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Test School',
   recommendedProgramId: 'program-1', recommendedProgramName: 'Future Ready',
   contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
   discoverySource: 'community_outreach', notes: null, status: 'new',

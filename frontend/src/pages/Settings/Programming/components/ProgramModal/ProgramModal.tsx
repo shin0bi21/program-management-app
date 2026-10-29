@@ -2,7 +2,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program, ProgramWeekday } from '../../../../../common/features/programs/types';
 import useProgramModal from './hooks/useProgramModal';
 
 interface ProgramModalProps {
@@ -40,7 +40,7 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
           void workflow.submit();
         }}
       >
-        <FormField id="program-name" label="Program name">
+        <FormField id="program-name" label="Program Name">
           <input
             id="program-name"
             name="name"
@@ -63,7 +63,7 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
           />
         </FormField>
         <div className="form-row">
-          <FormField id="program-min-age" label="Minimum age">
+          <FormField id="program-min-age" label="Minimum Age">
             <input
               id="program-min-age"
               name="minAge"
@@ -75,7 +75,7 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
               onChange={event => workflow.updateDraft('minAge', event.target.value)}
             />
           </FormField>
-          <FormField id="program-max-age" label="Maximum age">
+          <FormField id="program-max-age" label="Maximum Age">
             <input
               id="program-max-age"
               name="maxAge"
@@ -88,18 +88,61 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
             />
           </FormField>
         </div>
-        <FormField id="program-roster-mode" label="Attendance">
+        <FormField id="program-default-weekday" label="Default Session Day">
           <FloatingSelect
-            id="program-roster-mode"
-            value={workflow.draft.rosterMode}
+            id="program-default-weekday"
+            value={workflow.draft.defaultDayOfWeek}
+            disabled={workflow.submissionComplete}
+            onChange={value => workflow.updateDraft('defaultDayOfWeek', value as ProgramWeekday)}
+            options={['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => ({
+              value: day,
+              label: day[0].toUpperCase() + day.slice(1),
+            }))}
+          />
+        </FormField>
+        <div className="form-row">
+          <FormField id="program-default-start" label="Default Start Time">
+            <input
+              id="program-default-start"
+              type="time"
+              required
+              value={workflow.draft.defaultStartTime}
+              disabled={workflow.submissionComplete}
+              onChange={event => workflow.updateDraft('defaultStartTime', event.target.value)}
+            />
+          </FormField>
+          <FormField id="program-default-end" label="Default End Time">
+            <input
+              id="program-default-end"
+              type="time"
+              required
+              value={workflow.draft.defaultEndTime}
+              disabled={workflow.submissionComplete}
+              onChange={event => workflow.updateDraft('defaultEndTime', event.target.value)}
+            />
+          </FormField>
+        </div>
+        <FormField id="program-timezone" label="Session Timezone">
+          <FloatingSelect
+            id="program-timezone"
+            value={workflow.draft.timezone}
+            disabled={workflow.submissionComplete}
+            options={[{ value: 'America/Toronto', label: 'Toronto (Eastern Time)' }]}
+            onChange={value => workflow.updateDraft('timezone', value as Program['timezone'])}
+          />
+        </FormField>
+        <FormField id="program-enrollment-required" label="Enrollment Required">
+          <FloatingSelect
+            id="program-enrollment-required"
+            value={workflow.draft.enrollmentRequired ? 'yes' : 'no'}
             disabled={workflow.submissionComplete}
             onChange={value => workflow.updateDraft(
-              'rosterMode',
-              value as 'enrolled' | 'open',
+              'enrollmentRequired',
+              value === 'yes',
             )}
             options={[
-              { value: 'enrolled', label: 'Enrollment required' },
-              { value: 'open', label: 'Open attendance' },
+              { value: 'yes', label: 'Yes' },
+              { value: 'no', label: 'No' },
             ]}
           />
         </FormField>

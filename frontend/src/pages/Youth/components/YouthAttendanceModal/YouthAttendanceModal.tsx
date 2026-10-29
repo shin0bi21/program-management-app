@@ -122,7 +122,7 @@ export default function YouthAttendanceModal({
                 <SessionAttendanceItem
                   key={session.id}
                   session={session}
-                  rosterMode={attendance.cohort.rosterMode}
+                  enrollmentRequired={attendance.cohort.enrollmentRequired}
                   status={selections[session.id] ?? ''}
                   canManageSessionNotes={canManageSessionNotes}
                   notesExpanded={sessionNotes.isExpanded(session.id)}
@@ -141,7 +141,7 @@ export default function YouthAttendanceModal({
 
       <YouthSessionNoteDialogs
         youth={youth}
-        rosterMode={attendance?.cohort.rosterMode ?? cohort?.rosterMode ?? 'enrolled'}
+        enrollmentRequired={attendance?.cohort.enrollmentRequired ?? cohort?.enrollmentRequired ?? true}
         noteTarget={sessionNotes.noteTarget}
         detailTarget={sessionNotes.detailTarget}
         unlinkTarget={sessionNotes.unlinkTarget}

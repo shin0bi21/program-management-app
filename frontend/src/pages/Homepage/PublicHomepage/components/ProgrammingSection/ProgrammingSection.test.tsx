@@ -8,7 +8,7 @@ const programs = [
     id: 'program-1',
     name: 'Future Ready',
     description: 'Build communication skills.',
-    rosterMode: 'enrolled',
+    enrollmentRequired: true,
     minAge: 12,
     maxAge: 15,
     sessions: [{

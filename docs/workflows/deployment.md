@@ -1,10 +1,10 @@
 # Production deployment
 
-Production deploys are automated through GitHub Actions. Pull requests are
-fully validated before they can enter `main`; the resulting push to `main`
-then runs only the deployment and public production smoke checks.
+Deployment requires separate explicit authorization from feature shipping.
+Release through a pull request from `develop` to `main`; merging that pull
+request automatically deploys production.
 
-See [Continuous integration](ci.md) for pull-request checks, failure reproduction, and workflow maintenance. This guide owns the separate continuous-deployment path after a push to `main`.
+## Release to production
 
 ```text
 feature → PR to develop → standard CI
@@ -53,41 +53,12 @@ Create a GitHub environment named `production`. The deployment workflow uses
 this environment so production secrets and optional approval rules can be
 scoped independently from pull-request CI.
 
-Repository rulesets enforce the following merge requirements:
-
-- `develop`: require a pull request and require `Lint & Shell Analysis`,
-  `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`.
-  Changed repository patterns are enforced inside `Lint & Shell Analysis`.
-- `main`: require a pull request, require the merge-path job that rejects
-  sources other than `develop`, require `Lint & Shell Analysis`,
-  `Backend — Typecheck, Migrate & Test`, and `Frontend — Typecheck & Build`,
-  allow only a regular merge commit so `develop` remains in production history,
-  and also require
-  `Production Compose Validation`, `Backend Production Image`, and
-  `Frontend Production Image`.
-
-The production validation jobs are always present on pull requests to `main`.
-They are conditional on relevant package, container, nginx, Compose, or
-deployment changes for pull requests to `develop`.
+Configure repository rulesets with the [required checks and merge constraints](ci.md#required-checks).
 
 ## CI and automatic deployment
 
-Pull-request validation is defined in
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). It runs only for pull
-requests targeting `develop` or `main`; merge pushes do not repeat the same
-test suite.
-
-Every pull request runs:
-
-- Merge-path enforcement for `main`.
-- ESLint, shell syntax checks, ShellCheck, and changed repository patterns.
-- Backend typechecking, clean-database migrations, checksum validation,
-  generated database-type drift detection, API tests, and build.
-- Frontend tests, typechecking, and build.
-
-Production containers are also built when a pull request targets `main`, or
-when a pull request to `develop` changes a Dockerfile, production Compose or
-nginx configuration, deployment script, package manifest, or lockfile.
+Pull-request validation and production image checks follow the
+[CI execution and routing contract](ci.md#pull-request-execution-graph).
 
 The deployment workflow is defined in
 [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml). It runs only
@@ -185,9 +156,8 @@ for the `main` commit. A successful production run shows these steps as green:
 If deployment fails because secrets were missing, add the secrets and use
 **Re-run jobs → Re-run failed jobs**. A new commit is not required.
 
-An empty-key configuration is visible in the deployment log as an empty key
-write, an SSH destination of `@`, or an empty `cd` path. Verify all four secret
-names and values if that occurs.
+The workflow stops before SSH when a required secret is missing. Verify the
+reported secret name and value, then rerun the failed job.
 
 ## Manual access and deployment
 
@@ -216,27 +186,17 @@ Deployment logs are written to `logs/deploy.log` by default.
 
 ## Troubleshooting checklist
 
-1. Confirm the release pull request passed its backend, frontend, quality, and
-   production-container jobs.
+1. Confirm the release pull request satisfied the [required checks](ci.md#required-checks).
 2. Confirm all four GitHub repository secrets exist with exact names.
 3. Confirm `/home/ubuntu/my-webapp` exists and is the production checkout.
 4. Confirm the server worktree is clean with `git status --short`.
 5. Confirm the server can fetch `origin/main`.
 6. Review `logs/deploy.log` on Lightsail.
 
+If SSH succeeds but fetching GitHub fails with `Invalid username or token`, follow
+[Renew the production server's GitHub access](github-credentials.md).
+
 The executable entry point is
 [`scripts/deploy/main.sh`](../../scripts/deploy/main.sh). Its supporting steps
 are the numbered files in the same directory, including change classification,
 database safeguards, service replacement, and rollback cleanup.
-
-## Dependency and security automation
-
-Dependabot checks npm dependencies in the root, backend, and frontend, plus
-GitHub Actions and Docker base images, on a weekly schedule. Its configuration
-lives in [`.github/dependabot.yml`](../../.github/dependabot.yml).
-
-GitHub Dependency Review and CodeQL are not configured because this private
-repository does not currently have GitHub Advanced Security. If that feature
-is enabled later, add Dependency Review to pull requests and enable CodeQL for
-`javascript-typescript`; keep those scans outside the production deployment
-critical path.

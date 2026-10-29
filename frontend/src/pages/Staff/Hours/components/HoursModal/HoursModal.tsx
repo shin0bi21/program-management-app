@@ -1,3 +1,4 @@
+import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -88,7 +89,7 @@ export default function HoursModal({
             <FloatingSelect
               id="hours-staff"
               value={draft.resourceId}
-              options={resources.map(resource => ({ value: resource.id, label: resource.name }))}
+              options={toFilterOptions(resources)}
               onChange={workflow.selectResource}
               placeholder="Select staff member"
               ariaLabel="Staff member"
@@ -160,7 +161,7 @@ export default function HoursModal({
             <FloatingSelect
               id="hours-program"
               value={draft.programId}
-              options={programs.map(program => ({ value: program.id, label: program.name }))}
+              options={toFilterOptions(programs)}
               onChange={workflow.selectProgram}
               placeholder="Select a program"
               ariaLabel="Program"

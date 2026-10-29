@@ -5,6 +5,14 @@ import { sql } from '../shared/db';
 
 const app = createApp();
 
+function birthDateForAge(age: number) {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  // January 1 stays valid in leap years and gives the requested age throughout the year.
+  return `${Number(today.slice(0, 4)) - age}-01-01`;
+}
+
 async function waitForBlockedQuery(fragment: string) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const blocked = await sql<{ pid: number }[]>`
@@ -47,7 +55,7 @@ describe('Public lead API', () => {
       .send({
         youthFirstName: 'Closed',
         youthLastName: 'Signup',
-        age: 14,
+        dateOfBirth: birthDateForAge(14),
         school: 'Test Secondary',
         submittedByRole: 'parent',
         discoverySource: 'online',
@@ -80,7 +88,7 @@ describe('Public lead API', () => {
         .send({
           youthFirstName,
           youthLastName: raceLastName,
-          age: 14,
+          dateOfBirth: birthDateForAge(14),
           school: 'Test Secondary',
           submittedByRole: 'parent',
           discoverySource: 'online',
@@ -111,7 +119,7 @@ describe('Public lead API', () => {
       .send({
         youthFirstName,
         youthLastName,
-        age: 14,
+        dateOfBirth: birthDateForAge(14),
         school: 'Test Secondary',
         submittedByRole: 'parent',
         discoverySource: 'school',
@@ -128,7 +136,7 @@ describe('Public lead API', () => {
       youthLastName: string;
       contactPhoneNumber: string | null;
       contactRelationship: string | null;
-      age: number;
+      dateOfBirth: string;
       school: string | null;
       discoverySource: string | null;
       origin: string;
@@ -139,7 +147,7 @@ describe('Public lead API', () => {
         youth_last_name as "youthLastName",
         contact_phone_number as "contactPhoneNumber",
         contact_relationship as "contactRelationship",
-        age,
+        date_of_birth::text AS date_of_birth,
         school,
         discovery_source as "discoverySource",
         origin,
@@ -155,7 +163,7 @@ describe('Public lead API', () => {
       youthLastName,
       contactPhoneNumber: '416-555-0199',
       contactRelationship: 'parent',
-      age: 14,
+      dateOfBirth: birthDateForAge(14),
       school: 'Test Secondary',
       discoverySource: 'school',
       origin: 'external',
@@ -169,7 +177,7 @@ describe('Public lead API', () => {
       .send({
         youthFirstName: 'Partial',
         youthLastName: 'Contact',
-        age: 15,
+        dateOfBirth: birthDateForAge(15),
         school: 'Test Secondary',
         discoverySource: 'online',
         submittedByRole: 'youth',
@@ -182,13 +190,13 @@ describe('Public lead API', () => {
     ]));
   });
 
-  it.each([11, 20])('rejects age %i outside the supported program range', async (age) => {
+  it.each([11, 20])('accepts age %i without assigning a program', async (age) => {
     const res = await request(app)
       .post('/api/public/leads')
       .send({
         youthFirstName: 'Age',
-        youthLastName: 'Boundary',
-        age,
+        youthLastName,
+        dateOfBirth: birthDateForAge(age),
         school: 'Test Secondary',
         submittedByRole: 'parent',
         discoverySource: 'online',
@@ -196,10 +204,7 @@ describe('Public lead API', () => {
         contactRelationship: 'parent',
       });
 
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'body.age' }),
-    ]));
+    expect(res.status).toBe(201);
   });
 
   it('rejects emergency as an Outreach relationship', async () => {
@@ -208,7 +213,7 @@ describe('Public lead API', () => {
       .send({
         youthFirstName: 'Relationship',
         youthLastName: 'Test',
-        age: 14,
+        dateOfBirth: birthDateForAge(14),
         school: 'Test Secondary',
         submittedByRole: 'guardian',
         discoverySource: 'online',
@@ -224,7 +229,7 @@ describe('Public lead API', () => {
 
   it('rejects unknown server-owned fields and intake information over 500 characters', async () => {
     const base = {
-      youthFirstName: 'Strict', youthLastName: 'Boundary', age: 14,
+      youthFirstName: 'Strict', youthLastName: 'Boundary', dateOfBirth: birthDateForAge(14),
       school: 'Test Secondary', discoverySource: 'online',
       submittedByRole: 'parent',
       contactPhoneNumber: '416-555-0199', contactRelationship: 'parent',

@@ -19,6 +19,12 @@ test('keeps dashboard naming checks on common components', () => {
   assert.match(violations.join('\n'), /structural dashboard owners/);
 });
 
+test('distinguishes a dashboard card from its data loading indicator', () => {
+  const file = 'frontend/src/pages/Example/components/ExampleSetting.tsx';
+  assert.match(violationsFor(file, '<DashboardCard title="Example" />').join('\n'), /DashboardCard naming/);
+  assert.deepEqual(violationsFor(file, '<DashboardCardLoading label="Loading setting…" />'), []);
+});
+
 test('routes page preferences to their ownership check', () => {
   const violations = violationsFor(
     'frontend/src/pages/Example/hooks/useExamplePreferences.ts',

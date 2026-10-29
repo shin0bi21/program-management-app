@@ -14,8 +14,9 @@ function makeSubmitEvent() {
   const form = document.createElement('form');
   for (const [name, value] of [
     ['theme', ' Career Stories '],
-    ['startsAt', '2026-08-10T13:00'],
-    ['endsAt', '2026-08-10T15:00'],
+    ['date', '2026-08-10'],
+    ['startTime', '13:00'],
+    ['endTime', '15:00'],
     ['description', ''],
   ]) {
     const input = document.createElement('input');
@@ -54,8 +55,8 @@ describe('useEditSessionModal', () => {
     expect(updateSession).toHaveBeenCalledWith(session.id, {
       sessionTypeId: 'type-2',
       theme: 'Career Stories',
-      startsAt: new Date('2026-08-10T13:00').toISOString(),
-      endsAt: new Date('2026-08-10T15:00').toISOString(),
+      startsAt: '2026-08-10T17:00:00Z',
+      endsAt: '2026-08-10T19:00:00Z',
       description: null,
     });
     expect(onUpdated).toHaveBeenCalledOnce();

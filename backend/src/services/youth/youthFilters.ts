@@ -29,7 +29,7 @@ export function applyYouthFilters(filters: YouthQuery) {
           INNER JOIN program_cohorts program_cohort ON program_cohort.id = program_session.cohort_id
           INNER JOIN programs attendance_program ON attendance_program.id = program_cohort.program_id
           WHERE program_attendance.youth_id = yp.user_id
-            AND attendance_program.roster_mode = 'open'
+            AND attendance_program.enrollment_required = FALSE
             ${filters.programIds.length
               ? sql`AND attendance_program.id = ANY(${sql.array(filters.programIds)}::uuid[])`
               : sql``}
@@ -60,7 +60,7 @@ export function applyYouthFilters(filters: YouthQuery) {
           INNER JOIN program_cycles search_cycle ON search_cycle.id = search_cohort.cycle_id
           INNER JOIN programs search_program ON search_program.id = search_cohort.program_id
           WHERE search_attendance.youth_id = yp.user_id
-            AND search_program.roster_mode = 'open'
+            AND search_program.enrollment_required = FALSE
             AND CONCAT_WS(' ', search_program.name, search_cycle.name)
               ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'
         )

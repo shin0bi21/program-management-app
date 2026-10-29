@@ -32,7 +32,7 @@ interface AttendanceBreakdown {
 }
 
 interface CohortYouthReport {
-  cohort: { id: string; name: string; programName: string; rosterMode: 'enrolled' | 'open' };
+  cohort: { id: string; name: string; programName: string; enrollmentRequired: boolean };
   youth: Array<{
     id: string;
     firstName: string;
@@ -61,10 +61,11 @@ interface CohortYouthReport {
   }>;
 }
 
-export function getCohortRosterYouth(opts?: RequestOptions) {
+export function getCohortRosterYouth(cohortId: string, opts?: RequestOptions) {
+  const path = `/cohorts/${cohortId}/roster`;
   return opts
-    ? apiClient.get<CohortRosterYouth[]>('/youth', opts)
-    : apiClient.get<CohortRosterYouth[]>('/youth');
+    ? apiClient.get<CohortRosterYouth[]>(path, opts)
+    : apiClient.get<CohortRosterYouth[]>(path);
 }
 
 export function getCohorts(

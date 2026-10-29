@@ -24,7 +24,7 @@ describe('SessionAttendanceItem', () => {
         startsAt: '2026-08-19T17:00:00.000Z', endsAt: '2026-08-19T18:00:00.000Z',
         cancelledAt: null, status: 'present', notes: null, sessionNotes: [note],
       }}
-      rosterMode="enrolled"
+      enrollmentRequired={true}
       status="present"
       canManageSessionNotes
       notesExpanded

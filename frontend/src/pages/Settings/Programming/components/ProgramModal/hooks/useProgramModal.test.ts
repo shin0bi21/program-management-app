@@ -17,9 +17,13 @@ const program: Program = {
   id: 'program-1',
   name: 'Soft Skills',
   description: 'Life skills',
-  rosterMode: 'enrolled',
+  enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
+  defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00',
+  defaultEndTime: '19:30',
+  timezone: 'America/Toronto',
 };
 
 describe('useProgramModal', () => {
@@ -50,9 +54,13 @@ describe('useProgramModal', () => {
     expect(createProgram).toHaveBeenCalledWith({
       name: 'Job Readiness',
       description: null,
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: 16,
       maxAge: 19,
+      defaultDayOfWeek: 'tuesday',
+      defaultStartTime: '17:00',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     });
     expect(onSaved).toHaveBeenCalledWith(saved);
     expect(result.current.submitStatus).toBe('success');
@@ -68,20 +76,28 @@ describe('useProgramModal', () => {
     expect(result.current.draft).toEqual({
       name: 'Soft Skills',
       description: 'Life skills',
-      rosterMode: 'enrolled',
+      enrollmentRequired: true,
       minAge: '12',
       maxAge: '15',
+      defaultDayOfWeek: 'tuesday',
+      defaultStartTime: '17:00',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     });
-    act(() => result.current.updateDraft('rosterMode', 'open'));
+    act(() => result.current.updateDraft('enrollmentRequired', false));
 
     await act(async () => result.current.submit());
 
     expect(updateProgram).toHaveBeenCalledWith(program.id, {
       name: 'Soft Skills',
       description: 'Life skills',
-      rosterMode: 'open',
+      enrollmentRequired: false,
       minAge: 12,
       maxAge: 15,
+      defaultDayOfWeek: 'tuesday',
+      defaultStartTime: '17:00',
+      defaultEndTime: '19:30',
+      timezone: 'America/Toronto',
     });
     expect(onSaved).toHaveBeenCalledWith(program);
   });
@@ -107,6 +123,34 @@ describe('useProgramModal', () => {
 
     expect(createProgram).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
+    expect(result.current.statusMessage).toBe(message);
+  });
+
+  it('saves program-specific session defaults', async () => {
+    const { result } = renderHook(() => useProgramModal({ isOpen: true, program, onSaved: vi.fn() }));
+    act(() => {
+      result.current.updateDraft('defaultDayOfWeek', 'friday');
+      result.current.updateDraft('defaultStartTime', '17:30');
+      result.current.updateDraft('defaultEndTime', '19:30');
+      result.current.updateDraft('timezone', 'America/Toronto');
+    });
+
+    await act(async () => result.current.submit());
+
+    expect(updateProgram).toHaveBeenCalledWith(program.id, expect.objectContaining({
+      defaultDayOfWeek: 'friday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto',
+    }));
+  });
+
+  it.each([
+    ['defaultEndTime', '16:00', 'Default end time must be after the start time.'],
+  ] as const)('rejects invalid session default %s', async (field, value, message) => {
+    const { result } = renderHook(() => useProgramModal({ isOpen: true, program, onSaved: vi.fn() }));
+    act(() => result.current.updateDraft(field, value));
+
+    await act(async () => result.current.submit());
+
+    expect(updateProgram).not.toHaveBeenCalled();
     expect(result.current.statusMessage).toBe(message);
   });
 

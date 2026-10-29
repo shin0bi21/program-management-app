@@ -1,0 +1,24 @@
+.status-label--upcoming {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.status-label--active {
+  background: var(--color-task-active-bg);
+  color: var(--color-task-active);
+}
+
+.status-label--overdue {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-dark);
+}
+
+.status-label--completed {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.status-label--cancelled {
+  background: var(--ink-06);
+  color: var(--color-muted);
+}

@@ -15,7 +15,7 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 }));
 
 const cohort = {
-  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', rosterMode: 'enrolled',
+  id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycleName: 'Summer 2026', name: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-09-01', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
@@ -35,7 +35,7 @@ describe('useCohortTable', () => {
 
   it('provides canonical data columns without actions for read-only users', () => {
     const { result } = renderHook(() => useCohortTable({
-      canWrite: false,
+      canWrite: false, canManageRoster: false,
       onManageRoster: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -50,7 +50,7 @@ describe('useCohortTable', () => {
     const callbacks = {
       onManageRoster: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),
     };
-    const { result } = renderHook(() => useCohortTable({ canWrite: true, ...callbacks }));
+    const { result } = renderHook(() => useCohortTable({ canWrite: true, canManageRoster: true, ...callbacks }));
     const actionColumn = result.current.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, cohort)}</>);
@@ -65,7 +65,7 @@ describe('useCohortTable', () => {
 
   it('omits roster management for open-attendance cohorts', () => {
     const { result } = renderHook(() => useCohortTable({
-      canWrite: true,
+      canWrite: true, canManageRoster: true,
       onManageRoster: vi.fn(),
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -73,8 +73,20 @@ describe('useCohortTable', () => {
 
     render(<>{renderCell(result.current.find(column => column.id === 'actions')!, {
       ...cohort,
-      rosterMode: 'open',
+      enrollmentRequired: false,
     })}</>);
     expect(menu.items.map(item => item.id)).toEqual(['edit', 'delete']);
+  });
+
+  it('allows roster-only staff to manage enrollment without assignment edit actions', () => {
+    const { result } = renderHook(() => useCohortTable({
+      canWrite: false, canManageRoster: true,
+      onManageRoster: vi.fn(), onEdit: vi.fn(), onDelete: vi.fn(),
+    }));
+    const actions = result.current.find(column => column.id === 'actions')!;
+
+    render(<>{renderCell(actions, cohort)}</>);
+    expect(menu.items.map(item => item.id)).toEqual(['manage-roster']);
+    expect(renderCell(actions, { ...cohort, enrollmentRequired: false })).toBeNull();
   });
 });

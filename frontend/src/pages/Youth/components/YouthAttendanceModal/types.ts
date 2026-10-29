@@ -18,7 +18,7 @@ export interface YouthCohortAttendance {
     id: string;
     name: string;
     programName: string;
-    rosterMode: 'enrolled' | 'open';
+    enrollmentRequired: boolean;
   };
   sessions: YouthAttendanceSession[];
 }

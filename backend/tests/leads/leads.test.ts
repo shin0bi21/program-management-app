@@ -5,6 +5,14 @@ import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
+function birthDateForAge(age: number) {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  // January 1 stays valid in leap years and gives the requested age throughout the year.
+  return `${Number(today.slice(0, 4)) - age}-01-01`;
+}
+
 describe('Leads API', () => {
   let staffUserId: string;
   let staffToken: string;
@@ -14,6 +22,7 @@ describe('Leads API', () => {
   let eligibleProgramName: string;
   let eligibleProgramCohortId: string;
   let otherProgramCohortId: string;
+  let otherProgramId: string;
   let eligibleProgramCycleId: string;
   let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
@@ -25,7 +34,7 @@ describe('Leads API', () => {
   const payload = {
     youthFirstName: 'Event',
     youthLastName: 'Prospect',
-    age: 14,
+    dateOfBirth: birthDateForAge(14),
     school: 'Community School',
     contactPhoneNumber: '416-555-0199',
     contactRelationship: 'guardian',
@@ -44,8 +53,8 @@ describe('Leads API', () => {
     const [program] = await sql<{ id: string; name: string }[]>`
       SELECT id, name
       FROM programs
-      WHERE roster_mode = 'enrolled'
-        AND ${payload.age} BETWEEN min_age AND max_age
+      WHERE enrollment_required = TRUE
+        AND 14 BETWEEN min_age AND max_age
       ORDER BY min_age DESC, max_age ASC, name ASC
       LIMIT 1
     `;
@@ -56,8 +65,10 @@ describe('Leads API', () => {
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE id != ${eligibleProgramId} AND roster_mode = 'enrolled' ORDER BY name LIMIT 1
+      INSERT INTO programs (name, enrollment_required)
+      VALUES (${`Lead alternate program ${Date.now()}`}, TRUE) RETURNING id
     `;
+    otherProgramId = otherProgram.id;
     ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
       programId: otherProgram.id,
       name: `Other Program ${Date.now()}`,
@@ -81,6 +92,7 @@ describe('Leads API', () => {
     }
     await deleteTestCohort(eligibleProgramCohortId, eligibleProgramCycleId);
     await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
+    await sql`DELETE FROM programs WHERE id = ${otherProgramId}`;
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
   });
@@ -101,6 +113,26 @@ describe('Leads API', () => {
       recommendedProgramName: eligibleProgramName,
       createdBy: staffUserId,
     }));
+  });
+
+  it('returns an empty note collection for an existing lead and 404 for a missing lead', async () => {
+    const lead = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ ...payload, youthFirstName: 'No Notes' });
+    expect(lead.status).toBe(201);
+
+    const empty = await request(app)
+      .get(`/api/leads/${lead.body.id}/notes`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(empty.status).toBe(200);
+    expect(empty.body).toEqual([]);
+
+    const missing = await request(app)
+      .get('/api/leads/00000000-0000-4000-8000-000000000000/notes')
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(missing.status).toBe(404);
+    expect(missing.body.error).toBe('Lead not found');
   });
 
   it('creates editable follow-up notes without changing Lead status', async () => {
@@ -246,28 +278,15 @@ describe('Leads API', () => {
     ]));
   });
 
-  it.each([11, 20])('rejects age %i outside the supported Lead range', async (age) => {
+  it.each([11, 20])('accepts age %i before a program assignment', async (age) => {
     const res = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, age });
+      .send({ ...payload, youthFirstName: 'Age', youthLastName: 'Boundary', dateOfBirth: birthDateForAge(age) });
 
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'body.age' }),
-    ]));
-  });
-
-  it.each([11, 20])('rejects age %i at the database boundary', async (age) => {
-    await expect(sql`
-      INSERT INTO leads (
-        origin, youth_first_name, youth_last_name, age, school,
-        contact_phone_number, contact_relationship, discovery_source, created_by
-      ) VALUES (
-        'internal', 'Invalid', ${`Invalid-${age}-${Date.now()}`}, ${age}, 'Test School',
-        '416-555-0190', 'parent', 'online', ${staffUserId}
-      )
-    `).rejects.toMatchObject({ code: '23514' });
+    expect(res.status).toBe(201);
+    expect(res.body.dateOfBirth).toBe(birthDateForAge(age));
+    expect(res.body.age).toBe(age);
   });
 
   it('lists leads for staff', async () => {
@@ -449,14 +468,15 @@ describe('Leads API', () => {
     }));
     convertedYouthId = res.body.convertedYouthId;
 
-    const [profile] = await sql<{ firstName: string }[]>`
-      SELECT u.first_name
+    const [profile] = await sql<{ firstName: string; dateOfBirth: string }[]>`
+      SELECT u.first_name, yp.date_of_birth::text AS date_of_birth
       FROM youth_profiles yp
       JOIN users u ON u.id = yp.user_id
       WHERE yp.user_id = ${convertedYouthId!}
     `;
     expect(profile).toEqual(expect.objectContaining({
       firstName: payload.youthFirstName,
+      dateOfBirth: payload.dateOfBirth,
     }));
     const [profileNote] = await sql<{ category: string; details: string }[]>`
       SELECT category, details FROM youth_profile_notes WHERE youth_id = ${convertedYouthId!}
@@ -542,7 +562,7 @@ describe('Leads API', () => {
       .send({
         youthFirstName: 'Outreach',
         youthLastName,
-        age: 14,
+        dateOfBirth: birthDateForAge(14),
         school: 'Lifecycle School',
         submittedByRole: 'guardian',
         discoverySource: 'online',
@@ -596,6 +616,87 @@ describe('Leads API', () => {
       SELECT cohort_id FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId!}
     `;
     expect(enrollment.cohortId).toBe(otherProgramCohortId);
+  });
+
+  it('rechecks the selected program enrollment requirement at signup', async () => {
+    const created = await request(app).post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`).send({ ...payload, youthFirstName: 'CurrentRules' });
+    await sql`UPDATE programs SET enrollment_required = FALSE WHERE id = ${otherProgramId}`;
+    try {
+      const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
+        .set('Authorization', `Bearer ${staffToken}`).send({ cohortId: otherProgramCohortId });
+      expect(rejected.status).toBe(409);
+      expect(rejected.body.error).toBe('Open attendance cohorts do not use enrollment');
+      const [lead] = await sql<{ convertedYouthId: string | null }[]>`
+        SELECT converted_youth_id FROM leads WHERE id = ${created.body.id}
+      `;
+      expect(lead.convertedYouthId).toBeNull();
+    } finally {
+      await sql`UPDATE programs SET enrollment_required = TRUE WHERE id = ${otherProgramId}`;
+    }
+  });
+
+  it('keeps legacy unknown DOB and age null until signup supplies an exact DOB', async () => {
+    const created = await request(app).post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`).send({ ...payload, youthFirstName: 'Legacy' });
+    await sql`UPDATE leads SET date_of_birth = NULL WHERE id = ${created.body.id}`;
+
+    const listed = await request(app).get('/api/leads?search=Legacy')
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(listed.body).toEqual(expect.arrayContaining([expect.objectContaining({
+      id: created.body.id, dateOfBirth: null, age: null,
+      recommendedProgramId: null, recommendedProgramName: null,
+    })]));
+    const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`).send({});
+    expect(rejected.status).toBe(409);
+
+    const correctedDateOfBirth = birthDateForAge(25);
+    const signedUp = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`).send({ dateOfBirth: correctedDateOfBirth });
+    expect(signedUp.status).toBe(201);
+    const youthId = signedUp.body.convertedYouthId;
+    try {
+      expect(signedUp.body.dateOfBirth).toBe(correctedDateOfBirth);
+      const [profile] = await sql<{ dateOfBirth: string }[]>`
+        SELECT date_of_birth::text AS date_of_birth FROM youth_profiles WHERE user_id = ${youthId}
+      `;
+      expect(profile.dateOfBirth).toBe(correctedDateOfBirth);
+      const [leadAudit] = await sql<{ oldDate: string | null; newDate: string }[]>`
+        SELECT old_data->>'dateOfBirth' AS old_date, new_data->>'dateOfBirth' AS new_date
+        FROM audit_log WHERE table_name = 'leads' AND record_id = ${created.body.id}
+          AND new_data->>'convertedYouthId' = ${youthId}
+      `;
+      expect(leadAudit).toEqual({ oldDate: null, newDate: correctedDateOfBirth });
+    } finally {
+      await sql`DELETE FROM leads WHERE id = ${created.body.id}`;
+      await sql`DELETE FROM users WHERE id = ${youthId}`;
+    }
+  });
+
+  it('rolls back signup, DOB correction, and all audits when the selected cohort age is ineligible', async () => {
+    const youthLastName = `AgeRollback-${Date.now()}`;
+    const created = await request(app).post('/api/leads')
+      .set('Authorization', `Bearer ${staffToken}`).send({ ...payload, youthLastName });
+    const [{ count: auditsBefore }] = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int AS count FROM audit_log WHERE user_id = ${staffUserId}
+    `;
+    const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ cohortId: eligibleProgramCohortId, dateOfBirth: birthDateForAge(50) });
+    expect(rejected.status).toBe(409);
+    const [lead] = await sql<{ dateOfBirth: string; status: string; convertedYouthId: string | null }[]>`
+      SELECT date_of_birth::text AS date_of_birth, status, converted_youth_id FROM leads WHERE id = ${created.body.id}
+    `;
+    expect(lead).toEqual({ dateOfBirth: payload.dateOfBirth, status: 'new', convertedYouthId: null });
+    const [{ count: userCount }] = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int AS count FROM users WHERE last_name = ${youthLastName}
+    `;
+    expect(userCount).toBe(0);
+    const [{ count: auditsAfter }] = await sql<{ count: number }[]>`
+      SELECT COUNT(*)::int AS count FROM audit_log WHERE user_id = ${staffUserId}
+    `;
+    expect(auditsAfter).toBe(auditsBefore);
   });
 
   it('rejects youth accounts', async () => {

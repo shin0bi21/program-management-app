@@ -1,7 +1,10 @@
 import { act, renderHook as renderBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { TaskReferenceData } from '../../types';
+import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
+import type { TaskReferenceData } from '../../tasks.api';
+import type { TaskResource, TaskProgram } from '../../types';
+type TestTaskOptions = TaskReferenceData & { resources: TaskResource[]; programs: TaskProgram[] };
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -21,7 +24,7 @@ const savedPreference: { preference: StoredTaskPreferences | null; error: string
   error: null,
 };
 
-const options: TaskReferenceData = {
+const options: TestTaskOptions = {
   resources: [{
     id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
   }],
@@ -35,14 +38,19 @@ const options: TaskReferenceData = {
     { value: 'completed', label: 'Completed' },
   ],
 };
+const cycles: ProgramCycle[] = [
+  { id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active' },
+];
 const tableKeys = [
   'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
 ] as const;
 
 interface UsePreferencesOptions {
-  currentOptions?: TaskReferenceData;
+  currentOptions?: TestTaskOptions;
   optionsLoading?: boolean;
   optionsError?: boolean;
+  cyclesLoading?: boolean;
+  cyclesError?: boolean;
 }
 
 function usePreferences(settings: UsePreferencesOptions = {}) {
@@ -51,10 +59,17 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
     : options;
 
   return useTaskPreferences({
+    resources: currentOptions?.resources ?? [],
+    programs: currentOptions?.programs ?? [],
+    resourcesLoading: settings.optionsLoading ?? false,
+    resourcesError: settings.optionsError ?? false,
+    programsLoading: settings.optionsLoading ?? false,
+    programsError: settings.optionsError ?? false,
     referenceData: currentOptions,
     referenceDataLoading: settings.optionsLoading ?? false,
     referenceDataError: settings.optionsError ?? false,
     tableKeys,
+    cycles, cyclesLoading: settings.cyclesLoading ?? false, cyclesError: settings.cyclesError ?? false,
   });
 }
 
@@ -105,6 +120,35 @@ describe('useTaskPreferences', () => {
     expect(getPreference).toHaveBeenCalledWith('task-preferences', expect.anything());
   });
 
+  it('restores cycle selections, removes stale IDs, and saves only cycle IDs', async () => {
+    savedPreference.preference = { view: 'table', cycleIds: ['cycle-1', 'removed-cycle'] };
+    const { result } = renderHook(() => usePreferences());
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
+
+    act(() => result.current.filters.apply('cycle', []));
+    expect(result.current.view).toBe('table');
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
+      expect.objectContaining({ cycleIds: [], view: 'table' })));
+    expect(vi.mocked(setPreference).mock.lastCall?.[1]).not.toHaveProperty('dateRange');
+  });
+
+  it('waits for cycles and preserves saved IDs during cycle failures until options recover', async () => {
+    savedPreference.preference = { cycleIds: ['cycle-1', 'removed-cycle'] };
+    const { result, rerender } = renderHook(
+      ({ cyclesLoading, cyclesError }) => usePreferences({ cyclesLoading, cyclesError }),
+      { initialProps: { cyclesLoading: true, cyclesError: false } },
+    );
+    expect(result.current.ready).toBe(false);
+
+    rerender({ cyclesLoading: false, cyclesError: true });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
+
+    rerender({ cyclesLoading: false, cyclesError: false });
+    await waitFor(() => expect(result.current.filters.cycleIds).toEqual(['cycle-1']));
+  });
+
   it('uses defaults for the page visit when loading saved preferences fails', async () => {
     savedPreference.preference = {
       view: 'table',
@@ -135,9 +179,10 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.filters.definitions.map(definition => definition.id)).toEqual([
-      'staff', 'program', 'category', 'status',
+      'staff', 'program', 'cycle', 'category', 'status',
     ]);
     act(() => {
+      result.current.filters.apply('cycle', ['cycle-1']);
       result.current.filters.apply('staff', ['staff-1']);
       result.current.filters.apply('program', ['program-1']);
       result.current.filters.apply('category', ['planning_prep']);
@@ -185,7 +230,7 @@ describe('useTaskPreferences', () => {
       sorting: expected.sorting,
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
-      ...expected, staffIds: [], programIds: [], categories: [], statuses: [],
+      ...expected, cycleIds: [], staffIds: [], programIds: [], categories: [], statuses: [],
     })));
   });
 
@@ -217,7 +262,7 @@ describe('useTaskPreferences', () => {
       ({ currentOptions, optionsError }) => usePreferences({ currentOptions, optionsError }),
       {
         initialProps: {
-          currentOptions: undefined as TaskReferenceData | undefined,
+          currentOptions: undefined as TestTaskOptions | undefined,
           optionsError: true,
         },
       },

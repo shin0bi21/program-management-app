@@ -75,7 +75,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Leads' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
   });
 
   it('opens homepage management from Settings for staff with homepage access', () => {
@@ -95,7 +95,7 @@ describe('AppNavigation', () => {
       'My Account',
       'Manage Homepage',
     ]);
-    expect(screen.queryByRole('menuitem', { name: 'Manage Accounts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
@@ -114,19 +114,28 @@ describe('AppNavigation', () => {
     expect(screen.getByRole('menuitem', { name: 'Internal Leads' })).toBeInTheDocument();
   });
 
-  it('keeps the Youth navigation focused on profiles', () => {
+  it('opens Youth profiles directly and closes the mobile sidebar', async () => {
     authState.permissions = ['read:youth_profiles'];
     authState.role = 'staff';
+    const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={['/youth/profiles']}>
+      <MemoryRouter initialEntries={['/settings/account']}>
         <AppNavigation />
+        <CurrentPath />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Youth' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Profiles' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Attendance' })).not.toBeInTheDocument();
+    const youth = screen.getByRole('button', { name: 'Youth' });
+    expect(youth).not.toHaveAttribute('aria-haspopup');
+    expect(screen.queryByRole('menuitem', { name: 'Profiles' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    await user.click(youth);
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/youth/profiles');
+    expect(youth).toHaveClass('active');
+    expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
   it('does not expose a standalone Schools destination', () => {
@@ -142,26 +151,43 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
   });
 
-  it('shows Cohorts and Sessions in Programming navigation', () => {
-    authState.permissions = ['read:programs', 'read:cohorts', 'read:sessions'];
+  it('opens Programming directly and closes the mobile sidebar', async () => {
+    authState.permissions = ['read:sessions'];
     authState.role = 'staff';
+    const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={['/programming/cohorts']}>
+      <MemoryRouter initialEntries={['/staff/hours']}>
         <AppNavigation />
+        <CurrentPath />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Programming' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Sessions' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Calendar' })).not.toBeInTheDocument();
+    const programming = screen.getByRole('button', { name: 'Programming' });
+    expect(programming).not.toHaveAttribute('aria-haspopup');
+    expect(screen.queryByRole('menuitem', { name: 'Cohorts' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Sessions' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    await user.click(programming);
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/programming/calendar');
+    expect(programming).toHaveClass('active');
+    expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
+  });
+
+  it('hides Programming when only cohort read permission is granted', () => {
+    authState.permissions = ['read:programs'];
+
+    render(<MemoryRouter><AppNavigation /></MemoryRouter>);
+
+    expect(screen.queryByRole('button', { name: 'Programming' })).not.toBeInTheDocument();
   });
 
   it('places Programming before Leads in application navigation', () => {
     authState.permissions = [
       'read:programs',
-      'read:cohorts',
+      'read:programs',
       'read:sessions',
       'read:outreach',
     ];
@@ -317,7 +343,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 
-  it('orders admin Settings destinations by account, programming, then homepage management', () => {
+  it('orders admin Settings destinations by user, programming, then homepage management', () => {
     authState.permissions = ['read:accounts', 'write:programs', 'read:homepage'];
     authState.role = 'admin';
     render(
@@ -328,7 +354,7 @@ describe('AppNavigation', () => {
 
     expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
       'My Account',
-      'Manage Accounts',
+      'Manage Users',
       'Manage Programming',
       'Manage Homepage',
     ]);

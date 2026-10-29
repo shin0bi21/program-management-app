@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
+import { formatShortDate } from '../../../../../common/utils/date';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import { calculateAge } from '../../../../../common/utils/time';
 import type { YouthProfile } from '../../../types';
 
 interface UseYouthTableOptions {
@@ -16,9 +16,8 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
   const columns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
     { id: 'firstName', header: 'First Name', accessorFn: profile => profile.firstName },
     { id: 'lastName', header: 'Last Name', accessorFn: profile => profile.lastName },
-    { id: 'age', header: 'Age', accessorFn: profile => calculateAge(profile.dateOfBirth), size: 100 },
+    { id: 'dateOfBirth', header: 'Date of Birth', accessorFn: profile => formatBirthDate(profile.dateOfBirth), size: 150 },
     { id: 'school', header: 'School', accessorFn: profile => profile.schoolName ?? '—' },
-    { id: 'grade', header: 'Grade', accessorFn: profile => profile.gradeLevel ?? '—', size: 100 },
     {
       id: 'program',
       header: 'Program',
@@ -59,4 +58,12 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
   ], [canWrite, onAddNote, onEdit]);
 
   return { columns };
+}
+
+function formatBirthDate(dateOfBirth: string | null): string {
+  if (!dateOfBirth) return '—';
+
+  // DOB is a calendar date, even when the API serializes it as a UTC timestamp.
+  const calendarDate = dateOfBirth.split('T')[0];
+  return formatShortDate(new Date(`${calendarDate}T12:00:00`));
 }

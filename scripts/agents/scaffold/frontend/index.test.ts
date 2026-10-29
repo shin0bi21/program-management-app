@@ -68,16 +68,11 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.match(read(files[0]), /view\/setView at the top level/);
   assert.match(read(files[0]), /Filter configuration passed to every page data view/);
   assertOrdered(read(files[1]), [
-    'Page-local error state',
-    'Permissions and application services',
-    'Page data',
-    'Saved preferences and the current view',
-    'Filter configuration',
-    'Selection and page-spanning actions',
-    'Modal and confirmation workflows',
-    'Table, calendar, dashboard, and body initialization',
-    'Derived errors and presentation state',
-    'Render',
+    'Entry and readiness',
+    'Rendered states',
+    'Controls and views',
+    'Selection and coordination',
+    'Commands and dialogs',
   ]);
   files.forEach(assertParses);
 });
@@ -167,4 +162,23 @@ test('rejects unsupported page depths, invalid owners, names, and overwrites', (
 
   scaffoldFrontend(['page', 'Temporary/OverwriteExample']);
   assert.throws(() => scaffoldFrontend(['page', 'Temporary/OverwriteExample']), /Refusing to overwrite/);
+});
+
+test('scaffolds a calendar page with separate page, data, and calendar test owners', () => {
+  const pageFiles = scaffoldFrontend(['page', 'Youth/Placements']);
+  const pageContents = pageFiles.map(read);
+
+  const calendarFiles = scaffoldFrontend([
+    'calendar', 'frontend/src/pages/Youth/Placements/components', 'PlacementCalendar',
+  ]);
+
+  assert.deepEqual(calendarFiles, [
+    'frontend/src/pages/Youth/Placements/components/PlacementCalendar/PlacementCalendar.tsx',
+    'frontend/src/pages/Youth/Placements/components/PlacementCalendar/PlacementCalendar.test.tsx',
+  ]);
+  assert.deepEqual(pageFiles.map(read), pageContents);
+  assert.match(read(pageFiles[1]), /shares selected context across page views/);
+  assert.match(read(pageFiles[3]), /forwards request inputs and AbortSignal/);
+  assert.match(read(calendarFiles[1]), /forwards the complete page filters and requested range/);
+  [...pageFiles, ...calendarFiles].forEach(assertParses);
 });

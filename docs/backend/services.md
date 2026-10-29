@@ -15,9 +15,18 @@ Keep product behavior with its capability even when several pages use it. Use `s
 
 Program-cycle reads and mutations belong to
 [`programming/cycles/programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts).
-Cohort creation, updates, and deletion remain in the cohort service. Cycle routes,
-controller handlers, and validation still use the cohort HTTP owners; the
-[`/cohorts/cycles` endpoints](api.md#programming) retain their existing paths and permissions.
+Cohort creation, updates, and deletion remain in the cohort service. The cycle,
+cohort, enrollment, and session routes and controllers own their HTTP capabilities
+separately; existing `/cohorts` URLs remain stable and shared validation types stay
+in `cohortSchemas.ts`.
+
+Program-side checked cycles use `cohorts/assignmentService.ts`; cycle saves replace
+checked programs in the cycle service transaction. Retained relationships keep
+their cohort IDs. Unchecking a relationship with any session, enrollment (including
+withdrawn youth), or logged hours fails the entire save. Assignment and session
+schedule mutations lock program rows, then cycles, then cohort rows; cycle editing
+locks all current programs in ID order before its cycle to serialize both editors.
+Child foreign keys coordinate enrollment and hours insertion with cohort removal.
 
 ## Write the public operations first
 
@@ -40,6 +49,9 @@ Name a command after the record it changes. Session attendance belongs to `sessi
 - Lock the current row with `FOR UPDATE` when permissions, state, assignments, or delete rules must stay valid during the write.
 - Apply policy checks, related-record validation, the write, and its audit inside the same transaction when they must succeed together.
 - Keep focused commands narrow. A status, placement, reorder, or assignment command updates only the fields it owns.
+- Validate replacement-list identifiers and reject duplicates before removing omitted
+  children. A stale or foreign identifier must fail the whole command rather than
+  silently dropping submitted records.
 - Preserve unchanged data and deterministic response ordering.
 
 Use the repository error classes for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.

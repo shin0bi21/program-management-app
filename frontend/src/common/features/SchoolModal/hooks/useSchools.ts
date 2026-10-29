@@ -1,15 +1,10 @@
-import { getSchools } from '../schoolModal.api';
 import type { School } from '../types';
-import useListQuery from '../../../../query/hooks/useListQuery';
+import { useSchoolReferences } from '../../referenceData/hooks/useReferenceData';
 
 export type { School };
 
 export function useSchools() {
-  const query = useListQuery<School>({
-    queryKey: ['schools'],
-    queryFn: ({ signal }) => getSchools({ signal }),
-    errorMessage: 'Failed to load schools',
-  });
+  const query = useSchoolReferences();
 
   return {
     schools: query.rows,

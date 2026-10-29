@@ -49,7 +49,7 @@ describe('publicHomepage API', () => {
     const payload = {
       youthFirstName: 'Jamie',
       youthLastName: 'Test',
-      age: 14,
+      dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
       school: 'Westview',
       submittedByRole: 'youth' as const,
       contactPhoneNumber: '519-555-0100',
