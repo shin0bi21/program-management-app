@@ -34,6 +34,7 @@ describe('useHomepageImageModal', () => {
 
     expect(updateHomepageImage).toHaveBeenCalledWith(image.id, { caption: 'Updated caption.' });
     expect(onSaved).toHaveBeenCalledOnce();
+    expect(vi.mocked(updateHomepageImage).mock.invocationCallOrder[0]).toBeLessThan(onSaved.mock.invocationCallOrder[0]);
     expect(result.current).toMatchObject({
       status: 'success',
       statusMessage: 'Homepage image updated.',
@@ -72,5 +73,21 @@ describe('useHomepageImageModal', () => {
     rerender({ isOpen: false });
     rerender({ isOpen: true });
     expect(result.current).toMatchObject({ status: 'idle', statusMessage: '' });
+  });
+
+  it('surfaces mutation errors and unlocks the workflow for retry', async () => {
+    vi.mocked(updateHomepageImage)
+      .mockRejectedValueOnce(new Error('Image update failed'))
+      .mockResolvedValueOnce({ id: image.id });
+    const onSaved = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useHomepageImageModal({ image, isOpen: true, onSaved }));
+
+    await act(() => result.current.submit('Updated caption.'));
+    expect(result.current).toMatchObject({ status: 'error', statusMessage: 'Image update failed' });
+
+    await act(() => result.current.submit('Updated caption.'));
+    expect(updateHomepageImage).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenCalledOnce();
+    expect(result.current.status).toBe('success');
   });
 });

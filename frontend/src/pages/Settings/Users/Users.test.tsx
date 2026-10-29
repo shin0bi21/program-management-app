@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Users from './Users';
 
 const mockUseAuth = vi.fn();
@@ -38,14 +38,7 @@ const accounts = [
   },
 ] as const;
 
-const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => ({
-  client,
-  ...render(
-  <QueryClientProvider client={client}>
-    <Users />
-  </QueryClientProvider>,
-  ),
-});
+const renderPage = () => renderWithQueryClient(<Users />);
 
 describe('Users', () => {
   beforeEach(() => {
@@ -59,7 +52,7 @@ describe('Users', () => {
     });
   });
 
-  // Permissions and application services.
+  // Entry and readiness.
   it('shows admin account controls and sends search state to the accounts query', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
@@ -101,7 +94,7 @@ describe('Users', () => {
     expect(screen.getByText('Yara Youth')).toBeInTheDocument();
   });
 
-  // Modal and confirmation workflows.
+  // Commands and dialogs.
   it('opens the account status confirmation from the table action', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
     renderPage();

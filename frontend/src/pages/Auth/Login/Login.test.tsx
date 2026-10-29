@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -66,5 +66,22 @@ describe('Login', () => {
     expect(await screen.findByText('Invalid email address')).toBeInTheDocument();
     expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
     expect(login).not.toHaveBeenCalled();
+  });
+
+  it('submits valid rendered credentials through the login workflow', async () => {
+    authState.isAuthenticated = false;
+    vi.mocked(login).mockResolvedValue({
+      message: 'Signed in', token: 'token',
+      user: { id: 'user-1', firstName: 'Test', lastName: 'User', email: 'test@example.com' },
+    });
+    render(<MemoryRouter><Login /></MemoryRouter>);
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'test@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'valid-password' } });
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+    });
+    expect(login).toHaveBeenCalledOnce();
+    expect(authState.login).toHaveBeenCalledOnce();
   });
 });

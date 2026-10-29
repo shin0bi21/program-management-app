@@ -45,6 +45,7 @@ describe('ManageHomepage', () => {
     homepage.error = null;
   });
 
+  // Rendered states.
   it('composes the managed image controls from page data', () => {
     renderPage();
 
@@ -70,6 +71,7 @@ describe('ManageHomepage', () => {
     expect(homepage.refresh).toHaveBeenCalledOnce();
   });
 
+  // Commands and dialogs.
   it('opens the page-owned image editor from the page header', async () => {
     const user = userEvent.setup();
     renderPage();

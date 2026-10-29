@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -41,13 +40,6 @@ const images = [
   },
 ];
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-  };
-};
-
 describe('useManagedHomepage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +49,7 @@ describe('useManagedHomepage', () => {
   });
 
   it('exposes the managed image query lifecycle and refresh action', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createWrapper() });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.images).toEqual(images));
@@ -68,7 +60,7 @@ describe('useManagedHomepage', () => {
   });
 
   it('optimistically reorders images and persists their ids', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createWrapper() });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
     await waitFor(() => expect(result.current.images).toEqual(images));
 
     await act(() => result.current.reorderImages('image-2', 'image-1'));
@@ -78,7 +70,7 @@ describe('useManagedHomepage', () => {
   });
 
   it('deletes an image and refreshes the managed content', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createWrapper() });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
     await waitFor(() => expect(result.current.images).toEqual(images));
 
     await act(() => result.current.deleteImage('image-1'));

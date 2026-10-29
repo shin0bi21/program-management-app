@@ -1,6 +1,6 @@
+import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import type { ComponentProps } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
@@ -33,8 +33,7 @@ function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {})
     onClose: vi.fn(),
     ...overrides,
   };
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><HoursModal {...props} /></QueryClientProvider>);
+  renderWithQueryClient(<HoursModal {...props} />);
   return props;
 }
 
@@ -50,16 +49,7 @@ describe('HoursModal', () => {
   });
 
   it('puts general-time fields in workflow order', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><HoursModal
-      isOpen
-      resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
-      programs={[{ id: 'program-1', name: 'Program one' }]}
-      categories={categories}
-      loadTasks={loadTasks}
-      onAdd={vi.fn()}
-      onClose={vi.fn()}
-    /></QueryClientProvider>);
+    renderModal({ resources: [resources[0]], programs: [{ id: 'program-1', name: 'Program one' }] });
 
     expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
       'Staff member', 'Program (optional)', 'Category *', 'Date', 'Hours', 'Note',
@@ -99,17 +89,7 @@ describe('HoursModal', () => {
   });
 
   it('puts session selection before its date and hours', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><HoursModal
-      isOpen
-      resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
-      programs={[]}
-      categories={categories}
-      loadTasks={loadTasks}
-      initialSource="session"
-      onAdd={vi.fn()}
-      onClose={vi.fn()}
-    /></QueryClientProvider>);
+    renderModal({ resources: [resources[0]], programs: [], initialSource: 'session' });
 
     expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
       'Staff member', 'Session *', 'Date', 'Hours', 'Note',
@@ -161,18 +141,7 @@ describe('HoursModal', () => {
   });
 
   it('locks a contextual task and its assigned staff while logging task time', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={client}><HoursModal
-      isOpen
-      resources={[{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]}
-      programs={[]}
-      categories={categories}
-      loadTasks={loadTasks}
-      initialTask={task}
-      canCompleteTask
-      onAdd={vi.fn()}
-      onClose={vi.fn()}
-    /></QueryClientProvider>);
+    renderModal({ resources: [resources[0]], programs: [], initialTask: task, canCompleteTask: true });
 
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.getByRole('button', { name: 'Task' })).not.toHaveTextContent('Planning / Prep');

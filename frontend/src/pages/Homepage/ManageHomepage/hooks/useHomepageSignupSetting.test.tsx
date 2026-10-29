@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getManagedHomepage, getManagedHomepageSignup, reorderHomepageImages, updateHomepageSignup } from '../manageHomepage.api';
@@ -17,13 +16,6 @@ const images = ['first', 'second'].map((id, displayOrder) => ({
   id, displayOrder, caption: id, altText: id, imageUrl: id, mobileUrl: id,
   thumbnailUrl: id, createdAt: '', updatedAt: '',
 }));
-const createWrapper = () => {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-  };
-};
-
 describe('useHomepageSignupSetting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,7 +26,7 @@ describe('useHomepageSignupSetting', () => {
   });
 
   it('keeps signup state intact through photo reorder and refresh, and saves without refreshing photos', async () => {
-    const { result } = renderHook(() => ({ photos: useManagedHomepage(), signup: useHomepageSignupSetting() }), { wrapper: createWrapper() });
+    const { result } = renderHook(() => ({ photos: useManagedHomepage(), signup: useHomepageSignupSetting() }), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
     await waitFor(() => expect(result.current.photos.images).toEqual(images));
     await waitFor(() => expect(result.current.signup.signupEnabled).toBe(true));
 
@@ -52,7 +44,7 @@ describe('useHomepageSignupSetting', () => {
 
   it('retains signup status when saving fails and retries only signup', async () => {
     vi.mocked(updateHomepageSignup).mockRejectedValue(new Error('Save failed'));
-    const { result } = renderHook(useHomepageSignupSetting, { wrapper: createWrapper() });
+    const { result } = renderHook(useHomepageSignupSetting, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
     await waitFor(() => expect(result.current.signupEnabled).toBe(true));
 
     act(() => result.current.setSignupEnabled(false));

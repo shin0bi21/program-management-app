@@ -1,8 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
-import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { makeCohortSession } from '../../../../../tests/factories/session';
 import type { CohortSession } from '../../types';
 import useSessionActions from './useSessionActions';
@@ -17,7 +16,7 @@ describe('useSessionActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('moves one session, locks duplicate drops, and reconciles the cached table row', async () => {
-    const queryClient = new QueryClient();
+    const queryClient = createTestQueryClient();
     const session = makeCohortSession();
     const tableKey = ['sessions', 'table', {}];
     queryClient.setQueryData(tableKey, { pages: [{ rows: [session], nextCursor: null }], pageParams: [null] });
@@ -44,7 +43,7 @@ describe('useSessionActions', () => {
   });
 
   it('keeps failed moves unchanged and permits a retry', async () => {
-    const queryClient = new QueryClient();
+    const queryClient = createTestQueryClient();
     api.moveSessionDate.mockRejectedValueOnce(new Error('Session has already started'));
     const { result } = renderHook(() => useSessionActions({ onSessionRemoved: vi.fn() }), {
       wrapper: createQueryClientWrapper(queryClient),
@@ -55,7 +54,7 @@ describe('useSessionActions', () => {
   });
 
   it('deletes the requested session and reconciles calendar and cohort owners', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue();
     const cancelQueries = vi.spyOn(queryClient, 'cancelQueries');
     const onSessionRemoved = vi.fn();
@@ -78,7 +77,7 @@ describe('useSessionActions', () => {
   });
 
   it('refreshes session and youth owners after attendance changes', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue();
     const { result } = renderHook(
       () => useSessionActions({ onSessionRemoved: vi.fn() }),
@@ -94,7 +93,7 @@ describe('useSessionActions', () => {
   });
 
   it('replaces the calendar buffer after session invalidation completes', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     let finishCalendarInvalidation!: () => void;
     const pendingInvalidation = new Promise<void>(resolve => { finishCalendarInvalidation = resolve; });
     vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(({ queryKey } = {}) => (
@@ -117,7 +116,7 @@ describe('useSessionActions', () => {
   });
 
   it('cancels an inactive pre-mutation range query before replacing its buffer', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     const queryKey = ['sessions', 'calendar', { start: '2026-08-10', end: '2026-08-11' }];
     let requestSignal: AbortSignal | undefined;
     const oldRequest = queryClient.fetchQuery({
@@ -142,7 +141,7 @@ describe('useSessionActions', () => {
   });
 
   it('preserves selection and the calendar buffer when deletion fails', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     const onSessionRemoved = vi.fn();
     api.deleteSession.mockRejectedValueOnce(new Error('Delete failed'));
     const { result } = renderHook(

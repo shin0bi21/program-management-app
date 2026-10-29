@@ -14,6 +14,8 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+let unsubscribePromptListener: (() => void) | undefined;
+
 describe('apiClient re-authentication', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -21,6 +23,8 @@ describe('apiClient re-authentication', () => {
   });
 
   afterEach(() => {
+    unsubscribePromptListener?.();
+    unsubscribePromptListener = undefined;
     vi.unstubAllGlobals();
   });
 
@@ -62,6 +66,29 @@ describe('apiClient re-authentication', () => {
     expect(vi.mocked(fetch).mock.calls[1][1]).toEqual(expect.objectContaining({
       headers: expect.objectContaining({ Authorization: `Bearer ${freshToken}` }),
     }));
+  });
+
+  it('rejects when the single retry also returns 401 without prompting again', async () => {
+    const originalToken = tokenWithExpiry(Date.now() + 60 * 60_000);
+    const freshToken = tokenWithExpiry(Date.now() + 2 * 60 * 60_000);
+    localStorage.setItem(STORAGE_KEYS.TOKEN, originalToken);
+    let promptCount = 0;
+    unsubscribePromptListener = reAuthCoordinator.subscribe(() => {
+      if (reAuthCoordinator.getSnapshot().status === 'prompting') promptCount += 1;
+    });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'Unauthorized' }))
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'Unauthorized' }));
+
+    const request = apiClient.get('/protected');
+    await vi.waitFor(() => expect(reAuthCoordinator.getSnapshot().status).toBe('prompting'));
+    localStorage.setItem(STORAGE_KEYS.TOKEN, freshToken);
+    reAuthCoordinator.resolveReAuth();
+
+    await expect(request).rejects.toMatchObject({ status: 401 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(reAuthCoordinator.getSnapshot().status).toBe('idle');
+    expect(promptCount).toBe(1);
   });
 
   it('uses one re-authentication workflow for concurrent expired requests', async () => {

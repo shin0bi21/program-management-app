@@ -115,7 +115,7 @@ describe('Cohorts', () => {
     });
   });
 
-  // Permissions and application services.
+  // Entry and readiness.
   it('keeps assignment creation out of staff access', () => {
     auth.role = 'staff';
     auth.permissions = ['read:programs', 'write:enrollments'];
@@ -141,7 +141,6 @@ describe('Cohorts', () => {
     expect(Boolean(screen.queryByRole('button', { name: 'Manage Roster' }))).toBe(expected);
   });
 
-  // Saved preferences and the current view.
   it('keeps persisted controls and content unavailable until restoration completes', async () => {
     let finishLoading!: (value: CohortPreference | null) => void;
     preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
@@ -159,67 +158,7 @@ describe('Cohorts', () => {
     expect(screen.getByRole('table', { name: 'Cohorts' })).toBeInTheDocument();
   });
 
-  // Selection and page-spanning actions.
-  it('shows all cohorts by default and can display a selected program', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
-        <Cohorts />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
-    expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
-    expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
-    expect(screen.getByText('Soft Skills')).toBeInTheDocument();
-    expect(screen.queryAllByText('5')).toHaveLength(0);
-    expect(screen.queryByRole('columnheader', { name: 'Youth' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Enrolled' })).not.toBeInTheDocument();
-    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
-    expect(headers.slice(2, 5)).toEqual(['Start', 'End', 'Status']);
-    const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
-    const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
-    expect(firstOverviewCard).not.toBeNull();
-    expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const cohortRow = screen.getByText('Summer 2026').closest('tr');
-    expect(cohortRow).toHaveAttribute('tabindex', '0');
-    await user.click(cohortRow!);
-    expect(cohortRow).toHaveAttribute('aria-selected', 'true');
-    expect(overview).toHaveTextContent('Enrollment:5');
-    expect(overview).toHaveTextContent('80%');
-    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeEnabled();
-    expect(screen.getAllByText('5')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
-    expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
-
-  });
-
-  it('removes a deleted cohort without refetching the table', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
-        <Cohorts />
-      </MemoryRouter>,
-    );
-    await screen.findByText('Summer 2026');
-    const initialRequestCount = api.getCohorts.mock.calls.length;
-
-    await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete Cohort' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-
-    await waitFor(() => expect(api.deleteCohort).toHaveBeenCalledWith('cohort-1'));
-    await waitFor(() => expect(screen.queryByText('Summer 2026')).not.toBeInTheDocument());
-    expect(api.getCohorts).toHaveBeenCalledTimes(initialRequestCount);
-    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
-  });
-
-  // Derived errors and presentation state.
+  // Rendered states.
   it('shows distinct youth attendance instead of enrollment for an open cohort', async () => {
     const user = userEvent.setup();
     api.getCohorts.mockResolvedValue([{
@@ -263,7 +202,68 @@ describe('Cohorts', () => {
     expect(screen.queryByRole('menuitem', { name: 'Add Sessions' })).not.toBeInTheDocument();
   });
 
-  // Render.
+  // Controls and views.
+  it('shows all cohorts by default and can display a selected program', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
+        <Cohorts />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
+    expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
+    expect(screen.getByText('Soft Skills')).toBeInTheDocument();
+    expect(screen.queryAllByText('5')).toHaveLength(0);
+    expect(screen.queryByRole('columnheader', { name: 'Youth' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Enrolled' })).not.toBeInTheDocument();
+    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
+    expect(headers.slice(2, 5)).toEqual(['Start', 'End', 'Status']);
+    const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
+    const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
+    const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
+    expect(firstOverviewCard).not.toBeNull();
+    expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const cohortRow = screen.getByText('Summer 2026').closest('tr');
+    expect(cohortRow).toHaveAttribute('tabindex', '0');
+    await user.click(cohortRow!);
+    expect(cohortRow).toHaveAttribute('aria-selected', 'true');
+    expect(overview).toHaveTextContent('Enrollment:5');
+    expect(overview).toHaveTextContent('80%');
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeEnabled();
+    expect(screen.getAllByText('5')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
+    expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
+
+  });
+
+  // Selection and coordination.
+  it('removes a deleted cohort without refetching the table', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/programming/cohorts']} future={routerFuture}>
+        <Cohorts />
+      </MemoryRouter>,
+    );
+    await screen.findByText('Summer 2026');
+    const initialRequestCount = api.getCohorts.mock.calls.length;
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Summer 2026' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Cohort' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(api.deleteCohort).toHaveBeenCalledWith('cohort-1'));
+    await waitFor(() => expect(screen.queryByText('Summer 2026')).not.toBeInTheDocument());
+    expect(api.getCohorts).toHaveBeenCalledTimes(initialRequestCount);
+    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
+  });
+
+  // Commands and dialogs.
   it('shows success feedback after adding a cohort', async () => {
     const user = userEvent.setup();
     render(
@@ -279,4 +279,5 @@ describe('Cohorts', () => {
       'Soft Skills successfully added to Summer 2026.',
     )).toBeInTheDocument();
   });
+
 });
