@@ -1,12 +1,3 @@
-.dashboard-card.hours-overview-card {
-  height: 75px;
-  min-height: 75px;
-}
-
-.hours-overview-card .dashboard-card__header {
-  margin-bottom: var(--space-2);
-}
-
 .hours-overview-card--details {
   justify-content: flex-start;
 }
@@ -25,6 +16,9 @@
 
 .hours-overview-card__layout {
   flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .hours-overview-card__details {
@@ -37,25 +31,20 @@
 
 .hours-overview-card__details div {
   display: grid;
-  gap: var(--space-1);
 }
 
 .hours-overview-card__details dt {
   color: var(--color-muted);
-  font-size: .74rem;
+  font-size: var(--dashboard-card-label-size);
   line-height: 1.15;
 }
 
 .hours-overview-card__details dd {
-  margin: 3px 0 0;
+  margin: var(--dashboard-card-value-gap) 0 0;
   color: var(--color-ink);
-  font-size: 1.35rem;
+  font-size: var(--dashboard-card-value-size);
   font-weight: 750;
   line-height: 1;
-}
-
-.hours-overview-card__details .hours-overview-card__text-value {
-  font-size: 1rem;
 }
 
 .hours-overview-card__metric,
@@ -64,7 +53,7 @@
 }
 
 .hours-overview-card__metric {
-  font-size: 1.8rem;
+  font-size: var(--dashboard-card-value-size);
   line-height: 1;
 }
 
@@ -75,11 +64,6 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard-card.hours-overview-card {
-    height: auto;
-    min-height: 75px;
-  }
-
   .hours-overview-card__details {
     grid-template-columns: 1fr;
   }

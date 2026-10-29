@@ -67,6 +67,7 @@ describe('SessionAttachmentsDashboardCard', () => {
     renderWithQueryClient(
       <SessionAttachmentsDashboardCard queryKey={queryKey} session={session} canWrite />,
     );
+    expect(screen.getByRole('status', { name: 'Loading attachments…' })).toBeInTheDocument();
     expect(await screen.findByText('No attachments.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add attachments' }));
     expect(screen.getByRole('dialog', { name: 'Attachment editor' })).toBeInTheDocument();

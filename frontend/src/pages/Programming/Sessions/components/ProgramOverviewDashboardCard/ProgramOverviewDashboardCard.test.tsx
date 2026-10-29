@@ -39,11 +39,12 @@ describe('ProgramOverviewDashboardCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Program overview' })).toBeInTheDocument();
     expect(screen.getByText('Select a program to view its current cohort.')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
 
     rerender(<ProgramOverviewDashboardCard {...props} loading />);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading program rosters…');
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading program rosters…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
 
     rerender(<ProgramOverviewDashboardCard {...props} cohorts={[]} />);
     expect(screen.getByRole('heading', { name: `${program.name} Overview` })).toBeInTheDocument();
@@ -90,7 +91,7 @@ describe('ProgramOverviewDashboardCard', () => {
       { ...cohort, startsOn: '2026-01-01', endsOn: '2026-06-30', state: 'completed' }, openCohort,
     ]} />);
     expect(screen.getByText('No current cohort matches the selected filters.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Attendance Report' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
 
   it('uses the program timezone and includes the final cycle date', () => {
@@ -120,4 +121,35 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.queryByRole('button', { name: 'Attendance Report' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
   });
+  it('preserves the shell and metric labels while loading a different program', () => {
+    const props = makeProps();
+    const view = render(<ProgramOverviewDashboardCard {...props} />);
+    const card = screen.getByRole('heading', { name: 'Art - Fall Overview' }).closest('article');
+
+    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} cohorts={[]} loading />);
+
+    expect(screen.getByRole('heading', { name: 'Music Overview' }).closest('article')).toBe(card);
+    expect(screen.getByText('Enrollment')).toBeInTheDocument();
+    expect(screen.getByText('Average attendance')).toBeInTheDocument();
+    expect(screen.queryByText('75%')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
+  });
+
+  it('keeps metrics and disabled actions when a pending program load fails', () => {
+    const props = { ...makeProps(), cohorts: [] };
+    const view = render(<ProgramOverviewDashboardCard {...props} loading />);
+    const heading = screen.getByRole('heading', { name: 'Art Overview' });
+    const card = heading.closest('article');
+
+    view.rerender(<ProgramOverviewDashboardCard {...props} error="Unavailable" />);
+
+    expect(screen.getByRole('heading', { name: 'Art Overview' })).toBe(heading);
+    expect(heading.closest('article')).toBe(card);
+    expect(screen.getByText('Enrollment')).toBeInTheDocument();
+    expect(screen.getByText('Average attendance')).toBeInTheDocument();
+    expect(screen.getByText('Program rosters unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
+  });
+
 });

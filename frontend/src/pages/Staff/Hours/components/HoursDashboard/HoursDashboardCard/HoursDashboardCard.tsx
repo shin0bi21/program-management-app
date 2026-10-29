@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
-import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import { DashboardCard, DashboardCardLoading } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import './HoursDashboardCard.css';
@@ -8,6 +8,9 @@ import './HoursDashboardCard.css';
 interface EmptyHoursDashboardCardProps {
   title?: string;
   emptyMessage: string;
+  loading?: boolean;
+  scopeKey?: string;
+  details?: Array<[string, string | null]>;
   unavailable?: {
     title: string;
     onRetry?: () => void;
@@ -19,28 +22,29 @@ interface ReadyHoursDashboardCardProps extends EmptyHoursDashboardCardProps {
   modalTitle: string;
   modalSubtitle: string;
   breakdown: Array<[string, number]>;
-  details?: Array<[string, string]>;
 }
 
 type HoursDashboardCardProps = EmptyHoursDashboardCardProps | ReadyHoursDashboardCardProps;
 
-const compactDetailLabels = new Set(['Current Pay Period', 'Cycle']);
-
 export default function HoursDashboardCard(props: HoursDashboardCardProps) {
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState<string | null>(null);
   const hasData = 'total' in props;
-  const { title, emptyMessage, unavailable } = props;
+  const { title, emptyMessage, unavailable, loading = false, scopeKey = '' } = props;
+
+  useEffect(() => setBreakdownOpen(null), [scopeKey]);
+
   const total = hasData ? props.total : 0;
   const modalTitle = hasData ? props.modalTitle : '';
   const modalSubtitle = hasData ? props.modalSubtitle : '';
   const breakdown = hasData ? props.breakdown : [];
-  const details = hasData ? props.details : undefined;
-  const breakdownAction = hasData ? (
+  const details = props.details;
+  const breakdownAction = hasData || loading || details ? (
     <Button
       size="sm"
       variant="secondary"
       aria-haspopup="dialog"
-      onClick={() => setBreakdownOpen(true)}
+      disabled={!hasData || loading}
+      onClick={() => setBreakdownOpen(scopeKey)}
     >
       See Breakdown
     </Button>
@@ -49,26 +53,29 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
   return (
     <>
       {details ? (
-        <article className="dashboard-card hours-overview-card hours-overview-card--details">
+        <article className="dashboard-card dashboard-card--short hours-overview-card hours-overview-card--details" aria-busy={loading || undefined}>
           {title && <h2 className="hours-overview-card__accessible-title">{title}</h2>}
-          {unavailable ? <UnavailableState compact {...unavailable} /> : hasData ? (
-            <div className="dashboard-card__compact-layout hours-overview-card__layout">
+          <div className="dashboard-card__compact-layout hours-overview-card__layout">
+            <div>
               <dl className="hours-overview-card__details">
                 {details.map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd className={compactDetailLabels.has(label) ? 'hours-overview-card__text-value' : undefined}>{value}</dd>
+                    <dd>
+                      {loading ? <DashboardCardLoading label={`Loading ${label.toLowerCase()}…`} /> : value ?? '—'}
+                    </dd>
                   </div>
                 ))}
               </dl>
-              <div className="dashboard-card__compact-action hours-overview-card__action">{breakdownAction}</div>
+              {unavailable ? <UnavailableState compact {...unavailable} /> : !hasData && !loading ? <p className="dashboard-card__empty">{emptyMessage}</p> : null}
             </div>
-          ) : <p className="dashboard-card__empty">{emptyMessage}</p>}
+            <div className="dashboard-card__compact-action hours-overview-card__action">{breakdownAction}</div>
+          </div>
         </article>
       ) : (
         <DashboardCard
           title={title}
-          className="hours-overview-card"
+          className="dashboard-card--short hours-overview-card"
           emptyMessage={emptyMessage}
           action={breakdownAction}
         >
@@ -81,8 +88,8 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
         </DashboardCard>
       )}
       <Modal
-        isOpen={breakdownOpen}
-        onClose={() => setBreakdownOpen(false)}
+        isOpen={breakdownOpen === scopeKey && hasData && !loading}
+        onClose={() => setBreakdownOpen(null)}
         title={modalTitle}
         maxWidth="440px"
       >

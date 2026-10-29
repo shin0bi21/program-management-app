@@ -4,6 +4,7 @@ import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
+import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
@@ -257,7 +258,7 @@ export default function Hours() {
         viewError,
         dashboardError,
       ]} />
-      {!preferences.ready ? <p role="status">Loading saved filters…</p> : <PageBody
+      {!preferences.ready ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading saved filters…</p> : <PageBody
         ariaLabel="Hours overview and entries"
         dashboard={<HoursDashboard
           queryKey={HOURS_QUERY_KEY}

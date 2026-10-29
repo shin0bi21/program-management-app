@@ -50,6 +50,7 @@ describe('SessionNotesDashboardCard', () => {
     renderWithQueryClient(
       <SessionNotesDashboardCard queryKey={queryKey} session={session} canWrite />,
     );
+    expect(screen.getByRole('status', { name: 'Loading notes…' })).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add notes' }));
     expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
