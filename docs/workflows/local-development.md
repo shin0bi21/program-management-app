@@ -2,7 +2,7 @@
 
 This is the source of truth for day-to-day operation of the local Docker
 stack. For a new machine or a fresh checkout, complete
-[Local Environment Setup](setup.md) first.
+[Set up the local environment](setup.md) first.
 
 Run all commands from the repository root.
 
@@ -122,11 +122,9 @@ unrelated services.
 
 ## Production data snapshots
 
-Use the [data refresh workflow](data-snapshots.md) for the single SSH-to-local
-refresh command and its step-by-step process. It validates a temporary import
-before switching databases, retains the previous local database for rollback,
-and removes temporary downloads. Use `--validate-only` to check the import
-without replacing local data. Uploaded files are not copied.
+Use [Refresh local data](data-snapshots.md) for downloading, validating,
+applying, and recovering a local production-data copy. That guide owns the
+privacy constraints and backup procedure; uploaded files are not copied.
 
 ## Destructive reset
 
