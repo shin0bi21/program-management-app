@@ -25,6 +25,8 @@ export function useLeadTableData(
     error: query.error,
     hasNextPage: query.hasNextPage,
     loadingNextPage: query.loadingNextPage,
+    nextPageError: query.nextPageError,
+    retryNextPage: query.retryNextPage,
     loadNextPage: query.loadNextPage,
     retry: query.retry,
   };

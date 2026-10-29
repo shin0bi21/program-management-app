@@ -33,11 +33,9 @@ Preserve the dependency direction `pages → common/features → common/componen
 
 ## Find the right guide
 
-The guides follow the application structure: architecture and data foundations, navigation
-and pages, then shared components and specific UI surfaces. Each rule is explained in one
-place so the documentation does not repeat itself.
-
-Rendered-surface guides are flat files under `components/`; add a subdirectory only when a documentation area grows into a substantial multi-file set. Each owner guide documents its own skeleton and the scaffold preset that generates it.
+Choose by the responsibility you are changing. Small primitives share UI guidance;
+composed surfaces have focused contracts. Keep component guides flat unless an area
+needs a substantial multi-file set.
 
 | What are you changing? | Guide |
 |---|---|
@@ -46,8 +44,10 @@ Rendered-surface guides are flat files under `components/`; add a subdirectory o
 | Sidebar navigation or route visibility | [App navigation](components/navigation.md) |
 | A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
 | Saved preferences, field rules, or grouped page controls | [Page preferences](pages/preferences.md) |
-| Shared components | [Components](components/README.md) |
+| Shared components, type labels, and status badges | [UI basics](components/README.md) |
 | Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
 | Calendars | [Calendars](components/calendars.md) |
 | Dashboards | [Dashboards](components/dashboards.md) |
-| Modals and other overlays | [Overlays](components/overlays.md) |
+| Form validation and submission | [Modals and forms](components/modals-and-forms.md) |
+| Dialogs, floating menus, and tooltips | [Overlays](components/overlays.md) |
+| Generate implementation and colocated test outlines | [Scaffolding](scaffolding.md) |

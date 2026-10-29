@@ -13,20 +13,9 @@ Keep list-only totals and direct-record-only relationships with the endpoint tha
 
 Keep product behavior with its capability even when several pages use it. Use `services/shared/` only for technical mechanisms such as audit writing, cursor encoding, or file uploads.
 
-Program-cycle reads and mutations belong to
-[`programming/cycles/programCycleService.ts`](../../backend/src/services/programming/cycles/programCycleService.ts).
-Cohort creation, updates, and deletion remain in the cohort service. The cycle,
-cohort, enrollment, and session routes and controllers own their HTTP capabilities
-separately; existing `/cohorts` URLs remain stable and shared validation types stay
-in `cohortSchemas.ts`.
-
-Program-side checked cycles use `cohorts/assignmentService.ts`; cycle saves replace
-checked programs in the cycle service transaction. Retained relationships keep
-their cohort IDs. Unchecking a relationship with any session, enrollment (including
-withdrawn youth), or logged hours fails the entire save. Assignment and session
-schedule mutations lock program rows, then cycles, then cohort rows; cycle editing
-locks all current programs in ID order before its cycle to serialize both editors.
-Child foreign keys coordinate enrollment and hours insertion with cohort removal.
+See the [API source map](api.md#find-an-api-owner) for domain owners and
+[program-cycle assignments](api.md#program-cycle-assignments) for a transaction
+that spans several related services.
 
 ## Write the public operations first
 
@@ -62,3 +51,13 @@ Use the repository error classes for invalid input, denied or concealed access, 
 - Include the relationship IDs needed to understand the change.
 - Do not keep a database transaction open while sending email, calling a provider, or writing a file unless that integration explicitly requires it.
 - Decide what happens when the database succeeds but the external operation fails, including retry and duplicate handling.
+
+## Render reports
+
+Keep report data and file rendering in separate owners.
+
+- A service under `src/services/<product-area>/` checks access, queries data, and calculates the report result. Its result can serve JSON and file endpoints.
+- A renderer under `src/reports/<product-area>/` accepts that result and produces a file. Renderers do not query the database, check permissions, or depend on Express requests and responses.
+- The controller obtains the authorized report result, passes it to the renderer, and sends the file with the appropriate HTTP headers.
+
+For cohort youth reports, `getCohortYouthReport` supplies the data and `renderCohortYouthPdf` renders the PDF. Keep format-specific layout and filename generation with the renderer. Test the report data at its service or API boundary and verify the file endpoint returns a valid response.

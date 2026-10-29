@@ -9,7 +9,7 @@ Turn approved working-tree changes into traceable, tested pull requests without 
 
 Enter this workflow only after an explicit shipping request. Neither implementation, full implementation, mapping, review, nor approval of the code authorizes shipping. The request may authorize one named concern or all approved concerns in the current map; do not broaden its scope.
 
-Read [`docs/workflows/shipping.md`](../../../docs/workflows/shipping.md) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) when selecting or evaluating local verification evidence.
+Read the [review and merge guide](../../../docs/workflows/changes.md#shipping) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) when selecting or evaluating local verification evidence.
 
 Keep shipping single-threaded and serial. Do not delegate branch, stash, commit, pull-request, check-waiting, merge, or base-synchronization operations: they share mutable Git and GitHub state and must complete in one ordered workflow.
 

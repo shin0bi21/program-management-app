@@ -15,6 +15,37 @@ const columns: TableColumnDef<Row>[] = [
 ];
 
 describe('Table', () => {
+  it('keeps loaded rows with an explicit load-more recovery action', () => {
+    const retry = vi.fn();
+    render(<Table ariaLabel="Accounts" columns={columns} data={[{ id: 'one', name: 'Avery' }]}
+      keyExtractor={row => row.id} nextPageUnavailable={{ onRetry: retry }} />);
+
+    expect(screen.getByText('Avery')).toBeInTheDocument();
+    expect(screen.getByText('More rows unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('skips unchanged cells during selection and query-state changes', () => {
+    const cell = vi.fn(({ row }: { row: { original: Row } }) => row.original.name);
+    const stableColumns: TableColumnDef<Row>[] = [{ id: 'name', header: 'Name', cell }];
+    const data = [{ id: 'one', name: 'Avery' }, { id: 'two', name: 'Blair' }, { id: 'three', name: 'Casey' }];
+    const select = vi.fn();
+    const keyExtractor = (row: Row) => row.id;
+    const { rerender } = render(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="one" />);
+    cell.mockClear();
+
+    rerender(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="two" loadingNextPage />);
+    expect(cell.mock.calls.map(([{ row }]) => row.original.id)).toEqual(['one', 'two']);
+    cell.mockClear();
+
+    rerender(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="two" refreshing />);
+    expect(cell).not.toHaveBeenCalled();
+  });
+
   it('emits controlled backend sorting from sortable headers', () => {
     const onSortingChange = vi.fn();
     const sortableColumns: TableColumnDef<Row>[] = [

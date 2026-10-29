@@ -1,5 +1,10 @@
 # Frontend pages
 
+Use the collection-page pattern below for authenticated routes with shared controls,
+data views, and dashboards. Informational, authentication, and public pages keep the
+shell their task requires; do not add empty headers, dashboards, or data views merely
+to match the scaffold. Ownership and colocated test boundaries still apply.
+
 ## Build the page in scaffold order
 
 Keep the route component in this execution order, omitting phases the page does not need:
@@ -62,7 +67,7 @@ Route tests own cross-view reconciliation and dialog entry wiring. Child owners 
 
 ## Compose page components
 
-Render one `main.page-container` with `PageHeader`, `PageErrorOverlay` and `PageBody` in that
+For a collection page, render one `main.page-container` with `PageHeader`, `PageErrorOverlay` and `PageBody` in that
 order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
 or summary plus one active data view to the body.
 
@@ -96,7 +101,7 @@ Do not repeat those matrices in every route test.
 
 ## Scaffolding
 
-Preview a root or route-family page with the page preset:
+Preview an authenticated collection page at the root or within a route family:
 
 ```bash
 npm run scaffold:frontend -- page Leads --dry-run
@@ -106,7 +111,7 @@ npm run scaffold:frontend -- page Staff/Schedules --dry-run
 Remove `--dry-run` to generate the skeleton below.
 
 Tests are generated automatically. See the
-[calendar-page example](../../workflows/testing.md#scaffold-implementation-and-tests-together)
+[calendar-page example](../scaffolding.md)
 for combining page and component presets with separate test owners.
 
 The page preset generates the route and its test plus `hooks/data/use<Page>Data.ts` and

@@ -59,28 +59,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 | `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → `ValidationError`) |
 | `src/types/` | TypeScript shape declarations only — no runtime logic |
 
----
-
-## 1. Error classes
-
-```
-AppError (base, 500)
-├── BadRequestError        400
-├── ValidationError        400  — carries details[] (Zod field errors)
-├── UnauthorizedError      401
-├── ForbiddenError         403
-├── NotFoundError          404
-├── ConflictError          409  — mapped from Postgres 23505
-├── LockedError            423
-├── TooManyRequestsError   429
-├── DbConnectionError      503  — DB unreachable
-├── ServiceUnavailableError 503 — upstream dependency down
-└── InternalServerError    500  — unexpected error
-```
-
-```ts
-throw new NotFoundError('User not found');
-```
+<a id="1-error-classes"></a>
 
 ## Choose an error
 

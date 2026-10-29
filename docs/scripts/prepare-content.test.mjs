@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { prepareContent } from './prepare-content.mjs';
+import { buildSidebar } from './navigation.mjs';
 
 async function createRepository() {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'docs-content-'));
@@ -19,7 +20,21 @@ async function createRepository() {
   await writeFile(path.join(repoRoot, 'docs/frontend/components/README.md'), '# Components\n\nComponent guide.\n');
   await writeFile(path.join(repoRoot, 'docs/frontend/components/buttons.md'), '# Buttons\n\nButton guide.\n');
   await writeFile(path.join(repoRoot, 'docs/workflows/testing.md'), '# Testing\n\nWorkflow guide.\n');
-  return { repoRoot, outputDir, cleanup: () => rm(repoRoot, { recursive: true, force: true }) };
+  const navigationEntries = [
+    { label: 'Overview', source: 'README.md' },
+    { label: 'Website', source: 'docs/README.md' },
+    { label: 'Backend', items: [
+      { label: 'Overview', source: 'docs/backend/README.md' },
+      { label: 'HTTP flow', source: 'docs/backend/http.mmd' },
+    ] },
+    { label: 'Frontend', items: [
+      { label: 'Overview', source: 'docs/frontend/README.md' },
+      { label: 'UI basics', source: 'docs/frontend/components/README.md' },
+      { label: 'Buttons', source: 'docs/frontend/components/buttons.md' },
+    ] },
+    { label: 'Verify', items: [{ label: 'Testing', source: 'docs/workflows/testing.md' }] },
+  ];
+  return { repoRoot, outputDir, navigationEntries, cleanup: () => rm(repoRoot, { recursive: true, force: true }) };
 }
 
 test('builds the configured corpus, route manifest, frontmatter, and Mermaid source', async t => {
@@ -43,19 +58,14 @@ test('builds the configured corpus, route manifest, frontmatter, and Mermaid sou
   assert.doesNotMatch(rootOutput, /^# Product/m);
   assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /```mermaid\n%% HTTP lifecycle\nsequenceDiagram/);
   assert.equal(manifest.sources[path.join(fixture.outputDir, 'backend/index.md')], 'docs/backend/README.md');
-  assert.match(await readFile(path.join(fixture.outputDir, 'website.md'), 'utf8'), /title: "Docs Index"/);
-  assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /title: "HTTP Lifecycle"/);
+  assert.match(await readFile(path.join(fixture.outputDir, 'website.md'), 'utf8'), /title: "Docs index"/);
+  assert.match(await readFile(path.join(fixture.outputDir, 'backend/http.md'), 'utf8'), /title: "HTTP lifecycle"/);
   assert.deepEqual(manifest.sidebar.find(group => group.label === 'Frontend'), {
     label: 'Frontend',
     items: [
       { slug: 'frontend', label: 'Overview' },
-      {
-        label: 'Components',
-        items: [
-          { slug: 'frontend/components', label: 'Overview' },
-          { slug: 'frontend/components/buttons' },
-        ],
-      },
+      { slug: 'frontend/components', label: 'UI basics' },
+      { slug: 'frontend/components/buttons', label: 'Buttons' },
     ],
   });
 });
@@ -76,4 +86,19 @@ test('fails on generated path collisions before writing output', async t => {
   await writeFile(path.join(fixture.repoRoot, 'docs/backend/http.md'), '# HTTP Markdown\n');
 
   await assert.rejects(prepareContent(fixture), /Generated content collision/);
+});
+
+
+test('curated navigation preserves task order and rejects missing, duplicate, and unknown documents', () => {
+  const routes = { 'README.md': '/', 'docs/README.md': '/website/' };
+  const overview = { label: 'Overview', source: 'README.md' };
+  const website = { label: 'Website', source: 'docs/README.md' };
+
+  assert.deepEqual(buildSidebar(routes, [website, overview]), [
+    { label: 'Website', slug: 'website' },
+    { label: 'Overview', slug: '' },
+  ]);
+  assert.throws(() => buildSidebar(routes, [overview]), /missing from navigation: docs\/README.md/);
+  assert.throws(() => buildSidebar(routes, [overview, website, overview]), /Duplicate navigation source: README.md/);
+  assert.throws(() => buildSidebar(routes, [{ label: 'Unknown', source: 'missing.md' }]), /Unknown navigation source: missing.md/);
 });

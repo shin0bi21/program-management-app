@@ -7,6 +7,8 @@ import {
 } from './DataBuffer';
 import type { CalendarPeriod, RowItemData, RowPeriodData } from '../../types';
 
+type BufferOperationKey = 'initial' | 'left' | 'right' | 'reset';
+
 interface UseDataBufferOptions<TItem> {
   // Data loading
   initialData?: RowPeriodData<TItem>;
@@ -42,8 +44,12 @@ export function useDataBuffer<TItem>({
   const [error, setError] = useState<string | null>(null);
 
   const bufferRef = useRef<DataBuffer<TItem>>();
-  const retryRef = useRef<(() => void) | null>(null);
-  const operationRevisionRef = useRef(0);
+  const windowRevisionRef = useRef(0);
+  const operationRevisionsRef = useRef(new Map<BufferOperationKey, number>());
+  const failuresRef = useRef(new Map<BufferOperationKey, {
+    operation: () => Promise<void>;
+    message: string;
+  }>());
 
   const loadRef = useRef(load);
   const getItemIdRef = useRef(getItemId);
@@ -75,37 +81,63 @@ export function useDataBuffer<TItem>({
     return bufferRef.current;
   }, []);
 
-  /** Runs one buffer load and retains only the latest operation's retry/error result. */
-  const runBufferOperation = useCallback(function runBufferOperation(operation: () => Promise<void>) {
-    const revision = operationRevisionRef.current + 1;
-    operationRevisionRef.current = revision;
-    retryRef.current = () => runBufferOperation(operation);
+  /** Tracks the latest operation per edge while retaining failures from other edges. */
+  const runBufferOperation = useCallback(function runBufferOperation(
+    key: BufferOperationKey,
+    operation: () => Promise<void>,
+  ) {
+    const windowRevision = windowRevisionRef.current;
+    const revision = (operationRevisionsRef.current.get(key) ?? 0) + 1;
+    const previousFailure = failuresRef.current.get(key);
+
+    operationRevisionsRef.current.set(key, revision);
+    if (previousFailure) failuresRef.current.set(key, { ...previousFailure, operation });
 
     operation()
       .then(() => {
-        if (operationRevisionRef.current !== revision) return;
+        if (windowRevision !== windowRevisionRef.current
+          || operationRevisionsRef.current.get(key) !== revision) return;
 
-        retryRef.current = null;
-        setError(null);
+        failuresRef.current.delete(key);
+        // A successful edge load also confirms its prerequisite window initialization recovered.
+        if (key === 'left' || key === 'right') {
+          failuresRef.current.delete('initial');
+          failuresRef.current.delete('reset');
+        }
+
+        setError(failuresRef.current.values().next().value?.message ?? null);
       })
       .catch((cause: unknown) => {
-        if (operationRevisionRef.current === revision) setError(getErrorMessage(cause, errorMessage));
+        if (windowRevision !== windowRevisionRef.current
+          || operationRevisionsRef.current.get(key) !== revision) return;
+
+        failuresRef.current.set(key, { operation, message: getErrorMessage(cause, errorMessage) });
+
+        setError(failuresRef.current.values().next().value?.message ?? null);
       });
   }, [errorMessage]);
 
   /** Loads the initial window while sharing any in-flight initialization. */
   const initialize = useCallback((periods: readonly CalendarPeriod[]) => {
-    runBufferOperation(() => getBuffer().initialize(periods));
+    runBufferOperation('initial', () => getBuffer().initialize(periods));
   }, [getBuffer, runBufferOperation]);
 
   /** Extends the buffered window when virtualization exposes a new edge. */
   const onPeriodsBuilt = useCallback((periods: readonly CalendarPeriod[], direction: 'left' | 'right') => {
-    runBufferOperation(() => getBuffer().periodsBuilt(periods, direction));
+    if (!periods.length) return;
+
+    runBufferOperation(direction, () => getBuffer().periodsBuilt(periods, direction));
   }, [getBuffer, runBufferOperation]);
 
   /** Reloads around a replacement visible window. */
   const reset = useCallback((periods: readonly CalendarPeriod[]) => {
-    runBufferOperation(() => getBuffer().reset(periods));
+    if (!periods.length) return;
+
+    windowRevisionRef.current += 1;
+    failuresRef.current.clear();
+    operationRevisionsRef.current.clear();
+    setError(null);
+    runBufferOperation('reset', () => getBuffer().reset(periods));
   }, [getBuffer, runBufferOperation]);
 
   /** Reconciles a saved or moved record into the current buffer. */
@@ -118,8 +150,12 @@ export function useDataBuffer<TItem>({
     getBuffer().removeItem(itemId);
   }, [getBuffer]);
 
-  /** Retries the latest failed operation using the same buffer instance. */
-  const retry = useCallback(() => retryRef.current?.(), []);
+  /** Retries every failed edge so one successful load cannot hide another failed range. */
+  const retry = useCallback(() => {
+    failuresRef.current.forEach((failure, key) => {
+      runBufferOperation(key, failure.operation);
+    });
+  }, [runBufferOperation]);
   const items = useMemo(() => flattenItems(data, getItemId), [data, getItemId]);
 
   return {

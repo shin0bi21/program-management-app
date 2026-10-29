@@ -6,7 +6,7 @@ choose the local equivalent of a failed check.
 
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
-pull requests to `main` are rejected. See [Shipping](shipping.md) and
+pull requests to `main` are rejected. See [Review and merge changes](changes.md#shipping) and
 [Deployment](deployment.md) for those procedures.
 
 ## Workflow topology
@@ -47,7 +47,7 @@ stable required-check identity without coupling it to lint or shell analysis.
 
 [`scripts/ci/select-tests.ts`](../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
 
-Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests. This replaces the previous two always-on shards, which reduced wall time but repeated setup and always billed the complete frontend collection.
+Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests.
 
 Backend verification owns type checking, migrations, migration status, generated database types, selected tests, and the backend build in one database-backed job. Recognized domains run focused Jest directories in one invocation; shared infrastructure, migrations, dependencies, and unmapped backend files escalate to the complete backend suite.
 
@@ -73,20 +73,9 @@ Jobs use job-level conditions rather than workflow path filters so required chec
 
 ## Test-layer ownership
 
-| Layer | Canonical command | Environment | Normal PR CI |
-|---|---|---|---|
-| Static analysis | `bash scripts/tests/test-static.sh` | Node and shell tooling | Yes |
-| Backend API and service behavior | `bash scripts/tests/backend/test-apis.sh` | Docker locally; PostgreSQL service in CI | Yes |
-| Frontend unit/component behavior | `bash scripts/tests/frontend/test-ui.sh` | Vitest using Node or jsdom per test | Yes, related by dependency graph or full when required |
-| Browser layout and interaction | `bash scripts/tests/frontend/test-browser.sh` | Playwright with Chromium | No; scheduled/manual |
-| Standard full application suite | `bash scripts/tests/test-app.sh` | Deploy checks, backend, and frontend Vitest | Local full-suite contract |
-
-Vitest is the frontend test runner. jsdom is the default environment; browser-independent
-test files explicitly select Node with their file-level Vitest environment annotation.
-Both environments can appear in a related or full run because environment selection is
-per test file. Playwright owns behavior that depends on a real
-browser, including layout geometry, scrolling, pointer behavior, and browser focus.
-See [Testing](testing.md) for commands and focused-suite routing.
+[Testing](testing.md) owns runner commands, suite boundaries, and Node, jsdom,
+and browser environment selection. The workflow table above identifies which
+checks run on pull requests and which are scheduled or manual.
 
 ## Diagnose a failed check
 

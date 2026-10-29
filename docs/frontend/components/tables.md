@@ -76,7 +76,9 @@ export default function ExampleTable(props: ExampleTableProps) {
     } : undefined}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
+    sortableColumns={EXAMPLE_TABLE_KEYS}
     sorting={props.sorting}
     onSortingChange={props.onSortingChange}
     columnWidths={props.columnWidths}
@@ -93,6 +95,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
 - Represent initial loading, refreshing, error, empty, filtered-empty, and load-more states accurately.
 - Report the table's user-safe error to the route page for `PageErrorOverlay`, and pass a domain-named `unavailable` state with the same retry callback to `Table`. The shared table keeps its headers mounted and renders `UnavailableState` across the body. Never show a successful empty-state message when the query failed, and do not render the raw error again inside the table.
+- A next-page failure keeps loaded rows available. Pass `nextPageError` through `nextPageUnavailable` with `retryNextPage`; automatic pagination stays paused until an explicit retry succeeds. Report `error || nextPageError` to the page overlay with the matching retry action. Collection failures continue to use the body `unavailable` state.
 - Use controlled table selection only when selection has application meaning.
 
 The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not own generic selection state. Keep cross-view, cross-resource, filter-resistant, or mutation-aware selection in the page or domain hook, then pass that state through the page table. A row disappearing from one paginated or filtered result does not necessarily mean the domain selection should be cleared.
@@ -101,9 +104,9 @@ The shared `Table` receives `selectedKey` and emits `onRowSelect`; it does not o
 
 The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
 
-Keep a draft search value until `SearchInput` commits it through its Search button or Enter key. Save the trimmed search with the other preferences. Pass it through the same filter object used by the query key, API adapter and filtered-empty message. Clear resets the draft and saves an empty search. Do not debounce or defer search.
-
-Use the [grouped page-control contract](../pages/preferences.md) for search, filters and table preferences. Submit partial changes through `updatePreferences`; the shared preference hook composes rapid edits against its current value and persists the complete snapshot.
+Consume the [grouped page-control contract](../pages/preferences.md#expose-page-controls).
+Use the page's applied filters consistently in the query key, API inputs, and filtered-empty
+message; the table does not implement draft search or preference persistence.
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table rows](table-rows.md).
 

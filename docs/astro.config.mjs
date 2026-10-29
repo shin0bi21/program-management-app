@@ -11,6 +11,14 @@ const manifest = await prepareContent({ gitRef });
 
 export default defineConfig({
   output: 'static',
+  redirects: {
+    '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',
+    '/backend/policies/': '/backend/authorization/',
+    '/backend/reports/': '/backend/services/#render-reports',
+    '/workflows/review/': '/workflows/changes/#review',
+    '/workflows/shipping/': '/workflows/changes/#shipping',
+    '/workflows/github-credentials/': '/workflows/access/#server-github-access',
+  },
   markdown: {
     processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),
   },
@@ -43,11 +51,7 @@ export default defineConfig({
       title: 'Be Original · Developer Docs',
       description: 'Architecture, development guides, and operational runbooks for Be Original.',
       customCss: ['./src/styles/custom.css'],
-      sidebar: [
-        { label: 'Overview', slug: '' },
-        { label: 'Docs Website', slug: 'website' },
-        ...manifest.sidebar,
-      ],
+      sidebar: manifest.sidebar,
     }),
   ],
 });

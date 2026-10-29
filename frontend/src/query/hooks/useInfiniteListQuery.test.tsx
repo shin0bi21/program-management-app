@@ -102,4 +102,73 @@ describe('useInfiniteListQuery', () => {
     expect(result.current.error).toBe('');
     expect(queryFn).toHaveBeenCalledTimes(2);
   });
+  it('keeps collection refresh failures separate and blocks automatic pagination', async () => {
+    const queryFn = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ id: '1', name: 'First' }], nextCursor: 'next' })
+      .mockRejectedValueOnce(new Error('Refresh failed'));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useInfiniteListQuery<Row>({
+      queryKey: ['refresh-failure'], queryFn, errorMessage: 'Could not load rows',
+    }), { wrapper: createQueryClientWrapper(client) });
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.error).toBe('Refresh failed'));
+    expect(result.current.nextPageError).toBe('');
+    expect(result.current.hasNextPage).toBe(false);
+    act(() => result.current.loadNextPage());
+    expect(queryFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not paginate a disabled cached collection', async () => {
+    const queryFn = vi.fn().mockResolvedValue({ rows: [{ id: '1', name: 'First' }], nextCursor: 'next' });
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(({ enabled }) => useInfiniteListQuery<Row>({
+      queryKey: ['disabled-pagination'], queryFn, errorMessage: 'Could not load rows', enabled,
+    }), { initialProps: { enabled: true }, wrapper: createQueryClientWrapper(client) });
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    rerender({ enabled: false });
+    expect(result.current.hasNextPage).toBe(false);
+    act(() => { result.current.loadNextPage(); result.current.retryNextPage(); });
+    expect(queryFn).toHaveBeenCalledOnce();
+  });
+
+  it('retains stable rows and pauses automatic pagination after repeated failures until explicit recovery', async () => {
+    const queryFn = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ id: '1', name: 'First' }], nextCursor: 'next' })
+      .mockRejectedValueOnce(new Error('More failed'))
+      .mockRejectedValueOnce(new Error('More failed again'))
+      .mockResolvedValueOnce({ rows: [{ id: '2', name: 'Second' }], nextCursor: 'third' });
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(() => useInfiniteListQuery<Row>({
+      queryKey: ['pagination-failure'], queryFn, errorMessage: 'Could not load rows',
+    }), { wrapper: createQueryClientWrapper(client) });
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    const originalRows = result.current.rows;
+    rerender();
+    expect(result.current.rows).toBe(originalRows);
+
+    act(() => result.current.loadNextPage());
+    await waitFor(() => expect(result.current.nextPageError).toBe('More failed'));
+    expect(result.current.error).toBe('');
+    expect(result.current.rows).toBe(originalRows);
+    expect(result.current.hasNextPage).toBe(false);
+
+    act(() => result.current.loadNextPage());
+    expect(queryFn).toHaveBeenCalledTimes(2);
+    act(() => result.current.retryNextPage());
+    await waitFor(() => expect(result.current.nextPageError).toBe('More failed again'));
+    act(() => result.current.loadNextPage());
+    expect(queryFn).toHaveBeenCalledTimes(3);
+
+    act(() => result.current.retryNextPage());
+    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    expect(result.current.rows[0]).toBe(originalRows[0]);
+    expect(result.current.nextPageError).toBe('');
+    expect(result.current.hasNextPage).toBe(true);
+    expect(queryFn).toHaveBeenLastCalledWith(expect.objectContaining({ pageParam: 'next' }));
+  });
+
 });

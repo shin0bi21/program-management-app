@@ -71,6 +71,94 @@ describe('DataBuffer', () => {
     }));
   });
 
+  it('propagates a pending initialization failure and retries initialization on the next edge load', async () => {
+    let rejectInitial!: (error: Error) => void;
+    const load = vi.fn()
+      .mockImplementationOnce(() => new Promise((_, reject) => { rejectInitial = reject; }))
+      .mockResolvedValue({});
+    const buffer = new DataBuffer({ load, onData: vi.fn(), targetSize: 2, threshold: 0 });
+    const periods = buildInitialDayPeriods(new Date(2026, 7, 12), 1);
+    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const replenishing = buffer.periodsBuilt(periods, 'right');
+    const results = Promise.allSettled([initializing, replenishing]);
+
+    rejectInitial(new Error('offline'));
+
+    expect(await results).toEqual([
+      expect.objectContaining({ status: 'rejected' }),
+      expect.objectContaining({ status: 'rejected' }),
+    ]);
+    await buffer.periodsBuilt(periods, 'right');
+    expect(load.mock.calls.map(([range]) => range.direction)).toEqual(['initial', 'initial', 'right']);
+  });
+
+  it('removes omitted overlapping records while retaining disjoint records during an adjacent load', async () => {
+    type Task = { id: string; start: string; end: string };
+    const disjoint = { id: 'outside', start: '2026-08-08', end: '2026-08-09' };
+    const deleted = { id: 'deleted', start: '2026-08-08', end: '2026-08-13' };
+    const moved = { id: 'moved', start: '2026-08-08', end: '2026-08-13' };
+    const updated = { ...moved, start: '2026-08-12', end: '2026-08-13' };
+    const untouched = { '2026-08-08': [{ ...disjoint, id: 'untouched' }] };
+    const onData = vi.fn();
+    const load = vi.fn()
+      .mockResolvedValueOnce({ staff: { '2026-08-08': [disjoint, deleted, moved] }, untouched })
+      .mockResolvedValueOnce({ other: { '2026-08-12': [updated] } });
+    const buffer = new DataBuffer<Task>({
+      load, onData, getItemId: item => item.id, getItemRange: item => item,
+      targetSize: 2, threshold: 0, replenishSize: 2,
+    });
+    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const untouchedSnapshot = onData.mock.lastCall?.[0].untouched;
+
+    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 11), 1), 'right');
+
+    expect(onData).toHaveBeenLastCalledWith({
+      staff: { '2026-08-08': [disjoint] }, other: { '2026-08-12': [updated] }, untouched,
+    });
+    expect(onData.mock.lastCall?.[0].staff['2026-08-08'][0]).toBe(disjoint);
+    expect(onData.mock.lastCall?.[0].untouched).toBe(untouchedSnapshot);
+    expect(onData.mock.lastCall?.[0].untouched['2026-08-08']).toBe(untouchedSnapshot['2026-08-08']);
+  });
+
+  it('preserves newer local overrides when a sparse reset omits their buckets', async () => {
+    type Task = { id: string; start: string; end: string };
+    const deleted = { id: 'deleted', start: '2026-08-07', end: '2026-08-13' };
+    const local = { id: 'local', start: '2026-08-08', end: '2026-08-14' };
+    let resolveReset!: (data: RowPeriodData<Task>) => void;
+    const onData = vi.fn();
+    const load = vi.fn().mockResolvedValueOnce({ staff: { '2026-08-07': [deleted] } })
+      .mockImplementationOnce(() => new Promise<RowPeriodData<Task>>(resolve => { resolveReset = resolve; }));
+    const buffer = new DataBuffer<Task>({
+      load, onData, getItemId: item => item.id, getItemRange: item => item,
+      targetSize: 2,
+    });
+    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 1);
+    await buffer.initialize(periods);
+    const resetting = buffer.reset(periods);
+    await vi.waitFor(() => expect(resolveReset).toBeTypeOf('function'));
+
+    buffer.removeItem(deleted.id);
+    buffer.upsertItem('staff', local.start, local);
+    resolveReset({});
+    await resetting;
+
+    expect(onData).toHaveBeenLastCalledWith({ staff: { '2026-08-08': [local] } });
+  });
+
+  it('clears omitted rows and buckets when resetting an overlapping range with an empty response', async () => {
+    const onData = vi.fn();
+    const load = vi.fn()
+      .mockResolvedValueOnce({ staff: { '2026-08-09': [{ id: 'deleted' }] } })
+      .mockResolvedValueOnce({});
+    const buffer = new DataBuffer({ load, onData, getItemId: (item: { id: string }) => item.id });
+    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 1);
+    await buffer.initialize(periods);
+
+    await buffer.reset(periods);
+
+    expect(onData).toHaveBeenLastCalledWith({ staff: { '2026-08-09': [] } });
+  });
+
   it('recenters its runway when virtualization jumps beyond the loaded range', async () => {
     const load = vi.fn().mockResolvedValue({});
     const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);

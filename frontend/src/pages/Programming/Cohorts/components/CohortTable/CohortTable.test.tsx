@@ -13,7 +13,7 @@ const tableState = vi.hoisted<ReturnType<typeof useCohortTableData>>(() => ({
   refreshing: false,
   error: '',
   hasNextPage: false,
-  loadingNextPage: false,
+  loadingNextPage: false, nextPageError: '', retryNextPage: vi.fn(),
   loadNextPage: vi.fn(),
   retry: vi.fn(),
 }));
