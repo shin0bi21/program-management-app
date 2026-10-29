@@ -14,16 +14,12 @@ const noPrograms: Program[] = [];
 
 export default function useSessionTable({
   programs = noPrograms,
-  canWriteAttendance,
   canWriteSessions,
-  onTakeAttendance,
   onEdit,
   onDelete,
 }: {
   programs?: Program[];
-  canWriteAttendance: boolean;
   canWriteSessions: boolean;
-  onTakeAttendance: (session: CohortSession) => void;
   onEdit: (session: CohortSession) => void;
   onDelete: (session: CohortSession) => void;
 }) {
@@ -62,7 +58,7 @@ export default function useSessionTable({
       accessorFn: session => session.state,
       cell: ({ row: { original: session } }) => <StatusBadge status={session.state} label={session.state.charAt(0).toUpperCase() + session.state.slice(1)} />,
     },
-    ...(canWriteAttendance || canWriteSessions ? [{
+    ...(canWriteSessions ? [{
       id: 'actions',
       size: 40,
       enableResizing: false,
@@ -71,13 +67,10 @@ export default function useSessionTable({
       cell: ({ row: { original: session } }: CellContext<CohortSession, unknown>) => <ActionsMenu
         ariaLabel={`More actions for ${session.theme}`}
         items={[
-          ...(canWriteAttendance ? [{ id: 'attendance', label: 'Take Attendance', onClick: () => onTakeAttendance(session) }] : []),
-          ...(canWriteSessions ? [
-            { id: 'edit', label: 'Edit Session', onClick: () => onEdit(session) },
-            { id: 'delete', label: 'Delete Session', variant: 'danger' as const, onClick: () => onDelete(session) },
-          ] : []),
+          { id: 'edit', label: 'Edit', onClick: () => onEdit(session) },
+          { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => onDelete(session) },
         ]}
       />,
     }] : []),
-  ], [programs, canWriteAttendance, canWriteSessions, onDelete, onEdit, onTakeAttendance]);
+  ], [programs, canWriteSessions, onDelete, onEdit]);
 }
