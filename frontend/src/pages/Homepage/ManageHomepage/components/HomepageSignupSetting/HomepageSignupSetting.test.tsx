@@ -44,7 +44,7 @@ describe('HomepageSignupSetting', () => {
     state.signupEnabled = undefined;
     state.loading = true;
     render(<HomepageSignupSetting />);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading signup setting');
+    expect(screen.getByRole('status', { name: 'Loading signup setting…' })).toBeInTheDocument();
     expect(screen.queryByText('Closed')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });

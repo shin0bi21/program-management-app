@@ -39,4 +39,22 @@ describe('TaskHoursLoggedDashboardCard', () => {
 
     expect(onLogHours).toHaveBeenCalledOnce();
   });
+  it('keeps its shell but closes an open report when the task changes or clears', () => {
+    const view = render(<TaskHoursLoggedDashboardCard task={task} />);
+    const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article');
+    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
+    expect(screen.getByRole('dialog', { name: task.title })).toBeInTheDocument();
+
+    view.rerender(<TaskHoursLoggedDashboardCard task={{ ...task, id: 'task-2', title: 'New task' }} />);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')).toBe(card);
+    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
+    expect(screen.getByRole('dialog', { name: 'New task' })).toBeInTheDocument();
+
+    view.rerender(<TaskHoursLoggedDashboardCard task={null} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+  });
+
 });

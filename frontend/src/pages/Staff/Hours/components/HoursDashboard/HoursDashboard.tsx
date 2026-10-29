@@ -37,61 +37,50 @@ export default function HoursDashboard({
   const unavailableMessage = staff && cycle
     ? 'Hours overview is unavailable.'
     : 'Select a staff member to view their hours overview.';
-  const stateMessage = overviewData.status === 'loading'
-    ? 'Loading hours overview…'
-    : unavailableMessage;
+  const data = overviewData.status === 'ready' ? overviewData.data : null;
+  const payPeriod = data?.payPeriod;
+  const biweeklyAverage = data?.biweeklyAverage;
+  const payPeriodLabel = payPeriod
+    ? formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd)
+    : null;
+  const sharedProps = {
+    loading: overviewData.status === 'loading',
+    scopeKey: JSON.stringify([staff?.id, cycle?.id]),
+    emptyMessage: unavailableMessage,
+    unavailable: overviewData.status === 'error'
+      ? { title: 'Hours overview unavailable', onRetry: overviewData.retry }
+      : undefined,
+  };
+  const payPeriodProps = payPeriod ? {
+    total: payPeriod.totalHours,
+    modalTitle: staff?.name ?? '',
+    modalSubtitle: payPeriodLabel ?? '',
+    breakdown: payPeriod.breakdown.map(item => [item.label, item.hours] as [string, number]),
+  } : {};
+  const averageProps = biweeklyAverage ? {
+    total: biweeklyAverage.averageHours,
+    modalTitle: staff?.name ?? '',
+    modalSubtitle: `${cycle?.name ?? ''} · Biweekly Average`,
+    breakdown: biweeklyAverage.breakdown.map(item => [item.label, item.hours] as [string, number]),
+  } : {};
 
-  if (overviewData.status === 'error') {
-    return <>
-      <HoursDashboardCard
-        title="Hours This Pay Period"
-        emptyMessage=""
-        unavailable={{ title: 'Hours overview unavailable', onRetry: overviewData.retry }}
-      />
-      <HoursDashboardCard
-        title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
-        emptyMessage=""
-        unavailable={{ title: 'Hours overview unavailable', onRetry: overviewData.retry }}
-      />
-    </>;
-  }
-
-  if (overviewData.status !== 'ready') {
-    const showTitles = Boolean(staff);
-    return <>
-      <HoursDashboardCard title={showTitles ? 'Hours This Pay Period' : undefined} emptyMessage={stateMessage} />
-      <HoursDashboardCard
-        title={showTitles ? `Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}` : undefined}
-        emptyMessage={stateMessage}
-      />
-    </>;
-  }
-
-  const { payPeriod, biweeklyAverage } = overviewData.data;
-  const payPeriodLabel = formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd);
   return <>
     <HoursDashboardCard
+      {...sharedProps}
+      {...payPeriodProps}
       title="Hours This Pay Period"
-      total={payPeriod.totalHours}
-      modalTitle={staff?.name ?? ''}
-      modalSubtitle={payPeriodLabel}
-      breakdown={payPeriod.breakdown.map(item => [item.label, item.hours])}
-      emptyMessage={unavailableMessage}
       details={[
         ['Current Pay Period', payPeriodLabel],
-        ['Hours', payPeriod.totalHours.toFixed(2)],
+        ['Hours', payPeriod?.totalHours.toFixed(2) ?? null],
       ]}
     />
     <HoursDashboardCard
+      {...sharedProps}
+      {...averageProps}
       title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
-      total={biweeklyAverage.averageHours}
-      modalTitle={staff?.name ?? ''}
-      modalSubtitle={`${cycle?.name ?? ''} · Biweekly Average`}
-      breakdown={biweeklyAverage.breakdown.map(item => [item.label, item.hours])}
-      emptyMessage={unavailableMessage}
       details={[
-        ['Cycle', cycle?.name ?? ''],
-        ['Biweekly Average', biweeklyAverage.averageHours.toFixed(2)],
+        ['Cycle', cycle?.name ?? null],
+        ['Biweekly Average', biweeklyAverage?.averageHours.toFixed(2) ?? null],
       ]}
     />
   </>;

@@ -6,9 +6,6 @@
 .dashboard-card.task-overview-card {
   position: relative;
   justify-content: flex-start;
-  height: 75px;
-  min-height: 75px;
-  padding: .75rem 1rem;
 }
 
 .task-overview-card__accessible-title {
@@ -25,6 +22,9 @@
 
 .task-overview-card__layout {
   flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .task-overview-card__metrics {
@@ -39,15 +39,16 @@
 
 .task-overview-card__metrics dt {
   color: var(--color-muted);
-  font-size: .74rem;
+  font-size: var(--dashboard-card-label-size);
   line-height: 1.15;
 }
 
 .task-overview-card__metrics dd {
-  margin: 3px 0 0;
+  margin: var(--dashboard-card-value-gap) 0 0;
   color: var(--color-ink);
-  font-size: 1.35rem;
+  font-size: var(--dashboard-card-value-size);
   font-weight: 750;
+  line-height: 1;
 }
 
 .task-overview-card__metric-upcoming dt,
@@ -216,8 +217,6 @@
 @media (max-width: 520px) {
   .dashboard-card.task-overview-card {
     align-items: stretch;
-    height: auto;
-    min-height: 75px;
   }
 
   .task-overview-card__metrics {

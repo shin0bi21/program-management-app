@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { formatHours, formatShortDate } from '../../../../../../common/utils/date';
@@ -10,10 +10,11 @@ export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
   task: Task | null;
   onLogHours?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  useEffect(() => setOpenTaskId(null), [task?.id]);
   const maxDailyHours = task ? Math.max(...task.loggedHoursByDate.map(entry => entry.hours), 1) : 1;
   return <>
-    <article className="dashboard-card task-hours-breakdown-card">
+    <article className="dashboard-card dashboard-card--short task-hours-breakdown-card">
       <h2 className="task-hours-breakdown__accessible-title">Hours Logged</h2>
       {task ? <>
         <div className="dashboard-card__compact-layout task-hours-breakdown__layout">
@@ -22,12 +23,12 @@ export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
           </dl>
           <div className="dashboard-card__compact-action task-hours-breakdown__actions">
             {onLogHours && <Button size="sm" onClick={onLogHours}>Log Hours</Button>}
-            <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setOpen(true)}>See Breakdown</Button>
+            <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setOpenTaskId(task.id)}>See Breakdown</Button>
           </div>
         </div>
       </> : <p className="task-hours-breakdown__empty">Click a task to view its logged hours.</p>}
     </article>
-    <Modal isOpen={open} onClose={() => setOpen(false)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
+    <Modal isOpen={Boolean(task) && openTaskId === task?.id} onClose={() => setOpenTaskId(null)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
       {task && <dl className="task-hours-breakdown__details">
         <div><dt>Start</dt><dd>{formatShortDate(task.startDate)}</dd></div>
         <div><dt>End</dt><dd>{formatShortDate(task.dueDate)}</dd></div>

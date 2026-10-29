@@ -26,9 +26,6 @@ export default function SessionNotesDashboardCard({
 }) {
   const workflow = useSessionNotes({ queryKey, session, onErrorChange });
   const { query, noteTarget, editNote, detailNote, confirmAction, loadNotes, openAdd, openEdit, closeEditor, setDetailNote, requestDelete, setConfirmAction } = workflow;
-  const title = session && !query.isLoading && !query.error
-    ? `Session Notes (${query.data?.length ?? 0})`
-    : 'Session Notes';
   const notes = query.data ?? [];
   const detailNoteIndex = detailNote
     ? notes.findIndex(note => note.id === detailNote.id)
@@ -39,12 +36,13 @@ export default function SessionNotesDashboardCard({
 
   return <>
     <DashboardCard
-      title={title}
+      title="Session Notes"
+      loading={Boolean(session) && query.isLoading}
+      loadingLabel="Loading notes…"
       emptyMessage={session ? 'No notes.' : 'No session selected.'}
       action={canWrite ? <Button size="sm" variant="secondary" disabled={!session} aria-label="Add notes" onClick={openAdd}>+ Add</Button> : undefined}
     >
-      {session ? query.isLoading ? <p className="dashboard-card__empty">Loading notes…</p>
-        : query.error ? <UnavailableState compact title="Session notes unavailable" onRetry={query.refetch} />
+      {session ? query.error ? <UnavailableState compact title="Session notes unavailable" onRetry={query.refetch} />
         : query.data?.length ? <div className="note-list">{query.data.map(note => <SessionNoteRow
           key={note.id}
           note={note}

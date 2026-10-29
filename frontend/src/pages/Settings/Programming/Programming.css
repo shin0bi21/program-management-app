@@ -8,6 +8,12 @@
   padding: 0;
 }
 
+/* These panels contain management tables rather than compact dashboard summaries. */
+.programming-settings-panel {
+  height: auto;
+  min-height: var(--dashboard-card-height);
+}
+
 @media (min-width: 1001px) {
   .programming-settings-page .page-body {
     display: grid;
@@ -16,7 +22,7 @@
 
   .programming-settings-page .page-dashboard,
   .programming-settings-page .page-table,
-  .programming-settings-page .dashboard-card {
+  .programming-settings-page .programming-settings-panel {
     height: 100%;
   }
 

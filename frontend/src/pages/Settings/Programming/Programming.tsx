@@ -40,6 +40,9 @@ export default function Programming() {
   // View composition.
   const programsPanel = <DashboardCard
     title="Programs"
+    className="programming-settings-panel"
+    loading={data.programsLoading}
+    loadingLabel="Loading programs…"
     action={<Button size="sm" onClick={() => modals.program.open(null)}>+ Add Program</Button>}
   >
     <ProgramTable
@@ -53,6 +56,9 @@ export default function Programming() {
 
   const cyclesPanel = <DashboardCard
     title="Cycles"
+    className="programming-settings-panel"
+    loading={data.cyclesLoading}
+    loadingLabel="Loading cycles…"
     action={<Button size="sm" onClick={() => modals.cycle.open(null)}>+ Add Cycle</Button>}
   >
     <CycleTable

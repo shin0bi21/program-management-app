@@ -1,10 +1,4 @@
-.dashboard-card.program-dashboard-card {
-  height: auto;
-  min-height: 116px;
-}
-
 .program-dashboard-card .dashboard-card__header {
-  margin-bottom: var(--space-2);
   flex-wrap: wrap;
 }
 
