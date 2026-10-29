@@ -151,7 +151,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
   });
 
-  it('opens Programming directly and closes the mobile sidebar', async () => {
+  it('opens Sessions from Programming and closes the mobile sidebar', async () => {
     authState.permissions = ['read:sessions'];
     authState.role = 'staff';
     const user = userEvent.setup();
@@ -164,24 +164,43 @@ describe('AppNavigation', () => {
     );
 
     const programming = screen.getByRole('button', { name: 'Programming' });
-    expect(programming).not.toHaveAttribute('aria-haspopup');
+    expect(programming).toHaveAttribute('aria-haspopup', 'menu');
     expect(screen.queryByRole('menuitem', { name: 'Cohorts' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Programs' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    await user.click(programming);
+    await user.click(screen.getByRole('menuitem', { name: 'Sessions' }));
 
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/programming/calendar');
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/programming/sessions');
     expect(programming).toHaveClass('active');
     expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
-  it('hides Programming when only cohort read permission is granted', () => {
+  it('shows Programs independently of session access', () => {
     authState.permissions = ['read:programs'];
 
     render(<MemoryRouter><AppNavigation /></MemoryRouter>);
 
-    expect(screen.queryByRole('button', { name: 'Programming' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Programming' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Programs' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Sessions' })).not.toBeInTheDocument();
+  });
+
+  it('places Programs before Sessions and removes management from Settings', async () => {
+    authState.permissions = ['read:programs', 'read:sessions', 'write:programs'];
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><AppNavigation /><CurrentPath /></MemoryRouter>);
+
+    const programs = screen.getByRole('menuitem', { name: 'Programs' });
+    const sessions = screen.getByRole('menuitem', { name: 'Sessions' });
+    expect(programs.compareDocumentPosition(sessions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
+
+    await user.click(programs);
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/programming/programs');
+    expect(programs).toHaveClass('active');
   });
 
   it('places Programming before Leads in application navigation', () => {
@@ -323,27 +342,7 @@ describe('AppNavigation', () => {
     expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
-  it('shows programming management in Settings only with program write access', () => {
-    authState.permissions = ['write:programs'];
-    authState.role = 'admin';
-    const { rerender } = render(
-      <MemoryRouter initialEntries={['/settings/programming']}>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('menuitem', { name: 'Manage Programming' })).toHaveClass('active');
-
-    authState.permissions = ['read:programs'];
-    rerender(
-      <MemoryRouter initialEntries={['/settings/account']}>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
-  });
-
-  it('orders admin Settings destinations by user, programming, then homepage management', () => {
+  it('orders admin Settings destinations by user then homepage management', () => {
     authState.permissions = ['read:accounts', 'write:programs', 'read:homepage'];
     authState.role = 'admin';
     render(
@@ -355,7 +354,6 @@ describe('AppNavigation', () => {
     expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
       'My Account',
       'Manage Users',
-      'Manage Programming',
       'Manage Homepage',
     ]);
   });

@@ -1,0 +1,35 @@
+import { apiClient, type RequestOptions } from '../../../../http/client';
+import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../../query/types';
+import type { CohortChanges } from '../../Cohorts/cohorts.api';
+
+interface SetProgramCycleInput {
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  programIds: string[];
+}
+
+export interface SetCycleResult extends CohortChanges {
+  cycle: ProgramCycle;
+}
+
+export function getCycleList(pagination: CursorRequest<'name' | 'startsOn'>, opts?: RequestOptions) {
+  const params = new URLSearchParams({
+    sort: pagination.key,
+    direction: pagination.direction,
+    limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
+  });
+  if (pagination.cursor) params.set('cursor', pagination.cursor);
+  return apiClient.get<CursorPage<ProgramCycle>>(`/cohorts/cycles/list?${params}`, opts);
+}
+
+export function setProgramCycle(data: SetProgramCycleInput, cycleId?: string) {
+  return cycleId
+    ? apiClient.put<SetCycleResult>(`/cohorts/cycles/${cycleId}`, data)
+    : apiClient.post<SetCycleResult>('/cohorts/cycles', data);
+}
+
+export function deleteProgramCycle(cycleId: string) {
+  return apiClient.delete<{ id: string }>(`/cohorts/cycles/${cycleId}`);
+}

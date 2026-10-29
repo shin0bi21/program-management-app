@@ -36,9 +36,6 @@ Keep the heading and actions outside the scrolling data region. The shared
 Custom compact metric layouts bound scrolling to the data column; their action
 column stays outside that scrollport. Longer notes or lists never grow the whole card.
 
-Programming Settings reuses the card shell for full management tables, not overview
-summaries. Its explicitly named management panels fill the desktop content region
-and size to their table on mobile; the normal/short summary heights do not apply.
 
 The [shared shell styles](../../../frontend/src/common/components/DashboardCard/DashboardCard.css)
 own padding, header spacing, and short-card typography. Both sizes use the same outer
@@ -77,17 +74,11 @@ target so a selection change cannot present an old report under a new title.
 
 ## Separate Selection Intent from Data Availability
 
-Choose the dashboard from the user's explicit selection intent, not whether the
-selected record happens to be in a loaded table page or calendar buffer. Selecting
-a Session opens the Session dashboard immediately using the clicked record; its
-private queries show loading in their own cards. If that record leaves the buffer,
-the Session cards remain and show “No session selected.” Only explicitly selecting
-a program row switches to Program Overview. An item click that also selects its
-owning row is context synchronization, not an explicit program-dashboard request.
-
-Keep this coordination in the route or its selection hook. Shared tables/calendars
-report selection events; they do not own domain dashboard modes. Resolve a clicked
-full record in the selection update rather than waiting for a child's later effect.
+Sessions always renders its session dashboard; selecting a session supplies its record
+immediately, while selecting a calendar program row only updates scheduling context.
+If a selected session leaves the buffer, the session cards remain with their empty state.
+Programs owns the program overview and roster/report entry points, driven by its selected
+program. Shared tables and calendars report selection events without owning these workflows.
 
 ## Assign Dashboard Ownership
 

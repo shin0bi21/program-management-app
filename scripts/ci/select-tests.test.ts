@@ -41,6 +41,8 @@ test('domain backend changes select only their authoritative suite', () => {
     ['backend/src/services/outreach/leads/leadService.ts', ['tests/public', 'tests/expressionOfInterest', 'tests/leads']],
     ['backend/src/services/preferenceService.ts', ['tests/preferences']],
     ['backend/src/services/programService.ts', ['tests/programs', 'tests/referenceData']],
+    ['backend/src/services/programming/programs/programListService.ts', ['tests/programs', 'tests/referenceData']],
+    ['backend/src/services/programming/programs/programRecordQuery.ts', ['tests/programs', 'tests/referenceData']],
     ['backend/src/routes/schoolRoutes.ts', ['tests/schools', 'tests/referenceData']],
     ['backend/src/services/youth/youthService.ts', ['tests/youth']],
   ] as const;

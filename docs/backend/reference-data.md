@@ -27,7 +27,7 @@ and the authenticated My Account page. These are alternative permissions for
 minimal metadata, not permission to read or manage the complete domain records.
 Management endpoints retain their existing permissions and record policies.
 
-Staff results include only active staff/admin resources visible under the shared
+Staff results include only active staff, project manager, and administrator resources visible under the shared
 staff-resource read policy. The required `feature` determines both read
 authorization and the domain-specific `writable` flag. A Tasks capability must not
 authorize an Hours lookup or make an Hours resource writable.
@@ -57,8 +57,8 @@ API adapter.
 
 Successful mutations reconcile affected caches. Use authoritative responses when
 they contain the complete projection; otherwise invalidate or refetch the shared
-query. For example, cycle create/edit responses omit derived `state`, so Settings
-refetches the canonical cycle projection instead of inserting an incomplete row.
+query. For example, cycle create/edit responses include canonical `state`, so Programs
+reconciles both the cycle table and any loaded shared cycle choices from that response.
 Program edits also invalidate shared program labels and Sessions scheduling
 references. School edits reconcile the shared school cache.
 Account identity/status edits invalidate staff references; assignment edits also

@@ -7,7 +7,7 @@ for (const width of [1280, 390]) {
 
     for (const { story, height } of [
       { story: 'DashboardCard/LoadingAndOverflow', height: '125px' },
-      { story: 'ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
+      { story: 'pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
       { story: 'HoursDashboardCard/HoursSummary', height: '75px' },
     ]) {
       test(`${story} retains the standard height while loading`, async ({ page, mount }) => {
@@ -79,6 +79,7 @@ for (const width of [1280, 390]) {
       const component = await mount('ProgramTable/ManagementTables');
 
       for (const name of ['Programs', 'Cycles']) {
+        if (name === 'Cycles') await component.getByRole('button', { name: 'Manage Cycles' }).click();
         const table = component.getByRole('table', { name, exact: true });
         await expect(table.getByRole('row')).toHaveCount(2);
         const geometry = await table.evaluate(element => ({

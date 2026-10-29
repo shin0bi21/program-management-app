@@ -4,7 +4,7 @@ import useListQuery from '../../../../query/hooks/useListQuery';
 
 export function usePrograms({ assignedOnly = false }: { assignedOnly?: boolean } = {}) {
   const query = useListQuery<Program>({
-    queryKey: ['programs', { assignedOnly }],
+    queryKey: ['programs', 'options', { assignedOnly }],
     queryFn: ({ signal }) => getPrograms({ assignedOnly }, { signal }),
     errorMessage: 'Failed to load programs',
   });

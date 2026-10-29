@@ -23,6 +23,13 @@ Desktop and mobile navigation expose one destination contract. Selecting a desti
 4. Update navigation-owner tests for capability, visibility, active state, ordering, and navigation.
 5. Keep the route-page test focused on the page workflow rather than sidebar behavior.
 
+Programming contains Programs (`/programming/programs`, `read:programs`) and Sessions
+(`/programming/sessions`, `read:sessions`). Its group is visible with either capability.
+Program/cycle edit actions require `write:programs`; they are not a Settings destination.
+Legacy calendar, cohort, and programming-settings URLs redirect to the matching page,
+whose canonical route enforces read access. The public `/programming` homepage section
+remains separate.
+
 Public authentication routes and redirect-only aliases remain route concerns and intentionally skip navigation registration.
 
 Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners provide positioning, focus, keyboard navigation, outside/Escape dismissal, and focus return. App navigation owns only which menu is open, its domain destinations, and the callbacks and anchor refs passed to the shared primitives.

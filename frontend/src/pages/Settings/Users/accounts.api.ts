@@ -7,7 +7,7 @@ interface InviteUserInput {
   firstName: string;
   lastName: string;
   email: string;
-  role: 'staff' | 'admin';
+  role: 'staff' | 'project_manager' | 'admin';
   programIds?: string[];
 }
 

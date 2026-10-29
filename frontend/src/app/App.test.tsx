@@ -18,7 +18,9 @@ vi.mock('../auth/reauth/ReAuthProvider', () => ({
 }));
 vi.mock('./components/AppNavigation/AppNavigation', () => ({ default: () => null }));
 vi.mock('../pages/Homepage/PublicHomepage/PublicHomepage', () => ({ default: () => <h1>Homepage</h1> }));
-vi.mock('../pages/Programming/Sessions/Sessions', () => ({ default: () => <h1>Programming</h1> }));
+vi.mock('../pages/Programming/Sessions/Sessions', () => ({ default: () => <h1>Sessions</h1> }));
+
+vi.mock('../pages/Programming/Programs/Programs', () => ({ default: () => <h1>Programs</h1> }));
 
 describe('Programming routes', () => {
   beforeEach(() => {
@@ -37,42 +39,41 @@ describe('Programming routes', () => {
   });
 
   it.each([
-    '/programming/sessions?sessionId=42&view=calendar',
-    '/programming/cohorts?cohortId=7&view=calendar',
-  ])('preserves deep-link parameters when redirecting %s', async (path) => {
+    ['/programming/calendar?sessionId=42&view=calendar', '/programming/sessions', 'Sessions'],
+    ['/programming/cohorts?cohortId=7', '/programming/programs', 'Programs'],
+    ['/settings/programming', '/programming/programs', 'Programs'],
+  ])('preserves deep-link parameters when redirecting %s', async (path, destination, title) => {
     window.history.replaceState(null, '', path);
 
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Programming' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/programming/calendar');
+    expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(destination);
     expect(window.location.search).toBe(new URL(path, window.location.origin).search);
   });
 
-  it('allows session readers to open the canonical screen without program lookup access', async () => {
-    authState.permissions = ['read:sessions'];
-    window.history.replaceState(null, '', '/programming/calendar');
-
-    render(<App />);
-
-    expect(await screen.findByRole('heading', { name: 'Programming' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/programming/calendar');
-  });
-
-  it.each(['/programming/calendar', '/programming/cohorts'])('requires session read permission for the combined screen through %s', async (path) => {
-    authState.permissions = ['read:programs'];
+  it.each([
+    ['/programming/sessions', 'read:sessions', 'Sessions'],
+    ['/programming/programs', 'read:programs', 'Programs'],
+  ])('allows the matching reader to open %s', async (path, permission, title) => {
+    authState.permissions = [permission];
     window.history.replaceState(null, '', path);
 
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Homepage' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/');
-    expect(screen.queryByRole('heading', { name: 'Programming' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(path);
   });
 
-  it('requires program lookup access on the old cohort route', async () => {
-    authState.permissions = ['read:sessions'];
-    window.history.replaceState(null, '', '/programming/cohorts');
+  it.each([
+    ['/programming/sessions', 'read:programs'],
+    ['/programming/calendar', 'read:programs'],
+    ['/programming/programs', 'read:sessions'],
+    ['/programming/cohorts', 'read:sessions'],
+    ['/settings/programming', 'write:programs'],
+  ])('requires the destination read permission through %s', async (path, permission) => {
+    authState.permissions = [permission];
+    window.history.replaceState(null, '', path);
 
     render(<App />);
 

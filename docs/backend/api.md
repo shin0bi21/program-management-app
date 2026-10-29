@@ -84,6 +84,13 @@ cross-domain selection contract.
 
 ## Programming
 
+The Programs page owns program and cycle management; Sessions owns scheduling and
+attendance. These pages use the programming APIs independently of Settings. Staff
+retain assigned-program roster/session access. Project managers have all-program
+scope and staff permissions plus `write:programs`; administrators retain their broader
+account and staff-resource authority. Every endpoint still checks its own capability.
+Program/cycle options used elsewhere remain shared reference data.
+
 ### Program-Cycle Assignments
 
 Programs and cycles share cohort relationships. Assignment edits replace the

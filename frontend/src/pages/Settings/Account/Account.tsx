@@ -27,7 +27,7 @@ export default function Account() {
       </div>
       <div className="account-field">
         <span className="account-label">Role</span>
-        <span className="account-value account-role">{data.role}</span>
+        <span className="account-value account-role">{data.role === 'project_manager' ? 'Project Manager' : data.role}</span>
       </div>
       <div className="account-field">
         <span className="account-label">Programs</span>

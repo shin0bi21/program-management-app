@@ -22,7 +22,7 @@ export function useAccountControls(
     waiting: false,
     fields: {
       statuses: preferenceOptions<UserStatus>(['invited', 'active', 'inactive']),
-      roles: preferenceOptions<UserRole>(isAdmin ? ['admin', 'staff', 'youth'] : []),
+      roles: preferenceOptions<UserRole>(isAdmin ? ['admin', 'project_manager', 'staff', 'youth'] : []),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
       columnWidths: preferenceColumnWidths(tableKeys),
       hiddenColumns: preferenceHiddenColumns(tableKeys),
@@ -46,6 +46,7 @@ export function useAccountControls(
     ] },
     ...(isAdmin ? [{ id: 'role', label: 'Role', options: [
       { value: 'admin', label: 'Admin' },
+      { value: 'project_manager', label: 'Project Manager' },
       { value: 'staff', label: 'Staff' },
       { value: 'youth', label: 'Youth' },
     ] }] : []),

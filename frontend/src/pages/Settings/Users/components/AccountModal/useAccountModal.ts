@@ -47,7 +47,7 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       firstName: account.firstName,
       lastName: account.lastName,
       email: account.email,
-      role: account.role === 'admin' ? 'admin' : 'staff',
+      role: accountSchema.shape.role.parse(account.role),
       programIds: account.programIds ?? [],
     } : defaultValues);
     resetStatus();

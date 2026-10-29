@@ -42,7 +42,8 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
     return {
       programId,
       cycleIds: cycles.map(cycle => cycle.id),
-      updatedCohorts: await getCohortRowsByIds(trx, actor, [...retained, ...created].map(cohort => cohort.id)),
+      updatedCohorts: actor.permissions.includes('read:programs')
+        ? await getCohortRowsByIds(trx, actor, [...retained, ...created].map(cohort => cohort.id)) : [],
       createdCohortIds: created.map(cohort => cohort.id),
       removedCohortIds: removed.map(cohort => cohort.id),
       updatedYouth: actor.permissions.includes('read:youth_profiles')

@@ -18,7 +18,8 @@
   color: var(--color-success);
 }
 
-.status-label--cancelled {
+.status-label--cancelled,
+.status-label--inactive {
   background: var(--ink-06);
   color: var(--color-muted);
 }

@@ -1,0 +1,30 @@
+// @vitest-environment node
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { apiClient } from '../../../../http/client';
+import { deleteProgramCycle, getCycleList, setProgramCycle } from './cycles.api';
+
+vi.mock('../../../../http/client', () => ({
+  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
+}));
+
+describe('cycle API', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('serializes table pagination and forwards cancellation', () => {
+    const signal = new AbortController().signal;
+    getCycleList({ key: 'name', direction: 'asc', cursor: 'next-page', limit: 25 }, { signal });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/cycles/list?sort=name&direction=asc&limit=25&cursor=next-page', { signal });
+  });
+
+  it('creates, updates, and deletes cycles through the existing endpoints', () => {
+    const input = { name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: ['program-1'] };
+    setProgramCycle(input);
+    setProgramCycle(input, 'cycle-1');
+    deleteProgramCycle('cycle-1');
+
+    expect(apiClient.post).toHaveBeenCalledWith('/cohorts/cycles', input);
+    expect(apiClient.put).toHaveBeenCalledWith('/cohorts/cycles/cycle-1', input);
+    expect(apiClient.delete).toHaveBeenCalledWith('/cohorts/cycles/cycle-1');
+  });
+});

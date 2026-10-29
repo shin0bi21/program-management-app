@@ -39,13 +39,14 @@ Route access and mutations are permission-based. Roles group permissions in the 
 
 The [authorization and policy guide](authorization.md) owns record scope, enforcement, consumer capabilities, and permission changes.
 
-Staff program scope is assignment-based for every program. A program's `enrollment_required` flag controls whether youth must enroll before attendance; it does not automatically grant staff access. Administrators can assign both enrolled- and open-roster programs to staff accounts.
+Staff program scope is assignment-based for every program. A program's `enrollment_required` flag controls whether youth must enroll before attendance; it does not automatically grant staff access. Administrators can assign both enrolled- and open-roster programs to staff accounts. Project managers have access to all programs without individual assignments; this does not grant administrator scope over accounts or coworkers’ hours/tasks.
 
 ### Roles and Their Permissions
 
 | Role | Permissions |
 |------|-------------|
 | `admin` | All currently defined permissions, including account, youth, programming, outreach, homepage, settings, and hours access |
+| `project_manager` | All staff permissions plus `write:programs`; all-program scope for programs, cycles, rosters, and sessions; other workflows retain staff scope |
 | `staff` | Operational permissions assigned by migrations; account results and some workflows remain policy-scoped |
 | `youth` | *(none)* |
 
@@ -60,7 +61,7 @@ Staff program scope is assignment-based for every program. A program's `enrollme
 | `read:schools` | `GET /api/schools` |
 | `write:schools` | `POST /api/schools`, `DELETE /api/schools/:id` |
 | `read:programs` | Program, cycle, assignment, and enrollment lookups |
-| `write:programs` | Manage programs, cycles, and program-cycle assignments (admin grant) |
+| `write:programs` | Manage programs, cycles, and program-cycle assignments (admin and project manager grant) |
 | `write:enrollments` | Enroll and withdraw youth; required alongside outreach and youth-profile writes for Lead signup |
 | `read:sessions` | Read sessions, session types, notes, attachments, and assigned scheduling reference data |
 | `write:sessions` | Generate and manage sessions, notes, and attachments |
@@ -80,7 +81,7 @@ Staff program scope is assignment-based for every program. A program's `enrollme
 ### How Permissions Flow into a Token
 
 Minimal shared lookups use the consuming workflow's capability rather than
-requiring program or school management access. See [Reference data](reference-data.md)
+requiring program or school management access. See [Reference Data](reference-data.md)
 for alternative lookup permissions, authenticated assigned-program labels, and
 feature-specific staff scope. `requireAnyPermission(...)` accepts any listed
 capability; `requirePermission(...)` continues to require all listed capabilities.
@@ -133,7 +134,7 @@ in the authorization guide.
 
 The [account service](../../backend/src/services/accounts/accountService.ts) creates invited credentials with an unusable password and sends a 7-day activation link to `/reset-password?token=...`. Youth credential creation reuses this mechanism. The normal password-reset endpoint sets the password and promotes `invited` to `active`.
 
-Account policies limit staff to youth accounts; administrators can manage staff and administrator accounts.
+Account policies limit staff to youth accounts; administrators can manage staff, project manager, and administrator accounts. Project managers retain staff authority over youth accounts only.
 
 ## Record Auth Events
 
