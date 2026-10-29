@@ -169,7 +169,12 @@ After success, reconcile the visible calendar buffer, selection and affected das
 
 Persist durable filters with page preferences. Keep browser-local calendar position separate through a page-specific `positionStorageKey`.
 
-The route test owns shared controls, view switching, dialog entry and cross-view selection. Mutation-owner tests verify visible-buffer, selection and dashboard reconciliation without repeating generic buffer mechanics.
+## Testing
+
+Cover range shaping, filters, item capabilities, selection and callback-to-action wiring.
+Mutation tests cover buffer, selection and dashboard reconciliation. Shared calendar and
+buffer tests own their mechanics; use browser tests for drag, resize, clipping and scrolling.
+See [Testing](../../workflows/testing.md).
 
 ## Scaffolding
 

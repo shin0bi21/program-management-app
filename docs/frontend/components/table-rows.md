@@ -1,6 +1,6 @@
 # Table rows
 
-This document is the single source for page-table row identity, rendering, actions, and mutation reconciliation.
+Use authoritative server rows to update a table without disrupting its current position or selection.
 
 ## Render rows
 
@@ -12,8 +12,6 @@ This document is the single source for page-table row identity, rendering, actio
 - Preserve every unaffected row object reference during localized updates.
 
 Columns may render cells directly. Extract a row-owned component only when a region has meaningful interaction, accessibility, or independently testable behavior; do not create a wrapper merely to mirror table markup.
-
-Row or column tests own rendered values, accessible action names, emitted record values and permission-aware controls. They do not repeat shared table keyboard or selection mechanics.
 
 ## Own query keys
 
@@ -43,17 +41,25 @@ interface CompleteWorkResult {
 
 The typed frontend API adapter owns this response shape. If calendar or detail consumers use another representation, derive it from an authoritative response projection or include that projection explicitly in the endpoint-specific envelope. Never synthesize server-owned row fields from stale cache data merely to avoid changing the API.
 
-## Update existing rows
+## Reconcile row operations
 
-Every row-scoped edit, status change, placement change, assignment, or other update follows one pattern:
+| Operation | Cached rows | List request |
+|---|---|---|
+| Edit, status, placement, assignment or other update | `replaceInfiniteListRow` with each authoritative row | No invalidation or refetch |
+| Confirmed delete | `removeInfiniteListRow` | No refetch or page backfill |
+| Create | Insert only if membership and position are provably correct in every cached variant | Otherwise invalidate the exact list prefix |
+| Command spanning application areas | Replace returned existing rows; apply the create rule to new rows | Invalidate only unreconciled created collections and affected aggregates |
 
-1. The focused endpoint updates only command-owned fields and returns every canonical table row directly changed by the command.
-2. The mutation owner passes that response to `replaceInfiniteListRow` using the stable list-key prefix.
-3. Every loaded cached variant containing the row updates immediately while all unaffected rows and page boundaries retain their references.
-4. The table list is not invalidated or refetched and must not enter its refreshing state.
-5. The row keeps its current membership and position even when the changed value participates in the active filter or sort. The next natural query caused by changing controls, navigating, or reloading restores server ordering and membership.
-6. The mutation owner never inspects active filters or sorting to choose between replacement and refetch. Variants that contain the row are replaced; variants that do not contain it remain unchanged.
-7. Selection, calendar buffers, dashboards, and genuinely separate data owners are reconciled independently. Never invalidate a broad query prefix when it also contains the table list.
+Replacement updates every loaded variant containing the row and leaves other variants
+unchanged. Preserve its current membership and position even when a filter or sort value
+changes, along with unaffected row and page references. The next natural query restores
+server ordering, membership and pagination. Do not inspect active controls to choose between
+replacement and refetch, or enter a refreshing state for a row update.
+
+Reconcile selection and calendar buffers through their narrow adapters. Invalidate affected
+overview and dashboard queries by their exact keys, never a broad prefix matching the table.
+Use one named synchronization helper per row type when several commands reconcile the same
+owners:
 
 ```tsx
 const syncExample = useCallback((saved: Example) => {
@@ -69,29 +75,9 @@ const setStatus = useCallback(async (example: Example, status: ExampleStatus) =>
 }, [syncExample]);
 ```
 
-Use one named synchronization helper per table-row type when status, placement, modal edit, and other commands reconcile the same owners. The helper receives authoritative rows; it does not decide membership, fetch missing rows, or derive response fields.
-
-If an endpoint cannot return the complete canonical row, correct the backend projection and response contract instead of falling back to a table refresh.
-
-For every update path, mutation-owner tests assert the exact focused API payload, authoritative replacement in every cached variant containing the row, unchanged variants without it, preserved unaffected references, and no list invalidation or refresh. They also cover the required selection, calendar and dashboard reconciliation.
-
-## Create and delete rows
-
-- After a confirmed delete, call `removeInfiniteListRow` and reconcile selection and other owners. Do not refetch the table.
-- Local deletion may leave a loaded page short; do not fetch a replacement row merely to fill the page. The next natural query restores authoritative pagination.
-- A create has no existing row membership or position to preserve. Append it only when the owner can prove correct membership and position in every cached variant; otherwise invalidate the exact list prefix so the server places it authoritatively.
-- If a create command also updates an existing row in another domain, invalidate the created record's exact list prefix as needed and replace the returned existing row inline.
-
-| Operation | Existing table row | Current list request |
-|---|---|---|
-| Edit, status, placement, assignment, or other update | Replace in every cached variant containing it | No invalidation or refetch |
-| Delete | Remove from every cached variant containing it | No invalidation or refetch |
-| Create | No row exists to replace | Invalidate the exact list prefix unless safe placement is provable |
-| Command spanning application areas | Replace every returned existing row; handle new rows by their create rule | Invalidate only aggregates or created collections that cannot be reconciled locally |
-
-Overview and dashboard queries are derived aggregates and may be invalidated by their exact key. Calendar buffers, selected-record state, and other mounted owners use their narrow adapters. A broad invalidation is forbidden when it would also match the table list.
-
-Delete tests assert local removal without another list request or page backfill. Create tests assert the exact list-prefix invalidation and authoritative reloaded result. Commands spanning application areas assert every returned existing row replacement and only the necessary created or aggregate invalidations.
+The synchronization helper receives complete authoritative rows; it does not fetch missing
+rows or derive server-owned fields. If a command cannot return that projection, correct its
+backend response instead of falling back to a table refresh.
 
 ## Handle concurrency and failure
 
@@ -100,4 +86,11 @@ Delete tests assert local removal without another list request or page backfill.
 - Use serialization, cancellation, or revisions only when overlapping work can genuinely reach the same row.
 - Focused commands must not submit a full cached record merely to change one field; the backend re-reads authoritative state and returns the final row.
 
-Failure and duplicate-action tests confirm that stale data is not reconciled. Concurrency regressions verify that focused commands preserve unrelated fields changed after the client's original read.
+## Testing
+
+Row tests cover values, accessible action names, emitted records and permissions. Mutation
+tests cover focused payloads and the operation table above: affected variants change,
+unaffected references remain stable, and only permitted queries are invalidated. Cover
+selection and other required reconciliation, failed and duplicate actions, and preservation
+of fields changed after the client's original read. See [Testing](../../workflows/testing.md)
+for shared boundaries and runners.

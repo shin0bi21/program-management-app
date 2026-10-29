@@ -29,6 +29,13 @@ resources used by selection or dialogs. Page controls own the user's choices, no
 table or calendar collections. The route builds one applied filter object from those
 controls and passes it to each data view.
 
+Shared filter and selector lookups belong to `common/features/referenceData`, with
+one projection, API adapter, query key, and option conversion per shared lookup.
+Page data hooks compose them with feature-owned choices such as Task statuses.
+Full records needed by a workflow stay with that feature rather than expanding
+the shared label projection. Follow the [reference-data contract](../../backend/reference-data.md)
+for permissions, scope-specific cache keys, mutation reconciliation, and failures.
+
 A page preference hook may contain view-specific settings when the page owns their
 restoration and persistence across view changes. For example, its `table` group stores
 sorting, column widths and hidden columns, while the table owns applying them and
@@ -88,19 +95,16 @@ A controlled shared component receives the selected key and emits a selection ev
 
 ## Test state and data
 
-Keep a hook's test beside it. Test the behavior that justified the hook rather than applying a lifecycle checklist. For example, a hook that creates an `IntersectionObserver` owns observer options, callback guards, meaningful input changes, and `disconnect` on cleanup. Simple state wiring stays in its component or page test.
+| Owner | Cover |
+|---|---|
+| API adapter | Method, path, serialized inputs, cancellation and response normalization; mock the HTTP client |
+| Domain query hook | Query key, enabled condition, adapter inputs, cursors and domain shaping; use an isolated `QueryClient` |
+| Shared query wrapper | Repository behavior such as accumulation, deduplication, mapped errors and retry policy |
+| Stateful hook | The effects or coordination it adds, including cleanup where applicable |
+| Pure utility or finite policy | Representative inputs, invalid values and meaningful boundaries; every permission or capability case |
 
-Do not test whether TanStack Query can fetch or cache. Query-wrapper tests own only behavior the repository adds, such as normalization, initial-loading versus background-refresh semantics, cursor aggregation and deduplication, cache updates, mapped errors, and retry policy where implemented.
-
-A domain query-hook test owns the exact query key and enabled condition, adapter inputs, page size, cancellation and cursor forwarding, and domain response shaping. A real isolated `QueryClient` is the harness, not the subject. For example, the domain hook can prove that `pageParam: 'next'` becomes `cursor: 'next'`; `useInfiniteListQuery` owns proving that both pages are accumulated and deduplicated.
+For example, a domain hook proves that `pageParam: 'next'` becomes `cursor: 'next'`;
+`useInfiniteListQuery` proves that pages accumulate without duplicate rows. Test the behavior
+the owner adds, not TanStack Query itself. Simple state wiring stays in its component test.
 
 Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).
-
-## Shared reference data
-
-Shared filter and selector lookups belong to `common/features/referenceData`, with
-one projection, API adapter, query key, and option conversion per shared lookup.
-Page data hooks compose them with feature-owned choices such as Task statuses.
-Full records needed by a workflow stay with that feature rather than expanding
-the shared label projection. Follow the [reference-data contract](../../backend/reference-data.md)
-for permissions, scope-specific cache keys, mutation reconciliation, and failures.

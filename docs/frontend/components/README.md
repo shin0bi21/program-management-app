@@ -77,3 +77,14 @@ Extract a component when a rendered region has a clear name and an independent c
 | Modal forms and submission workflows | [Modals and forms](modals-and-forms.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
+
+## Extract a focused owner
+
+A component owns rendering, accessibility and presentation interactions. Extract a component
+when a region has a clear name and an independent contract. Keep simple local state there;
+use a focused hook for restoration, effects, subscriptions or asynchronous coordination.
+Do not add a wrapper or hook merely to shorten its parent.
+
+Use [Frontend ownership](../architecture/ownership.md) to choose its location and
+[Testing](../../workflows/testing.md#frontend-test-ownership) for test boundaries and runners.
+The surface guides above describe only their specific contracts.
