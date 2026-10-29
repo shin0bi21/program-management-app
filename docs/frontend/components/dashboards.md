@@ -36,8 +36,8 @@ metric layout must retain its `dashboard-card` shell and the same size modifier 
 all states. Do not introduce content-sized, percentage, or page-specific pixel heights.
 Keep the heading and actions outside the scrolling data region. The shared
 `dashboard-card__content` owns remaining space, `min-height: 0`, and internal scrolling.
-Custom metric layouts need the same bounded scrolling; longer notes or lists never
-grow the whole card.
+Custom compact metric layouts bound scrolling to the data column; their action
+column stays outside that scrollport. Longer notes or lists never grow the whole card.
 
 Programming Settings reuses the card shell for full management tables, not overview
 summaries. Its explicitly named management panels fill the desktop content region

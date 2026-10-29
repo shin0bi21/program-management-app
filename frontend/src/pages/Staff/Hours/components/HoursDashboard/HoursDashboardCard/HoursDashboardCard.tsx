@@ -56,7 +56,7 @@ export default function HoursDashboardCard(props: HoursDashboardCardProps) {
         <article className="dashboard-card dashboard-card--short hours-overview-card hours-overview-card--details" aria-busy={loading || undefined}>
           {title && <h2 className="hours-overview-card__accessible-title">{title}</h2>}
           <div className="dashboard-card__compact-layout hours-overview-card__layout">
-            <div>
+            <div className="hours-overview-card__data">
               <dl className="hours-overview-card__details">
                 {details.map(([label, value]) => (
                   <div key={label}>

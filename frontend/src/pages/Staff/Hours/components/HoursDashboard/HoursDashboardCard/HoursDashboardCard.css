@@ -17,6 +17,13 @@
 .hours-overview-card__layout {
   flex: 1;
   min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.hours-overview-card__data {
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
 }

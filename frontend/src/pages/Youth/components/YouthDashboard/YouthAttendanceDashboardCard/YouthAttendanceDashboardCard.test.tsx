@@ -9,6 +9,27 @@ describe('YouthAttendanceDashboardCard', () => {
     expect(screen.getByText('No active cohort attendance.')).toBeInTheDocument();
   });
 
+  it('keeps its tabs mounted but unavailable when selection clears', () => {
+    const view = render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
+    const active = screen.getByRole('button', { name: 'Active' });
+    const history = screen.getByRole('button', { name: 'History' });
+    fireEvent.click(history);
+
+    view.rerender(<YouthAttendanceDashboardCard selected={false} />);
+
+    expect(screen.getByRole('button', { name: 'Active' })).toBe(active);
+    expect(screen.getByRole('button', { name: 'History' })).toBe(history);
+    expect(active).toBeDisabled();
+    expect(history).toBeDisabled();
+    expect(screen.getByText('Select a row to view attendance.')).toBeInTheDocument();
+
+    view.rerender(<YouthAttendanceDashboardCard cohorts={[]} selected />);
+
+    expect(history).toBeEnabled();
+    expect(history).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('No historical attendance.')).toBeInTheDocument();
+  });
+
   it('separates active and historical attendance by program and cohort', () => {
     render(<YouthAttendanceDashboardCard selected cohorts={[
       {
