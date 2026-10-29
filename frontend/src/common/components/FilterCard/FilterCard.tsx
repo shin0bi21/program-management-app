@@ -24,7 +24,7 @@ export default function FilterCard({ categories, values, onApply, onClearAll, la
   const { isOpen, open, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'end' },
-    { widthEstimate: 264, heightEstimate: 320 },
+    { widthEstimate: 264, heightEstimate: 320, dismissOnViewportChange: false },
   );
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [draftCounts, setDraftCounts] = useState<Record<string, number>>({});

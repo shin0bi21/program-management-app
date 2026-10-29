@@ -52,6 +52,22 @@ describe('FilterCard', () => {
     expect(screen.queryByLabelText('1 active filters')).not.toBeInTheDocument();
   });
 
+  it('keeps the category open when updated results scroll after applying a filter', () => {
+    render(<><Harness /><div data-testid="results" /></>);
+    openStatus();
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    fireEvent.scroll(screen.getByTestId('results'));
+
+    expect(screen.getByRole('button', { name: 'Filters' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Active' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
   it('calls Clear All from the root view when values are applied', () => {
     const onClearAll = vi.fn();
     render(<FilterCard categories={categories} values={{ status: ['active'] }} onApply={vi.fn()} onClearAll={onClearAll} />);
