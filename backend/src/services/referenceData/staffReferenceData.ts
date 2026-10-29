@@ -22,7 +22,7 @@ export function getStaffReferenceData(actor: AccessTokenPayload, feature: StaffR
     FROM users staff
     INNER JOIN user_roles role ON role.id = staff.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = staff.id
-    WHERE role.name IN ('admin', 'staff') AND credentials.status = 'active'
+    WHERE role.name IN ('admin', 'project_manager', 'staff') AND credentials.status = 'active'
       AND ${sharedStaffResourceReadPredicate(actor, sql`staff.id`)}
     ORDER BY staff.first_name, staff.last_name, staff.id
   `;

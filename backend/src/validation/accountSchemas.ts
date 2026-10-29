@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
 
-const accountRoleSchema = z.enum(['admin', 'staff', 'youth']);
+const accountRoleSchema = z.enum(['admin', 'project_manager', 'staff', 'youth']);
 const accountStatusSchema = z.enum(['active', 'invited', 'inactive']);
 
 function commaSeparatedValues<T extends z.ZodType>(schema: T) {
@@ -33,7 +33,7 @@ export const setAccountSchema = z.object({
       .min(1, 'Last name is required')
       .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
     email: z.string().email('Invalid email format'),
-    role: z.enum(['staff', 'admin']).optional(),
+    role: z.enum(['staff', 'project_manager', 'admin']).optional(),
     programIds: z.array(z.string().uuid('Invalid program ID')).max(100).optional(),
   }),
 }).refine(data => !data.body.programIds

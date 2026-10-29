@@ -28,7 +28,7 @@ export default function useUserTable({
         accessorFn: account => `${account.firstName} ${account.lastName}`,
       },
       { id: 'email', header: 'Email', accessorFn: account => account.email },
-      { id: 'role', header: 'Role', size: 110, accessorFn: account => titleCase(account.role) },
+      { id: 'role', header: 'Role', size: 110, accessorFn: account => account.role === 'project_manager' ? 'Project Manager' : titleCase(account.role) },
       {
         id: 'status',
         header: 'Status',

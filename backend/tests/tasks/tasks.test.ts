@@ -100,6 +100,45 @@ describe('Tasks API', () => {
     await deleteTestUser(adminId);
   });
 
+  it('lets project managers manage their own tasks and read shared staff without employee-wide writes', async () => {
+    const manager = await seedTestUser({ role: 'project_manager' });
+    const token = generateToken(manager.userId, 'project_manager', manager.email);
+    const createdIds: string[] = [];
+
+    try {
+      await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${manager.userId}, ${programId})`;
+      const payload = { title: 'Project manager task', category: 'outreach', startDate: taskDate, dueDate: taskDate };
+      const own = await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${token}`).send({ ...payload, staffId: manager.userId });
+      if (own.body.id) createdIds.push(own.body.id);
+      expect(own.status).toBe(201);
+      expect(own.body.staffId).toBe(manager.userId);
+
+      const denied = await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${token}`).send({ ...payload, staffId: firstStaffId });
+      expect(denied.status).toBe(403);
+
+      const shared = await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`).send({ ...payload, staffId: firstStaffId });
+      if (shared.body.id) createdIds.push(shared.body.id);
+      expect(shared.status).toBe(201);
+
+      const readable = await request(app).get(`/api/tasks/${shared.body.id}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(readable.status).toBe(200);
+      expect(readable.body).toMatchObject({ id: shared.body.id, staffId: firstStaffId, writable: false });
+      const deniedStatus = await request(app).patch(`/api/tasks/${shared.body.id}/state`)
+        .set('Authorization', `Bearer ${token}`).send({ state: 'completed' });
+      expect(deniedStatus.status).toBe(404);
+    } finally {
+      if (createdIds.length) {
+        await sql`DELETE FROM tasks WHERE id IN ${sql(createdIds)}`;
+        await sql`DELETE FROM audit_log WHERE table_name = 'tasks' AND record_id IN ${sql(createdIds)}`;
+      }
+      await deleteTestUser(manager.userId);
+    }
+  });
+
   it('migrates legacy progress states and saved status filters to the open timing model', async () => {
     const rollback = new Error('rollback task status migration test');
     const migration = readFileSync(join(

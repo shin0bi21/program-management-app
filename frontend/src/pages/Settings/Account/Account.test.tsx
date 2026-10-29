@@ -30,6 +30,17 @@ describe('My Account', () => {
     expect(screen.getByText('Soft Skills, Drop In')).toBeInTheDocument();
   });
 
+  it('labels the project manager role without exposing its stored identifier', () => {
+    mockUseAccountData.mockReturnValue({
+      ...mockUseAccountData(),
+      role: 'project_manager',
+    });
+
+    render(<Account />);
+
+    expect(screen.getByText('Project Manager')).toBeInTheDocument();
+  });
+
   it('reports program failures through the page overlay and retries them', () => {
     const retryPrograms = vi.fn();
     mockUseAccountData.mockReturnValue({

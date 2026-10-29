@@ -55,6 +55,7 @@ describe('useSessionSelection', () => {
     expect(result.current.getSelectedSession('table')).toBeNull();
     expect(result.current.getSelectedSession('calendar')).toBeNull();
   });
+
   it('resolves a clicked table session immediately when switching records', () => {
     const first = makeCohortSession();
     const next = makeCohortSession({ id: 'session-2' });
@@ -65,10 +66,9 @@ describe('useSessionSelection', () => {
 
     expect(result.current.selectedSessionId).toBe(next.id);
     expect(result.current.getSelectedSession('table')).toBe(next);
-    expect(result.current.dashboardMode).toBe('session');
   });
 
-  it('keeps the Session dashboard when its buffered record disappears or is removed', () => {
+  it('clears resolved records when its buffered record disappears or is removed', () => {
     const session = makeCohortSession();
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
 
@@ -76,27 +76,17 @@ describe('useSessionSelection', () => {
     act(() => result.current.setCalendarSessions([]));
 
     expect(result.current.getSelectedSession('calendar')).toBeNull();
-    expect(result.current.dashboardMode).toBe('session');
 
     act(() => result.current.removeSelectedSession(session.id));
-    expect(result.current.dashboardMode).toBe('session');
     expect(result.current.selectedSessionId).toBe('');
-
-    act(() => result.current.showProgramDashboard());
-    expect(result.current.dashboardMode).toBe('program');
   });
 
-  it('retains a session restored through navigation when that selection clears', () => {
+  it('clears a session restored through navigation', () => {
     const { result } = renderHook(() => ({ selection: useSessionSelection(), navigate: useNavigate() }), { wrapper: Router });
-    act(() => result.current.selection.showProgramDashboard());
-    expect(result.current.selection.dashboardMode).toBe('program');
 
     act(() => result.current.navigate('?session=restored-session'));
-    expect(result.current.selection.dashboardMode).toBe('session');
 
     act(() => result.current.selection.clearSelectedSession());
     expect(result.current.selection.selectedSessionId).toBe('');
-    expect(result.current.selection.dashboardMode).toBe('session');
   });
-
 });

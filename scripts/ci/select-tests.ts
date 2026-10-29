@@ -85,6 +85,7 @@ const BACKEND_DOMAINS = {
   },
   programs: {
     testPaths: ['tests/programs'],
+    sourceDirectories: ['services/programming/programs/'],
     sourceFiles: [
       'controllers/programController.ts',
       'routes/programRoutes.ts',

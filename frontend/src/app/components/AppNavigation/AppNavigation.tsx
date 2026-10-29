@@ -15,7 +15,7 @@ export default function AppNavigation() {
   } = navigation;
   const {
     canManageHomepage, canViewYouth, canViewLeads,
-    canViewProgramming, canManageUsers, canManageProgramming,
+    canViewProgramming, canViewPrograms, canViewSessions, canManageUsers,
     canViewTasks, canViewHours, canViewStaff,
   } = permissions;
 
@@ -101,8 +101,11 @@ export default function AppNavigation() {
 
               {canViewProgramming && (
                 <button
-                  onClick={() => go('/programming/calendar')}
-                  className={`sidebar-link${active.programming ? ' active' : ''}`}
+                  ref={refs.programming}
+                  onClick={() => toggleMenu('programming')}
+                  aria-haspopup="menu"
+                  aria-expanded={menus.programming.isOpen}
+                  className={`sidebar-link${active.programming || menus.programming.isOpen ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faBookOpen} /></span>
                   <span>Programming</span>
@@ -181,6 +184,13 @@ export default function AppNavigation() {
         </FloatingMenuPanel>
       )}
 
+      {canViewProgramming && menus.programming.position && (
+        <FloatingMenuPanel menuRef={menus.programming.menuRef} position={menus.programming.position} onClose={menus.programming.close} className="settings-flyout">
+          {canViewPrograms && <button role="menuitem" onClick={() => go('/programming/programs')} className={`settings-flyout-item${isActive('/programming/programs') ? ' active' : ''}`}>Programs</button>}
+          {canViewSessions && <button role="menuitem" onClick={() => go('/programming/sessions')} className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}>Sessions</button>}
+        </FloatingMenuPanel>
+      )}
+
       {/* Settings flyout — portalled via FloatingMenuPanel */}
       {menus.settings.position && (
         <FloatingMenuPanel
@@ -203,15 +213,6 @@ export default function AppNavigation() {
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
               Manage Users
-            </button>
-          )}
-          {canManageProgramming && (
-            <button
-              role="menuitem"
-              onClick={() => go('/settings/programming')}
-              className={`settings-flyout-item${isActive('/settings/programming') ? ' active' : ''}`}
-            >
-              Manage Programming
             </button>
           )}
           {canManageHomepage && (

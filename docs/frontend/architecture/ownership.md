@@ -27,11 +27,14 @@ lifetime. Pass configuration down and report changes up through explicit callbac
 children an imperative parent-instance API. The [calendar guide](../components/calendars.md)
 shows this split for virtualized item movement and resizing.
 
-Program cycles are a shared programming capability used by Programming, Settings,
-Staff Hours, and Youth. Their API adapter and shared `ProgramCycle` contract live in
+Program and cycle lookup options remain cross-app reference data. Shared cycle date
+arithmetic and the `ProgramCycle` contract stay in
 [`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).
-Cycle management forms remain with Settings; cohort forms and enrollment behavior
-remain with Cohorts.
+Program/cycle management forms and mutation adapters belong to
+`pages/Programming/Programs/`; full program records used across route families remain
+in `common/features/programs/`. The Programs page owns the program overview and roster
+entry points; Sessions owns scheduling and attendance. Keep shared roster workflows
+with their existing Cohorts owner rather than duplicating them in either page.
 
 ## Assign Each File One Location
 

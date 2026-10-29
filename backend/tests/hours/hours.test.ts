@@ -114,6 +114,47 @@ describe('Hours API', () => {
     await deleteTestUser(adminId);
   });
 
+  it('lets project managers log their own hours without writing shared coworkers hours', async () => {
+    const manager = await seedTestUser({ role: 'project_manager' });
+    const token = generateToken(manager.userId, 'project_manager', manager.email);
+    const entryIds: string[] = [];
+
+    try {
+      await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${manager.userId}, ${programId})`;
+      const payload = { source: 'regular', programId, category: 'meeting', workDate, hours: 1, note: 'Project meeting' };
+      const own = await request(app).post('/api/hours')
+        .set('Authorization', `Bearer ${token}`).send({ ...payload, staffId: manager.userId });
+      if (own.body.id) entryIds.push(own.body.id);
+      expect(own.status).toBe(201);
+      expect(own.body.staffId).toBe(manager.userId);
+
+      const denied = await request(app).post('/api/hours')
+        .set('Authorization', `Bearer ${token}`).send({ ...payload, staffId: firstStaffId });
+      expect(denied.status).toBe(403);
+
+      const shared = await request(app).post('/api/hours')
+        .set('Authorization', `Bearer ${adminToken}`).send({ ...payload, staffId: firstStaffId });
+      if (shared.body.id) entryIds.push(shared.body.id);
+      expect(shared.status).toBe(201);
+
+      const readable = await request(app).get(`/api/hours/calendar?start=${workDate}&end=${workDate}&staffIds=${firstStaffId}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(readable.status).toBe(200);
+      expect(readable.body[firstStaffId][workDate]).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: shared.body.id }),
+      ]));
+      const deniedDelete = await request(app).delete(`/api/hours/${shared.body.id}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(deniedDelete.status).toBe(403);
+    } finally {
+      if (entryIds.length) {
+        await sql`DELETE FROM time_entries WHERE id IN ${sql(entryIds)}`;
+        await sql`DELETE FROM audit_log WHERE table_name = 'time_entries' AND record_id IN ${sql(entryIds)}`;
+      }
+      await deleteTestUser(manager.userId);
+    }
+  });
+
   it('allows staff to create and read their own regular-time entry', async () => {
     const created = await request(app)
       .post('/api/hours')

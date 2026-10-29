@@ -137,26 +137,26 @@ describe('Cohorts and attendance API', () => {
     expect(created.status).toBe(201);
 
     const updated = await request(app)
-      .put(`/api/cohorts/cycles/${created.body.id}`)
+      .put(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: `${cycleName} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
     expect(updated.status).toBe(200);
-    expect(updated.body).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
+    expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
 
     const deniedDelete = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(deniedDelete.status).toBe(403);
 
     const deleted = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(deleted.status).toBe(200);
-    expect(deleted.body).toEqual({ id: created.body.id });
-    expect(await sql`SELECT id FROM program_cycles WHERE id = ${created.body.id}`).toHaveLength(0);
+    expect(deleted.body).toEqual({ id: created.body.cycle.id });
+    expect(await sql`SELECT id FROM program_cycles WHERE id = ${created.body.cycle.id}`).toHaveLength(0);
 
     const missing = await request(app)
-      .delete(`/api/cohorts/cycles/${created.body.id}`)
+      .delete(`/api/cohorts/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(missing.status).toBe(404);
   });

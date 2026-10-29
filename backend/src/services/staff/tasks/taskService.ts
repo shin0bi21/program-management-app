@@ -264,7 +264,7 @@ async function assertActiveStaffResource(staffId: string, trx: typeof sql) {
     INNER JOIN user_roles role ON role.id = u.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = u.id
     WHERE u.id = ${staffId}
-      AND role.name IN ('admin', 'staff')
+      AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
   `;
   if (!staff.length) throw new NotFoundError('Staff member not found');

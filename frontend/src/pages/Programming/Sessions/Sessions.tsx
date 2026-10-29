@@ -11,10 +11,6 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import type { Program } from '../../../common/features/programs/types';
-import ProgramOverviewDashboardCard from './components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard';
-import ManageRosterModal from '../Cohorts/components/ManageRosterModal/ManageRosterModal';
-import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
-import type { ProgramCohort } from '../Cohorts/types';
 import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from './types';
 import AddSessionModal from './components/AddSessionModal/AddSessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
@@ -25,7 +21,6 @@ import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
 import useSessionActions from './hooks/actions/useSessionActions';
 import useSessionData from './hooks/data/useSessionData';
-import { useCohorts } from './hooks/data/useCohorts';
 import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
 import './Sessions.css';
@@ -34,7 +29,7 @@ const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
-export default function Programming() {
+export default function Sessions() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
   const [dashboardErrors, setDashboardErrors] = useState<PageMessageValue[]>([]);
 
@@ -42,16 +37,12 @@ export default function Programming() {
   const { permissions, role } = useAuth();
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
-  const canReadCohorts = permissions.includes('read:programs');
-  const canManageRoster = permissions.includes('write:enrollments');
-  const canViewYouthReport = canReadCohorts && permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   // Page data.
   const {
     programs, sessionTypes, referencesLoading, referencesError,
     cycles, cyclesLoading, cyclesError,
   } = useSessionData();
-  const { cohorts, loading: cohortsLoading, error: cohortsError, refresh: refreshCohorts } = useCohorts(undefined, canReadCohorts);
 
   // Saved preferences and current view.
   const controls = useSessionControls({
@@ -81,7 +72,7 @@ export default function Programming() {
       && !programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(null);
   }, [programs, referencesError, referencesLoading, selectedProgramId, setSelectedProgramId]);
   const selectProgram = (program: Program, source?: 'row' | 'item') => {
-    if (source !== 'item') selection.showProgramDashboard();
+    if (source !== 'item') selection.clearSelectedSession();
     setSelectedProgramId(program.id);
   };
   const selectSession = (session: CohortSession) => {
@@ -99,10 +90,6 @@ export default function Programming() {
     setSelectedProgramId(null);
     filters.clear();
   };
-
-  // Roster and reporting workflows for the selected program and cycle.
-  const [rosterTarget, setRosterTarget] = useState<ProgramCohort | null>(null);
-  const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
@@ -129,27 +116,14 @@ export default function Programming() {
 
   const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
   const canAddSession = !referencesLoading && programs.length > 0;
-  const programCohorts = cohorts.filter(cohort => cohort.programId === selectedProgram?.id
-    && (!cycleIds.length || cycleIds.includes(cohort.cycleId)));
-  const programDashboard = <ProgramOverviewDashboardCard
-    program={selectedProgram}
-    cohorts={programCohorts}
-    loading={cohortsLoading}
-    error={cohortsError}
-    onRetry={() => { void refreshCohorts(); }}
-    canManageRoster={canManageRoster}
-    canViewYouthReport={canViewYouthReport}
-    onManageRoster={setRosterTarget}
-    onViewReport={setReportTarget}
-  />;
-  const dashboard = selection.dashboardMode === 'session' ? <SessionDashboard
+  const dashboard = <SessionDashboard
     sessionQueryKey={SESSION_QUERY_KEY}
     session={selectedSession}
     canWriteAttendance={canWriteAttendance}
     canWriteSessions={canWriteSessions}
     onAddAttendance={setAttendanceTarget}
     onErrorsChange={setDashboardErrors}
-  /> : programDashboard;
+  />;
 
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
@@ -197,7 +171,7 @@ export default function Programming() {
     <>
       <main className="page-container sessions-page" data-view={view}>
         <PageHeader
-          title="Programming"
+          title="Sessions"
           actions={
             canWriteSessions ? (
               <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
@@ -251,7 +225,6 @@ export default function Programming() {
           controls.error,
           actions.moveError,
           referencesError,
-          cohortsError,
           cyclesError,
           viewError,
           ...dashboardErrors,
@@ -285,12 +258,6 @@ export default function Programming() {
         onSaved={actions.refreshCreatedSessions}
       />}
 
-      {canReadCohorts && <ManageRosterModal
-        cohort={rosterTarget}
-        onClose={() => setRosterTarget(null)}
-        onSuccess={saved => setRosterTarget(saved.cohort)}
-      />}
-      {reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
       <ConfirmModal
         action={actions.confirmAction}
         onClose={actions.closeConfirmation}

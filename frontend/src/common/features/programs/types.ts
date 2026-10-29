@@ -12,17 +12,3 @@ export interface Program extends ProgramReference {
   defaultEndTime: string;
   timezone: 'America/Toronto';
 }
-
-export interface CreateProgramInput {
-  name: string;
-  description?: string | null;
-  enrollmentRequired?: boolean;
-  minAge?: number | null;
-  maxAge?: number | null;
-  defaultDayOfWeek?: ProgramWeekday;
-  defaultStartTime?: string;
-  defaultEndTime?: string;
-  timezone?: 'America/Toronto';
-}
-
-export type UpdateProgramInput = CreateProgramInput;

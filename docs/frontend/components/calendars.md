@@ -160,7 +160,7 @@ or server assignment policy. Follow their implementations and colocated tests:
 |---|---|
 | Session form defaults and date edits | [Add Session workflow](../../../frontend/src/pages/Programming/Sessions/components/AddSessionModal/hooks/useAddSessionModal.ts) and [schedule utilities](../../../frontend/src/pages/Programming/Sessions/utils/sessionSchedule.ts) |
 | Sessions table columns and labels | [Table configuration](../../../frontend/src/pages/Programming/Sessions/components/SessionTable/hooks/useSessionTable.tsx) |
-| Current-cohort dashboard selection | [Program overview card](../../../frontend/src/pages/Programming/Sessions/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard.tsx) |
+| Current-cohort dashboard selection | [Program overview card](../../../frontend/src/pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard.tsx) |
 | Session movement capabilities and buffer reconciliation | [Session calendar](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionCalendar.tsx) |
 | Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) and [move regression tests](../../../backend/tests/cohorts/sessionMove.test.ts) |
 

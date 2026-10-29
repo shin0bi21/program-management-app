@@ -6,7 +6,7 @@ export function programAccessPredicate(
   actor: AccessTokenPayload,
   programId: ReturnType<typeof sql>,
 ) {
-  if (actor.role === 'admin') return sql`TRUE`;
+  if (actor.role === 'admin' || actor.role === 'project_manager') return sql`TRUE`;
 
   return sql`
     EXISTS (

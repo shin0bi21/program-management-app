@@ -411,7 +411,7 @@ async function assertActiveStaffResource(staffId: string) {
     INNER JOIN user_roles role ON role.id = u.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = u.id
     WHERE u.id = ${staffId}
-      AND role.name IN ('admin', 'staff')
+      AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
     LIMIT 1
   `;
