@@ -15,10 +15,10 @@ export interface PositionedItem<TItemData> {
 type VisibleItem<TItemData> = Omit<PositionedItem<TItemData>, 'lane' | 'laneCount'>;
 type LaneItem<TItemData> = Omit<PositionedItem<TItemData>, 'laneCount'>;
 
-/** Produces density for overlapping lanes; e.g. six lanes use dense presentation. */
+/** Produces density for overlapping lanes; e.g. seven lanes use dense presentation. */
 export function getItemDensity(laneCount: number): ItemDensity {
-  if (laneCount >= 6) return 'dense';
-  if (laneCount >= 4) return 'compact';
+  if (laneCount >= 7) return 'dense';
+  if (laneCount >= 5) return 'compact';
   return 'normal';
 }
 

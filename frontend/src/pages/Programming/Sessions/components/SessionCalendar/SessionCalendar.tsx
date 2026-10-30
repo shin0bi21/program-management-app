@@ -179,7 +179,6 @@ export default function SessionCalendar({
 
         rows={visiblePrograms}
         rowHeader="Program"
-        rowHeight={112}
         getRowId={getProgramId}
         renderRow={renderProgramRow}
         selectedRowId={selectedProgramId}

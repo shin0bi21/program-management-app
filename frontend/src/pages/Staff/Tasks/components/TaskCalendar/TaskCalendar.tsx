@@ -192,7 +192,6 @@ export default function TaskCalendar({
 
       rows={visibleResources}
       rowHeader="Staff"
-      rowHeight={112}
       getRowId={getTaskResourceId}
       renderRow={renderStaffRow}
       selectedRowId={selectedResourceId}
