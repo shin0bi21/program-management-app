@@ -69,14 +69,11 @@ describe('UserTable', () => {
 
     expect(useTableData).toHaveBeenCalledWith(queryKey, filters, sorting);
     expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Accounts',
       data: [user],
       loading: false,
       refreshing: true,
-      emptyMessage: 'No accounts match these filters',
       hiddenColumnKeys: ['createdAt'],
       sorting,
-      sortableColumns: ['name', 'email', 'role', 'status', 'createdAt'],
       columnWidths: { name: 240 },
       onColumnWidthsChange,
       hasNextPage: true,

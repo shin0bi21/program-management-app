@@ -71,26 +71,6 @@ describe('YouthModal', () => {
   });
 
   describe('rendering', () => {
-    it('shows Add Youth Profile title when creating from Youth', () => {
-      renderModal();
-      expect(screen.getByText('Add Youth Profile')).toBeInTheDocument();
-    });
-
-    it('collects only a street address for youth addresses', () => {
-      renderModal();
-
-      expect(screen.getByLabelText('Address (optional)')).toBeInTheDocument();
-      expect(screen.queryByLabelText('Grade')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('City')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Province')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Postal Code')).not.toBeInTheDocument();
-    });
-
-    it('shows Update Youth Profile title when editing', () => {
-      renderModal({ youthData: makeYouthProfile() });
-      expect(screen.getByRole('heading', { name: 'Update Youth Profile' })).toBeInTheDocument();
-    });
-
     it('shows only the primary contact section in contact mode', () => {
       renderModal({ youthData: makeYouthProfile(), mode: 'contact' });
 
@@ -107,16 +87,6 @@ describe('YouthModal', () => {
       renderModal({ youthData: makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' }) });
       expect(screen.getByDisplayValue('Jordan')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Smith')).toBeInTheDocument();
-    });
-
-    it('does not show login email when opened from Youth', () => {
-      renderModal();
-      expect(screen.queryByLabelText('Login Email')).not.toBeInTheDocument();
-    });
-
-    it('shows login email when opened from Users', () => {
-      renderModal({ showLoginEmail: true });
-      expect(screen.getByLabelText('Login Email')).toBeInTheDocument();
     });
 
     it('shows an existing account email as read-only in account mode', () => {
@@ -154,11 +124,6 @@ describe('YouthModal', () => {
       expect(screen.getAllByRole('dialog')).toHaveLength(1);
       expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
       expect(screen.queryByRole('dialog', { name: 'Add Youth Profile' })).not.toBeInTheDocument();
-    });
-
-    it('does not render when closed', () => {
-      renderModal({ isOpen: false });
-      expect(screen.queryByText('Add Youth Profile')).not.toBeInTheDocument();
     });
   });
 

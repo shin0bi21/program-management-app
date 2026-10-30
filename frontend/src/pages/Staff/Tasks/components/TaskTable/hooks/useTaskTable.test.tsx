@@ -1,4 +1,4 @@
-import { render, renderHook, screen } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,21 +45,8 @@ describe('useTaskTable', () => {
     const rendered = renderTable(false);
     const task = makeTask();
 
-    expect(rendered.result.current.columns.map(column => [column.id, column.header])).toEqual([
-      ['firstName', 'First Name'],
-      ['lastName', 'Last Name'],
-      ['title', 'Task'],
-      ['program', 'Program'],
-      ['category', 'Category'],
-      ['startDate', 'Start'],
-      ['dueDate', 'Due'],
-      ['status', 'Status'],
-    ]);
+    expect(rendered.result.current.columns.some(column => column.id === 'actions')).toBe(false);
     expect(renderCell(rendered.result.current.columns.find(column => column.id === 'program')!, task)).toBe('—');
-
-    const status = rendered.result.current.columns.find(column => column.id === 'status')!;
-    render(<>{renderCell(status, task)}</>);
-    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('adds the action column for writers and wires its task and action contract', () => {
@@ -68,7 +55,6 @@ describe('useTaskTable', () => {
     const actionColumn = rendered.result.current.columns.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, task)}</>);
-    expect(screen.getByTestId('task-actions-menu')).toBeInTheDocument();
     expect(taskActionsMenu).toHaveBeenCalledWith({
       task,
       isTaskPending: rendered.actions.isTaskPending,

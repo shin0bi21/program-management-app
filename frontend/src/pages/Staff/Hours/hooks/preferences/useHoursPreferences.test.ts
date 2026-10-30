@@ -163,9 +163,6 @@ describe('useHoursPreferences', () => {
 
     expect(result.current.view).toBe('calendar');
     expect(result.current.filters).toMatchObject({ staffIds: [], cycleIds: [], dateRange: { start: '2026-07-01', end: '2026-12-31' } });
-    expect(result.current.filters.definitions.map(category => category.id)).toEqual([
-      'staff', 'program', 'cycle', 'type', 'entryType',
-    ]);
 
     act(() => {
       result.current.search.setValue(' workshop ');

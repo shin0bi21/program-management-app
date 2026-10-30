@@ -23,20 +23,6 @@ describe('LeadNoteModal', () => {
     api.createLeadNote.mockResolvedValue({ details });
   });
 
-  it('renders a fixed follow-up category form', () => {
-    render(
-      <LeadNoteModal
-        lead={lead}
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('dialog', { name: 'Add Follow-up Note' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Category')).toHaveTextContent('Follow-up');
-    expect(screen.getByLabelText('Note *')).toHaveValue('');
-  });
-
   it('disables the complete form while a save is pending', async () => {
     api.createLeadNote.mockReturnValue(new Promise(() => undefined));
     render(

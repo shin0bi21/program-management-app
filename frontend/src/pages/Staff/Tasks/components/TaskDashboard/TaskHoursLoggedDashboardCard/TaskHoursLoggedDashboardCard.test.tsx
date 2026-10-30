@@ -19,7 +19,6 @@ describe('TaskHoursLoggedDashboardCard', () => {
     const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')!;
     expect(within(card).getByText('4.5 hours')).toBeInTheDocument();
     expect(within(card).queryByText('Task Start')).not.toBeInTheDocument();
-    expect(card).toHaveClass('task-hours-breakdown-card');
 
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 

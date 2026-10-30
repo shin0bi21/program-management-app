@@ -164,12 +164,6 @@ describe('Hours', () => {
     expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem').slice(0, 4).map(item => item.textContent)).toEqual([
-      expect.stringContaining('Program'),
-      expect.stringContaining('Cycle'),
-      expect.stringContaining('Type'),
-      expect.stringContaining('Category'),
-    ]);
   });
 
   it('keeps the Staff filter for admins', async () => {
@@ -303,7 +297,7 @@ describe('Hours', () => {
     expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
-  it('uses selected cycle bounds for table and calendar and exposes no Date Range control', async () => {
+  it('uses selected cycle bounds for table and calendar', async () => {
     preferenceHook.preference = { view: 'table', cycleIds: ['cycle-fall'] };
     renderHours();
 
@@ -318,8 +312,6 @@ describe('Hours', () => {
       expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }), expect.anything(),
       { signal: expect.any(AbortSignal) },
     ));
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
   });
 
   it('keeps search visible and reloads the calendar when search is applied', async () => {

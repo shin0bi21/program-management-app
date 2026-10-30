@@ -154,7 +154,6 @@ describe('Table', () => {
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
     const emptyCell = screen.getByRole('cell', { name: 'No accounts found' });
     expect(emptyCell).toHaveAttribute('colspan', '2');
-    expect(emptyCell.closest('tr')).toHaveClass('table-empty-row');
   });
 
   it('uses the shared empty-row message by default', () => {

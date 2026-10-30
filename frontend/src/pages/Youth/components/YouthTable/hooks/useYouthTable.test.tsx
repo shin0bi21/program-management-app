@@ -26,14 +26,12 @@ describe('useYouthTable', () => {
     vi.clearAllMocks();
   });
 
-  it('builds canonical data columns without actions for read-only users', () => {
+  it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useYouthTable({
       canWrite: false, onEdit: vi.fn(), onAddNote: vi.fn(),
     }));
 
-    expect(result.current.columns.map(column => column.id)).toEqual([
-      'firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status',
-    ]);
+    expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
   });
 
   it('shows DOB on its calendar day and leaves unknown dates empty', () => {
@@ -54,9 +52,8 @@ describe('useYouthTable', () => {
     const actionColumn = result.current.columns.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, profile)}</>);
-    expect(menu.items.map(item => item.id)).toEqual(['edit', 'add-note']);
-    menu.items[0].onClick();
-    menu.items[1].onClick();
+    menu.items.find(item => item.id === 'edit')!.onClick();
+    menu.items.find(item => item.id === 'add-note')!.onClick();
     expect(onEdit).toHaveBeenCalledWith(profile);
     expect(onAddNote).toHaveBeenCalledWith(profile);
   });

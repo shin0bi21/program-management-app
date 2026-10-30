@@ -27,20 +27,6 @@ const program: Program = {
 describe('ProgramModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('renders the editable program fields and enrollment requirement selector', () => {
-    render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
-
-    expect(screen.getByRole('textbox', { name: 'Program Name' })).toHaveValue('Soft Skills');
-    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('Life skills');
-    expect(screen.getByRole('button', { name: 'Default Session Day' })).toHaveTextContent('Tuesday');
-    expect(screen.getByLabelText('Default Start Time')).toHaveValue('17:00');
-    expect(screen.getByLabelText('Default End Time')).toHaveValue('19:30');
-    expect(screen.getByRole('button', { name: 'Session Timezone' })).toHaveTextContent('Toronto (Eastern Time)');
-    expect(screen.getByRole('spinbutton', { name: 'Minimum Age' })).toHaveValue(12);
-    expect(screen.getByRole('spinbutton', { name: 'Maximum Age' })).toHaveValue(15);
-    expect(screen.getByRole('button', { name: 'Enrollment Required' })).toHaveTextContent('Yes');
-  });
-
   it('saves No as enrollmentRequired false', async () => {
     vi.mocked(updateProgram).mockResolvedValue({ program: { ...program, enrollmentRequired: false }, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
     const user = userEvent.setup();

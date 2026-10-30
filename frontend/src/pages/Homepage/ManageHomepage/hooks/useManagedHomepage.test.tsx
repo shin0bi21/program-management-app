@@ -41,7 +41,10 @@ const images = [
 ];
 
 describe('useManagedHomepage', () => {
+  let queryClient: ReturnType<typeof createTestQueryClient>;
+
   beforeEach(() => {
+    queryClient = createTestQueryClient();
     vi.clearAllMocks();
     vi.mocked(getManagedHomepage).mockResolvedValue({ images });
     vi.mocked(deleteHomepageImage).mockResolvedValue(undefined);
@@ -49,7 +52,7 @@ describe('useManagedHomepage', () => {
   });
 
   it('exposes the managed image query lifecycle and refresh action', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
 
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.images).toEqual(images));
@@ -59,18 +62,92 @@ describe('useManagedHomepage', () => {
     expect(getManagedHomepage).toHaveBeenCalledTimes(2);
   });
 
-  it('optimistically reorders images and persists their ids', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+  it('uses a fresh server response after save even when the cache has a positive stale time', async () => {
+    queryClient.setDefaultOptions({ queries: { retry: false, staleTime: 60_000 } });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(result.current.images).toEqual(images));
+    const freshServerImages = [
+      { ...images[0], caption: 'Updated by server', displayOrder: 0 },
+      { ...images[1], caption: 'Second image.', displayOrder: 1 },
+    ];
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images: freshServerImages });
+
+    await act(() => result.current.reorderImages('image-2', 'image-1'));
+
+    expect(getManagedHomepage).toHaveBeenCalledTimes(2);
+    expect(result.current.images).toEqual(freshServerImages);
+    expect(reorderHomepageImages).toHaveBeenCalledWith(['image-2', 'image-1']);
+    expect(result.current.reordering).toBe(false);
+  });
+
+  it('locks overlapping reorders, cancels stale reads, and reconciles the server order', async () => {
+    let finishReorder!: (value: { imageIds: string[] }) => void;
+    vi.mocked(reorderHomepageImages).mockImplementation(() => new Promise((resolve) => { finishReorder = resolve; }));
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(result.current.images).toEqual(images));
+
+    let finishRead!: (value: { images: typeof images }) => void;
+    vi.mocked(getManagedHomepage).mockImplementationOnce(() => new Promise((resolve) => { finishRead = resolve; }));
+    const staleRead = queryClient.fetchQuery({
+      queryKey: ['homepage', 'managed', 'images'],
+      queryFn: () => getManagedHomepage(),
+    }).catch(() => undefined);
+    await waitFor(() => expect(getManagedHomepage).toHaveBeenCalledTimes(2));
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images });
+
+    let reorderPromise!: Promise<void>;
+    act(() => { reorderPromise = result.current.reorderImages('image-2', 'image-1'); });
+    await waitFor(() => expect(result.current.reordering).toBe(true));
+    await act(() => result.current.reorderImages('image-1', 'image-2'));
+    expect(reorderHomepageImages).toHaveBeenCalledTimes(1);
+    expect(result.current.images.map((image) => image.id)).toEqual(['image-2', 'image-1']);
+
+    finishRead({ images });
+    finishReorder({ imageIds: ['image-1', 'image-2'] });
+    await act(async () => { await Promise.all([staleRead, reorderPromise]); });
+
+    expect(result.current.images.map((image) => image.id)).toEqual(['image-1', 'image-2']);
+    expect(result.current.reordering).toBe(false);
+  });
+
+  it('restores the prior order and retains the save error when save and recovery read fail', async () => {
+    vi.mocked(reorderHomepageImages).mockRejectedValue(new Error('Save failed'));
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images }).mockRejectedValueOnce(new Error('Read failed'));
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
     await waitFor(() => expect(result.current.images).toEqual(images));
 
     await act(() => result.current.reorderImages('image-2', 'image-1'));
 
-    expect(result.current.images.map((image) => image.id)).toEqual(['image-2', 'image-1']);
-    expect(reorderHomepageImages).toHaveBeenCalledWith(['image-2', 'image-1']);
+    expect(result.current.error).toBe('Save failed');
+    expect(result.current.images.map((image) => image.id)).toEqual(['image-1', 'image-2']);
+    expect(getManagedHomepage).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the saved order when its refresh fails and retries the read without saving again', async () => {
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images }).mockRejectedValueOnce(new Error('Read failed'));
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(result.current.images).toEqual(images));
+
+    await act(() => result.current.reorderImages('image-2', 'image-1'));
+
+    expect(result.current.images.map(image => image.id)).toEqual(['image-2', 'image-1']);
+    expect(result.current.error).toBe('Image order saved. Read failed');
+    expect(result.current.reordering).toBe(false);
+
+    const savedImages = [
+      { ...images[1], displayOrder: 0 },
+      { ...images[0], displayOrder: 1 },
+    ];
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images: savedImages });
+    await act(() => result.current.refresh());
+
+    expect(result.current.images).toEqual(savedImages);
+    expect(result.current.error).toBeNull();
+    expect(reorderHomepageImages).toHaveBeenCalledTimes(1);
   });
 
   it('deletes an image and refreshes the managed content', async () => {
-    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
     await waitFor(() => expect(result.current.images).toEqual(images));
 
     await act(() => result.current.deleteImage('image-1'));

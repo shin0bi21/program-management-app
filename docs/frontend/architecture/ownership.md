@@ -36,6 +36,11 @@ in `common/features/programs/`. The Programs page owns the program overview and 
 entry points; Sessions owns scheduling and attendance. Keep shared roster workflows
 with their existing Cohorts owner rather than duplicating them in either page.
 
+The Cohorts directory retains the APIs, contracts, cache updates, and roster workflow
+used by those consumers; it has no standalone route page. Keep the roster query hook
+under `ManageRosterModal/hooks/`, its sole component owner. Legacy Cohorts and calendar
+URLs redirect to Programs and Sessions respectively.
+
 ## Assign Each File One Location
 
 - An API adapter owns endpoint paths and request/response typing through the centralized HTTP client.

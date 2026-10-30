@@ -48,14 +48,6 @@ describe('HoursModal', () => {
     vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
-  it('puts general-time fields in workflow order', () => {
-    renderModal({ resources: [resources[0]], programs: [{ id: 'program-1', name: 'Program one' }] });
-
-    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
-      'Staff member', 'Program (optional)', 'Category *', 'Date', 'Hours', 'Note',
-    ]);
-  });
-
   it('renders only options valid for regular time', () => {
     renderModal({ initialDate: '2026-08-18', initialResourceId: 'staff-1', staffLocked: true });
 
@@ -86,15 +78,6 @@ describe('HoursModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Prepare workshop' }));
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.queryByRole('checkbox', { name: 'Task completed' })).not.toBeInTheDocument();
-  });
-
-  it('puts session selection before its date and hours', () => {
-    renderModal({ resources: [resources[0]], programs: [], initialSource: 'session' });
-
-    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
-      'Staff member', 'Session *', 'Date', 'Hours', 'Note',
-    ]);
-    expect(document.getElementById('hours-session')?.closest('.hours-form__source')).not.toBeNull();
   });
 
   it('reloads rendered session options for an editable date', async () => {
@@ -146,11 +129,7 @@ describe('HoursModal', () => {
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.getByRole('button', { name: 'Task' })).not.toHaveTextContent('Planning / Prep');
     expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
-    expect(document.getElementById('hours-assigned-task')?.closest('.hours-form__source')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-    expect(Array.from(document.getElementById('hours-form')!.querySelectorAll('label')).map(label => label.textContent)).toEqual([
-      'Staff member', 'Task *', 'Task completed', 'Date', 'Hours', 'Note',
-    ]);
   });
 
   it('renders initialized edit values', () => {

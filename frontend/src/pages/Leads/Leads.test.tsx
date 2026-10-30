@@ -1,5 +1,5 @@
 import { renderWithQueryClient } from '../../tests/queryClientTestUtils';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Leads from './Leads';
 
@@ -65,6 +65,21 @@ describe('Leads', () => {
       contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
       status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     }], nextCursor: null });
+  });
+
+  it('keeps search unavailable until saved lead preferences are restored', async () => {
+    let resolvePreference: (value: unknown) => void = () => undefined;
+    preferenceApi.getPreference.mockReturnValue(new Promise(resolve => { resolvePreference = resolve; }));
+
+    renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved lead preferences…');
+    expect(screen.queryByLabelText('Search leads')).not.toBeInTheDocument();
+    expect(preferenceApi.setPreference).not.toHaveBeenCalled();
+
+    await act(async () => resolvePreference({ search: 'Avery' }));
+
+    expect(await screen.findByLabelText('Search leads')).toHaveValue('Avery');
   });
 
   // Rendered states.

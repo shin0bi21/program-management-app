@@ -88,7 +88,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       <PageHeader
         title={viewTitle}
         actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-        search={<SearchInput
+        search={preferences.ready ? <SearchInput
           label="Search leads"
           value={preferences.search.value}
           appliedValue={preferences.search.appliedValue}
@@ -96,7 +96,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           onApply={preferences.search.apply}
           onClear={preferences.search.clear}
           placeholder="Search youth or school"
-        />}
+        /> : undefined}
         columns={preferences.ready ? <ColumnVisibilityMenu
           columns={columns}
           hiddenColumnKeys={preferences.table.hiddenColumns}

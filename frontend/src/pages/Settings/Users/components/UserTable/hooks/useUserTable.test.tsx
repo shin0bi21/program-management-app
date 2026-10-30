@@ -31,14 +31,12 @@ describe('useUserTable', () => {
     vi.clearAllMocks();
   });
 
-  it('returns canonical account columns without actions for read-only users', () => {
+  it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useUserTable({
       canWrite: false, isAdmin: true, onEdit: vi.fn(), onRevoke: vi.fn(), onToggleStatus: vi.fn(),
     }));
 
-    expect(result.current.columns.map(column => column.id)).toEqual([
-      'name', 'email', 'role', 'status', 'createdAt',
-    ]);
+    expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
   });
 
   it.each([

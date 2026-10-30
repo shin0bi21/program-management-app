@@ -43,6 +43,7 @@ export default function ${name}() {
   // TODO: Saved preferences, when this page has durable controls.
   // Use a page hook backed by usePreferences; follow docs/frontend/pages/preferences.md.
   // Return grouped search, filters, and table controls, with ready/error at the top level.
+  // Gate every preference-backed control, including search, on ready before allowing edits.
   // Keep view/setView at the top level when multiple views are supported.
 
   // TODO: Filter configuration passed to every page data view.
@@ -79,10 +80,10 @@ describe('${name}', () => {
   // Entry and readiness.
   it.todo('shows only the page actions allowed by the current permissions');
   it.todo('shows the page loading state while required data loads');
-  it.todo('keeps dependent content unavailable until saved preferences are restored');
+  it.todo('keeps preference-backed search and filters unavailable until saved preferences are restored');
+  it.todo('preserves restored sibling filters when the first search change is applied');
 
   // Rendered states.
-  it.todo('composes loaded page controls, content, and dialogs');
   it.todo('reports page-owned failures through the shared message overlay');
 
   // Controls and views.

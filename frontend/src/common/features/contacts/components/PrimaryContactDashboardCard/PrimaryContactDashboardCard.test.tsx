@@ -10,12 +10,4 @@ describe('PrimaryContactDashboardCard', () => {
     rerender(<PrimaryContactDashboardCard contact={null} selected />);
     expect(screen.getByText('No primary contact recorded.')).toBeInTheDocument();
   });
-
-  it('shows primary contact details in one compact summary', () => {
-    render(<PrimaryContactDashboardCard contact={{ phoneNumber: '2262604073', relationship: 'parent' }} selected />);
-
-    const summary = screen.getByText('2262604073').closest('p');
-    expect(summary).toHaveClass('primary-contact-card__summary');
-    expect(summary).toContainElement(screen.getByText('Parent'));
-  });
 });

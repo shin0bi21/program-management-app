@@ -18,12 +18,11 @@ export default function ${name}() {
 }
 `);
   const test = context.sourceFile(join(directory, `${name}.test.tsx`), `
-// Cards own private queries, query states, rendering and actions; the dashboard owns composition.
+// Cards own private queries and actions; test only coordination added by the dashboard.
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  it.todo('composes cards for the selected context');
-  it.todo('passes shared data and cross-owner callbacks to the cards');
+  it.todo('routes a card action to the currently selected record');
 });
 `);
 

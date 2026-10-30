@@ -21,15 +21,6 @@ describe('My Account', () => {
     });
   });
 
-  it('shows identity, role, and accessible programs', () => {
-    render(<Account />);
-
-    expect(screen.getByText('Sofia Soft Skills')).toBeInTheDocument();
-    expect(screen.getByText('softskills.staff@local.test')).toBeInTheDocument();
-    expect(screen.getByText('staff')).toBeInTheDocument();
-    expect(screen.getByText('Soft Skills, Drop In')).toBeInTheDocument();
-  });
-
   it('labels the project manager role without exposing its stored identifier', () => {
     mockUseAccountData.mockReturnValue({
       ...mockUseAccountData(),

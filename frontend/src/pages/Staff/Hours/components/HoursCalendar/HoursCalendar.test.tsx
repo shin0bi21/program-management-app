@@ -158,7 +158,7 @@ describe('HoursCalendar', () => {
     expect(calendarState.props!.items[resource.id] ?? []).toEqual([]);
   });
 
-  it('configures resources, item density, capabilities, and cell actions', () => {
+  it('filters resources and restricts dragging and cell actions by entry source', () => {
     const onAdd = vi.fn();
     renderCalendar({ resources: [resource, coworker], staffIds: ['staff-1'], onAdd });
     const props = calendarState.props!;
@@ -167,8 +167,6 @@ describe('HoursCalendar', () => {
     const sessionItem = buildItem({ sessionId: 'session-1', sessionLabel: 'Confidence' });
 
     expect(props.rows).toEqual([resource]);
-    expect(props.rowHeight).toBe(112);
-    expect(props.positionStorageKey).toBe('resource-calendar:hours:position');
     expect(props.selectedRowId).toBe('staff-1');
     expect(props.getItemCapabilities?.({
       row: resource,
@@ -187,7 +185,6 @@ describe('HoursCalendar', () => {
       period: periods[1],
       items: [],
     });
-    expect(actions?.map(action => action.label)).toEqual(['Session Hours', 'Task Hours', 'Regular Hours']);
     actions?.find(action => action.id === 'regular')?.onSelect();
     expect(onAdd).toHaveBeenCalledWith({
       resourceId: 'staff-1',

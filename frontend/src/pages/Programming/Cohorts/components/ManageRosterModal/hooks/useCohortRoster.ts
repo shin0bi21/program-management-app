@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCohortRosterYouth } from '../cohorts.api';
-import type { CohortRosterYouth, ProgramCohort } from '../types';
-import { getErrorMessage } from '../../../../http/errors';
+import { getCohortRosterYouth } from '../../../cohorts.api';
+import type { CohortRosterYouth, ProgramCohort } from '../../../types';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 const noYouth: CohortRosterYouth[] = [];
 

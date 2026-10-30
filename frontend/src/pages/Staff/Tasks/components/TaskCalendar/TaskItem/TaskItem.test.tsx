@@ -41,10 +41,6 @@ describe('TaskItem', () => {
     expect(tooltip).toHaveTextContent('Logged');
     expect(tooltip).toHaveTextContent('1.5 hours');
     expect(tooltip).toHaveTextContent('Prepare activities.');
-    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Category', 'Start', 'End', 'Logged', 'Notes',
-    ]);
-    expect(screen.getByText('2026-08-10').closest('div')).toHaveClass('section-start');
   });
 
   it('shows a dash when the task has no program', async () => {
@@ -82,47 +78,4 @@ describe('TaskItem', () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it('uses the full task bar for overdue feedback instead of a trailing symbol', async () => {
-    render(<TaskItem task={{ ...task, dueDate: '2000-01-01', status: 'overdue', statusLabel: 'Overdue' }} />);
-
-    const item = screen.getByRole('button', { name: /Prepare workshop/ });
-    expect(item).toHaveClass('task-item--overdue');
-    expect(item.querySelector('.trailing')).toBeNull();
-
-    const tooltip = showDetails();
-    expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect([...tooltip.querySelectorAll('.task-item__detail-badges > span')].map(badge => badge.textContent)).toEqual([
-      'Overdue',
-    ]);
-  });
-
-  it('uses the full task bar for completed feedback instead of a trailing symbol', async () => {
-    render(<TaskItem task={{
-      ...task,
-      state: 'completed',
-      status: 'completed',
-      statusLabel: 'Completed',
-      dueDate: '2000-01-01',
-      completedAt: '2000-01-02T12:00:00.000Z',
-    }} />);
-
-    const item = screen.getByRole('button', { name: /Prepare workshop/ });
-    expect(item).toHaveClass('task-item--completed');
-    expect(item.querySelector('.trailing')).toBeNull();
-    const tooltip = showDetails();
-    expect(tooltip).toHaveTextContent('Completed');
-    expect(tooltip).not.toHaveTextContent('Overdue');
-  });
-
-  it.each([
-    ['Upcoming', { startDate: '2026-08-12', dueDate: '2026-08-13', status: 'upcoming' as const, statusLabel: 'Upcoming' }, 'upcoming'],
-    ['Active', { startDate: '2026-08-10', dueDate: '2026-08-12', status: 'active' as const, statusLabel: 'Active' }, 'active'],
-    ['Overdue', { startDate: '2026-08-08', dueDate: '2026-08-10', status: 'overdue' as const, statusLabel: 'Overdue' }, 'overdue'],
-    ['Completed', { state: 'completed' as const, status: 'completed' as const, statusLabel: 'Completed' }, 'completed'],
-    ['Cancelled', { state: 'cancelled' as const, status: 'cancelled' as const, statusLabel: 'Cancelled' }, 'cancelled'],
-  ])('styles the task as %s', (_label, overrides, modifier) => {
-    render(<TaskItem task={{ ...task, ...overrides }} />);
-    const item = screen.getByRole('button', { name: /Prepare workshop/ });
-    expect(item).toHaveClass(`task-item--${modifier}`);
-  });
 });

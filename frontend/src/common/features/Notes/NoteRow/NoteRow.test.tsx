@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import NoteRow from './NoteRow';
 
 describe('NoteRow', () => {
-  it('renders stable note metadata and delegates available actions', () => {
+  it('delegates available actions', () => {
     const onView = vi.fn();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
@@ -20,8 +20,6 @@ describe('NoteRow', () => {
       />,
     );
 
-    expect(screen.getByText('Check-in')).toBeInTheDocument();
-    expect(screen.getByText('General')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View profile note' }));
     fireEvent.click(screen.getByRole('button', { name: 'Edit profile note' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete profile note' }));

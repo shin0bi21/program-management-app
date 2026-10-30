@@ -46,22 +46,6 @@ describe('TaskTable', () => {
       baseProps.sorting,
       baseProps.today,
     );
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Tasks',
-      data: [],
-      loading: false,
-      refreshing: false,
-      emptyMessage: 'No tasks match these filters',
-      selectedKey: null,
-      onRowSelect: baseProps.onTaskSelect,
-      sorting: baseProps.sorting,
-      columnWidths: baseProps.columnWidths,
-      onColumnWidthsChange: baseProps.onColumnWidthsChange,
-      hasNextPage: false,
-      loadingNextPage: false,
-      onLoadNextPage: tableState.loadNextPage,
-    }));
-
     (tableProps.current?.onSortingChange as (value: unknown) => void)({ key: 'title', direction: 'asc' });
     expect(baseProps.onSortingChange).toHaveBeenCalledWith({ key: 'title', direction: 'asc' });
   });

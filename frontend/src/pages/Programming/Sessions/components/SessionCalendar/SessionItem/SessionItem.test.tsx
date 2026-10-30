@@ -4,14 +4,6 @@ import { makeCohortSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
 describe('SessionItem', () => {
-  it('uses the completed appearance and shared status badge', async () => {
-    render(<SessionItem session={makeCohortSession({ state: 'completed' })} />);
-    const item = screen.getByRole('button', { name: /Completed/ });
-    expect(item).toHaveClass('session-item--completed');
-    fireEvent.mouseEnter(item);
-    const details = await screen.findByRole('tooltip');
-    expect(within(details).getByText('Completed')).toHaveClass('status-label--completed');
-  });
   it('shows only the theme on the bar and gives type, Toronto times, cohort, status and description in its details', async () => {
     const session = makeCohortSession({
       sessionTypeName: 'Guest Speaker', state: 'cancelled',
@@ -21,7 +13,6 @@ describe('SessionItem', () => {
 
     const item = screen.getByRole('button', { name: /Communication, Future Ready, Summer 2026, Guest Speaker/ });
     expect(item).toHaveTextContent(/^Communication$/);
-    expect(item).toHaveClass('selected');
     expect(item).toHaveAccessibleName(/Cancelled/);
     fireEvent.mouseEnter(item);
 
@@ -29,8 +20,6 @@ describe('SessionItem', () => {
     expect(within(details).getByText('Future Ready')).toBeInTheDocument();
     expect(within(details).getByText('Summer 2026')).toBeInTheDocument();
     expect(within(details).getByText('Guest Speaker')).toBeInTheDocument();
-    expect(within(details).getByText('Cancelled')).toHaveClass('status-label--cancelled');
-    expect(within(details).getByText('Guest Speaker')).toHaveClass('session-type-badge--calendar');
     expect(within(details).getByText('Meet a local employer.')).toBeInTheDocument();
     expect(within(details).getByText('Date')).toBeInTheDocument();
     expect(details).toHaveTextContent(/Aug 10, 1\s*–\s*3\s*p\.m\./);

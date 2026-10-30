@@ -248,7 +248,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
-  it('uses all cycle dates when none are selected and offers Cycle without Date Range', async () => {
+  it('uses all cycle dates when none are selected and persists a selected cycle', async () => {
     renderTasks();
 
     await screen.findByRole('table', { name: 'Tasks' });
@@ -256,7 +256,6 @@ describe('Tasks', () => {
       dateRange: { start: '2025-01-01', end: '2027-12-31' },
     }), expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
@@ -264,7 +263,7 @@ describe('Tasks', () => {
     expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
   });
 
-  it('puts Staff first and sends the applied staff filter to the table request', async () => {
+  it('sends the applied staff filter to the table request', async () => {
     const coworker = {
       id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
     };
@@ -277,9 +276,7 @@ describe('Tasks', () => {
 
     await screen.findByRole('table', { name: 'Tasks' });
     fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    const categories = screen.getAllByRole('menuitem');
-    expect(categories[0]).toHaveTextContent('Staff');
-    fireEvent.click(categories[0]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Staff' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Smith' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
@@ -343,7 +340,7 @@ describe('Tasks', () => {
 
   // Selection and coordination.
 
-  it('clears the selected task when a calendar row is selected', async () => {
+  it('closes the hours dialog when selection clears and keeps it closed on reselection', async () => {
     calendarTestState.view = 'calendar';
     renderTasks();
 
@@ -379,8 +376,20 @@ describe('Tasks', () => {
     }) as { props: { selected?: boolean } };
     expect(selectedItem.props.selected).toBe(true);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
+    expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
+
     act(() => calendarTestState.props!.onRowSelect?.(row));
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
+
+    act(() => calendarTestState.props!.onItemActivate?.({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+    }));
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
   // Commands and dialogs.

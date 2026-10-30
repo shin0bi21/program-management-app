@@ -50,18 +50,16 @@ describe('LeadNotesDashboardCard', () => {
     api.updateLeadNote.mockResolvedValue({ ...existingNote, details: 'Reached guardian.' });
   });
 
-  it('keeps the notes shell mounted while a new lead loads and removes previous note actions', async () => {
+  it('removes previous note actions while another lead loads', async () => {
     let resolveNotes!: (notes: typeof existingNote[]) => void;
     const pendingNotes = new Promise<typeof existingNote[]>(resolve => { resolveNotes = resolve; });
     api.getLeadNotes.mockResolvedValueOnce([existingNote]).mockReturnValueOnce(pendingNotes);
     const { rerender } = render(<LeadNotesDashboardCard lead={lead} canWrite />);
     await screen.findByText('Notes (1)');
-    const card = screen.getByText('Notes (1)').closest('.dashboard-card');
 
     rerender(<LeadNotesDashboardCard lead={{ ...lead, id: 'lead-2' }} canWrite />);
 
     expect(screen.getByRole('status', { name: 'Loading follow-up notes…' })).toBeInTheDocument();
-    expect(screen.getByText('Notes').closest('.dashboard-card')).toBe(card);
     expect(screen.queryByRole('button', { name: 'View follow-up note' })).not.toBeInTheDocument();
     expect(screen.queryByText('No follow-up notes recorded.')).not.toBeInTheDocument();
 

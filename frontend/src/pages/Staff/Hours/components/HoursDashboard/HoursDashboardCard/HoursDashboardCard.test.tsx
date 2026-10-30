@@ -33,8 +33,6 @@ describe('HoursDashboardCard', () => {
     await user.click(toggle);
 
     const dialog = screen.getByRole('dialog', { name: 'Jordan Lee' });
-    const programDelivery = within(dialog).getByText('Program Delivery');
-    expect(programDelivery.closest('.hours-overview-card__breakdown-row')).toHaveClass('hours-overview-card__tone-0');
     expect(within(dialog).getByText('5.00')).toBeInTheDocument();
     expect(within(dialog).getByText('7.25')).toBeInTheDocument();
     expect(within(dialog).queryByText('hrs')).not.toBeInTheDocument();

@@ -4,6 +4,40 @@ A page-owned `*Calendar` adapts domain records to the shared `TimelineCalendar`.
 
 The route owns shared filters, selection, dialogs, and cross-view actions. The page calendar owns only calendar-specific data and adapters. Do not add a wrapper that merely forwards props.
 
+## Order the Page Calendar Owner
+
+Use the same reading order in Hours, Tasks, Sessions, and new page calendars:
+
+1. Module constants, domain interfaces, and stateless identity/range/row helpers.
+2. Range loading (`loadRange`) followed by buffer setup (`calendar = useDataBuffer`).
+3. Error reporting (`retryAction` and `usePageMessageReporter`).
+4. Cache synchronization, when the page needs to reconcile saved records.
+5. Display data (`visibleResources` or `visiblePrograms`, and `visibleItems` only when
+   adaptation is needed). Place notifications such as `onSessionsLoaded` beside the
+   derived data they report.
+6. Rendering and interaction callbacks: `buildItem`, `getItemCapabilities`, domain
+   move/resize handlers, then `getCellActions` or the cell activation handler.
+7. The unavailable-state guard, then the calendar JSX.
+
+Group JSX props in this order, separated by blank lines: layout and periods; rows
+and selection; items and rendering; item interactions; cell actions. Expand long
+prop destructuring, cleanup bodies, and nested mapping logic into readable blocks.
+Use the same names for equivalent responsibilities, but retain domain names and
+rules for actions such as moving hours, resizing tasks, or moving sessions.
+
+Move substantial callbacks out of JSX and name their decisions. Keep simple field
+accessors and one-step forwarding inline when extraction would only add indirection.
+Do not add wrapper hooks, shared abstractions, or placeholder phases to a real owner
+that does not need them. The calendar scaffold provides ordered implementation
+prompts; replace each applicable prompt with its implementation and remove the rest.
+
+Cache synchronization effects must use destructured `upsertItem` and `removeItem`
+callbacks and list those callbacks plus the relevant ref/filter values as dependencies.
+Do not depend on the whole buffer result object or suppress dependency warnings.
+Keep the existing memoization when standardizing structure; memoization is a separate
+performance decision, not a requirement for every callback. `useDataBuffer` reads the
+latest loader through a ref, so loader identity does not itself trigger a range fetch.
+
 ## Load Filtered Ranges
 
 Follow the [Tasks calendar](../../../frontend/src/pages/Staff/Tasks/components/TaskCalendar/TaskCalendar.tsx).

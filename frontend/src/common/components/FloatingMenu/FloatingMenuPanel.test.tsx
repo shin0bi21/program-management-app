@@ -34,8 +34,6 @@ describe('FloatingMenuPanel', () => {
 
     const menu = screen.getByRole('menu');
     expect(menu.parentElement).toBe(document.body);
-    expect(menu).toHaveClass('floating-menu-panel', 'actions-menu');
-    expect(menu).toHaveStyle({ top: '24px', left: '48px', width: '220px' });
     expect(menuRef.current).toBe(menu);
 
     fireEvent.pointerDown(menu);

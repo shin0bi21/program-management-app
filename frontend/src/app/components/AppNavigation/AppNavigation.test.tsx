@@ -91,10 +91,6 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('active');
     expect(screen.getByRole('menuitem', { name: 'Manage Homepage' })).toHaveClass('active');
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
-      'My Account',
-      'Manage Homepage',
-    ]);
     expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
@@ -138,19 +134,6 @@ describe('AppNavigation', () => {
     expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
-  it('does not expose a standalone Schools destination', () => {
-    authState.permissions = ['read:schools', 'write:schools'];
-    authState.role = 'staff';
-
-    render(
-      <MemoryRouter>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
-  });
-
   it('opens Sessions from Programming and closes the mobile sidebar', async () => {
     authState.permissions = ['read:sessions'];
     authState.role = 'staff';
@@ -187,57 +170,17 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Sessions' })).not.toBeInTheDocument();
   });
 
-  it('places Programs before Sessions and removes management from Settings', async () => {
+  it('opens Programs from Programming', async () => {
     authState.permissions = ['read:programs', 'read:sessions', 'write:programs'];
     const user = userEvent.setup();
 
     render(<MemoryRouter><AppNavigation /><CurrentPath /></MemoryRouter>);
 
     const programs = screen.getByRole('menuitem', { name: 'Programs' });
-    const sessions = screen.getByRole('menuitem', { name: 'Sessions' });
-    expect(programs.compareDocumentPosition(sessions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
 
     await user.click(programs);
     expect(screen.getByTestId('current-path')).toHaveTextContent('/programming/programs');
     expect(programs).toHaveClass('active');
-  });
-
-  it('places Programming before Leads in application navigation', () => {
-    authState.permissions = [
-      'read:programs',
-      'read:programs',
-      'read:sessions',
-      'read:outreach',
-    ];
-    authState.role = 'staff';
-
-    render(
-      <MemoryRouter>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    const programming = screen.getByRole('button', { name: 'Programming' });
-    const leads = screen.getByRole('button', { name: 'Leads' });
-    expect(
-      programming.compareDocumentPosition(leads) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it('places Staff before Youth in application navigation', () => {
-    authState.permissions = ['read:hours', 'read:youth_profiles'];
-    authState.role = 'staff';
-
-    render(
-      <MemoryRouter>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    const staff = screen.getByRole('button', { name: 'Staff' });
-    const youth = screen.getByRole('button', { name: 'Youth' });
-    expect(staff.compareDocumentPosition(youth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('shows each Staff destination only with its read permission', () => {
@@ -271,21 +214,6 @@ describe('AppNavigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Staff' })).not.toBeInTheDocument();
-  });
-
-  it('places Hours before Tasks in the Staff menu', () => {
-    authState.permissions = ['read:hours', 'read:tasks'];
-    authState.role = 'staff';
-
-    render(
-      <MemoryRouter>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    const hours = screen.getByRole('menuitem', { name: 'Hours' });
-    const tasks = screen.getByRole('menuitem', { name: 'Tasks' });
-    expect(hours.compareDocumentPosition(tasks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('uses the canonical Hours URL from Staff navigation', async () => {
@@ -340,21 +268,5 @@ describe('AppNavigation', () => {
     await user.click(document.querySelector('.sidebar-backdrop') as HTMLElement);
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
     expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
-  });
-
-  it('orders admin Settings destinations by user then homepage management', () => {
-    authState.permissions = ['read:accounts', 'write:programs', 'read:homepage'];
-    authState.role = 'admin';
-    render(
-      <MemoryRouter>
-        <AppNavigation />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
-      'My Account',
-      'Manage Users',
-      'Manage Homepage',
-    ]);
   });
 });

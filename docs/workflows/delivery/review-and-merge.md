@@ -6,6 +6,47 @@ separate explicit authorization. Stop at each handoff unless the current request
 includes the next phase. Full implementation includes mapping, review, fixes,
 and re-review; it does not authorize shipping or deployment.
 
+## Tracked Isolation
+
+Stashes and worktrees are alternative ways to isolate the same issue-scoped work.
+Choose the method that best preserves the current changes and supports review and
+verification. Use a stash when restoring a concern into the current checkout is
+straightforward; use a worktree when a separate checkout makes preservation or
+verification clearer. Neither method changes the delivery contract:
+
+```text
+issue -> issue-numbered branch -> isolated implementation -> concern map/review
+      -> verification -> authorized commit/PR -> checked merge -> cleanup
+```
+
+Create or reuse a GitHub issue before creating its concern branch or worktree.
+Use `<issue-number>-<short-description>` for the branch in either method. Record
+the issue, branch, checkout/worktree path, and any source stash or recovery worktree
+in the concern record. Authorized implementation includes this tracking/isolation
+preparation when needed; commits, pushes, PRs, merges, and deployment still require
+their respective authorization. Read-only mapping and review do not create issues
+or isolation unless the user also requests that work.
+
+For already mixed changes, map the concerns before isolating them for delivery.
+Protect dirty input, including untracked files. Stash-based isolation restores
+only the current issue's files or hunks; worktree-based isolation ports those same
+files or hunks onto a fresh branch from synchronized `develop`. A clean input does
+not require a safety stash, and a worktree may still use one to protect mixed input.
+Run review and checks in the checkout containing the isolated concern.
+
+Keep shipping serial for both methods. Backlog issues can exist together, but do
+not create the next concern branch/worktree until the current concern has merged,
+its issue is closed, its isolation and branch are cleaned up, and the main checkout
+is clean and synchronized on `develop`.
+
+Before retiring a stash or worktree, reconcile its tracked/untracked edits against
+the merged result and preserve any locally important files. A merged branch tip
+does not prove uncommitted edits shipped. Preserve ambiguous drafts with an issue
+link; do not force-remove a dirty worktree. For completed linked worktrees, verify
+cleanliness, remove with `git worktree remove`, then delete the verified merged
+branch. Keep the main checkout and confirm linked-worktree removal in
+`git worktree list`.
+
 <a id="1-establish-the-concern"></a>
 
 ## Review
@@ -50,8 +91,9 @@ review procedure. Humans follow the same concern and evidence boundaries.
 
 A shipping request may cover one concern or every approved concern in the map;
 its stated scope controls whether work continues after a merge. Implementation
-or review alone does not authorize issue-scoped branches, commits, pull requests,
-or merges.
+permits issue/branch/worktree preparation when isolation is needed, as described
+above. Implementation or review alone does not authorize commits, pushes, pull
+requests, or merges.
 
 <a id="1-confirm-the-approved-concern"></a>
 
@@ -69,8 +111,9 @@ remote state.
 
 ### Ship One Concern
 
-1. Create or reuse its GitHub issue and start an issue-numbered branch from
-   synchronized `develop`. Isolate only the approved concern.
+1. Create or reuse its GitHub issue before starting an issue-numbered branch from
+   synchronized `develop`, in the main checkout or a linked worktree. Choose
+   stash-based or worktree-based isolation and isolate only the approved concern.
 2. Run the mapped focused verification and repository checks against that exact
    isolated diff. Commit, push, and open a pull request to `develop`.
 3. Wait for the [required GitHub checks](ci.md#required-checks) to pass, merge,
@@ -79,9 +122,10 @@ remote state.
    Closing keywords may not close issues for PRs targeting `develop`; explicitly
    close the issue when needed. Keep broader issues open for unfinished scope.
 5. Verify the feature branch matches the merged PR head and contains no extra
-   work, including after a squash merge. Delete it locally and remotely.
+   work, including after a squash merge. Reconcile and remove its clean linked
+   worktree when used, then delete the branch locally and remotely.
 
-Agents use `ship-changes` for safety stashes, isolated verification, PR handling,
+Agents use `ship-changes` for stash/worktree isolation, verification, PR handling,
 check waiting, and reconciliation.
 
 <a id="3-continue-the-concern-map"></a>

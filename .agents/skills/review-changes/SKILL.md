@@ -22,6 +22,13 @@ Read the [review and merge guide](../../../docs/workflows/delivery/review-and-me
 
 Do not modify implementation unless the user explicitly requests fixes. Read-only diagnostics and missing focused tests are allowed; changing from implementation to review is not itself a reason to rerun tests.
 
+For a worktree review, verify its issue-linked branch, working directory, base,
+and uncommitted tracked/untracked edits. Compare the intended draft delta with
+current `develop`; do not classify later base changes as draft work. A clean main
+checkout or merged branch tip does not establish that a dirty worktree is reconciled.
+Apply the same review and verification contract to either isolation method in
+[Tracked isolation](../../../docs/workflows/delivery/review-and-merge.md#tracked-isolation).
+
 A review request authorizes the prerequisite `map-changes` phase when no current concern map exists. It does not authorize fixing findings, shipping, or deployment. A request for full implementation authorizes fixing and re-reviewing findings, but still does not authorize shipping or deployment.
 
 ## Orchestrate large reviews

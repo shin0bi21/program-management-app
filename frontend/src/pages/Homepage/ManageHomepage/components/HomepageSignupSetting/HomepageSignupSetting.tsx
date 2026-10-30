@@ -1,11 +1,8 @@
-import { useAuth } from '../../../../../auth/authContext';
 import { DashboardCardLoading } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../common/components/Button/Button';
-import { useHomepageSignupSetting } from '../../hooks/useHomepageSignupSetting';
+import { useHomepageSignupSetting } from './hooks/useHomepageSignupSetting';
 
-export default function HomepageSignupSetting() {
-  const { permissions } = useAuth();
-  const canWrite = permissions.includes('write:homepage');
+export default function HomepageSignupSetting({ canWrite }: { canWrite: boolean }) {
   const signup = useHomepageSignupSetting();
   const hasSettings = signup.signupEnabled !== undefined;
 

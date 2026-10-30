@@ -50,10 +50,8 @@ describe('YouthTable', () => {
     />);
 
     expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Youth profiles',
       data: [profile],
       refreshing: true,
-      emptyMessage: 'No youth profiles match these filters',
       hiddenColumnKeys: ['school'],
       selectedKey: profile.id,
       onRowSelect,

@@ -1,13 +1,13 @@
-import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCohortRosterYouth } from '../cohorts.api';
-import type { ProgramCohort } from '../types';
-import { makeCohortRosterYouth } from '../../../../tests/factories/cohortRoster';
+import { getCohortRosterYouth } from '../../../cohorts.api';
+import type { ProgramCohort } from '../../../types';
+import { makeCohortRosterYouth } from '../../../../../../tests/factories/cohortRoster';
 import { useCohortRoster } from './useCohortRoster';
 
-vi.mock('../cohorts.api', () => ({ getCohortRosterYouth: vi.fn() }));
+vi.mock('../../../cohorts.api', () => ({ getCohortRosterYouth: vi.fn() }));
 
 const cohort: ProgramCohort = {
   id: 'cohort-1',

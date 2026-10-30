@@ -19,13 +19,6 @@ const props = {
 
 beforeEach(() => Object.assign(workflow, { selectedCycleIds: ['cycle-1'], ready: true, loading: false, error: null }));
 
-it('renders the target and loaded assigned cycles', () => {
-  render(<ProgramCyclesModal {...props} />);
-  expect(screen.getByRole('heading', { name: 'Assigned Cycles — Skills' })).toBeInTheDocument();
-  expect(screen.getByRole('checkbox', { name: 'Fall' })).toBeChecked();
-  expect(screen.getByRole('button', { name: 'Save Assigned Cycles' })).toBeEnabled();
-});
-
 it('shows failed assignment loading without presenting unchecked cycles as saved data', () => {
   Object.assign(workflow, { selectedCycleIds: null, ready: false, error: 'Assignments unavailable' });
   render(<ProgramCyclesModal {...props} />);

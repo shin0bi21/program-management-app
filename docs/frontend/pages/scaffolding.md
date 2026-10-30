@@ -46,8 +46,18 @@ pages/Youth/Placements/
 The page suite covers filters, selection, and dialog coordination. The page-data
 suite covers its reference queries. The calendar suite covers domain range inputs,
 item mapping, and callback wiring; shared calendar mechanics stay in shared suites.
+When adding saved controls, follow the [preference readiness gate](preferences.md#expose-page-controls),
+including search. The page scaffold prompts for pending-control behavior and the
+first search save preserving restored sibling filters.
 Connect the generated calendar to the page when implementing the feature; the
 component preset does not edit its parent or register a route.
+
+The calendar preset supplies ordered implementation prompts matching the
+[page calendar standard](../components/calendars.md#order-the-page-calendar-owner):
+range loading, buffer setup, error reporting, cache synchronization, display data,
+rendering/interactions, unavailable state, then grouped calendar JSX. It remains a
+skeleton rather than inventing domain APIs, permission rules, or record types.
+Replace applicable prompts with real code and remove phases the owner does not need.
 
 Append `--dry-run` to preview either command without writing files. Every preset
 refuses to overwrite existing files. Add table, dashboard, or modal presets only
@@ -55,7 +65,9 @@ when the new page needs those owners; each includes its own test outlines.
 
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
-inapplicable cases. Use the shared QueryClient helpers for query-backed tests.
+inapplicable cases and delete the test file when the owner adds no behavior.
+Do not turn outlines into checks of static options, classes, or copied props.
+Use the shared QueryClient helpers for query-backed tests.
 Use the [testing guide](../../workflows/delivery/testing.md) for runner selection.
 See each [frontend owner guide](../README.md#find-the-right-guide) for
 the supported source layout and preset commands.

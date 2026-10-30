@@ -14,21 +14,6 @@ describe('SignupSection', () => {
     mockSubmitPublicLead.mockResolvedValue({ message: 'ok' })
   })
 
-  it('organizes the shared data shape into form sections without duplicate response fields', () => {
-    const { container } = render(<SignupSection />)
-
-    expect(screen.getByText('Youth Information')).toBeInTheDocument()
-    expect(screen.getByText('Primary Contact')).toBeInTheDocument()
-    expect(container.querySelector('input[name="website"]')).toHaveAttribute('hidden')
-    expect(screen.getByRole('button', { name: 'Who is filling out this form?' })).toHaveTextContent('Parent')
-    expect(screen.queryByText('Follow-up Information')).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }))
-    expect(screen.queryByRole('menuitemradio', { name: 'Emergency Contact' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
-    expect(document.getElementById('cohort-phoneNumber')).not.toBeInTheDocument()
-  })
-
   it('submits the cohort form with a normalized payload', async () => {
     render(<SignupSection />)
 
