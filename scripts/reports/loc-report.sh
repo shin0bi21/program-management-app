@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# loc-report.sh — lines of code breakdown by type (excludes node_modules, dist, .git)
+# loc-report.sh — line breakdown by type (excludes node_modules, dist, .git)
 #
 # Usage:
 #   npm run report:loc              # app: ts + tsx only (default)
 #   npm run report:loc -- all       # all types: ts tsx css sql md
 #   npm run report:loc -- ts tsx sql
+#   npm run report:loc -- --ignore-comments
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+IGNORE_COMMENTS=false
+ARGS=()
+for arg in "$@"; do
+  if [[ "$arg" == "--ignore-comments" ]]; then
+    IGNORE_COMMENTS=true
+  else
+    ARGS+=("$arg")
+  fi
+done
 
 # Array form — no eval needed
 EXCLUDES=( ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" )
@@ -23,11 +34,8 @@ count() {
     name_args=(-name "*.$ext" ! \( -name "*.test.$ext" -o -name "*.spec.$ext" \))
   fi
 
-  # Guard against macOS xargs hanging on empty stdin
-  local file_count
-  file_count=$(find "$ROOT" -type f "${name_args[@]}" "${EXCLUDES[@]}" | wc -l | tr -d ' ')
-  if [[ "$file_count" -eq 0 ]]; then echo 0; return; fi
-  find "$ROOT" -type f "${name_args[@]}" "${EXCLUDES[@]}" -print0 | xargs -0 wc -l 2>/dev/null | awk '/total/{print $1}' | tail -1
+  find "$ROOT" -type f "${name_args[@]}" "${EXCLUDES[@]}" -print0 |
+    node "$ROOT/scripts/reports/count-lines.ts" "$ext" "$IGNORE_COMMENTS"
 }
 
 label() {
@@ -42,14 +50,19 @@ label() {
 }
 
 # ── Resolve mode ───────────────────────────────────────────────────────────────
-case "${1:-app}" in
+case "${ARGS[0]:-app}" in
   app) TYPES=(ts tsx) ;;
   all) TYPES=(ts tsx css sql md) ;;
-  *)   TYPES=("$@") ;;
+  *)   TYPES=("${ARGS[@]}") ;;
 esac
 
 # ── Print table ────────────────────────────────────────────────────────────────
-printf "\n%-20s %6s\n" "Type" "Lines"
+if [[ "$IGNORE_COMMENTS" == true ]]; then
+  printf "\nExcludes blank and comment-only lines.\n"
+else
+  printf "\nExcludes blank lines; includes comments.\n"
+fi
+printf "%-20s %6s\n" "Type" "Lines"
 printf "%-20s %6s\n" "--------------------" "------"
 
 total=0

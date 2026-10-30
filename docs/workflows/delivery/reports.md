@@ -44,8 +44,16 @@ Use the LOC report for a repository-size breakdown. It excludes `.git`, `node_mo
 
 ```bash
 npm run report:loc
+npm run report:loc -- --ignore-comments
+npm run report:loc -- all --ignore-comments
 npm run report:loc -- all
 npm run report:loc -- ts tsx sql
 ```
 
 `report:loc` defaults to application TypeScript and React files. Pass `all` to include CSS, SQL, and Markdown, or provide an explicit extension list.
+
+Blank and whitespace-only lines are always excluded. Comments count by default.
+Pass `--ignore-comments` to exclude comment-only lines for TypeScript/React (`//`, `/* */`, JSDoc,
+and JSX comments), CSS (`/* */`), SQL (`--` and `/* */`), and Markdown
+(`<!-- -->`). Lines containing both code and comments still count. Quoted comment markers remain content. Other requested extensions use
+nonblank line counts.
