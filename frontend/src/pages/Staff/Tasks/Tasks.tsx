@@ -1,5 +1,5 @@
 import { getCycleDateRange } from '../../../common/features/programming/cycles/cycleDateRange';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Button from '../../../common/components/Button/Button';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
@@ -106,6 +106,10 @@ export default function Tasks() {
   // Hours modal.
   const [hoursModalOpen, setHoursModalOpen] = useState(false);
   const closeHoursModal = () => setHoursModalOpen(false);
+
+  useEffect(() => {
+    if (!selection.selectedTaskId) setHoursModalOpen(false);
+  }, [selection.selectedTaskId]);
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);

@@ -340,7 +340,7 @@ describe('Tasks', () => {
 
   // Selection and coordination.
 
-  it('clears the selected task when a calendar row is selected', async () => {
+  it('closes the hours dialog when selection clears and keeps it closed on reselection', async () => {
     calendarTestState.view = 'calendar';
     renderTasks();
 
@@ -376,8 +376,20 @@ describe('Tasks', () => {
     }) as { props: { selected?: boolean } };
     expect(selectedItem.props.selected).toBe(true);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
+    expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
+
     act(() => calendarTestState.props!.onRowSelect?.(row));
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
+
+    act(() => calendarTestState.props!.onItemActivate?.({
+      row,
+      data: task,
+      range: { start: task.startDate, end: task.dueDate },
+    }));
+    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
   // Commands and dialogs.
