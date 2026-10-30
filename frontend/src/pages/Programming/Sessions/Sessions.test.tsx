@@ -469,7 +469,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    const addButton = await screen.findByRole('button', { name: '+ Add Session' });
+    const addButton = await screen.findByRole('button', { name: '+ Add' });
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
@@ -485,7 +485,7 @@ describe('Sessions', () => {
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
-    const addButton = screen.getByRole('button', { name: '+ Add Session' });
+    const addButton = screen.getByRole('button', { name: '+ Add' });
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
