@@ -38,6 +38,8 @@ const defaultProps = {
   onEdit: vi.fn(),
   onDelete: vi.fn(),
   onReorder: vi.fn(),
+  canWrite: true,
+  mutationsPending: false,
 };
 
 describe('HomepageImageList', () => {
@@ -53,6 +55,23 @@ describe('HomepageImageList', () => {
 
     rerender(<HomepageImageList {...defaultProps} />);
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('hides write controls for read-only users while keeping image content visible', () => {
+    render(<HomepageImageList {...defaultProps} canWrite={false} />);
+
+    expect(screen.getByText('First image.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for First image.' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').every((row) => row.getAttribute('draggable') === 'false')).toBe(true);
+  });
+
+  it('disables mutations and dragging while a reorder is pending', () => {
+    render(<HomepageImageList {...defaultProps} mutationsPending />);
+
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'More actions for First image.' })).toBeDisabled();
+    expect(screen.getAllByRole('listitem').every((row) => row.getAttribute('draggable') === 'false')).toBe(true);
   });
 
   it('emits edit and delete actions', async () => {

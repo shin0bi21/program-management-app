@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getErrorMessage } from '../../../../http/errors';
-import { getManagedHomepageSignup, updateHomepageSignup } from '../manageHomepage.api';
+import { getErrorMessage } from '../../../../../../http/errors';
+import { getManagedHomepageSignup, updateHomepageSignup } from '../../../manageHomepage.api';
 
 const queryKey = ['homepage', 'managed', 'signup'] as const;
 

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HomepageSignupSetting from './HomepageSignupSetting';
 
 const state = vi.hoisted(() => ({
-  permissions: ['read:homepage', 'write:homepage'],
   signupEnabled: true as boolean | undefined,
   loading: false,
   saving: false,
@@ -12,13 +11,11 @@ const state = vi.hoisted(() => ({
   refresh: vi.fn(),
   setSignupEnabled: vi.fn(),
 }));
-vi.mock('../../../../../auth/authContext', () => ({ useAuth: () => state }));
-vi.mock('../../hooks/useHomepageSignupSetting', () => ({ useHomepageSignupSetting: () => state }));
+vi.mock('./hooks/useHomepageSignupSetting', () => ({ useHomepageSignupSetting: () => state }));
 
 describe('HomepageSignupSetting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.permissions = ['read:homepage', 'write:homepage'];
     state.signupEnabled = true;
     state.loading = false;
     state.saving = false;
@@ -26,7 +23,7 @@ describe('HomepageSignupSetting', () => {
   });
 
   it('lets homepage writers change signup availability', async () => {
-    render(<HomepageSignupSetting />);
+    render(<HomepageSignupSetting canWrite />);
     expect(screen.getByRole('heading', { name: 'Signup Form' })).toBeInTheDocument();
     const toggle = screen.getByRole('switch', { name: 'Disable signups' });
     expect(toggle).toHaveAttribute('aria-checked', 'true');
@@ -35,8 +32,7 @@ describe('HomepageSignupSetting', () => {
   });
 
   it('shows status without a toggle to read-only users', () => {
-    state.permissions = ['read:homepage'];
-    render(<HomepageSignupSetting />);
+    render(<HomepageSignupSetting canWrite={false} />);
     expect(screen.getByText('Open')).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
@@ -44,7 +40,7 @@ describe('HomepageSignupSetting', () => {
   it('shows loading without claiming signup is closed', () => {
     state.signupEnabled = undefined;
     state.loading = true;
-    render(<HomepageSignupSetting />);
+    render(<HomepageSignupSetting canWrite />);
     expect(screen.getByRole('status', { name: 'Loading signup setting…' })).toBeInTheDocument();
     expect(screen.queryByText('Closed')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
@@ -53,7 +49,7 @@ describe('HomepageSignupSetting', () => {
   it('retries signup errors through its own flow and blocks duplicate saves', async () => {
     state.error = 'Could not save signup';
     state.saving = true;
-    render(<HomepageSignupSetting />);
+    render(<HomepageSignupSetting canWrite />);
     expect(screen.getByRole('switch')).toBeDisabled();
     await userEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
     expect(state.refresh).toHaveBeenCalledOnce();

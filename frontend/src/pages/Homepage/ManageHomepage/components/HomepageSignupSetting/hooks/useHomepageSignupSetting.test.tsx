@@ -1,11 +1,11 @@
-import { createTestQueryClient, createQueryClientWrapper } from '../../../../tests/queryClientTestUtils';
+import { createTestQueryClient, createQueryClientWrapper } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getManagedHomepage, getManagedHomepageSignup, reorderHomepageImages, updateHomepageSignup } from '../manageHomepage.api';
-import { useManagedHomepage } from './useManagedHomepage';
+import { getManagedHomepage, getManagedHomepageSignup, reorderHomepageImages, updateHomepageSignup } from '../../../manageHomepage.api';
+import { useManagedHomepage } from '../../../hooks/useManagedHomepage';
 import { useHomepageSignupSetting } from './useHomepageSignupSetting';
 
-vi.mock('../manageHomepage.api', () => ({
+vi.mock('../../../manageHomepage.api', () => ({
   getManagedHomepage: vi.fn(),
   getManagedHomepageSignup: vi.fn(),
   reorderHomepageImages: vi.fn(),
@@ -38,7 +38,7 @@ describe('useHomepageSignupSetting', () => {
     act(() => result.current.signup.setSignupEnabled(false));
     await waitFor(() => expect(result.current.signup.signupEnabled).toBe(false));
     expect(updateHomepageSignup).toHaveBeenCalledWith(false, expect.anything());
-    expect(getManagedHomepage).toHaveBeenCalledTimes(2);
+    expect(getManagedHomepage).toHaveBeenCalledTimes(3);
     expect(getManagedHomepageSignup).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
   });
 
