@@ -73,25 +73,29 @@ export default function AccountModal(props: AccountModalProps) {
           />
         </div>
         <FormFieldGroup label="Programs">
-          {programsLoading ? (
+          {programsLoading && (
             <span className="account-programs__empty">Loading programs…</span>
-          ) : programs.length ? <Controller
-            name="programIds"
-            control={control}
-            render={({ field }) => (
-              <Checklist
-                variant="form"
-                ariaLabel="Programs"
-                options={programs.map(program => ({ value: program.id, label: program.name }))}
-                value={field.value}
-                onToggle={value => field.onChange(field.value.includes(value)
-                  ? field.value.filter(id => id !== value)
-                  : [...field.value, value])}
-                disabled={submissionComplete}
-              />
-            )}
-          /> : (
+          )}
+          {!programsLoading && programs.length === 0 && (
             <span className="account-programs__empty">No assignable programs.</span>
+          )}
+          {!programsLoading && programs.length > 0 && (
+            <Controller
+              name="programIds"
+              control={control}
+              render={({ field }) => (
+                <Checklist
+                  variant="form"
+                  ariaLabel="Programs"
+                  options={programs.map(program => ({ value: program.id, label: program.name }))}
+                  value={field.value}
+                  onToggle={value => field.onChange(field.value.includes(value)
+                    ? field.value.filter(id => id !== value)
+                    : [...field.value, value])}
+                  disabled={submissionComplete}
+                />
+              )}
+            />
           )}
         </FormFieldGroup>
       </form>
