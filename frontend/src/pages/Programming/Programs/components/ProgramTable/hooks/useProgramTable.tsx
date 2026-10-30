@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import StatusBadge from '../../../../../../common/components/StatusBadge/StatusBadge';
+import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { ProgramCohort } from '../../../../Cohorts/types';
@@ -37,7 +37,7 @@ export default function useProgramTable(
         const label = getStatus(row.original);
         if (label === 'Unavailable' || label === 'Loading…') return label;
 
-        return <StatusBadge status={label === 'Active' ? 'active' : 'inactive'} label={label} />;
+        return <StatusLabel status={label === 'Active' ? 'active' : 'inactive'} label={label} />;
       },
     };
   }, [cohorts, loading, error]);

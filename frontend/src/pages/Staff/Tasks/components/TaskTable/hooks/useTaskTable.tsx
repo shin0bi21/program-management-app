@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { Task } from '../../../types';
 
-import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
+import TaskStatusLabel from '../../TaskStatusLabel/TaskStatusLabel';
 import TaskActionsMenu, { type TaskTableActions } from '../TaskActionsMenu';
 
 interface UseTaskTableOptions {
@@ -64,7 +64,7 @@ export default function useTaskTable({
       header: 'Status',
       size: 150,
       accessorFn: task => task.status,
-      cell: ({ row }) => <TaskStatusBadge task={row.original} />,
+      cell: ({ row }) => <TaskStatusLabel task={row.original} />,
     },
     ...(canWrite ? [{
       id: 'actions',

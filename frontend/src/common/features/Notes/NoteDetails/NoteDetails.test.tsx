@@ -7,7 +7,7 @@ describe('NoteDetails', () => {
   it('uses the staff fallback when the author is unavailable', () => {
     render(
       <NoteDetails
-        categoryBadge={<span>General</span>}
+        categoryLabel={<span>General</span>}
         createdAt="2026-08-19T12:00:00.000Z"
         createdByName={null}
       />,

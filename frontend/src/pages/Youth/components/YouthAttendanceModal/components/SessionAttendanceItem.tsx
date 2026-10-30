@@ -1,5 +1,6 @@
 import { faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import Label from '../../../../../common/components/Label/Label';
 import Button from '../../../../../common/components/Button/Button';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
@@ -43,7 +44,7 @@ export default function SessionAttendanceItem({
           <strong>{sessionLabel}</strong>
           <span>{formatShortDate(session.startsAt)}</span>
           {session.cancelledAt && (
-            <span className="status-badge youth-attendance-modal__cancelled">Cancelled</span>
+            <Label tone="negative">Cancelled</Label>
           )}
         </div>
         <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionLabel}`}>

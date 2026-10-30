@@ -1,6 +1,6 @@
 import type { SessionNote } from '../../types';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import NoteCategoryBadge from '../../../../../common/features/Notes/NoteCategoryBadge/NoteCategoryBadge';
+import NoteCategoryLabel from '../../../../../common/features/Notes/NoteCategoryLabel/NoteCategoryLabel';
 import NoteRow from '../../../../../common/features/Notes/NoteRow/NoteRow';
 import { getSessionNoteCategoryLabel } from '../../utils/sessionNoteCategories';
 
@@ -26,7 +26,7 @@ export default function SessionNoteRow<TNote extends SessionNote>({
   return (
     <NoteRow
       ariaLabel="session note"
-      categoryBadge={<NoteCategoryBadge category={note.category} label={getSessionNoteCategoryLabel(note.category)} />}
+      categoryLabel={<NoteCategoryLabel category={note.category} label={getSessionNoteCategoryLabel(note.category)} />}
       date={date}
       onView={() => onView(note)}
       onEdit={onEdit ? () => onEdit(note) : undefined}

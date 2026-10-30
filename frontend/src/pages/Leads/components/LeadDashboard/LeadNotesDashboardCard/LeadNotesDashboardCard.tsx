@@ -3,7 +3,7 @@ import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
 import NoteDetails from '../../../../../common/features/Notes/NoteDetails/NoteDetails';
-import NoteCategoryBadge from '../../../../../common/features/Notes/NoteCategoryBadge/NoteCategoryBadge';
+import NoteCategoryLabel from '../../../../../common/features/Notes/NoteCategoryLabel/NoteCategoryLabel';
 import NoteRow from '../../../../../common/features/Notes/NoteRow/NoteRow';
 import type { Lead } from '../../../types';
 import useLeadNotes from './useLeadNotes';
@@ -43,7 +43,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange
               key={note.id}
               ariaLabel="follow-up note"
               compact
-              categoryBadge={<NoteCategoryBadge category="follow_up" label="Follow-up" />}
+              categoryLabel={<NoteCategoryLabel category="follow_up" label="Follow-up" />}
               date={note.createdAt}
               onView={() => notes.openDetails(note)}
               onEdit={canWrite ? () => notes.openEditor(note) : undefined}
@@ -62,7 +62,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange
       footer={<Button variant="secondary" onClick={notes.closeDetails}>Close</Button>}
     >
       {notes.selectedNote && <NoteDetails
-        categoryBadge={<NoteCategoryBadge category="follow_up" label="Follow-up" />}
+        categoryLabel={<NoteCategoryLabel category="follow_up" label="Follow-up" />}
         createdAt={notes.selectedNote.createdAt}
         createdByName={notes.selectedNote.createdByName}
         details={notes.selectedNote.details}

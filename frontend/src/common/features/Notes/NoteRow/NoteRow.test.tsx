@@ -12,7 +12,7 @@ describe('NoteRow', () => {
       <NoteRow
         ariaLabel="profile note"
         title="Check-in"
-        categoryBadge={<span>General</span>}
+        categoryLabel={<span>General</span>}
         date="2026-08-07T12:00:00.000Z"
         onView={onView}
         onEdit={onEdit}
@@ -33,7 +33,7 @@ describe('NoteRow', () => {
       <NoteRow
         ariaLabel="profile note"
         title="Read only"
-        categoryBadge={<span>General</span>}
+        categoryLabel={<span>General</span>}
         date="2026-08-07T12:00:00.000Z"
         onView={() => undefined}
       />,
@@ -45,7 +45,7 @@ describe('NoteRow', () => {
 
   it('supports editing without exposing deletion', () => {
     const onEdit = vi.fn();
-    render(<NoteRow ariaLabel="status update" categoryBadge={<span>Contacted</span>}
+    render(<NoteRow ariaLabel="status update" categoryLabel={<span>Contacted</span>}
       date="2026-08-07T12:00:00.000Z" onView={() => undefined} onEdit={onEdit} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit status update' }));

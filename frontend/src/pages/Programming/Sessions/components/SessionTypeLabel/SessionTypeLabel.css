@@ -1,18 +1,18 @@
-.session-type-badge {
+.session-type-label {
   justify-self: start;
 }
 
-.session-type-badge--regular {
+.session-type-label--regular {
   background: var(--ink-08);
   color: var(--color-body);
 }
 
-.session-type-badge--guest-speaker {
+.session-type-label--guest-speaker {
   background: var(--color-status-warn-bg);
   color: var(--color-status-warn);
 }
 
-.session-type-badge--field-trip {
+.session-type-label--field-trip {
   background: var(--color-accent-soft);
   color: var(--color-accent);
 }

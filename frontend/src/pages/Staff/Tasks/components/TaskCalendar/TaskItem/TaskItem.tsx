@@ -2,7 +2,7 @@ import type { ItemCalendarProps } from '../../../../../../common/components/Time
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import { formatHours } from '../../../../../../common/utils/date';
 import type { Task } from '../../../types';
-import TaskStatusBadge from '../../TaskStatusBadge/TaskStatusBadge';
+import TaskStatusLabel from '../../TaskStatusLabel/TaskStatusLabel';
 import './TaskItem.css';
 
 export default function TaskItem<TRow, TItemData>({ calendar, task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete }: { calendar?: ItemCalendarProps<TRow, TItemData>; task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void }) {
@@ -17,8 +17,8 @@ export default function TaskItem<TRow, TItemData>({ calendar, task, selected = f
     detailTitle={(
       <span className="task-item__detail-title">
         <span>{task.title}</span>
-        <span className="task-item__detail-badges">
-          <TaskStatusBadge task={task} />
+        <span className="task-item__detail-labels">
+          <TaskStatusLabel task={task} />
         </span>
       </span>
     )}

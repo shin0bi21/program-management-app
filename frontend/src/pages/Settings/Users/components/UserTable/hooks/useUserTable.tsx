@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import Label from '../../../../../../common/components/Label/Label';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { User, UserStatus } from '../../../types';
@@ -34,7 +35,7 @@ export default function useUserTable({
         header: 'Status',
         size: 120,
         accessorFn: account => account.status,
-        cell: ({ row }) => statusBadge(row.original.status),
+        cell: ({ row }) => statusLabel(row.original.status),
       },
       {
         id: 'createdAt',
@@ -79,6 +80,8 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function statusBadge(status: UserStatus) {
-  return <span className={`status-badge status-${status}`}>{titleCase(status)}</span>;
+function statusLabel(status: UserStatus) {
+  const tones = { active: 'positive', inactive: 'negative', invited: 'attention' } as const;
+
+  return <Label tone={tones[status]}>{titleCase(status)}</Label>;
 }

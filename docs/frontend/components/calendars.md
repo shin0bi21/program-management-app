@@ -192,15 +192,15 @@ own that conversion contract.
 
 ## Present Item Details
 
-Use the shared [badge primitives](README.md#type-and-status-labels) for type and lifecycle
+Use the shared [label primitives](README.md#type-and-status-labels) for type and lifecycle
 labels. Keep summaries concise and place additional information in hover or keyboard-focus
-details. Dense row overrides must not shrink badges in the details surface. Accessible
+details. Dense row overrides must not shrink labels in the details surface. Accessible
 labels retain the complete information needed when the visual summary is clipped.
 
 For example, Programming uses programs as rows and session themes as summaries. Its
 [SessionItem](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionItem/SessionItem.tsx)
 and [tests](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionItem/SessionItem.test.tsx)
-own badge order, program-local date/time formatting, and cross-midnight labels. Hours
+own label order, program-local date/time formatting, and cross-midnight labels. Hours
 item details omit a redundant cycle label; other Hours surfaces keep their cycle context.
 
 ## Find Domain Behavior

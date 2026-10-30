@@ -158,8 +158,8 @@ describe('useTaskActions', () => {
       hoursLogged: 3.5,
       loggedHoursByDate: [{ date: '2026-08-18', hours: 3.5 }],
       state: completeTask ? 'completed' : 'open',
-      status: completeTask ? 'completed' : 'active',
-      statusLabel: completeTask ? 'Completed' : 'Active',
+      status: completeTask ? 'completed' : 'in_progress',
+      statusLabel: completeTask ? 'Completed' : 'In Progress',
       completedAt: completeTask ? '2026-08-18T12:00:00Z' : null,
     });
     const client = createTestQueryClient();

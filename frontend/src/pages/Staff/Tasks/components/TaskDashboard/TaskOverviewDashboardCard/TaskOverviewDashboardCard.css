@@ -63,9 +63,9 @@
   color: var(--color-info);
 }
 
-.task-overview-card__metric-active dt,
-.task-overview-card__metric-active dd {
-  color: var(--color-task-active);
+.task-overview-card__metric-in-progress dt,
+.task-overview-card__metric-in-progress dd {
+  color: var(--color-status-warn);
 }
 
 .task-overview-card__metric-overdue dt,
@@ -105,9 +105,9 @@
   color: var(--color-info);
 }
 
-.task-overview-card__report-active dt,
-.task-overview-card__report-active dd {
-  color: var(--color-task-active);
+.task-overview-card__report-in-progress dt,
+.task-overview-card__report-in-progress dd {
+  color: var(--color-status-warn);
 }
 
 .task-overview-card__report-overdue dt,
@@ -156,13 +156,13 @@
 }
 
 .task-overview-card__task-section--warn {
-  border-left-color: var(--color-task-active-border);
-  background: var(--color-task-active-bg);
+  border-left-color: var(--color-status-warn-border);
+  background: var(--color-status-warn-bg);
 }
 
 .task-overview-card__task-section--warn h3,
 .task-overview-card__task-section--warn li span {
-  color: var(--color-task-active);
+  color: var(--color-status-warn);
 }
 
 .task-overview-card__task-section--danger {
@@ -209,7 +209,7 @@
 }
 
 .task-overview-card__task--due-this-week span {
-  color: var(--color-task-active);
+  color: var(--color-status-warn);
   font-weight: 700;
 }
 

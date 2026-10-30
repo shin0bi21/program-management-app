@@ -33,16 +33,16 @@ function sortByDueDate(tasks: readonly Task[]) {
 function groupTasksForOverview(tasks: readonly Task[], today: string) {
   const assignedTasks = tasks.filter(task => task.state === 'open');
   const upcomingTasks = assignedTasks.filter(task => task.status === 'upcoming');
-  const activeTasks = assignedTasks.filter(task => task.status === 'active');
+  const inProgressTasks = assignedTasks.filter(task => task.status === 'in_progress');
   const overdueTasks = assignedTasks.filter(task => task.status === 'overdue');
   const weekEnd = currentWeekEnd(today);
-  const dueThisWeekTasks = [...upcomingTasks, ...activeTasks]
+  const dueThisWeekTasks = [...upcomingTasks, ...inProgressTasks]
     .filter(task => task.dueDate >= today && task.dueDate <= weekEnd);
 
   return {
     assignedTasks: sortByDueDate(assignedTasks),
     upcomingTasks: sortByDueDate(upcomingTasks),
-    activeTasks: sortByDueDate(activeTasks),
+    inProgressTasks: sortByDueDate(inProgressTasks),
     overdueTasks: sortByDueDate(overdueTasks),
     dueThisWeekTasks,
   };
@@ -113,7 +113,7 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
   const summary = {
     assigned: overview.assignedTasks.length,
     upcoming: overview.upcomingTasks.length,
-    active: overview.activeTasks.length,
+    inProgress: overview.inProgressTasks.length,
     overdue: overview.overdueTasks.length,
   };
   const dueThisWeekIds = new Set(overview.dueThisWeekTasks.map(task => task.id));
@@ -126,7 +126,7 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
           <dl className="task-overview-card__metrics">
             <div><dt>Assigned</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.assigned}</dd></div>
             <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.upcoming}</dd></div>
-            <div className="task-overview-card__metric-active"><dt>Active</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.active}</dd></div>
+            <div className="task-overview-card__metric-in-progress"><dt>In Progress</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.inProgress}</dd></div>
             <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.overdue}</dd></div>
           </dl>
           {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
@@ -146,7 +146,7 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
         <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
-        <div className="task-overview-card__report-active"><dt>Active</dt><dd>{summary.active}</dd></div>
+        <div className="task-overview-card__report-in-progress"><dt>In Progress</dt><dd>{summary.inProgress}</dd></div>
         <div className="task-overview-card__report-overdue"><dt>Overdue</dt><dd>{summary.overdue}</dd></div>
       </dl>
       <div className="task-overview-card__task-lists">
@@ -158,9 +158,9 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
           dueThisWeekIds={dueThisWeekIds}
         />
         <TaskDueList
-          title="Active"
-          tasks={overview.activeTasks}
-          emptyMessage="No active tasks."
+          title="In Progress"
+          tasks={overview.inProgressTasks}
+          emptyMessage="No in progress tasks."
           tone="warn"
           dueThisWeekIds={dueThisWeekIds}
         />

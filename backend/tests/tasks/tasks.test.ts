@@ -205,6 +205,60 @@ describe('Tasks API', () => {
     })).rejects.toBe(rollback);
   });
 
+  it.each([
+    ['task-filters', '2026-10-30_2_rename_task_filter_active_status.sql'],
+    ['task-preferences', '2026-10-30_3_rename_task_preference_active_status.sql'],
+  ])('migrates saved active filters in %s without changing other preferences', async (key, filename) => {
+    const rollback = new Error('rollback task filter rename migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      `db/migrations/${filename}`,
+    ), 'utf8');
+    const fixtures = [
+      {
+        userId: firstStaffId,
+        key,
+        value: {
+          statuses: ['overdue', 'active', 'completed', 'in_progress', 'active'],
+          search: 'keep me',
+          staffIds: [firstStaffId],
+        },
+        expected: {
+          statuses: ['overdue', 'in_progress', 'completed'],
+          search: 'keep me',
+          staffIds: [firstStaffId],
+        },
+      },
+      { userId: secondStaffId, key, value: { statuses: ['upcoming', 'completed'] } },
+      { userId: unrelatedStaffId, key, value: { statuses: 'active' } },
+      { userId: adminId, key, value: { search: 'missing statuses' } },
+      { userId: firstStaffId, key: 'hours-filters', value: { statuses: ['active'] } },
+    ];
+
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      for (const fixture of fixtures) {
+        await trx`
+          INSERT INTO user_preferences (user_id, preference_key, value)
+          VALUES (${fixture.userId}, ${fixture.key}, ${trx.json(fixture.value)})
+          ON CONFLICT (user_id, preference_key) DO UPDATE SET value = EXCLUDED.value
+        `;
+      }
+
+      await trx.unsafe(migration);
+      await trx.unsafe(migration);
+
+      for (const fixture of fixtures) {
+        const [preference] = await trx<Array<{ value: unknown }>>`
+          SELECT value FROM user_preferences
+          WHERE user_id = ${fixture.userId} AND preference_key = ${fixture.key}
+        `;
+        expect(preference.value).toEqual(fixture.expected ?? fixture.value);
+      }
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
   it('returns only task-owned reference choices', async () => {
     const options = await request(app).get('/api/tasks/reference-data')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -213,7 +267,7 @@ describe('Tasks API', () => {
     expect(options.body.categories).toContainEqual({ value: 'planning_prep', label: 'Planning / Prep' });
     expect(options.body.statuses).toEqual([
       { value: 'upcoming', label: 'Upcoming' },
-      { value: 'active', label: 'Active' },
+      { value: 'in_progress', label: 'In Progress' },
       { value: 'overdue', label: 'Overdue' },
       { value: 'completed', label: 'Completed' },
       { value: 'cancelled', label: 'Cancelled' },
@@ -482,9 +536,9 @@ describe('Tasks API', () => {
   it('filters open tasks by their date-derived timing state', async () => {
     const marker = `Timing-filtered task ${firstStaffId}`;
     const cases = [
-      { status: 'upcoming', title: `${marker} upcoming`, startDate: shiftDate(taskDate, 1), dueDate: shiftDate(taskDate, 2) },
-      { status: 'active', title: `${marker} active`, startDate: shiftDate(taskDate, -1), dueDate: shiftDate(taskDate, 1) },
-      { status: 'overdue', title: `${marker} overdue`, startDate: shiftDate(taskDate, -2), dueDate: shiftDate(taskDate, -1) },
+      { status: 'upcoming', label: 'Upcoming', title: `${marker} upcoming`, startDate: shiftDate(taskDate, 1), dueDate: shiftDate(taskDate, 2) },
+      { status: 'in_progress', label: 'In Progress', title: `${marker} in progress`, startDate: shiftDate(taskDate, -1), dueDate: shiftDate(taskDate, 1) },
+      { status: 'overdue', label: 'Overdue', title: `${marker} overdue`, startDate: shiftDate(taskDate, -2), dueDate: shiftDate(taskDate, -1) },
     ] as const;
 
     for (const taskCase of cases) {
@@ -499,6 +553,7 @@ describe('Tasks API', () => {
           staffId: firstStaffId,
         }));
       expect(created.status).toBe(201);
+      expect(created.body).toMatchObject({ state: 'open', status: taskCase.status, statusLabel: taskCase.label });
     }
 
     for (const taskCase of cases) {
@@ -512,9 +567,48 @@ describe('Tasks API', () => {
           title: taskCase.title,
           state: 'open',
           status: taskCase.status,
-          statusLabel: taskCase.status[0].toUpperCase() + taskCase.status.slice(1),
+          statusLabel: taskCase.label,
         }),
       ]);
+
+      const calendar = await request(app)
+        .get(`/api/tasks/calendar?start=${shiftDate(taskDate, -3)}&end=${shiftDate(taskDate, 3)}&search=${encodeURIComponent(marker)}&statuses=${taskCase.status}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+
+      expect(calendar.status).toBe(200);
+      expect(calendar.body).toEqual([
+        expect.objectContaining({ title: taskCase.title, state: 'open', status: taskCase.status, statusLabel: taskCase.label }),
+      ]);
+    }
+
+    const sorted = await request(app)
+      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=status&direction=asc&limit=1`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(sorted.status).toBe(200);
+    expect(sorted.body.rows).toEqual([expect.objectContaining({ status: 'in_progress' })]);
+    expect(sorted.body.nextCursor).toEqual(expect.any(String));
+
+    const nextPage = await request(app)
+      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=status&direction=asc&limit=1&cursor=${encodeURIComponent(sorted.body.nextCursor)}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+
+    expect(nextPage.status).toBe(200);
+    expect(nextPage.body.rows).toEqual([expect.objectContaining({ status: 'overdue' })]);
+  });
+
+  it('rejects the obsolete active task status filter', async () => {
+    for (const endpoint of [
+      '/api/tasks/list?statuses=active',
+      `/api/tasks/calendar?start=${taskDate}&end=${taskDate}&statuses=active`,
+    ]) {
+      const response = await request(app).get(endpoint)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.details).toEqual(expect.arrayContaining([
+        expect.objectContaining({ field: 'query.statuses.0' }),
+      ]));
     }
   });
 

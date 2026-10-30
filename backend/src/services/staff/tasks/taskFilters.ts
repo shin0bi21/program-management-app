@@ -12,7 +12,7 @@ export function buildTaskFilters(filters: TaskFilters) {
   const status = sql`CASE
     WHEN task.status = 'open' AND task.start_date > ${today} THEN 'upcoming'
     WHEN task.status = 'open' AND task.due_date < ${today} THEN 'overdue'
-    WHEN task.status = 'open' THEN 'active'
+    WHEN task.status = 'open' THEN 'in_progress'
     ELSE task.status
   END`;
   const search = filters.search ? `%${filters.search}%` : null;
@@ -24,7 +24,7 @@ export function buildTaskFilters(filters: TaskFilters) {
     AND ${filters.categories.length ? sql`task.category::text = ANY(${sql.array(filters.categories)}::text[])` : sql`TRUE`}
     AND ${filters.statuses.length ? sql`(
       (${filters.statuses.includes('upcoming')} AND task.status = 'open' AND task.start_date > ${today})
-      OR (${filters.statuses.includes('active')} AND task.status = 'open' AND task.start_date <= ${today} AND task.due_date >= ${today})
+      OR (${filters.statuses.includes('in_progress')} AND task.status = 'open' AND task.start_date <= ${today} AND task.due_date >= ${today})
       OR (${filters.statuses.includes('overdue')} AND task.status = 'open' AND task.due_date < ${today})
       OR (${filters.statuses.includes('completed')} AND task.status = 'completed')
       OR (${filters.statuses.includes('cancelled')} AND task.status = 'cancelled')
