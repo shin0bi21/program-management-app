@@ -30,7 +30,6 @@ export default function AccountModal(props: AccountModalProps) {
       onClose={handleClose}
       title={isEdit ? 'Edit Account' : 'Invite Staff Account'}
       status={submitStatus}
-      successDelay={800}
       statusMessage={
         submitStatus === 'submitting' ? (isEdit ? 'Updating account...' : 'Sending invitation...') :
         submitStatus === 'success' ? (isEdit ? 'Account updated!' : 'Invitation sent!') :

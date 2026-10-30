@@ -8,6 +8,42 @@ describe('Modal success lifecycle', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('closes 1000 ms after success by default', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Modal isOpen onClose={onClose} title="Save" status="submitting">
+        Content
+      </Modal>,
+    );
+
+    act(() => vi.advanceTimersByTime(2000));
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal isOpen onClose={onClose} title="Save" status="success">
+        Content
+      </Modal>,
+    );
+    act(() => vi.advanceTimersByTime(999));
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('allows disabling automatic closure with a zero delay', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal isOpen onClose={onClose} title="Saved" status="success" successDelay={0}>
+        Content
+      </Modal>,
+    );
+
+    act(() => vi.runAllTimers());
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('closes once through the latest callback after the success delay', () => {
     const firstClose = vi.fn();
     const latestClose = vi.fn();
@@ -22,7 +58,11 @@ describe('Modal success lifecycle', () => {
         Content
       </Modal>,
     );
-    act(() => vi.advanceTimersByTime(500));
+    act(() => vi.advanceTimersByTime(499));
+
+    expect(latestClose).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(1));
 
     expect(firstClose).not.toHaveBeenCalled();
     expect(latestClose).toHaveBeenCalledOnce();

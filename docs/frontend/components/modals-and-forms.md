@@ -54,6 +54,11 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 
+`Modal` closes automatically 1000 ms after its status becomes `success`. Omit
+`successDelay` to use this standard; pass an explicit delay only when a workflow
+needs different timing, or `0` to disable automatic closure. Shared modal wrappers
+should inherit this default rather than define their own.
+
 Use `FormField` for one labeled control (input, date, textarea, or select). Use
 `FormFieldGroup` from the same component directory for a checklist or other group of
 controls that needs a `fieldset` and `legend`. Both share label typography, a 4px

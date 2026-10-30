@@ -48,7 +48,6 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
       footer={footer}
       status={submitStatus}
       statusMessage={statusMessage}
-      successDelay={800}
     >
       <form id="lead-form" onSubmit={handleSubmit(onValid)}>
         <OutreachFormFields

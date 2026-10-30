@@ -12,7 +12,7 @@ interface ModalProps {
   maxWidth?: string;
   status?: 'idle' | 'submitting' | 'success' | 'error';
   statusMessage?: string;
-  // Auto-close after successDelay ms when status becomes 'success'. 0 = disabled.
+  // Auto-close after successDelay ms when status becomes 'success'. Defaults to 1000; 0 disables it.
   successDelay?: number;
   // Disable the X close button (e.g. while a request is in-flight)
   disableClose?: boolean;
@@ -30,7 +30,7 @@ export default function Modal({
   maxWidth = '500px',
   status = 'idle',
   statusMessage,
-  successDelay = 0,
+  successDelay = 1000,
   disableClose = false,
   dismissible = true,
   ariaDescribedBy,

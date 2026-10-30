@@ -108,7 +108,6 @@ export default function YouthModal({
         footer={footer}
         status={submitStatus}
         statusMessage={modalStatusMessage}
-        successDelay={800}
       >
         <form id="youth-form" onSubmit={rhfHandleSubmit(onValid)}>
           {!contactOnly && (

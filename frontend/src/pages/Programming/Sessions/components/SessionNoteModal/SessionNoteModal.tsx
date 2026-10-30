@@ -37,7 +37,6 @@ export default function SessionNoteModal({
       submitLabel={note ? 'Save' : 'Add Note'}
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      successDelay={1200}
       onCategoryChange={value => workflow.updateCategory(value as SessionNoteCategory)}
       onDetailsChange={workflow.updateDetails}
       onSubmit={workflow.submit}

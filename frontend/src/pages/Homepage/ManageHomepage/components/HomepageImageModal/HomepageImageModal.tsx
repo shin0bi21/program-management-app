@@ -29,7 +29,6 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
       title="Manage Images"
       status={workflow.status}
       statusMessage={workflow.statusMessage}
-      successDelay={1200}
       footer={(
         <ModalFormFooter
           formId="homepage-image-form"
