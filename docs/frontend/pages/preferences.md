@@ -91,6 +91,11 @@ flat aliases for grouped controls. A route reads `controls.search.appliedValue` 
 values to its table. The groups describe the interface; each page retains its own fields,
 defaults and persistence choices.
 
+Keep preference-backed controls, including search, unavailable until `ready`.
+Applying an early edit can replace a pending preference read with normalized
+defaults and overwrite saved sibling fields. Gate those controls alongside the
+page's filters and views; ephemeral controls may remain available.
+
 The preference pattern check enforces these groups. The page scaffold points new durable
 controls to this contract without inventing preference keys or filters for a new page.
 
