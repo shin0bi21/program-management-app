@@ -86,6 +86,11 @@ outside them. Pages show an empty or unavailable state instead of mounting a cal
 without cycle bounds. Generic consumers without explicit bounds retain the existing
 period-count contract.
 
+The shared calendar refreshes its local current date at midnight and on tab visibility
+or window focus. The highlight and Today availability use that date; activating Today
+rechecks the clock and current bounds before navigating. Midnight updates preserve the
+current viewport and do not reload calendar data.
+
 Data buffers preload beyond visible periods. Intersect every buffered request with the
 applied range before issuing HTTP requests, and return empty data for disjoint requests.
 Convert Programming dates into local-midnight timestamps with an exclusive next-day end;
@@ -114,7 +119,7 @@ Apply the [lowest-owner hook rule](../architecture/ownership.md) within the cale
 
 | Owner | Hook responsibility |
 |---|---|
-| `TimelineCalendar/hooks/` | Viewport-wide virtualization and the single shared pointer-session coordinator |
+| `TimelineCalendar/hooks/` | Viewport-wide virtualization, current-date lifetime, and the single shared pointer-session coordinator |
 | `components/Row/hooks/` | Stateful behavior contained within one row, when needed; simple selection and event forwarding stay in Row |
 | `components/Item/hooks/` | That item's complete move/resize workflows, hover/focus details, and action-menu workflow |
 | `components/Cell/hooks/` | That cell's activation and action-menu workflow |
