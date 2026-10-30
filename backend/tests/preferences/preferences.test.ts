@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { asTransactionSql } from '../../src/db/client';
+import { preferenceKeySchema } from '../../src/validation/preferenceSchemas';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
@@ -92,7 +93,6 @@ describe('User preferences API', () => {
       types: ['session'],
       cycleId: '00000000-0000-4000-8000-000000000001',
       sorting: { key: 'session', direction: 'asc' },
-      columnWidths: { firstName: 180, lastName: 200, session: 220, type: 120 },
     };
     const saved = await request(app)
       .put('/api/preferences/hours-filters')
@@ -107,108 +107,85 @@ describe('User preferences API', () => {
     expect(restored.body).toEqual(value);
   });
 
-  it('persists frontend-owned table presentation values', async () => {
-    const value = {
-      statuses: [],
-      roles: [],
-      columnWidths: { name: 180, email: 320 },
-      hiddenColumns: ['email'],
+  it.each(preferenceKeySchema.options)('discards browser-local layout when saving %s', async key => {
+    const accountPreferences = {
+      search: 'planning',
+      statuses: ['active'],
+      sorting: { key: 'name', direction: 'desc' },
+      futureFilter: { enabled: true },
     };
     const saved = await request(app)
-      .put('/api/preferences/account-filters')
+      .put(`/api/preferences/${key}`)
       .set('Authorization', `Bearer ${firstToken}`)
-      .send(value);
+      .send({ ...accountPreferences, columnWidths: { name: 180 }, hiddenColumns: ['email'] });
+
     expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(value);
-
-    const presentationColumns = await request(app)
-      .put('/api/preferences/account-filters')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send({ statuses: [], roles: [], columnWidths: { actions: 120 }, hiddenColumns: ['actions'] });
-    expect(presentationColumns.status).toBe(200);
-    expect(presentationColumns.body).toEqual({
-      statuses: [],
-      roles: [],
-      columnWidths: { actions: 120 },
-      hiddenColumns: ['actions'],
-    });
-  });
-
-  it('stores preference contents as frontend-owned JSON', async () => {
-    const legacyValue = {
-      statuses: [],
-      programIds: [],
-      columnWidths: { youthName: 260, school: 220 },
-      hiddenColumns: ['youthName', 'school'],
-    };
-    await sql`
-      INSERT INTO user_preferences (user_id, preference_key, value)
-      VALUES (${firstUserId}, 'expression-interest-filters', ${sql.json(legacyValue)})
-      ON CONFLICT (user_id, preference_key) DO UPDATE
-      SET value = EXCLUDED.value, updated_at = NOW()
-    `;
+    expect(saved.body).toEqual(accountPreferences);
 
     const restored = await request(app)
-      .get('/api/preferences/expression-interest-filters')
+      .get(`/api/preferences/${key}`)
       .set('Authorization', `Bearer ${firstToken}`);
-    expect(restored.status).toBe(200);
-    expect(restored.body).toEqual(legacyValue);
+    expect(restored.body).toEqual(accountPreferences);
 
-    const saved = await request(app)
-      .put('/api/preferences/expression-interest-filters')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send(legacyValue);
-    expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(legacyValue);
-
-    const futureValue = {
-      ...legacyValue,
-      futureFilter: { enabled: true },
-      columnWidths: { futureColumn: 99 },
-    };
-    const savedFutureValue = await request(app)
-      .put('/api/preferences/expression-interest-filters')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send(futureValue);
-    expect(savedFutureValue.status).toBe(200);
-    expect(savedFutureValue.body).toEqual(futureValue);
+    const [row] = await sql<Array<{ value: typeof accountPreferences }>>`
+      SELECT value FROM user_preferences
+      WHERE user_id = ${firstUserId} AND preference_key = ${key}
+    `;
+    expect(row.value).toEqual(accountPreferences);
   });
 
-  it('persists separate Outreach first and last name column widths', async () => {
-    const preferences = [
-      {
-        key: 'lead-filters',
-        value: { statuses: [], programIds: [], columnWidths: { firstName: 180, lastName: 200 } },
-      },
-      {
-        key: 'expression-interest-filters',
-        value: { statuses: [], programIds: [], columnWidths: { firstName: 170, lastName: 210 } },
-      },
-    ] as const;
-
-    for (const { key, value } of preferences) {
-      const saved = await request(app)
-        .put(`/api/preferences/${key}`)
-        .set('Authorization', `Bearer ${firstToken}`)
-        .send(value);
-      expect(saved.status).toBe(200);
-      expect(saved.body).toEqual(value);
-    }
-  });
-
-  it('persists separate task assignee first and last name column widths', async () => {
-    const value = {
-      view: 'list', staffIds: [], programIds: [], categories: [], statuses: [],
-      sorting: { key: 'lastName', direction: 'desc' },
-      columnWidths: { firstName: 180, lastName: 200 },
+  it('removes only layout fields from all users and preference keys during migration', async () => {
+    const rollback = new Error('rollback layout preference migration test');
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-10-30_1_remove_table_layout_preferences.sql',
+    ), 'utf8');
+    const accountPreferences = {
+      view: 'table',
+      search: 'planning',
+      sorting: { key: 'title', direction: 'asc' },
+      staffIds: [firstUserId],
+      futureFilter: { hiddenColumns: ['nested-value-is-not-table-layout'] },
     };
-    const saved = await request(app)
-      .put('/api/preferences/task-preferences')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send(value);
 
-    expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(value);
+    await expect(sql.begin(async rawTx => {
+      const trx = asTransactionSql(rawTx);
+      const fixtures = [
+        { userId: firstUserId, key: 'task-preferences', value: { ...accountPreferences, columnWidths: { title: 280 }, hiddenColumns: ['program'] } },
+        { userId: secondUserId, key: 'retired-preference-key', value: { ...accountPreferences, columnWidths: null, hiddenColumns: 'malformed' } },
+        { userId: firstUserId, key: 'layout-only', value: { columnWidths: {}, hiddenColumns: [] } },
+        { userId: secondUserId, key: 'unaffected-preferences', value: accountPreferences },
+      ];
+
+      for (const fixture of fixtures) {
+        await trx`
+          INSERT INTO user_preferences (user_id, preference_key, value, updated_at)
+          VALUES (${fixture.userId}, ${fixture.key}, ${trx.json(fixture.value)}, '2000-01-01T00:00:00Z')
+          ON CONFLICT (user_id, preference_key) DO UPDATE
+          SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+        `;
+      }
+
+      await trx.unsafe(migration);
+
+      for (const fixture of fixtures) {
+        const [row] = await trx<Array<{ value: object; updatedAt: Date }>>`
+          SELECT value, updated_at FROM user_preferences
+          WHERE user_id = ${fixture.userId} AND preference_key = ${fixture.key}
+        `;
+        expect(row.value).toEqual(fixture.key === 'layout-only' ? {} : accountPreferences);
+        if (fixture.key === 'unaffected-preferences') {
+          expect(new Date(row.updatedAt).toISOString()).toBe('2000-01-01T00:00:00.000Z');
+        }
+      }
+
+      const [remaining] = await trx<Array<{ count: number }>>`
+        SELECT COUNT(*)::int AS count FROM user_preferences
+        WHERE value ? 'columnWidths' OR value ? 'hiddenColumns'
+      `;
+      expect(remaining.count).toBe(0);
+      throw rollback;
+    })).rejects.toBe(rollback);
   });
 
   it('migrates task preferences to the preferences key without changing their value', async () => {

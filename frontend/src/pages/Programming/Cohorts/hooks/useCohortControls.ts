@@ -4,12 +4,11 @@ import type { FilterCardCategory } from '../../../../common/components/FilterCar
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
   optionalPreferenceOption,
   optionalPreferenceId,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
 import type { CohortSortKey } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
@@ -20,8 +19,6 @@ export interface CohortPreference {
   programId: string | null;
   status: CohortStatus | null;
   sorting?: ListSort<CohortSortKey>;
-  columnWidths?: Record<string, number>;
-  hiddenColumns?: string[];
 }
 
 const DEFAULT_SORTING: ListSort<CohortSortKey> = { key: 'start', direction: 'desc' };
@@ -35,6 +32,7 @@ export function useCohortControls(
   // Search and filters.
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const layout = useTableLayout({ key: 'cohort-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'cohort-filters',
     waiting: role === null || programsLoading,
@@ -42,11 +40,9 @@ export function useCohortControls(
       programId: optionalPreferenceId(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       status: optionalPreferenceOption(['active', 'upcoming', 'completed'] as const, role === 'staff' ? 'active' : null),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
-  const { sorting, columnWidths, hiddenColumns } = preferences;
+  const { sorting } = preferences;
   const programId = preferences.programId ?? '';
   const status = preferences.status ?? '';
 
@@ -81,8 +77,6 @@ export function useCohortControls(
   };
   const clearFilters = () => updatePreferences({ programId: null, status: null });
   const setSorting = (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<CohortSortKey> });
-  const setColumnWidths = (columnWidths: Record<string, number>) => updatePreferences({ columnWidths });
-  const setHiddenColumns = (hiddenColumns: string[]) => updatePreferences({ hiddenColumns });
 
   return {
     ready,
@@ -104,10 +98,10 @@ export function useCohortControls(
     table: {
       sorting,
       setSorting,
-      columnWidths,
-      setColumnWidths,
-      hiddenColumns,
-      setHiddenColumns,
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }

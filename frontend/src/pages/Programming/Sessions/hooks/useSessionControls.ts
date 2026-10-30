@@ -4,13 +4,12 @@ import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceOption,
   preferenceOptions,
   preferenceIds,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionSortKey, SessionType } from '../types';
@@ -26,8 +25,6 @@ export interface SessionPreference {
   sessionTypeIds: string[];
   statuses: SessionStatusFilter[];
   sorting?: ListSort<SessionSortKey>;
-  columnWidths?: Record<string, number>;
-  hiddenColumns?: string[];
 }
 
 interface UseSessionControlsOptions {
@@ -52,6 +49,7 @@ export function useSessionControls({
   // Search and filters.
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const layout = useTableLayout({ key: 'session-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'session-filters',
     waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,
@@ -62,11 +60,9 @@ export function useSessionControls({
       sessionTypeIds: preferenceIds(sessionTypesLoading || sessionTypesError ? undefined : sessionTypes.map(type => type.id)),
       statuses: preferenceOptions(['upcoming', 'completed'] as const),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
-  const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting, columnWidths, hiddenColumns } = preferences;
+  const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting } = preferences;
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const applySearch = () => setAppliedSearch(search.trim());
@@ -101,8 +97,6 @@ export function useSessionControls({
   const clearFilters = () => updatePreferences({ programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] });
   const setView = (view: SessionView) => updatePreferences({ view });
   const setSorting = (sorting: ListSort<SessionSortKey>) => updatePreferences({ sorting });
-  const setColumnWidths = (columnWidths: Record<string, number>) => updatePreferences({ columnWidths });
-  const setHiddenColumns = (hiddenColumns: string[]) => updatePreferences({ hiddenColumns });
 
   return {
     ready,
@@ -129,10 +123,10 @@ export function useSessionControls({
     table: {
       sorting,
       setSorting,
-      columnWidths,
-      setColumnWidths,
-      hiddenColumns,
-      setHiddenColumns,
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }

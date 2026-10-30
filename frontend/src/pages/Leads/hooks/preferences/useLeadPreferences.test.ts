@@ -29,6 +29,8 @@ const tableKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'crea
 describe('useLeadPreferences', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
@@ -52,14 +54,18 @@ describe('useLeadPreferences', () => {
       result.current.table.setSorting({ key: 'school', direction: 'asc' });
     });
 
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:outreach-external-leads-filters')!)).toEqual({
+      hiddenColumns: ['school'], columnWidths: { firstName: 240 },
+    });
     expect(result.current.search.appliedValue).toBe('school');
     expect(result.current.filters.statuses).toEqual(['contacted']);
     expect(result.current.filters.submitterRoles).toEqual(['youth']);
-    expect(result.current.table.sorting).toEqual({ key: 'school', direction: 'asc' });
+    expect(result.current.table).toMatchObject({
+      sorting: { key: 'school', direction: 'asc' }, hiddenColumns: ['school'], columnWidths: { firstName: 240 },
+    });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-external-leads-filters', expect.objectContaining({
         search: 'school', statuses: ['contacted'], submitterRoles: ['youth'],
-        hiddenColumns: ['school'], columnWidths: { firstName: 240 },
         sorting: { key: 'school', direction: 'asc' },
       }),
     ));

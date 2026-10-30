@@ -44,8 +44,6 @@ const currentPreference: StoredTaskPreferences = {
   programIds: [],
   categories: [],
   statuses: [],
-  columnWidths: {},
-  hiddenColumns: [],
 };
 const taskReferenceChoices = {
   categories: [

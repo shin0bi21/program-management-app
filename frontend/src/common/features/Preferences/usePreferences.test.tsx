@@ -5,15 +5,15 @@ import { getPreference, setPreference, type PreferenceKey } from './preferences.
 import {
   preferenceOption,
   preferenceIds,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
+  preferenceText,
+  preferenceOptions,
 } from './preferences';
 import usePreferences from './usePreferences';
 
 vi.mock('./preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 const get = vi.mocked(getPreference);
 const put = vi.mocked(setPreference);
-const initial = { view: 'calendar', programIds: ['program-1'], hiddenColumns: [], columnWidths: {} };
+const initial = { view: 'calendar', programIds: ['program-1'], statuses: [], search: '' };
 
 function setup(options: { waiting?: boolean; available?: string[]; key?: PreferenceKey } = {}) {
   const client = createTestQueryClient();
@@ -23,8 +23,8 @@ function setup(options: { waiting?: boolean; available?: string[]; key?: Prefere
     fields: {
       view: preferenceOption(['calendar', 'table'], 'calendar'),
       programIds: preferenceIds(available),
-      hiddenColumns: preferenceHiddenColumns(['name', 'status']),
-      columnWidths: preferenceColumnWidths(['name', 'status']),
+      statuses: preferenceOptions(['active', 'inactive']),
+      search: preferenceText(),
     },
   }), { initialProps: options, wrapper: createQueryClientWrapper(client) });
   return { ...hook, client };
@@ -55,13 +55,13 @@ describe('usePreferences', () => {
   });
 
   it('repairs and persists only invalid fields without reporting a load error', async () => {
-    get.mockResolvedValue({ ...initial, view: 'removed', hiddenColumns: 'malformed', columnWidths: { name: 180, removed: 240 } });
+    get.mockResolvedValue({ ...initial, view: 'removed', statuses: 'malformed', search: ' retained ' });
     const { result } = setup();
     await tick();
     expect(result.current.ready).toBe(true);
     await tick(250);
     expect(result.current.error).toBeNull();
-    expect(result.current.preferences).toEqual({ ...initial, columnWidths: { name: 180 } });
+    expect(result.current.preferences).toEqual({ ...initial, search: 'retained' });
     expect(put).toHaveBeenCalledTimes(1);
     expect(put).toHaveBeenCalledWith('task-preferences', result.current.preferences);
   });
@@ -94,13 +94,13 @@ describe('usePreferences', () => {
     const { result } = setup();
     await tick();
     act(() => {
-      result.current.updatePreferences({ hiddenColumns: ['status'] });
-      result.current.updatePreferences({ columnWidths: { name: 180 } });
+      result.current.updatePreferences({ statuses: ['inactive'] });
+      result.current.updatePreferences({ search: 'retained' });
       result.current.updatePreferences({ view: 'table' });
     });
     await tick(250);
     expect(put).toHaveBeenCalledTimes(1);
-    expect(put).toHaveBeenCalledWith('task-preferences', { ...initial, view: 'table', hiddenColumns: ['status'], columnWidths: { name: 180 } });
+    expect(put).toHaveBeenCalledWith('task-preferences', { ...initial, view: 'table', statuses: ['inactive'], search: 'retained' });
   });
 
   it('reconciles the latest selection when options recover and preserves sibling edits', async () => {
@@ -141,12 +141,12 @@ describe('usePreferences', () => {
     await tick();
     act(() => result.current.updatePreferences({ view: 'table' }));
     await tick(250);
-    act(() => result.current.updatePreferences({ hiddenColumns: ['name'] }));
+    act(() => result.current.updatePreferences({ statuses: ['active'] }));
     await tick(250);
     expect(put).toHaveBeenCalledTimes(1);
     await act(async () => finish(initial));
     expect(put).toHaveBeenCalledTimes(2);
-    expect(put).toHaveBeenLastCalledWith('task-preferences', { ...initial, view: 'table', hiddenColumns: ['name'] });
+    expect(put).toHaveBeenLastCalledWith('task-preferences', { ...initial, view: 'table', statuses: ['active'] });
   });
 
   it('does not shorten the debounce when an earlier save finishes', async () => {
@@ -156,7 +156,7 @@ describe('usePreferences', () => {
     await tick();
     act(() => result.current.updatePreferences({ view: 'table' }));
     await tick(250);
-    act(() => result.current.updatePreferences({ hiddenColumns: ['name'] }));
+    act(() => result.current.updatePreferences({ statuses: ['active'] }));
     await act(async () => finish(initial));
     await tick(249);
     expect(put).toHaveBeenCalledTimes(1);
@@ -171,13 +171,13 @@ describe('usePreferences', () => {
     await tick();
     act(() => result.current.updatePreferences({ view: 'table' }));
     await tick(250);
-    act(() => result.current.updatePreferences({ hiddenColumns: ['name'] }));
+    act(() => result.current.updatePreferences({ statuses: ['active'] }));
     await act(async () => fail(new Error('obsolete')));
     expect(result.current.saveError).toBeNull();
     put.mockRejectedValueOnce(new Error('offline'));
     await tick(250);
     expect(result.current.saveError).toBe('offline');
-    act(() => result.current.updatePreferences({ hiddenColumns: [] }));
+    act(() => result.current.updatePreferences({ statuses: [] }));
     await tick(250);
     expect(result.current.saveError).toBeNull();
   });
@@ -209,9 +209,9 @@ describe('usePreferences', () => {
     await tick();
     expect(put).toHaveBeenCalledWith('task-preferences', { ...initial, view: 'table' });
     expect(result.current.preferences).toEqual({ ...initial, programIds: [] });
-    act(() => result.current.updatePreferences({ hiddenColumns: ['name'] }));
+    act(() => result.current.updatePreferences({ statuses: ['active'] }));
     await tick(250);
-    expect(put).toHaveBeenLastCalledWith('hours-filters', { ...initial, programIds: [], hiddenColumns: ['name'] });
+    expect(put).toHaveBeenLastCalledWith('hours-filters', { ...initial, programIds: [], statuses: ['active'] });
   });
 
   it('keeps the current save error when a previous key fails later', async () => {

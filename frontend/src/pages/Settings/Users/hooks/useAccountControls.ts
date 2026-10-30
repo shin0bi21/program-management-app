@@ -2,11 +2,10 @@ import { useMemo, useState } from 'react';
 import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceOptions,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { UserRole, UserSortKey, UserStatus } from '../types';
@@ -17,6 +16,7 @@ export function useAccountControls(
   isAdmin: boolean,
   tableKeys: readonly UserSortKey[],
 ) {
+  const layout = useTableLayout({ key: 'account-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'account-filters',
     waiting: false,
@@ -24,8 +24,6 @@ export function useAccountControls(
       statuses: preferenceOptions<UserStatus>(['invited', 'active', 'inactive']),
       roles: preferenceOptions<UserRole>(isAdmin ? ['admin', 'project_manager', 'staff', 'youth'] : []),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
 
@@ -77,10 +75,10 @@ export function useAccountControls(
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<UserSortKey> }),
-      columnWidths: preferences.columnWidths,
-      setColumnWidths: (columnWidths: Record<string, number>) => updatePreferences({ columnWidths }),
-      hiddenColumns: preferences.hiddenColumns,
-      setHiddenColumns: (hiddenColumns: string[]) => updatePreferences({ hiddenColumns }),
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }
