@@ -24,6 +24,7 @@ export const useResetPassword = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const activeRef = useRef(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -33,9 +34,14 @@ export const useResetPassword = () => {
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  // Cancel the delayed redirect when this reset flow is no longer active.
-  useEffect(() => () => {
-    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+  // A pending reset may finish after cleanup, before any redirect timer exists.
+  useEffect(() => {
+    activeRef.current = true;
+
+    return () => {
+      activeRef.current = false;
+      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+    };
   }, []);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
@@ -53,9 +59,13 @@ export const useResetPassword = () => {
 
     try {
       await resetPassword(token, data.password);
+      if (!activeRef.current) return;
+
       setMessage('Password reset successful');
       navigationTimerRef.current = setTimeout(() => navigate('/login'), 1000);
     } catch (err: unknown) {
+      if (!activeRef.current) return;
+
       setError(getErrorMessage(err, 'Failed to reset password'));
     }
   };
