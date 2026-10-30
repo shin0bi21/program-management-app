@@ -111,15 +111,24 @@ describe('item resize workflow', () => {
     ['start', 'ArrowRight', '2026-08-20', '2026-08-21', { start: '2026-08-21', end: '2026-08-21' }],
     ['end', 'ArrowLeft', '2026-08-20', '2026-08-21', { start: '2026-08-20', end: '2026-08-20' }],
     ['end', 'ArrowRight', '2026-08-20', '2026-08-21', { start: '2026-08-20', end: '2026-08-22' }],
+    ['start', 'ArrowLeft', '2026-08-20', '2026-08-24', { start: '2026-08-19', end: '2026-08-24' }],
+    ['start', 'ArrowRight', '2026-08-20', '2026-08-24', { start: '2026-08-21', end: '2026-08-24' }],
+    ['end', 'ArrowLeft', '2026-08-17', '2026-08-21', { start: '2026-08-17', end: '2026-08-20' }],
+    ['end', 'ArrowRight', '2026-08-17', '2026-08-21', { start: '2026-08-17', end: '2026-08-22' }],
   ] as const)('resizes the %s with %s', (edge, key, start, end, nextRange) => {
     const fixture = setup();
-    fixture.calendar.layout = { ...fixture.calendar.layout, start, end };
+    fixture.calendar.layout = {
+      ...fixture.calendar.layout, start, end,
+      startsInWindow: start >= periods[0].key,
+      endsInWindow: end <= periods[periods.length - 1].key,
+    };
+    fixture.calendar.target.range = { start, end };
     const { result } = renderHook(() => useItemResize(fixture.calendar, fixture.hideDetails));
     const handle = edge === 'start' ? result.current.startHandle : result.current.endHandle;
     const preventDefault = vi.fn();
     handle?.onKeyDown?.({ key, preventDefault } as unknown as React.KeyboardEvent<HTMLButtonElement>);
     expect(preventDefault).toHaveBeenCalledOnce();
-    expect(fixture.onResize).toHaveBeenCalledWith(expect.objectContaining({ nextRange, edge }));
+    expect(fixture.onResize).toHaveBeenCalledWith(expect.objectContaining({ originalRange: { start, end }, nextRange, edge }));
   });
 
   it.each([
@@ -127,6 +136,8 @@ describe('item resize workflow', () => {
     ['end', 'ArrowRight', '2026-08-20', '2026-08-22'],
     ['start', 'ArrowRight', '2026-08-20', '2026-08-20'],
     ['end', 'ArrowLeft', '2026-08-20', '2026-08-20'],
+    ['start', 'ArrowLeft', '2026-08-19', '2026-08-24'],
+    ['end', 'ArrowRight', '2026-08-17', '2026-08-22'],
   ] as const)('keeps %s inside valid bounds for %s', (edge, key, start, end) => {
     const fixture = setup();
     fixture.calendar.layout = { ...fixture.calendar.layout, start, end };

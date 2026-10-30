@@ -151,12 +151,14 @@ export default function useItemResize<TRow, TItemData>(
     const startIndex = periods.findIndex(period => period.key === start);
     const endIndex = periods.findIndex(period => period.key === end);
 
-    if (startIndex < 0 || endIndex < 0) return;
-
     const currentIndex = edge === 'start' ? startIndex : endIndex;
+    if (currentIndex < 0) return;
+
     const direction = event.key === 'ArrowLeft' ? -1 : 1;
-    const candidate = Math.max(0, Math.min(periods.length - 1, currentIndex + direction));
-    const nextIndex = edge === 'start' ? Math.min(candidate, endIndex) : Math.max(candidate, startIndex);
+    let nextIndex = Math.max(0, Math.min(periods.length - 1, currentIndex + direction));
+
+    if (edge === 'start' && endIndex >= 0) nextIndex = Math.min(nextIndex, endIndex);
+    else if (edge === 'end' && startIndex >= 0) nextIndex = Math.max(nextIndex, startIndex);
 
     if (nextIndex === currentIndex) return;
 

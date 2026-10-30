@@ -1,6 +1,6 @@
 import { addDays, dayKey } from './utils/periods';
 // This suite owns TimelineCalendar composition, grid semantics, selection, and item construction.
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TimelineCalendar from './TimelineCalendar';
 import Item from './components/Item/Item';
@@ -62,6 +62,7 @@ describe('TimelineCalendar', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
@@ -137,6 +138,52 @@ describe('TimelineCalendar', () => {
     const button = screen.getByRole('button', { name: 'Today' });
     if (disabled) expect(button).toBeDisabled();
     else expect(button).toBeEnabled();
+  });
+
+  it.each([
+    ['2026-08-10', '2026-08-11', true, false],
+    ['2026-08-09', '2026-08-09', false, true],
+    ['2026-08-01', '2026-08-31', false, false],
+  ] as const)('updates Today at midnight across range %s–%s', (start, end, initiallyDisabled, finallyDisabled) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 9, 23, 59, 59));
+    const onPeriodsReset = vi.fn();
+    const { container } = renderCalendar({
+      dateRange: { start, end }, onPeriodsReset, positionStorageKey: 'calendar-today-test',
+    });
+    const button = screen.getByRole('button', { name: 'Today' });
+    expect(button).toHaveProperty('disabled', initiallyDisabled);
+    const grid = screen.getByRole('grid');
+    const initialScroll = grid.scrollLeft;
+    if (!initiallyDisabled) expect(container.querySelector('.period.today')).toHaveAttribute('data-period-key', '2026-08-09');
+
+    act(() => vi.advanceTimersByTime(1000));
+
+    expect(button).toHaveProperty('disabled', finallyDisabled);
+    if (finallyDisabled) expect(container.querySelector('.period.today')).toBeNull();
+    else expect(container.querySelector('.period.today')).toHaveAttribute('data-period-key', '2026-08-10');
+    expect(grid.scrollLeft).toBe(initialScroll);
+    expect(onPeriodsReset).not.toHaveBeenCalled();
+
+    if (!finallyDisabled) {
+      fireEvent.click(button);
+      expect(JSON.parse(localStorage.getItem('calendar-today-test')!)).toMatchObject({ date: '2026-08-10' });
+    }
+  });
+
+  it('rechecks the clock and current bounds if Today is clicked before a delayed midnight timer runs', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 9, 23, 59, 59));
+    const { container } = renderCalendar({ dateRange: { start: '2026-08-09', end: '2026-08-09' } });
+    const grid = screen.getByRole('grid');
+    const scrollTo = vi.spyOn(grid, 'scrollTo');
+    vi.setSystemTime(new Date(2026, 7, 10, 8));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+
+    expect(screen.getByRole('button', { name: 'Today' })).toBeDisabled();
+    expect(container.querySelector('.period.today')).toBeNull();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
 });
