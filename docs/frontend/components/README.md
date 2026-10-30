@@ -62,11 +62,16 @@ Buttons, inputs and other small primitives do not need separate guides unless th
 
 ## Checklists
 
-Use `Checklist` for controlled lists of labeled choices. It shares the checkbox-row
-appearance between forms and filters, accepting options, selected values, a toggle
-callback, and a disabled state. Forms use native checkboxes; `inMenu` preserves menu
-checkbox semantics and the floating menu's keyboard navigation. Callers own drafts,
-single/multiple selection rules, loading/errors, and submission.
+Use `Checklist` for controlled lists of labeled choices, accepting options, selected
+values, a toggle callback, and a disabled state. Use `variant="form"` in forms for
+native accent-colored checkboxes, a rounded border, row dividers, and roomier spacing.
+Form checklists have a shared 240px maximum height and scroll vertically as needed;
+use a caller class through `className` to override that limit when required.
+The default `compact` appearance serves filters; `inMenu` preserves menu checkbox
+semantics and the floating menu's keyboard navigation. Appearance does not select
+interaction semantics. Callers own drafts, single/multiple selection rules,
+fieldsets/legends, loading/errors/empty states, and submission. React Hook Form
+consumers connect array fields through `Controller`.
 
 ## Type and Status Labels
 

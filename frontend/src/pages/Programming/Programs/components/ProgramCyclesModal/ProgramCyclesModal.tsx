@@ -42,6 +42,7 @@ export default function ProgramCyclesModal({
       {workflow.error && <div role="alert">{workflow.error} <Button onClick={workflow.retry}>Retry assignments</Button></div>}
       {(workflow.loading || cyclesLoading) && <p role="status">Loading assigned cycles...</p>}
       {workflow.selectedCycleIds !== null && <Checklist
+        variant="form"
         ariaLabel="Assigned cycles"
         options={cycles.map(cycle => ({ value: cycle.id, label: cycle.name }))}
         value={workflow.selectedCycleIds}

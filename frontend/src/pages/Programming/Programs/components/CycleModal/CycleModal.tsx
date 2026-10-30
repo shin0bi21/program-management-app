@@ -65,6 +65,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
         {!workflow.assignmentsReady && !workflow.assignmentsError && !programsError && <p role="status">Loading assigned programs...</p>}
         {workflow.selectedProgramIds !== null && <>
           <Checklist
+            variant="form"
             ariaLabel="Assigned programs"
             options={programs.map(program => ({ value: program.id, label: program.name }))}
             value={workflow.selectedProgramIds}

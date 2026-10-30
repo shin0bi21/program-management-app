@@ -9,7 +9,7 @@ export function FormAndFilter() {
   const [filters, setFilters] = useState(['fall']);
 
   return <div style={{ padding: 24 }}>
-    <Checklist ariaLabel="Assigned cycles" options={options} value={selected}
+    <Checklist variant="form" ariaLabel="Assigned cycles" options={options} value={selected}
       onToggle={value => setSelected(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
     <FilterCard categories={[{ id: 'cycle', label: 'Cycle', options }]} values={{ cycle: filters }}
       onApply={(_, value) => setFilters(value)} />

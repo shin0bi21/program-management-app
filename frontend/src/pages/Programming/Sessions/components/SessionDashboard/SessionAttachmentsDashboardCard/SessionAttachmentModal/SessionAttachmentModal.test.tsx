@@ -139,6 +139,7 @@ describe('SessionAttachmentModal', () => {
     fireEvent.submit(screen.getByLabelText('Title').closest('form') as HTMLFormElement);
 
     await waitFor(() => expect(screen.getByLabelText('Title')).toBeDisabled());
+    expect(await screen.findByRole('checkbox', { name: 'Maya Thompson' })).toBeDisabled();
     expect(screen.getByLabelText('File')).toBeDisabled();
     expect(screen.getByLabelText('Description (optional)')).toBeDisabled();
     await act(async () => resolveUpload());

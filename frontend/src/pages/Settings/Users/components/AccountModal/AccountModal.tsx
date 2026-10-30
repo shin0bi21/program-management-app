@@ -1,4 +1,5 @@
 import { Controller } from 'react-hook-form';
+import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -72,23 +73,26 @@ export default function AccountModal(props: AccountModalProps) {
         </div>
         <fieldset className="account-programs">
           <legend>Programs</legend>
-          <div className="account-programs__list">
-            {programsLoading ? (
-              <span className="account-programs__empty">Loading programs…</span>
-            ) : programs.length ? programs.map(program => (
-              <label key={program.id} className="account-programs__option">
-                <input
-                  type="checkbox"
-                  value={program.id}
-                  disabled={submissionComplete}
-                  {...register('programIds')}
-                />
-                <span>{program.name}</span>
-              </label>
-            )) : (
-              <span className="account-programs__empty">No assignable programs.</span>
+          {programsLoading ? (
+            <span className="account-programs__empty">Loading programs…</span>
+          ) : programs.length ? <Controller
+            name="programIds"
+            control={control}
+            render={({ field }) => (
+              <Checklist
+                variant="form"
+                ariaLabel="Programs"
+                options={programs.map(program => ({ value: program.id, label: program.name }))}
+                value={field.value}
+                onToggle={value => field.onChange(field.value.includes(value)
+                  ? field.value.filter(id => id !== value)
+                  : [...field.value, value])}
+                disabled={submissionComplete}
+              />
             )}
-          </div>
+          /> : (
+            <span className="account-programs__empty">No assignable programs.</span>
+          )}
         </fieldset>
       </form>
     </Modal>
