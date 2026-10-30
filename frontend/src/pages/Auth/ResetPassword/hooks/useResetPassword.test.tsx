@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import { StrictMode, type PropsWithChildren } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,10 +16,10 @@ vi.mock('react-router-dom', async () => ({
 
 function renderResetPassword(path = '/reset-password?token=reset-token') {
   function wrapper({ children }: PropsWithChildren) {
-    return <MemoryRouter
+    return <StrictMode><MemoryRouter
       initialEntries={[path]}
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >{children}</MemoryRouter>;
+    >{children}</MemoryRouter></StrictMode>;
   }
 
   return renderHook(() => useResetPassword(), { wrapper });
@@ -93,6 +93,25 @@ describe('useResetPassword', () => {
     act(() => vi.runAllTimers());
 
     expect(result.current.error).toBe('Reset link expired');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect when a pending reset finishes after unmount', async () => {
+    let resolveReset!: (value: object) => void;
+    vi.mocked(resetPassword).mockReturnValue(new Promise(resolve => { resolveReset = resolve; }));
+    const { result, unmount } = renderResetPassword();
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = result.current.onSubmit({ password: 'new-password', confirmPassword: 'new-password' });
+    });
+    unmount();
+    await act(async () => {
+      resolveReset({});
+      await submission;
+    });
+    act(() => vi.runAllTimers());
+
     expect(navigate).not.toHaveBeenCalled();
   });
 
