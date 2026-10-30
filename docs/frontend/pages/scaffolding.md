@@ -55,7 +55,9 @@ when the new page needs those owners; each includes its own test outlines.
 
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
-inapplicable cases. Use the shared QueryClient helpers for query-backed tests.
+inapplicable cases and delete the test file when the owner adds no behavior.
+Do not turn outlines into checks of static options, classes, or copied props.
+Use the shared QueryClient helpers for query-backed tests.
 Use the [testing guide](../../workflows/delivery/testing.md) for runner selection.
 See each [frontend owner guide](../README.md#find-the-right-guide) for
 the supported source layout and preset commands.

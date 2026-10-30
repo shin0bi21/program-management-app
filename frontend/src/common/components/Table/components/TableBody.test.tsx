@@ -20,6 +20,5 @@ describe('TableBody', () => {
 
     const loadingCell = screen.getByRole('status', { name: 'Loading rows' }).closest('td');
     expect(loadingCell).toHaveAttribute('colspan', '3');
-    expect(loadingCell?.closest('tr')).toHaveClass('table-loading-row');
   });
 });

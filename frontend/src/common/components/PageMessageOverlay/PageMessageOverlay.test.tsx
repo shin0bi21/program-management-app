@@ -60,7 +60,6 @@ it('presents a warning with a disabled pending action', () => {
   };
   const view = render(<PageMessageOverlay messages={[warning]} />);
 
-  expect(screen.getByRole('status')).toHaveClass('page-message-overlay--warning');
   expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(refresh).not.toHaveBeenCalled();
@@ -78,7 +77,6 @@ it('flattens grouped messages and deduplicates by severity and message', () => {
 
   const items = within(screen.getByRole('alert')).getAllByRole('listitem');
   expect(items).toHaveLength(2);
-  expect(items[1].firstChild).toHaveClass('page-message-overlay__content--warning');
 });
 
 it('resets dismissal after all messages clear and when severity changes', () => {

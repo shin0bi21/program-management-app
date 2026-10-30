@@ -10,12 +10,6 @@ function makeItems(): ActionItem[] {
 }
 
 describe('ActionsMenu', () => {
-  it('uses the supplied accessible trigger label and starts closed', () => {
-    render(<ActionsMenu items={makeItems()} ariaLabel="More actions for Jane Doe" />);
-    expect(screen.getByRole('button', { name: 'More actions for Jane Doe' })).toBeInTheDocument();
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-  });
-
   it('shows the supplied actions and closes after invoking only the selected handler', () => {
     const items = makeItems();
     render(<ActionsMenu items={items} />);

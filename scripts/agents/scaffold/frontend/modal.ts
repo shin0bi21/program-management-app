@@ -50,7 +50,7 @@ export default function ${hookName}() {
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  it.todo('wires accessible fields, contextual locks, status, and submit controls');
+  it.todo('prevents editing context-locked values');
   it.todo('emits domain values while leaving workflow transitions to the hook');
 });
 `);

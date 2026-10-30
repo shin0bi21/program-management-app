@@ -88,8 +88,15 @@ Cover lifecycle and error states only when they are part of that owner's
 contract. Describe observable behavior and avoid arbitrary sleeps, private
 implementation assertions, and mocks that bypass the boundary under test.
 Test observable contracts, not private methods or a copy of the implementation.
+Do not add tests merely to confirm static labels, enabled options, CSS classes,
+wrapper structure, or configuration flags copied from the implementation. A
+presentation-only component or page does not need its own test file. Test an
+option when eligibility depends on permissions or domain state, or when choosing
+it changes an observable outcome. Cover visual layout in the browser when it
+protects a concrete behavior such as scrolling, clipping, or resizing.
+
 Shared mechanics have one authoritative suite; each consumer covers only the
-configuration, inputs, callbacks, or domain outcome it adds. For example, shared
+input handling, callbacks, or domain outcome it adds. For example, shared
 table tests cover keyboard selection, a domain table covers selection wiring,
 and a page covers updating its dashboard from the selected record.
 

@@ -103,23 +103,13 @@ test('checks import and export declarations without matching source text', () =>
   assert.match(violations[0], /leads\.api/);
 });
 
-test('requires the route entry and test while keeping types optional', () => {
-  const violations = violationsFor(
-    checkRoutePageStructure,
-    `${leadsPage}/Leads.tsx`,
-    routePageDirectories,
-    [`${leadsPage}/Leads.tsx`],
-  );
-
-  assert.match(violations[0], /Leads\.test\.tsx/);
-  assert.doesNotMatch(violations[0], /types\.ts/);
-
+test('allows a presentation-only route without a test or types file', () => {
   assert.deepEqual(
     violationsFor(
       checkRoutePageStructure,
       `${leadsPage}/Leads.tsx`,
       routePageDirectories,
-      [`${leadsPage}/Leads.tsx`, `${leadsPage}/Leads.test.tsx`],
+      [`${leadsPage}/Leads.tsx`],
     ),
     [],
   );
@@ -279,25 +269,13 @@ test('allows an API directory with multiple cohesive feature adapters', () => {
   assert.deepEqual(violationsFor(checkApiStructure, file, repositoryFiles), []);
 });
 
-test('requires components to own a colocated test', () => {
-  const file = `${leadsPage}/components/LeadModal/LeadModal.tsx`;
-  const violations = violationsFor(
-    checkTestOwnership,
-    file,
-    [file],
-    routePageDirectories,
-  );
-
-  assert.match(violations[0], /components must own/);
-});
-
-test('accepts a component with its colocated test', () => {
-  const file = `${leadsPage}/components/LeadModal/LeadModal.tsx`;
+test('allows a presentation-only component without a test file', () => {
+  const file = 'frontend/src/common/components/PageHeader/PageHeader.tsx';
   assert.deepEqual(
     violationsFor(
       checkTestOwnership,
       file,
-      [file, `${leadsPage}/components/LeadModal/LeadModal.test.tsx`],
+      [file],
       routePageDirectories,
     ),
     [],

@@ -89,7 +89,6 @@ describe('PublicHomepage', () => {
 
     expect(mockUseSectionRouting).toHaveBeenLastCalledWith({ disabled: true });
     expect(screen.getByRole('status')).toHaveTextContent('Loading photos…');
-    expect(document.querySelector('.hero-photo-frame')).toBeInTheDocument();
 
     homepageState.imagesLoading = false;
     view.rerender(
@@ -103,17 +102,6 @@ describe('PublicHomepage', () => {
   });
 
   // Rendered states.
-  it('composes public navigation with loaded homepage content', () => {
-    render(
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <PublicHomepage />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('navigation', { name: 'Page sections' })).toBeInTheDocument();
-    expect(screen.getByAltText('Youth trip')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /programming/i })).toBeInTheDocument();
-  });
 
   it('hides signup navigation and content when signup is disabled', () => {
     homepageState.signupEnabled = false;

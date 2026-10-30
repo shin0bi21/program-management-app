@@ -23,7 +23,7 @@ export default function ${name}() {
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  it.todo('wires domain range loading, rows, items, capabilities, selection, and unavailable state');
+  it.todo('allows domain actions only for writable records');
   it.todo('forwards the complete page filters and requested range to the API adapter');
   it.todo('maps supported cell, item, move, and resize callbacks to page actions');
 });

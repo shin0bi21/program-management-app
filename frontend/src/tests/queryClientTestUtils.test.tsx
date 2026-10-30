@@ -9,15 +9,14 @@ import {
 } from './queryClientTestUtils';
 
 describe('queryClientTestUtils', () => {
-  it('creates isolated clients with retries disabled', () => {
+  it('keeps cached data isolated between test clients', () => {
     const firstClient = createTestQueryClient();
     const secondClient = createTestQueryClient();
 
-    expect(firstClient).not.toBe(secondClient);
-    expect(firstClient.getDefaultOptions()).toEqual(expect.objectContaining({
-      queries: expect.objectContaining({ retry: false }),
-      mutations: expect.objectContaining({ retry: false }),
-    }));
+    firstClient.setQueryData(['example'], 'First test data');
+
+    expect(firstClient.getQueryData(['example'])).toBe('First test data');
+    expect(secondClient.getQueryData(['example'])).toBeUndefined();
   });
 
   it('returns the client that provides the rendered component', () => {

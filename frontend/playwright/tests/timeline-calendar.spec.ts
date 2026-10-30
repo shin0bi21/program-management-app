@@ -232,13 +232,6 @@ test('scrolls positioned items with their period cells without per-item updates'
   expect(scrolledItemBox.x - initialItemBox.x).toBeCloseTo(scrolledCellBox.x - initialCellBox.x, 0);
 });
 
-test('disables vertical overscroll so the period header stays fixed', async ({ mount }) => {
-  const component = await mount(storyId);
-  const viewport = component.getByLabel('Browser-tested row calendar');
-
-  await expect.poll(() => viewport.evaluate(element => getComputedStyle(element).overscrollBehaviorY)).toBe('none');
-});
-
 test('moves an item to a valid day and records the drop', async ({ page, mount }) => {
   const component = await mount(storyId);
   const source = component.getByRole('button', { name: 'Movable entry' });

@@ -82,7 +82,6 @@ describe('${name}', () => {
   it.todo('keeps dependent content unavailable until saved preferences are restored');
 
   // Rendered states.
-  it.todo('composes loaded page controls, content, and dialogs');
   it.todo('reports page-owned failures through the shared message overlay');
 
   // Controls and views.

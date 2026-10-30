@@ -21,27 +21,6 @@ describe('FloatingSelect', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('forwards styling classes to the trigger and individual options', () => {
-    render(
-      <FloatingSelect
-        id="status"
-        value="one"
-        className="status-trigger"
-        options={[
-          { value: 'one', label: 'Status One', className: 'status-one' },
-          { value: 'two', label: 'Status Two', className: 'status-two' },
-        ]}
-        onChange={vi.fn()}
-      />,
-    );
-
-    const trigger = screen.getByRole('button', { name: 'Status One' });
-    expect(trigger).toHaveClass('status-trigger');
-    fireEvent.click(trigger);
-    expect(screen.getByRole('menuitemradio', { name: 'Status One' })).toHaveClass('status-one');
-    expect(screen.getByRole('menuitemradio', { name: 'Status Two' })).toHaveClass('status-two');
-  });
-
   it('runs the optional inline action', () => {
     const onSelect = vi.fn();
     render(
@@ -56,7 +35,6 @@ describe('FloatingSelect', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Select an option' }));
     const action = screen.getByRole('menuitem', { name: '+ Add school' });
-    expect(action.nextElementSibling).toHaveClass('floating-select-options');
     fireEvent.click(action);
     expect(onSelect).toHaveBeenCalledOnce();
   });

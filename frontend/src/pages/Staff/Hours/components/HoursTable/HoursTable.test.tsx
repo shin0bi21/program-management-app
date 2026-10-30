@@ -63,35 +63,17 @@ describe('HoursTable', () => {
       baseProps.filters,
       baseProps.sorting,
     );
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Hours entries',
-      data: [],
-      loading: false,
-      refreshing: false,
-      hiddenColumnKeys: [],
-      selectedKey: null,
-      onRowSelect: baseProps.onRowSelect,
-      sorting: baseProps.sorting,
-      columnWidths: baseProps.columnWidths,
-      onColumnWidthsChange: baseProps.onColumnWidthsChange,
-      hasNextPage: false,
-      loadingNextPage: false,
-      onLoadNextPage: tableState.loadNextPage,
-      emptyMessage: 'No hours found',
-    }));
-
     (tableProps.current?.onLoadNextPage as () => void)();
     expect(tableState.loadNextPage).toHaveBeenCalledOnce();
     (tableProps.current?.onSortingChange as (value: unknown) => void)({ key: 'hours', direction: 'asc' });
     expect(baseProps.onSortingChange).toHaveBeenCalledWith({ key: 'hours', direction: 'asc' });
   });
 
-  it('reports table-data errors while keeping the standard empty message', () => {
+  it('reports table-data errors with a retry action', () => {
     tableState.error = 'Could not load hours.';
     render(<HoursTable {...baseProps} filters={{ ...baseProps.filters, search: 'planning' }} />);
 
     expect(tableProps.current).toEqual(expect.objectContaining({
-      emptyMessage: 'No hours found',
       unavailable: { title: 'Hours unavailable', onRetry: tableState.retry },
     }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
@@ -100,23 +82,4 @@ describe('HoursTable', () => {
     });
   });
 
-  it('uses the standard empty message for cycle-only and unfiltered results', () => {
-    const noOtherFilters = {
-      ...baseProps.filters,
-      staffIds: [],
-      categories: [],
-      programIds: [],
-      types: [],
-    };
-    const { rerender } = render(<HoursTable {...baseProps} filters={noOtherFilters} />);
-
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      emptyMessage: 'No hours found',
-    }));
-
-    rerender(<HoursTable {...baseProps} filters={{ ...noOtherFilters, cycleIds: [] }} />);
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      emptyMessage: 'No hours found',
-    }));
-  });
 });

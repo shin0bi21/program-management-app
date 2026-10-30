@@ -33,7 +33,7 @@ describe('useCohortTable', () => {
     vi.clearAllMocks();
   });
 
-  it('provides canonical data columns without actions for read-only users', () => {
+  it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useCohortTable({
       canWrite: false, canManageRoster: false,
       onManageRoster: vi.fn(),
@@ -41,9 +41,7 @@ describe('useCohortTable', () => {
       onDelete: vi.fn(),
     }));
 
-    expect(result.current.map(column => column.id)).toEqual([
-      'program', 'cohort', 'start', 'end', 'status',
-    ]);
+    expect(result.current.some(column => column.id === 'actions')).toBe(false);
   });
 
   it('maps enrolled-cohort actions and emits exact row callbacks', () => {
@@ -54,9 +52,6 @@ describe('useCohortTable', () => {
     const actionColumn = result.current.find(column => column.id === 'actions')!;
 
     render(<>{renderCell(actionColumn, cohort)}</>);
-    expect(menu.items.map(item => [item.id, item.variant])).toEqual([
-      ['manage-roster', undefined], ['edit', undefined], ['delete', 'danger'],
-    ]);
     menu.items.forEach(item => item.onClick());
     expect(callbacks.onManageRoster).toHaveBeenCalledWith(cohort);
     expect(callbacks.onEdit).toHaveBeenCalledWith(cohort);

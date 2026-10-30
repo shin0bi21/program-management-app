@@ -79,11 +79,6 @@ describe('useSessionControls', () => {
     act(() => result.current.filters.apply('program', ['program-1']));
     expect(result.current.filters.cycleIds).toEqual(['cycle-2']);
 
-    expect(result.current.filters.definitions.find(filter => filter.id === 'cycle')).toEqual({
-      id: 'cycle', label: 'Cycle',
-      options: cycles.map(cycle => ({ value: cycle.id, label: cycle.name })),
-    });
-
     act(() => result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']));
     expect(result.current.filters.programIds).toEqual(['program-1']);
     expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']);
@@ -94,7 +89,6 @@ describe('useSessionControls', () => {
 
     act(() => result.current.filters.clear());
     expect(result.current.filters).toMatchObject({ programIds: [], cycleIds: [] });
-
   });
 
   it('waits for authoritative cycles before restoring a saved cycle', async () => {

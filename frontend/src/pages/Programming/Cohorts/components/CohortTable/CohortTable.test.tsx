@@ -77,15 +77,12 @@ describe('CohortTable', () => {
     expect(useTableData).toHaveBeenCalledWith(queryKey, filters, sorting);
     expect(onRowSelect).not.toHaveBeenCalled();
     expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Cohorts',
       data: [cohort],
       loading: false,
       refreshing: true,
-      emptyMessage: 'No cohorts match your search and filters',
       hiddenColumnKeys: ['end'],
       selectedKey: 'cohort-1',
       sorting,
-      sortableColumns: ['program', 'cohort', 'start', 'end', 'status'],
       columnWidths: { cohort: 220 },
       onColumnWidthsChange,
       hasNextPage: true,

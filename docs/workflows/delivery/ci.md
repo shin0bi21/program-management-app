@@ -77,6 +77,10 @@ Jobs use job-level conditions rather than workflow path filters so required chec
 and browser environment selection. The workflow table above identifies which
 checks run on pull requests and which are scheduled or manual.
 
+Pattern checks require colocated hook and API-adapter tests but do not require a
+test file for every component or route. Component coverage follows observable
+behavior rather than file counts; presentation-only wrappers need no placeholder suite.
+
 ## Diagnose a Failed Check
 
 1. Open the failed job and step in **Checks** or **Actions**.

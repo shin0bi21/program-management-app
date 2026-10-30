@@ -14,32 +14,29 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
   },
 }));
 
-it('builds Program columns and emits edit for the row', () => {
+it('routes program management actions to the selected row', () => {
   const program = {
     id: 'program-1', name: 'Soft Skills', description: null, enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
   } as Program;
   const onEdit = vi.fn();
   const onManageCycles = vi.fn();
   const { result } = renderHook(() => useProgramTable(onEdit, onManageCycles, true, { cohorts: [], loading: false, error: null }));
-  expect(result.current.columns.map(column => column.id)).toEqual(['name', 'enrollmentRequired', 'ages', 'status', 'actions']);
 
   const actionColumn = result.current.columns.find(column => column.id === 'actions') as ColumnDef<Program>;
   const content = (actionColumn.cell as (context: CellContext<Program, unknown>) => unknown)(
     { row: { original: program } } as CellContext<Program, unknown>,
   );
   render(<>{content}</>);
-  expect(menu.items.map(item => item.label)).toEqual(['Edit Program', 'Assigned Cycles']);
-  menu.items[0].onClick();
+  menu.items.find(item => item.id === 'edit')!.onClick();
   expect(onEdit).toHaveBeenCalledWith(program);
-  menu.items[1].onClick();
+  menu.items.find(item => item.id === 'cycles')!.onClick();
   expect(onManageCycles).toHaveBeenCalledWith(program);
 });
-
 
 it('omits program management actions for read-only viewers', () => {
   const { result } = renderHook(() => useProgramTable(vi.fn(), vi.fn(), false, { cohorts: [], loading: false, error: null }));
 
-  expect(result.current.columns.map(column => column.id)).toEqual(['name', 'enrollmentRequired', 'ages', 'status']);
+  expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
 });
 
 it.each([

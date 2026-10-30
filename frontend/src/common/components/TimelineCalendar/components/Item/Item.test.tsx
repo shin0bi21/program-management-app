@@ -16,7 +16,7 @@ const itemProps = {
 };
 
 describe('Item', () => {
-  it('owns placement and selects its row before activating the item', () => {
+  it('selects its row before activating the item', () => {
     const calls: string[] = [];
     const calendar = makeItemCalendarProps(target, {
       onSelect: () => calls.push('select'),
@@ -25,9 +25,6 @@ describe('Item', () => {
     render(<Item {...itemProps} calendar={calendar} />);
     const trigger = screen.getByRole('button', { name: 'Prepare workshop' });
 
-    expect(trigger.parentElement).toHaveClass('positioned-item', 'normal');
-    expect(trigger.parentElement).toHaveStyle({ gridColumn: '3 / 5', top: '8px', height: '26px' });
-    expect(trigger.parentElement).toHaveAttribute('data-item-start', '2026-08-19');
     fireEvent.click(trigger);
 
     expect(calls).toEqual(['select', 'activate']);
@@ -159,5 +156,4 @@ describe('Item', () => {
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
-
 });

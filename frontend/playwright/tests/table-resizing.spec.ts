@@ -111,20 +111,13 @@ test('retains immediate keyboard sizing, reset, and hidden saved widths', async 
   await expect(component.getByRole('button', { name: 'Resize  column' })).toHaveCount(0);
 });
 
-test('aligns the subtle grid with sticky headers and selected rows', async ({ mount }) => {
+test('keeps body columns aligned with sticky headers during scrolling', async ({ mount }) => {
   const component = await mount('Table/ResizePreview');
   const wrapper = component.locator('.table-wrapper');
   const header = component.locator('th[data-column-id="name"]');
   const cell = component.locator('tbody tr').first().locator('td').first();
   const initial = await box(header);
 
-  await expect(header).toHaveCSS('border-right-width', '1px');
-  await expect(cell).toHaveCSS('border-right-width', '1px');
-  await expect(header).toHaveCSS('padding', '12px');
-  await expect(cell).toHaveCSS('padding', '12px');
-  await expect(component.locator('thead th').last()).not.toHaveCSS('box-shadow', 'none');
-  await expect(component.locator('thead th').last()).toHaveCSS('border-right-width', '0px');
-  await expect(component.locator('tbody tr').first()).toHaveClass(/table-row--selected/);
   expect((await box(cell)).width).toBeCloseTo(initial.width, 0);
   await wrapper.evaluate(element => element.scrollTo({ top: 240 }));
   expect((await box(header)).y).toBeCloseTo(initial.y, 0);

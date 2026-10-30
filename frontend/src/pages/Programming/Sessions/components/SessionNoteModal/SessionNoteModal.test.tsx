@@ -34,7 +34,7 @@ describe('SessionNoteModal', () => {
     api.updateSessionNote.mockResolvedValue({});
   });
 
-  it('renders category, details, and optional youth controls', async () => {
+  it('updates the category, note draft, and linked youth selection', async () => {
     render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(await screen.findByRole('group', { name: 'Link youth' })).toBeInTheDocument();

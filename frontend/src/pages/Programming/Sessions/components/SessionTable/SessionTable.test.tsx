@@ -47,10 +47,6 @@ describe('SessionTable', () => {
     expect(useSessionTableData).toHaveBeenCalledWith(
       baseProps.queryKey, { cycleIds: ['cycle-1'] }, baseProps.sorting, true,
     );
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      ariaLabel: 'Sessions', emptyMessage: 'No sessions match your search and filters',
-      sorting: baseProps.sorting,
-    }));
   });
 
   it('retains the selected row after a refresh failure', async () => {
@@ -60,7 +56,7 @@ describe('SessionTable', () => {
 
     await waitFor(() => expect(baseProps.onSelectedSessionResolved).toHaveBeenCalledWith(session));
     expect(tableProps.current).toEqual(expect.objectContaining({
-      selectedKey: 'session-1', scrollToSelected: true, emptyMessage: 'No sessions yet',
+      selectedKey: 'session-1', scrollToSelected: true,
       unavailable: undefined,
     }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({

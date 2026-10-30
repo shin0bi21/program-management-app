@@ -104,8 +104,6 @@ describe('TaskCalendar', () => {
     ));
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([task]));
     expect(calendarState.props?.rows).toEqual([resource]);
-    expect(calendarState.props?.positionStorageKey).toBe('resource-calendar:tasks:position');
-    expect(calendarState.props?.rowHeight).toBe(112);
   });
 
   it('emits narrow resize and cross-resource move commands with selection changes', async () => {

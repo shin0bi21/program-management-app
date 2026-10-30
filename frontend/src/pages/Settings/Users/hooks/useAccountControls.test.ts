@@ -39,7 +39,6 @@ describe('useAccountControls', () => {
     expect(result.current.table).toMatchObject({
       sorting: { key: 'email', direction: 'desc' }, columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
-    expect(result.current.filters.definitions.map(category => category.id)).toEqual(['status', 'role']);
 
     act(() => {
       result.current.filters.apply('status', ['inactive']);
@@ -60,15 +59,13 @@ describe('useAccountControls', () => {
     ));
   });
 
-  it('restores and exposes the project manager account filter for administrators', async () => {
+  it('restores the project manager account filter for administrators', async () => {
     preferenceApi.getPreference.mockResolvedValue({ roles: ['project_manager'] });
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.filters.roles).toEqual(['project_manager']);
-    expect(result.current.filters.definitions.find(category => category.id === 'role')?.options)
-      .toContainEqual({ value: 'project_manager', label: 'Project Manager' });
   });
 
   it('removes admin-only roles and obsolete sorting for staff', async () => {
@@ -81,7 +78,7 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.definitions.map(category => category.id)).toEqual(['status']);
+    expect(result.current.filters.definitions.some(category => category.id === 'role')).toBe(false);
     expect(result.current.filters.roles).toEqual([]);
     expect(result.current.filters.statuses).toEqual(['active']);
     expect(result.current.table.sorting).toEqual({ key: 'name', direction: 'asc' });

@@ -44,10 +44,6 @@ describe('TaskOverviewDashboardCard', () => {
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Active').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
-    expect(screen.getByText('Upcoming').parentElement).toHaveClass('task-overview-card__metric-upcoming');
-    expect(screen.getByText('Active').parentElement).toHaveClass('task-overview-card__metric-active');
-    expect(screen.getByText('Overdue').parentElement).toHaveClass('task-overview-card__metric-overdue');
-    expect(screen.getByRole('heading', { name: 'Task Overview' })).toHaveClass('task-overview-card__accessible-title');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
@@ -57,7 +53,6 @@ describe('TaskOverviewDashboardCard', () => {
     expect(within(dialog).getByRole('heading', { name: 'Upcoming' })).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { name: 'Active' })).toBeInTheDocument();
     expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Aug 12');
-    expect(within(dialog).getByText('Prepare workshop').parentElement).toHaveClass('task-overview-card__task--due-this-week');
     expect(within(dialog).getByText('Future workshop').nextSibling).toHaveTextContent('Aug 14');
   });
 
@@ -94,12 +89,8 @@ describe('TaskOverviewDashboardCard', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
     expect(within(dialog).queryByText('Closed')).not.toBeInTheDocument();
-    const upcomingSection = within(dialog).getByRole('heading', { name: 'Upcoming' }).closest('section')!;
     const activeSection = within(dialog).getByRole('heading', { name: 'Active' }).closest('section')!;
     const overdueSection = within(dialog).getByRole('heading', { name: 'Overdue' }).closest('section')!;
-    expect(upcomingSection).toHaveClass('task-overview-card__task-section--info');
-    expect(activeSection).toHaveClass('task-overview-card__task-section--warn');
-    expect(overdueSection).toHaveClass('task-overview-card__task-section--danger');
     expect(within(activeSection).getAllByRole('listitem').map(item => item.textContent)).toEqual([
       'SoonAug 12', 'LaterAug 20',
     ]);
@@ -119,7 +110,6 @@ describe('TaskOverviewDashboardCard', () => {
       action: { label: 'Retry', onClick: overviewData.retry },
     });
     expect(screen.getByText('Task overview unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Task Overview' }).closest('article')).toHaveClass('task-overview-card');
     expect(screen.getByText('Assigned')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

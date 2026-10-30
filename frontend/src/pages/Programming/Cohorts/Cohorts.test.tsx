@@ -212,25 +212,12 @@ describe('Cohorts', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Cohorts' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Add Cohort' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Search cohorts' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(await screen.findByText('Summer 2026')).toBeInTheDocument();
     expect(screen.getByText('No cohort selected.')).toBeInTheDocument();
     expect(screen.getByText('Soft Skills')).toBeInTheDocument();
     expect(screen.queryAllByText('5')).toHaveLength(0);
-    expect(screen.queryByRole('columnheader', { name: 'Youth' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Enrolled' })).not.toBeInTheDocument();
-    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
-    expect(headers.slice(2, 5)).toEqual(['Start', 'End', 'Status']);
-    const cohortTable = screen.getByRole('table', { name: 'Cohorts' });
     const overview = screen.getByRole('region', { name: 'Programming cohorts and overview' });
-    const firstOverviewCard = screen.getByRole('heading', { name: 'Youth Overview' }).closest('article');
-    expect(firstOverviewCard).not.toBeNull();
-    expect(firstOverviewCard!.compareDocumentPosition(cohortTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const cohortRow = screen.getByText('Summer 2026').closest('tr');
-    expect(cohortRow).toHaveAttribute('tabindex', '0');
     await user.click(cohortRow!);
     expect(cohortRow).toHaveAttribute('aria-selected', 'true');
     expect(overview).toHaveTextContent('Enrollment:5');
@@ -240,7 +227,6 @@ describe('Cohorts', () => {
     expect(screen.getAllByText('5')).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
     expect(screen.getByRole('dialog', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
-
   });
 
   // Selection and coordination.

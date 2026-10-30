@@ -27,7 +27,6 @@ describe('HoursItem', () => {
     const entry = screen.getByRole('button');
     expect(entry).toHaveTextContent('2h');
     expect(entry).toHaveTextContent(type);
-    expect(entry.querySelector('.hours-item__type')).toHaveClass(type.toLowerCase());
   });
 
   it('shows complete entry details on hover', async () => {
@@ -41,10 +40,6 @@ describe('HoursItem', () => {
     expect(tooltip).not.toHaveTextContent('Summer 2026');
     expect(tooltip).toHaveTextContent('Workshop delivery');
 
-    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Category', 'Hours', 'Notes',
-    ]);
-    expect(screen.getByText('Hours').closest('div')).toHaveClass('section-start');
   });
 
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
@@ -56,9 +51,6 @@ describe('HoursItem', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).not.toHaveTextContent('General');
-    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Category', 'Hours', 'Notes',
-    ]);
     expect(tooltip.querySelectorAll('dd')[0]).toHaveTextContent('—');
   });
 
@@ -72,9 +64,6 @@ describe('HoursItem', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(within(tooltip).getAllByText('Healthy Relationships')).toHaveLength(1);
-    expect([...tooltip.querySelectorAll('dt')].map(label => label.textContent)).toEqual([
-      'Program', 'Category', 'Hours', 'Notes',
-    ]);
     expect(tooltip).toHaveTextContent('Program Delivery');
   });
 
@@ -85,7 +74,6 @@ describe('HoursItem', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
-    expect(screen.getByRole('button', { name: /program delivery, 2 hours/i })).toHaveClass('menu-open');
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();

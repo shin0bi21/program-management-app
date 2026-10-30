@@ -17,9 +17,15 @@ Keep executable examples and relevant boundary cases in colocated tests; compone
 helpers can be verified through their owner's behavior. Place helpers below the component
 in the order their callers use them.
 
-Keep each component's test beside it. A component test owns its rendered states, accessible controls, controlled-prop wiring, and exact values it emits. A focused hook test owns the stateful policy or external lifecycle that justified the hook. Cross-component coordination belongs to the route page.
+Keep component tests beside their owner when it has behavior to verify. Test state
+transitions, user interactions, accessibility behavior, conditional domain outcomes,
+and emitted values. Presentation-only wrappers do not need a test that repeats their
+markup or supplied options. A focused hook test owns the stateful policy or external
+lifecycle that justified the hook. Cross-component coordination belongs to the route page.
 
-Lifecycle is conditional. A hook that installs an observer tests its options, callback guards, meaningful dependency changes, and cleanup. A badge that only renders a label and modifier tests those outputs; it does not need mount, rerender, and unmount tests.
+Lifecycle is conditional. A hook that installs an observer tests callback guards,
+meaningful dependency changes, and cleanup. A badge that only renders a supplied
+label and modifier does not need a dedicated test.
 
 A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
 
@@ -75,8 +81,8 @@ and retain a readable label rather than communicating state through color alone.
 calendar rows may scope compact sizing to the positioned item; hover/focus details retain
 the normal badge size. See [calendar details](calendars.md#present-item-details).
 
-Primitive tests cover content and appearance classes; domain tests cover record-to-label
-mapping. Consumers cover supplied values and placement without repeating primitive tests.
+Test nontrivial domain derivations and conditional outcomes at their owner. Do not
+enumerate static label-to-class maps or repeat a child's presentation in consumers.
 Use browser tests for clipping, density, and selection geometry.
 
 ## Scaffold a Rendered Surface

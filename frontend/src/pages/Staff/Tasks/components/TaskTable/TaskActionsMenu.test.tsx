@@ -71,7 +71,6 @@ describe('TaskActionsMenu', () => {
   ])('maps capabilities for an %s', (_scenario, task, labels) => {
     renderMenu(task);
 
-    expect(menu.ariaLabel).toBe(`Actions for ${task.title}`);
     expect(menu.items.map(item => item.label)).toEqual(labels);
   });
 
@@ -95,6 +94,5 @@ describe('TaskActionsMenu', () => {
     rerender(<TaskActionsMenu task={untouchedTask} {...actions} />);
     action('delete').onClick();
     expect(actions.requestDelete).toHaveBeenCalledWith(untouchedTask);
-    expect(action('delete').variant).toBe('danger');
   });
 });

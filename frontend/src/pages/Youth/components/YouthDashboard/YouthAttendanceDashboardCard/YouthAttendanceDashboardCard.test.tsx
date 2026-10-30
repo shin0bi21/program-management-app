@@ -3,13 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard';
 
 describe('YouthAttendanceDashboardCard', () => {
-  it('keeps its empty state inside the dashboard card', () => {
+  it('shows an empty state when no active attendance exists', () => {
     render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
-    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(screen.getByText('No active cohort attendance.')).toBeInTheDocument();
   });
 
-  it('keeps its tabs mounted but unavailable when selection clears', () => {
+  it('disables tabs when selection clears and restores the chosen tab', () => {
     const view = render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
     const active = screen.getByRole('button', { name: 'Active' });
     const history = screen.getByRole('button', { name: 'History' });
@@ -17,8 +16,6 @@ describe('YouthAttendanceDashboardCard', () => {
 
     view.rerender(<YouthAttendanceDashboardCard selected={false} />);
 
-    expect(screen.getByRole('button', { name: 'Active' })).toBe(active);
-    expect(screen.getByRole('button', { name: 'History' })).toBe(history);
     expect(active).toBeDisabled();
     expect(history).toBeDisabled();
     expect(screen.getByText('Select a row to view attendance.')).toBeInTheDocument();

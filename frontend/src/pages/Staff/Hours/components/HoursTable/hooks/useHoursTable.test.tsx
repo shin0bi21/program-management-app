@@ -22,7 +22,7 @@ function renderCell(column: ColumnDef<HoursTableRow>, item: HoursTableRow) {
 }
 
 describe('useHoursTable', () => {
-  it('returns the canonical read-only columns and entry-type renderer', () => {
+  it('omits row actions for read-only users', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: false,
       resourcesById: new Map(),
@@ -31,21 +31,7 @@ describe('useHoursTable', () => {
       onDelete: vi.fn(),
     }));
 
-    expect(result.current.columns.map(column => [column.id, column.header])).toEqual([
-      ['firstName', 'First Name'],
-      ['lastName', 'Last Name'],
-      ['date', 'Date'],
-      ['cycle', 'Cycle'],
-      ['program', 'Program'],
-      ['category', 'Category'],
-      ['hours', 'Hours'],
-      ['note', 'Note'],
-      ['type', 'Type'],
-    ]);
-
-    const typeColumn = result.current.columns.find(column => column.id === 'type')!;
-    render(<>{renderCell(typeColumn, row)}</>);
-    expect(screen.getByText('Task')).toBeInTheDocument();
+    expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
   });
 
   it('builds row actions only for writable resources', () => {
