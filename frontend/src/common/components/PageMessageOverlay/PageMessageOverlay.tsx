@@ -6,7 +6,6 @@ export interface PageMessageItem {
   message: string;
   severity?: 'error' | 'warning';
   details?: string;
-  tooltip?: string;
   action?: {
     label: string;
     onClick: () => void;
@@ -41,7 +40,7 @@ export default function PageMessageOverlay({ messages }: PageMessageOverlayProps
     return items;
   }, [messages]);
   const signature = visibleMessages.length ? JSON.stringify(visibleMessages.map(item => [
-    item.severity ?? 'error', item.message, item.details ?? '', item.tooltip ?? '', item.action?.label ?? '',
+    item.severity ?? 'error', item.message, item.details ?? '', item.action?.label ?? '',
   ])) : '';
   const hasError = visibleMessages.some(item => (item.severity ?? 'error') === 'error');
 
@@ -70,12 +69,6 @@ function MessageContent({ item }: { item: PageMessageItem }) {
   return <div className={`page-message-overlay__content page-message-overlay__content--${item.severity ?? 'error'}`}>
     <div>
       <span>{item.message}</span>
-      {item.tooltip && <span
-        className="page-message-overlay__info"
-        tabIndex={0}
-        title={item.tooltip}
-        aria-label={item.tooltip}
-      >ⓘ</span>}
       {item.details && <details className="page-message-overlay__details">
         <summary>Details</summary>
         <p>{item.details}</p>

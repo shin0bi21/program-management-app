@@ -10,7 +10,7 @@ that a failed request returned an empty result.
 The route collects errors from page data, preferences, actions, and child views.
 Pass these values through the overlay's `messages` prop. Each entry may be a message
 string or an object with `message`, optional `severity` (`error` by default or
-`warning`), optional `details`/`tooltip`, and an optional `action` containing `label`,
+`warning`), optional `details`, and an optional `action` containing `label`,
 `onClick`, and `disabled`. A message can also be a group of items reported by one child. Empty entries are ignored; repeated messages
 appear once. Use a retry action when the error's owner can retry the failed work.
 
@@ -30,7 +30,7 @@ without actions have no action button.
 
 Table rows stay in place after edits. If an edited sort value violates its position
 relative to loaded neighbors in the current direction, the table reports “This table’s
-data is out of order.” with an explanatory tooltip and Refresh action. Sort edits that
+data is out of order.” with a Refresh action. Sort edits that
 still fit, unrelated edits, and filter-only changes do not show this warning.
 Refresh fetches a fresh first page and resets pagination. Failed refreshes retain the
 rows and warning, with the request failure reported alongside it. Clear the warning
