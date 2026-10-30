@@ -1,31 +1,37 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
-import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
-import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
+import type {
+  BuildItemContext,
+  ItemCapabilityContext,
+  ItemMoveContext,
+  RenderRowContext,
+} from '../../../../../common/components/TimelineCalendar/types';
 import type { Program } from '../../../../../common/features/programs/types';
+import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import { getSessions } from '../../sessions.api';
 import type { CohortSession, SessionCalendarCache, SessionListFilters } from '../../types';
-import { getSessionRange } from './sessionCalendarDates';
 import { getSessionRequestRange } from '../../utils/sessionDateRange';
-import { intersectDateRanges } from '../../../../../common/utils/dateRange';
+import { getSessionRange } from './sessionCalendarDates';
 import SessionItem from './SessionItem/SessionItem';
 import './SessionCalendar.css';
 
 const SESSION_CALENDAR_POSITION_KEY = 'resource-calendar:sessions:position';
-const getSessionId = (session: CohortSession) => session.id;
 
 interface SessionCalendarProps {
   filters: SessionListFilters;
   programs: Program[];
   selectedProgramId?: string | null;
   selectedSessionId: string;
+  calendarCacheRef: MutableRefObject<SessionCalendarCache>;
+  pendingSessionIds?: string[];
+
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
   onSessionsLoaded?: (sessions: CohortSession[]) => void;
   onSessionSelect: (session: CohortSession) => void;
-  calendarCacheRef: React.MutableRefObject<SessionCalendarCache>;
-  pendingSessionIds?: string[];
   onSessionMove?: (session: CohortSession, date: string) => Promise<CohortSession | null>;
   onAddSession?: (program: Program, date: string) => void;
   onSessionEdit?: (session: CohortSession) => void;
@@ -33,10 +39,36 @@ interface SessionCalendarProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
+const getProgramId = (program: Program) => program.id;
+const getSessionId = (session: CohortSession) => session.id;
+
+function renderProgramRow({ row }: RenderRowContext<Program>) {
+  return <span>{row.name}</span>;
+}
+
+function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, CohortSession>) {
+  return row.id === destinationRow.id;
+}
+
 export default function SessionCalendar({
-  filters, programs, selectedProgramId, selectedSessionId, onProgramSelect,
-  onSessionsLoaded, onSessionSelect, onSessionMove, calendarCacheRef, pendingSessionIds = [], onAddSession, onSessionEdit, onSessionDelete, onMessageChange,
+  filters,
+  programs,
+  selectedProgramId,
+  selectedSessionId,
+  calendarCacheRef,
+  pendingSessionIds = [],
+
+  onProgramSelect,
+  onSessionsLoaded,
+  onSessionSelect,
+  onSessionMove,
+  onAddSession,
+  onSessionEdit,
+  onSessionDelete,
+  onMessageChange,
 }: SessionCalendarProps) {
+  const { cycleIds, programIds, dateRange } = filters;
+
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
     if (!dates) return {};
@@ -45,83 +77,126 @@ export default function SessionCalendar({
     const requestFilters = { ...filters, ...requestRange };
     const sessions = await getSessions(requestFilters, { signal });
 
-    return sessions.reduce<Record<string, Record<string, CohortSession[]>>>((data, session) => {
+    const data: Record<string, Record<string, CohortSession[]>> = {};
+    for (const session of sessions) {
       data[session.programId] ??= {};
       data[session.programId][start.key] ??= [];
       data[session.programId][start.key].push(session);
-      return data;
-    }, {});
+    }
+
+    return data;
   }, [filters]);
+
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getSessionId,
     getItemRange: getSessionRange,
     errorMessage: 'Unable to load sessions calendar data',
   });
-  useEffect(() => {
-    calendarCacheRef.current = {
-      upsert: session => {
-        if (filters.cycleIds?.length && !filters.cycleIds.includes(session.cycleId)) {
-          calendar.removeItem(session.id);
-          return;
-        }
-        calendar.upsertItem(session.programId, getSessionRange(session).start, session);
-      },
-      remove: calendar.removeItem,
-    };
-    return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef, filters.cycleIds]);
+  const { upsertItem, removeItem } = calendar;
+
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
 
-  const sessions = useMemo(() => Object.values(calendar.items).flatMap(items => items ?? []), [calendar.items]);
+  useEffect(() => {
+    calendarCacheRef.current = {
+      upsert: session => {
+        const outsideSelectedCycles = cycleIds?.length && !cycleIds.includes(session.cycleId);
+
+        if (outsideSelectedCycles) {
+          removeItem(session.id);
+          return;
+        }
+
+        upsertItem(session.programId, getSessionRange(session).start, session);
+      },
+      remove: removeItem,
+    };
+
+    return () => {
+      calendarCacheRef.current = {
+        upsert: () => undefined,
+        remove: () => undefined,
+      };
+    };
+  }, [calendarCacheRef, cycleIds, removeItem, upsertItem]);
+
+  const visiblePrograms = useMemo(() => {
+    if (!programIds?.length) return programs;
+
+    return programs.filter(program => programIds.includes(program.id));
+  }, [programIds, programs]);
+
+  const sessions = useMemo(() => {
+    return Object.values(calendar.items).flatMap(items => items ?? []);
+  }, [calendar.items]);
+
   useEffect(() => {
     onSessionsLoaded?.(sessions);
   }, [onSessionsLoaded, sessions]);
 
-  const visiblePrograms = useMemo(() => filters.programIds?.length
-    ? programs.filter(program => filters.programIds!.includes(program.id))
-    : programs, [filters.programIds, programs]);
+  function buildItem({ data: session, row, calendar: itemCalendar }: BuildItemContext<Program, CohortSession>) {
+    const isPending = pendingSessionIds.includes(session.id);
 
-  if (calendar.error) return <UnavailableState title="Sessions calendar unavailable" onRetry={calendar.retry} />;
-
-  return <div className="sessions-calendar-view">
-    <TimelineCalendar
-      dateRange={filters.dateRange}
-      rows={visiblePrograms}
-      items={calendar.items}
-      onInitialPeriods={calendar.initialize}
-      onPeriodsBuilt={calendar.onPeriodsBuilt}
-      onPeriodsReset={calendar.reset}
-      getRowId={program => program.id}
-      getItemId={getSessionId}
-      getItemRange={getSessionRange}
-      getItemCapabilities={({ data: session }) => ({
-        draggable: Boolean(onSessionMove) && !session.cancelledAt
-          && new Date(session.startsAt).getTime() > Date.now() && !pendingSessionIds.includes(session.id),
-        resizable: false,
-      })}
-      canItemMove={({ row, destinationRow }) => row.id === destinationRow.id}
-      onItemMove={onSessionMove ? async ({ item: session, nextRange }) => {
-        await onSessionMove(session, nextRange.start);
-      } : undefined}
-      renderRow={({ row }) => <span>{row.name}</span>}
-      selectedRowId={selectedProgramId}
-      onRowSelect={onProgramSelect}
-      onCellActivate={onAddSession ? ({ row, period }) => onAddSession(row, period.key) : undefined}
-      buildItem={({ data: session, row, calendar: itemCalendar }) => <SessionItem
+    return (
+      <SessionItem
         calendar={itemCalendar}
         session={session}
         timezone={row.timezone}
         selected={session.id === selectedSessionId}
-        onEdit={onSessionEdit && !pendingSessionIds.includes(session.id) ? () => onSessionEdit(session) : undefined}
-        onDelete={onSessionDelete && !pendingSessionIds.includes(session.id) ? () => onSessionDelete(session) : undefined}
-      />}
-      onItemActivate={({ data: session }) => onSessionSelect(session)}
-      ariaLabel="Sessions calendar"
-      positionStorageKey={SESSION_CALENDAR_POSITION_KEY}
-      rowHeader="Program"
-      rowHeight={112}
-    />
-  </div>;
+        onEdit={onSessionEdit && !isPending ? () => onSessionEdit(session) : undefined}
+        onDelete={onSessionDelete && !isPending ? () => onSessionDelete(session) : undefined}
+      />
+    );
+  }
+
+  function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, CohortSession>) {
+    const draggable = Boolean(onSessionMove)
+      && !session.cancelledAt
+      && new Date(session.startsAt).getTime() > Date.now()
+      && !pendingSessionIds.includes(session.id);
+
+    return { draggable, resizable: false };
+  }
+
+  async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, CohortSession>) {
+    await onSessionMove?.(session, nextRange.start);
+  }
+
+  if (calendar.error) {
+    return <UnavailableState title="Sessions calendar unavailable" onRetry={calendar.retry} />;
+  }
+
+  return (
+    <div className="sessions-calendar-view">
+      <TimelineCalendar
+        ariaLabel="Sessions calendar"
+        dateRange={dateRange}
+        positionStorageKey={SESSION_CALENDAR_POSITION_KEY}
+        onPeriodsBuilt={calendar.onPeriodsBuilt}
+        onInitialPeriods={calendar.initialize}
+        onPeriodsReset={calendar.reset}
+
+        rows={visiblePrograms}
+        rowHeader="Program"
+        rowHeight={112}
+        getRowId={getProgramId}
+        renderRow={renderProgramRow}
+        selectedRowId={selectedProgramId}
+        onRowSelect={onProgramSelect}
+
+        items={calendar.items}
+        getItemId={getSessionId}
+        getItemRange={getSessionRange}
+        buildItem={buildItem}
+
+        getItemCapabilities={getItemCapabilities}
+        onItemActivate={({ data: session }) => onSessionSelect(session)}
+        onItemMove={onSessionMove ? moveSession : undefined}
+        canItemMove={canMoveWithinProgram}
+
+        onCellActivate={onAddSession ? ({ row, period }) => onAddSession(row, period.key) : undefined}
+      />
+    </div>
+  );
 }

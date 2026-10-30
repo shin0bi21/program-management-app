@@ -1,41 +1,45 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
+import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
   BuildItemContext,
   CalendarCellContext,
+  ItemCapabilityContext,
   ItemMoveContext,
+  RenderRowContext,
   RowItemData,
 } from '../../../../../common/components/TimelineCalendar/types';
-import { getHoursCalendarData } from '../../hours.api';
-import type { StaffResource, HoursFilters, HoursItem as HoursEntry } from '../../types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
+import { getHoursCalendarData } from '../../hours.api';
 import type {
+  StaffResource,
+  HoursFilters,
+  HoursItem as HoursEntry,
   HoursCalendarCache,
   HoursEntryMove,
   HoursEntryTarget,
 } from '../../types';
 import HoursItem from './HoursItem/HoursItem';
-import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 
 const initialDate = new Date();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
-const getStaffResourceId = (resource: StaffResource) => resource.id;
-export interface HoursCalendarItem { date: string; item: HoursEntry }
-const getHoursEntryId = (item: HoursEntry) => item.id;
-const getHoursCalendarItemId = (item: HoursCalendarItem) => item.item.id;
-const canMoveWithinStaff = ({ row, destinationRow }: ItemMoveContext<StaffResource, HoursCalendarItem>) => row.writable
-  && destinationRow.writable
-  && row.id === destinationRow.id;
+
+export interface HoursCalendarItem {
+  date: string;
+  item: HoursEntry;
+}
+
 interface HoursCalendarProps {
   resources: StaffResource[];
   filters: HoursFilters;
   canWrite: boolean;
   selectedStaffId?: string;
-  calendarCacheRef: React.MutableRefObject<HoursCalendarCache>;
+  calendarCacheRef: MutableRefObject<HoursCalendarCache>;
   isEntryPending: (entryId: string) => boolean;
+
   onStaffSelect: (staffId: string) => void;
   onEdit: (target: HoursEntryTarget) => void;
   onDelete: (target: HoursEntryTarget) => void;
@@ -44,98 +48,187 @@ interface HoursCalendarProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
+const getStaffResourceId = (resource: StaffResource) => resource.id;
+const getHoursEntryId = (item: HoursEntry) => item.id;
+const getHoursCalendarItemId = (data: HoursCalendarItem) => data.item.id;
+const getHoursCalendarItemRange = (data: HoursCalendarItem) => ({ start: data.date, end: data.date });
+
+function renderStaffRow({ row }: RenderRowContext<StaffResource>) {
+  return (
+    <div className="hours-resource">
+      <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>
+    </div>
+  );
+}
+
+function canMoveWithinStaff({ row, destinationRow }: ItemMoveContext<StaffResource, HoursCalendarItem>) {
+  return row.writable && destinationRow.writable && row.id === destinationRow.id;
+}
+
 export default function HoursCalendar({
-  resources, filters, canWrite, selectedStaffId,
-  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onMessageChange,
+  resources,
+  filters,
+  canWrite,
+  selectedStaffId,
+  calendarCacheRef,
+  isEntryPending,
+
+  onStaffSelect,
+  onEdit,
+  onDelete,
+  onAdd,
+  onMove,
+  onMessageChange,
 }: HoursCalendarProps) {
-  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => (
-    getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal })
-  ), [filters]);
+  const { staffIds, cycleIds, dateRange } = filters;
+
+  const loadRange = useCallback(({ start, end }: PeriodRange, signal: AbortSignal) => {
+    return getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
+  }, [filters]);
+
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getHoursEntryId,
     errorMessage: 'Unable to load hours data',
   });
+  const { upsertItem, removeItem } = calendar;
+
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
+
   useEffect(() => {
     calendarCacheRef.current = {
       upsert: (resourceId, date, item) => {
+        const outsideSelectedCycles = cycleIds?.length && !cycleIds.includes(item.cycleId);
+
         // A move can resolve to an unselected cycle inside the displayed date span.
-        if (filters.cycleIds?.length && !filters.cycleIds.includes(item.cycleId)) {
-          calendar.removeItem(item.id);
+        if (outsideSelectedCycles) {
+          removeItem(item.id);
           return;
         }
-        calendar.upsertItem(resourceId, date, item);
+
+        upsertItem(resourceId, date, item);
       },
-      remove: calendar.removeItem,
+      remove: removeItem,
     };
-    return () => { calendarCacheRef.current = { upsert: () => undefined, remove: () => undefined }; };
-  }, [calendar.removeItem, calendar.upsertItem, calendarCacheRef, filters.cycleIds]);
-  const visibleResources = useMemo(() => filters.staffIds.length
-    ? resources.filter(resource => filters.staffIds.includes(resource.id))
-    : resources, [filters.staffIds, resources]);
-  const visibleItems = useMemo<RowItemData<HoursCalendarItem>>(() => Object.fromEntries(
-    Object.entries(calendar.data).map(([resourceId, periods]) => [
-      resourceId,
-      Object.entries(periods).flatMap(([date, items]) => items.map(item => ({ date, item }))),
-    ]),
-  ), [calendar.data]);
 
-  const moveHours = ({ item, row, destinationRow, originalRange, nextRange }: ItemMoveContext<StaffResource, HoursCalendarItem>) => onMove({
-    item: item.item,
-    source: { resourceId: row.id, date: originalRange.start },
-    destination: { resourceId: destinationRow.id, date: nextRange.start },
-  });
-  const buildItem = useCallback(({ row, range, data, calendar: itemCalendar }: BuildItemContext<StaffResource, HoursCalendarItem>) => (
-    <HoursItem
-      calendar={itemCalendar}
-      item={data.item}
-      onEdit={canWrite && row.writable && !isEntryPending(data.item.id)
-        ? () => onEdit({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
-      onDelete={canWrite && row.writable && !isEntryPending(data.item.id)
-        ? () => onDelete({ resourceId: row.id, date: range.start, item: data.item }) : undefined}
-    />
-  ), [canWrite, isEntryPending, onDelete, onEdit]);
-  const openCellEntry = useCallback((
-    { row, period }: CalendarCellContext<StaffResource, HoursCalendarItem>,
-    source: 'regular' | 'task' | 'session',
-  ) => onAdd({ resourceId: row.id, date: period.key, source }), [onAdd]);
+    return () => {
+      calendarCacheRef.current = {
+        upsert: () => undefined,
+        remove: () => undefined,
+      };
+    };
+  }, [calendarCacheRef, cycleIds, removeItem, upsertItem]);
 
-  if (calendar.error) return <UnavailableState title="Hours calendar unavailable" onRetry={calendar.retry} />;
+  const visibleResources = useMemo(() => {
+    if (!staffIds.length) return resources;
 
-  return <>
+    return resources.filter(resource => staffIds.includes(resource.id));
+  }, [staffIds, resources]);
+
+  const visibleItems = useMemo(() => {
+    const itemsByResource: RowItemData<HoursCalendarItem> = {};
+
+    for (const [resourceId, periods] of Object.entries(calendar.data)) {
+      const resourceItems: HoursCalendarItem[] = [];
+
+      for (const [date, items] of Object.entries(periods)) {
+        for (const item of items) {
+          resourceItems.push({ date, item });
+        }
+      }
+
+      itemsByResource[resourceId] = resourceItems;
+    }
+
+    return itemsByResource;
+  }, [calendar.data]);
+
+  const buildItem = useCallback(({
+    row,
+    range,
+    data,
+    calendar: itemCalendar,
+  }: BuildItemContext<StaffResource, HoursCalendarItem>) => {
+    const entry = data.item;
+    const canModifyEntry = canWrite && row.writable && !isEntryPending(entry.id);
+    const target: HoursEntryTarget = { resourceId: row.id, date: range.start, item: entry };
+
+    return (
+      <HoursItem
+        calendar={itemCalendar}
+        item={entry}
+        onEdit={canModifyEntry ? () => onEdit(target) : undefined}
+        onDelete={canModifyEntry ? () => onDelete(target) : undefined}
+      />
+    );
+  }, [canWrite, isEntryPending, onDelete, onEdit]);
+
+  function getItemCapabilities({ row, data }: ItemCapabilityContext<StaffResource, HoursCalendarItem>) {
+    const entry = data.item;
+    const draggable = canWrite && row.writable && !entry.sessionId && !isEntryPending(entry.id);
+
+    return { draggable };
+  }
+
+  function moveHours({
+    item,
+    row,
+    destinationRow,
+    originalRange,
+    nextRange,
+  }: ItemMoveContext<StaffResource, HoursCalendarItem>) {
+    return onMove({
+      item: item.item,
+      source: { resourceId: row.id, date: originalRange.start },
+      destination: { resourceId: destinationRow.id, date: nextRange.start },
+    });
+  }
+
+  function getCellActions({ row, period }: CalendarCellContext<StaffResource, HoursCalendarItem>) {
+    if (!row.writable) return [];
+
+    const target = { resourceId: row.id, date: period.key };
+
+    return [
+      { id: 'session', label: 'Session Hours', onSelect: () => onAdd({ ...target, source: 'session' }) },
+      { id: 'task', label: 'Task Hours', onSelect: () => onAdd({ ...target, source: 'task' }) },
+      { id: 'regular', label: 'Regular Hours', onSelect: () => onAdd({ ...target, source: 'regular' }) },
+    ];
+  }
+
+  if (calendar.error) {
+    return <UnavailableState title="Hours calendar unavailable" onRetry={calendar.retry} />;
+  }
+
+  return (
     <TimelineCalendar<StaffResource, HoursCalendarItem>
-      rows={visibleResources}
-      items={visibleItems}
-      getItemRange={data => ({ start: data.date, end: data.date })}
-      initialDate={initialDate}
-      dateRange={filters.dateRange}
-      positionStorageKey={HOURS_CALENDAR_POSITION_KEY}
       ariaLabel="Staff hours calendar"
-      rowHeader="Name"
+      initialDate={initialDate}
+      dateRange={dateRange}
+      positionStorageKey={HOURS_CALENDAR_POSITION_KEY}
       onPeriodsBuilt={calendar.onPeriodsBuilt}
       onInitialPeriods={calendar.initialize}
       onPeriodsReset={calendar.reset}
-      onItemMove={canWrite ? moveHours : undefined}
-      canItemMove={canMoveWithinStaff}
-      getItemCapabilities={({ row, data }) => ({
-        draggable: canWrite && row.writable && !data.item.sessionId && !isEntryPending(data.item.id),
-      })}
+
+      rows={visibleResources}
+      rowHeader="Name"
       rowHeight={112}
-      getCellActions={canWrite ? context => context.row.writable ? [
-        { id: 'session', label: 'Session Hours', onSelect: () => openCellEntry(context, 'session') },
-        { id: 'task', label: 'Task Hours', onSelect: () => openCellEntry(context, 'task') },
-        { id: 'regular', label: 'Regular Hours', onSelect: () => openCellEntry(context, 'regular') },
-      ] : [] : undefined}
       getRowId={getStaffResourceId}
-      getItemId={getHoursCalendarItemId}
-      renderRow={({ row }) => <div className="hours-resource">
-        <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>
-      </div>}
+      renderRow={renderStaffRow}
       selectedRowId={selectedStaffId}
       onRowSelect={row => onStaffSelect(row.id)}
+
+      items={visibleItems}
+      getItemId={getHoursCalendarItemId}
+      getItemRange={getHoursCalendarItemRange}
       buildItem={buildItem}
+
+      getItemCapabilities={getItemCapabilities}
+      onItemMove={canWrite ? moveHours : undefined}
+      canItemMove={canMoveWithinStaff}
+
+      getCellActions={canWrite ? getCellActions : undefined}
     />
-  </>;
+  );
 }

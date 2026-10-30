@@ -49,6 +49,13 @@ item mapping, and callback wiring; shared calendar mechanics stay in shared suit
 Connect the generated calendar to the page when implementing the feature; the
 component preset does not edit its parent or register a route.
 
+The calendar preset supplies ordered implementation prompts matching the
+[page calendar standard](../components/calendars.md#order-the-page-calendar-owner):
+range loading, buffer setup, error reporting, cache synchronization, display data,
+rendering/interactions, unavailable state, then grouped calendar JSX. It remains a
+skeleton rather than inventing domain APIs, permission rules, or record types.
+Replace applicable prompts with real code and remove phases the owner does not need.
+
 Append `--dry-run` to preview either command without writing files. Every preset
 refuses to overwrite existing files. Add table, dashboard, or modal presets only
 when the new page needs those owners; each includes its own test outlines.
