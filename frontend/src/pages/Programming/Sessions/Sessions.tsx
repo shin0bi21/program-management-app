@@ -173,7 +173,7 @@ export default function Sessions() {
           actions={
             canWriteSessions ? (
               <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
-                + Add Session
+                + Add
               </Button>
             ) : undefined
           }
