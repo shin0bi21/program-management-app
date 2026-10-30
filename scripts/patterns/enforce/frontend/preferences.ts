@@ -22,13 +22,31 @@ export function checkPreferenceControlOwnership(violations: Findings, file: stri
     violations.push(`${file}:1 usePreferences callers must declare field normalization rules in fields.`);
   }
 
-  for (const [field, rule] of Object.entries({ columnWidths: 'preferenceColumnWidths', hiddenColumns: 'preferenceHiddenColumns' })) {
-    if (!new RegExp(`\\b${field}\\b`).test(source)) continue;
-    const hasOwningRule = new RegExp(
-      `\\b${field}\\s*:\\s*${rule}\\s*\\(\\s*tableKeys\\s*,?\\s*\\)`,
-    ).test(source);
-    if (!hasOwningRule) {
-      violations.push(`${file}:1 ${field} preferences must use ${rule}(tableKeys) with owning tableKeys.`);
+  const sourceFile = parseSourceFile(file, source);
+  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    if (call.getExpression().getText() !== 'usePreferences') continue;
+    const options = call.getArguments()[0];
+    if (!options || !Node.isObjectLiteralExpression(options)) continue;
+    const property = options.getProperty('fields');
+    const fields = property && Node.isPropertyAssignment(property) ? property.getInitializer() : undefined;
+    if (!fields || !Node.isObjectLiteralExpression(fields)) continue;
+
+    for (const field of ['columnWidths', 'hiddenColumns']) {
+      if (fields.getProperty(field)) {
+        violations.push(`${file}:${fields.getStartLineNumber()} ${field} is browser-local layout and must use useTableLayout, not usePreferences.`);
+      }
+    }
+  }
+
+  if (/\b(?:columnWidths|hiddenColumns)\b/.test(source)) {
+    const layoutCall = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)
+      .find(call => call.getExpression().getText() === 'useTableLayout');
+    const options = layoutCall?.getArguments()[0];
+    const property = options && Node.isObjectLiteralExpression(options) ? options.getProperty('tableKeys') : undefined;
+    const ownsKeys = property && (Node.isShorthandPropertyAssignment(property)
+      || (Node.isPropertyAssignment(property) && property.getInitializer()?.getText() === 'tableKeys'));
+    if (!ownsKeys) {
+      violations.push(`${file}:1 table layouts must use useTableLayout with owning tableKeys.`);
     }
   }
 

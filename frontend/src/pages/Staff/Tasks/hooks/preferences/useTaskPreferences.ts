@@ -5,14 +5,13 @@ import { useMemo, useState } from 'react';
 
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceOption,
   preferenceOptions,
   preferenceIds,
   preferenceText,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 
@@ -33,8 +32,6 @@ interface TaskPreferences {
   categories: TaskCategory[];
   statuses: TaskStatus[];
   sorting: ListSort<TaskSortKey>;
-  columnWidths: Record<string, number>;
-  hiddenColumns: string[];
 }
 
 export type StoredTaskPreferences = Partial<TaskPreferences>;
@@ -71,6 +68,7 @@ export default function useTaskPreferences({
   cyclesError,
 }: UseTaskPreferencesOptions) {
   const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
+  const layout = useTableLayout({ key: 'task-preferences', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
     waiting: referenceDataLoading || cyclesLoading || resourcesLoading || programsLoading,
@@ -91,8 +89,6 @@ export default function useTaskPreferences({
         options?.statuses.map(status => status.value) ?? null,
       ),
       sorting: preferenceSorting(tableKeys, { key: 'startDate', direction: 'asc' }),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
   const [searchDraft, setSearchValue] = useState<string | null>(null);
@@ -155,16 +151,6 @@ export default function useTaskPreferences({
     updatePreferences({ sorting });
   };
 
-  // Column widths.
-  const setColumnWidths = (columnWidths: Record<string, number>) => {
-    updatePreferences({ columnWidths });
-  };
-
-  // Hidden columns.
-  const setHiddenColumns = (hiddenColumns: string[]) => {
-    updatePreferences({ hiddenColumns });
-  };
-
   return {
     ready,
     error,
@@ -194,10 +180,10 @@ export default function useTaskPreferences({
     table: {
       sorting: preferences.sorting,
       setSorting,
-      columnWidths: preferences.columnWidths,
-      setColumnWidths,
-      hiddenColumns: preferences.hiddenColumns,
-      setHiddenColumns,
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }

@@ -76,6 +76,8 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
 describe('useTaskPreferences', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     savedPreference.preference = null;
     savedPreference.error = null;
     vi.mocked(getPreference).mockImplementation(async () => {
@@ -193,14 +195,15 @@ describe('useTaskPreferences', () => {
       result.current.setView('table');
     });
 
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:task-preferences')!)).toEqual({
+      hiddenColumns: ['program'], columnWidths: { title: 300 },
+    });
     const expected = {
       view: 'table',
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
       statuses: ['active'],
-      hiddenColumns: ['program'],
-      columnWidths: { title: 300 },
       sorting: { key: 'title', direction: 'asc' },
     };
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining(expected)));
@@ -213,8 +216,8 @@ describe('useTaskPreferences', () => {
         statuses: expected.statuses,
       },
       table: {
-        hiddenColumns: expected.hiddenColumns,
-        columnWidths: expected.columnWidths,
+        hiddenColumns: ['program'],
+        columnWidths: { title: 300 },
         sorting: expected.sorting,
       },
     });
@@ -225,8 +228,8 @@ describe('useTaskPreferences', () => {
     }));
     expect(result.current.view).toBe('table');
     expect(result.current.table).toMatchObject({
-      hiddenColumns: expected.hiddenColumns,
-      columnWidths: expected.columnWidths,
+      hiddenColumns: ['program'],
+      columnWidths: { title: 300 },
       sorting: expected.sorting,
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({

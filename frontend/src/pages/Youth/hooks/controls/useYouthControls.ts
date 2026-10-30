@@ -5,12 +5,11 @@ import type { ProgramReference } from '../../../../common/features/referenceData
 import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceIds,
   preferenceText,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { YouthSortKey } from '../../types';
@@ -38,6 +37,7 @@ export function useYouthControls({
   cyclesError,
   tableKeys,
 }: UseYouthControlsOptions) {
+  const layout = useTableLayout({ key: 'youth-profile-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'youth-profile-filters',
     waiting: programsLoading || cyclesLoading || role === null,
@@ -51,8 +51,6 @@ export function useYouthControls({
         cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id),
       ),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
 
@@ -103,10 +101,10 @@ export function useYouthControls({
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<YouthSortKey> }),
-      columnWidths: preferences.columnWidths,
-      setColumnWidths: (columnWidths: Record<string, number>) => updatePreferences({ columnWidths }),
-      hiddenColumns: preferences.hiddenColumns,
-      setHiddenColumns: (hiddenColumns: string[]) => updatePreferences({ hiddenColumns }),
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }

@@ -4,14 +4,13 @@ import type { TableSorting } from '../../../../common/components/Table/Table.typ
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceOptions,
   preferenceIds,
   preferenceText,
   fixedPreference,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
@@ -28,6 +27,7 @@ export function useLeadPreferences(
   programsError: string | null,
   tableKeys: readonly LeadSortKey[],
 ) {
+  const layout = useTableLayout({ key: preferenceKey, tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: preferenceKey,
     waiting: programsLoading,
@@ -38,8 +38,6 @@ export function useLeadPreferences(
       origins: fixedPreference([origin]),
       submitterRoles: preferenceOptions(origin === 'external' ? externalSubmitterRoles : []),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
 
@@ -95,10 +93,10 @@ export function useLeadPreferences(
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<LeadSortKey> }),
-      columnWidths: preferences.columnWidths,
-      setColumnWidths: (columnWidths: Record<string, number>) => updatePreferences({ columnWidths }),
-      hiddenColumns: preferences.hiddenColumns,
-      setHiddenColumns: (hiddenColumns: string[]) => updatePreferences({ hiddenColumns }),
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }
