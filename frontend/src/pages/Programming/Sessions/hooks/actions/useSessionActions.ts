@@ -10,7 +10,6 @@ import { getErrorMessage } from '../../../../../http/errors';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
-const SESSION_CALENDAR_QUERY_KEY = ['sessions', 'calendar'] as const;
 const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
 
 export default function useSessionActions({
@@ -34,11 +33,6 @@ export default function useSessionActions({
 
   const syncSession = useCallback((session: CohortSession) => {
     replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
-    queryClient.setQueriesData<CohortSession[]>({ queryKey: SESSION_CALENDAR_QUERY_KEY }, rows => (
-      rows?.some(row => row.id === session.id)
-        ? rows.map(row => row.id === session.id ? session : row)
-        : rows
-    ));
     calendarCacheRef.current.upsert(session);
     onSessionSynced?.(session);
     refreshCohortOverviews();
@@ -89,12 +83,8 @@ export default function useSessionActions({
 
   const refreshCreatedSessions = useCallback(async (result: CreatedSessionResult) => {
     syncCohorts(result.updatedCohorts);
-    // Creation cannot establish membership in every cached filter and calendar range.
-    await queryClient.cancelQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY });
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-    ]);
+    // Creation cannot establish membership in every filtered collection or buffered range.
+    await queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
     refreshCohortOverviews();
     setCalendarRevision(revision => revision + 1);
   }, [queryClient, refreshCohortOverviews, syncCohorts]);
@@ -109,9 +99,6 @@ export default function useSessionActions({
       const saved = await deleteSession(session.id);
       syncCohorts(saved.updatedCohorts);
       removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
-      queryClient.setQueriesData<CohortSession[]>({ queryKey: SESSION_CALENDAR_QUERY_KEY }, rows => (
-        rows?.some(row => row.id === session.id) ? rows.filter(row => row.id !== session.id) : rows
-      ));
       calendarCacheRef.current.remove(session.id);
       onSessionRemoved(session.id);
       refreshCohortOverviews();

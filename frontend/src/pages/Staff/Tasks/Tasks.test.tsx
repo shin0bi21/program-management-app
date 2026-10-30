@@ -311,6 +311,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+      { signal: expect.any(AbortSignal) },
     ));
     await waitFor(() => expect(calendarTestState.props?.items['staff-1']).toEqual([task]));
     expect(screen.getByRole('textbox', { name: 'Search tasks' })).toHaveValue('missing');
@@ -338,6 +339,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'workshop' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+      { signal: expect.any(AbortSignal) },
     ));
   });
 

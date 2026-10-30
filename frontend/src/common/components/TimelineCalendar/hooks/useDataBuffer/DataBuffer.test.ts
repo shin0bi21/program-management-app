@@ -6,6 +6,27 @@ import { DataBuffer, type PeriodRange } from './DataBuffer';
 import type { RowPeriodData } from '../../types';
 
 describe('DataBuffer', () => {
+  it('discards a late response and queued reads when disposed', async () => {
+    let resolveLoad!: (data: RowPeriodData<{ id: string }>) => void;
+    const load = vi.fn((_range: PeriodRange, _signal: AbortSignal) => (
+      new Promise<RowPeriodData<{ id: string }>>(resolve => { resolveLoad = resolve; })
+    ));
+    const onData = vi.fn();
+    const buffer = new DataBuffer({ load, onData, getItemId: item => item.id });
+    const pending = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const queued = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right');
+
+    buffer.dispose();
+    resolveLoad({ staff: { '2026-08-09': [{ id: 'obsolete' }] } });
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await queued;
+    buffer.upsertItem('staff', '2026-08-09', { id: 'late-mutation' });
+
+    expect(load.mock.calls[0][1].aborted).toBe(true);
+    expect(load).toHaveBeenCalledOnce();
+    expect(onData).not.toHaveBeenCalled();
+  });
+
   it('uses a six-week day runway on initialization', async () => {
     const load = vi.fn().mockResolvedValue({});
     const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
@@ -17,7 +38,7 @@ describe('DataBuffer', () => {
       start: expect.objectContaining({ key: '2026-06-27' }),
       end: expect.objectContaining({ key: '2026-09-21' }),
       direction: 'initial',
-    }));
+    }), expect.any(AbortSignal));
   });
 
   it('replenishes three weeks when the right runway reaches three weeks', async () => {
@@ -34,7 +55,7 @@ describe('DataBuffer', () => {
       start: expect.objectContaining({ key: '2026-09-22' }),
       end: expect.objectContaining({ key: '2026-10-12' }),
       direction: 'right',
-    }));
+    }), expect.any(AbortSignal));
   });
 
   it('serializes and deduplicates directional replenishment ranges', async () => {
@@ -68,7 +89,7 @@ describe('DataBuffer', () => {
       direction: 'right',
       start: expect.objectContaining({ key: '2026-08-10' }),
       end: expect.objectContaining({ key: '2026-08-14' }),
-    }));
+    }), expect.any(AbortSignal));
   });
 
   it('propagates a pending initialization failure and retries initialization on the next edge load', async () => {
@@ -172,7 +193,7 @@ describe('DataBuffer', () => {
       start: expect.objectContaining({ key: '2027-06-28' }),
       end: expect.objectContaining({ key: '2027-09-20' }),
       direction: 'right',
-    }));
+    }), expect.any(AbortSignal));
   });
 
   it('retries initialization and does not commit a failed loaded range', async () => {
@@ -205,7 +226,7 @@ describe('DataBuffer', () => {
       start: expect.objectContaining({ key: '2026-11-28' }),
       end: expect.objectContaining({ key: '2027-02-22' }),
       direction: 'initial',
-    }));
+    }), expect.any(AbortSignal));
     expect(onData).toHaveBeenLastCalledWith({ staff: {} });
   });
 

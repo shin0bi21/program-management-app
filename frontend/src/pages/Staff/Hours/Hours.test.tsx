@@ -316,6 +316,7 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
       expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }), expect.anything(),
+      { signal: expect.any(AbortSignal) },
     ));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
@@ -336,7 +337,7 @@ describe('Hours', () => {
     }, {
       start: expect.any(String),
       end: expect.any(String),
-    }));
+    }, { signal: expect.any(AbortSignal) }));
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
   });
@@ -346,6 +347,7 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
       { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
+      { signal: expect.any(AbortSignal) },
     ));
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
@@ -356,6 +358,7 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
       { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
+      { signal: expect.any(AbortSignal) },
     ));
   });
 

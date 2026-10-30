@@ -1,12 +1,59 @@
 // This suite owns the React buffer adapter's loading, retry, flattening, and mutation wiring.
+import { StrictMode, createElement, useEffect, useRef } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { buildInitialDayPeriods } from '../../utils/periods';
 import { ApiError } from '../../../../../http/errors';
 import { useDataBuffer } from './useDataBuffer';
+import type { RowPeriodData } from '../../types';
 
 describe('useDataBuffer', () => {
   type Item = { id: string };
+
+  it('aborts pending loads and skips queued edges after unmount', async () => {
+    let resolveLoad!: (data: RowPeriodData<Item>) => void;
+    const load = vi.fn((_range, _signal: AbortSignal) => new Promise<RowPeriodData<Item>>(resolve => { resolveLoad = resolve; }));
+    const { result, unmount } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
+
+    act(() => {
+      result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right');
+    });
+    const signal = load.mock.calls[0][1];
+    unmount();
+
+    expect(signal.aborted).toBe(true);
+    await act(async () => resolveLoad({}));
+    expect(load).toHaveBeenCalledOnce();
+  });
+
+  it('restarts an interrupted initialization during StrictMode effect replay', async () => {
+    const load = vi.fn((_range, signal: AbortSignal) => {
+      if (load.mock.calls.length === 1) {
+        return new Promise<RowPeriodData<Item>>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+        });
+      }
+      return Promise.resolve({ staff: { '2026-08-09': [{ id: 'current' }] } });
+    });
+    const { result } = renderHook(() => {
+      const buffer = useDataBuffer<Item>({ load, getItemId: item => item.id });
+      const { initialize } = buffer;
+      const initialized = useRef(false);
+      useEffect(() => {
+        if (initialized.current) return;
+        initialized.current = true;
+        initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+      }, [initialize]);
+      return buffer;
+    }, { wrapper: ({ children }) => createElement(StrictMode, null, children) });
+
+    await waitFor(() => expect(result.current.items.staff).toEqual([{ id: 'current' }]));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(load.mock.calls[0][1].aborted).toBe(true);
+    expect(load.mock.calls[1][1].aborted).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
 
   it('preserves flattened item references when buffered data is unchanged', () => {
     const item = { id: 'task-1' };
@@ -116,7 +163,7 @@ describe('useDataBuffer', () => {
 
     await waitFor(() => expect(result.current.error).toBeNull());
     expect(load).toHaveBeenCalledTimes(4);
-    expect(load).toHaveBeenLastCalledWith(failedRange);
+    expect(load).toHaveBeenLastCalledWith(failedRange, expect.any(AbortSignal));
   });
 
   it('clears a recovered edge on normal loading while retaining the other edge failure', async () => {

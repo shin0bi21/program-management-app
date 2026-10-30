@@ -48,8 +48,8 @@ export default function HoursCalendar({
   resources, filters, canWrite, selectedStaffId,
   calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onMessageChange,
 }: HoursCalendarProps) {
-  const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    getHoursCalendarData(filters, { start: start.key, end: end.key })
+  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => (
+    getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal })
   ), [filters]);
   const calendar = useDataBuffer({
     load: loadRange,
