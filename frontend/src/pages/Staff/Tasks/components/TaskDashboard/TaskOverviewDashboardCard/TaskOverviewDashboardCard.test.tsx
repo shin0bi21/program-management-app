@@ -12,7 +12,7 @@ const cardProps = { queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Z
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
   categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
-  status: 'active', statusLabel: 'Active',
+  status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
   assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
 };
@@ -42,7 +42,7 @@ describe('TaskOverviewDashboardCard', () => {
 
     expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
-    expect(screen.getByText('Active').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('In Progress').nextSibling).toHaveTextContent('1');
     expect(screen.getByText('Overdue').nextSibling).toHaveTextContent('1');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
@@ -51,12 +51,12 @@ describe('TaskOverviewDashboardCard', () => {
     expect(within(dialog).getByRole('heading', { name: 'Overdue' })).toBeInTheDocument();
     expect(within(dialog).getByText('Submit report').nextSibling).toHaveTextContent('Aug 9');
     expect(within(dialog).getByRole('heading', { name: 'Upcoming' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('heading', { name: 'Active' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'In Progress' })).toBeInTheDocument();
     expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Aug 12');
     expect(within(dialog).getByText('Future workshop').nextSibling).toHaveTextContent('Aug 14');
   });
 
-  it('excludes closed tasks and sorts active tasks by due date', () => {
+  it('excludes closed tasks and sorts in progress tasks by due date', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-11T12:00:00'));
     const tasks = [
@@ -89,9 +89,9 @@ describe('TaskOverviewDashboardCard', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
     expect(within(dialog).queryByText('Closed')).not.toBeInTheDocument();
-    const activeSection = within(dialog).getByRole('heading', { name: 'Active' }).closest('section')!;
+    const inProgressSection = within(dialog).getByRole('heading', { name: 'In Progress' }).closest('section')!;
     const overdueSection = within(dialog).getByRole('heading', { name: 'Overdue' }).closest('section')!;
-    expect(within(activeSection).getAllByRole('listitem').map(item => item.textContent)).toEqual([
+    expect(within(inProgressSection).getAllByRole('listitem').map(item => item.textContent)).toEqual([
       'SoonAug 12', 'LaterAug 20',
     ]);
     expect(within(overdueSection).getAllByRole('listitem').map(item => item.textContent)).toEqual(['OverdueAug 9']);
@@ -127,7 +127,7 @@ describe('TaskOverviewDashboardCard', () => {
     rerender(<TaskOverviewDashboardCard {...cardProps} resourceId="staff-2" />);
     expect(screen.getAllByRole('status')).toHaveLength(4);
     expect(screen.getByRole('heading', { name: 'Task Overview' }).closest('article')).toBe(card);
-    for (const label of ['Assigned', 'Upcoming', 'Active', 'Overdue']) {
+    for (const label of ['Assigned', 'Upcoming', 'In Progress', 'Overdue']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();

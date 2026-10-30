@@ -6,7 +6,7 @@ import type { Task } from '../../../types';
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
   categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
-  status: 'active', statusLabel: 'Active',
+  status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
   completedAt: null, assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
@@ -35,7 +35,7 @@ describe('TaskItem', () => {
     expect(item).not.toHaveTextContent('Soft Skills');
     const tooltip = showDetails();
     expect(tooltip).toHaveTextContent('Prepare workshop');
-    expect(within(tooltip).getByText('Active', { selector: '.status-label' })).toBeInTheDocument();
+    expect(within(tooltip).getByText('In Progress', { selector: '.status-label' })).toBeInTheDocument();
     expect(tooltip).toHaveTextContent('Planning / Prep');
     expect(tooltip).toHaveTextContent('Soft Skills');
     expect(tooltip).toHaveTextContent('Logged');
@@ -58,7 +58,7 @@ describe('TaskItem', () => {
     const onDelete = vi.fn();
     render(<div onClick={onItemActivate}><TaskItem task={task} onComplete={onComplete} onEdit={onEdit} onDelete={onDelete} /></div>);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, Active, 2026-08-10 to 2026-08-12. Open actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare workshop, In Progress, 2026-08-10 to 2026-08-12. Open actions' }));
     expect(onItemActivate).toHaveBeenCalledOnce();
     expect(screen.getByRole('menuitem', { name: 'Set Completed' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();

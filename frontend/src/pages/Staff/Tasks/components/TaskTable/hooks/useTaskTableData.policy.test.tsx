@@ -32,7 +32,7 @@ it.each(sortChanges)('maps %s to its canonical sort value and ignores unrelated 
 });
 
 it('ignores active filter and search changes outside the sort column', () => {
-  const filters: TasksFilters = { staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], statuses: ['active'], dateRange: { start: '2026-01-01', end: '2026-12-31' }, search: 'work' };
+  const filters: TasksFilters = { staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'], statuses: ['in_progress'], dateRange: { start: '2026-01-01', end: '2026-12-31' }, search: 'work' };
   const key: TaskSortKey = sortChanges[0][0];
   renderHook(() => useTaskTableData(['tasks', 'table'], filters, { key, direction: 'desc' }, '2026-10-01'));
   expect(vi.mocked(useInfiniteListQuery).mock.calls[0][0].ordering?.direction).toBe('desc');

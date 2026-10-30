@@ -1,4 +1,5 @@
 import { DashboardCardLoading } from '../../../../../common/components/DashboardCard/DashboardCard';
+import Label from '../../../../../common/components/Label/Label';
 import Button from '../../../../../common/components/Button/Button';
 import { useHomepageSignupSetting } from './hooks/useHomepageSignupSetting';
 
@@ -22,9 +23,9 @@ export default function HomepageSignupSetting({ canWrite }: { canWrite: boolean 
         </div>}
       </div>
       {hasSettings && <div className="homepage-signup-setting__controls">
-        <span className={`status-badge ${signup.signupEnabled ? 'status-active' : 'status-inactive'}`}>
+        <Label tone={signup.signupEnabled ? 'positive' : 'negative'}>
           {signup.signupEnabled ? 'Open' : 'Closed'}
-        </span>
+        </Label>
         {canWrite && <Button
           variant={signup.signupEnabled ? 'secondary' : 'primary'}
           role="switch"

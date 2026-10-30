@@ -1,5 +1,5 @@
 import type { YouthProfileNote } from '../../types';
-import NoteCategoryBadge from '../../../../common/features/Notes/NoteCategoryBadge/NoteCategoryBadge';
+import NoteCategoryLabel from '../../../../common/features/Notes/NoteCategoryLabel/NoteCategoryLabel';
 import NoteRow from '../../../../common/features/Notes/NoteRow/NoteRow';
 
 const categoryLabel = (category: YouthProfileNote['category']) => (
@@ -20,7 +20,7 @@ export default function ProfileNoteRow({
   return (
     <NoteRow
       ariaLabel="profile note"
-      categoryBadge={<NoteCategoryBadge category={note.category} label={categoryLabel(note.category)} />}
+      categoryLabel={<NoteCategoryLabel category={note.category} label={categoryLabel(note.category)} />}
       date={note.createdAt}
       onView={() => onView(note)}
       onEdit={onEdit ? () => onEdit(note) : undefined}

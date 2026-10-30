@@ -34,7 +34,7 @@ const options: TestTaskOptions = {
     { value: 'meeting', label: 'Meeting' },
   ],
   statuses: [
-    { value: 'active', label: 'Active' },
+    { value: 'in_progress', label: 'In Progress' },
     { value: 'completed', label: 'Completed' },
   ],
 };
@@ -95,7 +95,7 @@ describe('useTaskPreferences', () => {
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['program-1', 'removed-program'],
       categories: ['planning_prep', 'removed-category'] as never,
-      statuses: ['active', 'removed-status'] as never,
+      statuses: ['in_progress', 'removed-status'] as never,
       sorting: { key: 'removedColumn' as never, direction: 'desc' },
     };
     const { result, rerender } = renderHook(
@@ -111,7 +111,7 @@ describe('useTaskPreferences', () => {
       view: 'calendar',
       search: { value: 'workshop', appliedValue: 'workshop' },
       filters: {
-        staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep'], statuses: ['active'],
+        staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep'], statuses: ['in_progress'],
       },
       table: {
         sorting: { key: 'startDate', direction: 'asc' },
@@ -185,7 +185,7 @@ describe('useTaskPreferences', () => {
       result.current.filters.apply('staff', ['staff-1']);
       result.current.filters.apply('program', ['program-1']);
       result.current.filters.apply('category', ['planning_prep']);
-      result.current.filters.apply('status', ['active']);
+      result.current.filters.apply('status', ['in_progress']);
       result.current.table.setHiddenColumns(['program']);
       result.current.table.setColumnWidths({ title: 300 });
       result.current.table.setSorting({ key: 'title', direction: 'asc' });
@@ -200,7 +200,7 @@ describe('useTaskPreferences', () => {
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
-      statuses: ['active'],
+      statuses: ['in_progress'],
       sorting: { key: 'title', direction: 'asc' },
     };
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining(expected)));

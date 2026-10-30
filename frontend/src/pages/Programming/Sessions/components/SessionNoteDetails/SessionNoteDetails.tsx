@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { SessionNote } from '../../types';
-import NoteCategoryBadge from '../../../../../common/features/Notes/NoteCategoryBadge/NoteCategoryBadge';
+import NoteCategoryLabel from '../../../../../common/features/Notes/NoteCategoryLabel/NoteCategoryLabel';
 import NoteDetails from '../../../../../common/features/Notes/NoteDetails/NoteDetails';
 import { getSessionNoteCategoryLabel } from '../../utils/sessionNoteCategories';
 import './SessionNoteDetails.css';
@@ -14,7 +14,7 @@ export default function SessionNoteDetails({
 }) {
   return (
     <NoteDetails
-      categoryBadge={<NoteCategoryBadge category={note.category} label={getSessionNoteCategoryLabel(note.category)} />}
+      categoryLabel={<NoteCategoryLabel category={note.category} label={getSessionNoteCategoryLabel(note.category)} />}
       createdAt={note.createdAt}
       createdByName={note.createdByName}
       context={context}

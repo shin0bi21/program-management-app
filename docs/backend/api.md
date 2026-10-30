@@ -36,6 +36,11 @@ boundaries unless an endpoint explicitly defines a different response, such as a
 
 ## Hours and Tasks
 
+Tasks store `open`, `completed`, or `cancelled` lifecycle states. Open tasks expose
+the date-derived status `upcoming`, `in_progress` (label “In Progress”), or
+`overdue`; list and calendar filters use those derived values. Saved task filters
+belong to the `task-preferences` key.
+
 Task-linked hours mutations include `updatedTasks` when the actor has
 `read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
 create/update/placement responses also return their canonical `tableRow`; deletion

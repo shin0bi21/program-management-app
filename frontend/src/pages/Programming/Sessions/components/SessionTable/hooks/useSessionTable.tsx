@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
-import StatusBadge from '../../../../../../common/components/StatusBadge/StatusBadge';
+import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { CohortSession } from '../../../types';
 import type { Program } from '../../../../../../common/features/programs/types';
 import { sessionDateTime } from '../../../utils/sessionSchedule';
 import { formatShortDate } from '../../../../../../common/utils/date';
-import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
+import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
 
 const noPrograms: Program[] = [];
 
@@ -49,14 +49,14 @@ export default function useSessionTable({
       header: 'Type',
       size: 135,
       accessorFn: session => session.sessionTypeName,
-      cell: ({ row: { original: session } }) => <SessionTypeBadge name={session.sessionTypeName} />,
+      cell: ({ row: { original: session } }) => <SessionTypeLabel name={session.sessionTypeName} />,
     },
     {
       id: 'status',
       header: 'Status',
       size: 110,
       accessorFn: session => session.state,
-      cell: ({ row: { original: session } }) => <StatusBadge status={session.state} label={session.state.charAt(0).toUpperCase() + session.state.slice(1)} />,
+      cell: ({ row: { original: session } }) => <StatusLabel status={session.state} label={session.state.charAt(0).toUpperCase() + session.state.slice(1)} />,
     },
     ...(canWriteSessions ? [{
       id: 'actions',

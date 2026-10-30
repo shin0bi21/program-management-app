@@ -5,14 +5,14 @@ import { formatShortDate } from '../../../utils/date';
 import './NoteDetails.css';
 
 export default function NoteDetails({
-  categoryBadge,
+  categoryLabel,
   createdAt,
   createdByName,
   context,
   details,
   children,
 }: {
-  categoryBadge: ReactNode;
+  categoryLabel: ReactNode;
   createdAt: string;
   createdByName: string | null;
   context?: ReactNode;
@@ -22,7 +22,7 @@ export default function NoteDetails({
   return (
     <div className="note-details">
       <div className="note-details__meta">
-        {categoryBadge}
+        {categoryLabel}
         <span>
           <FontAwesomeIcon icon={faUser} aria-hidden="true" />
           {createdByName || 'Staff'}

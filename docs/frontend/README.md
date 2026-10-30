@@ -47,7 +47,7 @@ needs a substantial multi-file set.
 | Page-level errors and retry actions | [Page Message Overlays](components/message-overlays.md) |
 | Page test ownership and suite organization | [Page Testing](pages/testing.md) |
 | Saved preferences, field rules, or grouped page controls | [Page Preferences](pages/preferences.md) |
-| Shared components, type labels, and status badges | [UI Basics](components/README.md) |
+| Shared components, type labels, and status labels | [UI Basics](components/README.md) |
 | Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
 | Calendars | [Calendars](components/calendars.md) |
 | Dashboards | [Dashboards](components/dashboards.md) |

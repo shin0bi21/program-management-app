@@ -6,7 +6,7 @@ import { calendarDateSchema } from './dateRangeValidation';
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
 
 export const taskStateSchema = z.enum(['open', 'completed', 'cancelled']);
-export const taskStatusSchema = z.enum(['upcoming', 'active', 'overdue', 'completed', 'cancelled']);
+export const taskStatusSchema = z.enum(['upcoming', 'in_progress', 'overdue', 'completed', 'cancelled']);
 
 export const taskParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid task ID') }),

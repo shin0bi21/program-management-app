@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
+import Label from '../../../../../common/components/Label/Label';
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { YouthProfile } from '../../../types';
@@ -36,9 +37,9 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
       size: 110,
       accessorFn: profile => profile.status,
       cell: ({ row: { original: profile } }: CellContext<YouthProfile, unknown>) => (
-        <span className={`status-badge status-${profile.status}`}>
+        <Label tone={profile.status === 'active' ? 'positive' : 'negative'}>
           {profile.status === 'active' ? 'Active' : 'Inactive'}
-        </span>
+        </Label>
       ),
     },
     ...(canWrite ? [{
