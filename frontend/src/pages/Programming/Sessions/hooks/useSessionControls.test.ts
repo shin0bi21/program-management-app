@@ -22,15 +22,20 @@ const tableKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status
 describe('useSessionControls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation(async (_key: string, value: object) => value);
   });
   const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 
-  it('restores saved view, filters, sorting, widths, and hidden columns', async () => {
+  it('restores account preferences and the browser-local table layout', async () => {
+    localStorage.setItem('table-layout:v1:user-1:session-filters', JSON.stringify({
+      columnWidths: { theme: 240 }, hiddenColumns: ['status'],
+    }));
     preferenceApi.getPreference.mockResolvedValue({
       view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'],
-      sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'],
+      sorting: { key: 'theme', direction: 'asc' },
     });
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
@@ -129,7 +134,6 @@ describe('useSessionControls', () => {
       sessionTypeIds: ['removed-type'],
       statuses: 'completed',
       sorting: { key: 'removedColumn', direction: 'asc' },
-      columnWidths: { theme: 240, status: 'wide' },
     });
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
@@ -141,7 +145,7 @@ describe('useSessionControls', () => {
     expect(result.current).toMatchObject({
       view: 'calendar',
       filters: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: [], statuses: [] },
-      table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: { theme: 240 } },
+      table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: {} },
     });
   });
 
@@ -161,10 +165,12 @@ describe('useSessionControls', () => {
       result.current.table.setColumnWidths({ theme: 240 });
     });
 
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:session-filters')!)).toEqual({
+      hiddenColumns: ['status'], columnWidths: { theme: 240 },
+    });
     expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['completed'], view: 'table',
-      hiddenColumns: ['status'], columnWidths: { theme: 240 },
     })));
   });
 

@@ -11,7 +11,8 @@ own that child's queries.
 | Value | Owner | Examples |
 |---|---|---|
 | Backend data | Focused TanStack Query hook | rows, records, options, totals |
-| A restored page control | Shared preference state through a page hook | view, sorting, column widths |
+| A restored account preference | Shared preference state through a page hook | view, sorting, filters |
+| Browser-local table layout | Shared layout state through a page hook | column widths, hidden columns |
 | A temporary choice shared by page children | Route page or focused page hook | selected row, open modal target |
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
@@ -36,8 +37,8 @@ for permissions, scope-specific cache keys, mutation reconciliation, and failure
 
 A page preference hook may contain view-specific settings when the page owns their
 restoration and persistence across view changes. For example, its `table` group stores
-sorting, column widths and hidden columns, while the table owns applying them and
-emitting edits. This does not make those settings calendar inputs or move table fetching
+account-wide sorting alongside browser-local column widths and hidden columns, while the
+table owns applying them and emitting edits. This does not make those settings calendar inputs or move table fetching
 and pagination into the page hook.
 
 Keep view-local interaction state with the view. Calendar navigation, visible periods,

@@ -4,14 +4,13 @@ import { toFilterOptions } from '../../../../../common/features/referenceData/fi
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
 import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
+import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
 import {
   preferenceOption,
   preferenceOptions,
   preferenceIds,
   preferenceText,
   preferenceSorting,
-  preferenceColumnWidths,
-  preferenceHiddenColumns,
 } from '../../../../../common/features/Preferences/preferences';
 import type {
   StaffResource,
@@ -34,8 +33,6 @@ interface HoursPreferences {
   types: HoursEntryType[];
   cycleIds: string[];
   sorting: ListSort<HoursSortKey>;
-  columnWidths: Record<string, number>;
-  hiddenColumns: string[];
 }
 
 export type StoredHoursPreferences = Partial<HoursPreferences>;
@@ -69,6 +66,7 @@ export default function useHoursPreferences({
 }) {
   const canVerifyOptions = !loadingDependencies && !optionsError;
   const canVerifyCycles = !loadingDependencies && !cyclesError;
+  const layout = useTableLayout({ key: 'hours-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'hours-filters',
     waiting: loadingDependencies || role === null,
@@ -90,8 +88,6 @@ export default function useHoursPreferences({
       ),
       cycleIds: preferenceIds(canVerifyCycles ? cycles.map(cycle => cycle.id) : undefined),
       sorting: preferenceSorting(tableKeys, { key: 'date', direction: 'desc' }),
-      columnWidths: preferenceColumnWidths(tableKeys),
-      hiddenColumns: preferenceHiddenColumns(tableKeys),
     },
   });
   const dateRange = useMemo(() => getCycleDateRange(cycles, preferences.cycleIds), [cycles, preferences.cycleIds]);
@@ -155,12 +151,6 @@ export default function useHoursPreferences({
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {
     updatePreferences({ sorting });
   };
-  const updateColumnWidths = (columnWidths: Record<string, number>) => {
-    updatePreferences({ columnWidths });
-  };
-  const updateHiddenColumns = (hiddenColumns: string[]) => {
-    updatePreferences({ hiddenColumns });
-  };
 
   return {
     ready,
@@ -192,10 +182,10 @@ export default function useHoursPreferences({
     table: {
       sorting: preferences.sorting,
       setSorting: updateSorting,
-      columnWidths: preferences.columnWidths,
-      setColumnWidths: updateColumnWidths,
-      hiddenColumns: preferences.hiddenColumns,
-      setHiddenColumns: updateHiddenColumns,
+      columnWidths: layout.columnWidths,
+      setColumnWidths: layout.setColumnWidths,
+      hiddenColumns: layout.hiddenColumns,
+      setHiddenColumns: layout.setHiddenColumns,
     },
   };
 }

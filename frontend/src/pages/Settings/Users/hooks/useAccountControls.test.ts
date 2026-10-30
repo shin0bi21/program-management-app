@@ -17,14 +17,18 @@ const tableKeys = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 describe('useAccountControls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
 
-  it('restores admin controls and maps filter and table changes to preferences', async () => {
+  it('restores account preferences and local layout, and saves them separately', async () => {
+    localStorage.setItem('table-layout:v1:user-1:account-filters', JSON.stringify({
+      columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
+    }));
     preferenceApi.getPreference.mockResolvedValue({
       statuses: ['active'], roles: ['staff'], sorting: { key: 'email', direction: 'desc' },
-      columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
@@ -45,10 +49,13 @@ describe('useAccountControls', () => {
       result.current.table.setSorting({ key: 'status', direction: 'asc' });
     });
 
+    expect(result.current.table).toMatchObject({ hiddenColumns: ['email'], columnWidths: { name: 240 } });
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:account-filters')!)).toEqual({
+      hiddenColumns: ['email'], columnWidths: { name: 240 },
+    });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'account-filters', expect.objectContaining({
-        statuses: ['inactive'], roles: ['youth'], hiddenColumns: ['email'],
-        columnWidths: { name: 240 }, sorting: { key: 'status', direction: 'asc' },
+        statuses: ['inactive'], roles: ['youth'], sorting: { key: 'status', direction: 'asc' },
       }),
     ));
   });
@@ -83,11 +90,11 @@ describe('useAccountControls', () => {
     })));
   });
 
-  it('limits saved account filters to supported roles and statuses', async () => {
+  it('limits saved account filters and ignores legacy database layouts', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       statuses: 'active' as never,
       roles: ['staff', 'removed-role' as never],
-      columnWidths: { email: 260, status: 'wide' } as never,
+      columnWidths: { email: 260 }, hiddenColumns: ['email'],
     });
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
@@ -95,6 +102,7 @@ describe('useAccountControls', () => {
 
     expect(result.current.filters.roles).toEqual(['staff']);
     expect(result.current.filters.statuses).toEqual([]);
-    expect(result.current.table.columnWidths).toEqual({ email: 260 });
+    expect(result.current.table.columnWidths).toEqual({});
+    expect(result.current.table.hiddenColumns).toEqual([]);
   });
 });

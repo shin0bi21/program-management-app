@@ -16,7 +16,13 @@ const preferenceKeys = [
 export type PreferenceKey = (typeof preferenceKeys)[number];
 
 export const preferenceKeySchema = z.enum(preferenceKeys);
-const preferenceValueSchema = z.record(z.string().min(1), z.json());
+const preferenceValueSchema = z.record(z.string().min(1), z.json()).transform(value => {
+  // Older clients may still submit browser-local layout with account preferences.
+  const accountPreferences = { ...value };
+  delete accountPreferences.columnWidths;
+  delete accountPreferences.hiddenColumns;
+  return accountPreferences;
+});
 export type PreferenceValue = z.infer<typeof preferenceValueSchema>;
 
 export const getPreferenceSchema = z.object({

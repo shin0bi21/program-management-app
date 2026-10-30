@@ -126,7 +126,7 @@ management session opens, and keep presentation visibility separate from its lif
 
 ## Connect Page Controls
 
-The page owns live search, applied filters, sorting preferences, hidden columns, widths and view choice. Restore saved preferences and required option data before enabling the list query.
+The page owns live search, applied filters, sorting preferences, browser-local column layout and view choice. Compose widths and hidden columns through `useTableLayout`; sorting remains an account preference. Restore saved preferences and required option data before enabling the list query.
 
 Consume the [grouped page-control contract](../pages/preferences.md#expose-page-controls).
 Use the page's applied filters consistently in the query key, API inputs, and filtered-empty

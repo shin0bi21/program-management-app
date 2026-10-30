@@ -34,6 +34,8 @@ const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'categor
 describe('useHoursPreferences', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     savedPreference.preference = null;
     vi.mocked(getPreference).mockImplementation(async () => {
       return savedPreference.preference;
@@ -41,10 +43,13 @@ describe('useHoursPreferences', () => {
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
   });
 
-  it('waits for dependencies and restores one complete admin preference', async () => {
+  it('waits for dependencies and restores admin preferences alongside the local layout', async () => {
+    localStorage.setItem('table-layout:v1:user-1:hours-filters', JSON.stringify({
+      hiddenColumns: ['note'], columnWidths: { note: 240 },
+    }));
     savedPreference.preference = {
       view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
-      types: ['task'], cycleIds: ['cycle-2'], hiddenColumns: ['note'], columnWidths: { note: 240 },
+      types: ['task'], cycleIds: ['cycle-2'],
       sorting: { key: 'hours', direction: 'asc' },
     };
     const { result, rerender } = renderHook(
@@ -181,12 +186,15 @@ describe('useHoursPreferences', () => {
       staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
     }));
 
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:hours-filters')!)).toEqual({
+      hiddenColumns: ['note'], columnWidths: { note: 280 },
+    });
     expect(result.current.table).toMatchObject({
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
       search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
-      hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
+      sorting: { key: 'hours', direction: 'asc' },
     })));
 
     act(() => result.current.filters.clear());

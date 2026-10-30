@@ -34,6 +34,8 @@ const tableKeys = YOUTH_TABLE_KEYS;
 describe('useYouthControls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
@@ -64,8 +66,6 @@ describe('useYouthControls', () => {
       statuses: ['active'],
       programIds: ['removed-program'],
       sorting: { key: 'firstName', direction: 'asc' },
-      columnWidths: {},
-      hiddenColumns: [],
     });
     const { result } = renderHook(() => useYouthControls({
       role: 'staff',
@@ -81,11 +81,13 @@ describe('useYouthControls', () => {
     ));
   });
 
-  it.each(['age', 'grade'])('repairs removed %s preferences and saves current table controls', async removedColumn => {
+  it.each(['age', 'grade'])('repairs removed %s preferences and local layout using current table keys', async removedColumn => {
+    localStorage.setItem('table-layout:v1:user-1:youth-profile-filters', JSON.stringify({
+      columnWidths: { firstName: 220, [removedColumn]: 100, status: 'wide' },
+      hiddenColumns: [removedColumn, 'school'],
+    }));
     preferenceApi.getPreference.mockResolvedValue({
       programIds: [],
-      columnWidths: { firstName: 220, [removedColumn]: 100, status: 'wide' } as never,
-      hiddenColumns: [removedColumn, 'school'],
       sorting: { key: removedColumn, direction: 'desc' },
     });
     const { result } = renderHook(() => useYouthControls({
@@ -98,7 +100,6 @@ describe('useYouthControls', () => {
     expect(result.current.table.hiddenColumns).toEqual(['school']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        columnWidths: { firstName: 220 }, hiddenColumns: ['school'],
         sorting: { key: 'firstName', direction: 'asc' },
       }),
     ));
@@ -112,7 +113,6 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        hiddenColumns: ['school'], columnWidths: { firstName: 240 },
         sorting: { key: 'school', direction: 'desc' },
       }),
     ));
@@ -120,6 +120,9 @@ describe('useYouthControls', () => {
       preferenceApi.setPreference.mock.calls.length - 1
     ]?.[1];
     expect(lastSavedPreference).not.toHaveProperty('statuses');
+    expect(lastSavedPreference).not.toHaveProperty('columnWidths');
+    expect(lastSavedPreference).not.toHaveProperty('hiddenColumns');
+    expect(result.current.table).toMatchObject({ hiddenColumns: ['school'], columnWidths: { firstName: 240 } });
   });
 
   it('restores search and saves only applied or cleared search with the other filters', async () => {

@@ -13,6 +13,8 @@ const tableKeys = ['program', 'cohort', 'start', 'end', 'status'] as const;
 describe('useCohortControls', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('user', JSON.stringify({ id: 'user-1' }));
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation(async (_key: string, value: object) => value);
   });
@@ -50,13 +52,14 @@ describe('useCohortControls', () => {
 
     expect(result.current.table.hiddenColumns).toEqual(['status']);
     expect(result.current.table.columnWidths).toEqual({ cohort: 240 });
+    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:cohort-filters')!)).toEqual({
+      hiddenColumns: ['status'], columnWidths: { cohort: 240 },
+    });
     expect(result.current.table.sorting).toEqual({ key: 'program', direction: 'asc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('cohort-filters', {
       programId: null,
       status: 'active',
       sorting: { key: 'program', direction: 'asc' },
-      columnWidths: { cohort: 240 },
-      hiddenColumns: ['status'],
     }));
   });
 

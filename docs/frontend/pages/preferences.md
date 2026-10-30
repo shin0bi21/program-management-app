@@ -1,6 +1,7 @@
 # Page Preferences
 
-Use the shared `usePreferences` hook for controls that survive navigation. Declare each
+Use the shared `usePreferences` hook for account preferences that survive navigation and
+synchronize across devices. Keep table layout in the separate `useTableLayout` hook. Declare each
 field with a named rule such as `preferenceOption`, `preferenceOptions`, `preferenceText`,
 or `preferenceIds` from `common/features/Preferences/preferences.ts`; the rule supplies its
 default and repairs invalid values. Keep page-specific fields, allowed values, role rules and
@@ -20,8 +21,6 @@ pages instead of introducing generic aliases such as `oneOf`, `values` or `choic
 | `optionalPreferenceId(available, fallback?)` | One record ID or `null`; clear a confirmed removed ID |
 | `preferenceText(fallback?)` | Trim text and replace malformed values with the default |
 | `preferenceSorting(tableKeys, fallback)` | Validate the sort key and direction |
-| `preferenceColumnWidths(tableKeys)` | Keep finite positive widths for current columns |
-| `preferenceHiddenColumns(tableKeys)` | Keep only current column IDs |
 | `fixedPreference(value)` | Enforce a page-owned constant, such as the route's lead origin |
 
 Declare the rules together in the page hook's `fields` object:
@@ -34,14 +33,39 @@ fields: {
   programIds: preferenceIds(availableProgramIds),
   cycleId: optionalPreferenceId(availableCycleIds),
   sorting: preferenceSorting(tableKeys, defaultSorting),
-  columnWidths: preferenceColumnWidths(tableKeys),
-  hiddenColumns: preferenceHiddenColumns(tableKeys),
 },
 ```
 
 Use only the fields the page owns. See the
 [Hours preference hook](../../../frontend/src/pages/Staff/Hours/hooks/preferences/useHoursPreferences.ts)
 for a complete caller, including independently loaded option sources.
+
+## Keep Table Layout Local
+
+Column widths and visibility adapt a table to the current screen. Use
+`useTableLayout({ key, tableKeys })` from `common/features/Preferences/useTableLayout.ts`
+with the same stable preference key and page-owned table keys as the account controls.
+It returns `columnWidths`, `setColumnWidths`, `hiddenColumns`, and `setHiddenColumns`;
+compose those into the existing `table` group alongside account-wide sorting.
+Do not declare layout fields in `usePreferences` or send them to the preference API.
+
+The shared layout hook restores synchronously from `localStorage` under
+`table-layout:v1:<userId>:<preferenceKey>` and saves edits immediately. Layout is
+isolated by signed-in user and table within each browser profile. Reloads and normal
+logout/login retain it; different browsers/devices are independent. Clearing site data
+resets layout, private browsing is temporary, and blocked/full storage leaves edits
+usable in memory. No device ID or viewport-based identity is needed.
+
+The shared owner applies `preferenceColumnWidths(tableKeys)` and
+`preferenceHiddenColumns(tableKeys)` so invalid widths and obsolete column IDs are
+ignored without discarding valid siblings. Tabs sharing the same browser storage
+receive layout changes through storage events. Page hooks do not implement their own
+storage or restoration effects.
+
+The forward migration removes only `columnWidths` and `hiddenColumns` from all legacy
+account preference objects. Existing layouts reset once; they are not imported from the
+server. The API strips these fields from old clients' writes. Sorting, filters, view,
+and other account preferences retain their existing persistence.
 
 ## Expose Page Controls
 
@@ -105,7 +129,9 @@ Filter menu drafts and dismissal follow the [overlay contract](../components/ove
 
 ## Testing
 
-Shared preference tests own normalization, restoration, recovery and asynchronous persistence.
+Shared preference tests own account normalization, restoration, recovery and asynchronous persistence.
+Shared layout tests own browser persistence, user/table isolation, field repair and storage failures.
+Page tests seed layout separately from API fixtures and verify layout controls do not enter API saves.
 Page preference tests own field rules, defaults, role restrictions and coordinated updates.
 Use the real shared hook with an isolated QueryClient and mocked preference API to verify those
 rules. Consolidate each page's field-rule examples and callback-to-save assertions rather

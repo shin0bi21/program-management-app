@@ -332,16 +332,15 @@ test('checks an owner when its test is deleted', () => {
   );
 });
 
-test('accepts shared preference fields with owning table rules', () => {
+test('accepts account preferences with browser-local layout', () => {
   const source = `
     const { preferences, updatePreferences } = usePreferences({
       key: 'lead-filters',
       fields: {
-        columnWidths: preferenceColumnWidths(tableKeys),
-        hiddenColumns: preferenceHiddenColumns(tableKeys),
+        sorting: preferenceSorting(tableKeys, defaultSorting),
       },
     });
-    updatePreferences({ hiddenColumns });
+    const { hiddenColumns } = useTableLayout({ key: 'lead-filters', tableKeys });
   `;
 
   assert.deepEqual(
@@ -355,10 +354,7 @@ test('accepts a route-selected key and formatted field rules', () => {
     usePreferences({
       key: preferenceKey,
       fields: {
-        columnWidths: preferenceColumnWidths(
-          tableKeys,
-        ),
-        hiddenColumns: preferenceHiddenColumns(tableKeys),
+        sorting: preferenceSorting(tableKeys, defaultSorting),
       },
     });
   `;
@@ -394,7 +390,7 @@ test('requires field rules on shared preference calls', () => {
   assert.match(violations.join('\n'), /field normalization rules in fields/);
 });
 
-test('requires both table preferences to use owning table keys', () => {
+test('rejects layout fields in account preferences', () => {
   const source = `
     usePreferences({
       key: 'lead-filters',
@@ -410,9 +406,10 @@ test('requires both table preferences to use owning table keys', () => {
     source,
   );
 
-  assert.equal(violations.length, 2);
-  assert.match(violations[0], /preferenceColumnWidths\(tableKeys\)/);
-  assert.match(violations[1], /preferenceHiddenColumns\(tableKeys\)/);
+  assert.equal(violations.length, 3);
+  assert.match(violations[0], /columnWidths is browser-local layout/);
+  assert.match(violations[1], /hiddenColumns is browser-local layout/);
+  assert.match(violations[2], /useTableLayout with owning tableKeys/);
 });
 
 test('rejects page-owned preference restoration and option recovery hooks', () => {
@@ -445,10 +442,10 @@ const groupedPreferenceSource = `
       fields: {
         search: preferenceText(),
         statuses: preferenceOptions(['active']),
-        columnWidths: preferenceColumnWidths(tableKeys),
-        hiddenColumns: preferenceHiddenColumns(tableKeys),
+        sorting: preferenceSorting(tableKeys, defaultSorting),
       },
     });
+    const layout = useTableLayout({ key: 'lead-filters', tableKeys });
     return {
       ready,
       error,
