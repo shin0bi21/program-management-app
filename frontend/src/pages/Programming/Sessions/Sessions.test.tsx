@@ -263,7 +263,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
@@ -428,7 +428,7 @@ describe('Sessions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
     expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
@@ -514,13 +514,13 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Evict buffered sessions' }));
-    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getAllByText('No session selected.')).toHaveLength(3);
     expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
   });
 
