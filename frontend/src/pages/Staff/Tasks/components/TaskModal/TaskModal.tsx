@@ -39,7 +39,6 @@ export default function TaskModal(props: TaskModalProps) {
       maxWidth="620px"
       status={modal.status}
       statusMessage={modal.statusMessage}
-      successDelay={1200}
       footer={(
         <>
           <Button variant="secondary" onClick={onClose} disabled={modal.submissionComplete}>Cancel</Button>

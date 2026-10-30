@@ -23,7 +23,6 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
       title={program ? 'Edit Program' : 'Add Program'}
       status={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      successDelay={1400}
       footer={(
         <ModalFormFooter
           formId="program-form"

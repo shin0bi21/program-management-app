@@ -63,12 +63,12 @@ describe('tasks API', () => {
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
-      statuses: ['active', 'overdue'],
+      statuses: ['in_progress', 'overdue'],
       search: 'workshop prep',
     }, { start: '2026-08-10', end: '2026-08-12' });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/calendar?start=2026-08-10&end=2026-08-12&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=active%2Coverdue&search=workshop+prep',
+      '/tasks/calendar?start=2026-08-10&end=2026-08-12&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
       undefined,
     );
   });
@@ -116,7 +116,7 @@ describe('tasks API', () => {
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
-      statuses: ['active', 'overdue'],
+      statuses: ['in_progress', 'overdue'],
       search: 'workshop prep',
     }, undefined, {
       key: 'dueDate',
@@ -126,7 +126,7 @@ describe('tasks API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/list?sort=dueDate&direction=desc&limit=50&cursor=cursor-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=active%2Coverdue&search=workshop+prep',
+      '/tasks/list?sort=dueDate&direction=desc&limit=50&cursor=cursor-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
       undefined,
     );
   });

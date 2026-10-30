@@ -1,7 +1,7 @@
 import type { DateRange } from '../../../common/utils/dateRange';
 // Domain values and types.
 export type TaskState = 'open' | 'completed' | 'cancelled';
-export type TaskTiming = 'upcoming' | 'active' | 'overdue';
+export type TaskTiming = 'upcoming' | 'in_progress' | 'overdue';
 export type TaskStatus = TaskTiming | Exclude<TaskState, 'open'>;
 export type TaskCategory =
   | 'program_delivery'

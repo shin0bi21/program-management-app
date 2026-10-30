@@ -27,7 +27,7 @@ describe('useTaskData', () => {
     vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
       categories: [{ value: 'meeting', label: 'Meeting' }],
-      statuses: [{ value: 'active', label: 'Active' }],
+      statuses: [{ value: 'in_progress', label: 'In Progress' }],
     });
   });
 

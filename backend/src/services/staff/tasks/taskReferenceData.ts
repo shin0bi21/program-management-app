@@ -12,7 +12,7 @@ export const TASK_CATEGORY_OPTIONS = [
 
 export const TASK_STATUS_OPTIONS = [
   { value: 'upcoming', label: 'Upcoming' },
-  { value: 'active', label: 'Active' },
+  { value: 'in_progress', label: 'In Progress' },
   { value: 'overdue', label: 'Overdue' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -39,7 +39,7 @@ export function getTaskStatus(
   if (task.status !== 'open') return task.status;
   if (task.startDate > today) return 'upcoming';
   if (task.dueDate < today) return 'overdue';
-  return 'active';
+  return 'in_progress';
 }
 
 export function getTaskStatusLabel(status: TaskStatus) {

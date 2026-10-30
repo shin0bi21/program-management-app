@@ -51,7 +51,7 @@ const taskReferenceChoices = {
     { value: 'outreach' as const, label: 'Outreach' },
   ],
   statuses: [
-    { value: 'active' as const, label: 'Active' },
+    { value: 'in_progress' as const, label: 'In Progress' },
     { value: 'completed' as const, label: 'Completed' },
   ],
 };
@@ -419,8 +419,8 @@ describe('Tasks', () => {
         rows: [{
           ...completedTask,
           state: 'open',
-          status: 'active',
-          statusLabel: 'Active',
+          status: 'in_progress',
+          statusLabel: 'In Progress',
           completedAt: null,
         }],
         nextCursor: null,
@@ -428,8 +428,8 @@ describe('Tasks', () => {
     vi.mocked(updateTaskState).mockResolvedValue({
       ...completedTask,
       state: 'open',
-      status: 'active',
-      statusLabel: 'Active',
+      status: 'in_progress',
+      statusLabel: 'In Progress',
       completedAt: null,
     });
     renderTasks();
@@ -439,7 +439,7 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
     await waitFor(() => expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open'));
-    await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('cell', { name: 'In Progress' })).toBeInTheDocument());
   });
 
   it('keeps the hours target current after completion and preserves selection when closed', async () => {

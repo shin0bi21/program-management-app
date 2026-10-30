@@ -12,7 +12,6 @@ export interface UseConfirmModalResult {
   status: 'idle' | 'submitting' | 'success' | 'error';
   statusMessage: string | undefined;
   footer: ReactNode;
-  successDelay: number;
 }
 
 export function useConfirmModal({
@@ -83,6 +82,5 @@ export function useConfirmModal({
     status,
     statusMessage,
     footer,
-    successDelay: successMessage ? 1200 : 0,
   };
 }

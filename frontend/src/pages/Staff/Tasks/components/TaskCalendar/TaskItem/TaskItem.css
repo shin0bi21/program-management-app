@@ -1,6 +1,6 @@
-.calendar-item.task-item--active {
-  border-color: var(--color-task-active-border);
-  background: var(--color-task-active-bg);
+.calendar-item.task-item--in_progress {
+  border-color: var(--color-status-warn-border);
+  background: var(--color-status-warn-bg);
 }
 
 .calendar-item.task-item--overdue {
@@ -25,7 +25,7 @@
   gap: 5px;
 }
 
-.task-item__detail-badges {
+.task-item__detail-labels {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;

@@ -40,7 +40,7 @@
   cursor: default;
 }
 
-.checklist-option input {
+.checklist--compact .checklist-option input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -62,4 +62,43 @@
 .checklist-indicator.checked {
   border-color: var(--brand-ink);
   background: var(--brand-ink);
+}
+
+.checklist--form {
+  min-width: 0;
+  max-height: 240px;
+  gap: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+}
+
+.checklist--form .checklist-option {
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.checklist--form .checklist-option + .checklist-option {
+  border-top: var(--border-line-soft);
+}
+
+.checklist--form .checklist-option:hover:not(.disabled):not(:disabled) {
+  background: var(--ink-03);
+}
+
+.checklist--form .checklist-option input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: var(--color-accent);
+}
+
+.checklist--form .checklist-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

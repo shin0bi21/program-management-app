@@ -1,10 +1,21 @@
 import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
+import Label from '../../../../../common/components/Label/Label';
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { EditableLeadStatus, Lead, LeadOrigin } from '../../../types';
+
+const statusTones = {
+  new: 'attention',
+  contacted: 'neutral',
+  eligible: 'info',
+  ineligible: 'negative',
+  deferred: 'attention',
+  closed: 'neutral',
+  signed_up: 'positive',
+} as const;
 
 const editableStatuses: EditableLeadStatus[] = [
   'new',
@@ -48,7 +59,7 @@ export default function useLeadTable({
       size: 120,
       accessorFn: lead => lead.status,
       cell: ({ row: { original: lead } }) => (
-        <span className={`status-badge status-${lead.status}`}>{title(lead.status)}</span>
+        <Label tone={statusTones[lead.status]}>{title(lead.status)}</Label>
       ),
     },
     { id: 'created', header: 'Created', size: 130, accessorFn: lead => formatShortDate(lead.createdAt) },

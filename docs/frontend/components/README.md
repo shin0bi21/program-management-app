@@ -24,7 +24,7 @@ markup or supplied options. A focused hook test owns the stateful policy or exte
 lifecycle that justified the hook. Cross-component coordination belongs to the route page.
 
 Lifecycle is conditional. A hook that installs an observer tests callback guards,
-meaningful dependency changes, and cleanup. A badge that only renders a supplied
+meaningful dependency changes, and cleanup. A label that only renders a supplied
 label and modifier does not need a dedicated test.
 
 A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
@@ -62,24 +62,41 @@ Buttons, inputs and other small primitives do not need separate guides unless th
 
 ## Checklists
 
-Use `Checklist` for controlled lists of labeled choices. It shares the checkbox-row
-appearance between forms and filters, accepting options, selected values, a toggle
-callback, and a disabled state. Forms use native checkboxes; `inMenu` preserves menu
-checkbox semantics and the floating menu's keyboard navigation. Callers own drafts,
-single/multiple selection rules, loading/errors, and submission.
+Use `Checklist` for controlled lists of labeled choices, accepting options, selected
+values, a toggle callback, and a disabled state. Use `variant="form"` in forms for
+native accent-colored checkboxes, a rounded border, row dividers, and roomier spacing.
+Form checklists have a shared 240px maximum height and scroll vertically as needed;
+use a caller class through `className` to override that limit when required.
+The default `compact` appearance serves filters; `inMenu` preserves menu checkbox
+semantics and the floating menu's keyboard navigation. Appearance does not select
+interaction semantics. Callers own drafts, single/multiple selection rules,
+loading/errors/empty states, and submission. Wrap a form checklist in `FormFieldGroup`
+for its visible title, native fieldset/legend, and standard form-label spacing.
+React Hook Form consumers connect array fields through `Controller`.
 
 ## Type and Status Labels
 
-Badges are non-interactive labels. Use [Badge](../../../frontend/src/common/components/Badge/Badge.tsx)
-for type labels and [StatusBadge](../../../frontend/src/common/components/StatusBadge/StatusBadge.tsx)
-for supported lifecycle states. Domain components map records to labels and appearance;
-the primitives do not derive business state. Pass authoritative labels through and use
-only states the domain supports.
+Labels are non-interactive. Use [Label](../../../frontend/src/common/components/Label/Label.tsx)
+for shared typography, padding, casing, and radius. Its optional `tone` selects a
+fixed semantic palette: `positive` (green), `negative` (red), `neutral` (gray),
+`attention` (amber), or `info` (blue). Keep a readable label rather than
+communicating meaning through color alone.
 
-Share base typography, padding, casing, and radius. Keep domain palette classes separate,
-and retain a readable label rather than communicating state through color alone. Dense
-calendar rows may scope compact sizing to the positioned item; hover/focus details retain
-the normal badge size. See [calendar details](calendars.md#present-item-details).
+[StatusLabel](../../../frontend/src/common/components/StatusLabel/StatusLabel.tsx)
+maps supported lifecycle states to those tones: Active and Completed are positive,
+In Progress is attention, Upcoming is info, Overdue is negative, and Inactive and
+Cancelled are neutral. Domain owners may use `Label` directly for different
+semantics, such as a negative Inactive youth/account label. Task `in_progress` is
+derived from an open task's date window; keep it distinct from stored `open` state.
+
+Type/category labels retain domain-owned palettes and compose `Label` without a
+semantic tone: `HoursTypeLabel`, `SessionTypeLabel`, and `NoteCategoryLabel` own
+those mappings. A task hours type is a category, not an attention status. Do not
+put page-specific type values into `StatusLabel` or introduce numbered type colors
+until a shared categorical palette is agreed.
+
+Dense calendar rows may scope compact sizing to the positioned item; hover/focus
+details retain the normal label size. See [calendar details](calendars.md#present-item-details).
 
 Test nontrivial domain derivations and conditional outcomes at their owner. Do not
 enumerate static label-to-class maps or repeat a child's presentation in consumers.

@@ -1,54 +1,5 @@
-.session-attachment-youth {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  margin-top: var(--space-4);
-}
-
-.session-attachment-youth legend {
-  padding: 0;
-  color: var(--color-ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
 .session-attachment-youth > p {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.875rem;
-}
-
-.session-attachment-youth__checklist {
-  display: grid;
-  max-height: 240px;
-  overflow-y: auto;
-  border: var(--border-line-soft);
-  border-radius: var(--radius-md);
-}
-
-.session-attachment-youth__checklist label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  color: var(--color-ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.session-attachment-youth__checklist label + label {
-  border-top: var(--border-line-soft);
-}
-
-.session-attachment-youth__checklist label:hover {
-  background: var(--ink-04);
-}
-
-.session-attachment-youth__checklist input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-accent);
 }

@@ -1,49 +1,5 @@
-.account-programs {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: 0;
-  border: 0;
-}
-
-.account-programs legend {
-  margin-bottom: var(--space-1);
-  font-weight: 700;
-}
-
-.account-programs p,
-.account-programs small,
 .account-programs__empty {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.875rem;
-}
-
-.account-programs__list {
-  display: grid;
-  overflow: hidden;
-  border: var(--border-line-soft);
-  border-radius: var(--radius-md);
-}
-
-.account-programs__option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  cursor: pointer;
-}
-
-.account-programs__option + .account-programs__option {
-  border-top: var(--border-line-soft);
-}
-
-.account-programs__option:hover {
-  background: var(--ink-03);
-}
-
-.account-programs__option input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-accent);
 }

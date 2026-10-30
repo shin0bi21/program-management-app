@@ -1,38 +1,3 @@
-.status-new {
-  background: var(--color-status-warn-bg);
-  color: var(--color-status-warn);
-}
-
-.status-contacted {
-  background: var(--ink-08);
-  color: var(--color-body);
-}
-
-.status-eligible {
-  background: var(--color-info-bg);
-  color: var(--color-info);
-}
-
-.status-ineligible {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-dark);
-}
-
-.status-deferred {
-  background: var(--color-status-upcoming-bg);
-  color: var(--color-status-upcoming);
-}
-
-.status-closed {
-  background: var(--ink-08);
-  color: var(--color-muted);
-}
-
-.status-signed_up {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
 .lead-view-controls {
   display: flex;
   gap: 8px;

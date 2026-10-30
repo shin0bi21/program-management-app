@@ -73,14 +73,9 @@
   white-space: nowrap;
 }
 
-.youth-attendance-modal__session-details > span:not(.status-badge) {
+.youth-attendance-modal__session-details > span:not(.label) {
   color: var(--color-muted);
   font-size: 0.875rem;
-}
-
-.youth-attendance-modal__cancelled {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-dark);
 }
 
 .youth-attendance-modal__attendance {

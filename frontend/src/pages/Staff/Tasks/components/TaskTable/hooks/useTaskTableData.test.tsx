@@ -18,7 +18,7 @@ describe('useTaskTableData', () => {
     const client = createTestQueryClient();
     const filters = {
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep' as const],
-      statuses: ['active' as const], search: 'workshop',
+      statuses: ['in_progress' as const], search: 'workshop',
     };
     const sorting = { key: 'dueDate' as const, direction: 'asc' as const };
     const { result } = renderHook(
@@ -66,7 +66,7 @@ describe('useTaskTableData', () => {
     const { rerender } = renderHook(
       ({ today }) => useTaskTableData(
         ['tasks', 'table'],
-        { staffIds: [], programIds: [], categories: [], statuses: ['active'], search: '' },
+        { staffIds: [], programIds: [], categories: [], statuses: ['in_progress'], search: '' },
         { key: 'status', direction: 'asc' },
         today,
       ),

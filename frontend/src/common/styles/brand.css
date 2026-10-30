@@ -122,9 +122,7 @@
   --color-status-active:     #065f46;
   --color-status-warn-bg:    #fef3c7;
   --color-status-warn:       #92400e;
-  --color-task-active-bg:    #fff0dc;
-  --color-task-active:       #b34f00;
-  --color-task-active-border: #f28c28;
+  --color-status-warn-border: #fcd34d;
   --color-status-upcoming-bg: #ffedd5;
   --color-status-upcoming:    #c2410c;
   --color-border:         #d4d8e0;  /* input/form borders */

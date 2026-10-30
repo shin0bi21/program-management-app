@@ -1,7 +1,7 @@
 import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
-import StatusBadge from '../../../../../../common/components/StatusBadge/StatusBadge';
-import SessionTypeBadge from '../../SessionTypeBadge/SessionTypeBadge';
+import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
+import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
 import type { CohortSession } from '../../../types';
 import './SessionItem.css';
 
@@ -30,8 +30,8 @@ export default function SessionItem<TRow, TItemData>({ calendar, session, timezo
     detailTitle={<span className="session-item__detail-title">
       <span>{session.theme}</span>
       <span className="session-item__detail-badges">
-        <SessionTypeBadge name={session.sessionTypeName} appearance="calendar" />
-        <StatusBadge status={session.state} label={status} />
+        <SessionTypeLabel name={session.sessionTypeName} appearance="calendar" />
+        <StatusLabel status={session.state} label={status} />
       </span>
     </span>}
     details={[

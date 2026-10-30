@@ -7,7 +7,7 @@ const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Z
 const initialTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: 'Prepare activities and materials.', category: 'planning_prep',
   categoryLabel: 'Planning / Prep', programId: 'program-1', programName: 'Soft Skills', state: 'open',
-  status: 'active', statusLabel: 'Active',
+  status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
   assignee: {

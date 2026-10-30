@@ -84,7 +84,7 @@ export default function useTaskPreferences({
         options?.categories.map(category => category.value) ?? null,
       ),
       statuses: preferenceOptions<TaskStatus>(
-        ['upcoming', 'active', 'overdue', 'completed', 'cancelled'],
+        ['upcoming', 'in_progress', 'overdue', 'completed', 'cancelled'],
         [],
         options?.statuses.map(status => status.value) ?? null,
       ),

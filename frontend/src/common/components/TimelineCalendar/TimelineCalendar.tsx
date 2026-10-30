@@ -18,8 +18,8 @@ import type {
 import { loadCalendarPosition } from './utils/calendarPosition';
 import './TimelineCalendar.css';
 
-const PERIOD_WIDTH = 145;
-const ROW_WIDTH = 125;
+const PERIOD_WIDTH = 150;
+const ROW_WIDTH = 150;
 const HEADER_HEIGHT = 40;
 
 type CalendarInteractionState<TRow, TItemData> = ItemInteractionState<TRow, TItemData>
@@ -33,7 +33,7 @@ type CalendarInteractionState<TRow, TItemData> = ItemInteractionState<TRow, TIte
 export default function TimelineCalendar<TRow, TItemData>({
   // Grid layout and accessibility
   ariaLabel = 'Timeline calendar',
-  rowHeight = 92,
+  rowHeight = 150,
   overscanRows = 3,
 
   // Periods and range loading

@@ -35,7 +35,6 @@ export default function ProfileNoteModal({
       submitLabel="Save"
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      successDelay={1400}
       onCategoryChange={value => workflow.selectCategory(value as YouthProfileNoteCategory)}
       onDetailsChange={workflow.updateDetails}
       onSubmit={workflow.submit}

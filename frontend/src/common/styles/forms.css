@@ -16,11 +16,27 @@
   margin-bottom: 1rem;
 }
 
+.form-field,
+.form-field-group {
+  --form-field-label-gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  gap: var(--form-field-label-gap);
+}
+
+.form-field-group {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-field-group > legend {
+  padding: 0;
+  margin-bottom: var(--form-field-label-gap);
 }
 
 .form-row .form-field {
@@ -29,7 +45,8 @@
   margin-bottom: 0;
 }
 
-.form-field label {
+.form-field label,
+.form-field-group > legend {
   display: flex;
   font-size: 0.875rem;
   font-weight: 600;

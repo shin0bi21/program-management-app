@@ -37,7 +37,7 @@ describe('TaskTable', () => {
   });
 
   it('wires page controls and query state into the table', () => {
-    const filters = { ...baseProps.filters, staffIds: ['staff-1'], statuses: ['active' as const] };
+    const filters = { ...baseProps.filters, staffIds: ['staff-1'], statuses: ['in_progress' as const] };
     render(<TaskTable {...baseProps} filters={filters} />);
 
     expect(useTaskTableData).toHaveBeenCalledWith(

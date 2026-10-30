@@ -1,4 +1,6 @@
 import type { CohortSession, SessionRosterMember } from '../../types';
+import Checklist from '../../../../../common/components/Checklist/Checklist';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 
 interface SessionYouthChecklistProps {
   enrollmentRequired: CohortSession['enrollmentRequired'];
@@ -20,30 +22,25 @@ export default function SessionYouthChecklist({
   onToggle,
 }: SessionYouthChecklistProps) {
   return (
-    <fieldset className="session-note-youth" disabled={disabled}>
-      <legend>Link youth</legend>
+    <FormFieldGroup label="Link youth" className="session-note-youth" disabled={disabled}>
       {loading ? (
         <p>Loading youth…</p>
       ) : error ? (
         <p className="form-error" role="alert">{error}</p>
       ) : roster.length > 0 ? (
-        <div className="session-note-youth__checklist">
-          {roster.map(youth => (
-            <label key={youth.youthId}>
-              <input
-                type="checkbox"
-                checked={selectedYouthIds.includes(youth.youthId)}
-                onChange={() => onToggle(youth.youthId)}
-              />
-              <span>{youth.firstName} {youth.lastName}</span>
-            </label>
-          ))}
-        </div>
+        <Checklist
+          variant="form"
+          ariaLabel="Link youth"
+          options={roster.map(youth => ({ value: youth.youthId, label: `${youth.firstName} ${youth.lastName}` }))}
+          value={selectedYouthIds}
+          onToggle={onToggle}
+          disabled={disabled}
+        />
       ) : (
         <p>{!enrollmentRequired
           ? 'No youth have checked into this session yet.'
           : 'No youth are enrolled in this cohort.'}</p>
       )}
-    </fieldset>
+    </FormFieldGroup>
   );
 }

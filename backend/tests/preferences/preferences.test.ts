@@ -302,6 +302,38 @@ describe('User preferences API', () => {
     })).rejects.toBe(rollback);
   });
 
+  it('restores migrated in-progress task filters through the supported preference API', async () => {
+    const user = await seedTestUser({ role: 'staff' });
+    const token = generateToken(user.userId, user.role, user.email);
+    const migration = readFileSync(join(
+      process.cwd(),
+      'db/migrations/2026-10-30_3_rename_task_preference_active_status.sql',
+    ), 'utf8');
+    const value = {
+      view: 'table',
+      statuses: ['upcoming', 'active', 'overdue'],
+      search: 'preserved task search',
+      sorting: { key: 'status', direction: 'asc' },
+    };
+
+    try {
+      await sql`
+        INSERT INTO user_preferences (user_id, preference_key, value)
+        VALUES (${user.userId}, 'task-preferences', ${sql.json(value)})
+      `;
+
+      await sql.unsafe(migration);
+      const restored = await request(app)
+        .get('/api/preferences/task-preferences')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(restored.status).toBe(200);
+      expect(restored.body).toEqual({ ...value, statuses: ['upcoming', 'in_progress', 'overdue'] });
+    } finally {
+      await deleteTestUser(user.userId);
+    }
+  });
+
   it('rejects unknown preference keys and non-object preference values', async () => {
     expect((await request(app)
       .get('/api/preferences/unknown')

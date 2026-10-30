@@ -1,4 +1,5 @@
 import Checklist from '../../../../../common/components/Checklist/Checklist';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
@@ -41,13 +42,16 @@ export default function ProgramCyclesModal({
       {cyclesError && <div role="alert">{cyclesError} <Button onClick={onRetryCycles}>Retry cycles</Button></div>}
       {workflow.error && <div role="alert">{workflow.error} <Button onClick={workflow.retry}>Retry assignments</Button></div>}
       {(workflow.loading || cyclesLoading) && <p role="status">Loading assigned cycles...</p>}
-      {workflow.selectedCycleIds !== null && <Checklist
-        ariaLabel="Assigned cycles"
-        options={cycles.map(cycle => ({ value: cycle.id, label: cycle.name }))}
-        value={workflow.selectedCycleIds}
-        onToggle={workflow.toggleCycle}
-        disabled={!workflow.ready || workflow.locked}
-      />}
+      {workflow.selectedCycleIds !== null && <FormFieldGroup label="Assigned cycles">
+        <Checklist
+          variant="form"
+          ariaLabel="Assigned cycles"
+          options={cycles.map(cycle => ({ value: cycle.id, label: cycle.name }))}
+          value={workflow.selectedCycleIds}
+          onToggle={workflow.toggleCycle}
+          disabled={!workflow.ready || workflow.locked}
+        />
+      </FormFieldGroup>}
       {!cyclesLoading && !cyclesError && cycles.length === 0 && <p>No cycles yet. Add a cycle from Manage Cycles first.</p>}
     </form>
   </Modal>;

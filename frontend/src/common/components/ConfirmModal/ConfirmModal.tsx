@@ -17,7 +17,6 @@ export default function ConfirmModal({ action, onClose }: ConfirmModalProps) {
     status={confirmation.status}
     statusMessage={confirmation.statusMessage}
     footer={confirmation.footer}
-    successDelay={confirmation.successDelay}
   >
     {action && <p>{action.message}</p>}
   </Modal>;

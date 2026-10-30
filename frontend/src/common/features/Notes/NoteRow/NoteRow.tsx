@@ -8,7 +8,7 @@ import './NoteRow.css';
 interface NoteRowProps {
   ariaLabel: string;
   title?: string;
-  categoryBadge: ReactNode;
+  categoryLabel: ReactNode;
   date: string;
   author?: string | null;
   onView: () => void;
@@ -24,7 +24,7 @@ interface NoteRowProps {
 export default function NoteRow({
   ariaLabel,
   title,
-  categoryBadge,
+  categoryLabel,
   date,
   author,
   onView,
@@ -42,7 +42,7 @@ export default function NoteRow({
         {title && (emphasizeTitle
           ? <strong className="note-row__title" title={title}>{title}</strong>
           : <span className="note-row__title" title={title}>{title}</span>)}
-        {categoryBadge}
+        {categoryLabel}
         {author && <span className="note-row__author" title={author}>{author}</span>}
         <span className="note-row__date">{formatShortDate(date)}</span>
       </div>

@@ -27,7 +27,6 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
       title="Edit Session"
       status={status}
       statusMessage={statusMessage}
-      successDelay={1200}
       footer={(
         <ModalFormFooter
           formId="edit-session-form"

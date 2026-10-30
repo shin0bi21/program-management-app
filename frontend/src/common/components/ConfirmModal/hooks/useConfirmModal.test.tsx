@@ -24,7 +24,6 @@ function ConfirmHarness({
   return <>
     <span data-testid="status">{confirmation.status}</span>
     <span data-testid="message">{confirmation.statusMessage}</span>
-    <span data-testid="success-delay">{confirmation.successDelay}</span>
     {confirmation.footer}
   </>;
 }
@@ -86,7 +85,6 @@ describe('useConfirmModal', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('success'));
     expect(screen.getByTestId('message')).toHaveTextContent('Deleted successfully');
-    expect(screen.getByTestId('success-delay')).toHaveTextContent('1200');
     expect(onClose).not.toHaveBeenCalled();
   });
 });

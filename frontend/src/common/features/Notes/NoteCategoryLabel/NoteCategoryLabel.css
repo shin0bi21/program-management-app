@@ -1,14 +1,6 @@
 .note-category {
-  display: inline-flex;
-  width: fit-content;
-  padding: 3px 7px;
-  border-radius: var(--radius-full);
   background: var(--ink-05);
   color: var(--color-muted);
-  font-size: 0.68rem;
-  font-weight: 750;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .note-category--attendance {

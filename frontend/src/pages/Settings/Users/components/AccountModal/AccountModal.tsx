@@ -1,6 +1,8 @@
 import { Controller } from 'react-hook-form';
+import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { User } from '../../types';
@@ -28,7 +30,6 @@ export default function AccountModal(props: AccountModalProps) {
       onClose={handleClose}
       title={isEdit ? 'Edit Account' : 'Invite Staff Account'}
       status={submitStatus}
-      successDelay={800}
       statusMessage={
         submitStatus === 'submitting' ? (isEdit ? 'Updating account...' : 'Sending invitation...') :
         submitStatus === 'success' ? (isEdit ? 'Account updated!' : 'Invitation sent!') :
@@ -70,26 +71,32 @@ export default function AccountModal(props: AccountModalProps) {
             )}
           />
         </div>
-        <fieldset className="account-programs">
-          <legend>Programs</legend>
-          <div className="account-programs__list">
-            {programsLoading ? (
-              <span className="account-programs__empty">Loading programs…</span>
-            ) : programs.length ? programs.map(program => (
-              <label key={program.id} className="account-programs__option">
-                <input
-                  type="checkbox"
-                  value={program.id}
+        <FormFieldGroup label="Programs">
+          {programsLoading && (
+            <span className="account-programs__empty">Loading programs…</span>
+          )}
+          {!programsLoading && programs.length === 0 && (
+            <span className="account-programs__empty">No assignable programs.</span>
+          )}
+          {!programsLoading && programs.length > 0 && (
+            <Controller
+              name="programIds"
+              control={control}
+              render={({ field }) => (
+                <Checklist
+                  variant="form"
+                  ariaLabel="Programs"
+                  options={programs.map(program => ({ value: program.id, label: program.name }))}
+                  value={field.value}
+                  onToggle={value => field.onChange(field.value.includes(value)
+                    ? field.value.filter(id => id !== value)
+                    : [...field.value, value])}
                   disabled={submissionComplete}
-                  {...register('programIds')}
                 />
-                <span>{program.name}</span>
-              </label>
-            )) : (
-              <span className="account-programs__empty">No assignable programs.</span>
-            )}
-          </div>
-        </fieldset>
+              )}
+            />
+          )}
+        </FormFieldGroup>
       </form>
     </Modal>
   );
