@@ -18,6 +18,7 @@
 - Treat every arrow in that workflow as a handoff boundary. Stop after the current phase and report its deliverable unless the user's current request explicitly includes the next phase.
 - A request for "full implementation" authorizes implementation, concern mapping, review, fixes, and re-review. It does not authorize shipping or deployment; each still requires its own explicit request.
 - Map mixed work logically in one concern map, but ship it serially. Complete one concern through merge, return to a clean `develop`, synchronize it with `origin/develop`, and only then create or prepare the next concern branch.
+- Before creating a concern branch or worktree, create or reuse its GitHub issue and use an issue-numbered branch. Choose stash-based or worktree-based isolation as appropriate; both follow the same tracking, authorization, review, merge, and cleanup contract in `docs/workflows/delivery/review-and-merge.md`.
 - Start application work at the routing overview in `README.md`.
 - Read `docs/frontend/README.md` before changing frontend ownership, component, hook, query, or test structure, then follow the narrowest focused guide under `docs/frontend/`.
 - Read `docs/backend/README.md` before changing backend behavior, then follow the narrowest focused guide under `docs/backend/` for middleware, authentication, authorization, services, policies, database, errors, testing, API, or integrations.

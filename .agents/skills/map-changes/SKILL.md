@@ -26,6 +26,12 @@ The output is a logical concern map, not authorization to materialize every conc
 3. Reconstruct the user-request ledger from available context and changed canonical documentation.
 4. Distinguish intentional feature work from unrelated pre-existing changes and generated output.
 
+When worktree isolation or leftovers are relevant, use `git worktree list --porcelain`
+and inventory sources in the authorized scope. Record each path, branch, issue link,
+base, and tracked/untracked edits. Merged branch ancestry does not prove working-tree
+edits shipped. Record missing issue links as reconciliation work; do not create
+issues or isolation during mapping.
+
 Do not perform a deep correctness review yet. Read only enough implementation to establish coupling accurately.
 
 ## 2. Form concern groups
@@ -48,6 +54,8 @@ For each group record:
 - migration and generated-file ownership;
 - narrow authoritative tests and final shipping checks;
 - unresolved ambiguity or likely leftover work.
+- the issue, branch, isolation method, and source stash/worktree when known; mark
+  unknown values rather than preparing branches or worktrees during mapping.
 
 ## 3. Order downstream work
 
