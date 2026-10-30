@@ -71,6 +71,10 @@ For a collection page, render one `main.page-container` with `PageHeader`, `Page
 order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
 or summary plus one active data view to the body.
 
+The shared header always renders a title row and a controls container, even when the
+controls container is empty. All pages use the same header layout rules; title-row
+actions wrap within that row on mobile.
+
 The shared header orders desktop controls from left to right as columns, view, filters,
 then search, omitting unavailable controls. Keep search rightmost and filters beside it.
 On mobile, search occupies a full-width row below the other controls.
