@@ -17,6 +17,18 @@ Use the repository's human-facing application handbook and owner documents as th
 
 For cross-stack work, agree on stored data, permissions, API shapes, errors, and frontend updates before implementing either side. Build the backend first, then connect the frontend to it.
 
+## Choose tracked isolation
+
+When authorized implementation needs a separate concern branch or worktree, follow
+[Tracked isolation](../../../docs/workflows/delivery/review-and-merge.md#tracked-isolation):
+create or reuse the GitHub issue first, then use `<issue-number>-<short-description>`
+for the branch. The agent chooses stash-based or worktree-based isolation for the
+task; neither method bypasses traceability or permits early concern branches.
+Record the issue, branch, checkout path, and any source stash or recovery worktree.
+Preserve its uncommitted edits until reconciliation. Issue and isolation preparation
+do not authorize commits, pushes, PRs, merges, or deployment. Mapping and review
+remain read-only unless the current request also authorizes implementation or tracking.
+
 ## Orchestrate substantial work
 
 When sub-agent tools are available, delegate only substantial, independently useful lanes. The primary agent owns product decisions, the acceptance ledger, the shared cross-stack contract, integration, final verification, and user communication.
