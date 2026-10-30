@@ -180,8 +180,7 @@ export default function Table<T>({
       {resize.guide && <div className="table-resize-guide" aria-hidden="true" style={resize.guide} />}
       {refreshing && data.length > 0 && (
         <div className="table-refresh-status" role="status" aria-label="Updating rows">
-          <LoadingSpinner />
-          <span className="sr-only">Updating rows…</span>
+          <LoadingSpinner label="Updating rows…" />
         </div>
       )}
       <div ref={sentinelRef} className="table-scroll-sentinel" aria-hidden="true" />
