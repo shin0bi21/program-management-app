@@ -31,7 +31,7 @@ describe('HTTP transport', () => {
     })));
     const { request } = await import('./transport');
 
-    const pendingRequest = request('/api/stalled', {}, 25);
+    const pendingRequest = request('/api/stalled', {}, res => res.text(), 25);
     const rejection = pendingRequest.catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(25);
 
@@ -47,8 +47,37 @@ describe('HTTP transport', () => {
     controller.abort(new DOMException('Cancelled', 'AbortError'));
     const { request } = await import('./transport');
 
-    await expect(request('/api/cancelled', {}, 1000, controller.signal)).rejects.toMatchObject({
+    await expect(request('/api/cancelled', {}, res => res.text(), 1000, controller.signal)).rejects.toMatchObject({
       name: 'AbortError',
     });
   });
+  it.each(['cancel', 'timeout'] as const)('keeps %s active while reading the response body', async mode => {
+    vi.useFakeTimers();
+    let bodyStarted!: () => void;
+    const reading = new Promise<void>(resolve => { bodyStarted = resolve; });
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => (
+      new Response(new ReadableStream({
+        start(controller) {
+          init.signal?.addEventListener('abort', () => controller.error(init.signal?.reason), { once: true });
+        },
+      }))
+    )));
+    const { request } = await import('./transport');
+    const controller = new AbortController();
+    const pending = request('/api/download', {}, res => {
+      bodyStarted();
+      return res.text();
+    }, 25, controller.signal);
+    const rejection = pending.catch((error: unknown) => error);
+    await reading;
+
+    if (mode === 'cancel') controller.abort();
+    else await vi.advanceTimersByTimeAsync(25);
+
+    await expect(rejection).resolves.toMatchObject({
+      name: mode === 'cancel' ? 'AbortError' : 'RequestTimeoutError',
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
 });

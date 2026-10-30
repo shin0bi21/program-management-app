@@ -17,12 +17,13 @@ export interface RequestOptions {
 
 // ─── Core execute ─────────────────────────────────────────────────────────────
 
-async function sendRequest(
+async function sendRequest<T>(
   method: string,
   path: string,
+  consume: (response: Response) => Promise<T>,
   body?: unknown,
   opts: RequestOptions = {},
-): Promise<Response> {
+): Promise<T> {
   const { auth = true, timeout = DEFAULT_TIMEOUT, signal } = opts;
 
   const headers: Record<string, string> = {};
@@ -30,7 +31,7 @@ async function sendRequest(
   if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
 
   if (auth) {
-    const token = await getValidAccessToken();
+    const token = await getValidAccessToken(signal);
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -43,31 +44,32 @@ async function sendRequest(
     }),
   };
 
-  let res = await request(apiUrl(path), init, timeout, signal);
+  const execute = () => request(apiUrl(path), { ...init, headers }, async res => {
+    if (!res.ok) {
+      const err = await res.json().catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+        return { error: 'Request failed' };
+      });
+      throw new ApiError(
+        res.status,
+        err.error || err.message || 'Request failed',
+        err.details,
+        err.requestId,
+      );
+    }
+    return consume(res);
+  }, timeout, signal);
 
-  // 401 retry — token was rejected server-side (revoked, clock skew).
-  // Show re-login modal and retry once with a fresh token.
-  if (auth && res.status === 401) {
-    const freshToken = await reauthenticateAccessToken();
-    res = await request(
-      apiUrl(path),
-      { ...init, headers: { ...headers, Authorization: `Bearer ${freshToken}` } },
-      timeout,
-      signal,
-    );
+  try {
+    return await execute();
+  } catch (error) {
+    if (!auth || !(error instanceof ApiError) || error.status !== 401) throw error;
+
+    // Each caller can leave the shared re-login workflow independently.
+    const freshToken = await reauthenticateAccessToken(signal);
+    headers.Authorization = `Bearer ${freshToken}`;
+    return execute();
   }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new ApiError(
-      res.status,
-      err.error || err.message || 'Request failed',
-      err.details,
-      err.requestId,
-    );
-  }
-
-  return res;
 }
 
 async function jsonRequest<T>(
@@ -76,15 +78,15 @@ async function jsonRequest<T>(
   body?: unknown,
   opts?: RequestOptions,
 ): Promise<T> {
-  const res = await sendRequest(method, path, body, opts);
-  if (res.status === 204 || res.status === 205) return undefined as T;
-  const text = await res.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  return sendRequest(method, path, async res => {
+    if (res.status === 204 || res.status === 205) return undefined as T;
+    const text = await res.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  }, body, opts);
 }
 
 async function blobRequest(path: string, opts?: RequestOptions): Promise<Blob> {
-  const res = await sendRequest('GET', path, undefined, opts);
-  return res.blob();
+  return sendRequest('GET', path, res => res.blob(), undefined, opts);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
