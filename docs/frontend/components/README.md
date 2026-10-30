@@ -70,8 +70,9 @@ use a caller class through `className` to override that limit when required.
 The default `compact` appearance serves filters; `inMenu` preserves menu checkbox
 semantics and the floating menu's keyboard navigation. Appearance does not select
 interaction semantics. Callers own drafts, single/multiple selection rules,
-fieldsets/legends, loading/errors/empty states, and submission. React Hook Form
-consumers connect array fields through `Controller`.
+loading/errors/empty states, and submission. Wrap a form checklist in `FormFieldGroup`
+for its visible title, native fieldset/legend, and standard form-label spacing.
+React Hook Form consumers connect array fields through `Controller`.
 
 ## Type and Status Labels
 

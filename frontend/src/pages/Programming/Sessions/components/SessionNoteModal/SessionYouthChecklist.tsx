@@ -1,5 +1,6 @@
 import type { CohortSession, SessionRosterMember } from '../../types';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 
 interface SessionYouthChecklistProps {
   enrollmentRequired: CohortSession['enrollmentRequired'];
@@ -21,8 +22,7 @@ export default function SessionYouthChecklist({
   onToggle,
 }: SessionYouthChecklistProps) {
   return (
-    <fieldset className="session-note-youth" disabled={disabled}>
-      <legend>Link youth</legend>
+    <FormFieldGroup label="Link youth" className="session-note-youth" disabled={disabled}>
       {loading ? (
         <p>Loading youth…</p>
       ) : error ? (
@@ -41,6 +41,6 @@ export default function SessionYouthChecklist({
           ? 'No youth have checked into this session yet.'
           : 'No youth are enrolled in this cohort.'}</p>
       )}
-    </fieldset>
+    </FormFieldGroup>
   );
 }

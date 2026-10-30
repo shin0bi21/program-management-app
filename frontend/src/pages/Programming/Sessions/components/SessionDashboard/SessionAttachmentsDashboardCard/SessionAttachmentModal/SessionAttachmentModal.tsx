@@ -1,4 +1,5 @@
 import FormField from '../../../../../../../common/components/FormField/FormField';
+import FormFieldGroup from '../../../../../../../common/components/FormField/FormFieldGroup';
 import Checklist from '../../../../../../../common/components/Checklist/Checklist';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
@@ -50,8 +51,7 @@ export default function SessionAttachmentModal({
         <FormField id="session-attachment-description" label="Description (optional)">
           <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
         </FormField>
-        <fieldset className="session-attachment-youth" disabled={submissionComplete}>
-          <legend>Link youth</legend>
+        <FormFieldGroup label="Link youth" className="session-attachment-youth" disabled={submissionComplete}>
           {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
             <p className="form-error" role="alert">
               {rosterQuery.error instanceof Error
@@ -68,7 +68,7 @@ export default function SessionAttachmentModal({
               disabled={submissionComplete}
             />
           ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
-        </fieldset>
+        </FormFieldGroup>
       </form>
     </Modal>
   );
