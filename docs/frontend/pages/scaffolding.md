@@ -46,6 +46,9 @@ pages/Youth/Placements/
 The page suite covers filters, selection, and dialog coordination. The page-data
 suite covers its reference queries. The calendar suite covers domain range inputs,
 item mapping, and callback wiring; shared calendar mechanics stay in shared suites.
+When adding saved controls, follow the [preference readiness gate](preferences.md#expose-page-controls),
+including search. The page scaffold prompts for pending-control behavior and the
+first search save preserving restored sibling filters.
 Connect the generated calendar to the page when implementing the feature; the
 component preset does not edit its parent or register a route.
 
