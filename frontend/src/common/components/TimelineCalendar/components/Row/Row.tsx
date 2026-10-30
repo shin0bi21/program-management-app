@@ -23,11 +23,11 @@ import type {
 
 import { getItemDensity, positionItems, type PositionedItem } from '../../utils/itemPosition';
 
-const HIDE_ITEM_SUMMARIES_AT = 7;
+const HIDE_ITEM_SUMMARIES_AT = 8;
 const ITEM_SPACING = {
-  normal: { padding: 8, gap: 8 },
-  compact: { padding: 7, gap: 3 },
-  dense: { padding: 4, gap: 2 },
+  normal: { padding: 8, gap: 4 },
+  compact: { padding: 6, gap: 4 },
+  dense: { padding: 4, gap: 4 },
 };
 
 interface RowProps<TRow, TItemData> {

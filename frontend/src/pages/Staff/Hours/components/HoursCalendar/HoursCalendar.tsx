@@ -213,7 +213,6 @@ export default function HoursCalendar({
 
       rows={visibleResources}
       rowHeader="Name"
-      rowHeight={112}
       getRowId={getStaffResourceId}
       renderRow={renderStaffRow}
       selectedRowId={selectedStaffId}

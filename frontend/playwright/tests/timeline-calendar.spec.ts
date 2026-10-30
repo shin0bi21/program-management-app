@@ -7,8 +7,8 @@ const interactiveItemsStoryId = 'TimelineCalendar/InteractiveItems';
 const rangeLaneSizingStoryId = 'TimelineCalendar/RangeLaneSizing';
 const itemDensityStoryId = 'TimelineCalendar/ItemDensity';
 const persistedPositionStoryId = 'TimelineCalendar/PersistedPosition';
-const periodWidth = 145;
-const rowWidth = 125;
+const periodWidth = 150;
+const rowWidth = 150;
 
 async function drag(page: Page, source: Locator, target: Locator) {
   const sourceBox = await source.boundingBox();
@@ -187,7 +187,7 @@ test('keeps each overlap group aligned at its peak density', async ({ mount }) =
   const rowBox = await row.boundingBox();
   if (!rowBox) throw new Error('Range lane geometry is unavailable');
 
-  await expect(row).toHaveCSS('height', '112px');
+  await expect(row).toHaveCSS('height', '150px');
   await expect(longTask).toHaveCount(1);
   await expect(crowdedGroup).toHaveAttribute('data-item-density', 'dense');
   await expect(isolatedGroup).toHaveAttribute('data-item-density', 'normal');
@@ -778,20 +778,28 @@ test('auto-scrolls while resizing a ranged task near the horizontal edge', async
 test('fits normal, compact, and dense items without changing the virtualized row height', async ({ page, mount }) => {
   const component = await mount(itemDensityStoryId);
   const row = component.locator('.timeline-calendar .row');
+  const normalItems = component.locator('[data-item-start="2026-08-09"]');
   const compactItems = component.locator('[data-item-start="2026-08-10"]');
   const denseItems = component.locator('[data-item-start="2026-08-11"]');
   const compactItem = compactItems.first();
   const denseItem = denseItems.first();
+  const hiddenItems = component.locator('[data-item-start="2026-08-12"]');
+  const hiddenItem = hiddenItems.first();
 
-  await expect(row).toHaveCSS('height', '112px');
+  await expect(row).toHaveCSS('height', '150px');
   await expect(compactItem).toHaveClass(/positioned-item compact/);
   await expect(denseItem).toHaveClass(/positioned-item dense/);
-  await expect(denseItem).toHaveClass(/summaries-hidden/);
+  await expect(normalItems).toHaveCount(4);
+  await expect(normalItems.last()).toHaveClass(/positioned-item normal/);
+  await expect(normalItems.last().locator('.calendar-item .summary')).toBeVisible();
+  await expect(hiddenItem).toHaveClass(/summaries-hidden/);
+  await expect(hiddenItems).toHaveCount(8);
   await expect(compactItems).toHaveCount(5);
   await expect(denseItems).toHaveCount(7);
   await expect(denseItem.getByRole('button')).toHaveCSS('font-size', '8.8px');
-  await expect(denseItem.locator('.calendar-item .summary')).toBeHidden();
-  await denseItem.getByRole('button').hover();
+  await expect(denseItem.locator('.calendar-item .summary')).toBeVisible();
+  await expect(hiddenItem.locator('.calendar-item .summary')).toBeHidden();
+  await hiddenItem.getByRole('button').hover();
   await expect(page.getByRole('tooltip')).toBeVisible();
   await expect(component.getByRole('button', { name: /Show all/ })).toHaveCount(0);
 });

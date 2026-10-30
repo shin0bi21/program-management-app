@@ -147,7 +147,6 @@ export function RangeLaneSizing() {
       getItemRange={item => ({ start: item.start, end: item.end })}
       initialDate={new Date(2026, 7, 9)}
       ariaLabel="Range lane sizing calendar"
-      rowHeight={112}
       getRowId={row => row.id}
       getItemId={item => item.id}
       renderRow={({ row }) => <span>{row.name}</span>}
@@ -165,9 +164,10 @@ export function ItemDensity() {
     end: date,
   }));
   const items = [
-    ...makeItems(3, 'normal', '2026-08-09'),
+    ...makeItems(4, 'normal', '2026-08-09'),
     ...makeItems(5, 'compact', '2026-08-10'),
     ...makeItems(7, 'dense', '2026-08-11'),
+    ...makeItems(8, 'hidden', '2026-08-12'),
   ];
 
   return <div style={{ height: '300px', padding: '16px' }}>
@@ -177,7 +177,6 @@ export function ItemDensity() {
       getItemRange={item => ({ start: item.start, end: item.end })}
       initialDate={new Date(2026, 7, 9)}
       ariaLabel="Item density calendar"
-      rowHeight={112}
       getRowId={row => row.id}
       getItemId={item => item.id}
       renderRow={({ row }) => <span>{row.name}</span>}
