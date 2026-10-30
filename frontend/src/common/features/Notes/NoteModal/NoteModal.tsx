@@ -17,7 +17,6 @@ interface NoteModalProps {
   submitLabel: string;
   submitStatus: SubmitStatus;
   statusMessage?: string;
-  successDelay?: number;
   maxLength?: number;
   children?: ReactNode;
   onCategoryChange: (category: string) => void;
@@ -38,7 +37,6 @@ export default function NoteModal({
   submitLabel,
   submitStatus,
   statusMessage,
-  successDelay = 1200,
   maxLength = 5000,
   children,
   onCategoryChange,
@@ -59,7 +57,6 @@ export default function NoteModal({
       title={title}
       status={submitStatus}
       statusMessage={statusMessage}
-      successDelay={successDelay}
       footer={<ModalFormFooter formId={formId} submitLabel={submitLabel} submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id={formId} aria-busy={submissionComplete || undefined} onSubmit={submit}>

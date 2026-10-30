@@ -18,7 +18,7 @@ interface AddSessionModalProps {
 export default function AddSessionModal({ onClose, ...options }: AddSessionModalProps) {
   const workflow = useAddSessionModal(options);
   return <Modal isOpen onClose={onClose} title="Add Session" status={workflow.status}
-    statusMessage={workflow.message} successDelay={1400}
+    statusMessage={workflow.message}
     footer={<ModalFormFooter formId="add-session-form" submitLabel="Add Session"
       submitStatus={workflow.status} submitDisabled={!workflow.program} onClose={onClose} />}>
     <form id="add-session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>

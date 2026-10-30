@@ -41,7 +41,6 @@ export default function SessionAttendanceModal({
       maxWidth="720px"
       status={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      successDelay={1400}
       footer={footer}
     >
       <form

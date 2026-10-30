@@ -60,7 +60,6 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
       title="Sign Up Lead"
       status={modalStatus}
       statusMessage={modalStatusMessage}
-      successDelay={1400}
       maxWidth="600px"
       footer={(
         <ModalFormFooter

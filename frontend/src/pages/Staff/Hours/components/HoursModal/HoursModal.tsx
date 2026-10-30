@@ -80,7 +80,6 @@ export default function HoursModal({
       maxWidth="620px"
       status={workflow.submitStatus}
       statusMessage={statusMessage}
-      successDelay={1200}
       footer={footer}
     >
       <form id="hours-form" className="hours-form" onSubmit={workflow.submit}>

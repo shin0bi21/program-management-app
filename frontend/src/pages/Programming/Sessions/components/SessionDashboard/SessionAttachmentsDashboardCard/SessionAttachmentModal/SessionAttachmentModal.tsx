@@ -30,7 +30,6 @@ export default function SessionAttachmentModal({
       title={attachment ? 'Edit Attachment' : 'Add Attachment'}
       status={submitStatus}
       statusMessage={statusMessage || undefined}
-      successDelay={1200}
       footer={<ModalFormFooter formId="session-attachment-form" submitLabel={attachment ? 'Save' : 'Add Attachment'} submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>

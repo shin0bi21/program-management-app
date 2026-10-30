@@ -28,7 +28,6 @@ export default function LeadNoteModal({
       submitLabel="Add Note"
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      successDelay={900}
       maxLength={500}
       onCategoryChange={() => undefined}
       onDetailsChange={workflow.updateDetails}
