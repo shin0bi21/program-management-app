@@ -10,7 +10,6 @@ export function PageMessagesStory({ mixed = false }: { mixed?: boolean }) {
       {
         message: 'This table’s data is out of order.',
         severity: 'warning',
-        tooltip: 'Edited rows stay in place while you work. Refresh when you’re ready to restore the sort order.',
         action: { label: 'Refresh', disabled: refreshing, onClick: () => setRefreshing(true) },
       },
     ]} />

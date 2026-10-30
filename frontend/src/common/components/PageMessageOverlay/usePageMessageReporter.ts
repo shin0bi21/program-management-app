@@ -16,7 +16,6 @@ export default function usePageMessageReporter(
   const noticeMessage = notice?.message;
   const noticeSeverity = notice?.severity;
   const noticeDetails = notice?.details;
-  const noticeTooltip = notice?.tooltip;
   const noticeActionLabel = notice?.action?.label;
   const noticeOnAction = notice?.action?.onClick;
   const noticeActionDisabled = notice?.action?.disabled;
@@ -39,7 +38,6 @@ export default function usePageMessageReporter(
         message: noticeMessage,
         severity: noticeSeverity,
         details: noticeDetails,
-        tooltip: noticeTooltip,
         action: noticeActionLabel && noticeOnAction ? {
           label: noticeActionLabel, onClick: noticeOnAction, disabled: noticeActionDisabled,
         } : undefined,
@@ -48,5 +46,5 @@ export default function usePageMessageReporter(
 
     onMessageChange(items.length > 1 ? items : items[0] ?? null);
     return () => onMessageChange(null);
-  }, [actionDisabled, actionLabel, message, onAction, onMessageChange, noticeMessage, noticeSeverity, noticeDetails, noticeTooltip, noticeActionLabel, noticeOnAction, noticeActionDisabled]);
+  }, [actionDisabled, actionLabel, message, onAction, onMessageChange, noticeMessage, noticeSeverity, noticeDetails, noticeActionLabel, noticeOnAction, noticeActionDisabled]);
 }

@@ -52,19 +52,15 @@ describe('PageMessageOverlay', () => {
   });
 });
 
-it('presents a warning with explanatory help and a disabled pending action', () => {
+it('presents a warning with a disabled pending action', () => {
   const refresh = vi.fn();
   const warning = {
     message: 'This table’s data is out of order.', severity: 'warning' as const,
-    tooltip: 'Refresh when you finish editing.',
     action: { label: 'Refresh', onClick: refresh, disabled: true },
   };
   const view = render(<PageMessageOverlay messages={[warning]} />);
 
   expect(screen.getByRole('status')).toHaveClass('page-message-overlay--warning');
-  const help = screen.getByTitle('Refresh when you finish editing.');
-  expect(help).toHaveAttribute('tabindex', '0');
-  expect(help).toHaveAccessibleName('Refresh when you finish editing.');
   expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(refresh).not.toHaveBeenCalled();

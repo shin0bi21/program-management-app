@@ -6,7 +6,6 @@ for (const width of [390, 1280]) {
     const component = await mount('PageMessageOverlay/PageMessagesStory');
     const message = component.getByRole('status');
     await expect(message).toContainText('This table’s data is out of order.');
-    await expect(message.locator('[title]')).toHaveAttribute('title', /Edited rows stay in place/);
 
     const bounds = await message.boundingBox();
     if (!bounds) throw new Error('Message geometry unavailable');
