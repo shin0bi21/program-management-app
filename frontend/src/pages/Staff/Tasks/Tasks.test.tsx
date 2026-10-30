@@ -435,7 +435,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
   });
 
-  it('keeps the hours target until close after completing its task and does not reopen on selection', async () => {
+  it('keeps the hours target current after completion and preserves selection when closed', async () => {
     const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
     const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
     vi.mocked(setHours).mockResolvedValue({ updatedTasks: [completedTask] } as Awaited<ReturnType<typeof setHours>>);
@@ -450,9 +450,12 @@ describe('Tasks', () => {
     expect(setHours).toHaveBeenCalledWith(input);
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(hoursModal.props!.initialTask).toEqual(task);
+    expect(hoursModal.props!.initialTask).toEqual(completedTask);
 
     act(() => hoursModal.props!.onClose());
+    expect(screen.getByText('Prepare workshop').closest('tr')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByText('Next task'));
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();

@@ -104,9 +104,8 @@ export default function Tasks() {
   const deleteTaskAction = actions.deleteTask;
 
   // Hours modal.
-  const [hoursModalTask, setHoursModalTask] = useState<Task | null>(null);
-  const openHoursModal = (task: Task) => setHoursModalTask(task);
-  const closeHoursModal = () => setHoursModalTask(null);
+  const [hoursModalOpen, setHoursModalOpen] = useState(false);
+  const closeHoursModal = () => setHoursModalOpen(false);
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
@@ -143,7 +142,8 @@ export default function Tasks() {
   });
 
   // View configuration.
-  const loggableTask = getLoggableTask(selection.selectedTask, canWrite);
+  const canLogHours = canWrite && selection.selectedTask?.writable && selection.selectedTask.state === 'open';
+  const hoursModalTask = hoursModalOpen ? selection.selectedTask : null;
 
   const taskTable = (
     <TaskTable
@@ -265,7 +265,7 @@ export default function Tasks() {
           resourceName={selection.selectedResource.name}
           today={today}
           selectedTask={selection.selectedTask}
-          onLogHours={loggableTask ? () => openHoursModal(loggableTask) : undefined}
+          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
           onMessageChange={setDashboardError}
         /> : null}
         {...viewContent}
@@ -300,10 +300,4 @@ export default function Tasks() {
       onClose={closeConfirmation}
     />
   </>;
-}
-
-function getLoggableTask(task: Task | null, canWrite: boolean) {
-  if (!canWrite || !task?.writable) return null;
-  if (task.state !== 'open') return null;
-  return task;
 }
