@@ -1,4 +1,5 @@
 import FormField from '../../../../../../../common/components/FormField/FormField';
+import Checklist from '../../../../../../../common/components/Checklist/Checklist';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
 import type { CohortSession, SessionAttachment } from '../../../../types';
@@ -58,18 +59,14 @@ export default function SessionAttachmentModal({
                 : 'Could not load session roster'}
             </p>
           ) : roster.length ? (
-            <div className="session-attachment-youth__checklist">
-              {roster.map(youth => (
-                <label key={youth.youthId}>
-                  <input
-                    type="checkbox"
-                    checked={selectedYouthIds.includes(youth.youthId)}
-                    onChange={() => toggleYouth(youth.youthId)}
-                  />
-                  <span>{youth.firstName} {youth.lastName}</span>
-                </label>
-              ))}
-            </div>
+            <Checklist
+              variant="form"
+              ariaLabel="Link youth"
+              options={roster.map(youth => ({ value: youth.youthId, label: `${youth.firstName} ${youth.lastName}` }))}
+              value={selectedYouthIds}
+              onToggle={toggleYouth}
+              disabled={submissionComplete}
+            />
           ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
         </fieldset>
       </form>

@@ -5,10 +5,10 @@ import Checklist from './Checklist';
 
 const options = [{ value: 'fall', label: 'Fall 2026' }, { value: 'spring', label: 'Spring 2026' }];
 
-it('renders controlled native checkboxes and emits the toggled value with keyboard access', async () => {
+it.each(['compact', 'form'] as const)('renders controlled native checkboxes with keyboard access (%s)', async variant => {
   const user = userEvent.setup();
   const onToggle = vi.fn();
-  const { rerender } = render(<Checklist options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" />);
+  const { rerender } = render(<Checklist variant={variant} options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" />);
 
   expect(screen.getByRole('group', { name: 'Cycles' })).toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: 'Fall 2026' })).toBeChecked();
@@ -16,13 +16,17 @@ it('renders controlled native checkboxes and emits the toggled value with keyboa
   await user.keyboard(' ');
   expect(onToggle).toHaveBeenCalledWith('fall');
 
-  rerender(<Checklist options={options} value={[]} onToggle={onToggle} ariaLabel="Cycles" />);
+  rerender(<Checklist variant={variant} options={options} value={[]} onToggle={onToggle} ariaLabel="Cycles" />);
   expect(screen.getByRole('checkbox', { name: 'Fall 2026' })).not.toBeChecked();
 });
 
-it.each([false, true])('disables every choice when locked (menu: %s)', async inMenu => {
+it.each([
+  { variant: 'compact', inMenu: false },
+  { variant: 'compact', inMenu: true },
+  { variant: 'form', inMenu: false },
+] as const)('disables every choice when locked ($variant, menu: $inMenu)', async ({ variant, inMenu }) => {
   const onToggle = vi.fn();
-  render(<Checklist options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" disabled inMenu={inMenu} />);
+  render(<Checklist variant={variant} options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" disabled inMenu={inMenu} />);
 
   for (const option of screen.getAllByRole(inMenu ? 'menuitemcheckbox' : 'checkbox')) {
     expect(option).toBeDisabled();
