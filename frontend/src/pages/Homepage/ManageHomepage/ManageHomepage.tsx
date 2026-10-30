@@ -1,3 +1,4 @@
+import { useAuth } from '../../../auth/authContext';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageMessageOverlay from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
@@ -12,6 +13,9 @@ import { useManagedHomepage } from './hooks/useManagedHomepage';
 import './ManageHomepage.css';
 
 export default function ManageHomepage() {
+  const { permissions } = useAuth();
+  const canWrite = permissions.includes('write:homepage');
+
   // Data and actions.
   const homepage = useManagedHomepage();
 
@@ -29,7 +33,7 @@ export default function ManageHomepage() {
         } : null]} />
         <PageBody
           ariaLabel="Homepage image management"
-          dashboard={<HomepageSignupSetting />}
+          dashboard={<HomepageSignupSetting canWrite={canWrite} />}
           table={<HomepageImageList
             images={homepage.images}
             loading={homepage.loading}
@@ -39,21 +43,23 @@ export default function ManageHomepage() {
             onEdit={modals.image.openEdit}
             onDelete={modals.deletion.open}
             onReorder={homepage.reorderImages}
+            canWrite={canWrite}
+            mutationsPending={homepage.reordering}
           />}
         />
       </main>
 
-      <HomepageImageModal
+      {canWrite && <HomepageImageModal
         image={modals.image.target}
         isOpen={modals.image.open}
         onClose={modals.image.close}
         onSaved={homepage.refresh}
-      />
+      />}
 
-      <ConfirmModal
+      {canWrite && <ConfirmModal
         action={modals.deletion.action}
         onClose={modals.deletion.close}
-      />
+      />}
     </>
   );
 }

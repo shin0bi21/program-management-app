@@ -22,7 +22,11 @@ const homepage = vi.hoisted(() => ({
   refresh: vi.fn(),
   deleteImage: vi.fn(),
   reorderImages: vi.fn(),
+  reordering: false,
 }));
+
+const auth = vi.hoisted(() => ({ permissions: ['read:homepage', 'write:homepage'] as string[] }));
+vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 
 vi.mock('./hooks/useManagedHomepage', () => ({
   useManagedHomepage: () => homepage,
@@ -43,9 +47,29 @@ describe('ManageHomepage', () => {
     vi.clearAllMocks();
     homepage.loading = false;
     homepage.error = null;
+    homepage.reordering = false;
+    auth.permissions = ['read:homepage', 'write:homepage'];
   });
 
   // Rendered states.
+
+  it('keeps homepage content readable and removes write entry points for read-only users', () => {
+    auth.permissions = ['read:homepage'];
+    renderPage();
+
+    expect(screen.getByText('Adventure Bay trip.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Adventure Bay trip.' })).not.toBeInTheDocument();
+  });
+
+  it('does not expose write controls while an image reorder is saving', () => {
+    homepage.reordering = true;
+    renderPage();
+
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'More actions for Adventure Bay trip.' })).toBeDisabled();
+    expect(screen.getByRole('listitem')).toHaveAttribute('draggable', 'false');
+  });
 
   it('reports page-owned errors through the shared overlay with a retry action', async () => {
     const user = userEvent.setup();

@@ -19,6 +19,8 @@ interface HomepageImageListProps {
   onEdit: (image: ManagedHomepageImage) => void;
   onDelete: (image: ManagedHomepageImage) => void;
   onReorder: (sourceImageId: string, targetImageId: string) => void | Promise<void>;
+  canWrite: boolean;
+  mutationsPending: boolean;
 }
 
 export default function HomepageImageList({
@@ -30,6 +32,8 @@ export default function HomepageImageList({
   onEdit,
   onDelete,
   onReorder,
+  canWrite,
+  mutationsPending,
 }: HomepageImageListProps) {
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
@@ -46,7 +50,7 @@ export default function HomepageImageList({
     >
       <div className="homepage-management-section__header">
         <h2 id="homepage-images-title">Images</h2>
-        <Button size="sm" onClick={onAdd}>+ Add</Button>
+        {canWrite && <Button size="sm" disabled={mutationsPending} onClick={onAdd}>+ Add</Button>}
       </div>
       <div className="homepage-image-list" role="list" aria-label="Homepage hero images">
         {loading ? (
@@ -68,18 +72,23 @@ export default function HomepageImageList({
                 className={`homepage-image-row${
                   draggedImageId === image.id ? ' homepage-image-row--dragging' : ''
                 }${dragOverImageId === image.id ? ' homepage-image-row--drag-over' : ''}`}
-                draggable
+                draggable={canWrite && !mutationsPending}
                 onDragStart={(event) => {
+                  if (!canWrite || mutationsPending) return;
                   event.dataTransfer.effectAllowed = 'move';
                   event.dataTransfer.setData('text/plain', image.id);
                   setDraggedImageId(image.id);
                 }}
-                onDragEnter={() => setDragOverImageId(image.id)}
+                onDragEnter={() => {
+                  if (canWrite && !mutationsPending) setDragOverImageId(image.id);
+                }}
                 onDragOver={(event) => {
+                  if (!canWrite || mutationsPending) return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = 'move';
                 }}
                 onDrop={(event) => {
+                  if (!canWrite || mutationsPending) return;
                   event.preventDefault();
                   const sourceImageId = event.dataTransfer.getData('text/plain') || draggedImageId;
                   if (sourceImageId) void onReorder(sourceImageId, image.id);
@@ -99,8 +108,9 @@ export default function HomepageImageList({
                 <span className="homepage-image-row__caption" title={image.caption}>
                   {image.caption}
                 </span>
-                <ActionsMenu
+                {canWrite && <ActionsMenu
                   ariaLabel={`More actions for ${image.caption}`}
+                  disabled={mutationsPending}
                   items={[
                     { id: 'edit', label: 'Edit Image', onClick: () => onEdit(image) },
                     {
@@ -110,7 +120,7 @@ export default function HomepageImageList({
                       onClick: () => onDelete(image),
                     },
                   ]}
-                />
+                />}
               </div>
             ))}
           </>
