@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { usePeriodVirtualization } from './hooks/usePeriodVirtualization/usePeriodVirtualization';
 import { usePointerSession } from './hooks/usePointerSession/usePointerSession';
 import { useRowVirtualization } from './hooks/useRowVirtualization/useRowVirtualization';
+import { useToday } from './hooks/useToday/useToday';
 import Toolbar from './components/Toolbar/Toolbar';
 import Grid from './components/Grid/Grid';
 import { dayPeriodDefinition } from './utils/periods';
@@ -106,7 +107,7 @@ export default function TimelineCalendar<TRow, TItemData>({
   );
 
   const gridColumns = `${ROW_WIDTH}px ${leadingPeriodWidth}px repeat(${periods.length}, ${PERIOD_WIDTH}px) ${trailingPeriodWidth}px`;
-  const [today] = useState(() => new Date());
+  const { today, refreshDate } = useToday();
   const todayIsInRange = today >= allPeriods[0].start && today < allPeriods[allPeriods.length - 1].end;
 
   const pointer = usePointerSession();
@@ -159,7 +160,7 @@ export default function TimelineCalendar<TRow, TItemData>({
 
   /** Navigates with a fresh current date when the user invokes Today. */
   function goToToday(): void {
-    const today = new Date();
+    const today = refreshDate();
     if (today < allPeriods[0].start || today >= allPeriods[allPeriods.length - 1].end) return;
 
     setNavigationAnchor(today);
