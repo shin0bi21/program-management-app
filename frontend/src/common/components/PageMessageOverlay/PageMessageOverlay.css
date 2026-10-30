@@ -95,9 +95,3 @@
   cursor: wait;
   opacity: 0.65;
 }
-
-.page-message-overlay__info {
-  display: inline-block;
-  margin-left: var(--space-2);
-  cursor: help;
-}
