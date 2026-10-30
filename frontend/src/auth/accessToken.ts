@@ -25,11 +25,12 @@ function requireValidStoredAccessToken(message?: string): string {
   return token;
 }
 
-export async function getValidAccessToken(): Promise<string> {
+export async function getValidAccessToken(signal?: AbortSignal): Promise<string> {
+  signal?.throwIfAborted();
   const token = getToken();
 
   if (!token) throw new SessionError();
-  if (isTokenExpired(token)) return reauthenticateAccessToken();
+  if (isTokenExpired(token)) return reauthenticateAccessToken(signal);
 
   const timeUntilExpiry = getTimeUntilExpiry(token);
   const nearExpiry = timeUntilExpiry !== null && timeUntilExpiry < REFRESH_THRESHOLD_MS;
@@ -55,33 +56,33 @@ async function refreshAccessToken(): Promise<string> {
 }
 
 async function requestAccessTokenRefresh(): Promise<string> {
-  const response = await request(apiUrl('/auth/refresh'), {
+  return request(apiUrl('/auth/refresh'), {
     method: 'POST',
     credentials: 'include',
+  }, async response => {
+    try {
+      if (!response.ok) throw new Error('Token refresh failed');
+
+      const data: unknown = await response.json();
+      if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
+        throw new Error('Token refresh returned an invalid response');
+      }
+      const existingUser = getUser();
+      if (existingUser) {
+        setAuthData(data.token, existingUser);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+      }
+      return data.token;
+    } catch (error) {
+      clearAuthData();
+      window.location.href = '/login';
+      throw error;
+    }
   });
-
-  try {
-    if (!response.ok) throw new Error('Token refresh failed');
-
-    const data: unknown = await response.json();
-    if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
-      throw new Error('Token refresh returned an invalid response');
-    }
-    const existingUser = getUser();
-    if (existingUser) {
-      setAuthData(data.token, existingUser);
-    } else {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-    }
-    return data.token;
-  } catch (error) {
-    clearAuthData();
-    window.location.href = '/login';
-    throw error;
-  }
 }
 
-export async function reauthenticateAccessToken(): Promise<string> {
-  await reAuthCoordinator.requestReAuth();
+export async function reauthenticateAccessToken(signal?: AbortSignal): Promise<string> {
+  await reAuthCoordinator.requestReAuth(signal);
   return requireValidStoredAccessToken('Re-authentication did not produce a valid session.');
 }
