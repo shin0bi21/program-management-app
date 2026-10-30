@@ -21,6 +21,10 @@ const verifyPasswordSchema = z.object({
   trustDevice: z.boolean().optional(),
 }) satisfies z.ZodType<VerifyPasswordFormData, VerifyPasswordFormData>;
 
+const verificationContextSchema = z.object({
+  userId: z.string().trim().min(1),
+});
+
 export const useVerifyPassword = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -32,7 +36,8 @@ export const useVerifyPassword = () => {
   const location = useLocation();
   const { login: updateAuthState } = useAuth();
 
-  const userId = (location.state as { userId?: string } | undefined)?.userId;
+  const context = verificationContextSchema.safeParse(location.state);
+  const userId = context.success ? context.data.userId : undefined;
 
   const form = useForm<VerifyPasswordFormData>({
     resolver: zodResolver(verifyPasswordSchema),
