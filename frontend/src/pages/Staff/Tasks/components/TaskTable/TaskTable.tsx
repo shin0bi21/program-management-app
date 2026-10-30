@@ -34,6 +34,7 @@ export default function TaskTable({
     || filters.statuses.length > 0;
 
   return <Table
+    enableColumnResizing
     ariaLabel="Tasks"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}

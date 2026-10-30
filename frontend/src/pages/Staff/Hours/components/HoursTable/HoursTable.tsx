@@ -30,6 +30,7 @@ export default function HoursTable({
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table
+    enableColumnResizing
     ariaLabel="Hours entries"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}

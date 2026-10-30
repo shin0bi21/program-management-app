@@ -98,6 +98,7 @@ export default function ExampleTable(props: ExampleTableProps) {
     sortableColumns={EXAMPLE_TABLE_KEYS}
     sorting={props.sorting}
     onSortingChange={props.onSortingChange}
+    enableColumnResizing
     columnWidths={props.columnWidths}
     onColumnWidthsChange={props.onColumnWidthsChange}
     selectedKey={props.selectedId}
@@ -131,6 +132,40 @@ Use the page's applied filters consistently in the query key, API inputs, and fi
 message; the table does not implement draft search or preference persistence.
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table Rows](table-rows.md).
+
+## Resize Shared Columns
+
+Resizing is opt-in at the table level: pass `enableColumnResizing` together with
+controlled `columnWidths` and `onColumnWidthsChange`. It defaults to disabled,
+even when a width callback is present. Column `enableResizing: false` still keeps
+an individual column fixed; `enableHiding` and `hiddenColumnKeys` are independent.
+Disabling resizing preserves saved widths and cancels an active gesture.
+
+The shared table stages actual rendered column widths locally when a mouse or touch
+resize begins. TanStack's `onEnd` sizing mode drives one vertical preview guide;
+headers, body cells, and page preferences stay unchanged during movement. Release
+commits the clamped active width and captured sibling widths together once. Escape,
+touch cancellation, window blur, and unmount discard the gesture and its listeners.
+Keyboard arrows commit immediately in ten-pixel steps; double-click resets a column.
+Hidden widths survive and action columns remain fixed.
+
+The model fills available viewport space among data columns within their size limits,
+keeping action columns fixed. This also applies when restoring saved widths or growing
+the viewport. Drag and keyboard resizing stop at the width needed to fill the viewport
+with the captured sibling widths; the preview uses that same lower limit. Tables can
+still overflow horizontally, and configured column maxima remain in effect. Viewport sizing uses the exact ResizeObserver content-box width and preserves fractional
+pixels in captured widths, committed widths, and the minimum resize width. Rounded clientWidth measurements can otherwise
+create subpixel overflow with a scrollbar but no usable scroll range. Overflow remains
+browser-managed; no tolerance or scrollbar hiding is applied.
+Horizontal scrolling contributes to the preview offset; vertical scrolling keeps the
+guide over the visible viewport. Header and data cells use subtle internal
+vertical borders alongside the existing horizontal rules.
+
+The colgroup owns column widths; headers and body cells inherit their track sizes.
+Memoized rows receive their visible cells, so column visibility updates render while
+width changes and drag-only updates skip cell rendering; the shared component regression
+measures zero cell renders over ten movements with 150 loaded rows. Browser tests
+own preview/release geometry, touch release, scrolling, fixed columns, and the grid.
 
 ## Test the Table
 

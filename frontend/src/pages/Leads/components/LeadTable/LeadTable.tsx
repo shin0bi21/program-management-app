@@ -35,6 +35,7 @@ export default function LeadTable({
   ));
 
   return <Table
+    enableColumnResizing
     ariaLabel="Leads"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}
