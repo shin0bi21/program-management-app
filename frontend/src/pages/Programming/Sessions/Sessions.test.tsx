@@ -365,11 +365,7 @@ describe('Sessions', () => {
     );
 
     expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
-    const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
     const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
-    expect(pageHeader).not.toBeNull();
-    expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(viewSelector);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));

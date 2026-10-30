@@ -46,18 +46,6 @@ describe('ManageHomepage', () => {
   });
 
   // Rendered states.
-  it('composes the managed image controls from page data', () => {
-    renderPage();
-
-    expect(screen.getByRole('heading', { name: 'Manage Homepage' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Homepage signup setting' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Homepage image management' })).toBeInTheDocument();
-    expect(screen.getByText('Adventure Bay trip.')).toBeInTheDocument();
-    expect(document.querySelector('.homepage-image-row__thumbnail')).toHaveAttribute(
-      'src',
-      '/programming/adventure_bay.png',
-    );
-  });
 
   it('reports page-owned errors through the shared overlay with a retry action', async () => {
     const user = userEvent.setup();

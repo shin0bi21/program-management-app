@@ -19,11 +19,9 @@ const note: SessionNote = {
 };
 
 describe('SessionNoteDetails', () => {
-  it('maps the session category and renders every linked youth', () => {
-    render(<SessionNoteDetails note={note} context={<span>Session context</span>} />);
+  it('shows the linked youth for a session note', () => {
+    render(<SessionNoteDetails note={note} />);
 
-    expect(screen.getByText('Achievement')).toHaveClass('note-category--achievement');
-    expect(screen.getByText('Session context')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Linked youth' })).toBeInTheDocument();
     expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
     expect(screen.getByText('Noah Williams')).toBeInTheDocument();

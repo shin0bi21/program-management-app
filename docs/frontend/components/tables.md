@@ -170,7 +170,9 @@ own preview/release geometry, touch release, scrolling, fixed columns, and the g
 
 ## Test the Table
 
-Cover domain columns, permission-aware actions, selection wiring and table-state propagation.
+Cover domain cell derivations, permission-aware actions, selection changes and
+loading, failure, and pagination outcomes. Do not enumerate fixed column lists or
+assert copied table configuration; exercise the behavior those settings enable.
 The data hook covers its query inputs, cursors, cancellation and row shaping; shared `Table`
 and `useInfiniteListQuery` tests cover rendering and pagination mechanics. Use browser tests
 for resizing, sticky layout and real scrolling. See [Testing](../../workflows/delivery/testing.md).

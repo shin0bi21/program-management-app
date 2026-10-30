@@ -26,27 +26,6 @@ describe('TaskModal', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the accessible create fields and required controls', () => {
-    render(<TaskModal
-      target={{ mode: 'add', initialValues: { startDate: '', dueDate: '' } }}
-      resources={resources}
-      programs={programs}
-      categories={categories}
-      onSaved={vi.fn()}
-      onClose={vi.fn()}
-    />);
-
-    expect(screen.getByRole('dialog', { name: 'Add Task' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Task title *')).toBeRequired();
-    expect(screen.getByRole('button', { name: 'Task staff' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Task program' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Task category' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Start date *')).toBeRequired();
-    expect(screen.getByLabelText('Due date *')).toBeRequired();
-    expect(screen.getByLabelText('Details (optional)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add task' })).toBeDisabled();
-  });
-
   it('uses the calendar context without rendering an editable staff control', () => {
     render(<TaskModal
       target={{

@@ -26,17 +26,14 @@ describe('useSessionTable', () => {
     vi.clearAllMocks();
   });
 
-  it('provides canonical data columns without actions for read-only users', () => {
+  it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useSessionTable({
       canWriteSessions: false,
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
 
-    expect(result.current.map(column => column.id)).toEqual([
-      'program', 'cohort', 'theme', 'date', 'time', 'type', 'status',
-    ]);
-    expect(result.current.find(column => column.id === 'cohort')?.header).toBe('Cycle');
+    expect(result.current.some(column => column.id === 'actions')).toBe(false);
   });
 
   it('formats dates and hours in the program timezone', () => {
@@ -63,14 +60,9 @@ describe('useSessionTable', () => {
     }));
 
     render(<>{renderCell(result.current.find(column => column.id === 'actions')!, session)}</>);
-    expect(menu.items.map(({ id, label }) => ({ id, label }))).toEqual([
-      { id: 'edit', label: 'Edit' },
-      { id: 'delete', label: 'Delete' },
-    ]);
 
     menu.items.forEach(item => item.onClick());
     expect(callbacks.onEdit).toHaveBeenCalledWith(session);
     expect(callbacks.onDelete).toHaveBeenCalledWith(session);
-    expect(menu.items.find(item => item.id === 'delete')).toMatchObject({ variant: 'danger' });
   });
 });

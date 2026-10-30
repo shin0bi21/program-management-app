@@ -25,19 +25,6 @@ describe('LeadModal', () => {
     createLead.mockResolvedValue({ id: 'lead-1' });
   });
 
-  it('uses the established section and modal-footer structure', () => {
-    render(<LeadModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
-
-    expect(screen.getByRole('heading', { name: 'Create Lead' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Youth Information' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Follow-up Information' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /notes/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Emergency Contact' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-  });
-
   it('requires a date of birth before creating a lead', async () => {
     render(<LeadModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
     fireEvent.submit(document.getElementById('lead-form')!);

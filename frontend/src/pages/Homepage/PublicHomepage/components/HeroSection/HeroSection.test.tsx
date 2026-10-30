@@ -22,19 +22,9 @@ describe('HeroSection', () => {
     vi.unstubAllGlobals()
   })
 
-  it('renders the active photo and caption', () => {
-    render(<HeroSection photos={photos} />)
+  it('shows loading while photos load', () => {
+    render(<HeroSection photos={[]} loading />)
 
-    expect(screen.getByAltText('First hero photo')).toBeInTheDocument()
-    expect(document.querySelector('source')).toHaveAttribute('srcset', '/programming/photo-1-mobile.webp')
-    expect(screen.getByText('First caption.')).toBeInTheDocument()
-  })
-
-  it('keeps the hero image frame present while photos load', () => {
-    const { container } = render(<HeroSection photos={[]} loading />)
-
-    expect(screen.getByRole('region', { name: 'Organization branding' })).toBeInTheDocument()
-    expect(container.querySelector('.hero-photo-frame')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Loading photos…')
   })
 

@@ -48,22 +48,6 @@ describe('SessionDashboard', () => {
     childCardProps.attachments.mockClear();
   });
 
-  it('keeps every card composed before a session is selected', () => {
-    render(
-      <SessionDashboard
-        sessionQueryKey={['sessions']}
-        session={null}
-        canWriteAttendance
-        canWriteSessions
-        onAddAttendance={vi.fn()}
-      />,
-    );
-
-    expect(childCardProps.attendance).toHaveBeenCalledWith(expect.objectContaining({ session: null }));
-    expect(screen.getByTestId('notes-card')).toBeInTheDocument();
-    expect(screen.getByTestId('attachments-card')).toBeInTheDocument();
-  });
-
   it('forwards selected context and card errors, and delegates attendance management', async () => {
     const session = makeCohortSession();
     const queryKey = ['sessions', 'program-1'] as const;

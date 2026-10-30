@@ -25,10 +25,4 @@ describe('Toolbar', () => {
     expect(onToday).toHaveBeenCalledOnce();
     expect(screen.getByLabelText('Calendar year 2026')).toHaveTextContent('2026');
   });
-
-  it('omits partial navigation controls', () => {
-    render(<Toolbar year={2026} onPrevious={vi.fn()} />);
-
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
 });

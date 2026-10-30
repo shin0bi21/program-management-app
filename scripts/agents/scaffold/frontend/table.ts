@@ -30,11 +30,11 @@ export default function ${hookName}() {
 }
 `);
   const test = context.sourceFile(join(directory, `${name}.test.tsx`), `
-// Replace these placeholders with domain presentation and shared-Table boundary tests.
+// Replace applicable prompts with observable domain behavior; omit static configuration assertions.
 import { describe, it } from 'vitest';
 
 describe('${name}', () => {
-  it.todo('wires domain rows, columns, state, copy, permissions, and actions into the shared Table');
+  it.todo('invokes row actions for the correct record only when permitted');
   it.todo('forwards controlled selection and emitted row selection without owning selection state');
 });
 `);

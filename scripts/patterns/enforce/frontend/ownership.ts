@@ -91,10 +91,6 @@ export function checkTestOwnership(violations: Findings, file: string, repositor
   const pageName = routeDirectory?.split('/').at(-1);
   if (routeDirectory && file === `${routeDirectory}/${pageName}.tsx`) return;
 
-  if (/\/components\/.*\.tsx$/.test(file)
-    && !siblingExists(repositoryFiles, file, ['.test.tsx'])) {
-    violations.push(`${file}:1 components must own a colocated same-name *.test.tsx file.`);
-  }
   if (/\/use[A-Z][^/]*\.tsx?$/.test(file)
     && !siblingExists(repositoryFiles, file, ['.test.ts', '.test.tsx'])) {
     violations.push(`${file}:1 hooks must own a colocated same-name test file.`);

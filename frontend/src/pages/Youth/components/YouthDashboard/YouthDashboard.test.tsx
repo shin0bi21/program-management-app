@@ -32,9 +32,6 @@ describe('YouthDashboard', () => {
       onDeleteProfileNote={vi.fn()}
     />);
 
-    expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
     expect(onManagePrimaryContact).toHaveBeenCalledWith(profile);
   });

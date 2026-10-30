@@ -180,9 +180,6 @@ describe('useTaskPreferences', () => {
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.definitions.map(definition => definition.id)).toEqual([
-      'staff', 'program', 'cycle', 'category', 'status',
-    ]);
     act(() => {
       result.current.filters.apply('cycle', ['cycle-1']);
       result.current.filters.apply('staff', ['staff-1']);

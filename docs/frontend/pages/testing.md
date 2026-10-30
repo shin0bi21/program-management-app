@@ -3,8 +3,11 @@
 ## Test Page Coordination
 
 Page tests cover the page's observable contract at its boundaries with data,
-controls, views, and dialogs. A real hook or child may run inside the test, but its
-internal policy still belongs in its own suite. Use the following reading order
+controls, views, and dialogs. Do not assert header wrappers, fixed menu inventories,
+or copied table and calendar configuration. Verify what choosing a control does
+and when domain state or permissions changes its availability. A real hook or
+child may run inside the test, but its internal policy still belongs in its own
+suite. Use the following reading order
 for substantial page suites, omitting groups the page does not need:
 
 | Group | Page-owned contract |
@@ -22,7 +25,7 @@ order in which tests depend on each other or a mandatory test count.
 
 For a table page, verify that its applied filter reaches the table and calendar
 and that a selected record supplies the dashboard or dialog target. Delegate
-domain table states and configuration to the [table owner](../components/tables.md#test-the-table),
+domain table behavior to the [table owner](../components/tables.md#test-the-table),
 record actions to their [row/action owner](../components/table-rows.md#testing),
 and query inputs and lifecycle to the [data owner](../architecture/state-and-data.md#test-state-and-data).
 Shared table suites own keyboard navigation, width behavior, and rendering mechanics.

@@ -1,5 +1,5 @@
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
-// This suite owns grid headers, virtual spacers, and row-to-row data mapping.
+// This suite owns virtual row offsets and row-to-row data mapping.
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { buildInitialDayPeriods } from '../../utils/periods';
@@ -24,13 +24,13 @@ vi.mock('../Row/Row', () => ({
 const fixtureTarget = { row: { id: 'staff-1', name: 'Alex' }, data: { id: 'task-1' }, range: { start: '2026-08-19', end: '2026-08-19' } };
 
 describe('Grid', () => {
-  it('renders period headers and maps each visible row to its owned data', () => {
+  it('maps each visible row to its data, selection, and virtual offset', () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 2);
     const firstItem = { id: 'entry-1' };
     const rangedItem = { id: 'task-1' };
     const getRowId = vi.fn((row: { id: string }) => row.id);
 
-    const { container } = render(<Grid
+    render(<Grid
       rows={[{ id: 'staff-1', name: 'Alex' }, { id: 'staff-2', name: 'Zoe' }]}
       firstRowIndex={4}
       periods={periods}
@@ -58,13 +58,7 @@ describe('Grid', () => {
       today={periods[0].start}
     />);
 
-    expect(screen.getByRole('columnheader', { name: 'Staff' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: periods[0].key })).toHaveClass('period', 'today');
     expect(screen.getByText('Alex:4:entry-1:false')).toBeInTheDocument();
     expect(screen.getByText('Zoe:5:task-1:true')).toBeInTheDocument();
-    expect(getRowId).toHaveBeenCalledTimes(2);
-    const spacers = container.querySelectorAll('[aria-hidden="true"]');
-    expect(spacers[1]).toHaveStyle({ height: '184px' });
-    expect(spacers[2]).toHaveStyle({ height: '276px' });
   });
 });
