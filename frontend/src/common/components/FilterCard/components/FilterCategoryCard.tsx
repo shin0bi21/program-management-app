@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import Checklist from '../../Checklist/Checklist';
 import Button from '../../Button/Button';
 import type { FilterCardCategory } from '../types';
 
@@ -49,16 +50,7 @@ export default function FilterCategoryCard({ category, value, active, resetVersi
       </button>
       <span>{category.label}</span>
     </div>
-    <div className="filter-card-options">
-      {category.options.map(option => {
-        const checked = selected.includes(option.value);
-        return <button key={option.value} type="button" role="menuitemcheckbox" aria-checked={checked}
-          className="filter-card-option" onClick={() => toggleOption(option.value)}>
-          <span className={`filter-card-checkbox${checked ? ' checked' : ''}`}>{checked && <FontAwesomeIcon icon={faCheck} />}</span>
-          <span>{option.label}</span>
-        </button>;
-      })}
-    </div>
+    <Checklist options={category.options} value={selected} onToggle={toggleOption} ariaLabel={category.label} inMenu />
     <div className="filter-card-footer">
       <Button type="button" role="menuitem" size="sm" onClick={clear} disabled={value.length === 0}>Clear</Button>
       <Button type="button" role="menuitem" size="sm" onClick={() => onApply(selected)} disabled={normalized(selected) === appliedKey}>Apply</Button>

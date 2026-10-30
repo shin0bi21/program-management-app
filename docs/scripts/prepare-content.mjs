@@ -2,12 +2,13 @@ import { readdir, readFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
+import { buildSidebar, navigation } from './navigation.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const documentationDirectories = ['docs/backend', 'docs/frontend', 'docs/workflows'];
 export const DEFAULT_REPOSITORY_SLUG = 'shin0bi21/be-original';
 
-export async function prepareContent({ repoRoot = repositoryRoot, outputDir, gitRef = 'main', repositorySlug = DEFAULT_REPOSITORY_SLUG } = {}) {
+export async function prepareContent({ repoRoot = repositoryRoot, outputDir, gitRef = 'main', repositorySlug = DEFAULT_REPOSITORY_SLUG, navigationEntries = navigation } = {}) {
   const root = path.resolve(repoRoot);
   const output = path.resolve(outputDir ?? path.join(root, 'docs/src/content/docs'));
   const sources = await collectSources(root);
@@ -29,49 +30,42 @@ export async function prepareContent({ repoRoot = repositoryRoot, outputDir, git
 
     const body = sourcePath.endsWith('.mmd') ? `\`\`\`mermaid\n${content.trimEnd()}\n\`\`\`` : stripFirstH1(content);
     const editUrl = `https://github.com/${repositorySlug}/edit/${encodeURIComponent(gitRef)}/${sourcePath}`;
-    const document = `---\ntitle: ${yamlString(capitalizeTitle(title))}\neditUrl: ${yamlString(editUrl)}\n---\n\n${body.trimStart()}\n`;
+    const document = `---\ntitle: ${yamlString(title)}\neditUrl: ${yamlString(editUrl)}\n---\n\n${body.trimStart()}\n`;
     generated.push({ destination, document, sourcePath, route: routeForSource(sourcePath) });
     routes[sourcePath] = routeForSource(sourcePath);
   }
 
+  const sidebar = buildSidebar(routes, navigationEntries);
+
   await mkdir(output, { recursive: true });
-  for (const entry of await readdir(output)) {
-    await rm(path.join(output, entry), { recursive: true, force: true });
-  }
+  const existing = [];
+  await collectMarkdownFiles(output, '', existing);
+
+  // Keep watched directories and unchanged entries intact during live reloads.
   for (const file of generated) {
+    const previous = await readFile(file.destination, 'utf8').catch(error => {
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    });
+    if (previous === file.document) continue;
+
     await mkdir(path.dirname(file.destination), { recursive: true });
     await writeFile(file.destination, file.document, 'utf8');
+  }
+  for (const relative of existing) {
+    const destination = path.resolve(output, relative);
+    if (!destinations.has(destination)) await rm(destination);
   }
 
   return {
     routes,
-    sidebar: documentationDirectories.map(directory => sidebarGroup(directory, sources, routes)),
+    sidebar,
     sources: Object.fromEntries(generated.map(file => [file.destination, file.sourcePath])),
   };
 }
 
-function capitalizeTitle(title) {
-  return title.replace(/(^|[\s-])([a-z])/g, (_match, separator, letter) => separator + letter.toUpperCase());
-}
-
-function sidebarGroup(directory, sources, routes) {
-  const prefix = `${directory}/`;
-  const children = sources.filter(source => source.startsWith(prefix));
-  const directPages = children.filter(source => !source.slice(prefix.length).includes('/'));
-  const subdirectories = [...new Set(children
-    .filter(source => source.slice(prefix.length).includes('/'))
-    .map(source => source.slice(prefix.length).split('/')[0]))];
-  const items = directPages.map(source => ({
-    slug: routes[source].slice(1, -1),
-    ...(source.endsWith('/README.md') ? { label: 'Overview' } : {}),
-  }));
-
-  items.push(...subdirectories.map(child => sidebarGroup(`${directory}/${child}`, sources, routes)));
-  return { label: capitalizeTitle(path.posix.basename(directory).replace(/[-_]+/g, ' ')), items };
-}
-
 async function collectSources(root) {
-  const candidates = ['README.md', 'docs/README.md'];
+  const candidates = ['README.md'];
 
   for (const directory of documentationDirectories) {
     await collectMarkdownFiles(root, directory, candidates);
@@ -92,7 +86,6 @@ async function collectMarkdownFiles(root, directory, candidates) {
 
 function generatedPath(sourcePath) {
   if (sourcePath === 'README.md') return 'index.md';
-  if (sourcePath === 'docs/README.md') return 'website.md';
   if (/^docs\/(?:backend|frontend|workflows)\/(?:.+\/)?README\.md$/i.test(sourcePath)) {
     return `${sourcePath.slice(5, -'README.md'.length)}index.md`;
   }
@@ -102,7 +95,6 @@ function generatedPath(sourcePath) {
 
 function routeForSource(sourcePath) {
   if (sourcePath === 'README.md') return '/';
-  if (sourcePath === 'docs/README.md') return '/website/';
   const relative = sourcePath.slice('docs/'.length).replace(/\.mmd$/i, '.md').replace(/\.md$/i, '');
   if (/^(?:backend|frontend|workflows)\/(?:.+\/)?README$/i.test(relative)) {
     return `/${relative.slice(0, -'README'.length)}`;

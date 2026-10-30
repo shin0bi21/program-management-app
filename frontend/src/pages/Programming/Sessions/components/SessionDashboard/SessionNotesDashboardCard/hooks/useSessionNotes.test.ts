@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PageErrorItem } from '../../../../../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import type { PageMessageItem } from '../../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
 import type { SessionNote } from '../../../../types';
 import { makeCohortSession } from '../../../../../../../tests/factories/session';
@@ -56,23 +56,23 @@ describe('useSessionNotes', () => {
     vi.mocked(getSessionNotes)
       .mockRejectedValueOnce(new Error('Notes unavailable'))
       .mockResolvedValueOnce([note]);
-    const onErrorChange = vi.fn();
+    const onMessageChange = vi.fn();
     const client = createTestQueryClient();
     const { result } = renderHook(() => useSessionNotes({
-      queryKey: ['sessions'], session, onErrorChange,
+      queryKey: ['sessions'], session, onMessageChange,
     }), { wrapper: createQueryClientWrapper(client) });
 
-    await waitFor(() => expect(onErrorChange).toHaveBeenCalledWith(expect.objectContaining({
+    await waitFor(() => expect(onMessageChange).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Could not load session notes.',
       action: expect.objectContaining({ label: 'Retry' }),
     })));
-    const error = onErrorChange.mock.calls
-      .map(([value]) => value as PageErrorItem | null)
+    const error = onMessageChange.mock.calls
+      .map(([value]) => value as PageMessageItem | null)
       .find(value => value?.message === 'Could not load session notes.');
 
     await act(() => error?.action?.onClick());
 
     await waitFor(() => expect(result.current.query.data).toEqual([note]));
-    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(null));
+    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(null));
   });
 });

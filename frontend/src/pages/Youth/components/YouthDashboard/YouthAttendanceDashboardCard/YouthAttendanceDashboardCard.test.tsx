@@ -9,15 +9,36 @@ describe('YouthAttendanceDashboardCard', () => {
     expect(screen.getByText('No active cohort attendance.')).toBeInTheDocument();
   });
 
+  it('keeps its tabs mounted but unavailable when selection clears', () => {
+    const view = render(<YouthAttendanceDashboardCard cohorts={[]} selected />);
+    const active = screen.getByRole('button', { name: 'Active' });
+    const history = screen.getByRole('button', { name: 'History' });
+    fireEvent.click(history);
+
+    view.rerender(<YouthAttendanceDashboardCard selected={false} />);
+
+    expect(screen.getByRole('button', { name: 'Active' })).toBe(active);
+    expect(screen.getByRole('button', { name: 'History' })).toBe(history);
+    expect(active).toBeDisabled();
+    expect(history).toBeDisabled();
+    expect(screen.getByText('Select a row to view attendance.')).toBeInTheDocument();
+
+    view.rerender(<YouthAttendanceDashboardCard cohorts={[]} selected />);
+
+    expect(history).toBeEnabled();
+    expect(history).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('No historical attendance.')).toBeInTheDocument();
+  });
+
   it('separates active and historical attendance by program and cohort', () => {
     render(<YouthAttendanceDashboardCard selected cohorts={[
       {
-        id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+        id: 'active-cohort', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
         startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
         presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
       },
       {
-        id: 'historic-cohort', name: 'Spring 2025', programId: 'program-2', programName: 'Drop In', enrollmentRequired: false,
+        id: 'historic-cohort', cycleId: 'cycle-1', name: 'Spring 2025', programId: 'program-2', programName: 'Drop In', enrollmentRequired: false,
         startsOn: '2025-01-01', endsOn: '2025-06-30', enrolledOn: null, withdrawnOn: null,
         presentCount: 3, lateCount: 0, absentCount: 0, lastAttendedOn: '2025-05-10',
       },
@@ -32,7 +53,7 @@ describe('YouthAttendanceDashboardCard', () => {
   it('opens youth attendance management for the selected cohort', () => {
     const onManage = vi.fn();
     const cohort = {
-      id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+      id: 'active-cohort', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };
@@ -45,7 +66,7 @@ describe('YouthAttendanceDashboardCard', () => {
   it('opens the selected youth report for an enrolled cohort', () => {
     const onViewReport = vi.fn();
     const cohort = {
-      id: 'active-cohort', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+      id: 'active-cohort', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };

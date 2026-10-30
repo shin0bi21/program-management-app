@@ -6,7 +6,22 @@ import type {
   CohortSortKey,
   ProgramCohort,
 } from './types';
-import type { CursorPage, CursorRequest } from '../../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
+import type { YouthProfile } from '../../Youth/types';
+
+export interface CohortChanges {
+  updatedCohorts: ProgramCohort[];
+  removedCohortIds: string[];
+  createdCohortIds: string[];
+  updatedYouth?: YouthProfile[];
+}
+
+export interface CohortMutationResult {
+  cohort: ProgramCohort;
+  updatedYouth: YouthProfile[];
+}
+
+export type RosterMutationResult = CohortMutationResult;
 
 interface CreateCohortInput {
   programId: string;
@@ -92,7 +107,7 @@ export function getCohortPage(
   if (filters.status) query.set('status', filters.status);
   query.set('sort', pagination.key);
   query.set('direction', pagination.direction);
-  query.set('limit', String(pagination.limit ?? 25));
+  query.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
   if (pagination.cursor) query.set('cursor', pagination.cursor);
   const path = `/cohorts?${query}`;
   return opts
@@ -105,7 +120,7 @@ export function createCohort(data: CreateCohortInput) {
 }
 
 export function updateCohort(cohortId: string, data: UpdateCohortInput) {
-  return apiClient.put(`/cohorts/${cohortId}`, data);
+  return apiClient.put<CohortMutationResult>(`/cohorts/${cohortId}`, data);
 }
 
 export function deleteCohort(cohortId: string) {
@@ -113,11 +128,11 @@ export function deleteCohort(cohortId: string) {
 }
 
 export function enrollYouth(cohortId: string, data: EnrollYouthInput) {
-  return apiClient.post(`/cohorts/${cohortId}/enrollments`, data);
+  return apiClient.post<RosterMutationResult>(`/cohorts/${cohortId}/enrollments`, data);
 }
 
 export function withdrawYouth(cohortId: string, youthId: string) {
-  return apiClient.patch(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
+  return apiClient.patch<RosterMutationResult>(`/cohorts/${cohortId}/enrollments/${youthId}/withdraw`);
 }
 
 export function getCohortYouthReport(cohortId: string, filters: { youthId?: string } = {}, opts?: RequestOptions) {

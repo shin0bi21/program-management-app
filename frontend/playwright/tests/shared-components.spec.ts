@@ -154,6 +154,28 @@ test.describe('Table', () => {
     await expect(component.getByTestId('load-count')).toHaveText('1');
   });
 
+  test('retains rows and pauses a visible sentinel through failed explicit retries', async ({ mount }) => {
+    const component = await mount('Table/NextPageFailure');
+    const wrapper = component.locator('.table-wrapper');
+    await expect(component.getByText('Person 30', { exact: true })).toBeAttached();
+    await wrapper.evaluate(element => element.scrollTo({ top: element.scrollHeight }));
+
+    await expect(component.getByText('More rows unavailable')).toBeVisible();
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('1');
+    await expect(component.getByText('Person 1', { exact: true })).toBeAttached();
+    await component.getByRole('button', { name: 'Retry' }).click();
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('2');
+    await expect(component.getByRole('button', { name: 'Retry' })).toBeVisible();
+
+    await wrapper.evaluate(element => element.scrollTo({ top: 0 }));
+    await wrapper.evaluate(element => element.scrollTo({ top: element.scrollHeight }));
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('2');
+    await component.getByRole('button', { name: 'Retry' }).click();
+    await expect(component.getByText('Person 60', { exact: true })).toBeAttached();
+    await expect(component.getByText('More rows unavailable')).toHaveCount(0);
+    await expect(component.getByTestId('pagination-attempts')).toHaveText('3');
+  });
+
   test('keeps its header sticky during vertical scrolling', async ({ mount }) => {
     const component = await mount('Table/InfiniteScroll');
     const wrapper = component.locator('.table-wrapper');
@@ -187,3 +209,30 @@ test.describe('Table', () => {
     await expect.poll(async () => (await nameHeader.boundingBox())?.width ?? 0).toBeGreaterThan(initialWidth + 40);
   });
 });
+
+for (const width of [390, 1280]) {
+  test(`Table fills its page region while loading at ${width}px`, async ({ page, mount }) => {
+    await page.setViewportSize({ width, height: 720 });
+    const component = await mount('Table/InitialLoading');
+    const area = component.getByRole('region', { name: 'Loading table area' });
+    const wrapper = area.locator('.table-wrapper');
+    const table = area.getByRole('table', { name: 'Loading example' });
+    const spinner = table.getByRole('status', { name: 'Loading rows' });
+    await expect(table.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+    await expect(spinner).toBeVisible();
+    await expect(table).toHaveAttribute('aria-busy', 'true');
+
+    const areaBox = await area.boundingBox();
+    const wrapperBox = await wrapper.boundingBox();
+    const bodyBox = await table.locator('tbody').boundingBox();
+    const spinnerBox = await spinner.locator('.loading-spinner').boundingBox();
+    if (!areaBox || !wrapperBox || !bodyBox || !spinnerBox) throw new Error('Table geometry unavailable');
+    expect(Math.abs(areaBox.height - wrapperBox.height)).toBeLessThanOrEqual(2);
+    expect(Math.abs(spinnerBox.y + spinnerBox.height / 2 - bodyBox.y - bodyBox.height / 2)).toBeLessThanOrEqual(2);
+
+    await component.getByRole('button', { name: 'Finish loading' }).click();
+    await expect(spinner).toHaveCount(0);
+    await expect(table.getByRole('cell', { name: 'Person 1', exact: true })).toBeVisible();
+    expect(Math.abs((await wrapper.boundingBox())!.height - wrapperBox.height)).toBeLessThanOrEqual(2);
+  });
+}

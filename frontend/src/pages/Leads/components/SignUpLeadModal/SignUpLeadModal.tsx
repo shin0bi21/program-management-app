@@ -6,6 +6,7 @@ import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
 
 import type { Lead } from '../../types';
+import type { LeadSignUpResult } from '../../leads.api';
 
 import useSignUpLeadModal, { type LeadNoteCategory } from './useSignUpLeadModal';
 
@@ -29,7 +30,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
   queryKey: readonly unknown[];
   lead: Lead | null;
   onClose: () => void;
-  onSuccess: (lead: Lead) => void | Promise<void>;
+  onSuccess: (result: LeadSignUpResult) => void | Promise<void>;
 }) {
   const birthDateBounds = getDateOfBirthBounds();
   const workflow = useSignUpLeadModal({

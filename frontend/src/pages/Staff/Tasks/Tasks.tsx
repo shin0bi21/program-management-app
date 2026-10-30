@@ -7,7 +7,7 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
 import PageBody from '../../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
@@ -43,8 +43,8 @@ const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 export default function Tasks() {
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions } = useAuth();
@@ -104,9 +104,8 @@ export default function Tasks() {
   const deleteTaskAction = actions.deleteTask;
 
   // Hours modal.
-  const [hoursModalTask, setHoursModalTask] = useState<Task | null>(null);
-  const openHoursModal = (task: Task) => setHoursModalTask(task);
-  const closeHoursModal = () => setHoursModalTask(null);
+  const [hoursModalOpen, setHoursModalOpen] = useState(false);
+  const closeHoursModal = () => setHoursModalOpen(false);
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
@@ -143,7 +142,8 @@ export default function Tasks() {
   });
 
   // View configuration.
-  const loggableTask = getLoggableTask(selection.selectedTask, canWrite);
+  const canLogHours = canWrite && selection.selectedTask?.writable && selection.selectedTask.state === 'open';
+  const hoursModalTask = hoursModalOpen ? selection.selectedTask : null;
 
   const taskTable = (
     <TaskTable
@@ -158,7 +158,7 @@ export default function Tasks() {
       onTaskSelect={selection.selectTask}
       onSortingChange={preferences.table.setSorting}
       onColumnWidthsChange={preferences.table.setColumnWidths}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -181,7 +181,7 @@ export default function Tasks() {
       onResourceSelect={selection.selectResource}
       onAddTask={openAddTaskModal}
       onEditTask={openEditTaskModal}
-      onErrorChange={setViewError}
+      onMessageChange={setViewError}
     />
   );
 
@@ -241,7 +241,7 @@ export default function Tasks() {
           /> : undefined}
       />
 
-      <PageErrorOverlay errors={[
+      <PageMessageOverlay messages={[
         actions.actionError,
         preferences.error,
         pageData.referenceDataError ? {
@@ -265,8 +265,8 @@ export default function Tasks() {
           resourceName={selection.selectedResource.name}
           today={today}
           selectedTask={selection.selectedTask}
-          onLogHours={loggableTask ? () => openHoursModal(loggableTask) : undefined}
-          onErrorChange={setDashboardError}
+          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
+          onMessageChange={setDashboardError}
         /> : null}
         {...viewContent}
       />}
@@ -300,10 +300,4 @@ export default function Tasks() {
       onClose={closeConfirmation}
     />
   </>;
-}
-
-function getLoggableTask(task: Task | null, canWrite: boolean) {
-  if (!canWrite || !task?.writable) return null;
-  if (task.state !== 'open') return null;
-  return task;
 }

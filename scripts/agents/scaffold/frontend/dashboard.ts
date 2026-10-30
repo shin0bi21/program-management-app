@@ -11,9 +11,9 @@ export default function ${name}() {
   // Cards own private queries; receive shared page data through props.
   // Add a dashboard data hook only for queries shared by sibling cards.
   return (
-    <section aria-label="${title} dashboard">
+    <>
       TODO: Compose the ${title} dashboard cards.
-    </section>
+    </>
   );
 }
 `);

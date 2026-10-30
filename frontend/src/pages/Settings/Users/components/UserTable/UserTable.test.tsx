@@ -13,7 +13,7 @@ const tableState = vi.hoisted<ReturnType<typeof useUserTableData>>(() => ({
   refreshing: false,
   error: '',
   hasNextPage: false,
-  loadingNextPage: false,
+  loadingNextPage: false, nextPageError: '', retryNextPage: vi.fn(),
   loadNextPage: vi.fn(),
   retry: vi.fn(),
 }));
@@ -33,7 +33,7 @@ const filters: UserFilters = { search: 'sam', roles: ['staff'], statuses: ['acti
 const sorting = { key: 'name' as const, direction: 'asc' as const };
 const onSortingChange = vi.fn();
 const onColumnWidthsChange = vi.fn();
-const onErrorChange = vi.fn();
+const onMessageChange = vi.fn();
 const baseProps = {
   queryKey,
   filters,
@@ -43,7 +43,7 @@ const baseProps = {
   columnWidths: { name: 240 },
   onSortingChange,
   onColumnWidthsChange,
-  onErrorChange,
+  onMessageChange,
 };
 
 describe('UserTable', () => {
@@ -51,7 +51,7 @@ describe('UserTable', () => {
     vi.clearAllMocks();
     Object.assign(tableState, {
       rows: [], loading: false, refreshing: false, error: '',
-      hasNextPage: false, loadingNextPage: false,
+      hasNextPage: false, loadingNextPage: false, nextPageError: '',
     });
     tableProps.current = null;
   });
@@ -89,6 +89,19 @@ describe('UserTable', () => {
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'email', direction: 'desc' });
   });
 
+  it('routes next-page failure recovery to the footer and page overlay while retaining rows', () => {
+    tableState.nextPageError = 'Unable to load more accounts.';
+    render(<UserTable {...baseProps} />);
+
+    expect(tableProps.current?.unavailable).toBeUndefined();
+    expect(tableProps.current?.data).toBe(tableState.rows);
+    expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
+    expect(onMessageChange).toHaveBeenLastCalledWith({
+      message: 'Unable to load more accounts.',
+      action: { label: 'Retry', onClick: tableState.retryNextPage },
+    });
+  });
+
   it('maps query failures to the unavailable state and page error retry action', () => {
     tableState.error = 'Unable to load accounts.';
     render(<UserTable {...baseProps} />);
@@ -96,7 +109,7 @@ describe('UserTable', () => {
     expect(tableProps.current).toEqual(expect.objectContaining({
       unavailable: { title: 'Accounts unavailable', onRetry: tableState.retry },
     }));
-    expect(onErrorChange).toHaveBeenLastCalledWith({
+    expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load accounts.',
       action: { label: 'Retry', onClick: tableState.retry },
     });

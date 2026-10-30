@@ -1,9 +1,11 @@
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertCanAccessCohort } from '../../../policies/programAccessPolicy';
 import { assertAssignmentUnused, lockAssignmentProgram } from './assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { CreateCohortInput, UpdateCohortInput } from '../../../validation/cohortSchemas';
+import { getCohortRowsByIds, getCohortYouthIds } from './cohortRecordQuery';
 
 export async function createCohort(data: CreateCohortInput, actor: AccessTokenPayload) {
   return sql.begin(async tx => {
@@ -11,25 +13,12 @@ export async function createCohort(data: CreateCohortInput, actor: AccessTokenPa
     await lockAssignmentProgram(trx, data.programId, actor);
 
     const rows = await trx`
-    INSERT INTO program_cohorts (
-      program_id, cycle_id, created_by, updated_by
-    )
-    VALUES (
-      ${data.programId}, ${data.cycleId}, ${actor.userId}, ${actor.userId}
-    )
-    RETURNING
-      id,
-      program_id,
-      cycle_id,
-      (SELECT name FROM program_cycles WHERE id = ${data.cycleId}) AS name,
-      (SELECT name FROM program_cycles WHERE id = ${data.cycleId}) AS cycle_name,
-      (SELECT starts_on::text FROM program_cycles WHERE id = ${data.cycleId}) AS starts_on,
-      (SELECT ends_on::text FROM program_cycles WHERE id = ${data.cycleId}) AS ends_on,
-      (SELECT enrollment_required FROM programs WHERE id = ${data.programId}) AS enrollment_required,
-      (SELECT min_age FROM programs WHERE id = ${data.programId}) AS min_age,
-      (SELECT max_age FROM programs WHERE id = ${data.programId}) AS max_age
-  `;
-    return rows[0];
+      INSERT INTO program_cohorts (program_id, cycle_id, created_by, updated_by)
+      VALUES (${data.programId}, ${data.cycleId}, ${actor.userId}, ${actor.userId})
+      RETURNING id
+    `;
+    const [created] = await getCohortRowsByIds(trx, actor, [rows[0].id]);
+    return created;
   });
 }
 
@@ -65,7 +54,12 @@ export async function updateCohort(id: string, data: UpdateCohortInput, actor: A
       WHERE id = ${id}
       RETURNING id
     `;
-    return rows[0];
+    const [updated] = await getCohortRowsByIds(trx, actor, [rows[0].id]);
+    return {
+      cohort: updated,
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, await getCohortYouthIds(trx, [id])) : [],
+    };
   });
 }
 

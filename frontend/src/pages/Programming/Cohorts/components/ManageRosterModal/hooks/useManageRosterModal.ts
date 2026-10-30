@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { syncCohortChanges } from '../../../hooks/actions/cohortCache';
 
 import type { ConfirmAction } from '../../../../../../common/components/ConfirmModal/types';
-import { enrollYouth, withdrawYouth } from '../../../cohorts.api';
+import { enrollYouth, withdrawYouth, type RosterMutationResult } from '../../../cohorts.api';
 import type { CohortRosterYouth, ProgramCohort } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
@@ -9,10 +11,11 @@ import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 interface UseManageRosterModalOptions {
   cohort: ProgramCohort | null;
   refresh: () => Promise<void>;
-  onSuccess: () => void | Promise<void>;
+  onSuccess: (result: RosterMutationResult) => void | Promise<void>;
 }
 
 export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRosterModalOptions) {
+  const queryClient = useQueryClient();
   const { tryLock, unlock } = useSubmitLock();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [pendingYouthId, setPendingYouthId] = useState<string | null>(null);
@@ -26,9 +29,11 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
     unlock();
   }, [cohortId, unlock]);
 
-  const reconcileRoster = async (completedAction: string) => {
+  const reconcileRoster = async (completedAction: string, result: RosterMutationResult) => {
+    syncCohortChanges(queryClient, { updatedCohorts: [result.cohort], updatedYouth: result.updatedYouth, createdCohortIds: [], removedCohortIds: [] });
+
     try {
-      await Promise.all([refresh(), onSuccess()]);
+      await Promise.all([refresh(), onSuccess(result)]);
     } catch {
       setActionError(`${completedAction}, but the roster could not refresh. Reload to see the change.`);
     }
@@ -39,8 +44,9 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
 
     setPendingYouthId(profile.id);
     setActionError('');
+    let saved: RosterMutationResult;
     try {
-      await enrollYouth(cohort.id, { youthIds: [profile.id] });
+      saved = await enrollYouth(cohort.id, { youthIds: [profile.id] });
     } catch (cause) {
       setActionError(getErrorMessage(cause, 'Could not enroll youth'));
       setPendingYouthId(null);
@@ -48,7 +54,7 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
       return;
     }
 
-    await reconcileRoster(`${profile.firstName} ${profile.lastName} was enrolled`);
+    await reconcileRoster(`${profile.firstName} ${profile.lastName} was enrolled`, saved);
     setPendingYouthId(null);
     unlock();
   };
@@ -64,9 +70,9 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
       confirmVariant: 'danger',
       successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
       onConfirm: async () => {
-        await withdrawYouth(cohort.id, profile.id);
+        const saved = await withdrawYouth(cohort.id, profile.id);
 
-        await reconcileRoster(`${profile.firstName} ${profile.lastName} was withdrawn`);
+        await reconcileRoster(`${profile.firstName} ${profile.lastName} was withdrawn`, saved);
       },
     });
   };

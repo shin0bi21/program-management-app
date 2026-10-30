@@ -31,8 +31,8 @@ describe('ManageRosterModal', () => {
       }),
       makeCohortRosterYouth({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2010-01-01', age: 15, schoolName: 'Central School' }),
     ]);
-    api.enrollYouth.mockResolvedValue({});
-    api.withdrawYouth.mockResolvedValue({});
+    api.enrollYouth.mockResolvedValue({ cohort, updatedYouth: [] });
+    api.withdrawYouth.mockResolvedValue({ cohort, updatedYouth: [] });
   });
 
   it('shows all youth in one checklist and enrolls an unchecked youth', async () => {

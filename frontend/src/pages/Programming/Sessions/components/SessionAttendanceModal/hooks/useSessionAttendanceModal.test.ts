@@ -50,7 +50,7 @@ describe('useSessionAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getSessionRoster).mockResolvedValue(roster);
-    vi.mocked(setSessionAttendance).mockResolvedValue([]);
+    vi.mocked(setSessionAttendance).mockResolvedValue({ roster, session });
     vi.mocked(searchAttendanceYouth).mockResolvedValue([]);
   });
 
@@ -66,7 +66,7 @@ describe('useSessionAttendanceModal', () => {
       status: 'late',
       notes: null,
     }]);
-    expect(onSaved).toHaveBeenCalledOnce();
+    expect(onSaved).toHaveBeenCalledWith({ roster, session });
     expect(result.current.submitStatus).toBe('success');
   });
 
@@ -93,7 +93,7 @@ describe('useSessionAttendanceModal', () => {
   it('surfaces a failed attendance command and permits retry', async () => {
     vi.mocked(setSessionAttendance)
       .mockRejectedValueOnce(new Error('Attendance unavailable'))
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce({ roster, session });
     const { result } = renderWorkflow();
 
     await waitFor(() => expect(result.current.roster).toEqual(roster));

@@ -1,3 +1,4 @@
+import type { YouthAttendanceResult } from '../youthAttendance.api';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
@@ -13,7 +14,7 @@ export default function useYouthAttendance({
 }: {
   youthId: string | null;
   cohortId: string | null;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
@@ -56,7 +57,7 @@ export default function useYouthAttendance({
         })),
       );
       queryClient.setQueryData<YouthCohortAttendance>(queryKey, saved);
-      await onSaved();
+      await onSaved(saved);
       setSubmitStatus('success');
     } catch (cause) {
       setError(getErrorMessage(cause, 'Could not save youth attendance'));

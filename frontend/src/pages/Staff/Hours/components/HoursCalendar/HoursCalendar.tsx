@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
@@ -41,15 +41,15 @@ interface HoursCalendarProps {
   onDelete: (target: HoursEntryTarget) => void;
   onAdd: (target: { resourceId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
   onMove: (move: HoursEntryMove) => Promise<void>;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function HoursCalendar({
   resources, filters, canWrite, selectedStaffId,
-  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onErrorChange,
+  calendarCacheRef, isEntryPending, onStaffSelect, onEdit, onDelete, onAdd, onMove, onMessageChange,
 }: HoursCalendarProps) {
-  const loadRange = useCallback(async ({ start, end }: PeriodRange) => (
-    getHoursCalendarData(filters, { start: start.key, end: end.key })
+  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => (
+    getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal })
   ), [filters]);
   const calendar = useDataBuffer({
     load: loadRange,
@@ -57,7 +57,7 @@ export default function HoursCalendar({
     errorMessage: 'Unable to load hours data',
   });
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
-  usePageErrorReporter(onErrorChange, calendar.error, retryAction);
+  usePageMessageReporter(onMessageChange, calendar.error, retryAction);
   useEffect(() => {
     calendarCacheRef.current = {
       upsert: (resourceId, date, item) => {

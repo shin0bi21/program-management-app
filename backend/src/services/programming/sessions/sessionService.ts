@@ -2,6 +2,8 @@ import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertCanAccessCohort, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
 import { lockAssignmentProgram } from '../cohorts/assignmentService';
+import { getSessionRowsByIds } from './sessionRecordQuery';
+import { getCohortRowsByIds } from '../cohorts/cohortRecordQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionInput,
@@ -184,7 +186,7 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
       throw new ConflictError('No session dates match the selected schedule and date range');
     }
 
-    return { sessions };
+    return { sessions, updatedCohorts: await getUpdatedCohorts(trx, actor, [cohortId]) };
   });
 }
 
@@ -206,7 +208,9 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
       RETURNING id
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
-    return rows[0];
+    const [saved] = await getSessionRowsByIds(trx, actor, [id]);
+    if (!saved) throw new NotFoundError('Session not found');
+    return { session: saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [saved.cohortId]) };
   });
 }
 
@@ -263,33 +267,45 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     const timing = await sessionTiming(trx, session.startLocal, session.endLocal, schedule.timezone);
     if (!timing.future) throw new ConflictError('Session destination must be in the future');
 
-    const [updated] = await trx`
+    await trx`
       UPDATE cohort_sessions SET cohort_id = ${cohorts[0].id},
         starts_at = ${timing.startsAt}, ends_at = ${timing.endsAt},
         updated_at = NOW(), updated_by = ${actor.userId}
       WHERE id = ${id}
       RETURNING id, cohort_id, starts_at, ends_at
     `;
-    return { ...updated, cohortName: cohorts[0].name, cycleId: cohorts[0].cycleId };
+    const [saved] = await getSessionRowsByIds(trx, actor, [id]);
+    if (!saved) throw new NotFoundError('Session not found');
+    return { session: saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [session.cohortId, saved.cohortId]) };
   });
 }
 
 export async function deleteSession(id: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
-  const attendance = await sql`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
-  if (attendance.length) {
-    throw new ConflictError('Session cannot be deleted because attendance has been recorded');
-  }
-  const notes = await sql`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
-  if (notes.length) {
-    throw new ConflictError('Session cannot be deleted because session notes have been recorded');
-  }
-  const attachments = await sql`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
-  if (attachments.length) {
-    throw new ConflictError('Session cannot be deleted because attachments have been added');
-  }
-  const rows = await sql`DELETE FROM cohort_sessions WHERE id = ${id} RETURNING id`;
-  if (!rows.length) throw new NotFoundError('Session not found');
+  return sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    const [lookup] = await trx<{ cohortId: string }[]>`SELECT cohort_id FROM cohort_sessions WHERE id = ${id}`;
+    if (!lookup) throw new NotFoundError('Session not found');
+    await lockSessionAssignment(trx, lookup.cohortId, actor);
+    const [session] = await trx<{ id: string; cohortId: string }[]>`SELECT id, cohort_id FROM cohort_sessions WHERE id = ${id} FOR UPDATE`;
+    if (!session) throw new NotFoundError('Session not found');
+
+    const attendance = await trx`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
+    if (attendance.length) {
+      throw new ConflictError('Session cannot be deleted because attendance has been recorded');
+    }
+    const notes = await trx`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
+    if (notes.length) {
+      throw new ConflictError('Session cannot be deleted because session notes have been recorded');
+    }
+    const attachments = await trx`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
+    if (attachments.length) {
+      throw new ConflictError('Session cannot be deleted because attachments have been added');
+    }
+
+    await trx`DELETE FROM cohort_sessions WHERE id = ${id}`;
+    return { id, updatedCohorts: await getUpdatedCohorts(trx, actor, [session.cohortId]) };
+  });
 }
 
 export function getSessionTypes() {
@@ -362,7 +378,15 @@ async function createScheduledSession(
     )
     RETURNING id, cohort_id, session_type_id, theme, starts_at, ends_at, description
   `;
-  return session;
+  const [saved] = await getSessionRowsByIds(trx, actor, [session.id]);
+  if (!saved) throw new NotFoundError('Session not found');
+  return { ...saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [cohortId]) };
+}
+
+function getUpdatedCohorts(trx: typeof sql, actor: AccessTokenPayload, ids: string[]) {
+  return actor.permissions.includes('read:programs')
+    ? getCohortRowsByIds(trx, actor, [...new Set(ids)])
+    : undefined;
 }
 
 async function sessionTiming(trx: typeof sql, startLocal: string, endLocal: string, timezone: string) {

@@ -5,7 +5,7 @@ import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/C
 import ConfirmModal from '../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../common/components/FilterCard/FilterCard';
 import PageBody from '../../common/components/PageBody/PageBody';
-import PageErrorOverlay, { type PageErrorItem } from '../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
@@ -23,8 +23,8 @@ import './Leads.css';
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
-  const [dashboardError, setDashboardError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions } = useAuth();
@@ -113,7 +113,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           onClearAll={preferences.filters.clear}
         /> : undefined}
       />
-      <PageErrorOverlay errors={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]} />
+      <PageMessageOverlay messages={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]} />
       {!preferences.ready ? <p role="status">Loading saved lead preferences…</p> : <PageBody
         ariaLabel={viewTitle}
         table={<LeadTable
@@ -127,12 +127,12 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
           onLeadSelect={selection.selectLead}
           onSortingChange={preferences.table.setSorting}
           onColumnWidthsChange={preferences.table.setColumnWidths}
-          onErrorChange={setViewError}
+          onMessageChange={setViewError}
         />}
         dashboard={<LeadDashboard
           lead={selection.selectedLead}
           canWrite={canWrite}
-          onErrorChange={setDashboardError}
+          onMessageChange={setDashboardError}
         />}
       />}
     </main>

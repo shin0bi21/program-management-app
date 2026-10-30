@@ -35,7 +35,7 @@ function renderCalendar({
   staffIds = [] as string[],
   canWrite = true,
   selectedTaskId = null as string | null,
-  onErrorChange = vi.fn(),
+  onMessageChange = vi.fn(),
 } = {}) {
   const actions: TaskCalendarActions = {
     isTaskPending: vi.fn(() => false),
@@ -61,7 +61,7 @@ function renderCalendar({
   const callbacks = {
     onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
   };
-  render(<TaskCalendar
+  const rendered = render(<TaskCalendar
     resources={resources}
     filters={{ search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
@@ -70,9 +70,9 @@ function renderCalendar({
     actions={actions}
     calendarCacheRef={calendarCacheRef}
     {...callbacks}
-    onErrorChange={onErrorChange}
+    onMessageChange={onMessageChange}
   />);
-  return { actions, calendarCacheRef, onErrorChange, ...callbacks };
+  return { ...rendered, actions, calendarCacheRef, onMessageChange, ...callbacks };
 }
 
 describe('TaskCalendar', () => {
@@ -80,6 +80,16 @@ describe('TaskCalendar', () => {
     vi.clearAllMocks();
     calendarState.props = null;
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
+  });
+
+  it('cancels its range request when unmounted', () => {
+    const { unmount } = renderCalendar();
+    act(() => calendarState.props?.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 1)));
+    const signal = vi.mocked(getTasksCalendarData).mock.calls[0][2]?.signal;
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it('loads buffered task data and applies the staff resource filter', async () => {
@@ -90,6 +100,7 @@ describe('TaskCalendar', () => {
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       { search: '', staffIds: ['staff-1'], programIds: [], categories: [], statuses: [] },
       { start: expect.any(String), end: expect.any(String) },
+      { signal: expect.any(AbortSignal) },
     ));
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([task]));
     expect(calendarState.props?.rows).toEqual([resource]);
@@ -233,14 +244,14 @@ describe('TaskCalendar', () => {
 
   it('removes mutation callbacks in read-only mode and reports range-load errors', async () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
-    const { onErrorChange } = renderCalendar({ canWrite: false });
+    const { onMessageChange } = renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     expect(calendarState.props?.onItemResize).toBeUndefined();
     expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Task request failed',
       action: expect.objectContaining({ label: 'Retry' }),
     })));

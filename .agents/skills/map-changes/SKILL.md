@@ -9,7 +9,7 @@ Produce one read-only concern map before review or shipping. A cohesive working 
 
 This phase may run when the user explicitly requests mapping, review, shipping, or full implementation because those workflows require a current concern map. Producing the map does not by itself authorize review, fixes, shipping, or deployment.
 
-Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) for the concern and review boundaries and [`docs/workflows/shipping.md`](../../../docs/workflows/shipping.md) for the serial shipping boundary the map must support.
+Read [Review and merge changes](../../../docs/workflows/delivery/review-and-merge.md) for the concern, review, and serial shipping boundaries the map must support.
 
 Keep this workflow single-threaded. One agent must inspect the whole working tree and produce one authoritative concern map; parallel classification risks conflicting boundaries and duplicated ownership.
 
@@ -51,16 +51,11 @@ For each group record:
 
 ## 3. Order downstream work
 
-Produce the safest concern order. For each concern, the downstream loop is:
-
-1. review the concern;
-2. resolve findings and perform narrow verification;
-3. obtain explicit shipping authorization;
-4. isolate, commit, and open a pull request for the approved concern;
-5. pass required full CI and merge into `develop`;
-6. return to clean synchronized `develop`;
-7. verify the completed issue is closed and its feature branch is deleted locally and remotely, following `ship-changes`, before preparing the next concern.
-8. revalidate the remaining map before starting the next concern.
+Produce the safest concern order and dependency edges. Review and resolve findings
+for one concern at a time; enter shipping only with explicit authorization.
+The [shipping workflow](../../../docs/workflows/delivery/review-and-merge.md#shipping) owns the serial
+issue, branch, verification, merge, and cleanup procedure. Revalidate the remaining
+map after each completed concern; do not prepare multiple branches in advance.
 
 Production deployment follows only after separate explicit authorization.
 

@@ -128,7 +128,8 @@ const CI_PATHS = [
   /^\.github\/workflows\//,
   /^scripts\/tests\//,
   /^scripts\/reports\/ci-report(?:\.test)?\.ts$/,
-  /^docs\/workflows\/(ci|reports|testing)\.md$/,
+  // Historical PRs still refer to the former flat workflow paths.
+  /^docs\/workflows\/(?:delivery\/)?(ci|reports|testing)\.md$/,
   /(^|\/)package(-lock)?\.json$/,
   /(^|\/)vite\.config\.(js|ts)$/,
   /(^|\/)playwright\.config\.(js|ts)$/,

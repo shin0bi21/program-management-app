@@ -1,5 +1,6 @@
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import { USER_TABLE_KEYS, type User, type UserFilters, type UserSortKey } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -14,21 +15,22 @@ interface UserTableProps {
   columnWidths: Record<string, number>;
   onSortingChange: (sorting: ListSort<UserSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function UserTable(props: UserTableProps) {
   const tableData = useUserTableData(props.queryKey, props.filters, props.sorting);
   const hasFilters = Boolean(props.filters?.search || props.filters?.roles?.length || props.filters?.statuses?.length);
-  usePageErrorReporter(props.onErrorChange, tableData.error, { label: 'Retry', onClick: tableData.retry });
+  usePageMessageReporter(props.onMessageChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry }, tableRefreshMessage(tableData.refreshNotice));
   return <Table
+    enableColumnResizing
     ariaLabel="Accounts"
     columns={props.columns}
     hiddenColumnKeys={props.hiddenColumnKeys}
     data={tableData.rows}
     loading={tableData.loading}
     refreshing={tableData.refreshing}
-    unavailable={tableData.error ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
+    unavailable={tableData.error && !tableData.rows.length ? { title: 'Accounts unavailable', onRetry: tableData.retry } : undefined}
     emptyMessage={hasFilters ? 'No accounts match these filters' : 'No accounts found'}
     keyExtractor={account => account.id}
     sorting={props.sorting}
@@ -38,6 +40,7 @@ export default function UserTable(props: UserTableProps) {
     onColumnWidthsChange={props.onColumnWidthsChange}
     hasNextPage={tableData.hasNextPage}
     loadingNextPage={tableData.loadingNextPage}
+    nextPageUnavailable={tableData.nextPageError ? { onRetry: tableData.retryNextPage } : undefined}
     onLoadNextPage={tableData.loadNextPage}
   />;
 }

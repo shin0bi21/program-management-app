@@ -9,9 +9,9 @@ Evolve CI without weakening the merge gate or confusing local and remote test ow
 
 ## 1. Establish the execution path
 
-1. Read [`docs/workflows/ci.md`](../../../docs/workflows/ci.md) completely. It owns CI architecture, operations, gates, routing, performance, and failure handling.
+1. Read [`docs/workflows/delivery/ci.md`](../../../docs/workflows/delivery/ci.md) completely. It owns CI architecture, operations, gates, routing, performance, and failure handling.
 2. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
-3. Read `docs/workflows/testing.md` when changing test ownership or runner composition. Read `docs/workflows/local-development.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/workflows/deployment.md` for any push-to-main or production path.
+3. Read `docs/workflows/delivery/testing.md` when changing test ownership or runner composition. Read `docs/workflows/local-development/README.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/workflows/delivery/deployment.md` for any push-to-main or production path.
 4. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
 
 Treat workflow files as orchestration, repository scripts as stable developer/CI entry points, and package scripts as framework-level commands.
@@ -53,6 +53,6 @@ Do not claim a durable improvement from a tiny sample. Record a dated baseline i
 2. Verify workflow dependencies, conditions, path classification, concurrency groups, cache keys, timeouts, permissions, and required-check names.
 3. Run `bash -n` and `shellcheck` for changed shell scripts when available.
 4. Run the narrow affected runner and `bash scripts/tests/test-static.sh` when the change affects executable test or static-analysis behavior.
-5. Review the final workflow graph against `docs/workflows/ci.md` and update that document in the same concern when architecture, ownership, or operation changes.
+5. Review the final workflow graph against `docs/workflows/delivery/ci.md` and update that document in the same concern when architecture, ownership, or operation changes.
 
 Report checks run, unverified GitHub-only behavior, expected wall-time effect, expected runner-minute effect, and any required-check or branch-protection follow-up.

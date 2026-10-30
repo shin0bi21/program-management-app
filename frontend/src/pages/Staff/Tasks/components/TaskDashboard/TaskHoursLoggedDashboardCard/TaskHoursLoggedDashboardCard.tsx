@@ -16,17 +16,18 @@ export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
   return <>
     <article className="dashboard-card dashboard-card--short task-hours-breakdown-card">
       <h2 className="task-hours-breakdown__accessible-title">Hours Logged</h2>
-      {task ? <>
-        <div className="dashboard-card__compact-layout task-hours-breakdown__layout">
+      <div className="dashboard-card__compact-layout task-hours-breakdown__layout">
+        <div className="task-hours-breakdown__data">
           <dl className="task-hours-breakdown__summary">
-            <div><dt>Logged</dt><dd>{formatHours(task.hoursLogged)}</dd></div>
+            <div><dt>Logged</dt><dd>{task ? formatHours(task.hoursLogged) : '—'}</dd></div>
           </dl>
-          <div className="dashboard-card__compact-action task-hours-breakdown__actions">
-            {onLogHours && <Button size="sm" onClick={onLogHours}>Log Hours</Button>}
-            <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setOpenTaskId(task.id)}>See Breakdown</Button>
-          </div>
+          {!task && <p className="task-hours-breakdown__empty">Click a task to view its logged hours.</p>}
         </div>
-      </> : <p className="task-hours-breakdown__empty">Click a task to view its logged hours.</p>}
+        <div className="dashboard-card__compact-action task-hours-breakdown__actions">
+          {onLogHours && <Button size="sm" disabled={!task} onClick={onLogHours}>Log Hours</Button>}
+          <Button size="sm" variant="secondary" aria-haspopup="dialog" disabled={!task} onClick={() => task && setOpenTaskId(task.id)}>See Breakdown</Button>
+        </div>
+      </div>
     </article>
     <Modal isOpen={Boolean(task) && openTaskId === task?.id} onClose={() => setOpenTaskId(null)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
       {task && <dl className="task-hours-breakdown__details">

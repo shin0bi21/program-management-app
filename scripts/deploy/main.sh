@@ -17,17 +17,17 @@ unset deploy_part
 
 main() {
   parse_arguments "$@"
+  if [ "$PREVIEW_ONLY" = true ]; then
+    preview_deployment
+    return
+  fi
+
   initialize_process
   synchronize_repository "$@"
   load_environment
   load_revision_state
   classify_changes
-  print_deployment_plan
-
-  if [ "$PLAN_ONLY" = true ]; then
-    echo "Plan only; no images, containers, database state, or revision markers changed."
-    return
-  fi
+  print_deployment_summary
 
   if [ "$INFRASTRUCTURE_CHANGED" = true ]; then
     deploy_infrastructure

@@ -16,11 +16,10 @@ describe('TableBody', () => {
       keyExtractor={() => ''}
       tabbableIndex={0}
       onNavigate={vi.fn()}
-      columnWidths={{}}
     /></table>);
 
-    const loadingCell = screen.getByRole('cell', { name: 'Loading...' });
+    const loadingCell = screen.getByRole('status', { name: 'Loading rows' }).closest('td');
     expect(loadingCell).toHaveAttribute('colspan', '3');
-    expect(loadingCell.closest('tr')).toHaveClass('table-loading-row');
+    expect(loadingCell?.closest('tr')).toHaveClass('table-loading-row');
   });
 });

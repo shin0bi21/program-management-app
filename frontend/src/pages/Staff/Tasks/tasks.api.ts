@@ -1,7 +1,7 @@
 import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import type { CursorPage, CursorRequest } from '../../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
 import type { Task, TaskCategory, TaskStatus, TasksFilters } from './types';
 
 export interface SetTaskInput {
@@ -22,7 +22,7 @@ interface TaskPlacementInput {
 
 export function getTasksTableData(filters: TasksFilters, opts: RequestOptions | undefined, pagination: CursorRequest) {
   const params = new URLSearchParams({
-    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? 25),
+    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyTaskFilters(params, filters);

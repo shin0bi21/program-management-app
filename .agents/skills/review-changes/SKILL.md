@@ -7,7 +7,7 @@ description: Review tracked and untracked repository changes for correctness, re
 
 Review the current working tree without creating issues, branches, commits, pull requests, merges, or remote changes. Keep review repeatable so findings can be fixed and reviewed again before shipping.
 
-Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely. Follow [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) for test ownership, focused runner selection, and evidence reuse.
+Read the [review and merge guide](../../../docs/workflows/delivery/review-and-merge.md#review) completely. Follow [`docs/workflows/delivery/testing.md`](../../../docs/workflows/delivery/testing.md) for test ownership, focused runner selection, and evidence reuse.
 
 ## 1. Establish scope
 
@@ -16,7 +16,7 @@ Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) completely.
 3. Regenerate `node scripts/agents/snapshot-changes.ts --json` and compare its fingerprint and changed paths with the mapped snapshot. Inspect raw Git state only when resolving a mismatch or ambiguity. Update the map before deep review when the concern boundaries no longer hold.
 4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
 5. Identify affected features, ownership layers, and execution paths.
-6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development.md` and verify required refresh or migration steps.
+6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development/README.md` and verify required refresh or migration steps.
 7. Reuse and refine the selected concern's acceptance ledger. Mark every item implemented, intentionally deferred, contradicted, or unverified.
 8. Reuse deterministic checks and focused test evidence when they cover the exact unchanged concern diff. Run only missing checks once for the current review state, not once per reference or sub-area.
 
@@ -38,7 +38,7 @@ Keep the primary reviewer on the strongest available model and reasoning tier. U
 
 ## 2. Load owning documentation
 
-Use the repository docs as the review contract. Read [`docs/workflows/review.md`](../../../docs/workflows/review.md) and [`docs/workflows/testing.md`](../../../docs/workflows/testing.md) as directed above, then the focused owner guides for the changed surfaces:
+Use the repository docs as the review contract. Read the [review and merge guide](../../../docs/workflows/delivery/review-and-merge.md#review) and [`docs/workflows/delivery/testing.md`](../../../docs/workflows/delivery/testing.md) as directed above, then the focused owner guides for the changed surfaces:
 
 - For frontend changes, start at [`docs/frontend/README.md`](../../../docs/frontend/README.md). Follow its links for ownership, components, state, rendering, and affected page or component surfaces.
 - For backend changes, start at [`docs/backend/README.md`](../../../docs/backend/README.md). Read the applicable middleware, service, policy, database, testing, error, auth, API, or integration guides.

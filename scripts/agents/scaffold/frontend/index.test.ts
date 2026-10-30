@@ -57,9 +57,9 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.equal(files.length, 4);
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/components')), false);
   assert.match(read(files[0]), /import useScaffoldPageData from '\.\/hooks\/data\/useScaffoldPageData'/);
-  assert.match(read(files[0]), /import PageErrorOverlay from/);
+  assert.match(read(files[0]), /import PageMessageOverlay from/);
   assertOrdered(read(files[0]), ['Permissions and application services', 'useScaffoldPageData();', 'Saved preferences']);
-  assertOrdered(read(files[0]), ['<PageHeader', '<PageErrorOverlay errors={pageErrors}', '<PageBody']);
+  assertOrdered(read(files[0]), ['<PageHeader', '<PageMessageOverlay messages={pageMessages}', '<PageBody']);
   assert.match(read(files[2]), /export default function useScaffoldPageData/);
   assert.match(read(files[3]), /describe\('useScaffoldPageData'/);
   assert.match(read(files[0]), /Permissions and application services/);
@@ -111,6 +111,8 @@ test('creates focused table, calendar, and dashboard owners under page component
   assert.match(read(tableFiles[3]), /filters, sorting, page size, cursor, and AbortSignal/);
   assert.match(read(calendarFiles[1]), /TimelineCalendar tests retain generic/);
   assert.match(read(dashboardFiles[1]), /Cards own private queries/);
+  assert.match(read(dashboardFiles[0]), /return \(\s*<>/);
+  assert.doesNotMatch(read(dashboardFiles[0]), /<section|<div/);
   [...tableFiles, ...calendarFiles, ...dashboardFiles].forEach(assertParses);
 });
 

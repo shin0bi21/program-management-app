@@ -30,6 +30,12 @@ export const cohortQuerySchema = z.object({
   }),
 });
 
+export const cycleListQuerySchema = z.object({
+  query: z.object({ ...cursorListFields(['name', 'startsOn'], 'startsOn', 'desc') }),
+});
+
+export type CycleListQuery = z.infer<typeof cycleListQuerySchema.shape.query>;
+
 export const createCohortSchema = z.object({
   body: z.object({
     programId: z.string().uuid('Invalid program ID'),

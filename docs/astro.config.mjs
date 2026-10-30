@@ -11,6 +11,28 @@ const manifest = await prepareContent({ gitRef });
 
 export default defineConfig({
   output: 'static',
+  redirects: {
+    '/workflows/': '/#documentation',
+    '/frontend/pages/message-overlays/': '/frontend/components/message-overlays/',
+    '/frontend/scaffolding/': '/frontend/pages/scaffolding/',
+    '/website/': '/workflows/local-development/',
+    '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',
+    '/backend/policies/': '/backend/authorization/',
+    '/backend/reports/': '/backend/services/#render-reports',
+    '/workflows/review/': '/workflows/delivery/review-and-merge/#review',
+    '/workflows/shipping/': '/workflows/delivery/review-and-merge/#shipping',
+    '/workflows/github-credentials/': '/workflows/production/github-authentication/#server-github-access',
+    '/workflows/setup/': '/workflows/local-development/setup/',
+    '/workflows/debugging/': '/workflows/local-development/debugging/',
+    '/workflows/data-snapshots/': '/workflows/delivery/refresh-data/',
+    '/workflows/local-development/refresh-data/': '/workflows/delivery/refresh-data/',
+    '/workflows/testing/': '/workflows/delivery/testing/',
+    '/workflows/changes/': '/workflows/delivery/review-and-merge/',
+    '/workflows/ci/': '/workflows/delivery/ci/',
+    '/workflows/reports/': '/workflows/delivery/reports/',
+    '/workflows/deployment/': '/workflows/delivery/deployment/',
+    '/workflows/access/': '/workflows/production/access/',
+  },
   markdown: {
     processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),
   },
@@ -19,7 +41,7 @@ export default defineConfig({
       name: 'canonical-documentation-reload',
       hooks: {
         'astro:server:setup': ({ server, logger }) => {
-          const sources = ['../README.md', './README.md', './backend/', './frontend/', './workflows/']
+          const sources = ['../README.md', './backend/', './frontend/', './workflows/']
             .map(path => fileURLToPath(new URL(path, import.meta.url)));
           server.watcher.add(sources);
           let refresh = Promise.resolve();
@@ -43,11 +65,7 @@ export default defineConfig({
       title: 'Be Original · Developer Docs',
       description: 'Architecture, development guides, and operational runbooks for Be Original.',
       customCss: ['./src/styles/custom.css'],
-      sidebar: [
-        { label: 'Overview', slug: '' },
-        { label: 'Docs Website', slug: 'website' },
-        ...manifest.sidebar,
-      ],
+      sidebar: manifest.sidebar,
     }),
   ],
 });

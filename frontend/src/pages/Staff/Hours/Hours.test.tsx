@@ -9,7 +9,6 @@ import {
   getHoursTableData,
   getHoursReferenceData,
   getHoursCalendarData,
-  setHours,
 } from './hours.api';
 import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
@@ -317,6 +316,7 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
       expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }), expect.anything(),
+      { signal: expect.any(AbortSignal) },
     ));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
@@ -337,7 +337,7 @@ describe('Hours', () => {
     }, {
       start: expect.any(String),
       end: expect.any(String),
-    }));
+    }, { signal: expect.any(AbortSignal) }));
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
   });
@@ -347,6 +347,7 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledWith(
       { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
+      { signal: expect.any(AbortSignal) },
     ));
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
@@ -357,6 +358,7 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
       { dateRange: { start: '2026-07-01', end: '2026-09-01' }, staffIds: [], categories: [], programIds: ['program-1'], types: [], cycleIds: ['cycle-1'], search: '' },
       { start: expect.any(String), end: expect.any(String) },
+      { signal: expect.any(AbortSignal) },
     ));
   });
 
@@ -458,13 +460,6 @@ describe('Hours', () => {
 
   // Commands and dialogs.
   it('bridges the page Add action to the shared entry modal', async () => {
-    const workDate = dayKey(new Date());
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-new', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', categoryLabel: 'Planning / Prep', taskId: null, taskTitle: null, sessionId: null,
-      sessionLabel: null, workDate, hours: 1, note: 'Route bridge',
-    });
     renderHours();
     await screen.findAllByLabelText('Zoe Wilson');
 
@@ -498,12 +493,6 @@ describe('Hours', () => {
     vi.mocked(setPreference).mockImplementation((_key, value) => new Promise(resolve => {
       finishSave = () => resolve(value);
     }));
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'meeting', categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null,
-      sessionLabel: null, workDate: '2026-08-09', hours: 2, note: 'Planning meeting',
-    });
     renderHours();
 
     fireEvent.click(await screen.findByRole('button', {

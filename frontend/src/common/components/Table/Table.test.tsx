@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import Table from './Table';
@@ -15,6 +14,37 @@ const columns: TableColumnDef<Row>[] = [
 ];
 
 describe('Table', () => {
+  it('keeps loaded rows with an explicit load-more recovery action', () => {
+    const retry = vi.fn();
+    render(<Table ariaLabel="Accounts" columns={columns} data={[{ id: 'one', name: 'Avery' }]}
+      keyExtractor={row => row.id} nextPageUnavailable={{ onRetry: retry }} />);
+
+    expect(screen.getByText('Avery')).toBeInTheDocument();
+    expect(screen.getByText('More rows unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('skips unchanged cells during selection and query-state changes', () => {
+    const cell = vi.fn(({ row }: { row: { original: Row } }) => row.original.name);
+    const stableColumns: TableColumnDef<Row>[] = [{ id: 'name', header: 'Name', cell }];
+    const data = [{ id: 'one', name: 'Avery' }, { id: 'two', name: 'Blair' }, { id: 'three', name: 'Casey' }];
+    const select = vi.fn();
+    const keyExtractor = (row: Row) => row.id;
+    const { rerender } = render(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="one" />);
+    cell.mockClear();
+
+    rerender(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="two" loadingNextPage />);
+    expect(cell.mock.calls.map(([{ row }]) => row.original.id)).toEqual(['one', 'two']);
+    cell.mockClear();
+
+    rerender(<Table ariaLabel="Accounts" columns={stableColumns} data={data}
+      keyExtractor={keyExtractor} onRowSelect={select} selectedKey="two" refreshing />);
+    expect(cell).not.toHaveBeenCalled();
+  });
+
   it('emits controlled backend sorting from sortable headers', () => {
     const onSortingChange = vi.fn();
     const sortableColumns: TableColumnDef<Row>[] = [
@@ -27,170 +57,93 @@ describe('Table', () => {
     expect(onSortingChange).toHaveBeenCalledWith({ key: 'name', direction: 'desc' });
   });
 
-  it('omits hidden data columns but keeps fixed action columns available', () => {
-    render(<Table
-      ariaLabel="Accounts"
-      columns={[
+  it('updates visible body cells when hiding columns, while keeping actions available', () => {
+    const props = {
+      ariaLabel: 'Accounts',
+      columns: [
         ...columns,
         { id: 'actions', header: '', cell: () => 'Actions', size: 40, enableResizing: false, enableHiding: false },
-      ]}
-      data={[{ id: 'one', name: 'Avery' }]}
-      keyExtractor={row => row.id}
-      hiddenColumnKeys={['status', 'actions']}
-    />);
+      ] satisfies TableColumnDef<Row>[],
+      data: [{ id: 'one', name: 'Avery' }],
+      keyExtractor: (row: Row) => row.id,
+    };
+    const { rerender } = render(<Table {...props} />);
+    expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument();
+
+    rerender(<Table {...props} hiddenColumnKeys={['status', 'actions']} />);
 
     expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Active' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('columnheader')[1]).toHaveAttribute('data-column-id', 'actions');
     expect(screen.getByText('Actions').closest('td')).toHaveAttribute('data-column-id', 'actions');
   });
 
-  it('resizes data columns by keyboard while leaving action columns fixed', () => {
-    const onColumnWidthsChange = vi.fn();
-    const resizableColumns: TableColumnDef<Row>[] = [
-      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
-      { id: 'actions', header: '', cell: () => null, size: 40, enableResizing: false, enableHiding: false },
-    ];
-    render(<Table
-      ariaLabel="Accounts"
-      columns={resizableColumns}
-      data={[]}
-      keyExtractor={row => row.id}
-      columnWidths={{ name: 150 }}
-      onColumnWidthsChange={onColumnWidthsChange}
-    />);
+  it.each([undefined, false, true])('requires table opt-in and a callback to resize (opt-in: %s)', enabled => {
+    const onColumnWidthsChange = enabled === true ? undefined : vi.fn();
+    render(<Table ariaLabel="Accounts" columns={columns} data={[]} keyExtractor={row => row.id}
+      enableColumnResizing={enabled} columnWidths={{ name: 180 }} onColumnWidthsChange={onColumnWidthsChange} />);
 
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Name column' }), { key: 'ArrowRight' });
-    expect(onColumnWidthsChange).toHaveBeenCalledWith({ name: 160 });
-    expect(screen.queryByRole('button', { name: 'Resize  column' })).not.toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Accounts' })).toHaveStyle({ width: '100%', minWidth: '190px' });
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toHaveStyle({ width: '150px' });
-    expect(screen.getAllByRole('columnheader')[1]).toHaveStyle({ width: '40px' });
-    const tracks = screen.getByRole('table', { name: 'Accounts' }).querySelectorAll('col');
-    expect(tracks[0]).toHaveStyle({ width: '150px' });
-    expect(tracks[1]).toHaveStyle({ width: '40px' });
+    expect(screen.queryByRole('button', { name: /Resize .* column/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('table').querySelector('col')).toHaveStyle({ width: '180px' });
   });
 
-  it('locks sibling pixel widths while the active column grows from its right edge', () => {
-    const onWidthsChange = vi.fn();
-    const resizeColumns: TableColumnDef<Row>[] = [
-      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
-      { id: 'status', header: 'Status', cell: () => 'Active' },
-      { id: 'actions', header: '', cell: () => null, size: 40, enableResizing: false, enableHiding: false },
-    ];
+  it('keeps fixed columns disabled and cancels an active drag when table resizing is turned off', () => {
+    const onColumnWidthsChange = vi.fn();
+    const props = {
+      ariaLabel: 'Accounts', data: [], keyExtractor: (row: Row) => row.id, onColumnWidthsChange,
+      columns: [...columns, { id: 'actions', header: '', enableResizing: false }] satisfies TableColumnDef<Row>[],
+    };
+    const { rerender, container } = render(<Table {...props} enableColumnResizing />);
+    expect(screen.queryByRole('button', { name: 'Resize  column' })).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Name column' }), { clientX: 150 });
+    fireEvent.mouseMove(document, { clientX: 180 });
+    expect(container.querySelector('.table-resize-guide')).toBeInTheDocument();
 
-    function ControlledTable() {
-      const [widths, setWidths] = useState({ name: 150, status: 150 });
-      return (
-        <Table
-          ariaLabel="Accounts"
-          columns={resizeColumns}
-          data={[]}
-          keyExtractor={row => row.id}
-          columnWidths={widths}
-          onColumnWidthsChange={next => {
-            onWidthsChange(next);
-            setWidths(next as typeof widths);
-          }}
-        />
-      );
-    }
+    rerender(<Table {...props} enableColumnResizing={false} />);
+    fireEvent.mouseUp(document, { clientX: 180 });
 
-    render(<ControlledTable />);
-    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
-    const statusHeader = screen.getByRole('columnheader', { name: 'Status' });
-    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 320 } as DOMRect);
-    vi.spyOn(statusHeader, 'getBoundingClientRect').mockReturnValue({ width: 280 } as DOMRect);
+    expect(onColumnWidthsChange).not.toHaveBeenCalled();
+    expect(container.querySelector('.table-resize-guide')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Resize .* column/ })).not.toBeInTheDocument();
+  });
+
+  it('captures visible widths and preserves hidden preferences in one release callback', () => {
+    const onColumnWidthsChange = vi.fn();
+    render(<Table ariaLabel="Accounts" columns={[
+      ...columns,
+      { id: 'hidden', header: 'Hidden', cell: () => null },
+      { id: 'actions', header: '', size: 40, enableResizing: false, cell: () => null },
+    ]} data={[]} keyExtractor={row => row.id} hiddenColumnKeys={['hidden']}
+      columnWidths={{ name: 150, status: 150, hidden: 240 }} enableColumnResizing onColumnWidthsChange={onColumnWidthsChange} />);
+    const headers = screen.getAllByRole('columnheader');
+    vi.spyOn(headers[0], 'getBoundingClientRect').mockReturnValue({ left: 0, width: 320.25 } as DOMRect);
+    vi.spyOn(headers[1], 'getBoundingClientRect').mockReturnValue({ left: 320.25, width: 280.5 } as DOMRect);
 
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Status column' }), { clientX: 600 });
     fireEvent.mouseMove(document, { clientX: 650 });
-    fireEvent.mouseUp(document);
+    expect(onColumnWidthsChange).not.toHaveBeenCalled();
+    fireEvent.mouseUp(document, { clientX: 650 });
 
-    expect(onWidthsChange).toHaveBeenNthCalledWith(1, { name: 320, status: 280 });
-    expect(onWidthsChange).toHaveBeenLastCalledWith({ name: 320, status: 330 });
-    expect(nameHeader).toHaveStyle({ width: '320px' });
-    expect(statusHeader).toHaveStyle({ width: '330px' });
-    expect(screen.getAllByRole('columnheader')[2]).toHaveStyle({ width: '40px' });
+    expect(onColumnWidthsChange).toHaveBeenCalledExactlyOnceWith({ name: 320.25, status: 330.5, hidden: 240 });
   });
 
-  it('preserves captured sibling widths during keyboard resizing', () => {
+  it('does not rerender cells across three loaded pages during a drag', () => {
+    const cell = vi.fn(({ row }: { row: { original: Row } }) => row.original.name);
+    const data = Array.from({ length: 150 }, (_, index) => ({ id: String(index), name: `Row ${index}` }));
     const onColumnWidthsChange = vi.fn();
-    render(<Table
-      ariaLabel="Accounts"
-      columns={columns}
-      data={[]}
-      keyExtractor={row => row.id}
-      columnWidths={{ name: 150, status: 150 }}
-      onColumnWidthsChange={onColumnWidthsChange}
-    />);
-    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
-    const statusHeader = screen.getByRole('columnheader', { name: 'Status' });
-    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 320 } as DOMRect);
-    vi.spyOn(statusHeader, 'getBoundingClientRect').mockReturnValue({ width: 280 } as DOMRect);
-
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Status column' }), { key: 'ArrowRight' });
-
-    expect(onColumnWidthsChange).toHaveBeenNthCalledWith(1, { name: 320, status: 280 });
-    expect(onColumnWidthsChange).toHaveBeenLastCalledWith({ name: 320, status: 290 });
-  });
-
-  it('preserves hidden column widths while a visible column is resized', () => {
-    const onWidthsChange = vi.fn();
-
-    function ControlledTable() {
-      const [widths, setWidths] = useState({ name: 150, status: 240 });
-      const [hiddenColumnKeys, setHiddenColumnKeys] = useState(['status']);
-
-      return <>
-        <button type="button" onClick={() => setHiddenColumnKeys([])}>Show status</button>
-        <Table
-          ariaLabel="Accounts"
-          columns={columns}
-          data={[]}
-          keyExtractor={row => row.id}
-          hiddenColumnKeys={hiddenColumnKeys}
-          columnWidths={widths}
-          onColumnWidthsChange={next => {
-            onWidthsChange(next);
-            setWidths(next as typeof widths);
-          }}
-        />
-      </>;
-    }
-
-    render(<ControlledTable />);
-    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
-    vi.spyOn(nameHeader, 'getBoundingClientRect').mockReturnValue({ width: 150 } as DOMRect);
+    render(<Table ariaLabel="Accounts" columns={[{ id: 'name', header: 'Name', cell }]}
+      data={data} keyExtractor={row => row.id} columnWidths={{ name: 150 }}
+      enableColumnResizing onColumnWidthsChange={onColumnWidthsChange} />);
+    expect(cell).toHaveBeenCalledTimes(150);
+    cell.mockClear();
 
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Name column' }), { clientX: 150 });
-    fireEvent.mouseMove(document, { clientX: 170 });
-    fireEvent.mouseUp(document);
+    for (let clientX = 160; clientX <= 250; clientX += 10) fireEvent.mouseMove(document, { clientX });
 
-    expect(onWidthsChange).toHaveBeenLastCalledWith({ name: 170, status: 240 });
-    fireEvent.click(screen.getByRole('button', { name: 'Show status' }));
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveStyle({ width: '240px' });
-  });
-
-  it('clamps transient drag widths before exposing them to preference persistence', () => {
-    const onColumnWidthsChange = vi.fn();
-    const dragColumns: TableColumnDef<Row>[] = [
-      { id: 'name', header: 'Name', cell: ({ row: { original: row } }) => row.name },
-    ];
-    render(<Table
-      ariaLabel="Accounts"
-      columns={dragColumns}
-      data={[]}
-      keyExtractor={row => row.id}
-      columnWidths={{ name: 150 }}
-      onColumnWidthsChange={onColumnWidthsChange}
-    />);
-
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize Name column' }), { clientX: 150 });
-    fireEvent.mouseMove(document, { clientX: 0 });
-    fireEvent.mouseUp(document);
-
-    expect(onColumnWidthsChange).toHaveBeenCalled();
-    expect(onColumnWidthsChange.mock.calls.every(([widths]) => widths.name >= 100)).toBe(true);
+    expect(cell).not.toHaveBeenCalled();
+    expect(onColumnWidthsChange).not.toHaveBeenCalled();
+    fireEvent.mouseUp(document, { clientX: 250 });
+    expect(onColumnWidthsChange).toHaveBeenCalledExactlyOnceWith({ name: 250 });
   });
 
   it('keeps the header and renders a full-width row when data is empty', () => {
@@ -214,7 +167,7 @@ describe('Table', () => {
 
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Loading...' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading rows' })).toBeInTheDocument();
   });
 
   it('keeps the header and renders the shared unavailable state with retry', () => {
@@ -263,7 +216,7 @@ describe('Table', () => {
     expect(existingRow).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Updating rows' })).toBeInTheDocument();
     expect(existingRow.closest('tbody')).toHaveAttribute('inert');
-    expect(screen.queryByRole('cell', { name: 'Loading...' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading rows' })).not.toBeInTheDocument();
   });
 
   it('supports mouse and keyboard row selection', () => {

@@ -24,7 +24,7 @@ describe('EditSessionModal', () => {
   });
 
   it('renders session fields and submits edits with success feedback', async () => {
-    vi.mocked(updateSession).mockResolvedValue(session);
+    vi.mocked(updateSession).mockResolvedValue({ session });
     const onUpdated = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderWithQueryClient(

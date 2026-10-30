@@ -4,16 +4,19 @@ A full-stack platform for outreach, youth profiles, programming, attendance, sta
 
 ## Documentation
 
-Start with the guide for the area you are changing. Directory READMEs route readers to
-focused guides; those guides own the patterns and examples.
-
-Lead with the task, useful structure, or decision. Keep each rule in one place and link to
-it elsewhere. Prefer a short example or table over repeated explanation; keep implementation
-details in source unless they explain a constraint the reader needs to act on.
+Choose the category that matches your task. Each overview links to focused guides.
 
 | Area | Start here |
 |---|---|
-| Frontend application | [Frontend](docs/frontend/README.md) |
-| Backend API and database | [Backend](docs/backend/README.md) |
-| Setup, testing, CI, review, and deployment | [Workflows](docs/workflows/README.md) |
-| Repository-wide agent rules | [AGENTS.md](AGENTS.md) |
+| Install tools, set up and run the local stack, or debug | [Local Development](docs/workflows/local-development/tools.md) |
+| Build frontend pages, components, and state | [Frontend](docs/frontend/README.md) |
+| Change backend APIs, services, permissions, and database behavior | [Backend](docs/backend/README.md) |
+| Refresh local data, test, review, merge, deploy, or inspect CI and reports | [Workflows](docs/workflows/delivery/README.md) |
+| Manually access the server or deploy an authorized release | [Admin](docs/workflows/admin/manual-deployment.md) |
+| Configure production access or recover a failed service | [Production](docs/workflows/production/README.md) |
+| Follow repository-wide agent instructions | [AGENTS.md](AGENTS.md) |
+
+Keep each rule in its focused guide and link to it elsewhere. Use focused checks
+while implementing and required GitHub checks to merge into `develop`. Review,
+shipping, and production deployment have separate handoff boundaries;
+deployment requires explicit authorization.

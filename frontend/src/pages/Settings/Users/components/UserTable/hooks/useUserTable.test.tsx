@@ -43,6 +43,7 @@ describe('useUserTable', () => {
 
   it.each([
     ['active administrator', account, true, ['edit', 'deactivate']],
+    ['active project manager', { ...account, role: 'project_manager' as const }, true, ['edit', 'deactivate']],
     ['invited staff member', { ...account, role: 'staff' as const, status: 'invited' as const }, true, ['edit', 'revoke']],
     ['inactive youth', { ...account, role: 'youth' as const, status: 'inactive' as const }, true, ['activate']],
     ['active staff for a non-admin viewer', { ...account, role: 'staff' as const }, false, ['deactivate']],

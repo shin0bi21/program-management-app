@@ -19,7 +19,7 @@ describe('useCohortActions', () => {
     const onCohortRemoved = vi.fn();
     api.deleteCohort.mockResolvedValue(undefined);
     const { result } = renderHook(
-      () => useCohortActions({ tableQueryKey: ['cohorts', 'table'], onCohortRemoved }),
+      () => useCohortActions({ tableQueryKey: ['cohorts', 'table'], onCohortRemoved, onCohortSynced: vi.fn() }),
       { wrapper: createQueryClientWrapper(queryClient) },
     );
 
@@ -33,21 +33,24 @@ describe('useCohortActions', () => {
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['cohorts', 'options'] });
   });
 
-  it('refreshes the cohort table, options, and youth queries for roster changes', async () => {
+  it('replaces authoritative edited rows without invalidating the table', async () => {
     const queryClient = createTestQueryClient();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue();
+    const onCohortSynced = vi.fn();
     const { result } = renderHook(
-      () => useCohortActions({ tableQueryKey: ['cohorts', 'table'], onCohortRemoved: vi.fn() }),
+      () => useCohortActions({ tableQueryKey: ['cohorts', 'table'], onCohortRemoved: vi.fn(), onCohortSynced }),
       { wrapper: createQueryClientWrapper(queryClient) },
     );
+    const cohort = { id: 'cohort-1', enrolledCount: 6 } as ProgramCohort;
+    const old = { ...cohort, enrolledCount: 5 };
+    queryClient.setQueryData(['cohorts', 'table', 'filtered'], { pages: [{ rows: [old], nextCursor: null }], pageParams: [null] });
 
-    await act(() => result.current.refreshRoster());
+    act(() => result.current.syncCohort({ cohort, updatedYouth: [] }));
 
-    expect(invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(expect.arrayContaining([
-      ['cohorts', 'table'],
-      ['cohorts', 'options'],
-      ['youth'],
-    ]));
-    expect(invalidateQueries).toHaveBeenCalledTimes(3);
+    expect(onCohortSynced).toHaveBeenCalledWith(cohort);
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['cohorts', 'options'] });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: ['cohorts', 'table'] });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: ['youth'] });
+    expect(queryClient.getQueryData(['cohorts', 'table', 'filtered'])).toEqual({ pages: [{ rows: [cohort], nextCursor: null }], pageParams: [null] });
   });
 });

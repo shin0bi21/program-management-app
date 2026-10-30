@@ -7,7 +7,7 @@ for (const width of [1280, 390]) {
 
     for (const { story, height } of [
       { story: 'DashboardCard/LoadingAndOverflow', height: '125px' },
-      { story: 'ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
+      { story: 'pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
       { story: 'HoursDashboardCard/HoursSummary', height: '75px' },
     ]) {
       test(`${story} retains the standard height while loading`, async ({ page, mount }) => {
@@ -41,10 +41,45 @@ for (const width of [1280, 390]) {
       expect(await heading.boundingBox()).toEqual(originalHeader);
     });
 
+    for (const { story, dataClass } of [
+      { story: 'HoursDashboardCard/HoursSummary', dataClass: '.hours-overview-card__data' },
+      { story: 'TaskOverviewDashboardCard/TaskSummary', dataClass: '.task-overview-card__data' },
+      { story: 'TaskHoursLoggedDashboardCard/LoggedHours', dataClass: '.task-hours-breakdown__data' },
+    ]) {
+      test(`${story} scrolls data while its actions stay fixed`, async ({ mount }) => {
+        const component = await mount(story);
+        const card = component.locator('.dashboard-card');
+        const data = component.locator(dataClass);
+        const actions = component.locator('.dashboard-card__compact-action');
+        const actionBox = await actions.boundingBox();
+        const cardBox = await card.boundingBox();
+
+        await expect(card).toHaveCSS('height', '75px');
+        await expect(card).toHaveCSS('padding', '16px');
+        await expect(data).toHaveCSS('overflow-y', 'auto');
+        expect(actionBox!.y).toBeGreaterThanOrEqual(cardBox!.y + 16);
+        expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height - 16);
+        if (width === 390) {
+          expect(await data.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+          await data.evaluate(element => { element.scrollTop = element.scrollHeight; });
+          expect(await data.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+        }
+        expect(await actions.boundingBox()).toEqual(actionBox);
+        for (const button of await actions.getByRole('button').all()) {
+          if (await button.isEnabled()) {
+            await button.click();
+            await expect(component.getByRole('dialog')).toBeVisible();
+            await component.getByRole('button', { name: 'Close', exact: true }).click();
+          }
+        }
+      });
+    }
+
     test('keeps management table rows visible below their sticky headers', async ({ mount }) => {
       const component = await mount('ProgramTable/ManagementTables');
 
       for (const name of ['Programs', 'Cycles']) {
+        if (name === 'Cycles') await component.getByRole('button', { name: 'Manage Cycles' }).click();
         const table = component.getByRole('table', { name, exact: true });
         await expect(table.getByRole('row')).toHaveCount(2);
         const geometry = await table.evaluate(element => ({

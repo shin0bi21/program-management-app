@@ -166,7 +166,7 @@ describe('Sessions', () => {
         uniqueAttendeeCount: 0,
       },
     ]);
-    getSessions.mockResolvedValue([makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeCohortSession({
       sessionTypeId: 'type-regular',
       theme: 'Communication',
       programId: 'program-1',
@@ -174,7 +174,7 @@ describe('Sessions', () => {
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       description: 'Planned communication exercise',
-    })]);
+    })], nextCursor: null });
     getSessionRoster.mockResolvedValue([
       {
         youthId: 'youth-1',
@@ -200,7 +200,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved filters…');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading page preferences…');
     expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
@@ -241,7 +241,7 @@ describe('Sessions', () => {
 
   // Rendered states.
   it('shows open attendance as a check-in count', async () => {
-    getSessions.mockResolvedValue([makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeCohortSession({
       id: 'drop-in-session',
       cohortId: 'drop-in-cohort',
       sessionTypeId: 'type-field-trip',
@@ -255,7 +255,7 @@ describe('Sessions', () => {
       attendanceMarkedCount: 3,
       attendedCount: 3,
       attendanceRate: 100,
-    })]);
+    })], nextCursor: null });
 
     render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
@@ -263,9 +263,9 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Select a program to view its current cohort.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add attachments' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add notes' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
@@ -366,7 +366,7 @@ describe('Sessions', () => {
 
     expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
-    const pageHeader = screen.getByRole('heading', { name: 'Programming' }).closest('header');
+    const pageHeader = screen.getByRole('heading', { name: 'Sessions' }).closest('header');
     const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
     expect(pageHeader).not.toBeNull();
     expect(pageHeader!.compareDocumentPosition(viewSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -379,7 +379,7 @@ describe('Sessions', () => {
     expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
 
     fireEvent.click(await screen.findByText('Communication'));
 
@@ -419,22 +419,18 @@ describe('Sessions', () => {
     expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
-  it('switches the dashboard between a program row and a session without losing cohort access', async () => {
+  it('keeps the session dashboard while a program row changes scheduling context', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    auth.permissions.push('write:enrollments');
-    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
-    expect(await screen.findByRole('heading', { name: 'Soft Skills - Summer 2026 Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
-    expect(await screen.findByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
-
+    fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
     expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
   });
 
@@ -446,7 +442,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Programming' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');
@@ -473,7 +469,7 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    const addButton = await screen.findByRole('button', { name: '+ Add Session' });
+    const addButton = await screen.findByRole('button', { name: '+ Add' });
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
@@ -489,7 +485,7 @@ describe('Sessions', () => {
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
-    const addButton = screen.getByRole('button', { name: '+ Add Session' });
+    const addButton = screen.getByRole('button', { name: '+ Add' });
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
@@ -508,7 +504,7 @@ describe('Sessions', () => {
     expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
   });
 
-  it('keeps the Session dashboard empty after buffer eviction until a program row is explicitly selected', async () => {
+  it('keeps the Session dashboard after buffer eviction and program row selection', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
@@ -518,13 +514,14 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Evict buffered sessions' }));
-    expect(screen.getByRole('heading', { name: 'Session Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getAllByText('No session selected.')).toHaveLength(3);
     expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(await screen.findByRole('heading', { name: /Overview/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
   });
 
 });

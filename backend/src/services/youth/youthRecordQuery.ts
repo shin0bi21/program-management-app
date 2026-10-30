@@ -9,6 +9,7 @@ export type YouthRecordRow =
     status: 'active' | 'inactive';
     cohorts: Array<{
       id: string;
+      cycleId: string;
       name: string;
       programId: string;
       programName: string;
@@ -62,6 +63,7 @@ export const youthRecordColumns = sql`
     SELECT json_agg(
       json_build_object(
         'id', pc.id,
+        'cycleId', cycle.id,
         'name', cycle.name,
         'programId', p.id,
         'programName', p.name,
@@ -156,3 +158,12 @@ export const youthRecordFrom = sql`
   LEFT JOIN schools s ON s.id = yp.school_id
   LEFT JOIN user_credentials uc ON uc.user_id = u.id
 `;
+
+export function getYouthRowsByIds(database: typeof sql, ids: readonly string[]) {
+  return database<YouthRecordRow[]>`
+    SELECT ${youthRecordColumns}
+    ${youthRecordFrom}
+    WHERE ur.name = 'youth' AND u.id = ANY(${sql.array([...ids])}::uuid[])
+    ORDER BY u.id
+  `;
+}

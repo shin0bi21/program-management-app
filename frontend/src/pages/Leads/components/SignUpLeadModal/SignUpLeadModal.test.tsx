@@ -68,7 +68,7 @@ describe('SignUpLeadModal', () => {
       { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
       { ...cohort, id: 'cohort-open', name: 'Drop In', enrollmentRequired: false },
     ]);
-    vi.mocked(signUpLead).mockResolvedValue(lead);
+    vi.mocked(signUpLead).mockResolvedValue({ lead });
   });
 
   it('renders only matching enrollment cohorts', async () => {
@@ -143,7 +143,7 @@ describe('SignUpLeadModal', () => {
 
   it('shows successful signup feedback even when optional cohorts failed to load', async () => {
     vi.mocked(getCohorts).mockRejectedValue(new Error('Cohorts unavailable'));
-    vi.mocked(signUpLead).mockResolvedValue({ ...lead, status: 'signed_up' });
+    vi.mocked(signUpLead).mockResolvedValue({ lead: { ...lead, status: 'signed_up' } });
 
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
 

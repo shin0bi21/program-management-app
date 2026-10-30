@@ -42,7 +42,7 @@ const baseProps = {
   onRowSelect: vi.fn(),
   onSortingChange: vi.fn(),
   onColumnWidthsChange: vi.fn(),
-  onErrorChange: vi.fn(),
+  onMessageChange: vi.fn(),
 };
 
 describe('HoursTable', () => {
@@ -94,7 +94,7 @@ describe('HoursTable', () => {
       emptyMessage: 'No hours found',
       unavailable: { title: 'Hours unavailable', onRetry: tableState.retry },
     }));
-    expect(baseProps.onErrorChange).toHaveBeenLastCalledWith({
+    expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Could not load hours.',
       action: { label: 'Retry', onClick: tableState.retry },
     });

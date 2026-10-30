@@ -1,8 +1,8 @@
-# App navigation
+# App Navigation
 
 `frontend/src/app/components/AppNavigation/` owns the application sidebar, mobile navigation shell, and the visible path into each navigable application route. It is an application-shell component, not a route page and not a product-agnostic common component.
 
-## Assign navigation ownership
+## Assign Navigation Ownership
 
 | Owner | Responsibility |
 |---|---|
@@ -15,13 +15,20 @@ Keep route authorization and navigation visibility aligned with the same backend
 
 Desktop and mobile navigation expose one destination contract. Selecting a destination closes the mobile sidebar and every open flyout. A location change also closes stale flyouts. The logo returns to the public homepage; authentication actions remain in the navigation footer.
 
-## Add or change a visible application destination
+## Add or Change a Visible Application Destination
 
 1. Mount the lazy route in `frontend/src/app/App.tsx` and protect it with the backend-aligned required permission.
 2. Derive its destination visibility and any parent-group capability in `useAppNavigation`.
 3. Render the exact canonical URL under the correct group and order in `AppNavigation`.
 4. Update navigation-owner tests for capability, visibility, active state, ordering, and navigation.
 5. Keep the route-page test focused on the page workflow rather than sidebar behavior.
+
+Programming contains Programs (`/programming/programs`, `read:programs`) and Sessions
+(`/programming/sessions`, `read:sessions`). Its group is visible with either capability.
+Program/cycle edit actions require `write:programs`; they are not a Settings destination.
+Legacy calendar, cohort, and programming-settings URLs redirect to the matching page,
+whose canonical route enforces read access. The public `/programming` homepage section
+remains separate.
 
 Public authentication routes and redirect-only aliases remain route concerns and intentionally skip navigation registration.
 
@@ -34,4 +41,4 @@ Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners p
 authentication actions and mobile controls. Keep sidebar assertions here rather than in
 route-page tests. Shared floating-menu tests own their mechanics; use browser tests for
 responsive layout, clipping and focus geometry. See
-[Testing](../../workflows/testing.md#frontend-test-ownership).
+[Testing](../../workflows/delivery/testing.md#frontend-test-ownership).

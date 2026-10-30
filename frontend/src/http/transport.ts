@@ -9,12 +9,14 @@ export const DEFAULT_TIMEOUT = 15_000;
 
 export const apiUrl = (route: string) => `${API_BASE_URL}/${route.replace(/^\/+/, '')}`;
 
-export async function request(
+/** Keeps cancellation and timeout active until the consumer finishes reading the body. */
+export async function request<T>(
   url: string,
   init: RequestInit,
+  consume: (response: Response) => Promise<T>,
   timeout = DEFAULT_TIMEOUT,
   callerSignal?: AbortSignal,
-): Promise<Response> {
+): Promise<T> {
 
   const controller = new AbortController();
   let timedOut = false;
@@ -32,7 +34,8 @@ export async function request(
   }
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    return await consume(response);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       if (timedOut) throw new RequestTimeoutError(timeout);

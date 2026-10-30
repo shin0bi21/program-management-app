@@ -8,11 +8,12 @@ import {
   getHoursTableData,
   getHoursReferenceData,
   setHours,
+  deleteHours,
   updateHoursPlacement,
 } from './hours.api';
 
 vi.mock('../../../http/client', () => ({
-  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn() },
+  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
 describe('hours API', () => {
@@ -102,7 +103,9 @@ describe('hours API', () => {
     setHours(input);
     setHours(input, 'entry-1');
     updateHoursPlacement('entry-1', { workDate: '2026-08-20' });
+    deleteHours('entry-1');
 
+    expect(apiClient.delete).toHaveBeenCalledWith('/hours/entry-1');
     expect(apiClient.post).toHaveBeenCalledWith('/hours', input);
     expect(apiClient.put).toHaveBeenCalledWith('/hours/entry-1', input);
     expect(apiClient.patch).toHaveBeenCalledWith('/hours/entry-1/placement', {

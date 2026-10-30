@@ -21,7 +21,7 @@ export interface SeedOverrides {
   password?: string;
   firstName?: string;
   lastName?: string;
-  role?: 'admin' | 'staff' | 'youth';
+  role?: 'admin' | 'project_manager' | 'staff' | 'youth';
 }
 
 export interface SeededCohort {

@@ -1,3 +1,4 @@
+import type { RosterMutationResult } from '../../cohorts.api';
 import { useMemo } from 'react';
 
 import Button from '../../../../../common/components/Button/Button';
@@ -14,7 +15,7 @@ import './ManageRosterModal.css';
 interface ManageRosterModalProps {
   cohort: ProgramCohort | null;
   onClose: () => void;
-  onSuccess: () => void | Promise<void>;
+  onSuccess: (result: RosterMutationResult) => void | Promise<void>;
 }
 
 export default function ManageRosterModal({ cohort, onClose, onSuccess }: ManageRosterModalProps) {

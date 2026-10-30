@@ -2,17 +2,17 @@
 
 The frontend uses React, TypeScript, and Vite. Start with the guide for the part of the interface you are changing.
 
-## Develop a frontend change
+## Develop a Frontend Change
 
 1. Choose the page, component or architectural owner.
 2. Read the narrowest guide for each changed surface.
 3. Inspect the owner's types, API adapter, hooks, component and tests.
 4. Keep route, permission, API, state, rendering and test contracts aligned.
-5. Follow the [testing guide](../workflows/testing.md) for focused verification and required checks.
+5. Follow the [testing guide](../workflows/delivery/testing.md) for focused verification and required checks.
 
 Browser-sensitive interactions use Playwright stories under `frontend/playwright/gallery/` and specs under `frontend/playwright/tests/`.
 
-## Understand the source structure
+## Understand the Source Structure
 
 ```text
 frontend/src/
@@ -31,23 +31,26 @@ frontend/src/
 
 Preserve the dependency direction `pages → common/features → common/components`. Root infrastructure remains below those layers. The [ownership guide](architecture/ownership.md) explains route-family `common/` code and when to promote an owner.
 
-## Find the right guide
+## Find the Right Guide
 
-The guides follow the application structure: architecture and data foundations, navigation
-and pages, then shared components and specific UI surfaces. Each rule is explained in one
-place so the documentation does not repeat itself.
-
-Rendered-surface guides are flat files under `components/`; add a subdirectory only when a documentation area grows into a substantial multi-file set. Each owner guide documents its own skeleton and the scaffold preset that generates it.
+Choose by the responsibility you are changing. Small primitives share UI guidance;
+composed surfaces have focused contracts. Keep component guides flat unless an area
+needs a substantial multi-file set.
 
 | What are you changing? | Guide |
 |---|---|
 | Where code should live | [Ownership](architecture/ownership.md) |
-| State, API calls, queries, or mutations | [State and data](architecture/state-and-data.md) |
-| Sidebar navigation or route visibility | [App navigation](components/navigation.md) |
+| State, API calls, queries, or mutations | [State and Data](architecture/state-and-data.md) |
+| Sidebar navigation or route visibility | [App Navigation](components/navigation.md) |
 | A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
-| Saved preferences, field rules, or grouped page controls | [Page preferences](pages/preferences.md) |
-| Shared components | [Components](components/README.md) |
+| Page shell, data loading, or coordinated filters | [Page Composition](pages/composition.md) |
+| Page-level errors and retry actions | [Page Message Overlays](components/message-overlays.md) |
+| Page test ownership and suite organization | [Page Testing](pages/testing.md) |
+| Saved preferences, field rules, or grouped page controls | [Page Preferences](pages/preferences.md) |
+| Shared components, type labels, and status badges | [UI Basics](components/README.md) |
 | Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
 | Calendars | [Calendars](components/calendars.md) |
 | Dashboards | [Dashboards](components/dashboards.md) |
-| Modals and other overlays | [Overlays](components/overlays.md) |
+| Form validation and submission | [Modals and Forms](components/modals-and-forms.md) |
+| Dialogs, floating menus, and tooltips | [Overlays](components/overlays.md) |
+| Generate implementation and colocated test outlines | [Scaffolding](pages/scaffolding.md) |

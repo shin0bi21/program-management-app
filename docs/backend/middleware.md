@@ -1,4 +1,4 @@
-# Backend middleware
+# Backend Middleware
 
 Middleware owns reusable HTTP request-chain behavior. It may authenticate a request, require an endpoint capability, limit traffic, parse an upload, validate request input, attach request metadata, or normalize failures. Business rules, record-level access, SQL, transactions, and audit behavior remain in services and policies.
 
@@ -18,7 +18,7 @@ Middleware owns reusable HTTP request-chain behavior. It may authenticate a requ
 
 Do not put reusable business logic in middleware just because multiple routes need it. Extract that logic to a service or policy so HTTP composition does not become the application owner.
 
-## Request ordering
+## Request Ordering
 
 Application-wide middleware is ordered in `backend/src/index.ts`:
 
@@ -38,7 +38,7 @@ A normal protected JSON route uses this order:
 
 Public routes omit authentication and authorization intentionally but still apply an appropriate limiter, validation, and `asyncHandler`. Single-file endpoints use `uploadFile`, accept the multipart field `file`, and share the 15 MB transport limit and parser errors. Upload parsing runs before validation that depends on the parsed file or multipart fields. Endpoint services remain responsible for allowed file types and other domain rules. Preserve the order unless the endpoint contract gives a concrete reason to differ.
 
-## Route example
+## Route Example
 
 Keep the route as a readable declaration of the HTTP contract:
 
@@ -72,7 +72,7 @@ Each `validateRequest` schema parses the combined `{ body, query, params }` requ
 
 Every Express 4 async middleware or controller must use `asyncHandler`. Throw typed application errors or pass parser errors to `next(error)`; do not catch them to build an endpoint-specific response. The global handler owns status resolution, logging, production redaction, request IDs, and the JSON error shape. See [Errors](errors.md) for that contract.
 
-## Adding or changing middleware
+## Adding or Changing Middleware
 
 1. Decide whether the behavior is application-wide or endpoint-specific and whether it is truly HTTP request-chain behavior.
 2. Put reusable middleware in `backend/src/middleware/`; keep endpoint validation schemas in `backend/src/validation/`.
@@ -82,4 +82,4 @@ Every Express 4 async middleware or controller must use `asyncHandler`. Throw ty
 6. Mount new routers in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 7. Test the middleware behavior at its narrowest owner and the route chain where ordering or integration matters.
 
-Authentication and permission internals are documented in [Auth](auth.md). Record-level authorization remains in [Authorization](authorization.md) and [Policies](policies.md). Backend test ownership is documented in [Testing](testing.md).
+Authentication and permission internals are documented in [Auth](auth.md). Record-level authorization remains in [Authorization and Policies](authorization.md). Backend test ownership is documented in [Testing](testing.md).

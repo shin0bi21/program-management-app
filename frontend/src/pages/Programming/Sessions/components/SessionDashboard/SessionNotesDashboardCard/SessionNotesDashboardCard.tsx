@@ -8,7 +8,7 @@ import SessionNoteDetails from '../../SessionNoteDetails/SessionNoteDetails';
 import SessionNoteModal from '../../SessionNoteModal/SessionNoteModal';
 import SessionNoteRow from '../../SessionNoteRow/SessionNoteRow';
 import type { CohortSession } from '../../../types';
-import { type PageErrorChangeHandler } from '../../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import { useSessionNotes } from './hooks/useSessionNotes';
 import './SessionNotesDashboardCard.css';
@@ -17,14 +17,14 @@ export default function SessionNotesDashboardCard({
   queryKey,
   session,
   canWrite,
-  onErrorChange,
+  onMessageChange,
 }: {
   queryKey: readonly unknown[];
   session: CohortSession | null;
   canWrite: boolean;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }) {
-  const workflow = useSessionNotes({ queryKey, session, onErrorChange });
+  const workflow = useSessionNotes({ queryKey, session, onMessageChange });
   const { query, noteTarget, editNote, detailNote, confirmAction, loadNotes, openAdd, openEdit, closeEditor, setDetailNote, requestDelete, setConfirmAction } = workflow;
   const notes = query.data ?? [];
   const detailNoteIndex = detailNote
@@ -36,7 +36,7 @@ export default function SessionNotesDashboardCard({
 
   return <>
     <DashboardCard
-      title="Session Notes"
+      title="Notes"
       loading={Boolean(session) && query.isLoading}
       loadingLabel="Loading notes…"
       emptyMessage={session ? 'No notes.' : 'No session selected.'}

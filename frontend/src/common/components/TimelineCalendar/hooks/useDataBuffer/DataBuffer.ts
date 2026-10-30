@@ -43,7 +43,7 @@ export interface PeriodRange {
 export interface DataBufferOptions<TItemData> {
   // Data loading
   initialData?: RowPeriodData<TItemData>;
-  load: (range: PeriodRange) => Promise<RowPeriodData<TItemData>>;
+  load: (range: PeriodRange, signal: AbortSignal) => Promise<RowPeriodData<TItemData>>;
   onData: (data: RowPeriodData<TItemData>) => void;
 
   // Item identity and ranges
@@ -93,6 +93,7 @@ export class DataBuffer<TItemData> {
   private readonly adapter: PeriodBufferAdapter;
   private readonly itemOverrides = new Map<string, ItemOverride<TItemData>>();
   private readonly itemLocations = new Map<string, ItemLocation>();
+  private readonly controller = new AbortController();
   private mutationRevision = 0;
   private data: RowPeriodData<TItemData>;
   private renderedStart: CalendarPeriod | null = null;
@@ -101,6 +102,7 @@ export class DataBuffer<TItemData> {
   private loadedEnd: CalendarPeriod | null = null;
   private initialized = false;
   private initializing: Promise<void> | null = null;
+  private initialPeriods: readonly CalendarPeriod[] = [];
   private queues: Record<'left' | 'right', Promise<void>> = {
     left: Promise.resolve(),
     right: Promise.resolve(),
@@ -121,11 +123,22 @@ export class DataBuffer<TItemData> {
     this.rebuildItemIndex();
   }
 
+  /** Permanently releases this calendar instance and cancels its outstanding reads. */
+  dispose(): void {
+    this.controller.abort();
+    this.data = {};
+    this.itemOverrides.clear();
+    this.itemLocations.clear();
+    this.initialPeriods = [];
+    this.queues = { left: Promise.resolve(), right: Promise.resolve() };
+  }
+
   /** Starts the initial window load once, sharing an in-flight initialization. */
   initialize(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
-    if (this.initialized || !renderedPeriods.length) return Promise.resolve();
+    if (this.controller.signal.aborted || this.initialized || !renderedPeriods.length) return Promise.resolve();
     if (this.initializing) return this.initializing;
 
+    this.initialPeriods = renderedPeriods;
     this.initializing = this.runInitialization(renderedPeriods);
 
     return this.initializing;
@@ -133,10 +146,12 @@ export class DataBuffer<TItemData> {
 
   /** Waits for pending loads, then rebuilds the buffer around a replacement window. */
   async reset(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
-    if (!renderedPeriods.length) return;
+    if (this.controller.signal.aborted || !renderedPeriods.length) return;
 
     if (this.initializing) await this.initializing.catch(() => undefined);
     await Promise.all(Object.values(this.queues).map(queue => queue.catch(() => undefined)));
+
+    if (this.controller.signal.aborted) return;
 
     this.initialized = false;
     this.renderedStart = null;
@@ -150,7 +165,7 @@ export class DataBuffer<TItemData> {
 
   /** Queues directional replenishment as scrolling exposes new periods. */
   periodsBuilt(periods: readonly CalendarPeriod[], direction: 'left' | 'right'): Promise<void> {
-    if (!periods.length) return Promise.resolve();
+    if (this.controller.signal.aborted || !periods.length) return Promise.resolve();
 
     if (direction === 'left') this.renderedStart = periods[0];
     else this.renderedEnd = periods[periods.length - 1];
@@ -161,8 +176,10 @@ export class DataBuffer<TItemData> {
     this.queues[direction] = this.queues[direction]
       .catch(() => undefined)
       .then(async () => {
-        await initialization?.catch(() => undefined);
-        await this.replenishIfNeeded(direction);
+        if (this.controller.signal.aborted) return;
+
+        await (initialization ?? this.initialize(this.initialPeriods));
+        if (!this.controller.signal.aborted) await this.replenishIfNeeded(direction);
       });
 
     return this.queues[direction];
@@ -170,6 +187,8 @@ export class DataBuffer<TItemData> {
 
   /** Applies a saved record locally while guarding it against stale loads. */
   upsertItem(rowId: string, periodKey: string, item: TItemData): void {
+    if (this.controller.signal.aborted) return;
+
     const getItemId = this.getItemId;
 
     if (!getItemId) throw new Error('getItemId is required for item mutations');
@@ -202,6 +221,8 @@ export class DataBuffer<TItemData> {
 
   /** Removes a record locally and retains its delete override until acknowledged. */
   removeItem(itemId: string): void {
+    if (this.controller.signal.aborted) return;
+
     if (!this.getItemId) throw new Error('getItemId is required for item mutations');
 
     const previousOverride = this.itemOverrides.get(itemId);
@@ -238,6 +259,7 @@ export class DataBuffer<TItemData> {
 
     try {
       await this.loadAndMerge({ start: loadedStart, end: loadedEnd, direction: 'initial' });
+      this.controller.signal.throwIfAborted();
 
       this.renderedStart ??= renderedStart;
       this.renderedEnd ??= renderedEnd;
@@ -267,6 +289,7 @@ export class DataBuffer<TItemData> {
         const nextEnd = this.adapter.shift(this.renderedStart, this.targetSize);
 
         await this.loadAndMerge({ start: nextStart, end: nextEnd, direction });
+        this.controller.signal.throwIfAborted();
 
         this.loadedStart = nextStart;
         this.loadedEnd = nextEnd;
@@ -283,6 +306,7 @@ export class DataBuffer<TItemData> {
         end: this.adapter.shift(previousStart, -1),
         direction,
       });
+      this.controller.signal.throwIfAborted();
 
       this.loadedStart = nextStart;
       this.trimRetainedData('left');
@@ -299,6 +323,7 @@ export class DataBuffer<TItemData> {
       const nextEnd = this.adapter.shift(this.renderedEnd, this.targetSize);
 
       await this.loadAndMerge({ start: nextStart, end: nextEnd, direction });
+      this.controller.signal.throwIfAborted();
 
       this.loadedStart = nextStart;
       this.loadedEnd = nextEnd;
@@ -315,6 +340,7 @@ export class DataBuffer<TItemData> {
       end: nextEnd,
       direction,
     });
+    this.controller.signal.throwIfAborted();
 
     this.loadedEnd = nextEnd;
     this.trimRetainedData('right');
@@ -322,8 +348,12 @@ export class DataBuffer<TItemData> {
 
   /** Loads one range and acknowledges only mutation overrides covered by that request. */
   private async loadAndMerge(range: PeriodRange): Promise<void> {
+    const signal = this.controller.signal;
+    signal.throwIfAborted();
+
     const requestRevision = this.mutationRevision;
-    const incoming = await this.load(range);
+    const incoming = await this.load(range, signal);
+    signal.throwIfAborted();
 
     // A response acknowledges only overrides it covered and that existed when its request began.
     this.itemOverrides.forEach((override, itemId) => {
@@ -346,12 +376,32 @@ export class DataBuffer<TItemData> {
       if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
     });
 
-    this.mergeData(incoming);
+    this.mergeData(incoming, range);
   }
 
-  /** Merges server records, replacing old indexed locations and preserving current overrides. */
-  private mergeData(incoming: RowPeriodData<TItemData>): void {
+  /** Reconciles the authoritative requested range, including absent rows and buckets. */
+  private mergeData(incoming: RowPeriodData<TItemData>, range: PeriodRange): void {
     const getItemId = this.getItemId;
+
+    Object.entries(this.data).forEach(([rowId, periods]) => {
+      Object.entries(periods).forEach(([periodKey, items]) => {
+        const retained = items.filter(item => {
+          const itemRange = this.getItemRange?.(item);
+
+          return itemRange
+            ? this.adapter.getRangeAnchor(itemRange, range.start, range.end) === undefined
+            : !this.adapter.includes(range.start, range.end, periodKey);
+        });
+
+        if (retained.length === items.length) return;
+
+        this.data = {
+          ...this.data,
+          [rowId]: { ...this.data[rowId], [periodKey]: retained },
+        };
+      });
+    });
+    this.rebuildItemIndex();
 
     Object.entries(incoming).forEach(([rowId, periods]) => {
       Object.entries(periods).forEach(([periodKey, items]) => {
@@ -362,22 +412,9 @@ export class DataBuffer<TItemData> {
 
         const row = this.data[rowId] ?? {};
 
-        if (getItemId) {
-          const replacedItems = row[periodKey] ?? [];
-
-          replacedItems.forEach(item => {
-            const itemId = getItemId(item);
-            const location = this.itemLocations.get(itemId);
-
-            if (location?.rowId === rowId && location.periodKey === periodKey) {
-              this.itemLocations.delete(itemId);
-            }
-          });
-        }
-
         this.data = {
           ...this.data,
-          [rowId]: { ...row, [periodKey]: items },
+          [rowId]: { ...row, [periodKey]: [...(row[periodKey] ?? []), ...items] },
         };
 
         if (getItemId) {

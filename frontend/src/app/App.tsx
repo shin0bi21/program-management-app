@@ -12,9 +12,9 @@ const ManageHomepage = lazy(() => import('../pages/Homepage/ManageHomepage/Manag
 const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
-const ProgrammingSettings = lazy(() => import('../pages/Settings/Programming/Programming'));
+const Programs = lazy(() => import('../pages/Programming/Programs/Programs'));
 const Leads = lazy(() => import('../pages/Leads/Leads'));
-const Programming = lazy(() => import('../pages/Programming/Sessions/Sessions'));
+const Sessions = lazy(() => import('../pages/Programming/Sessions/Sessions'));
 const Hours = lazy(() => import('../pages/Staff/Hours/Hours'));
 const Tasks = lazy(() => import('../pages/Staff/Tasks/Tasks'));
 const Login = lazy(() => import('../pages/Auth/Login/Login'));
@@ -22,10 +22,10 @@ const VerifyPassword = lazy(() => import('../pages/Auth/VerifyPassword/VerifyPas
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword/ResetPassword'));
 
-function ProgrammingRedirect() {
+function ProgrammingRedirect({ to }: { to: string }) {
   const location = useLocation();
 
-  return <Navigate to={{ pathname: '/programming/calendar', search: location.search }} replace />;
+  return <Navigate to={{ pathname: to, search: location.search }} replace />;
 }
 
 function AuthenticatedLayout() {
@@ -74,26 +74,10 @@ function App() {
                 }
               />
               <Route
-                path="/settings/programming"
-                element={
-                  <ProtectedRoute requiredPermission="write:programs">
-                    <ProgrammingSettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/programming/calendar"
-                element={
-                  <ProtectedRoute requiredPermission="read:sessions">
-                    <Programming />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/programming/cohorts"
+                path="/programming/programs"
                 element={
                   <ProtectedRoute requiredPermission="read:programs">
-                    <ProgrammingRedirect />
+                    <Programs />
                   </ProtectedRoute>
                 }
               />
@@ -101,10 +85,13 @@ function App() {
                 path="/programming/sessions"
                 element={
                   <ProtectedRoute requiredPermission="read:sessions">
-                    <ProgrammingRedirect />
+                    <Sessions />
                   </ProtectedRoute>
                 }
               />
+              <Route path="/settings/programming" element={<ProgrammingRedirect to="/programming/programs" />} />
+              <Route path="/programming/cohorts" element={<ProgrammingRedirect to="/programming/programs" />} />
+              <Route path="/programming/calendar" element={<ProgrammingRedirect to="/programming/sessions" />} />
               <Route
                 path="/staff/tasks"
                 element={

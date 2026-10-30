@@ -3,6 +3,7 @@ import type { Row } from '@tanstack/react-table';
 import TableRow from './TableRow';
 import type { TableNavigationKey } from '../Table.types';
 import UnavailableState from '../../UnavailableState/UnavailableState';
+import LoadingSpinner from '../../LoadingSpinner/LoadingSpinner';
 
 interface TableBodyProps<T> {
   rows: Row<T>[];
@@ -21,7 +22,6 @@ interface TableBodyProps<T> {
   tabbableIndex: number;
   onRowSelect?: (item: T) => void;
   onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
-  columnWidths: Record<string, number>;
 }
 
 export default function TableBody<T>({
@@ -37,7 +37,6 @@ export default function TableBody<T>({
   tabbableIndex,
   onRowSelect,
   onNavigate,
-  columnWidths,
 }: TableBodyProps<T>) {
   const bodyRef = useRef<HTMLTableSectionElement>(null);
 
@@ -52,7 +51,11 @@ export default function TableBody<T>({
   if (loading) {
     content = (
       <tr className="table-loading-row">
-        <td colSpan={visibleColumnCount} className="table-state-cell">Loading...</td>
+        <td colSpan={visibleColumnCount} className="table-state-cell">
+          <div className="table-loading-status" role="status" aria-label="Loading rows">
+            <LoadingSpinner label="Loading rows…" />
+          </div>
+        </td>
       </tr>
     );
   } else if (unavailable) {
@@ -77,16 +80,16 @@ export default function TableBody<T>({
         <TableRow
           key={key}
           row={row}
+          cells={row.getVisibleCells()}
           selected={selectedKey === key}
           tabbable={index === tabbableIndex}
           rowIndex={index}
           onSelect={onRowSelect}
           onNavigate={onNavigate}
-          columnWidths={columnWidths}
         />
       );
     });
   }
 
-  return <tbody ref={bodyRef} aria-busy={refreshing || undefined}>{content}</tbody>;
+  return <tbody ref={bodyRef} aria-busy={loading || refreshing || undefined}>{content}</tbody>;
 }

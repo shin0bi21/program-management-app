@@ -35,7 +35,7 @@ describe('useLeadTableData', () => {
     rerender({ readyFilters: filters });
     await waitFor(() => expect(result.current.leads).toEqual([lead]));
     expect(getLeads).toHaveBeenCalledWith(
-      filters, { ...sorting, cursor: undefined, limit: 25 }, { signal: expect.any(AbortSignal) },
+      filters, { ...sorting, cursor: undefined, limit: 50 }, { signal: expect.any(AbortSignal) },
     );
   });
 

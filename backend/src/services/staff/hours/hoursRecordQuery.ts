@@ -1,9 +1,13 @@
 import { sql } from '../../../db/client';
+import { getHoursCategoryLabel } from './hoursReferenceData';
 import type { HoursCategory } from '../../../validation/hoursSchemas';
 
 export interface HoursRow {
   id: string;
   staffId: string;
+  staffFirstName: string;
+  staffLastName: string;
+  staffName: string;
   programId: string | null;
   programName: string | null;
   cycleId: string;
@@ -24,6 +28,9 @@ export interface HoursRow {
 export const hoursRecordColumns = sql`
   entry.id,
   entry.staff_id,
+  staff.first_name AS staff_first_name,
+  staff.last_name AS staff_last_name,
+  CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
   entry.program_id,
   program.name AS program_name,
   cycle.id AS cycle_id,
@@ -63,22 +70,39 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
   entry.work_date::text
 )`;
 
-/** Canonical hours response returned by insert and update commands. */
-export const hoursMutationColumns = sql`
-  id,
-  staff_id,
-  program_id,
-  (SELECT name FROM programs WHERE id = time_entries.program_id) AS program_name,
-  cycle_id,
-  (SELECT name FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_name,
-  (SELECT starts_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_starts_on,
-  (SELECT ends_on::text FROM program_cycles WHERE id = time_entries.cycle_id) AS cycle_ends_on,
-  category,
-  task_id,
-  (SELECT title FROM tasks WHERE id = time_entries.task_id) AS task_title,
-  session_id,
-  (SELECT session.theme FROM cohort_sessions session WHERE session.id = time_entries.session_id) AS session_label,
-  work_date::text,
-  hours::text,
-  note
-`;
+export function hoursRowToEntry(row: HoursRow) {
+  return {
+    id: row.id, staffId: row.staffId, workDate: row.workDate,
+    programId: row.programId, programName: row.programName,
+    cycleId: row.cycleId, cycleName: row.cycleName,
+    cycleStartsOn: row.cycleStartsOn, cycleEndsOn: row.cycleEndsOn,
+    category: row.category, categoryLabel: getHoursCategoryLabel(row.category),
+    taskId: row.taskId, taskTitle: row.taskTitle,
+    sessionId: row.sessionId, sessionLabel: row.sessionLabel,
+    hours: Number(row.hours), note: row.note,
+  };
+}
+
+export function hoursRowToTableRow(row: HoursRow) {
+  const { staffId, workDate, ...item } = hoursRowToEntry(row);
+  return {
+    id: row.id,
+    resourceId: staffId,
+    date: workDate,
+    staffFirstName: row.staffFirstName,
+    staffLastName: row.staffLastName,
+    staffName: row.staffName,
+    item,
+  };
+}
+
+export type HoursTableRow = ReturnType<typeof hoursRowToTableRow>;
+
+export async function getHoursRecord(id: string, trx: typeof sql) {
+  const [row] = await trx<HoursRow[]>`
+    SELECT ${hoursRecordColumns}
+    ${hoursRecordFrom}
+    WHERE entry.id = ${id}
+  `;
+  return row;
+}

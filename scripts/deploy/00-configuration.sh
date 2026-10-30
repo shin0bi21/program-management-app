@@ -6,7 +6,7 @@ cd "$REPO_ROOT" || exit
 
 export COMPOSE_FILE="docker-compose.prod.yml"
 
-LOCKFILE="/tmp/myapp-deploy.lock"
+LOCKFILE="${DEPLOY_LOCKFILE:-/tmp/myapp-deploy.lock}"
 LOGFILE="${DEPLOY_LOG:-./logs/deploy.log}"
 STATE_DIR="${DEPLOY_STATE_DIR:-./.deploy-state}"
 DB_CONTAINER="myapp_db"
@@ -30,4 +30,4 @@ ROLLBACK_NEEDED=false
 REPLACED_CONTAINER_ID=""
 
 # Command-line mode.
-PLAN_ONLY=false
+PREVIEW_ONLY=false

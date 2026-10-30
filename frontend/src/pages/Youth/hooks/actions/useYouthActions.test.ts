@@ -1,11 +1,9 @@
+import { makeCohortSession } from '../../../../tests/factories/session';
 import type { InfiniteData } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { CursorPage } from '../../../../query/types';
 
-const COHORT_QUERY_KEY = ['cohorts'] as const;
-const SESSION_QUERY_KEY = ['sessions'] as const;
-const YOUTH_QUERY_KEY = ['youth'] as const;
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 import type { YouthProfile } from '../../types';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
@@ -66,19 +64,27 @@ describe('useYouthActions', () => {
     act(() => rendered.result.current.reconcileCreatedYouth(makeYouthProfile({ id: 'youth-new' })));
 
     expect(invalidate).toHaveBeenCalledOnce();
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: YOUTH_QUERY_KEY });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: YOUTH_TABLE_QUERY_KEY });
     expect(rendered.onYouthReconciled).not.toHaveBeenCalled();
   });
 
-  it('refreshes youth, session, and cohort records after attendance changes', async () => {
+  it('reconciles attendance response rows and selection without invalidating table queries', () => {
     const rendered = renderActions();
-    const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries').mockResolvedValue();
+    const youth = makeYouthProfile();
+    const session = makeCohortSession({ attendedCount: 1 });
+    const key = ['sessions', 'table'];
+    rendered.queryClient.setQueryData(key, { pages: [{ rows: [makeCohortSession()], nextCursor: null }], pageParams: [null] });
+    const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries');
 
-    await act(() => rendered.result.current.refreshAttendance());
+    act(() => rendered.result.current.reconcileAttendance({
+      cohort: { id: 'cohort-1', name: 'Summer', programName: 'Skills', enrollmentRequired: true },
+      sessions: [], youth, updatedSessions: [session],
+    }));
 
-    expect(invalidate).toHaveBeenCalledTimes(3);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: YOUTH_QUERY_KEY });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: SESSION_QUERY_KEY });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: COHORT_QUERY_KEY });
+    expect(rendered.onYouthReconciled).toHaveBeenCalledWith(youth);
+    expect(rendered.queryClient.getQueryData(key)).toEqual({ pages: [{ rows: [session], nextCursor: null }], pageParams: [null] });
+    expect(rendered.queryClient.getQueryState(key)?.isInvalidated).toBe(false);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'calendar'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['cohorts', 'options'] });
   });
 });

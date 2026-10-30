@@ -52,7 +52,7 @@ classify_changes() {
   fi
 }
 
-print_deployment_plan() {
+print_deployment_summary() {
   echo ""
   echo "=========================================="
   echo "SMART DEPLOY"

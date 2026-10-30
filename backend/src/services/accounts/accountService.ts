@@ -85,13 +85,13 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
     await sql.begin(async (tx) => {
       const trx = asTransactionSql(tx);
 
-      // Check if user exists and is staff/admin; fetch current email too
+      // Check if user exists and is an employee; fetch current email too
       const existingUsers = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { email: string; status: 'invited' | 'active' | 'inactive' })[]>`
         SELECT u.id, u.first_name, u.last_name, uc.status, uc.email
         FROM users u
         INNER JOIN user_roles ur ON ur.id = u.role_id
         INNER JOIN user_credentials uc ON uc.user_id = u.id
-        WHERE u.id = ${id} AND ur.name IN ('staff', 'admin')
+        WHERE u.id = ${id} AND ur.name IN ('staff', 'project_manager', 'admin')
         LIMIT 1
       `;
       if (!existingUsers.length) throw new NotFoundError('Staff user not found');

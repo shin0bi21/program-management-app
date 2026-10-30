@@ -48,6 +48,22 @@ describe('AccountModal program assignments', () => {
     });
   });
 
+  it('submits a project manager invitation from the role selector', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<AccountModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('First Name *'), 'Project');
+    await user.type(screen.getByLabelText('Last Name *'), 'Manager');
+    await user.type(screen.getByLabelText('Email *'), 'manager@example.com');
+    await user.click(screen.getByRole('button', { name: 'Role' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Project Manager' }));
+    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+
+    await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'project_manager', email: 'manager@example.com',
+    })));
+  });
+
   it('assigns selected enrolled and open-roster programs', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

@@ -57,9 +57,13 @@ export function checkPaginatedTables(violations: Findings, file: string, source:
     );
   }
 
-  if (usesInfiniteList && !/limit\s*:\s*25\b/.test(source)) {
+  if (/\.(?:test|spec|story)\.tsx?$/.test(file)) return;
+
+  const usesStandardPageSize = /limit\s*:\s*TABLE_PAGE_SIZE\b/.test(source)
+    && /import\s*\{[^}]*\bTABLE_PAGE_SIZE\b[^}]*\}\s*from\s*['"][^'"]*\/query\/types['"]/.test(source);
+  if (usesInfiniteList && !usesStandardPageSize) {
     violations.push(
-      `${file}:1 remote list hooks must request the standard 25-row cursor page size.`,
+      `${file}:1 remote list hooks must request the standard 50-row cursor page size through TABLE_PAGE_SIZE from query/types.`,
     );
   }
 
@@ -69,16 +73,25 @@ export function checkPaginatedTables(violations: Findings, file: string, source:
     );
   }
 
-  if (/\.(?:test|spec|story)\.tsx?$/.test(file)) return;
+  if (usesInfiniteList && tableOwnerHook && !/\bordering\s*:/.test(source)) {
+    violations.push(`${file}:1 table data hooks must declare the active sort value and direction for out-of-order refresh messages.`);
+  }
+  if (canonicalTableComponent && rendersTable && !source.includes('tableRefreshMessage(')) {
+    violations.push(`${file}:1 table owners must report retained-edit refresh messages through the page message owner.`);
+  }
 
   const paginationProps = ['hasNextPage', 'loadingNextPage', 'onLoadNextPage'];
   const wiredProps = paginationProps.filter(
     prop => new RegExp(`\\b${prop}\\s*=`).test(source),
   );
-  if (wiredProps.length > 0 && wiredProps.length < paginationProps.length) {
+  if (canonicalTableComponent && rendersTable && wiredProps.length < paginationProps.length) {
     const missing = paginationProps.filter(prop => !wiredProps.includes(prop));
     violations.push(
       `${file}:1 paginated tables must wire the complete load-more contract; missing ${missing.join(', ')}.`,
     );
+  }
+
+  if (canonicalTableComponent && rendersTable && !/\bnextPageUnavailable\s*=/.test(source)) {
+    violations.push(`${file}:1 paginated tables must expose next-page failure and explicit retry through nextPageUnavailable.`);
   }
 }

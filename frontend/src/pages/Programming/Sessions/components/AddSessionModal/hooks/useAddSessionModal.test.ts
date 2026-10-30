@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../../../common/features/programs/types';
+import { makeCohortSession } from '../../../../../../tests/factories/session';
 import { createSession } from '../../../sessions.api';
 import useAddSessionModal from './useAddSessionModal';
 
@@ -16,7 +17,10 @@ const programs: Program[] = [
     defaultDayOfWeek: 'thursday', defaultStartTime: '16:00', defaultEndTime: '18:00', timezone: 'America/Toronto' },
 ];
 describe('single session creation', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(createSession).mockResolvedValue(makeCohortSession());
+  });
 
   it('uses program times and preserves a supplied calendar date when changing programs', async () => {
     const onSaved = vi.fn();
@@ -51,7 +55,7 @@ describe('single session creation', () => {
   });
 
   it('locks duplicate submissions, retains success if refresh fails, and permits retry after API failure', async () => {
-    vi.mocked(createSession).mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce({});
+    vi.mocked(createSession).mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce(makeCohortSession());
     const onSaved = vi.fn().mockRejectedValue(new Error('Refresh failed'));
     const { result } = renderHook(() => useAddSessionModal({ programs, onSaved }));
     act(() => result.current.updateDraft('theme', 'Art'));

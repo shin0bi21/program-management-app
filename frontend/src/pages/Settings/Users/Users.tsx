@@ -5,7 +5,7 @@ import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import PageErrorOverlay, { type PageErrorItem } from '../../../common/components/PageErrorOverlay/PageErrorOverlay';
+import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
@@ -23,7 +23,7 @@ const ACCOUNTS_TABLE_QUERY_KEY = ['accounts', 'table'] as const;
 
 export default function Users() {
   // Page-local errors.
-  const [viewError, setViewError] = useState<PageErrorItem | null>(null);
+  const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { role, permissions } = useAuth();
@@ -99,7 +99,7 @@ export default function Users() {
             onClearAll={filters.clear}
           /> : undefined}
         />
-        <PageErrorOverlay errors={[preferencesError, viewError]} />
+        <PageMessageOverlay messages={[preferencesError, viewError]} />
 
         {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <PageBody
           ariaLabel="Account records"
@@ -113,7 +113,7 @@ export default function Users() {
             onSortingChange={table.setSorting}
             columnWidths={table.columnWidths}
             onColumnWidthsChange={table.setColumnWidths}
-            onErrorChange={setViewError}
+            onMessageChange={setViewError}
           />}
         />}
       </main>

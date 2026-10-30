@@ -1,14 +1,12 @@
-# Frontend state and data
+# Frontend State and Data
 
 Give each value one owner. Choose that owner by how long the value lives and who changes it.
 
-Place state and data hooks with their smallest consumer. Lift them to a parent only when
-that parent coordinates their lifecycle or multiple children actually consume them. A page
-or dashboard that composes children does not automatically own their queries. For example,
-an overview card owns its private query hook and query-state presentation; a card rendering
-an already-selected record needs no extra data hook.
+Use the [ownership guide](ownership.md) for placement and promotion. This guide defines
+state lifetimes and data flow; the component that composes a child does not automatically
+own that child's queries.
 
-## Choose the state owner
+## Choose the State Owner
 
 | Value | Owner | Examples |
 |---|---|---|
@@ -22,7 +20,7 @@ For durable page controls, follow the [page preference contract](../pages/prefer
 
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
 
-## Separate page controls from view data
+## Separate Page Controls from View Data
 
 Page data hooks load reference data needed across the page, such as filter options and
 resources used by selection or dialogs. Page controls own the user's choices, not the
@@ -49,11 +47,11 @@ the page responsible for scrolling or restoration. Add calendar controls to a pa
 only when the page actually coordinates or persists those choices, not to mirror the
 table group.
 
-Follow [Page preferences](../pages/preferences.md) for the control contract,
+Follow [Page Preferences](../pages/preferences.md) for the control contract,
 [Tables](../components/tables.md) for collection ownership, and
 [Calendars](../components/calendars.md) for range loading and calendar interaction state.
 
-## Fetch remote data
+## Fetch Remote Data
 
 Backend data follows one visible path:
 
@@ -62,6 +60,10 @@ component → focused query hook → typed feature API → centralized HTTP clie
 ```
 
 The query hook owns loading, failure and cached server data. Include every filter, search, sort, selection and date value sent to the backend in the query key. Forward cancellation from the query hook through the API adapter to the HTTP client.
+
+Keep request cancellation and timeouts active until the response body has been consumed,
+including JSON, errors, and file downloads. A caller leaving a shared re-login workflow
+must detach its own wait without cancelling authentication for other callers.
 
 The API adapter is the single frontend owner of endpoint paths, HTTP methods, request and
 response contracts, serialization and boundary normalization. All requests use the
@@ -75,13 +77,21 @@ name> is no longer available.` An existing record with no children instead shows
 its normal empty state. Do not replace a rejected request with empty data or
 render internal diagnostics as user-facing copy.
 
-## Test adapters and pure policy
+## Test Adapters and Pure Policy
 
 API-adapter tests own the exact method, path, query or body serialization, cancellation forwarding, typed response shaping, and boundary normalization. Mock the centralized HTTP client rather than exercising these contracts through browser UI or a query hook.
 
 Pure utilities and finite policy or capability rules use representative inputs, contract boundaries, and invalid values that the owner handles. Cover every finite case when omission would change permissions, available actions, or persisted values. Use Vitest's Node environment when the owner does not need browser globals.
 
-## Reconcile mutations
+## Write Async Workflows
+
+Prefer `async`/`await` with `try`/`catch` for sequential loading and mutation workflows.
+Name asynchronous callbacks for their purpose, such as `loadPeriods`, rather than
+`operation`. Keep promise chaining when it directly expresses a shared promise or
+queue; do not convert it mechanically. UI callbacks that start an internally handled
+async workflow should use `void` to make the intentional lack of awaiting explicit.
+
+## Reconcile Mutations
 
 Use the record returned by the backend after a mutation. Do not rebuild it from form values.
 
@@ -89,11 +99,11 @@ When loads or mutations can overlap, define how stale responses are ignored or r
 
 The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
 
-## Keep application selection with its domain
+## Keep Application Selection with Its Domain
 
 A controlled shared component receives the selected key and emits a selection event. When selection must survive filters or pagination, span table and calendar views, follow a resource, or reconcile after mutation and deletion, keep it in the route page or a focused domain selection hook. Do not add application selection state to a shared rendering component.
 
-## Test state and data
+## Test State and Data
 
 | Owner | Cover |
 |---|---|
@@ -107,4 +117,4 @@ For example, a domain hook proves that `pageParam: 'next'` becomes `cursor: 'nex
 `useInfiniteListQuery` proves that pages accumulate without duplicate rows. Test the behavior
 the owner adds, not TanStack Query itself. Simple state wiring stays in its component test.
 
-Use the helpers and isolation rules in [Test ownership](../../workflows/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).
+Use the helpers and isolation rules in [Test Ownership](../../workflows/delivery/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).

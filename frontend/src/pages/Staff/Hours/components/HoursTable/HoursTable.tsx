@@ -1,5 +1,6 @@
+import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { HoursFilters, HoursTableRow } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -17,25 +18,26 @@ interface HoursTableProps {
   onRowSelect: (row: HoursTableRow) => void;
   onSortingChange: (sorting: ListSort<HoursSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function HoursTable({
   queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
-  onColumnWidthsChange, onErrorChange,
+  onColumnWidthsChange, onMessageChange,
 }: HoursTableProps) {
   const query = useHoursTableData(queryKey, filters, sorting);
-  usePageErrorReporter(onErrorChange, query.error, { label: 'Retry', onClick: query.retry });
+  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table
+    enableColumnResizing
     ariaLabel="Hours entries"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}
     data={query.rows}
     loading={query.loading}
     refreshing={query.refreshing}
-    unavailable={query.error ? { title: 'Hours unavailable', onRetry: query.retry } : undefined}
+    unavailable={query.error && !query.rows.length ? { title: 'Hours unavailable', onRetry: query.retry } : undefined}
     keyExtractor={row => row.id}
     selectedKey={selectedRowId}
     onRowSelect={onRowSelect}
@@ -46,6 +48,7 @@ export default function HoursTable({
     onColumnWidthsChange={onColumnWidthsChange}
     hasNextPage={query.hasNextPage}
     loadingNextPage={query.loadingNextPage}
+    nextPageUnavailable={query.nextPageError ? { onRetry: query.retryNextPage } : undefined}
     onLoadNextPage={query.loadNextPage}
     emptyMessage="No hours found"
   />;

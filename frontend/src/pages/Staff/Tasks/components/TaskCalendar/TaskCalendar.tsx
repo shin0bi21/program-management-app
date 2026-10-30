@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
-import usePageErrorReporter, { type PageErrorChangeHandler } from '../../../../../common/components/PageErrorOverlay/usePageErrorReporter';
+import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import { getTasksCalendarData } from '../../tasks.api';
@@ -50,15 +50,15 @@ interface TaskCalendarProps {
   onResourceSelect: (resourceId: string) => void;
   onAddTask: (initialValues: AddTaskModalInitialValues) => void;
   onEditTask: (task: Task) => void;
-  onErrorChange?: PageErrorChangeHandler;
+  onMessageChange?: PageMessageChangeHandler;
 }
 
 export default function TaskCalendar({
   resources, filters, canWrite, selectedResourceId, selectedTaskId, actions, calendarCacheRef,
-  onTaskSelect, onResourceSelect, onAddTask, onEditTask, onErrorChange,
+  onTaskSelect, onResourceSelect, onAddTask, onEditTask, onMessageChange,
 }: TaskCalendarProps) {
-  const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
-    const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key });
+  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
+    const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key }, { signal });
     return tasks.reduce<Record<string, Record<string, Task[]>>>((data, task) => {
       data[task.assignee.id] ??= {};
       data[task.assignee.id][start.key] ??= [];
@@ -74,7 +74,7 @@ export default function TaskCalendar({
   });
   const { upsertItem, removeItem } = calendar;
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
-  usePageErrorReporter(onErrorChange, calendar.error, retryAction);
+  usePageMessageReporter(onMessageChange, calendar.error, retryAction);
   useEffect(() => {
     calendarCacheRef.current = {
       upsert: task => upsertItem(task.assignee.id, task.startDate, task),

@@ -80,7 +80,7 @@ function renderCalendar({
   onDelete = vi.fn(),
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
-  onErrorChange = vi.fn(),
+  onMessageChange = vi.fn(),
 }: {
   data?: RowPeriodData<HoursItem>;
   resources?: StaffResource[];
@@ -93,7 +93,7 @@ function renderCalendar({
   onDelete?: ReturnType<typeof vi.fn>;
   onStaffSelect?: ReturnType<typeof vi.fn>;
   onMove?: ReturnType<typeof vi.fn>;
-  onErrorChange?: ReturnType<typeof vi.fn>;
+  onMessageChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
   const calendarCacheRef: MutableRefObject<HoursCalendarCache> = {
@@ -112,7 +112,7 @@ function renderCalendar({
         onDelete={onDelete}
         onAdd={onAdd}
         onMove={onMove}
-        onErrorChange={onErrorChange}
+        onMessageChange={onMessageChange}
       />
   );
   return {
@@ -123,7 +123,7 @@ function renderCalendar({
     onDelete,
     onStaffSelect,
     onMove,
-    onErrorChange,
+    onMessageChange,
   };
 }
 
@@ -136,6 +136,16 @@ describe('HoursCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     calendarState.props = null;
+  });
+
+  it('cancels its range request when unmounted', () => {
+    const { unmount } = renderCalendar();
+    act(() => calendarState.props?.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 1)));
+    const signal = vi.mocked(getHoursCalendarData).mock.calls[0][2]?.signal;
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
   });
 
   it('removes a moved or saved entry when its resolved cycle is outside the active selection', () => {
@@ -206,7 +216,7 @@ describe('HoursCalendar', () => {
     }, {
       start: expect.any(String),
       end: expect.any(String),
-    });
+    }, { signal: expect.any(AbortSignal) });
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([
       { date: periods[1].key, item },
     ]));
@@ -266,17 +276,17 @@ describe('HoursCalendar', () => {
     vi.mocked(getHoursCalendarData)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({});
-    const { onErrorChange } = renderCalendar();
+    const { onMessageChange } = renderCalendar();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'offline',
       action: expect.objectContaining({ label: 'Retry' }),
     })));
-    const reportedError = onErrorChange.mock.calls[onErrorChange.mock.calls.length - 1]?.[0];
+    const reportedError = onMessageChange.mock.calls[onMessageChange.mock.calls.length - 1]?.[0];
     act(() => reportedError.action.onClick());
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(onErrorChange).toHaveBeenLastCalledWith(null));
+    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(null));
   });
 });

@@ -2,74 +2,92 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
-import { deleteSession, moveSessionDate, type MoveSessionResult } from '../../sessions.api';
-import type { CohortSession } from '../../types';
+import { deleteSession, moveSessionDate, type CreatedSessionResult, type UpdatedSessionResult, type SessionAttendanceResult } from '../../sessions.api';
+import type { ProgramCohort } from '../../../Cohorts/types';
+import type { CohortSession, SessionCalendarCache } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import { getErrorMessage } from '../../../../../http/errors';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-const COHORT_QUERY_KEY = ['cohorts'] as const;
-const YOUTH_QUERY_KEY = ['youth'] as const;
-const SESSION_QUERY_KEY = ['sessions'] as const;
-const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
-const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
+const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
+const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
 
 export default function useSessionActions({
   onSessionRemoved,
+  onSessionSynced,
 }: {
   onSessionRemoved: (sessionId: string) => void;
+  onSessionSynced?: (session: CohortSession) => void;
 }) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRevision, setCalendarRevision] = useState(0);
-
+  const calendarCacheRef = useRef<SessionCalendarCache>(EMPTY_CALENDAR_CACHE);
   const [moveError, setMoveError] = useState<string | null>(null);
   const pendingMoves = useRef(new Set<string>());
   const [pendingSessionIds, setPendingSessionIds] = useState<string[]>([]);
 
+  const refreshCohortOverviews = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['cohorts', 'options'] });
+  }, [queryClient]);
+
+  const syncSession = useCallback((session: CohortSession) => {
+    replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
+    calendarCacheRef.current.upsert(session);
+    onSessionSynced?.(session);
+    refreshCohortOverviews();
+  }, [onSessionSynced, queryClient, refreshCohortOverviews]);
+
+  const syncCohorts = useCallback((cohorts: readonly ProgramCohort[] = []) => {
+    for (const cohort of cohorts) {
+      replaceInfiniteListRow(queryClient, ['cohorts', 'table'], cohort);
+    }
+  }, [queryClient]);
+
+  const syncUpdatedSession = useCallback((result: UpdatedSessionResult) => {
+    syncSession(result.session);
+    syncCohorts(result.updatedCohorts);
+  }, [syncCohorts, syncSession]);
+
+  const syncAttendance = useCallback((result: SessionAttendanceResult) => {
+    syncSession(result.session);
+    queryClient.setQueryData(['sessions', result.session.id, 'roster'], result.roster);
+    for (const youth of result.updatedYouth ?? []) {
+      replaceInfiniteListRow(queryClient, ['youth', 'table'], youth);
+    }
+    if (result.updatedCohort) {
+      syncCohorts([result.updatedCohort]);
+    }
+    void queryClient.invalidateQueries({ queryKey: ['youth-cohort-attendance'] });
+  }, [queryClient, syncCohorts, syncSession]);
+
   const moveSession = useCallback(async (session: CohortSession, date: string) => {
     if (pendingMoves.current.has(session.id)) return null;
+
     pendingMoves.current.add(session.id);
     setPendingSessionIds([...pendingMoves.current]);
     setMoveError(null);
 
-    let updated: (CohortSession & MoveSessionResult) | null = null;
     try {
-      const result = await moveSessionDate(session.id, date);
-      updated = { ...session, ...result };
-      replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, updated);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-      ]);
-      return updated;
+      const saved = await moveSessionDate(session.id, date);
+      syncUpdatedSession(saved);
+      return saved.session;
     } catch (cause) {
-      setMoveError(updated ? 'Session moved, but some views could not refresh. Reload to see the latest data.'
-        : getErrorMessage(cause, 'Could not move session'));
-      return updated;
+      setMoveError(getErrorMessage(cause, 'Could not move session'));
+      return null;
     } finally {
       pendingMoves.current.delete(session.id);
       setPendingSessionIds([...pendingMoves.current]);
     }
-  }, [queryClient]);
+  }, [syncUpdatedSession]);
 
-  const refreshSessionQueries = useCallback(async () => {
-    // Buffered calendars use inactive range queries; cancel old loads before replacing their buffer.
-    await queryClient.cancelQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY });
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-    ]);
+  const refreshCreatedSessions = useCallback(async (result: CreatedSessionResult) => {
+    syncCohorts(result.updatedCohorts);
+    // Creation cannot establish membership in every filtered collection or buffered range.
+    await queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+    refreshCohortOverviews();
     setCalendarRevision(revision => revision + 1);
-  }, [queryClient]);
-
-  const refreshAttendance = useCallback(async () => {
-    await Promise.all([
-      refreshSessionQueries(),
-      queryClient.invalidateQueries({ queryKey: YOUTH_QUERY_KEY }),
-    ]);
-  }, [queryClient, refreshSessionQueries]);
+  }, [queryClient, refreshCohortOverviews, syncCohorts]);
 
   const requestDelete = useCallback((session: CohortSession) => setConfirmAction({
     title: 'Delete Session',
@@ -78,17 +96,14 @@ export default function useSessionActions({
     confirmVariant: 'danger',
     successMessage: 'Session deleted',
     onConfirm: async () => {
-      await deleteSession(session.id);
+      const saved = await deleteSession(session.id);
+      syncCohorts(saved.updatedCohorts);
       removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
+      calendarCacheRef.current.remove(session.id);
       onSessionRemoved(session.id);
-      await queryClient.cancelQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: SESSION_CALENDAR_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: COHORT_QUERY_KEY }),
-      ]);
-      setCalendarRevision(revision => revision + 1);
+      refreshCohortOverviews();
     },
-  }), [onSessionRemoved, queryClient]);
+  }), [onSessionRemoved, queryClient, refreshCohortOverviews, syncCohorts]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 
@@ -98,8 +113,11 @@ export default function useSessionActions({
     pendingSessionIds,
     moveSession,
     calendarRevision,
-    refreshSessionQueries,
-    refreshAttendance,
+    calendarCacheRef,
+    syncSession,
+    syncUpdatedSession,
+    syncAttendance,
+    refreshCreatedSessions,
     requestDelete,
     closeConfirmation,
   };

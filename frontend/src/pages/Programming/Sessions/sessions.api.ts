@@ -1,3 +1,5 @@
+import type { YouthProfile } from '../../Youth/types';
+import type { ProgramCohort } from '../Cohorts/types';
 import type { Program } from '../../../common/features/programs/types';
 import { getSessionRequestRange } from './utils/sessionDateRange';
 import { apiClient } from '../../../http/client';
@@ -13,7 +15,7 @@ import type {
   SessionSortKey,
   SessionType,
 } from './types';
-import type { CursorPage, CursorRequest } from '../../../query/types';
+import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
 
 interface SessionCalendarFilters extends SessionListFilters {
   start: string;
@@ -59,8 +61,20 @@ export interface CreateSessionInput {
   endTime?: string;
 }
 
+export type CreatedSessionResult = CohortSession & { updatedCohorts?: ProgramCohort[] };
+
+export interface UpdatedSessionResult {
+  session: CohortSession;
+  updatedCohorts?: ProgramCohort[];
+}
+
+export interface DeletedSessionResult {
+  id: string;
+  updatedCohorts?: ProgramCohort[];
+}
+
 export function createSession(data: CreateSessionInput) {
-  return apiClient.post('/cohorts/sessions', data);
+  return apiClient.post<CreatedSessionResult>('/cohorts/sessions', data);
 }
 
 
@@ -97,7 +111,7 @@ export function getSessions(
   if (pagination) {
     query.set('sort', pagination.key);
     query.set('direction', pagination.direction);
-    query.set('limit', String(pagination.limit ?? 25));
+    query.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
     if (pagination.cursor) query.set('cursor', pagination.cursor);
   }
   const suffix = query.toString();
@@ -114,11 +128,18 @@ export function getSessionRoster(sessionId: string, opts?: RequestOptions) {
     : apiClient.get<SessionRosterMember[]>(path);
 }
 
+export interface SessionAttendanceResult {
+  roster: SessionRosterMember[];
+  session: CohortSession;
+  updatedYouth?: YouthProfile[];
+  updatedCohort?: ProgramCohort;
+}
+
 export function setSessionAttendance(
   sessionId: string,
   records: Array<{ youthId: string; status: AttendanceStatus; notes?: string | null }>,
 ) {
-  return apiClient.put<SessionRosterMember[]>(`/cohorts/sessions/${sessionId}/attendance`, { records });
+  return apiClient.put<SessionAttendanceResult>(`/cohorts/sessions/${sessionId}/attendance`, { records });
 }
 
 export function getSessionNotes(sessionId: string, opts?: RequestOptions) {
@@ -223,24 +244,15 @@ export async function downloadSessionAttachment(sessionId: string, attachment: S
 }
 
 export function updateSession(sessionId: string, data: UpdateSessionInput) {
-  return apiClient.put(`/cohorts/sessions/${sessionId}`, data);
-}
-
-export interface MoveSessionResult {
-  id: string;
-  cohortId: string;
-  cohortName: string;
-  cycleId: string;
-  startsAt: string;
-  endsAt: string;
+  return apiClient.put<UpdatedSessionResult>(`/cohorts/sessions/${sessionId}`, data);
 }
 
 export function moveSessionDate(sessionId: string, date: string) {
-  return apiClient.put<MoveSessionResult>(`/cohorts/sessions/${sessionId}/date`, { date });
+  return apiClient.put<UpdatedSessionResult>(`/cohorts/sessions/${sessionId}/date`, { date });
 }
 
 export function deleteSession(sessionId: string) {
-  return apiClient.delete(`/cohorts/sessions/${sessionId}`);
+  return apiClient.delete<DeletedSessionResult>(`/cohorts/sessions/${sessionId}`);
 }
 
 export interface SessionReferenceData {

@@ -17,7 +17,9 @@ import { getTask } from '../tasks/taskService';
 import { getBiweeklyPayPeriod } from './payPeriods';
 import { getStaffReferenceData } from '../../referenceData/staffReferenceData';
 import {
-  hoursMutationColumns,
+  getHoursRecord,
+  hoursRowToEntry,
+  hoursRowToTableRow,
   hoursRecordColumns,
   hoursRecordFrom,
   type HoursRow,
@@ -76,16 +78,17 @@ export async function setHours(
   await assertActiveStaffResource(input.staffId);
   const transactionId = crypto.randomUUID();
   let saved!: HoursRow;
-  let updatedTask: Awaited<ReturnType<typeof getTask>> | undefined;
+  let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const scope = await resolveHoursScope(input, trx);
     await assertProgramExists(scope.programId, trx);
     const cycleId = await resolveCycleForWorkDate(scope.workDate, scope.programId, trx);
     const existing = id ? await getOwnedEntry(trx, id, actor) : null;
-    saved = id
+    const savedId = id
       ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
       : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
+    saved = await getHoursRecord(savedId, trx);
     const completeTask = !id && input.source === 'task' && input.completeTask;
     await completeTaskFromHours(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
     await audit(
@@ -99,15 +102,12 @@ export async function setHours(
       { ...saved },
     );
 
-    if (scope.taskId && actor.permissions.includes('read:tasks')) {
-      updatedTask = await getTask(scope.taskId, actor, trx);
-    }
+    updatedTasks = await getAffectedTasks([existing?.taskId, scope.taskId], actor, trx);
   });
   return {
-    ...saved,
-    categoryLabel: getHoursCategoryLabel(saved.category),
-    hours: Number(saved.hours),
-    ...(updatedTask ? { updatedTask } : {}),
+    ...hoursRowToEntry(saved),
+    tableRow: hoursRowToTableRow(saved),
+    ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
 
@@ -118,6 +118,7 @@ export async function updateHoursPlacement(
 ) {
   const transactionId = crypto.randomUUID();
   let updated!: HoursRow;
+  let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const existing = await getOwnedEntry(trx, id, actor);
@@ -125,30 +126,33 @@ export async function updateHoursPlacement(
       throw new ConflictError('Session time must stay on the session date');
     }
     const cycleId = await resolveCycleForWorkDate(input.workDate, existing.programId, trx);
-    const rows = await trx<HoursRow[]>`
+    await trx`
       UPDATE time_entries
       SET work_date = ${input.workDate}, cycle_id = ${cycleId}, updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
-      RETURNING ${hoursMutationColumns}
     `;
-    updated = rows[0];
+    updated = await getHoursRecord(id, trx);
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
+    updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
   });
   return {
-    ...updated,
-    categoryLabel: getHoursCategoryLabel(updated.category),
-    hours: Number(updated.hours),
+    ...hoursRowToEntry(updated),
+    tableRow: hoursRowToTableRow(updated),
+    ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
 
 export async function deleteHours(id: string, actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
+  let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const existing = await getOwnedEntry(trx, id, actor);
     await trx`DELETE FROM time_entries WHERE id = ${id}`;
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'DELETE', { ...existing }, null);
+    updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
   });
+  return { message: 'Logged hours deleted', ...(updatedTasks.length ? { updatedTasks } : {}) };
 }
 
 export function getHoursReferenceData() {
@@ -290,7 +294,7 @@ async function insertHoursRecord(
   cycleId: string,
   actorId: string,
 ) {
-  const [created] = await trx<HoursRow[]>`
+  const [created] = await trx<{ id: string }[]>`
     INSERT INTO time_entries (
       staff_id, program_id, cycle_id, category, task_id, session_id,
       work_date, hours, note, created_by, updated_by
@@ -299,9 +303,9 @@ async function insertHoursRecord(
       ${input.staffId}, ${scope.programId}, ${cycleId}, ${scope.category}, ${scope.taskId},
       ${scope.sessionId}, ${scope.workDate}, ${input.hours}, ${input.note}, ${actorId}, ${actorId}
     )
-    RETURNING ${hoursMutationColumns}
+    RETURNING id
   `;
-  return created;
+  return created.id;
 }
 
 async function updateHoursRecord(
@@ -312,7 +316,7 @@ async function updateHoursRecord(
   cycleId: string,
   actorId: string,
 ) {
-  const [updated] = await trx<HoursRow[]>`
+  const [updated] = await trx<{ id: string }[]>`
     UPDATE time_entries
     SET staff_id = ${input.staffId},
       program_id = ${scope.programId},
@@ -326,9 +330,9 @@ async function updateHoursRecord(
       updated_by = ${actorId},
       updated_at = NOW()
     WHERE id = ${id}
-    RETURNING ${hoursMutationColumns}
+    RETURNING id
   `;
-  return updated;
+  return updated.id;
 }
 
 async function resolveHoursScope(input: SetHoursInput, db: typeof sql) {
@@ -407,7 +411,7 @@ async function assertActiveStaffResource(staffId: string) {
     INNER JOIN user_roles role ON role.id = u.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = u.id
     WHERE u.id = ${staffId}
-      AND role.name IN ('admin', 'staff')
+      AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
     LIMIT 1
   `;
@@ -448,4 +452,15 @@ async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayl
   if (!rows.length) throw new NotFoundError('Logged hours not found');
   assertCanSetHours(actor, rows[0].staffId);
   return rows[0];
+}
+
+async function getAffectedTasks(
+  taskIds: Array<string | null | undefined>,
+  actor: AccessTokenPayload,
+  trx: typeof sql,
+) {
+  if (!actor.permissions.includes('read:tasks')) return [];
+
+  const ids = [...new Set(taskIds.filter((id): id is string => Boolean(id)))];
+  return Promise.all(ids.map(id => getTask(id, actor, trx)));
 }

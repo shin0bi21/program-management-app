@@ -20,6 +20,7 @@ vi.mock('../../../Programming/Sessions/sessions.api', () => sessionNoteApi);
 
 const cohort = {
   id: 'cohort-1',
+    cycleId: 'cycle-1',
   name: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
@@ -66,7 +67,7 @@ describe('YouthAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.getYouthCohortAttendance.mockResolvedValue(attendance);
-    api.setYouthCohortAttendance.mockResolvedValue(attendance);
+    api.setYouthCohortAttendance.mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
     sessionNoteApi.createSessionNote.mockResolvedValue({});
     sessionNoteApi.unlinkSessionNoteYouth.mockResolvedValue(undefined);
     sessionNoteApi.getSessionRoster.mockResolvedValue([

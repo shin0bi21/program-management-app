@@ -3,7 +3,7 @@ import type { Program } from '../../../../../../common/features/programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { createSession } from '../../../sessions.api';
+import { createSession, type CreatedSessionResult } from '../../../sessions.api';
 import { REGULAR_SESSION_TYPE_ID } from '../../../types';
 import { useSessionTypes } from '../../../hooks/data/useSessionTypes';
 import { nextSessionDate } from '../../../utils/sessionSchedule';
@@ -12,7 +12,7 @@ export default function useAddSessionModal({ programs, initialProgramId, initial
   programs: Program[];
   initialProgramId?: string;
   initialDate?: string;
-  onSaved: () => void | Promise<void>;
+  onSaved: (result: CreatedSessionResult) => void | Promise<void>;
 }) {
   const [programId, setProgramId] = useState(initialProgramId ?? programs[0]?.id ?? '');
   const program = programs.find(candidate => candidate.id === programId);
@@ -62,8 +62,9 @@ export default function useAddSessionModal({ programs, initialProgramId, initial
 
     setStatus('submitting');
     setMessage('Adding session...');
+    let saved: CreatedSessionResult;
     try {
-      await createSession({
+      saved = await createSession({
         programId,
         sessionTypeId: draft.sessionTypeId,
         theme: draft.theme.trim(),
@@ -79,7 +80,7 @@ export default function useAddSessionModal({ programs, initialProgramId, initial
     }
 
     try {
-      await onSaved();
+      await onSaved(saved);
       setMessage('Session added successfully.');
     } catch {
       setMessage('Session added, but the page could not refresh. Reload to see it.');

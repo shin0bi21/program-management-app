@@ -110,11 +110,6 @@ describe('Tasks', () => {
     vi.mocked(getTaskReferenceData).mockResolvedValue({
       ...taskReferenceChoices,
     });
-    vi.mocked(setHours).mockResolvedValue({
-      id: 'entry-1', staffId: 'staff-1', programId: null, programName: null,
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', cycleStartsOn: '2026-07-01', cycleEndsOn: '2026-09-01',
-      category: 'planning_prep', categoryLabel: 'Planning / Prep', taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null, workDate: '2026-08-10', hours: 1, note: 'Prepared materials',
-    });
     vi.mocked(deleteTask).mockResolvedValue();
     vi.mocked(updateTaskState).mockResolvedValue({
       ...task,
@@ -293,7 +288,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
       expect.objectContaining({ staffIds: ['staff-2'] }),
       expect.anything(),
-      expect.objectContaining({ limit: 25 }),
+      expect.objectContaining({ limit: 50 }),
     ));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
 
@@ -316,6 +311,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+      { signal: expect.any(AbortSignal) },
     ));
     await waitFor(() => expect(calendarTestState.props?.items['staff-1']).toEqual([task]));
     expect(screen.getByRole('textbox', { name: 'Search tasks' })).toHaveValue('missing');
@@ -343,6 +339,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'workshop' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
+      { signal: expect.any(AbortSignal) },
     ));
   });
 
@@ -438,10 +435,10 @@ describe('Tasks', () => {
     await waitFor(() => expect(screen.getByRole('cell', { name: 'Active' })).toBeInTheDocument());
   });
 
-  it('keeps the hours target until close after completing its task and does not reopen on selection', async () => {
+  it('keeps the hours target current after completion and preserves selection when closed', async () => {
     const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
     const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
-    vi.mocked(setHours).mockResolvedValue({ updatedTask: completedTask } as Awaited<ReturnType<typeof setHours>>);
+    vi.mocked(setHours).mockResolvedValue({ updatedTasks: [completedTask] } as Awaited<ReturnType<typeof setHours>>);
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task, nextTask], nextCursor: null });
     renderTasks();
 
@@ -453,9 +450,12 @@ describe('Tasks', () => {
     expect(setHours).toHaveBeenCalledWith(input);
     expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(hoursModal.props!.initialTask).toEqual(task);
+    expect(hoursModal.props!.initialTask).toEqual(completedTask);
 
     act(() => hoursModal.props!.onClose());
+    expect(screen.getByText('Prepare workshop').closest('tr')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByText('Next task'));
     expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();

@@ -60,6 +60,7 @@ export default function AccountModal(props: AccountModalProps) {
                   value={field.value}
                   options={[
                     { value: 'staff', label: 'Staff' },
+                    { value: 'project_manager', label: 'Project Manager' },
                     { value: 'admin', label: 'Admin' },
                   ]}
                   onChange={field.onChange}
