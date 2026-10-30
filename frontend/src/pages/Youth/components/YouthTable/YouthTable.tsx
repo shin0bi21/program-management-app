@@ -39,6 +39,7 @@ export default function YouthTable({
   }, [onSelectedProfileResolved, selectedProfile, tableData.loading]);
 
   return <Table
+    enableColumnResizing
     ariaLabel="Youth profiles"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}

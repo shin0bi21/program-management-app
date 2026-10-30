@@ -42,6 +42,7 @@ export default function SessionTable({
     || Boolean(filters.statuses?.length);
 
   return <Table
+    enableColumnResizing
     ariaLabel="Sessions"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}

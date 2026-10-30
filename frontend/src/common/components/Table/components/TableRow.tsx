@@ -1,25 +1,25 @@
-import { flexRender, type Row } from '@tanstack/react-table';
+import { flexRender, type Cell, type Row } from '@tanstack/react-table';
 import { memo, type KeyboardEvent, type MouseEvent } from 'react';
 import type { TableNavigationKey } from '../Table.types';
 
 interface TableRowProps<T> {
   row: Row<T>;
+  cells: Cell<T, unknown>[];
   selected: boolean;
   tabbable: boolean;
   rowIndex: number;
   onSelect?: (item: T) => void;
   onNavigate: (rowIndex: number, id: TableNavigationKey) => void;
-  columnWidths: Record<string, number>;
 }
 
 function TableRowComponent<T>({
   row,
+  cells,
   selected,
   tabbable,
   rowIndex,
   onSelect,
   onNavigate,
-  columnWidths,
 }: TableRowProps<T>) {
   const item = row.original;
   const select = () => onSelect?.(item);
@@ -58,11 +58,10 @@ function TableRowComponent<T>({
       onClick={onSelect ? handleClick : undefined}
       onKeyDown={handleKeyDown}
     >
-      {row.getVisibleCells().map(cell => (
+      {cells.map(cell => (
         <td
           key={cell.id}
           data-column-id={cell.column.id}
-          style={{ width: columnWidths[cell.column.id] }}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </td>

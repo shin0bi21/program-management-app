@@ -1,14 +1,13 @@
 import { flexRender, type Header } from '@tanstack/react-table';
-import type { KeyboardEvent } from 'react';
-import { flushSync } from 'react-dom';
+import type { KeyboardEvent, MouseEvent, TouchEvent } from 'react';
 import type { ColumnSizingState } from '@tanstack/react-table';
 import { getTableColumnHeader } from '../Table.types';
 import { ariaSortFor } from '../table.utils';
 
 interface TableHeaderProps<T> {
   headers: Header<T, unknown>[];
-  canResize: boolean;
   onResizeStart: () => ColumnSizingState | undefined;
+  onResizeDrag: (header: Header<T, unknown>, event: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>) => void;
   onToggleSort: (columnKey: string) => void;
   onResizeByStep: (columnId: string, currentWidth: number, direction: 'ArrowLeft' | 'ArrowRight', lockedWidths?: ColumnSizingState) => void;
 }
@@ -19,8 +18,8 @@ interface TableHeaderCellProps<T> extends Omit<TableHeaderProps<T>, 'headers'> {
 
 function TableHeaderCell<T>({
   header,
-  canResize,
   onResizeStart,
+  onResizeDrag,
   onToggleSort,
   onResizeByStep,
 }: TableHeaderCellProps<T>) {
@@ -31,8 +30,7 @@ function TableHeaderCell<T>({
   const handleResizeKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    let lockedWidths: ColumnSizingState | undefined;
-    flushSync(() => { lockedWidths = onResizeStart(); });
+    const lockedWidths = onResizeStart();
     onResizeByStep(
       header.column.id,
       lockedWidths?.[header.column.id] ?? header.getSize(),
@@ -41,15 +39,9 @@ function TableHeaderCell<T>({
     );
   };
 
-  const handleResizeStart = (event: Parameters<ReturnType<typeof header.getResizeHandler>>[0]) => {
-    flushSync(onResizeStart);
-    header.getResizeHandler()(event);
-  };
-
   return (
     <th
       data-column-id={header.column.id}
-      style={{ width: header.getSize() }}
       aria-sort={ariaSortFor(sortDirection)}
     >
       {header.column.getCanSort() ? (
@@ -58,13 +50,13 @@ function TableHeaderCell<T>({
           <span aria-hidden="true" className="table-sort-indicator" data-direction={sortDirection || 'none'} />
         </button>
       ) : headerLabel}
-      {header.column.getCanResize() && canResize && (
+      {header.column.getCanResize() && (
         <button
           type="button"
-          className={`table-resize-handle${header.column.getIsResizing() ? ' table-resize-handle--active' : ''}`}
+          className="table-resize-handle"
           aria-label={`Resize ${getTableColumnHeader(column)} column`}
-          onMouseDown={handleResizeStart}
-          onTouchStart={handleResizeStart}
+          onMouseDown={event => onResizeDrag(header, event)}
+          onTouchStart={event => onResizeDrag(header, event)}
           onDoubleClick={() => header.column.resetSize()}
           onKeyDown={handleResizeKeyDown}
         />
@@ -75,8 +67,8 @@ function TableHeaderCell<T>({
 
 export default function TableHeader<T>({
   headers,
-  canResize,
   onResizeStart,
+  onResizeDrag,
   onToggleSort,
   onResizeByStep,
 }: TableHeaderProps<T>) {
@@ -87,8 +79,8 @@ export default function TableHeader<T>({
           <TableHeaderCell
             key={header.id}
             header={header}
-            canResize={canResize}
             onResizeStart={onResizeStart}
+            onResizeDrag={onResizeDrag}
             onToggleSort={onToggleSort}
             onResizeByStep={onResizeByStep}
           />

@@ -16,7 +16,6 @@ describe('TableBody', () => {
       keyExtractor={() => ''}
       tabbableIndex={0}
       onNavigate={vi.fn()}
-      columnWidths={{}}
     /></table>);
 
     const loadingCell = screen.getByRole('status', { name: 'Loading rows' }).closest('td');

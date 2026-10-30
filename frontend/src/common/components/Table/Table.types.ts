@@ -73,6 +73,7 @@ export interface TableProps<T> {
   nextPageUnavailable?: { onRetry: () => void };
 
   /* === Column sizing / visibility === */
+  enableColumnResizing?: boolean;
   columnWidths?: ColumnSizingState;
   onColumnWidthsChange?: (widths: ColumnSizingState) => void;
   hiddenColumnKeys?: string[];

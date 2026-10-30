@@ -40,6 +40,7 @@ export default function CohortTable({
 
 
   return <Table
+    enableColumnResizing
     ariaLabel="Cohorts"
     columns={columns}
     hiddenColumnKeys={hiddenColumnKeys}

@@ -46,6 +46,7 @@ export function InfiniteScroll() {
         hasNextPage={rows.length < 60}
         onLoadNextPage={loadNextPage}
         columnWidths={widths}
+        enableColumnResizing
         onColumnWidthsChange={setWidths}
       />
       <output data-testid="load-count">{loadCount}</output>
@@ -93,5 +94,35 @@ export function InitialLoading() {
           data={loaded ? makeRows(1, 2) : []} loading={!loaded} keyExtractor={row => row.id} />
       </div>
     </div>
+  </div>;
+}
+
+const resizeColumns: TableColumnDef<StoryRow>[] = [
+  { id: 'name', header: 'Name', size: 180, cell: ({ row }) => row.original.name },
+  { id: 'status', header: 'Status', size: 180, cell: ({ row }) => row.original.status },
+  { id: 'notes', header: 'Notes', size: 280, cell: ({ row }) => row.original.notes },
+  { id: 'actions', header: '', size: 40, enableResizing: false, enableHiding: false, cell: () => '…' },
+];
+const resizeRows = makeRows(1, 100);
+
+export function ResizePreview() {
+  const [widths, setWidths] = useState<ColumnSizingState>({ notes: 280 });
+  const [commits, setCommits] = useState(0);
+  const [narrow, setNarrow] = useState(false);
+  const [hiddenColumnKeys, setHiddenColumnKeys] = useState<string[]>([]);
+
+  return <div style={{ padding: 24, width: narrow ? 540 : 820 }}>
+    <button onClick={() => setNarrow(value => !value)}>Toggle viewport width</button>
+    <button onClick={() => setHiddenColumnKeys(value => value.length ? [] : ['notes'])}>Toggle notes</button>
+    <Table ariaLabel="Resize preview table" columns={resizeColumns} data={resizeRows}
+      keyExtractor={row => row.id} maxHeight="320px" selectedKey="1"
+      hiddenColumnKeys={hiddenColumnKeys} columnWidths={widths}
+      enableColumnResizing
+      onColumnWidthsChange={next => {
+        setCommits(value => value + 1);
+        setWidths(next);
+      }} />
+    <output data-testid="resize-commits">{commits}</output>
+    <output data-testid="saved-widths">{JSON.stringify(widths)}</output>
   </div>;
 }
