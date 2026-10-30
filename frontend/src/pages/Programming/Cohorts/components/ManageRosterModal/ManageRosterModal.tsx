@@ -7,7 +7,7 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 import type { ProgramCohort } from '../../types';
 
-import { useCohortRoster } from '../../hooks/useCohortRoster';
+import { useCohortRoster } from './hooks/useCohortRoster';
 import { useManageRosterModal } from './hooks/useManageRosterModal';
 
 import './ManageRosterModal.css';
