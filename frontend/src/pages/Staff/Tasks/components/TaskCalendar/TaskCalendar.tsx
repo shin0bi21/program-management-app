@@ -57,8 +57,8 @@ export default function TaskCalendar({
   resources, filters, canWrite, selectedResourceId, selectedTaskId, actions, calendarCacheRef,
   onTaskSelect, onResourceSelect, onAddTask, onEditTask, onMessageChange,
 }: TaskCalendarProps) {
-  const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
-    const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key });
+  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
+    const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key }, { signal });
     return tasks.reduce<Record<string, Record<string, Task[]>>>((data, task) => {
       data[task.assignee.id] ??= {};
       data[task.assignee.id][start.key] ??= [];

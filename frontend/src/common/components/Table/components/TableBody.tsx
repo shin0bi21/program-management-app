@@ -22,7 +22,6 @@ interface TableBodyProps<T> {
   tabbableIndex: number;
   onRowSelect?: (item: T) => void;
   onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
-  columnWidths: Record<string, number>;
 }
 
 export default function TableBody<T>({
@@ -38,7 +37,6 @@ export default function TableBody<T>({
   tabbableIndex,
   onRowSelect,
   onNavigate,
-  columnWidths,
 }: TableBodyProps<T>) {
   const bodyRef = useRef<HTMLTableSectionElement>(null);
 
@@ -55,8 +53,7 @@ export default function TableBody<T>({
       <tr className="table-loading-row">
         <td colSpan={visibleColumnCount} className="table-state-cell">
           <div className="table-loading-status" role="status" aria-label="Loading rows">
-            <LoadingSpinner />
-            <span className="sr-only">Loading rows…</span>
+            <LoadingSpinner label="Loading rows…" />
           </div>
         </td>
       </tr>
@@ -83,12 +80,12 @@ export default function TableBody<T>({
         <TableRow
           key={key}
           row={row}
+          cells={row.getVisibleCells()}
           selected={selectedKey === key}
           tabbable={index === tabbableIndex}
           rowIndex={index}
           onSelect={onRowSelect}
           onNavigate={onNavigate}
-          columnWidths={columnWidths}
         />
       );
     });

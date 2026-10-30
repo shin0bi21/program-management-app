@@ -37,7 +37,6 @@ function renderCalendar(filters: SessionListFilters = {}, editable = true) {
   const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
   const rendered = render(<SessionCalendar
     calendarCacheRef={calendarCacheRef}
-    queryKey={['sessions', 'calendar']}
     filters={filters}
     programs={programs}
     selectedSessionId={session.id}
@@ -66,6 +65,16 @@ describe('SessionCalendar', () => {
     api.getSessions.mockResolvedValue([session]);
   });
 
+  it('cancels its own range read when unmounted', () => {
+    const { unmount } = renderCalendar();
+    act(() => calendarState.props?.onInitialPeriods?.([period]));
+    const signal = api.getSessions.mock.calls[0][1].signal as AbortSignal;
+
+    unmount();
+
+    expect(signal.aborted).toBe(true);
+  });
+
   it('loads complete filters with a Toronto range, groups sessions by program and resolves buffered selection records', async () => {
     const filters: SessionListFilters = {
       programIds: ['program-1', 'program-2'], cycleIds: ['cycle-1'],
@@ -83,7 +92,6 @@ describe('SessionCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items).toEqual({
       'program-1': [session], 'program-2': [otherSession],
     }));
-    expect(rendered.queryClient.getQueryData(['sessions', 'calendar', requestFilters])).toEqual([session, otherSession]);
     expect(rendered.onSessionsLoaded).toHaveBeenLastCalledWith([session, otherSession]);
     expect(calendarState.props!.rows).toEqual(programs);
     expect(calendarState.props!.getItemRange(session)).toEqual({ start: '2026-08-10', end: '2026-08-10' });
@@ -132,7 +140,7 @@ describe('SessionCalendar', () => {
     });
     api.getSessions.mockResolvedValue([future]);
     const day = buildDayPeriod(new Date(2099, 7, 10));
-    render(<SessionCalendar calendarCacheRef={calendarCacheRef} queryKey={['sessions', 'calendar']} filters={{}} programs={programs}
+    render(<SessionCalendar calendarCacheRef={calendarCacheRef} filters={{}} programs={programs}
       selectedSessionId={future.id} onSessionSelect={vi.fn()} onSessionMove={move} />);
     act(() => calendarState.props!.onInitialPeriods!([day]));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([future]));

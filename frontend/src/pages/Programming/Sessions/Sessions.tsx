@@ -27,7 +27,6 @@ import './Sessions.css';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
-const SESSION_CALENDAR_QUERY_KEY = [...SESSION_QUERY_KEY, 'calendar'] as const;
 
 export default function Sessions() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
@@ -149,7 +148,6 @@ export default function Sessions() {
     programs={programs}
     selectedProgramId={selectedProgram?.id}
     onProgramSelect={selectProgram}
-    queryKey={SESSION_CALENDAR_QUERY_KEY}
     filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
     onSessionsLoaded={selection.setCalendarSessions}

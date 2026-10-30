@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import UnavailableState from '../UnavailableState/UnavailableState';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import TableBody from './components/TableBody';
@@ -37,6 +37,7 @@ export default function Table<T>({
   loadingNextPage = false,
   onLoadNextPage,
   nextPageUnavailable,
+  enableColumnResizing = false,
   columnWidths = EMPTY_WIDTHS,
   onColumnWidthsChange,
   hiddenColumnKeys = EMPTY_KEYS,
@@ -53,6 +54,16 @@ export default function Table<T>({
     onColumnWidthsChange({ ...hiddenWidths, ...nextWidths });
   }, [columnWidths, columns, hiddenColumnKeys, onColumnWidthsChange]);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper || typeof ResizeObserver === 'undefined') return;
+
+    // clientWidth rounds fractional CSS pixels and can create a scrollbar with no usable scroll range.
+    const observer = new ResizeObserver(([entry]) => setViewportWidth(entry.contentRect.width));
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
   const { navigateRows, tabbableIndex } = useTableNavigation({
     data,
     keyExtractor,
@@ -63,6 +74,7 @@ export default function Table<T>({
   });
   const {
     headers,
+    resize,
     rows,
     isResizing,
     resizeColumnByStep,
@@ -70,6 +82,8 @@ export default function Table<T>({
     toggleSort,
     totalWidth,
   } = useTableModel({
+    enableColumnResizing,
+    viewportWidth,
     data,
     columns,
     hiddenColumnKeys,
@@ -103,7 +117,6 @@ export default function Table<T>({
       })),
     };
 
-    onColumnWidthsChange(lockedWidths);
     return lockedWidths;
   }, [columnWidths, columns, headers, onColumnWidthsChange, resolvedColumnWidths]);
 
@@ -126,7 +139,7 @@ export default function Table<T>({
         className={`table${loading ? ' table--loading' : ''}`}
         aria-label={ariaLabel}
         aria-busy={loading || refreshing || undefined}
-        style={{ width: '100%', minWidth: totalWidth }}
+        style={{ width: totalWidth, minWidth: totalWidth }}
       >
         <colgroup>
           {headers.map(header => (
@@ -138,8 +151,11 @@ export default function Table<T>({
         </colgroup>
         <TableHeader
           headers={headers}
-          canResize={Boolean(onColumnWidthsChange)}
           onResizeStart={lockRenderedColumnWidths}
+          onResizeDrag={(header, event) => {
+            const widths = lockRenderedColumnWidths();
+            if (widths && wrapperRef.current) resize.startResize(header, event, widths, wrapperRef.current);
+          }}
           onToggleSort={toggleSort}
           onResizeByStep={resizeColumnByStep}
         />
@@ -159,13 +175,12 @@ export default function Table<T>({
           tabbableIndex={tabbableIndex}
           onRowSelect={onRowSelect}
           onNavigate={navigateRows}
-          columnWidths={resolvedColumnWidths}
         />
       </table>
+      {resize.guide && <div className="table-resize-guide" aria-hidden="true" style={resize.guide} />}
       {refreshing && data.length > 0 && (
         <div className="table-refresh-status" role="status" aria-label="Updating rows">
-          <LoadingSpinner />
-          <span className="sr-only">Updating rows…</span>
+          <LoadingSpinner label="Updating rows…" />
         </div>
       )}
       <div ref={sentinelRef} className="table-scroll-sentinel" aria-hidden="true" />

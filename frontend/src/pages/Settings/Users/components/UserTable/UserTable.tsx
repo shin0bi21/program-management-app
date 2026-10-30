@@ -23,6 +23,7 @@ export default function UserTable(props: UserTableProps) {
   const hasFilters = Boolean(props.filters?.search || props.filters?.roles?.length || props.filters?.statuses?.length);
   usePageMessageReporter(props.onMessageChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry }, tableRefreshMessage(tableData.refreshNotice));
   return <Table
+    enableColumnResizing
     ariaLabel="Accounts"
     columns={props.columns}
     hiddenColumnKeys={props.hiddenColumnKeys}

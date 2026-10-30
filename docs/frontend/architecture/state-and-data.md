@@ -61,6 +61,10 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 The query hook owns loading, failure and cached server data. Include every filter, search, sort, selection and date value sent to the backend in the query key. Forward cancellation from the query hook through the API adapter to the HTTP client.
 
+Keep request cancellation and timeouts active until the response body has been consumed,
+including JSON, errors, and file downloads. A caller leaving a shared re-login workflow
+must detach its own wait without cancelling authentication for other callers.
+
 The API adapter is the single frontend owner of endpoint paths, HTTP methods, request and
 response contracts, serialization and boundary normalization. All requests use the
 centralized client. Focused status and placement mutations use `PATCH`, not `PUT`.
@@ -78,6 +82,14 @@ render internal diagnostics as user-facing copy.
 API-adapter tests own the exact method, path, query or body serialization, cancellation forwarding, typed response shaping, and boundary normalization. Mock the centralized HTTP client rather than exercising these contracts through browser UI or a query hook.
 
 Pure utilities and finite policy or capability rules use representative inputs, contract boundaries, and invalid values that the owner handles. Cover every finite case when omission would change permissions, available actions, or persisted values. Use Vitest's Node environment when the owner does not need browser globals.
+
+## Write Async Workflows
+
+Prefer `async`/`await` with `try`/`catch` for sequential loading and mutation workflows.
+Name asynchronous callbacks for their purpose, such as `loadPeriods`, rather than
+`operation`. Keep promise chaining when it directly expresses a shared promise or
+queue; do not convert it mechanically. UI callbacks that start an internally handled
+async workflow should use `void` to make the intentional lack of awaiting explicit.
 
 ## Reconcile Mutations
 

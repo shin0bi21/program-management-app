@@ -24,19 +24,18 @@ function RowHarness() {
 
   return <table><tbody><TableRow
     row={table.getRowModel().rows[0]}
+    cells={table.getRowModel().rows[0].getVisibleCells()}
     selected={false}
     tabbable
     rowIndex={0}
     onNavigate={vi.fn()}
-    columnWidths={{ name: 180 }}
   /></tbody></table>;
 }
 
 describe('TableRow', () => {
-  it('renders the TanStack cell with its column identity and width', () => {
+  it('renders the TanStack cell with its column identity', () => {
     render(<RowHarness />);
 
     expect(screen.getByRole('cell', { name: 'AVERY' })).toHaveAttribute('data-column-id', 'name');
-    expect(screen.getByRole('cell', { name: 'AVERY' })).toHaveStyle({ width: '180px' });
   });
 });

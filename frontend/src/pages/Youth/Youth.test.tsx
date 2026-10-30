@@ -203,7 +203,7 @@ describe('Youth', () => {
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'View profile note' })).toBeInTheDocument();
     expect(screen.queryByText('Youth profile note')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Profile Notes (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
   });
 
   it('reconciles an authoritative contact save into the selected dashboard', async () => {

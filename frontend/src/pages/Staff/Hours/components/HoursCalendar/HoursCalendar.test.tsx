@@ -138,6 +138,16 @@ describe('HoursCalendar', () => {
     calendarState.props = null;
   });
 
+  it('cancels its range request when unmounted', () => {
+    const { unmount } = renderCalendar();
+    act(() => calendarState.props?.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 1)));
+    const signal = vi.mocked(getHoursCalendarData).mock.calls[0][2]?.signal;
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
   it('removes a moved or saved entry when its resolved cycle is outside the active selection', () => {
     const { calendarCacheRef } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
     const item = buildItem({ cycleId: 'cycle-1' });
@@ -206,7 +216,7 @@ describe('HoursCalendar', () => {
     }, {
       start: expect.any(String),
       end: expect.any(String),
-    });
+    }, { signal: expect.any(AbortSignal) });
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([
       { date: periods[1].key, item },
     ]));

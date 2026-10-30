@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
@@ -18,7 +17,6 @@ const SESSION_CALENDAR_POSITION_KEY = 'resource-calendar:sessions:position';
 const getSessionId = (session: CohortSession) => session.id;
 
 interface SessionCalendarProps {
-  queryKey: readonly unknown[];
   filters: SessionListFilters;
   programs: Program[];
   selectedProgramId?: string | null;
@@ -36,20 +34,16 @@ interface SessionCalendarProps {
 }
 
 export default function SessionCalendar({
-  queryKey, filters, programs, selectedProgramId, selectedSessionId, onProgramSelect,
+  filters, programs, selectedProgramId, selectedSessionId, onProgramSelect,
   onSessionsLoaded, onSessionSelect, onSessionMove, calendarCacheRef, pendingSessionIds = [], onAddSession, onSessionEdit, onSessionDelete, onMessageChange,
 }: SessionCalendarProps) {
-  const queryClient = useQueryClient();
-  const loadRange = useCallback(async ({ start, end }: PeriodRange) => {
+  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
     if (!dates) return {};
 
     const requestRange = getSessionRequestRange(dates.start, dates.end);
     const requestFilters = { ...filters, ...requestRange };
-    const sessions = await queryClient.fetchQuery({
-      queryKey: [...queryKey, requestFilters],
-      queryFn: ({ signal }) => getSessions(requestFilters, { signal }),
-    });
+    const sessions = await getSessions(requestFilters, { signal });
 
     return sessions.reduce<Record<string, Record<string, CohortSession[]>>>((data, session) => {
       data[session.programId] ??= {};
@@ -57,7 +51,7 @@ export default function SessionCalendar({
       data[session.programId][start.key].push(session);
       return data;
     }, {});
-  }, [filters, queryClient, queryKey]);
+  }, [filters]);
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getSessionId,

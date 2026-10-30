@@ -133,4 +133,29 @@ describe('apiClient re-authentication', () => {
       headers: expect.objectContaining({ Authorization: `Bearer ${token}` }),
     }));
   });
+  it.each(['expired', '401'] as const)('cancels one %s waiter without cancelling shared re-login', async mode => {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, tokenWithExpiry(
+      Date.now() + (mode === 'expired' ? -60_000 : 60 * 60_000),
+    ));
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse(401, { error: 'Unauthorized' }));
+    const controller = new AbortController();
+    const cancelled = apiClient.get('/cancelled', { signal: controller.signal });
+    const rejection = cancelled.catch((error: unknown) => error);
+    const remaining = apiClient.get('/remaining');
+    await vi.waitFor(() => expect(reAuthCoordinator.getSnapshot().status).toBe('prompting'));
+    if (mode === '401') await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+
+    controller.abort();
+    await expect(rejection).resolves.toMatchObject({ name: 'AbortError' });
+    expect(reAuthCoordinator.getSnapshot().status).toBe('prompting');
+    vi.mocked(fetch).mockClear();
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse(200, { ok: true }));
+    localStorage.setItem(STORAGE_KEYS.TOKEN, tokenWithExpiry(Date.now() + 60 * 60_000));
+    reAuthCoordinator.resolveReAuth();
+
+    await expect(remaining).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/remaining$/), expect.anything());
+  });
+
 });

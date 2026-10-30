@@ -29,7 +29,7 @@ describe('TableHeader', () => {
 
     render(<table><TableHeader
       headers={[header]}
-      canResize
+      onResizeDrag={vi.fn()}
       onResizeStart={() => ({ name: 180 })}
       onToggleSort={vi.fn()}
       onResizeByStep={onResizeByStep}
