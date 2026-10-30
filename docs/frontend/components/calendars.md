@@ -16,10 +16,23 @@ so changing filters starts a fresh buffer. Keep scroll position in `positionStor
 Use a separate calendar hook only for substantial presentation shaping, never to duplicate
 backend filtering.
 
+The buffer owns range-read lifetime. Forward its `AbortSignal` through the page API
+to the HTTP client. Unmounting disposes the buffer, aborts active reads, discards queued
+work and ignores late results. Effect replay must restart interrupted initialization.
+Use buffer-owned reads rather than a second imperative query cache for the same ranges;
+calendar teardown must not cancel reads owned by another consumer.
+
+`DataBuffer` owns cached range loading, retention, and item reconciliation so an older
+response cannot undo a saved edit or restore a deleted item. `useDataBuffer` connects
+that buffer to React state, load errors, retries, and teardown. Virtualization owns
+which rows and periods are rendered and reports exposed periods to the buffer; it
+does not own record updates or request history. Buffer seed data, adapter, and retention
+configuration are initialization options; remount the owner when changing them.
+
 ```tsx
 function ScheduleCalendar({ rows, filters, selection, actions }: Props) {
-  const loadRange = useCallback(({ start, end }: PeriodRange) => (
-    getExamplesCalendarData(filters, { start: start.key, end: end.key })
+  const loadRange = useCallback(({ start, end }: PeriodRange, signal: AbortSignal) => (
+    getExamplesCalendarData(filters, { start: start.key, end: end.key }, { signal })
   ), [filters]);
   const calendar = useDataBuffer({
     load: loadRange,

@@ -13,13 +13,11 @@ const api = vi.hoisted(() => ({ deleteSession: vi.fn(), moveSessionDate: vi.fn()
 vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, moveSessionDate: api.moveSessionDate }));
 
 const tableKey = ['sessions', 'table', {}];
-const calendarKey = ['sessions', 'calendar', {}];
 
 function renderActions(session = makeCohortSession()) {
   const client = createTestQueryClient();
   const other = makeCohortSession({ id: 'other-session' });
   client.setQueryData(tableKey, { pages: [{ rows: [session, other], nextCursor: 'next' }], pageParams: [null] });
-  client.setQueryData(calendarKey, [session, other]);
   const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
   const onSessionSynced = vi.fn();
   const onSessionRemoved = vi.fn();
@@ -58,7 +56,6 @@ describe('useSessionActions', () => {
     expect(page.rows[0]).toEqual(saved);
     expect(page.rows[1]).toBe(other);
     expect(page.nextCursor).toBe('next');
-    expect(client.getQueryData(calendarKey)).toEqual([saved, other]);
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
     expect(result.current.pendingSessionIds).toEqual([]);
@@ -88,7 +85,6 @@ describe('useSessionActions', () => {
     await act(() => result.current.confirmAction!.onConfirm());
 
     expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [other], nextCursor: 'next' }] });
-    expect(client.getQueryData(calendarKey)).toEqual([other]);
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['cohorts', 'options'] });
@@ -128,29 +124,6 @@ describe('useSessionActions', () => {
     await act(() => result.current.refreshCreatedSessions(makeCohortSession()));
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'calendar'] });
-    expect(result.current.calendarRevision).toBe(1);
-  });
-
-  it('cancels a pre-creation calendar load before rebuilding its buffer', async () => {
-    const client = createTestQueryClient();
-    const queryKey = ['sessions', 'calendar', { start: '2026-08-10', end: '2026-08-11' }];
-    let requestSignal: AbortSignal | undefined;
-    const oldRequest = client.fetchQuery({
-      queryKey,
-      queryFn: ({ signal }) => {
-        requestSignal = signal;
-        return new Promise<CohortSession[]>(() => undefined);
-      },
-    }).catch(() => undefined);
-    const { result } = renderHook(() => useSessionActions({ onSessionRemoved: vi.fn() }), {
-      wrapper: createQueryClientWrapper(client),
-    });
-
-    await act(() => result.current.refreshCreatedSessions(makeCohortSession()));
-    await oldRequest;
-
-    expect(requestSignal?.aborted).toBe(true);
     expect(result.current.calendarRevision).toBe(1);
   });
 
