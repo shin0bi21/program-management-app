@@ -36,7 +36,7 @@ export default function SessionNotesDashboardCard({
 
   return <>
     <DashboardCard
-      title="Session Notes"
+      title="Notes"
       loading={Boolean(session) && query.isLoading}
       loadingLabel="Loading notes…"
       emptyMessage={session ? 'No notes.' : 'No session selected.'}

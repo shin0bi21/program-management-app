@@ -7,12 +7,12 @@ describe('YouthNotesDashboardCard', () => {
   it('keeps the notes shell through loading and separates no selection from empty notes', () => {
     const onSelectProfileNote = vi.fn();
     const { rerender } = render(<YouthNotesDashboardCard selected={false} onSelectProfileNote={onSelectProfileNote} />);
-    const card = screen.getByText('Profile Notes').closest('.dashboard-card');
+    const card = screen.getByText('Notes').closest('.dashboard-card');
 
     rerender(<YouthNotesDashboardCard selected profileNotesLoading onSelectProfileNote={onSelectProfileNote} />);
 
     expect(screen.getByRole('status', { name: 'Loading profile notes…' })).toBeInTheDocument();
-    expect(screen.getByText('Profile Notes').closest('.dashboard-card')).toBe(card);
+    expect(screen.getByText('Notes').closest('.dashboard-card')).toBe(card);
     expect(screen.queryByText('No profile notes recorded.')).not.toBeInTheDocument();
 
     rerender(<YouthNotesDashboardCard selected onSelectProfileNote={onSelectProfileNote} />);
