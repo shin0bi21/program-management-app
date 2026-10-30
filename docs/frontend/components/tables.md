@@ -108,6 +108,7 @@ export default function ExampleTable(props: ExampleTableProps) {
 ```
 
 - Use durable row IDs and stable declarative columns.
+- Preserve entered line breaks and spacing in cell text; long lines wrap within the column.
 - Make user-facing data columns resizable; keep action columns fixed.
 - Use the canonical column `id` as the backend-supported sort key. Pass the owner's canonical table-key tuple to `sortableColumns`. Utility columns such as actions stay outside that tuple.
 - Use `loading` only for the initial empty request and `refreshing` only when an explicit collection refresh keeps existing rows mounted.
