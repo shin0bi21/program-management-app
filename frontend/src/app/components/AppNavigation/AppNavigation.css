@@ -52,6 +52,7 @@
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overscroll-behavior: none;
 }
 
 .sidebar-link {
