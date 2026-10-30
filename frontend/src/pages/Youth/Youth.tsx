@@ -107,7 +107,7 @@ export default function Youth() {
         <PageHeader
           title="Profiles"
           actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-          search={<SearchInput
+          search={controlsReady ? <SearchInput
             label="Search youth"
             value={search.value}
             appliedValue={search.appliedValue}
@@ -115,7 +115,7 @@ export default function Youth() {
             onApply={search.apply}
             onClear={search.clear}
             placeholder="Search youth, school, or program"
-          />}
+          /> : undefined}
           columns={controlsReady ? <ColumnVisibilityMenu
             columns={youthColumns}
             hiddenColumnKeys={table.hiddenColumns}

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
@@ -107,6 +107,21 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+  });
+
+  it('keeps search unavailable until saved youth preferences are restored', async () => {
+    let resolvePreference: (value: unknown) => void = () => undefined;
+    preferenceApi.getPreference.mockReturnValue(new Promise(resolve => { resolvePreference = resolve; }));
+
+    render(<Youth />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading saved youth preferences…');
+    expect(screen.queryByLabelText('Search youth')).not.toBeInTheDocument();
+    expect(preferenceApi.setPreference).not.toHaveBeenCalled();
+
+    await act(async () => resolvePreference({ search: 'Jamie' }));
+
+    expect(await screen.findByLabelText('Search youth')).toHaveValue('Jamie');
   });
 
   it('keeps account invitation controls out of the Youth page', async () => {
