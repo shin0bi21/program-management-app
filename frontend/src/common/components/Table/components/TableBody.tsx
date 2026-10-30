@@ -53,8 +53,7 @@ export default function TableBody<T>({
       <tr className="table-loading-row">
         <td colSpan={visibleColumnCount} className="table-state-cell">
           <div className="table-loading-status" role="status" aria-label="Loading rows">
-            <LoadingSpinner />
-            <span className="sr-only">Loading rows…</span>
+            <LoadingSpinner label="Loading rows…" />
           </div>
         </td>
       </tr>
