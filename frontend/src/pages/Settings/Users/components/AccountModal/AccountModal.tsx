@@ -2,6 +2,7 @@ import { Controller } from 'react-hook-form';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { User } from '../../types';
@@ -71,8 +72,7 @@ export default function AccountModal(props: AccountModalProps) {
             )}
           />
         </div>
-        <fieldset className="account-programs">
-          <legend>Programs</legend>
+        <FormFieldGroup label="Programs">
           {programsLoading ? (
             <span className="account-programs__empty">Loading programs…</span>
           ) : programs.length ? <Controller
@@ -93,7 +93,7 @@ export default function AccountModal(props: AccountModalProps) {
           /> : (
             <span className="account-programs__empty">No assignable programs.</span>
           )}
-        </fieldset>
+        </FormFieldGroup>
       </form>
     </Modal>
   );

@@ -3,6 +3,7 @@ import Checklist from '../../../../../common/components/Checklist/Checklist';
 import Button from '../../../../../common/components/Button/Button';
 import type { Program } from '../../../../../common/features/programs/types';
 import FormField from '../../../../../common/components/FormField/FormField';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
@@ -63,7 +64,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
         {programsError && <div role="alert">{programsError} <Button onClick={onRetryPrograms}>Retry programs</Button></div>}
         {workflow.assignmentsError && <div role="alert">{workflow.assignmentsError} <Button onClick={workflow.retryAssignments}>Retry assignments</Button></div>}
         {!workflow.assignmentsReady && !workflow.assignmentsError && !programsError && <p role="status">Loading assigned programs...</p>}
-        {workflow.selectedProgramIds !== null && <>
+        {workflow.selectedProgramIds !== null && <FormFieldGroup label="Assigned programs">
           <Checklist
             variant="form"
             ariaLabel="Assigned programs"
@@ -73,7 +74,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
             disabled={workflow.submissionComplete || !workflow.assignmentsReady}
           />
           {programs.length === 0 && <p>No programs yet.</p>}
-        </>}
+        </FormFieldGroup>}
       </form>
     </Modal>
   );

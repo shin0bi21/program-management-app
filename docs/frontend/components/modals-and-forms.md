@@ -54,6 +54,13 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 
+Use `FormField` for one labeled control (input, date, textarea, or select). Use
+`FormFieldGroup` from the same component directory for a checklist or other group of
+controls that needs a `fieldset` and `legend`. Both share label typography, a 4px
+label-to-control gap, and field spacing through `common/styles/forms.css`. Keep
+these rules with the shared field owner rather than adding page-specific title
+or group spacing. Grouped fields do not inherit the single-input styling.
+
 ## Manage Fields, Data and Mutations
 
 - Align required, optional, derived, fixed, and dependent fields across persistence, backend validation, API types, form state, labels, disabled states, and submit guards.

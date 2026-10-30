@@ -4,7 +4,7 @@ for (const width of [1280, 390]) {
   test(`supports form and filter keyboard selection at ${width}px`, async ({ page, mount }) => {
     await page.setViewportSize({ width, height: 800 });
     const component = await mount('Checklist/FormAndFilter');
-    const form = component.getByRole('group', { name: 'Assigned cycles' });
+    const form = component.getByRole('group', { name: 'Assigned cycles' }).last();
     const spring = form.getByRole('checkbox', { name: 'Spring 2026' });
 
     await expect(form).toHaveCSS('max-height', '240px');
