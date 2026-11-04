@@ -66,7 +66,7 @@ describe('User preferences API', () => {
     const value = {
       view: 'list',
       programIds: [],
-      cohortId: null,
+      cycleIds: [],
       sessionTypeIds: [],
       statuses: ['upcoming'],
     };

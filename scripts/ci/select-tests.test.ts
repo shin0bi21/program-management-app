@@ -37,12 +37,13 @@ test('domain backend changes select only their authoritative suite', () => {
   const cases = [
     ['backend/src/services/accounts/accountService.ts', ['tests/accounts']],
     ['backend/src/services/auth/authService.ts', ['tests/auth']],
-    ['backend/src/services/programming/cohorts/cohortService.ts', ['tests/cohorts', 'tests/referenceData']],
+    ['backend/src/services/programming/sessions/sessionService.ts', ['tests/sessions', 'tests/youth', 'tests/hours', 'tests/homepage', 'tests/referenceData']],
+    ['backend/src/services/programming/programCycles/assignmentService.ts', ['tests/programs', 'tests/sessions', 'tests/youth', 'tests/hours', 'tests/public', 'tests/expressionOfInterest', 'tests/leads', 'tests/homepage', 'tests/referenceData']],
     ['backend/src/services/outreach/leads/leadService.ts', ['tests/public', 'tests/expressionOfInterest', 'tests/leads']],
     ['backend/src/services/preferenceService.ts', ['tests/preferences']],
-    ['backend/src/services/programService.ts', ['tests/programs', 'tests/referenceData']],
-    ['backend/src/services/programming/programs/programListService.ts', ['tests/programs', 'tests/referenceData']],
-    ['backend/src/services/programming/programs/programRecordQuery.ts', ['tests/programs', 'tests/referenceData']],
+    ['backend/src/services/programService.ts', ['tests/programs', 'tests/sessions', 'tests/youth', 'tests/hours', 'tests/public', 'tests/expressionOfInterest', 'tests/leads', 'tests/homepage', 'tests/referenceData']],
+    ['backend/src/services/programming/programs/programListService.ts', ['tests/programs', 'tests/sessions', 'tests/youth', 'tests/hours', 'tests/public', 'tests/expressionOfInterest', 'tests/leads', 'tests/homepage', 'tests/referenceData']],
+    ['backend/src/services/programming/programs/programRecordQuery.ts', ['tests/programs', 'tests/sessions', 'tests/youth', 'tests/hours', 'tests/public', 'tests/expressionOfInterest', 'tests/leads', 'tests/homepage', 'tests/referenceData']],
     ['backend/src/routes/schoolRoutes.ts', ['tests/schools', 'tests/referenceData']],
     ['backend/src/services/youth/youthService.ts', ['tests/youth']],
   ] as const;

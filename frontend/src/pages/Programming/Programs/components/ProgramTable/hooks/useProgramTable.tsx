@@ -3,11 +3,11 @@ import { useMemo } from 'react';
 import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { ProgramCohort } from '../../../../Cohorts/types';
+import type { ProgramCycleAssignment } from '../../../types';
 import type { Program } from '../../../../../../common/features/programs/types';
 
 interface ProgramCycleStatus {
-  cohorts: readonly Pick<ProgramCohort, 'programId' | 'state'>[];
+  assignments: readonly Pick<ProgramCycleAssignment, 'programId' | 'state'>[];
   loading: boolean;
   error: string | null;
 }
@@ -16,10 +16,10 @@ export default function useProgramTable(
   onEdit: (program: Program) => void,
   onManageCycles: (program: Program) => void,
   canWrite: boolean,
-  { cohorts, loading, error }: ProgramCycleStatus,
+  { assignments, loading, error }: ProgramCycleStatus,
 ) {
   const statusColumn = useMemo<TableColumnDef<Program>>(() => {
-    const activeProgramIds = new Set(cohorts.filter(cohort => cohort.state === 'active').map(cohort => cohort.programId));
+    const activeProgramIds = new Set(assignments.filter(programCycle => programCycle.state === 'active').map(programCycle => programCycle.programId));
     const getStatus = (program: Program) => {
       if (error) return 'Unavailable';
       if (loading) return 'Loading…';
@@ -40,7 +40,7 @@ export default function useProgramTable(
         return <StatusLabel status={label === 'Active' ? 'active' : 'inactive'} label={label} />;
       },
     };
-  }, [cohorts, loading, error]);
+  }, [assignments, loading, error]);
 
   const programColumns = useMemo<TableColumnDef<Program>[]>(() => [
     { id: 'name', header: 'Program', accessorFn: program => program.name },

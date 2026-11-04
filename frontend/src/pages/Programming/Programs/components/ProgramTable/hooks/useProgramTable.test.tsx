@@ -20,7 +20,7 @@ it('routes program management actions to the selected row', () => {
   } as Program;
   const onEdit = vi.fn();
   const onManageCycles = vi.fn();
-  const { result } = renderHook(() => useProgramTable(onEdit, onManageCycles, true, { cohorts: [], loading: false, error: null }));
+  const { result } = renderHook(() => useProgramTable(onEdit, onManageCycles, true, { assignments: [], loading: false, error: null }));
 
   const actionColumn = result.current.columns.find(column => column.id === 'actions') as ColumnDef<Program>;
   const content = (actionColumn.cell as (context: CellContext<Program, unknown>) => unknown)(
@@ -34,7 +34,7 @@ it('routes program management actions to the selected row', () => {
 });
 
 it('omits program management actions for read-only viewers', () => {
-  const { result } = renderHook(() => useProgramTable(vi.fn(), vi.fn(), false, { cohorts: [], loading: false, error: null }));
+  const { result } = renderHook(() => useProgramTable(vi.fn(), vi.fn(), false, { assignments: [], loading: false, error: null }));
 
   expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
 });
@@ -46,11 +46,11 @@ it.each([
   { states: [] as const, loading: true, error: null, expected: 'Loading…' },
   { states: ['active'] as const, loading: false, error: 'Failed', expected: 'Unavailable' },
 ])('shows $expected from assigned cycle state without treating unknown data as inactive', ({ states, loading, error, expected }) => {
-  const cohorts = [
+  const assignments = [
     ...states.map(state => ({ programId: 'program-1', state })),
     { programId: 'another-program', state: 'active' as const },
   ];
-  const { result } = renderHook(() => useProgramTable(vi.fn(), vi.fn(), false, { cohorts, loading, error }));
+  const { result } = renderHook(() => useProgramTable(vi.fn(), vi.fn(), false, { assignments, loading, error }));
   const statusColumn = result.current.columns.find(column => column.id === 'status');
 
   expect(statusColumn && 'accessorFn' in statusColumn && statusColumn.accessorFn?.({ id: 'program-1' } as Program, 0))

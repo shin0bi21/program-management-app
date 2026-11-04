@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import type SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import type SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
 import type SessionNotesDashboardCard from './SessionNotesDashboardCard/SessionNotesDashboardCard';
@@ -49,7 +49,7 @@ describe('SessionDashboard', () => {
   });
 
   it('forwards selected context and card errors, and delegates attendance management', async () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const queryKey = ['sessions', 'program-1'] as const;
     const onAddAttendance = vi.fn();
     const onErrorsChange = vi.fn();

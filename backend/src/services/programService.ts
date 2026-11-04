@@ -3,7 +3,7 @@ import { ConflictError, NotFoundError } from '../errors';
 import { programAccessPredicate } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput, UpdateProgramInput } from '../validation/programSchemas';
-import { getCohortRowsByIds, getCohortYouthIds } from './programming/cohorts/cohortRecordQuery';
+import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRecordQuery';
 import { getYouthRowsByIds } from './youth/youthRecordQuery';
 import { programRecordColumns, type ProgramRow } from './programming/programs/programRecordQuery';
 
@@ -35,7 +35,7 @@ export async function createProgram(data: CreateProgramInput) {
     )
     RETURNING ${programRecordColumns}
   `;
-  return { program: rows[0], updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] };
+  return { program: rows[0], updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] };
 }
 
 export async function updateProgram(id: string, data: UpdateProgramInput, actor: AccessTokenPayload) {
@@ -64,13 +64,12 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
       WHERE id = ${id}
       RETURNING ${programRecordColumns}
     `;
-    const cohorts = await trx<{ id: string }[]>`SELECT id FROM program_cohorts WHERE program_id = ${id} ORDER BY id`;
-    const cohortIds = cohorts.map(cohort => cohort.id);
-    const updatedCohorts = actor.permissions.includes('read:programs')
-      ? await getCohortRowsByIds(trx, actor, cohortIds) : [];
+    const keys = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_cycle_assignments WHERE program_id = ${id} ORDER BY cycle_id`;
+    const updatedProgramCycles = actor.permissions.includes('read:programs')
+      ? await getProgramCycleRowsByKeys(trx, actor, keys) : [];
     const updatedYouth = actor.permissions.includes('read:youth_profiles')
-      ? await getYouthRowsByIds(trx, await getCohortYouthIds(trx, cohortIds)) : [];
+      ? await getYouthRowsByIds(trx, await getProgramCycleYouthIds(trx, keys)) : [];
 
-    return { program, updatedCohorts, removedCohortIds: [], createdCohortIds: [], updatedYouth };
+    return { program, updatedProgramCycles, removedProgramCycles: [], createdProgramCycles: [], updatedYouth };
   });
 }

@@ -32,14 +32,16 @@ arithmetic and the `ProgramCycle` contract stay in
 [`common/features/programming/cycles/`](../../../frontend/src/common/features/programming/cycles/).
 Program/cycle management forms and mutation adapters belong to
 `pages/Programming/Programs/`; full program records used across route families remain
-in `common/features/programs/`. The Programs page owns the program overview and roster
-entry points; Sessions owns scheduling and attendance. Keep shared roster workflows
-with their existing Cohorts owner rather than duplicating them in either page.
+in `common/features/programs/`. The Programs page owns program × cycle assignments, the current-cycle overview,
+roster management, assignment APIs and cache reconciliation. These live under
+`pages/Programming/Programs/`; Sessions owns scheduling and attendance. Keep the
+roster query hook under `ManageRosterModal/hooks/`, its sole component owner.
 
-The Cohorts directory retains the APIs, contracts, cache updates, and roster workflow
-used by those consumers; it has no standalone route page. Keep the roster query hook
-under `ManageRosterModal/hooks/`, its sole component owner. Legacy Cohorts and calendar
-URLs redirect to Programs and Sessions respectively.
+The frontend assignment contract is `ProgramCycleAssignment`. Program-cycle identity is the pair
+`programId` and `cycleId`, with no separate assignment ID. Backend allowed pairs
+are stored in `program_cycle_assignments`; sessions and enrollments reference both
+columns. There is no Cohorts page or owner directory. Legacy Cohorts and calendar URLs redirect to Programs and Sessions
+respectively.
 
 ## Assign Each File One Location
 

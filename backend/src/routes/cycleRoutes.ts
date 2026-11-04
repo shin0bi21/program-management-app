@@ -3,7 +3,7 @@ import { handleGetProgramCycles, handleGetCycleList, handleSetProgramCycle, hand
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { cycleListQuerySchema, createCycleSchema, updateCycleSchema, deleteCycleSchema } from '../validation/cohortSchemas';
+import { cycleListQuerySchema, createCycleSchema, updateCycleSchema, deleteCycleSchema } from '../validation/programmingSchemas';
 
 const router = Router();
 

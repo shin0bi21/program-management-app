@@ -5,15 +5,15 @@ import { setProgramCycles } from '../../../api/programs.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { getCohorts } from '../../../../Cohorts/cohorts.api';
-import { syncCohortChanges } from '../../../../Cohorts/hooks/actions/cohortCache';
+import { getProgramCycleAssignments } from '../../../api/programCycleAssignments.api';
+import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/programCycleAssignmentCache';
 
 // The modal is keyed by program ID, so each instance owns one program draft.
 export default function useProgramCyclesModal(programId: string, cyclesReady: boolean) {
   const queryClient = useQueryClient();
   const assignments = useQuery({
-    queryKey: ['cohorts', 'program-cycle-assignments', programId],
-    queryFn: ({ signal }) => getCohorts(programId, { includeAllPrograms: true }, { signal }),
+    queryKey: ['programs', 'cycle-assignment-editor', programId],
+    queryFn: ({ signal }) => getProgramCycleAssignments(programId, { includeAllPrograms: true }, { signal }),
     staleTime: 0,
   });
   const [selectedCycleIds, setSelectedCycleIds] = useState<string[] | null>(null);
@@ -23,7 +23,7 @@ export default function useProgramCyclesModal(programId: string, cyclesReady: bo
 
   useEffect(() => {
     if (!assignments.data) return;
-    setSelectedCycleIds(current => current ?? assignments.data.map(cohort => cohort.cycleId));
+    setSelectedCycleIds(current => current ?? assignments.data.map(programCycle => programCycle.cycleId));
   }, [assignments.data]);
 
   const locked = submitStatus === 'submitting' || submitStatus === 'success';
@@ -44,7 +44,7 @@ export default function useProgramCyclesModal(programId: string, cyclesReady: bo
 
     try {
       const saved = await setProgramCycles(programId, selectedCycleIds);
-      syncCohortChanges(queryClient, saved);
+      syncProgramCycleAssignmentChanges(queryClient, saved);
 
       setSelectedCycleIds(saved.cycleIds);
       setSubmitStatus('success');

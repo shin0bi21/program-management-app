@@ -11,7 +11,7 @@ export { generateToken, generateExpiredToken } from '../shared/tokenHelpers';
  * The addresses/contacts rows themselves are orphaned so we clean those too.
  */
 export async function deleteTestYouth(userId: string): Promise<void> {
-  await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${userId}`;
+  await sql`DELETE FROM program_enrollments WHERE youth_id = ${userId}`;
 
   // Collect address and contact IDs before cascading deletes remove the junctions
   const addressIds = await sql<{ id: string }[]>`

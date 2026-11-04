@@ -52,10 +52,10 @@ const BACKEND_DOMAINS = {
     sourceDirectories: ['services/auth/'],
     sourceFiles: ['controllers/authController.ts', 'routes/authRoutes.ts', 'validation/authSchemas.ts'],
   },
-  cohorts: {
-    testPaths: ['tests/cohorts'],
-    sourceDirectories: ['services/programming/cohorts/', 'services/programming/sessions/'],
-    sourceFiles: ['controllers/cohortController.ts', 'routes/cohortRoutes.ts', 'validation/cohortSchemas.ts'],
+  sessions: {
+    testPaths: ['tests/sessions'],
+    sourceDirectories: ['services/programming/sessions/'],
+    sourceFiles: ['controllers/sessionController.ts', 'routes/sessionRoutes.ts'],
   },
   homepage: {
     testPaths: ['tests/homepage'],
@@ -85,9 +85,13 @@ const BACKEND_DOMAINS = {
   },
   programs: {
     testPaths: ['tests/programs'],
-    sourceDirectories: ['services/programming/programs/'],
+    sourceDirectories: ['services/programming/programs/', 'services/programming/programCycles/', 'services/programming/cycles/', 'reports/programming/programCycles/'],
     sourceFiles: [
       'controllers/programController.ts',
+      'controllers/programCycleController.ts',
+      'controllers/cycleController.ts',
+      'controllers/enrollmentController.ts',
+      'routes/cycleRoutes.ts',
       'routes/programRoutes.ts',
       'services/programService.ts',
       'validation/programSchemas.ts',
@@ -134,13 +138,14 @@ type BackendSuite = keyof typeof BACKEND_DOMAINS;
 const RELATED_BACKEND_SUITES: Partial<Record<BackendSuite, readonly BackendSuite[]>> = {
   tasks: ['hours', 'referenceData'],
   hours: ['tasks', 'referenceData'],
-  programs: ['referenceData'],
+  programs: ['sessions', 'youth', 'hours', 'outreach', 'homepage', 'referenceData'],
   schools: ['referenceData'],
-  cohorts: ['referenceData'],
+  sessions: ['youth', 'hours', 'homepage', 'referenceData'],
   referenceData: ['hours'],
 };
 
 const SHARED_BACKEND_FILES: Readonly<Record<string, readonly BackendSuite[]>> = {
+  'backend/src/validation/programmingSchemas.ts': ['programs', 'sessions', 'youth', 'hours', 'referenceData'],
   'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours', 'referenceData'],
   'backend/src/controllers/homepageController.ts': ['homepage', 'outreach'],
   'backend/src/routes/homepageRoutes.ts': ['homepage', 'outreach'],

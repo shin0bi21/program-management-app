@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageMessageItem } from '../../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
 import type { SessionNote } from '../../../../types';
-import { makeCohortSession } from '../../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import { useSessionNotes } from './useSessionNotes';
 
@@ -13,8 +13,8 @@ vi.mock('../../../../sessions.api', () => ({
   getSessionNotes: vi.fn(),
 }));
 
-const session = makeCohortSession();
-const nextSession = makeCohortSession({ id: 'session-2' });
+const session = makeProgramSession();
+const nextSession = makeProgramSession({ id: 'session-2' });
 const note: SessionNote = {
   id: 'note-1', sessionId: session.id, category: 'achievement',
   details: 'Led the opening activity.', createdAt: '2026-08-01T12:00:00.000Z',

@@ -13,17 +13,17 @@ import useYouthAttendance from './hooks/useYouthAttendance';
 import useYouthSessionNotes from './hooks/useYouthSessionNotes';
 import './YouthAttendanceModal.css';
 
-type AttendanceCohort = YouthProfile['cohorts'][number];
+type AttendanceProgramCycle = YouthProfile['programCycles'][number];
 
 export default function YouthAttendanceModal({
   youth,
-  cohort,
+  programCycle,
   canManageSessionNotes = false,
   onClose,
   onSaved,
 }: {
   youth: YouthProfile | null;
-  cohort: AttendanceCohort | null;
+  programCycle: AttendanceProgramCycle | null;
   canManageSessionNotes?: boolean;
   onClose: () => void;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
@@ -40,7 +40,8 @@ export default function YouthAttendanceModal({
     error,
   } = useYouthAttendance({
     youthId: youth?.id ?? null,
-    cohortId: cohort?.id ?? null,
+    programId: programCycle?.programId ?? null,
+    cycleId: programCycle?.cycleId ?? null,
     onSaved,
   });
   const attendanceSessions = attendance?.sessions ?? [];
@@ -63,7 +64,7 @@ export default function YouthAttendanceModal({
   return (
     <>
       <Modal
-        isOpen={Boolean(youth && cohort && !sessionNotes.isChildOpen)}
+        isOpen={Boolean(youth && programCycle && !sessionNotes.isChildOpen)}
         onClose={close}
         title="Manage Attendance"
         maxWidth="720px"
@@ -82,10 +83,10 @@ export default function YouthAttendanceModal({
       >
         <form id="youth-attendance-form" onSubmit={submit}>
           <div className="youth-attendance-modal__summary">
-            {youth && cohort && (
+            {youth && programCycle && (
               <p className="youth-attendance-modal__context">
                 {youth.firstName} {youth.lastName}<span aria-hidden="true"> · </span>
-                {cohort.programName}<span aria-hidden="true"> · </span>{cohort.name}
+                {programCycle.programName}<span aria-hidden="true"> · </span>{programCycle.cycleName}
               </p>
             )}
             {sessionNotes.sessionsWithNotes.length > 0 && (
@@ -112,7 +113,7 @@ export default function YouthAttendanceModal({
           )}
           {loadError && <p className="form-error" role="alert">{loadError}</p>}
           {!loading && !loadError && attendance?.sessions.length === 0 && (
-            <p className="page-empty">No sessions are available for this cohort.</p>
+            <p className="page-empty">No sessions are available for this program and cycle.</p>
           )}
 
           {attendance?.sessions.length ? (
@@ -121,7 +122,7 @@ export default function YouthAttendanceModal({
                 <SessionAttendanceItem
                   key={session.id}
                   session={session}
-                  enrollmentRequired={attendance.cohort.enrollmentRequired}
+                  enrollmentRequired={attendance.programCycle.enrollmentRequired}
                   status={selections[session.id] ?? ''}
                   canManageSessionNotes={canManageSessionNotes}
                   notesExpanded={sessionNotes.isExpanded(session.id)}
@@ -140,7 +141,7 @@ export default function YouthAttendanceModal({
 
       <YouthSessionNoteDialogs
         youth={youth}
-        enrollmentRequired={attendance?.cohort.enrollmentRequired ?? cohort?.enrollmentRequired ?? true}
+        enrollmentRequired={attendance?.programCycle.enrollmentRequired ?? programCycle?.enrollmentRequired ?? true}
         noteTarget={sessionNotes.noteTarget}
         detailTarget={sessionNotes.detailTarget}
         unlinkTarget={sessionNotes.unlinkTarget}

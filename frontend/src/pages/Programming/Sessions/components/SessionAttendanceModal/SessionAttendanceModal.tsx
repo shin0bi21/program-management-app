@@ -1,7 +1,7 @@
 import type { SessionAttendanceResult } from '../../sessions.api';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { CohortSession } from '../../types';
+import type { ProgramSession } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 
 import SessionAttendanceRoster from './SessionAttendanceRoster';
@@ -9,7 +9,7 @@ import OpenAttendancePicker from './OpenAttendancePicker';
 import useSessionAttendanceModal from './hooks/useSessionAttendanceModal';
 
 interface SessionAttendanceModalProps {
-  session: CohortSession | null;
+  session: ProgramSession | null;
   onClose: () => void;
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }

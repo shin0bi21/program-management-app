@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
 import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import {
   getSubmitStatusMessage,
   useSubmitStatus,
 } from '../../../../common/hooks/useSubmitStatus';
-import type { ProgramCohort } from '../../../Programming/Cohorts/types';
+import type { ProgramCycleAssignment } from '../../../Programming/Programs/types';
 import { getErrorMessage } from '../../../../http/errors';
 
 import { signUpLead } from '../../leads.api';
@@ -17,7 +17,7 @@ import { calculateAge, dateOfBirthSchema } from '../../../../common/features/you
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
 
-const noCohorts: ProgramCohort[] = [];
+const noProgramCycles: ProgramCycleAssignment[] = [];
 
 interface UseSignUpLeadModalOptions {
   queryKey: readonly unknown[];
@@ -30,7 +30,7 @@ export default function useSignUpLeadModal({
   lead,
   onSuccess,
 }: UseSignUpLeadModalOptions) {
-  const [cohortId, setCohortId] = useState('');
+  const [selectedPairKey, setSelectedPairKey] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(lead?.dateOfBirth ?? '');
   const age = calculateAge(dateOfBirth);
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory>('general');
@@ -49,21 +49,21 @@ export default function useSignUpLeadModal({
   } = useSubmitStatus();
 
   const {
-    data: cohorts = noCohorts,
-    error: cohortsError,
+    data: programCycles = noProgramCycles,
+    error: programCyclesError,
     isLoading: loading,
   } = useQuery({
     queryKey: [...queryKey, 'all-programs'],
-    queryFn: ({ signal }) => getCohorts(undefined, {}, { signal }),
+    queryFn: ({ signal }) => getProgramCycleAssignments(undefined, {}, { signal }),
     enabled: Boolean(lead),
-    select: rows => rows.filter(cohort => (
-      cohort.state !== 'completed' && cohort.enrollmentRequired
+    select: rows => rows.filter(programCycle => (
+      programCycle.state !== 'completed' && programCycle.enrollmentRequired
     )),
   });
 
   // A different lead starts with a clean enrollment and note draft.
   useEffect(() => {
-    setCohortId('');
+    setSelectedPairKey('');
     setDateOfBirth(storedDateOfBirth ?? '');
     setNoteCategory('general');
     setSuccessMessage('');
@@ -71,19 +71,19 @@ export default function useSignUpLeadModal({
     resetStatus();
   }, [leadId, storedDateOfBirth, resetStatus]);
 
-  const visibleCohorts = useMemo(() => {
-    if (!lead) return cohorts;
+  const visibleProgramCycles = useMemo(() => {
+    if (!lead) return programCycles;
     if (!dateOfBirthSchema.safeParse(dateOfBirth).success) return [];
 
-    const ageEligible = cohorts.filter(cohort => (
+    const ageEligible = programCycles.filter(programCycle => (
       typeof age === 'number'
-      && (cohort.minAge == null || age >= cohort.minAge)
-      && (cohort.maxAge == null || age <= cohort.maxAge)
+      && (programCycle.minAge == null || age >= programCycle.minAge)
+      && (programCycle.maxAge == null || age <= programCycle.maxAge)
     ));
     return showAllPrograms || !lead.recommendedProgramId || dateOfBirth !== lead.dateOfBirth
       ? ageEligible
-      : ageEligible.filter(cohort => cohort.programId === lead.recommendedProgramId);
-  }, [cohorts, lead, showAllPrograms, age, dateOfBirth]);
+      : ageEligible.filter(programCycle => programCycle.programId === lead.recommendedProgramId);
+  }, [programCycles, lead, showAllPrograms, age, dateOfBirth]);
 
   const submit = async () => {
     if (!lead || !submitLock.tryLock()) return;
@@ -96,7 +96,7 @@ export default function useSignUpLeadModal({
       return;
     }
 
-    const selectedCohort = visibleCohorts.find(cohort => cohort.id === cohortId);
+    const selectedProgramCycle = visibleProgramCycles.find(programCycle => `${programCycle.programId}:${programCycle.cycleId}` === selectedPairKey);
     const youthName = `${lead.youthFirstName} ${lead.youthLastName}`;
     setSubmitStatus('submitting');
     setError('');
@@ -105,8 +105,8 @@ export default function useSignUpLeadModal({
     let saved: LeadSignUpResult;
     try {
       saved = lead.notes?.trim()
-        ? await signUpLead(lead.id, selectedCohort?.id || null, noteCategory, dateOfBirth)
-        : await signUpLead(lead.id, selectedCohort?.id || null, undefined, dateOfBirth);
+        ? await signUpLead(lead.id, selectedProgramCycle ? { programId: selectedProgramCycle.programId, cycleId: selectedProgramCycle.cycleId } : null, noteCategory, dateOfBirth)
+        : await signUpLead(lead.id, selectedProgramCycle ? { programId: selectedProgramCycle.programId, cycleId: selectedProgramCycle.cycleId } : null, undefined, dateOfBirth);
     } catch (cause) {
       setError(getErrorMessage(cause, 'Unable to create youth profile'));
       setSubmitStatus('error');
@@ -122,8 +122,8 @@ export default function useSignUpLeadModal({
     }
 
     let nextSuccessMessage = `Youth profile successfully created for ${youthName}.`;
-    if (selectedCohort) {
-      nextSuccessMessage = `Youth profile successfully created and added to ${selectedCohort.programName} - ${selectedCohort.name}.`;
+    if (selectedProgramCycle) {
+      nextSuccessMessage = `Youth profile successfully created and added to ${selectedProgramCycle.programName} - ${selectedProgramCycle.cycleName}.`;
     }
     if (refreshFailed) {
       nextSuccessMessage = 'Youth profile was created, but the page could not refresh. Reload to see it.';
@@ -147,19 +147,19 @@ export default function useSignUpLeadModal({
     age,
     changeDateOfBirth: (value: string) => {
       setDateOfBirth(value);
-      setCohortId('');
+      setSelectedPairKey('');
     },
-    cohortId,
-    selectCohort: setCohortId,
+    selectedPairKey,
+    selectProgramCycle: setSelectedPairKey,
     noteCategory,
     selectNoteCategory: setNoteCategory,
-    cohorts,
-    visibleCohorts,
+    programCycles,
+    visibleProgramCycles,
     showAllPrograms,
     setShowAllPrograms,
     loading,
-    loadError: cohortsError
-      ? getErrorMessage(cohortsError, 'Unable to load cohorts')
+    loadError: programCyclesError
+      ? getErrorMessage(programCyclesError, 'Unable to load program cycles')
       : '',
     submitStatus,
     statusMessage,

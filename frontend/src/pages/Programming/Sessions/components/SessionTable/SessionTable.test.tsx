@@ -1,13 +1,13 @@
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CohortSession } from '../../types';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import type { ProgramSession } from '../../types';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import SessionTable from './SessionTable';
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 const tableState = vi.hoisted(() => ({
-  sessions: [] as CohortSession[], loading: false, refreshing: false, error: '',
+  sessions: [] as ProgramSession[], loading: false, refreshing: false, error: '',
   hasNextPage: false, loadingNextPage: false, loadNextPage: vi.fn(),
   retry: vi.fn(),
 }));

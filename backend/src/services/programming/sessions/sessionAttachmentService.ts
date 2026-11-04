@@ -8,7 +8,7 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionAttachmentInput,
   UpdateSessionAttachmentInput,
-} from '../../../validation/cohortSchemas';
+} from '../../../validation/programmingSchemas';
 import {
   finalizeQuarantinedUpload,
   quarantineUpload,
@@ -74,9 +74,8 @@ export async function createSessionAttachment(
     await sql.begin(async tx => {
       const trx = asTransactionSql(tx);
       const sessions = await trx<{ enrollmentRequired: boolean }[]>`
-        SELECT p.enrollment_required FROM cohort_sessions cs
-        INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-        INNER JOIN programs p ON p.id = pc.program_id
+        SELECT p.enrollment_required FROM program_sessions cs
+        INNER JOIN programs p ON p.id = cs.program_id
         WHERE cs.id = ${sessionId} FOR UPDATE OF cs
       `;
       if (!sessions.length) throw new NotFoundError('Session not found');
@@ -119,9 +118,8 @@ export async function updateSessionAttachment(
     const attachments = await trx<{ id: string; enrollmentRequired: boolean }[]>`
       SELECT sa.id, p.enrollment_required
       FROM session_attachments sa
-      INNER JOIN cohort_sessions cs ON cs.id = sa.session_id
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      INNER JOIN programs p ON p.id = pc.program_id
+      INNER JOIN program_sessions cs ON cs.id = sa.session_id
+      INNER JOIN programs p ON p.id = cs.program_id
       WHERE sa.id = ${attachmentId} AND sa.session_id = ${sessionId}
       FOR UPDATE OF sa
     `;
@@ -211,8 +209,8 @@ async function assertYouthEligibility(
       `
     : await trx<{ youthId: string }[]>`
         SELECT ce.youth_id
-        FROM cohort_sessions cs
-        INNER JOIN cohort_enrollments ce ON ce.cohort_id = cs.cohort_id
+        FROM program_sessions cs
+        INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
         WHERE cs.id = ${sessionId}
           AND ce.youth_id = ANY(${sql.array(youthIds)}::uuid[])
           AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date

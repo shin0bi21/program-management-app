@@ -8,7 +8,7 @@ import {
 } from '../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type {
-  CohortSession,
+  ProgramSession,
   SessionNote,
   SessionNoteCategory,
   SessionRosterMember,
@@ -22,7 +22,7 @@ interface SessionNoteDraft {
 }
 
 export interface UseSessionNoteModalOptions {
-  session: Pick<CohortSession, 'id' | 'enrollmentRequired'> | null;
+  session: Pick<ProgramSession, 'id' | 'enrollmentRequired'> | null;
   note?: SessionNote | null;
   initialYouthId?: string;
   hideYouthSelection?: boolean;

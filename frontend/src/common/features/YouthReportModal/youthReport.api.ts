@@ -1,8 +1,8 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 
-export function getCohortYouthReportPdf(
-  cohortId: string,
+export function getProgramCycleYouthReportPdf(
+  programCycle: { programId: string; cycleId: string },
   filters: { youthId?: string } = {},
   opts?: RequestOptions,
 ) {
@@ -10,7 +10,7 @@ export function getCohortYouthReportPdf(
   if (filters.youthId) query.set('youthId', filters.youthId);
 
   return apiClient.download(
-    `/cohorts/${cohortId}/reports/youth.pdf${query.size ? `?${query}` : ''}`,
+    `/programs/${programCycle.programId}/cycles/${programCycle.cycleId}/reports/youth.pdf${query.size ? `?${query}` : ''}`,
     opts,
   );
 }

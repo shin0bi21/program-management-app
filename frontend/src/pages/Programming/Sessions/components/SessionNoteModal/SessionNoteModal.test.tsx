@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import SessionNoteModal from './SessionNoteModal';
 
@@ -16,7 +16,7 @@ vi.mock('../../sessions.api', () => ({
   updateSessionNote: api.updateSessionNote,
 }));
 
-const session = makeCohortSession({
+const session = makeProgramSession({
   sessionTypeId: 'type-regular',
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',

@@ -54,7 +54,7 @@ export const hoursRecordFrom = sql`
   LEFT JOIN programs program ON program.id = entry.program_id
   INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
   LEFT JOIN tasks task ON task.id = entry.task_id
-  LEFT JOIN cohort_sessions session ON session.id = entry.session_id
+  LEFT JOIN program_sessions session ON session.id = entry.session_id
 `;
 
 /** Searchable hours values shared by calendar and table collection reads. */

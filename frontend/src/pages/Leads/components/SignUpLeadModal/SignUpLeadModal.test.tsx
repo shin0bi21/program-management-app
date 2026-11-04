@@ -1,16 +1,16 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
-import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import SignUpLeadModal from './SignUpLeadModal';
 import { renderWithQueryClient } from '../../../../tests/queryClientTestUtils';
 
-const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
+const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
 
-vi.mock('../../../Programming/Cohorts/cohorts.api', () => ({
-  getCohorts: vi.fn(),
+vi.mock('../../../Programming/Programs/api/programCycleAssignments.api', () => ({
+  getProgramCycleAssignments: vi.fn(),
 }));
 
 vi.mock('../../leads.api', () => ({
@@ -38,8 +38,7 @@ const lead: Lead = {
   createdAt: '2026-07-24T12:00:00.000Z',
 };
 
-const cohort = {
-  id: 'cohort-1',
+const programCycle = {
   programId: 'program-1',
   programName: 'Future Ready',
   enrollmentRequired: true,
@@ -47,7 +46,6 @@ const cohort = {
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
   cycleName: 'Summer 2026',
-  name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
   state: 'active' as const,
@@ -63,37 +61,37 @@ const cohort = {
 describe('SignUpLeadModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getCohorts).mockResolvedValue([
-      cohort,
-      { ...cohort, id: 'cohort-completed', name: 'Spring 2026', state: 'completed' },
-      { ...cohort, id: 'cohort-open', name: 'Drop In', enrollmentRequired: false },
+    vi.mocked(getProgramCycleAssignments).mockResolvedValue([
+      programCycle,
+      { ...programCycle, cycleId: 'programCycle-completed', cycleName: 'Spring 2026', state: 'completed' },
+      { ...programCycle, cycleId: 'programCycle-open', cycleName: 'Drop In', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue({ lead });
   });
 
-  it('renders only matching enrollment cohorts', async () => {
+  it('renders only matching enrollment programCycles', async () => {
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    const cohortSelect = screen.getByRole('button', { name: 'Cohort enrollment' });
-    await waitFor(() => expect(cohortSelect).toBeEnabled());
+    const programCycleSelect = screen.getByRole('button', { name: 'Program and cycle enrollment' });
+    await waitFor(() => expect(programCycleSelect).toBeEnabled());
     expect(screen.queryByText('New youth profile')).not.toBeInTheDocument();
     expect(screen.queryByText(
-      'Optional. You can create the profile now and manage cohorts later.',
+      'Optional. You can create the profile now and manage enrollment later.',
     )).not.toBeInTheDocument();
-    expect(screen.queryByText('Choose a cohort')).not.toBeInTheDocument();
-    fireEvent.click(cohortSelect);
-    const cohortOption = await screen.findByRole('menuitemradio', { name: /Future Ready — Summer 2026/ });
-    expect(cohortOption).toBeInTheDocument();
+    expect(screen.queryByText('Choose a programCycle')).not.toBeInTheDocument();
+    fireEvent.click(programCycleSelect);
+    const programCycleOption = await screen.findByRole('menuitemradio', { name: /Future Ready — Summer 2026/ });
+    expect(programCycleOption).toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Spring 2026/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitemradio', { name: /Drop In/ })).not.toBeInTheDocument();
-    expect(getCohorts).toHaveBeenCalledWith(
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith(
       undefined,
       {},
       { signal: expect.any(AbortSignal) },
     );
 
-    fireEvent.click(cohortOption);
-    expect(cohortSelect).toHaveTextContent('Future Ready — Summer 2026');
+    fireEvent.click(programCycleOption);
+    expect(programCycleSelect).toHaveTextContent('Future Ready — Summer 2026');
   });
 
   it('shows missing birth date and age without inventing a default', () => {
@@ -108,7 +106,7 @@ describe('SignUpLeadModal', () => {
     expect(screen.getByText('16')).toBeInTheDocument();
   });
 
-  it('quietly excludes cohorts outside the lead age range', async () => {
+  it('quietly excludes programCycles outside the lead age range', async () => {
     const user = {
       ...lead,
       age: 16,
@@ -117,14 +115,14 @@ describe('SignUpLeadModal', () => {
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={user} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByRole('button', {
-      name: 'Cohort enrollment',
+      name: 'Program and cycle enrollment',
     })).toBeEnabled());
-    expect(screen.queryByText(/Filter cohorts by age/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Filter programCycles by age/)).not.toBeInTheDocument();
     expect(screen.getByText(
-      'No cohorts match this youth’s age. Create the profile now and manage cohorts later.',
+      'No program cycles match this youth’s age. Create the profile now and manage enrollment later.',
     )).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cohort enrollment' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Program and cycle enrollment' }));
 
     expect(screen.queryByRole('menuitemradio', {
       name: /Future Ready — Summer 2026/,
@@ -141,8 +139,8 @@ describe('SignUpLeadModal', () => {
     expect(noteType).toHaveTextContent('Health');
   });
 
-  it('shows successful signup feedback even when optional cohorts failed to load', async () => {
-    vi.mocked(getCohorts).mockRejectedValue(new Error('Cohorts unavailable'));
+  it('shows successful signup feedback even when optional programCycles failed to load', async () => {
+    vi.mocked(getProgramCycleAssignments).mockRejectedValue(new Error('ProgramCycles unavailable'));
     vi.mocked(signUpLead).mockResolvedValue({ lead: { ...lead, status: 'signed_up' } });
 
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
@@ -154,6 +152,6 @@ describe('SignUpLeadModal', () => {
     expect(await screen.findByText(
       'Youth profile successfully created for Avery Outreach.',
     )).toBeInTheDocument();
-    expect(screen.queryByText('Cohorts unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('ProgramCycles unavailable')).not.toBeInTheDocument();
   });
 });

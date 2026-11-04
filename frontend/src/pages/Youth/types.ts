@@ -10,10 +10,9 @@ export interface YouthProfile {
   dateOfBirth: string | null;
   schoolId: string | null;
   schoolName: string | null;
-  cohorts: Array<{
-    id: string;
+  programCycles: Array<{
     cycleId: string;
-    name: string;
+    cycleName: string;
     programId: string;
     programName: string;
     enrollmentRequired: boolean;

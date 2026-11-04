@@ -1,14 +1,13 @@
 import type { DateRange } from '../../../common/utils/dateRange';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 
-export interface CohortSession {
+export interface ProgramSession {
   id: string;
-  cohortId: string;
   cycleId: string;
   sessionTypeId: string;
   sessionTypeName: string;
   theme: string;
-  cohortName: string;
+  cycleName: string;
   programId: string;
   programName: string;
   enrollmentRequired: boolean;
@@ -33,7 +32,7 @@ export interface SessionListFilters {
 
 export type SessionStatusFilter = 'upcoming' | 'completed';
 
-export const SESSION_TABLE_KEYS = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+export const SESSION_TABLE_KEYS = ['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'] as const;
 export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
 
 export interface SessionType {
@@ -81,10 +80,10 @@ export interface SessionNote {
 }
 
 export interface YouthSessionNote extends SessionNote {
+  cycleId: string;
   sessionTheme: string | null;
   startsAt: string;
-  cohortId: string;
-  cohortName: string;
+  cycleName: string;
   programId: string;
   programName: string;
   enrollmentRequired: boolean;
@@ -111,6 +110,6 @@ export interface SessionAttachment {
 }
 
 export interface SessionCalendarCache {
-  upsert: (session: CohortSession) => void;
+  upsert: (session: ProgramSession) => void;
   remove: (sessionId: string) => void;
 }

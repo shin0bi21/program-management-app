@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { AccessTokenPayload } from '../../../types/auth';
-import { getCohortRowsByIds } from '../../programming/cohorts/cohortRecordQuery';
+import { getProgramCycleRowsByKeys } from '../../programming/programCycles/programCycleRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
@@ -271,40 +271,33 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       throw new ConflictError('Date of birth is required before signing up this lead');
     }
 
-    if (data.cohortId) {
-      const [assignment] = await trx<{ programId: string }[]>`
-        SELECT program_id FROM program_cohorts WHERE id = ${data.cohortId}
-      `;
-      if (!assignment) throw new ConflictError('Selected cohort is unavailable');
+    if (data.programId && data.cycleId) {
+      // Lead conversion may enroll in an eligible program outside the actor’s assigned programs.
+      await trx`SELECT id FROM programs WHERE id = ${data.programId} FOR UPDATE`;
 
-      // Match assignment mutations: lock the program before its cohort and recheck current rules.
-      await trx`SELECT id FROM programs WHERE id = ${assignment.programId} FOR UPDATE`;
-
-      const [cohort] = await trx<{
-        id: string;
+      const [programCycle] = await trx<{
         enrollmentRequired: boolean;
         minAge: number | null;
         maxAge: number | null;
         age: number;
       }[]>`
-        SELECT pc.id, p.enrollment_required, p.min_age, p.max_age,
+        SELECT p.enrollment_required, p.min_age, p.max_age,
           EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, ${dateOfBirth}::date))::int AS age
-        FROM program_cohorts pc
+        FROM program_cycle_assignments pc
         INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
-        WHERE pc.id = ${data.cohortId}
-          AND pc.program_id = ${assignment.programId}
+        WHERE pc.program_id = ${data.programId} AND pc.cycle_id = ${data.cycleId}
           AND (NOW() AT TIME ZONE 'America/Toronto')::date <= cycle.ends_on
         FOR UPDATE OF pc
       `;
-      if (!cohort) throw new ConflictError('Selected cohort is unavailable');
-      if (!cohort.enrollmentRequired) {
-        throw new ConflictError('Open attendance cohorts do not use enrollment');
+      if (!programCycle) throw new ConflictError('Selected program cycle is unavailable');
+      if (!programCycle.enrollmentRequired) {
+        throw new ConflictError('Open attendance programs do not use enrollment');
       }
-      const outsideAgeRange = (cohort.minAge !== null && cohort.age < cohort.minAge)
-        || (cohort.maxAge !== null && cohort.age > cohort.maxAge);
+      const outsideAgeRange = (programCycle.minAge !== null && programCycle.age < programCycle.minAge)
+        || (programCycle.maxAge !== null && programCycle.age > programCycle.maxAge);
       if (outsideAgeRange) {
-        throw new ConflictError('Lead does not meet this cohort age range');
+        throw new ConflictError('Lead does not meet this program age range');
       }
     }
 
@@ -347,17 +340,18 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       `;
     }
 
-    if (data.cohortId) {
+    if (data.programId && data.cycleId) {
       const enrollments = await trx<{ id: string; enrolledOn: string }[]>`
-        INSERT INTO cohort_enrollments (
-          cohort_id, youth_id, created_by, updated_by
+        INSERT INTO program_enrollments (
+          program_id, cycle_id, youth_id, created_by, updated_by
         )
-        VALUES (${data.cohortId}, ${youthId}, ${actorId}, ${actorId})
+        VALUES (${data.programId}, ${data.cycleId}, ${youthId}, ${actorId}, ${actorId})
         RETURNING id, enrolled_on::text AS enrolled_on
       `;
-      await audit(trx, actorId, transactionId, 'cohort_enrollments', enrollments[0].id, 'INSERT', null, {
+      await audit(trx, actorId, transactionId, 'program_enrollments', enrollments[0].id, 'INSERT', null, {
         id: enrollments[0].id,
-        cohortId: data.cohortId,
+        programId: data.programId,
+        cycleId: data.cycleId,
         youthId,
         enrolledOn: enrollments[0].enrolledOn,
       });
@@ -383,10 +377,10 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
     const [leadRecord] = await trx`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
-    const [updatedCohort] = data.cohortId && actor.permissions.includes('read:programs')
-      ? await getCohortRowsByIds(trx, actor, [data.cohortId])
+    const [updatedProgramCycle] = data.programId && data.cycleId && actor.permissions.includes('read:programs')
+      ? await getProgramCycleRowsByKeys(trx, actor, [{ programId: data.programId, cycleId: data.cycleId }])
       : [];
-    return { lead: leadRecord, ...(updatedCohort ? { updatedCohort } : {}) };
+    return { lead: leadRecord, ...(updatedProgramCycle ? { updatedProgramCycle } : {}) };
   });
 }
 

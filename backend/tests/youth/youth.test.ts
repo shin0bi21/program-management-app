@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { deleteTestCohort, seedTestCohort, seedTestUser, deleteTestUser, sql } from '../shared/db';
+import { deleteTestProgramCycle, seedTestProgramCycle, seedTestUser, deleteTestUser, sql } from '../shared/db';
 import { generateToken, generateExpiredToken, deleteTestYouth } from './helpers';
 
 const app = createApp();
@@ -17,7 +17,6 @@ describe('Youth API', () => {
   let adminUserId: string;
   let adminToken: string;
   let softSkillsProgramId: string;
-  let softSkillsCohortId: string;
   let softSkillsCycleId: string;
 
   beforeAll(async () => {
@@ -26,14 +25,14 @@ describe('Youth API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
-    ({ cohortId: softSkillsCohortId, cycleId: softSkillsCycleId } = await seedTestCohort({
+    ({ cycleId: softSkillsCycleId } = await seedTestProgramCycle({
       programId: softSkillsProgramId,
       name: `Youth Test ${Date.now()}`,
     }));
   });
 
   afterAll(async () => {
-    await deleteTestCohort(softSkillsCohortId, softSkillsCycleId);
+    await deleteTestProgramCycle(softSkillsProgramId, softSkillsCycleId);
     await deleteTestUser(adminUserId);
   });
 
@@ -63,12 +62,13 @@ describe('Youth API', () => {
     });
 
     it('sorts and paginates DOBs in both directions, including unknown dates and ties', async () => {
+      const surname = `BirthdateSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
       const records: Array<{ id: string; dateOfBirth: string }> = [];
       try {
         for (const dateOfBirth of [null, '2012-06-15', '2012-06-15', '2008-01-01']) {
           const saved = await request(app).post('/api/youth')
             .set('Authorization', `Bearer ${adminToken}`)
-            .send({ ...baseYouth, lastName: 'BirthdateSort', dateOfBirth });
+            .send({ ...baseYouth, lastName: surname, dateOfBirth });
           expect(saved.status).toBe(201);
           records.push({ id: saved.body.id, dateOfBirth: dateOfBirth ?? '' });
         }
@@ -79,7 +79,7 @@ describe('Youth API', () => {
           let cursor: string | undefined;
           do {
             const response = await request(app).get('/api/youth')
-              .query({ search: 'BirthdateSort', sort: 'dateOfBirth', direction, limit: 1, ...(cursor ? { cursor } : {}) })
+              .query({ search: surname, sort: 'dateOfBirth', direction, limit: 1, ...(cursor ? { cursor } : {}) })
               .set('Authorization', `Bearer ${adminToken}`);
             expect(response.status).toBe(200);
             actual.push(...response.body.rows.map((row: { id: string }) => row.id));
@@ -132,11 +132,12 @@ describe('Youth API', () => {
 
     describe('cycle filters', () => {
       let openProgramId: string;
-      let current: { cohortId: string; cycleId: string };
-      let past: { cohortId: string; cycleId: string };
-      let open: { cohortId: string; cycleId: string };
-      let otherCohortId: string;
+      let current: { programId: string; cycleId: string };
+      let past: { programId: string; cycleId: string };
+      let open: { programId: string; cycleId: string };
+      let otherProgramId: string;
       let sessionId: string;
+      const surname = `CycleFilter${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
       const youthIds: string[] = [];
       const youth: Record<string, string> = {};
 
@@ -152,42 +153,41 @@ describe('Youth API', () => {
           SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
             ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
         `;
-        current = await seedTestCohort({ programId: softSkillsProgramId, name: `Current ${randomUUID()}`, ...dates });
-        past = await seedTestCohort({
+        current = await seedTestProgramCycle({ programId: softSkillsProgramId, name: `Current ${randomUUID()}`, ...dates });
+        past = await seedTestProgramCycle({
           programId: softSkillsProgramId, name: `Past ${randomUUID()}`, startsOn: '2020-01-01', endsOn: '2020-12-31',
         });
-        open = await seedTestCohort({ programId: openProgramId, name: `Open ${randomUUID()}`, ...dates });
-        const [otherCohort] = await sql<{ id: string }[]>`
-          INSERT INTO program_cohorts (program_id, cycle_id)
-          VALUES (${otherProgram.id}, ${past.cycleId}) RETURNING id
-        `;
-        otherCohortId = otherCohort.id;
+        open = await seedTestProgramCycle({ programId: openProgramId, name: `Open ${randomUUID()}`, ...dates });
+        otherProgramId = otherProgram.id;
+        await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id)
+          VALUES (${otherProgramId}, ${past.cycleId})`;
+
 
         for (const name of ['Current', 'Past', 'Both', 'Cross', 'Withdrawn', 'Open', 'Unlinked']) {
           const response = await request(app).post('/api/youth')
             .set('Authorization', `Bearer ${adminToken}`)
-            .send({ ...baseYouth, firstName: name, lastName: 'CycleFilter' });
+            .send({ ...baseYouth, firstName: name, lastName: surname });
           expect(response.status).toBe(201);
           youth[name] = response.body.id;
           youthIds.push(response.body.id);
         }
         await sql`
-          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+          INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
           VALUES
-            (${current.cohortId}, ${youth.Current}, '2020-01-01'),
-            (${past.cohortId}, ${youth.Past}, '2020-01-01'),
-            (${current.cohortId}, ${youth.Both}, '2020-01-01'),
-            (${past.cohortId}, ${youth.Both}, '2020-01-01'),
-            (${current.cohortId}, ${youth.Cross}, '2020-01-01'),
-            (${otherCohortId}, ${youth.Cross}, '2020-01-01')
+            (${current.programId}, ${current.cycleId}, ${youth.Current}, '2020-01-01'),
+            (${past.programId}, ${past.cycleId}, ${youth.Past}, '2020-01-01'),
+            (${current.programId}, ${current.cycleId}, ${youth.Both}, '2020-01-01'),
+            (${past.programId}, ${past.cycleId}, ${youth.Both}, '2020-01-01'),
+            (${current.programId}, ${current.cycleId}, ${youth.Cross}, '2020-01-01'),
+            (${otherProgramId}, ${past.cycleId}, ${youth.Cross}, '2020-01-01')
         `;
         await sql`
-          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on, withdrawn_on)
-          VALUES (${current.cohortId}, ${youth.Withdrawn}, '2020-01-01', '2020-02-01')
+          INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on, withdrawn_on)
+          VALUES (${current.programId}, ${current.cycleId}, ${youth.Withdrawn}, '2020-01-01', '2020-02-01')
         `;
         const [session] = await sql<{ id: string }[]>`
-          INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
-          VALUES (${open.cohortId}, 'Cycle filter attendance', CURRENT_DATE - 1 + TIME '17:00',
+          INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
+          VALUES (${open.programId}, ${open.cycleId}, 'Cycle filter attendance', CURRENT_DATE - 1 + TIME '17:00',
             CURRENT_DATE - 1 + TIME '18:00') RETURNING id
         `;
         sessionId = session.id;
@@ -199,10 +199,10 @@ describe('Youth API', () => {
 
       afterAll(async () => {
         await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
-        await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
+        await sql`DELETE FROM program_sessions WHERE id = ${sessionId}`;
         for (const id of youthIds) await deleteTestYouth(id);
-        await sql`DELETE FROM program_cohorts WHERE id = ${otherCohortId}`;
-        for (const cohort of [current, past, open]) await deleteTestCohort(cohort.cohortId, cohort.cycleId);
+        await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${otherProgramId} AND cycle_id = ${past.cycleId}`;
+        for (const programCycle of [current, past, open]) await deleteTestProgramCycle(programCycle.programId, programCycle.cycleId);
       });
 
       const list = (query: Record<string, string | number> = {}) => request(app)
@@ -221,7 +221,7 @@ describe('Youth API', () => {
         expect(ids(response.body)).toEqual([youth.Current, youth.Past, youth.Both, youth.Cross].sort());
       });
 
-      it('requires program and cycle to match the same cohort participation', async () => {
+      it('requires program and cycle to match the same program-cycle participation', async () => {
         const response = await list({ programIds: softSkillsProgramId, cycleIds: past.cycleId });
         expect(response.status).toBe(200);
         expect(ids(response.body)).toEqual([youth.Past, youth.Both].sort());
@@ -238,7 +238,7 @@ describe('Youth API', () => {
       });
 
       it('combines cycle filtering with search and paginates matching youth', async () => {
-        const query = { cycleIds: current.cycleId, search: 'CycleFilter', limit: 1, sort: 'firstName' };
+        const query = { cycleIds: current.cycleId, search: surname, limit: 1, sort: 'firstName' };
         const first = await list(query);
         expect(first.status).toBe(200);
         expect(ids(first.body.rows)).toEqual([youth.Both]);
@@ -259,7 +259,7 @@ describe('Youth API', () => {
         expect(missing.status).toBe(200);
         expect(missing.body).toEqual([]);
 
-        const unrestricted = await list({ search: 'CycleFilter' });
+        const unrestricted = await list({ search: surname });
         expect(unrestricted.status).toBe(200);
         expect(ids(unrestricted.body)).toEqual([...youthIds].sort());
       });
@@ -274,15 +274,15 @@ describe('Youth API', () => {
       it('preserves planned participation in program and cycle filters', async () => {
         const created = await request(app).post('/api/youth')
           .set('Authorization', `Bearer ${adminToken}`)
-          .send({ ...baseYouth, firstName: 'Planned', lastName: 'CycleFilter' });
+          .send({ ...baseYouth, firstName: 'Planned', lastName: surname });
         expect(created.status).toBe(201);
         youthIds.push(created.body.id);
         await sql`
-          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
-          VALUES (${current.cohortId}, ${created.body.id}, (NOW() AT TIME ZONE 'America/Toronto')::date + 1)
+          INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
+          VALUES (${current.programId}, ${current.cycleId}, ${created.body.id}, (NOW() AT TIME ZONE 'America/Toronto')::date + 1)
         `;
 
-        const query = { cycleIds: current.cycleId, programIds: softSkillsProgramId, search: 'Planned CycleFilter' };
+        const query = { cycleIds: current.cycleId, programIds: softSkillsProgramId, search: `Planned ${surname}` };
         const response = await list(query);
         expect(response.status).toBe(200);
         expect(ids(response.body)).toEqual([created.body.id]);
@@ -342,11 +342,11 @@ describe('Youth API', () => {
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
-      expect(res.body.cohorts).toEqual([]);
+      expect(res.body.programCycles).toEqual([]);
       await sql`
-        INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+        INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
         VALUES (
-          ${softSkillsCohortId},
+          ${softSkillsProgramId}, ${softSkillsCycleId},
           ${res.body.id},
           (NOW() AT TIME ZONE 'America/Toronto')::date
         )
@@ -363,13 +363,13 @@ describe('Youth API', () => {
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({
           firstName: 'Jordan',
-          cohorts: expect.arrayContaining([
-            expect.objectContaining({ id: softSkillsCohortId, programId: softSkillsProgramId }),
+          programCycles: expect.arrayContaining([
+            expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }),
           ]),
         }),
       ]));
-      expect(res.body.every((profile: { cohorts: Array<{ programId: string }> }) =>
-        profile.cohorts.some(cohort => cohort.programId === softSkillsProgramId)
+      expect(res.body.every((profile: { programCycles: Array<{ programId: string }> }) =>
+        profile.programCycles.some(programCycle => programCycle.programId === softSkillsProgramId)
       )).toBe(true);
     });
 
@@ -382,17 +382,17 @@ describe('Youth API', () => {
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({
           firstName: 'Jordan',
-          cohorts: expect.arrayContaining([
-            expect.objectContaining({ id: softSkillsCohortId }),
+          programCycles: expect.arrayContaining([
+            expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }),
           ]),
         }),
       ]));
-      expect(res.body.every((profile: { cohorts: Array<{ id: string }> }) =>
-        profile.cohorts.some(cohort => cohort.id === softSkillsCohortId)
+      expect(res.body.every((profile: { programCycles: Array<{ programId: string; cycleId: string }> }) =>
+        profile.programCycles.some(programCycle => programCycle.programId === softSkillsProgramId && programCycle.cycleId === softSkillsCycleId)
       )).toBe(true);
     });
 
-    it('should derive active status from current cohort enrollment', async () => {
+    it('should derive active status from current program enrollment', async () => {
       const res = await request(app)
         .get('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`);
@@ -477,7 +477,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should derive no active cohort for a newly created youth', async () => {
+    it('should derive no active program for a newly created youth', async () => {
       const res = await request(app)
         .post('/api/youth')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -558,16 +558,16 @@ describe('Youth API', () => {
 
     it('should return the latest session date marked present or late', async () => {
       const sessions = await sql<{ id: string; sessionDate: string }[]>`
-        INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
+        INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
         VALUES
           (
-            ${softSkillsCohortId},
+            ${softSkillsProgramId}, ${softSkillsCycleId},
             ${`Attendance Test ${Date.now()}`},
             (CURRENT_DATE - 2 + TIME '17:00') AT TIME ZONE 'America/Toronto',
             (CURRENT_DATE - 2 + TIME '19:00') AT TIME ZONE 'America/Toronto'
           ),
           (
-            ${softSkillsCohortId},
+            ${softSkillsProgramId}, ${softSkillsCycleId},
             ${`Attendance Test Latest ${Date.now()}`},
             (CURRENT_DATE - 1 + TIME '17:00') AT TIME ZONE 'America/Toronto',
             (CURRENT_DATE - 1 + TIME '19:00') AT TIME ZONE 'America/Toronto'
@@ -577,8 +577,8 @@ describe('Youth API', () => {
 
       try {
         await sql`
-          INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
-          VALUES (${softSkillsCohortId}, ${youthId}, CURRENT_DATE - 3)
+          INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
+          VALUES (${softSkillsProgramId}, ${softSkillsCycleId}, ${youthId}, CURRENT_DATE - 3)
         `;
         await sql`
           INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
@@ -593,9 +593,9 @@ describe('Youth API', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.lastAttendedOn).toBe(sessions[0].sessionDate);
-        expect(res.body.cohorts).toEqual(expect.arrayContaining([
+        expect(res.body.programCycles).toEqual(expect.arrayContaining([
           expect.objectContaining({
-            id: softSkillsCohortId,
+            programId: softSkillsProgramId, cycleId: softSkillsCycleId,
             presentCount: 1,
             lateCount: 0,
             absentCount: 1,
@@ -604,8 +604,8 @@ describe('Youth API', () => {
         ]));
       } finally {
         await sql`DELETE FROM attendance_records WHERE youth_id = ${youthId}`;
-        await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${youthId}`;
-        await sql`DELETE FROM cohort_sessions WHERE id = ANY(${sql.array(sessions.map(session => session.id))}::uuid[])`;
+        await sql`DELETE FROM program_enrollments WHERE youth_id = ${youthId}`;
+        await sql`DELETE FROM program_sessions WHERE id = ANY(${sql.array(sessions.map(session => session.id))}::uuid[])`;
       }
     });
 
@@ -862,13 +862,13 @@ describe('Youth API', () => {
     });
   });
 
-  describe('Youth cohort attendance', () => {
+  describe('Youth program-cycle attendance', () => {
     let youthId: string;
     let otherYouthId: string;
     let firstSessionId: string;
     let secondSessionId: string;
     let linkedSessionNoteId: string;
-    let openCohortId: string;
+    let openProgramId: string;
     let openCycleId: string;
     let openSessionId: string;
 
@@ -885,19 +885,19 @@ describe('Youth API', () => {
       otherYouthId = otherYouth.body.id;
 
       await sql`
-        INSERT INTO cohort_enrollments (cohort_id, youth_id, enrolled_on)
+        INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
         VALUES
-          (${softSkillsCohortId}, ${youthId}, CURRENT_DATE - 30),
-          (${softSkillsCohortId}, ${otherYouthId}, CURRENT_DATE - 30)
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${youthId}, CURRENT_DATE - 30),
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${otherYouthId}, CURRENT_DATE - 30)
       `;
       const [sessionType] = await sql<{ id: string }[]>`SELECT id FROM session_types ORDER BY name LIMIT 1`;
       const sessions = await sql<{ id: string }[]>`
-        INSERT INTO cohort_sessions (
-          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        INSERT INTO program_sessions (
+          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES
-          (${softSkillsCohortId}, ${sessionType.id}, ${`Youth Attendance A ${Date.now()}`}, CURRENT_DATE - 2 + TIME '17:00', CURRENT_DATE - 2 + TIME '18:00', ${adminUserId}, ${adminUserId}),
-          (${softSkillsCohortId}, ${sessionType.id}, ${`Youth Attendance B ${Date.now()}`}, CURRENT_DATE - 1 + TIME '17:00', CURRENT_DATE - 1 + TIME '18:00', ${adminUserId}, ${adminUserId})
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${sessionType.id}, ${`Youth Attendance A ${Date.now()}`}, CURRENT_DATE - 2 + TIME '17:00', CURRENT_DATE - 2 + TIME '18:00', ${adminUserId}, ${adminUserId}),
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${sessionType.id}, ${`Youth Attendance B ${Date.now()}`}, CURRENT_DATE - 1 + TIME '17:00', CURRENT_DATE - 1 + TIME '18:00', ${adminUserId}, ${adminUserId})
         RETURNING id
       `;
       [firstSessionId, secondSessionId] = sessions.map(session => session.id);
@@ -928,17 +928,17 @@ describe('Youth API', () => {
       const [openProgram] = await sql<{ id: string }[]>`
         SELECT id FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
       `;
-      const openCohort = await seedTestCohort({
+      const openCohort = await seedTestProgramCycle({
         programId: openProgram.id,
         name: `Youth Open Attendance ${Date.now()}`,
       });
-      openCohortId = openCohort.cohortId;
+      openProgramId = openCohort.programId;
       openCycleId = openCohort.cycleId;
       const [openSession] = await sql<{ id: string }[]>`
-        INSERT INTO cohort_sessions (
-          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        INSERT INTO program_sessions (
+          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
-        VALUES (${openCohortId}, ${sessionType.id}, 'Open attendance', CURRENT_DATE - 1 + TIME '19:00', CURRENT_DATE - 1 + TIME '20:00', ${adminUserId}, ${adminUserId})
+        VALUES (${openProgramId}, ${openCycleId}, ${sessionType.id}, 'Open attendance', CURRENT_DATE - 1 + TIME '19:00', CURRENT_DATE - 1 + TIME '20:00', ${adminUserId}, ${adminUserId})
         RETURNING id
       `;
       openSessionId = openSession.id;
@@ -947,50 +947,50 @@ describe('Youth API', () => {
     afterAll(async () => {
       await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
       await sql`DELETE FROM session_notes WHERE id = ${linkedSessionNoteId}`;
-      await sql`DELETE FROM cohort_sessions WHERE id IN (${firstSessionId}, ${secondSessionId}, ${openSessionId})`;
-      await deleteTestCohort(openCohortId, openCycleId);
+      await sql`DELETE FROM program_sessions WHERE id IN (${firstSessionId}, ${secondSessionId}, ${openSessionId})`;
+      await deleteTestProgramCycle(openProgramId, openCycleId);
       await deleteTestYouth(youthId);
       await deleteTestYouth(otherYouthId);
     });
 
     it('requires authentication', async () => {
       const response = await request(app)
-        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`);
+        .get(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`);
       expect(response.status).toBe(401);
     });
 
     it('requires attendance permissions', async () => {
       const response = await request(app)
-        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .get(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${generateToken(youthId, 'youth')}`);
       expect(response.status).toBe(403);
     });
 
-    it('validates identifiers, reports missing youth, and hides unavailable cohorts', async () => {
+    it('validates identifiers, reports missing youth, and hides unavailable program cycles', async () => {
       const invalid = await request(app)
-        .get(`/api/youth/not-a-uuid/cohorts/${softSkillsCohortId}/attendance`)
+        .get(`/api/youth/not-a-uuid/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(invalid.status).toBe(400);
 
       const missingYouth = await request(app)
-        .get(`/api/youth/00000000-0000-4000-8000-000000000000/cohorts/${softSkillsCohortId}/attendance`)
+        .get(`/api/youth/00000000-0000-4000-8000-000000000000/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(missingYouth.status).toBe(404);
 
       const missingCohort = await request(app)
-        .get(`/api/youth/${youthId}/cohorts/00000000-0000-4000-8000-000000000000/attendance`)
+        .get(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/00000000-0000-4000-8000-000000000000/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(missingCohort.status).toBe(403);
     });
 
-    it('lists every eligible cohort session with this youth attendance only', async () => {
+    it('lists every eligible program session with this youth attendance only', async () => {
       const response = await request(app)
-        .get(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .get(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.cohort).toEqual(expect.objectContaining({
-        id: softSkillsCohortId,
+      expect(response.body.programCycle).toEqual(expect.objectContaining({
+        programId: softSkillsProgramId, cycleId: softSkillsCycleId,
         programName: 'Soft Skills',
         enrollmentRequired: true,
       }));
@@ -1010,7 +1010,7 @@ describe('Youth API', () => {
 
     it('atomically replaces one youth attendance without changing another youth', async () => {
       const response = await request(app)
-        .put(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .put(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ records: [
           { sessionId: firstSessionId, status: 'late', notes: 'Arrived after kickoff' },
@@ -1025,12 +1025,12 @@ describe('Youth API', () => {
       const profile = await request(app).get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(response.body.youth).toEqual(profile.body);
-      const listedSessions = await request(app).get('/api/cohorts/sessions')
+      const listedSessions = await request(app).get('/api/sessions')
         .set('Authorization', `Bearer ${adminToken}`).query({ limit: 50 });
       expect(response.body.updatedSessions).toEqual(expect.arrayContaining([
         listedSessions.body.rows.find((session: { id: string }) => session.id === firstSessionId),
       ]));
-      expect(response.body.updatedCohort).toEqual(expect.objectContaining({ id: softSkillsCohortId }));
+      expect(response.body.updatedProgramCycle).toEqual(expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }));
       const otherAttendance = await sql<{ status: string }[]>`
         SELECT status FROM attendance_records
         WHERE session_id = ${firstSessionId} AND youth_id = ${otherYouthId}
@@ -1038,9 +1038,9 @@ describe('Youth API', () => {
       expect(otherAttendance).toEqual([{ status: 'present' }]);
     });
 
-    it('rejects stale partial cohort replacements without deleting saved attendance', async () => {
+    it('rejects stale partial program attendance replacements without deleting saved attendance', async () => {
       const response = await request(app)
-        .put(`/api/youth/${youthId}/cohorts/${softSkillsCohortId}/attendance`)
+        .put(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ records: [{ sessionId: firstSessionId, status: 'absent' }] });
 
@@ -1054,13 +1054,13 @@ describe('Youth API', () => {
 
     it('limits open-program youth attendance to attended or unmarked', async () => {
       const rejected = await request(app)
-        .put(`/api/youth/${youthId}/cohorts/${openCohortId}/attendance`)
+        .put(`/api/youth/${youthId}/programs/${openProgramId}/cycles/${openCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ records: [{ sessionId: openSessionId, status: 'late' }] });
       expect(rejected.status).toBe(409);
 
       const saved = await request(app)
-        .put(`/api/youth/${youthId}/cohorts/${openCohortId}/attendance`)
+        .put(`/api/youth/${youthId}/programs/${openProgramId}/cycles/${openCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ records: [{ sessionId: openSessionId, status: 'present' }] });
       expect(saved.status).toBe(200);

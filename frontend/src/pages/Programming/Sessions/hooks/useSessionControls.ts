@@ -42,6 +42,7 @@ interface UseSessionControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
+const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle' };
 export function useSessionControls({
   role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
   sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
@@ -49,7 +50,7 @@ export function useSessionControls({
   // Search and filters.
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const layout = useTableLayout({ key: 'session-filters', tableKeys });
+  const layout = useTableLayout({ key: 'session-filters', tableKeys, columnKeyAliases: SESSION_COLUMN_KEY_ALIASES });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'session-filters',
     waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,

@@ -317,16 +317,15 @@ async function homepagePrograms() {
   const rows = await sql<HomepageProgramRow[]>`
     WITH ranked_sessions AS (
       SELECT
-        pc.program_id,
+        cs.program_id,
         cs.id AS session_id,
         cs.theme AS session_theme,
         cs.starts_at AS session_starts_at,
         ROW_NUMBER() OVER (
-          PARTITION BY pc.program_id
+          PARTITION BY cs.program_id
           ORDER BY cs.starts_at, cs.id
         ) AS program_session_order
-      FROM cohort_sessions cs
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+      FROM program_sessions cs
       WHERE cs.ends_at >= NOW()
         AND cs.cancelled_at IS NULL
     )

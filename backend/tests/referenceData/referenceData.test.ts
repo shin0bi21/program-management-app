@@ -202,7 +202,7 @@ describe('Page-authorized reference data', () => {
   });
 
   it('serves Sessions scheduling references with only session-read permission and retains management boundaries', async () => {
-    const sessions = await get('/cohorts/sessions/reference-data', ['read:sessions']);
+    const sessions = await get('/sessions/reference-data', ['read:sessions']);
     expect(sessions.status).toBe(200);
     expect(Object.keys(sessions.body).sort()).toEqual(['programs', 'sessionTypes']);
     expect(sessions.body.programs).toEqual([expect.objectContaining({
@@ -211,8 +211,8 @@ describe('Page-authorized reference data', () => {
       defaultEndTime: expect.any(String), timezone: 'America/Toronto', enrollmentRequired: true,
     })]);
     expect(Array.isArray(sessions.body.sessionTypes)).toBe(true);
-    expect((await get('/cohorts/sessions/reference-data', ['read:tasks'])).status).toBe(403);
-    for (const path of ['/programs', '/cohorts/cycles']) {
+    expect((await get('/sessions/reference-data', ['read:tasks'])).status).toBe(403);
+    for (const path of ['/programs', '/cycles']) {
       expect((await get(path, ['read:sessions'])).status).toBe(403);
     }
     expect((await get('/schools', ['read:youth_profiles'])).status).toBe(403);

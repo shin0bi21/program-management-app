@@ -21,15 +21,18 @@ vi.mock('../../../http/client', () => ({
 describe('session API', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('loads page-owned session options with cancellation', () => {
+  it('loads scheduling options and allowed program-cycle pairs with cancellation', async () => {
     const options = { signal: new AbortController().signal };
-    getSessionReferenceData(options);
-    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/sessions/reference-data', options);
+    const projection = { programs: [], sessionTypes: [] };
+    vi.mocked(apiClient.get).mockResolvedValueOnce(projection);
+
+    expect(await getSessionReferenceData(options)).toEqual(projection);
+    expect(apiClient.get).toHaveBeenCalledWith('/sessions/reference-data', options);
   });
 
   it('moves a session with a date-only command', () => {
     moveSessionDate('session-1', '2027-01-12');
-    expect(apiClient.put).toHaveBeenCalledWith('/cohorts/sessions/session-1/date', { date: '2027-01-12' });
+    expect(apiClient.put).toHaveBeenCalledWith('/sessions/session-1/date', { date: '2027-01-12' });
   });
 
   it('forwards canonical edit and attendance command responses to their owners', async () => {
@@ -38,25 +41,25 @@ describe('session API', () => {
     vi.mocked(apiClient.put).mockResolvedValueOnce({ session: saved });
 
     await expect(updateSession('session-1', edit)).resolves.toEqual({ session: saved });
-    expect(apiClient.put).toHaveBeenLastCalledWith('/cohorts/sessions/session-1', edit);
+    expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1', edit);
 
     const attendance = { roster: [], session: saved };
     vi.mocked(apiClient.put).mockResolvedValueOnce(attendance);
     await expect(setSessionAttendance('session-1', [])).resolves.toBe(attendance);
-    expect(apiClient.put).toHaveBeenLastCalledWith('/cohorts/sessions/session-1/attendance', { records: [] });
+    expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1/attendance', { records: [] });
   });
 
   it('creates by program and date so the server resolves the assigned cycle', () => {
     const data = { programId: 'program-1', sessionTypeId: 'type-1', theme: 'Art', date: '2026-10-27' };
     createSession(data);
-    expect(apiClient.post).toHaveBeenCalledWith('/cohorts/sessions', data);
+    expect(apiClient.post).toHaveBeenCalledWith('/sessions', data);
   });
 
   it('serializes session list filters without adding a trailing question mark', () => {
     getSessions({}, undefined, { key: 'date', direction: 'asc' });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/cohorts/sessions?sort=date&direction=asc&limit=50',
+      '/sessions?sort=date&direction=asc&limit=50',
     );
   });
 
@@ -64,12 +67,12 @@ describe('session API', () => {
     const options = { signal: new AbortController().signal };
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/cohorts/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=50', options,
+      '/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=50', options,
     );
 
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], start: '2026-07-01', end: '2026-08-01' }, options);
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/cohorts/sessions?start=2026-07-01&end=2026-08-01&cycleIds=cycle-1%2Ccycle-2', options,
+      '/sessions?start=2026-07-01&end=2026-08-01&cycleIds=cycle-1%2Ccycle-2', options,
     );
   });
 
@@ -83,7 +86,7 @@ describe('session API', () => {
     });
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      '/cohorts/sessions/session-1/attachments',
+      '/sessions/session-1/attachments',
       expect.any(FormData),
     );
     const form = vi.mocked(apiClient.post).mock.calls[0][1] as FormData;

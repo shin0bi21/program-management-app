@@ -170,9 +170,8 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
       program.id AS program_id, program.name AS program_name,
       (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date,
       session.starts_at::text AS starts_at
-    FROM cohort_sessions session
-    INNER JOIN program_cohorts cohort ON cohort.id = session.cohort_id
-    INNER JOIN programs program ON program.id = cohort.program_id
+    FROM program_sessions session
+    INNER JOIN programs program ON program.id = session.program_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
     WHERE session.cancelled_at IS NULL
       AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = ${query.workDate}::date
@@ -342,17 +341,16 @@ async function resolveHoursScope(input: SetHoursInput, db: typeof sql) {
   };
   if (input.source === 'session') {
     const rows = await db<Array<{ programId: string; workDate: string }>>`
-      SELECT cohort.program_id,
+      SELECT session.program_id,
         (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date
-      FROM cohort_sessions session
-      INNER JOIN program_cohorts cohort ON cohort.id = session.cohort_id
+      FROM program_sessions session
       INNER JOIN users target_staff ON target_staff.id = ${input.staffId}
       WHERE session.id = ${input.sessionId}
         AND session.cancelled_at IS NULL
         AND EXISTS (
           SELECT 1
           FROM user_program_assignments assignment
-          WHERE assignment.program_id = cohort.program_id
+          WHERE assignment.program_id = session.program_id
             AND assignment.user_id = target_staff.id
         )
       LIMIT 1
@@ -430,8 +428,8 @@ async function resolveCycleForWorkDate(workDate: string, programId: string | nul
     FROM program_cycles cycle
     WHERE ${workDate}::date BETWEEN cycle.starts_on AND cycle.ends_on
       AND ${programId ? sql`EXISTS (
-        SELECT 1 FROM program_cohorts cohort
-        WHERE cohort.program_id = ${programId} AND cohort.cycle_id = cycle.id
+        SELECT 1 FROM program_cycle_assignments assignment
+        WHERE assignment.program_id = ${programId} AND assignment.cycle_id = cycle.id
       )` : sql`TRUE`}
     ORDER BY cycle.starts_on, cycle.id
     LIMIT 2

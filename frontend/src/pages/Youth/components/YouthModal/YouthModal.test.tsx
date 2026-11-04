@@ -337,7 +337,7 @@ describe('YouthModal', () => {
       ]));
     });
 
-    it('does not submit the cohort-derived status when updating', async () => {
+    it('does not submit the programCycle-derived status when updating', async () => {
       const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' });
       renderModal({ youthData: profile });
       submitForm();

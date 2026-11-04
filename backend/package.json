@@ -13,7 +13,7 @@
     "test:youth": "jest --testPathPatterns=tests/youth",
     "test:schools": "jest --testPathPatterns=tests/schools",
     "test:programs": "jest --testPathPatterns=tests/programs",
-    "test:cohorts": "jest --testPathPatterns=tests/cohorts",
+    "test:sessions": "jest --testPathPatterns=tests/sessions",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
     "test:hours": "jest --testPathPatterns=tests/hours",

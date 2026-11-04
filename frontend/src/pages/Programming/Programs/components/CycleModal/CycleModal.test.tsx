@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProgramCycle } from '../../api/cycles.api';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
-import { getCohorts } from '../../../Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../api/programCycleAssignments.api';
 import CycleModal from './CycleModal';
 
 vi.mock('../../api/cycles.api', () => ({ setProgramCycle: vi.fn() }));
 
-vi.mock('../../../Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
+vi.mock('../../api/programCycleAssignments.api', () => ({ getProgramCycleAssignments: vi.fn() }));
 const programs = [{ id: 'program-1', name: 'Skills' }] as import('../../../../../common/features/programs/types').Program[];
 
 const cycle: ProgramCycle = {
@@ -18,11 +18,11 @@ const cycle: ProgramCycle = {
 };
 
 describe('CycleModal', () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.mocked(getCohorts).mockResolvedValue([{ programId: 'program-1', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getCohorts>>); });
+  beforeEach(() => { vi.clearAllMocks(); vi.mocked(getProgramCycleAssignments).mockResolvedValue([{ programId: 'program-1', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getProgramCycleAssignments>>); });
 
   it('submits the create form and displays its success status', async () => {
     const user = userEvent.setup();
-    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedCohorts: [], createdCohortIds: [], removedCohortIds: [] });
+    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedProgramCycles: [], createdProgramCycles: [], removedProgramCycles: [] });
     const onSaved = vi.fn().mockResolvedValue(undefined);
     render(<CycleModal programs={programs} isOpen cycle={null} onClose={vi.fn()} onSaved={onSaved} />);
 
@@ -40,7 +40,7 @@ describe('CycleModal', () => {
 
   it('renders existing cycle fields and the edit submit action', async () => {
     const user = userEvent.setup();
-    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedCohorts: [], createdCohortIds: [], removedCohortIds: [] });
+    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedProgramCycles: [], createdProgramCycles: [], removedProgramCycles: [] });
     render(<CycleModal programs={programs} isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('Fall 2026');

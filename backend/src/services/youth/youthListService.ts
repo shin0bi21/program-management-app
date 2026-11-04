@@ -19,7 +19,7 @@ export async function listYouth(filters: YouthQuery) {
     lastName: sql`LOWER(u.last_name)`,
     dateOfBirth: sql`COALESCE(yp.date_of_birth::text, '')`,
     school: sql`LOWER(COALESCE(s.name, ''))`,
-    program: sql`LOWER(COALESCE((SELECT MIN(p_sort.name) FROM cohort_enrollments ce_sort INNER JOIN program_cohorts pc_sort ON pc_sort.id = ce_sort.cohort_id INNER JOIN programs p_sort ON p_sort.id = pc_sort.program_id WHERE ce_sort.youth_id = u.id AND ce_sort.withdrawn_on IS NULL), ''))`,
+    program: sql`LOWER(COALESCE((SELECT MIN(p_sort.name) FROM program_enrollments ce_sort INNER JOIN programs p_sort ON p_sort.id = ce_sort.program_id WHERE ce_sort.youth_id = u.id AND ce_sort.withdrawn_on IS NULL), ''))`,
     status: youthActiveStatus,
   }[filters.sort]!);
   const youth = await sql<Array<YouthListRow & { cursorValue: string }>>`

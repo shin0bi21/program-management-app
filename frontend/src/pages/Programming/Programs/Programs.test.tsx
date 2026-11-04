@@ -4,14 +4,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../common/features/programs/types';
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
-import { getCohorts } from '../Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from './api/programCycleAssignments.api';
 import Programs from './Programs';
 
 vi.mock('./components/ProgramCyclesModal/ProgramCyclesModal', () => ({
   default: ({ program, onClose }: { program: Program; onClose: () => void }) => <div role="dialog" aria-label={`Assignments for ${program.name}`}><button onClick={onClose}>Close assignments</button></div>,
 }));
 
-vi.mock('../Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
+vi.mock('./api/programCycleAssignments.api', () => ({ getProgramCycleAssignments: vi.fn() }));
 
 const programmingApi = vi.hoisted(() => ({
   getCycleReferences: vi.fn(),
@@ -42,11 +42,11 @@ vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
 const auth = vi.hoisted(() => ({ role: 'project_manager', permissions: [] as string[] }));
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 
-vi.mock('../Cohorts/components/ManageRosterModal/ManageRosterModal', () => ({
-  default: ({ cohort }: { cohort: { name: string } | null }) => cohort ? <div role="dialog" aria-label={`Roster for ${cohort.name}`} /> : null,
+vi.mock('./components/ManageRosterModal/ManageRosterModal', () => ({
+  default: ({ assignment }: { assignment: { cycleName: string } | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycleName}`} /> : null,
 }));
 vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ cohort }: { cohort: { name: string } }) => <div role="dialog" aria-label={`Report for ${cohort.name}`} />,
+  default: ({ programCycle }: { programCycle: { cycleName: string } }) => <div role="dialog" aria-label={`Report for ${programCycle.cycleName}`} />,
 }));
 
 describe('Programs', () => {
@@ -54,9 +54,9 @@ describe('Programs', () => {
     vi.clearAllMocks();
     auth.role = 'project_manager';
     auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
-    vi.mocked(getCohorts).mockResolvedValue([{
-      id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Fall 2026',
-      name: 'Fall 2026', startsOn: '2020-01-01', endsOn: '2100-12-31', enrollmentRequired: true, minAge: 12, maxAge: 15, state: 'active',
+    vi.mocked(getProgramCycleAssignments).mockResolvedValue([{
+      programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Fall 2026',
+      startsOn: '2020-01-01', endsOn: '2100-12-31', enrollmentRequired: true, minAge: 12, maxAge: 15, state: 'active',
       enrolledCount: 5, uniqueAttendeeCount: 0, averageAttendance: 75, attendanceAttendedCount: 3, attendanceRecordedCount: 4,
       nextSessionAt: null, nextSessionId: null,
     }]);
@@ -162,7 +162,7 @@ describe('Programs', () => {
     const neighbor = { ...programState.programs[0], id: 'program-2', name: 'Tennis' };
     programState.programs.push(neighbor);
     const saved = { ...programState.programs[0], name: 'Updated Skills' };
-    programsApi.updateProgram.mockResolvedValue({ program: saved, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    programsApi.updateProgram.mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
     await user.click(await screen.findByText('Soft Skills'));
     await user.click(screen.getByRole('button', { name: 'Actions for Soft Skills' }));
@@ -202,7 +202,7 @@ describe('Programs', () => {
     const created = {
       id: 'program-2', name: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
-    programsApi.createProgram.mockResolvedValue({ program: created, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    programsApi.createProgram.mockResolvedValue({ program: created, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: '+ Add Program' }));
@@ -219,7 +219,7 @@ describe('Programs', () => {
     const user = userEvent.setup();
     programmingApi.setProgramCycle.mockResolvedValue({
       cycle: { id: 'cycle-1', name: 'Updated cycle', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming' },
-      updatedCohorts: [], removedCohortIds: [], createdCohortIds: [],
+      updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [],
     });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
     expect(programmingApi.getCycleList).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe('Programs', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Delete Cycle' }));
 
     expect(screen.getByRole('heading', { name: 'Delete Cycle' })).toBeInTheDocument();
-    expect(screen.getByText(/Cycles assigned to cohorts or logged hours cannot be deleted/)).toBeInTheDocument();
+    expect(screen.getByText(/Cycles assigned to programs or logged hours cannot be deleted/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(programmingApi.deleteProgramCycle).toHaveBeenCalledWith('cycle-1'));

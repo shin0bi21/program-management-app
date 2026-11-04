@@ -56,6 +56,11 @@ logout/login retain it; different browsers/devices are independent. Clearing sit
 resets layout, private browsing is temporary, and blocked/full storage leaves edits
 usable in memory. No device ID or viewport-based identity is needed.
 
+When a persisted column ID changes, migrate account sorting in a forward database migration.
+Pass a stable page-owned `columnKeyAliases` map to `useTableLayout` to rename browser-local
+width and hidden-column keys before validation. Existing values under the new key take
+precedence; restored layouts remain usable if storage cannot persist the migration.
+
 The shared owner applies `preferenceColumnWidths(tableKeys)` and
 `preferenceHiddenColumns(tableKeys)` so invalid widths and obsolete column IDs are
 ignored without discarding valid siblings. Tabs sharing the same browser storage

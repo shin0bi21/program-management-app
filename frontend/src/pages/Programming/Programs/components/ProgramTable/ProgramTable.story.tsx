@@ -26,7 +26,7 @@ export function ManagementTables() {
   });
   const [cyclesOpen, setCyclesOpen] = useState(false);
   const { columns: programColumns } = useProgramTable(() => {}, () => {}, true, {
-    cohorts: [{ programId: program.id, state: 'active' }], loading: false, error: null,
+    assignments: [{ programId: program.id, state: 'active' }], loading: false, error: null,
   });
   const { columns: cycleColumns } = useCycleTable({ onEdit: () => {}, onDelete: () => {} });
 

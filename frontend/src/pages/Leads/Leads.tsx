@@ -20,7 +20,7 @@ import useLeadSelection from './hooks/selection/useLeadSelection';
 import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadOrigin } from './types';
 import './Leads.css';
 
-const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-cohorts'] as const;
+const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);

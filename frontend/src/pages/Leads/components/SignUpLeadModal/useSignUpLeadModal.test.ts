@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCohorts } from '../../../Programming/Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
 import {
   createQueryClientWrapper,
   createTestQueryClient,
@@ -12,8 +12,8 @@ import { getDateKeyInTimeZone } from '../../../../common/utils/date';
 import type { Lead } from '../../types';
 import useSignUpLeadModal from './useSignUpLeadModal';
 
-vi.mock('../../../Programming/Cohorts/cohorts.api', () => ({
-  getCohorts: vi.fn(),
+vi.mock('../../../Programming/Programs/api/programCycleAssignments.api', () => ({
+  getProgramCycleAssignments: vi.fn(),
 }));
 
 vi.mock('../../leads.api', () => ({
@@ -41,8 +41,7 @@ const lead: Lead = {
   createdAt: '2026-07-24T12:00:00.000Z',
 };
 
-const cohort = {
-  id: 'cohort-1',
+const programCycle = {
   programId: 'program-1',
   programName: 'Future Ready',
   enrollmentRequired: true,
@@ -50,7 +49,6 @@ const cohort = {
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
   cycleName: 'Summer 2026',
-  name: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
   state: 'active' as const,
@@ -63,7 +61,7 @@ const cohort = {
   uniqueAttendeeCount: 0,
 };
 
-const queryKey = ['lead-signup-cohorts'] as const;
+const queryKey = ['lead-signup-programCycles'] as const;
 
 function renderWorkflow(currentLead: Lead | null, onSuccess = vi.fn()) {
   const queryClient = createTestQueryClient();
@@ -79,36 +77,36 @@ function renderWorkflow(currentLead: Lead | null, onSuccess = vi.fn()) {
 describe('useSignUpLeadModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getCohorts).mockResolvedValue([
-      cohort,
-      { ...cohort, id: 'cohort-too-old', minAge: 16, maxAge: 18 },
-      { ...cohort, id: 'cohort-completed', state: 'completed' },
-      { ...cohort, id: 'cohort-open', enrollmentRequired: false },
+    vi.mocked(getProgramCycleAssignments).mockResolvedValue([
+      programCycle,
+      { ...programCycle, cycleId: 'programCycle-too-old', minAge: 16, maxAge: 18 },
+      { ...programCycle, cycleId: 'programCycle-completed', state: 'completed' },
+      { ...programCycle, cycleId: 'programCycle-open', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue({ lead: { ...lead, status: 'signed_up' } });
   });
 
-  it('loads active enrollment cohorts and applies the lead age boundary', async () => {
+  it('loads active enrollment programCycles and applies the lead age boundary', async () => {
     const { result } = renderWorkflow(lead);
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(getCohorts).toHaveBeenCalledWith(
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith(
       undefined,
       {},
       { signal: expect.any(AbortSignal) },
     );
-    expect(result.current.cohorts.map(item => item.id)).toEqual([
-      'cohort-1',
-      'cohort-too-old',
+    expect(result.current.programCycles.map(item => item.cycleId)).toEqual([
+      'cycle-summer-2026',
+      'programCycle-too-old',
     ]);
-    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-1']);
+    expect(result.current.visibleProgramCycles.map(item => item.cycleId)).toEqual(['cycle-summer-2026']);
 
     act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
-    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
+    expect(result.current.visibleProgramCycles.map(item => item.cycleId)).toEqual(['programCycle-too-old']);
   });
 
-  it('submits the selected cohort and note category before reporting success', async () => {
+  it('submits the selected programCycle and note category before reporting success', async () => {
     const onSuccess = vi.fn();
     const updatedLead = { ...lead, status: 'signed_up' as const };
     vi.mocked(signUpLead).mockResolvedValue({ lead: updatedLead });
@@ -116,12 +114,12 @@ describe('useSignUpLeadModal', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => {
-      result.current.selectCohort('cohort-1');
+      result.current.selectProgramCycle(`${programCycle.programId}:${programCycle.cycleId}`);
       result.current.selectNoteCategory('health');
     });
     await act(() => result.current.submit());
 
-    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-1', 'health', lead.dateOfBirth);
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', { programId: 'program-1', cycleId: 'cycle-summer-2026' }, 'health', lead.dateOfBirth);
     expect(onSuccess).toHaveBeenCalledWith({ lead: updatedLead });
     expect(result.current.submitStatus).toBe('success');
     expect(result.current.statusMessage).toBe(
@@ -134,7 +132,7 @@ describe('useSignUpLeadModal', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.dateOfBirth).toBe('');
     expect(result.current.age).toBeNull();
-    expect(result.current.visibleCohorts).toEqual([]);
+    expect(result.current.visibleProgramCycles).toEqual([]);
 
     await act(() => result.current.submit());
     expect(signUpLead).not.toHaveBeenCalled();
@@ -146,19 +144,19 @@ describe('useSignUpLeadModal', () => {
     expect(result.current.statusMessage).toBe('Date of birth must be before today');
 
     act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
-    expect(result.current.visibleCohorts.map(item => item.id)).toEqual(['cohort-too-old']);
-    act(() => result.current.selectCohort('cohort-too-old'));
+    expect(result.current.visibleProgramCycles.map(item => item.cycleId)).toEqual(['programCycle-too-old']);
+    act(() => result.current.selectProgramCycle('program-1:programCycle-too-old'));
     await act(() => result.current.submit());
-    expect(signUpLead).toHaveBeenCalledWith('lead-1', 'cohort-too-old', 'general', `${new Date().getFullYear() - 16}-01-01`);
+    expect(signUpLead).toHaveBeenCalledWith('lead-1', { programId: 'program-1', cycleId: 'programCycle-too-old' }, 'general', `${new Date().getFullYear() - 16}-01-01`);
   });
 
-  it('allows profile signup outside all cohort age bounds without enrolling', async () => {
+  it('allows profile signup outside all programCycle age bounds without enrolling', async () => {
     const { result } = renderWorkflow(lead);
     await waitFor(() => expect(result.current.loading).toBe(false));
-    act(() => result.current.selectCohort('cohort-1'));
+    act(() => result.current.selectProgramCycle(`${programCycle.programId}:${programCycle.cycleId}`));
     act(() => result.current.changeDateOfBirth('2000-01-01'));
-    expect(result.current.cohortId).toBe('');
-    expect(result.current.visibleCohorts).toEqual([]);
+    expect(result.current.selectedPairKey).toBe('');
+    expect(result.current.visibleProgramCycles).toEqual([]);
     await act(() => result.current.submit());
     expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'general', '2000-01-01');
   });
@@ -167,13 +165,13 @@ describe('useSignUpLeadModal', () => {
     const view = renderWorkflow(lead);
     await waitFor(() => expect(view.result.current.loading).toBe(false));
     act(() => {
-      view.result.current.selectCohort('cohort-1');
+      view.result.current.selectProgramCycle(`${programCycle.programId}:${programCycle.cycleId}`);
       view.result.current.selectNoteCategory('health');
     });
 
     view.rerender({ target: { ...lead, id: 'lead-2' } });
 
-    await waitFor(() => expect(view.result.current.cohortId).toBe(''));
+    await waitFor(() => expect(view.result.current.selectedPairKey).toBe(''));
     expect(view.result.current.noteCategory).toBe('general');
     expect(view.result.current.submitStatus).toBe('idle');
   });

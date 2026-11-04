@@ -5,15 +5,15 @@ import { expect, it, vi } from 'vitest';
 import PageMessageOverlay, { type PageMessageValue } from '../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import { getSessions } from '../../sessions.api';
 import SessionTable from './SessionTable';
 
 vi.mock('../../sessions.api', () => ({ getSessions: vi.fn() }));
 
 it('keeps edited rows visible with the error and ordering warning when manual refresh fails', async () => {
-  const first = makeCohortSession({ id: 'first', theme: 'Alpha' });
-  const second = makeCohortSession({ id: 'second', theme: 'Beta' });
+  const first = makeProgramSession({ id: 'first', theme: 'Alpha' });
+  const second = makeProgramSession({ id: 'second', theme: 'Beta' });
   vi.mocked(getSessions).mockResolvedValue({ rows: [first, second], nextCursor: null });
   const user = userEvent.setup();
   function Page() {

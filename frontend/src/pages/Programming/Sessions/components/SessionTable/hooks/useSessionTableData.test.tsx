@@ -2,13 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getSessions } from '../../../sessions.api';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { useSessionTableData } from './useSessionTableData';
 
 vi.mock('../../../sessions.api', () => ({ getSessions: vi.fn() }));
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 
 describe('useSessionTableData', () => {
   beforeEach(() => vi.clearAllMocks());

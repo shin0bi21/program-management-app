@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionAttachment } from '../../../types';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard';
 
@@ -30,7 +30,7 @@ vi.mock('./SessionAttachmentViewerModal/SessionAttachmentViewerModal', () => ({
   },
 }));
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 
 const attachment: SessionAttachment = {
   id: 'attachment-1',

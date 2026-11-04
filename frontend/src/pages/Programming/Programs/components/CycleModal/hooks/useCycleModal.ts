@@ -6,7 +6,7 @@ import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { getCohorts } from '../../../../Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../../api/programCycleAssignments.api';
 
 interface CycleInput {
   name: string;
@@ -50,10 +50,10 @@ export default function useCycleModal({ isOpen, cycle, programs, programsReady =
     }
 
     const controller = new AbortController();
-    void getCohorts(undefined, { includeAllPrograms: true }, { signal: controller.signal })
-      .then(cohorts => {
+    void getProgramCycleAssignments(undefined, { includeAllPrograms: true }, { signal: controller.signal })
+      .then(programCycles => {
         if (controller.signal.aborted) return;
-        setSelectedProgramIds(cohorts.filter(cohort => cohort.cycleId === cycle.id).map(cohort => cohort.programId));
+        setSelectedProgramIds(programCycles.filter(programCycle => programCycle.cycleId === cycle.id).map(programCycle => programCycle.programId));
       })
       .catch(cause => {
         if (controller.signal.aborted) return;

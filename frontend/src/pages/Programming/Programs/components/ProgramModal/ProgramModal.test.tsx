@@ -28,7 +28,7 @@ describe('ProgramModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('saves No as enrollmentRequired false', async () => {
-    vi.mocked(updateProgram).mockResolvedValue({ program: { ...program, enrollmentRequired: false }, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    vi.mocked(updateProgram).mockResolvedValue({ program: { ...program, enrollmentRequired: false }, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     const user = userEvent.setup();
     render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
 

@@ -3,14 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
-import type { CohortSession, SessionAttachment } from '../../../../types';
+import type { ProgramSession, SessionAttachment } from '../../../../types';
 
 export function useSessionAttachments({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
-  session: CohortSession | null;
+  session: ProgramSession | null;
   onMessageChange?: PageMessageChangeHandler;
 }) {
-  const [attachmentTarget, setAttachmentTarget] = useState<CohortSession | null>(null);
+  const [attachmentTarget, setAttachmentTarget] = useState<ProgramSession | null>(null);
   const [editAttachment, setEditAttachment] = useState<SessionAttachment | null>(null);
   const [detailAttachment, setDetailAttachment] = useState<SessionAttachment | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);

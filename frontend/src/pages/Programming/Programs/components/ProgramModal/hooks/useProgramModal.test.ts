@@ -29,13 +29,13 @@ const program: Program = {
 describe('useProgramModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(createProgram).mockResolvedValue({ program: { ...program, id: 'program-2' }, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
-    vi.mocked(updateProgram).mockResolvedValue({ program, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    vi.mocked(createProgram).mockResolvedValue({ program: { ...program, id: 'program-2' }, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
+    vi.mocked(updateProgram).mockResolvedValue({ program, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
   });
 
   it('creates a normalized program and returns the saved record', async () => {
     const saved = { ...program, id: 'program-2', name: 'Job Readiness' };
-    vi.mocked(createProgram).mockResolvedValue({ program: saved, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    vi.mocked(createProgram).mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
       isOpen: true,
@@ -62,7 +62,7 @@ describe('useProgramModal', () => {
       defaultEndTime: '19:30',
       timezone: 'America/Toronto',
     });
-    expect(onSaved).toHaveBeenCalledWith({ program: saved, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] }, 'create');
+    expect(onSaved).toHaveBeenCalledWith({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'create');
     expect(result.current.submitStatus).toBe('success');
   });
 
@@ -99,7 +99,7 @@ describe('useProgramModal', () => {
       defaultEndTime: '19:30',
       timezone: 'America/Toronto',
     });
-    expect(onSaved).toHaveBeenCalledWith({ program, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] }, 'update');
+    expect(onSaved).toHaveBeenCalledWith({ program, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update');
   });
 
   it.each([

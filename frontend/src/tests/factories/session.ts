@@ -1,14 +1,13 @@
-import type { CohortSession } from '../../pages/Programming/Sessions/types';
+import type { ProgramSession } from '../../pages/Programming/Sessions/types';
 
-export function makeCohortSession(overrides: Partial<CohortSession> = {}): CohortSession {
+export function makeProgramSession(overrides: Partial<ProgramSession> = {}): ProgramSession {
   return {
     id: 'session-1',
-    cohortId: 'cohort-1',
     cycleId: 'cycle-1',
     sessionTypeId: 'type-1',
     sessionTypeName: 'Regular',
     theme: 'Communication',
-    cohortName: 'Summer 2026',
+    cycleName: 'Summer 2026',
     programId: 'program-1',
     programName: 'Future Ready',
     enrollmentRequired: true,

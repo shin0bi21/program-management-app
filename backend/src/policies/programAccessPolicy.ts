@@ -28,24 +28,21 @@ export async function assertCanAccessProgram(actor: AccessTokenPayload, programI
   if (!rows.length) throw new ForbiddenError('You do not have access to this program');
 }
 
-export async function assertCanAccessCohort(actor: AccessTokenPayload, cohortId: string) {
+export async function assertCanAccessProgramCycle(actor: AccessTokenPayload, programId: string, cycleId: string) {
   const rows = await sql`
-    SELECT 1
-    FROM program_cohorts pc
-    WHERE pc.id = ${cohortId}
-      AND ${programAccessPredicate(actor, sql`pc.program_id`)}
-    LIMIT 1
+    SELECT 1 FROM program_cycle_assignments assignment
+    WHERE assignment.program_id = ${programId} AND assignment.cycle_id = ${cycleId}
+      AND ${programAccessPredicate(actor, sql`assignment.program_id`)} LIMIT 1
   `;
-  if (!rows.length) throw new ForbiddenError('You do not have access to this cohort');
+  if (!rows.length) throw new ForbiddenError('You do not have access to this program cycle');
 }
 
 export async function assertCanAccessSession(actor: AccessTokenPayload, sessionId: string) {
   const rows = await sql`
     SELECT 1
-    FROM cohort_sessions cs
-    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
+    FROM program_sessions cs
     WHERE cs.id = ${sessionId}
-      AND ${programAccessPredicate(actor, sql`pc.program_id`)}
+      AND ${programAccessPredicate(actor, sql`cs.program_id`)}
     LIMIT 1
   `;
   if (!rows.length) throw new ForbiddenError('You do not have access to this session');

@@ -8,7 +8,7 @@ import type { YouthProfile } from '../../../types';
 import YouthDashboardTabs from './YouthDashboardTabs/YouthDashboardTabs';
 import './YouthAttendanceDashboardCard.css';
 
-type AttendanceCohort = YouthProfile['cohorts'][number];
+type AttendanceProgramCycle = YouthProfile['programCycles'][number];
 
 const attendanceTabs = [
   { value: 'active', label: 'Active' },
@@ -16,24 +16,24 @@ const attendanceTabs = [
 ] as const;
 
 export default function YouthAttendanceDashboardCard({
-  cohorts,
+  programCycles,
   selected,
   canManage = false,
   onManage,
   canViewReport = false,
   onViewReport,
 }: {
-  cohorts?: AttendanceCohort[];
+  programCycles?: AttendanceProgramCycle[];
   selected: boolean;
   canManage?: boolean;
-  onManage?: (cohort: AttendanceCohort) => void;
+  onManage?: (programCycle: AttendanceProgramCycle) => void;
   canViewReport?: boolean;
-  onViewReport?: (cohort: AttendanceCohort) => void;
+  onViewReport?: (programCycle: AttendanceProgramCycle) => void;
 }) {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const today = getDateKeyInTimeZone();
-  const visibleCohorts = cohorts?.filter(cohort => {
-    const active = cohort.startsOn <= today && cohort.endsOn >= today && cohort.withdrawnOn === null;
+  const visibleProgramCycles = programCycles?.filter(programCycle => {
+    const active = programCycle.startsOn <= today && programCycle.endsOn >= today && programCycle.withdrawnOn === null;
     return activeTab === 'active' ? active : !active;
   }) ?? [];
 
@@ -52,25 +52,25 @@ export default function YouthAttendanceDashboardCard({
       emptyMessage={!selected
         ? 'Select a row to view attendance.'
         : activeTab === 'active'
-          ? 'No active cohort attendance.'
+          ? 'No active program attendance.'
           : 'No historical attendance.'}
     >
-      {selected && visibleCohorts.length ? (
+      {selected && visibleProgramCycles.length ? (
         <div className="attendance-card__cohorts">
-          {visibleCohorts.map(cohort => (
-            <div className="attendance-card__cohort" key={cohort.id}>
+          {visibleProgramCycles.map(programCycle => (
+            <div className="attendance-card__cohort" key={`${programCycle.programId}:${programCycle.cycleId}`}>
               <div className="attendance-card__cohort-header">
-                <strong>{cohort.programName} · {cohort.name}</strong>
+                <strong>{programCycle.programName} · {programCycle.cycleName}</strong>
                 <div className="attendance-card__actions">
                   {canViewReport && onViewReport && (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="attendance-card__view"
-                      aria-label={`View attendance report for ${cohort.programName} · ${cohort.name}`}
-                      disabled={!cohort.enrollmentRequired}
-                      title={!cohort.enrollmentRequired ? undefined : 'View attendance report'}
-                      onClick={() => onViewReport(cohort)}
+                      aria-label={`View attendance report for ${programCycle.programName} · ${programCycle.cycleName}`}
+                      disabled={!programCycle.enrollmentRequired}
+                      title={!programCycle.enrollmentRequired ? undefined : 'View attendance report'}
+                      onClick={() => onViewReport(programCycle)}
                     >
                       <FontAwesomeIcon icon={faEye} aria-hidden="true" />
                     </Button>
@@ -80,24 +80,24 @@ export default function YouthAttendanceDashboardCard({
                       size="sm"
                       variant="ghost"
                       className="attendance-card__manage"
-                      aria-label={`Manage attendance for ${cohort.programName} · ${cohort.name}`}
+                      aria-label={`Manage attendance for ${programCycle.programName} · ${programCycle.cycleName}`}
                       title="Manage attendance"
-                      onClick={() => onManage(cohort)}
+                      onClick={() => onManage(programCycle)}
                     >
                       <FontAwesomeIcon icon={faPen} aria-hidden="true" />
                     </Button>
                   )}
                 </div>
               </div>
-              {!cohort.enrollmentRequired ? (
+              {!programCycle.enrollmentRequired ? (
                 <p className="attendance-card__breakdown">
-                  {cohort.presentCount} {cohort.presentCount === 1 ? 'visit' : 'visits'}
+                  {programCycle.presentCount} {programCycle.presentCount === 1 ? 'visit' : 'visits'}
                 </p>
               ) : (
                 <p className="attendance-card__breakdown">
-                  Present {cohort.presentCount}<span aria-hidden="true"> · </span>
-                  Late {cohort.lateCount}<span aria-hidden="true"> · </span>
-                  Absent {cohort.absentCount}
+                  Present {programCycle.presentCount}<span aria-hidden="true"> · </span>
+                  Late {programCycle.lateCount}<span aria-hidden="true"> · </span>
+                  Absent {programCycle.absentCount}
                 </p>
               )}
             </div>

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import { getSessionRange } from './sessionCalendarDates';
 import { getSessionRequestRange } from '../../utils/sessionDateRange';
 
@@ -20,6 +20,6 @@ describe('session calendar date boundaries', () => {
     ['2026-03-08T04:30:00Z', '2026-03-09T04:00:00Z', '2026-03-07', '2026-03-08'],
     ['2026-11-01T03:30:00Z', '2026-11-02T05:00:00Z', '2026-10-31', '2026-11-01'],
   ])('places the full session %s to %s on inclusive Toronto days', (startsAt, endsAt, start, end) => {
-    expect(getSessionRange(makeCohortSession({ startsAt, endsAt }))).toEqual({ start, end });
+    expect(getSessionRange(makeProgramSession({ startsAt, endsAt }))).toEqual({ start, end });
   });
 });

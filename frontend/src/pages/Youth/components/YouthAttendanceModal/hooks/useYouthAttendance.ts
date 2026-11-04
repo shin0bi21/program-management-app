@@ -4,32 +4,34 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../http/errors';
-import { getYouthCohortAttendance, setYouthCohortAttendance } from '../youthAttendance.api';
-import type { YouthCohortAttendance } from '../types';
+import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../youthAttendance.api';
+import type { YouthProgramCycleAttendance } from '../types';
 
 export default function useYouthAttendance({
   youthId,
-  cohortId,
+  programId,
+  cycleId,
   onSaved,
 }: {
   youthId: string | null;
-  cohortId: string | null;
+  programId: string | null;
+  cycleId: string | null;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-  const queryKey = ['youth-cohort-attendance', youthId, cohortId];
+  const queryKey = ['youth-program-cycle-attendance', youthId, programId, cycleId];
   const query = useQuery({
     queryKey,
-    queryFn: ({ signal }) => getYouthCohortAttendance(youthId!, cohortId!, { signal }),
-    enabled: Boolean(youthId && cohortId),
+    queryFn: ({ signal }) => getYouthProgramCycleAttendance(youthId!, { programId: programId!, cycleId: cycleId! }, { signal }),
+    enabled: Boolean(youthId && programId && cycleId),
   });
 
   useEffect(() => {
     resetStatus();
     setSelections({});
-  }, [cohortId, resetStatus, youthId]);
+  }, [programId, cycleId, resetStatus, youthId]);
 
   useEffect(() => {
     if (!query.data) return;
@@ -43,20 +45,20 @@ export default function useYouthAttendance({
   };
 
   const save = async () => {
-    if (!youthId || !cohortId || !query.data) return;
+    if (!youthId || !programId || !cycleId || !query.data) return;
     setSubmitStatus('submitting');
     setError('');
     try {
-      const saved = await setYouthCohortAttendance(
+      const saved = await setYouthProgramCycleAttendance(
         youthId,
-        cohortId,
+        { programId, cycleId },
         query.data.sessions.map(session => ({
           sessionId: session.id,
           status: selections[session.id] || null,
           notes: session.notes,
         })),
       );
-      queryClient.setQueryData<YouthCohortAttendance>(queryKey, saved);
+      queryClient.setQueryData<YouthProgramCycleAttendance>(queryKey, saved);
       await onSaved(saved);
       setSubmitStatus('success');
     } catch (cause) {

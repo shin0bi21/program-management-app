@@ -1,4 +1,4 @@
-import type { CohortSession } from '../../types';
+import type { ProgramSession } from '../../types';
 import type { PageMessageValue } from '../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
@@ -7,10 +7,10 @@ import { useSessionDashboardErrors } from './hooks/useSessionDashboardErrors';
 
 interface SessionDashboardProps {
   sessionQueryKey: readonly unknown[];
-  session: CohortSession | null;
+  session: ProgramSession | null;
   canWriteAttendance: boolean;
   canWriteSessions: boolean;
-  onAddAttendance: (session: CohortSession) => void;
+  onAddAttendance: (session: ProgramSession) => void;
   onErrorsChange?: (errors: PageMessageValue[]) => void;
 }
 
