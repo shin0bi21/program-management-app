@@ -9,7 +9,6 @@ import type {
   CreateHomepageImageInput,
   ReorderHomepageImagesInput,
   UpdateHomepageImageInput,
-  UpdateHomepageSignupInput,
 } from '../validation/homepageSchemas';
 import { createExternalLead } from './outreach/leads/leadService';
 import {
@@ -65,58 +64,17 @@ export async function getManagedHomepage() {
   return { images: await homepageImages() };
 }
 
-export async function getHomepageSignup() {
-  const [settings] = await sql<{ signupEnabled: boolean }[]>`
-    SELECT signup_enabled
-    FROM homepage_settings
-    WHERE id = 1
-  `;
-  if (!settings) throw new Error('Homepage settings row is missing');
-  return settings;
-}
-
-export async function updateHomepageSignup(
-  data: UpdateHomepageSignupInput,
-  actor: AccessTokenPayload,
-) {
-  const [settings] = await sql<{ signupEnabled: boolean }[]>`
-    UPDATE homepage_settings
-    SET
-      signup_enabled = ${data.enabled},
-      updated_at = NOW(),
-      updated_by = ${actor.userId}
-    WHERE id = 1
-    RETURNING signup_enabled
-  `;
-  if (!settings) throw new Error('Homepage settings row is missing');
-  return settings;
-}
-
 export async function submitPublicLead(data: PublicLeadInput) {
-  return sql.begin(async rawTx => {
-    const trx = asTransactionSql(rawTx);
-
-    // Hold the settings row through insertion so closing signup waits for in-flight submissions.
-    const [settings] = await trx<{ signupEnabled: boolean }[]>`
-      SELECT signup_enabled
-      FROM homepage_settings
-      WHERE id = 1
-      FOR SHARE
-    `;
-    if (!settings) throw new Error('Homepage settings row is missing');
-    if (!settings.signupEnabled) throw new ConflictError('Homepage signup is currently closed');
-
-    return createExternalLead({
-      youthFirstName: data.youthFirstName.trim(),
-      youthLastName: data.youthLastName.trim(),
-      dateOfBirth: data.dateOfBirth,
-      school: data.school.trim(),
-      discoverySource: data.discoverySource,
-      contactPhoneNumber: data.contactPhoneNumber.trim(),
-      contactRelationship: data.contactRelationship,
-      notes: data.notes?.trim() || null,
-    }, data.submittedByRole, trx);
-  });
+  return createExternalLead({
+    youthFirstName: data.youthFirstName.trim(),
+    youthLastName: data.youthLastName.trim(),
+    dateOfBirth: data.dateOfBirth,
+    school: data.school.trim(),
+    discoverySource: data.discoverySource,
+    contactPhoneNumber: data.contactPhoneNumber.trim(),
+    contactRelationship: data.contactRelationship,
+    notes: data.notes?.trim() || null,
+  }, data.submittedByRole, sql);
 }
 
 export async function createHomepageImage(

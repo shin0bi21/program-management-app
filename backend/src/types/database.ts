@@ -141,15 +141,6 @@ export interface HomepageImages {
   updated_by: string | null;
 }
 
-export interface HomepageSettings {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  id: Generated<number>;
-  signup_enabled: Generated<boolean>;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface LeadNotes {
   category: string;
   created_at: Generated<Timestamp>;
@@ -511,7 +502,6 @@ export interface DB {
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   homepage_images: HomepageImages;
-  homepage_settings: HomepageSettings;
   lead_notes: LeadNotes;
   leads: Leads;
   program_cycle_assignments: ProgramCycleAssignments;

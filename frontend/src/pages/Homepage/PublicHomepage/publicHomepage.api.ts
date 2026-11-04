@@ -46,10 +46,3 @@ export function getPublicHomepagePrograms(opts: RequestOptions = {}) {
     auth: false,
   });
 }
-
-export function getPublicHomepageSignup(opts: RequestOptions = {}) {
-  return apiClient.get<{ signupEnabled: boolean }>('/public/homepage/signup', {
-    ...opts,
-    auth: false,
-  });
-}

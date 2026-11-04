@@ -9,7 +9,6 @@ import { HOMEPAGE_ROUTE_PATHS } from '../pages/Homepage/PublicHomepage/utils/hom
 import AppNavigation from './components/AppNavigation/AppNavigation';
 
 const HomepageImages = lazy(() => import('../pages/Homepage/Images/Images'));
-const HomepageSignupForm = lazy(() => import('../pages/Homepage/SignupForm/SignupForm'));
 const Youth = lazy(() => import('../pages/Youth/Youth'));
 const Users = lazy(() => import('../pages/Settings/Users/Users'));
 const Account = lazy(() => import('../pages/Settings/Account/Account'));
@@ -54,14 +53,6 @@ function App() {
                   element={
                     <ProtectedRoute requiredPermission="read:homepage">
                       <HomepageImages />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/homepage/signup"
-                  element={
-                    <ProtectedRoute requiredPermission="read:homepage">
-                      <HomepageSignupForm />
                     </ProtectedRoute>
                   }
                 />

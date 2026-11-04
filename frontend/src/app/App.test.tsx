@@ -23,7 +23,6 @@ vi.mock('../pages/Programming/Sessions/Sessions', () => ({ default: () => <h1>Se
 vi.mock('../pages/Programming/Programs/Programs', () => ({ default: () => <h1>Programs</h1> }));
 
 vi.mock('../pages/Homepage/Images/Images', () => ({ default: () => <h1>Images</h1> }));
-vi.mock('../pages/Homepage/SignupForm/SignupForm', () => ({ default: () => <h1>Sign-up Form</h1> }));
 
 describe('Application routes', () => {
   beforeEach(() => {
@@ -60,7 +59,6 @@ describe('Application routes', () => {
     ['/programming/sessions', 'read:sessions', 'Sessions'],
     ['/programming/programs', 'read:programs', 'Programs'],
     ['/homepage/images', 'read:homepage', 'Images'],
-    ['/homepage/signup', 'read:homepage', 'Sign-up Form'],
   ])('allows the matching reader to open %s', async (path, permission, title) => {
     authState.permissions = [permission];
     window.history.replaceState(null, '', path);
@@ -78,7 +76,6 @@ describe('Application routes', () => {
     ['/programming/cohorts', 'read:sessions'],
     ['/settings/programming', 'write:programs'],
     ['/homepage/images', 'write:homepage'],
-    ['/homepage/signup', 'write:homepage'],
     ['/homepage/manage', 'read:accounts'],
   ])('requires the destination read permission through %s', async (path, permission) => {
     authState.permissions = [permission];

@@ -166,8 +166,9 @@ and [roster tests](../../backend/tests/programs/roster.test.ts).
 ## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
-even when a program's session list is empty. Signup availability is independent
-of managed photos; disabling signup rejects new public intake with `409`.
+even when a program's session list is empty. Public intake accepts valid lead
+submissions with request validation and strict rate limiting. The signup form is
+always available; it has no runtime availability setting.
 The [homepage tests](../../backend/tests/homepage/homepage.test.ts) and
 [public intake tests](../../backend/tests/public/public.test.ts) cover projections,
-permissions, and the signup gate. Leads own follow-up and conversion.
+permissions, and public lead submission. Leads own follow-up and conversion.

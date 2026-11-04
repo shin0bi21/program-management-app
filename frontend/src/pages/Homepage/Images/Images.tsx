@@ -10,7 +10,7 @@ import HomepageImageModal from './components/HomepageImageModal/HomepageImageMod
 import { useHomepageModals } from './hooks/useHomepageModals';
 import { useManagedHomepage } from './hooks/useManagedHomepage';
 
-import '../common/homepageManagement.css';
+import './Images.css';
 
 export default function Images() {
   const { permissions } = useAuth();
