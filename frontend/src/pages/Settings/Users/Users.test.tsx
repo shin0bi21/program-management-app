@@ -1,5 +1,5 @@
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Users from './Users';
 
@@ -12,6 +12,12 @@ vi.mock('./components/UserTable/hooks/useUserTableData', () => ({
   default: (...args: unknown[]) => mockUseUserTableData(...args),
 }));
 vi.mock('../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
+  getSchoolReferences: vi.fn().mockResolvedValue([]),
+}));
+vi.mock('../../../common/features/SchoolModal/schoolModal.api', () => ({
+  createSchool: vi.fn().mockResolvedValue({ id: 'school-new', name: 'Authoritative School' }),
+}));
 vi.mock('./accounts.api', () => ({
   revokeAccountInvite: vi.fn(),
   toggleAccountStatus: vi.fn(),
@@ -95,6 +101,27 @@ describe('Users', () => {
   });
 
   // Commands and dialogs.
+  it('returns to the invitation draft with the saved school selected', async () => {
+    mockUseAuth.mockReturnValue({ role: 'staff', permissions: ['read:accounts', 'write:youth_profiles', 'write:schools'] });
+    renderPage();
+    await screen.findByRole('button', { name: 'Filters' });
+    fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+    fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Unsaved youth' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'School' })).not.toBeDisabled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'School' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '+ Add school' }));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'New School' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('dialog', { name: 'Invite Youth' });
+    expect(screen.getByLabelText('First Name *')).toHaveValue('Unsaved youth');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'School' })).toHaveTextContent('Authoritative School'));
+  });
+
   it('opens the account status confirmation from the table action', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts'] });
     renderPage();

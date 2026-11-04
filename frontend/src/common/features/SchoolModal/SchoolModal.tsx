@@ -3,25 +3,14 @@ import { type FormEvent } from 'react';
 import Button from '../../components/Button/Button';
 import FormField from '../../components/FormField/FormField';
 import Modal from '../../components/Modal/Modal';
-import type { School } from './types';
-import useSchoolModal from './hooks/useSchoolModal';
-
-export type SchoolAction =
-  | { type: 'add' }
-  | { type: 'edit'; school: School }
-  | { type: 'delete'; school: School };
+import type { SchoolModalState } from './hooks/useSchoolModal';
 
 interface Props {
-  action: SchoolAction | null;
-  onClose: () => void;
-  onUpsert: (school: School) => void;
-  onDelete: (school: School) => void;
+  workflow: SchoolModalState;
 }
 
-export default function SchoolModal({ action, onClose, onUpsert, onDelete }: Props) {
-  const workflow = useSchoolModal({ action, onUpsert, onDelete });
-
-  if (!action) return null;
+export default function SchoolModal({ workflow }: Props) {
+  if (!workflow.action) return null;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,13 +23,13 @@ export default function SchoolModal({ action, onClose, onUpsert, onDelete }: Pro
   return (
     <Modal
       isOpen
-      onClose={onClose}
+      onClose={workflow.close}
       title={title}
       status={workflow.error ? 'error' : workflow.submitting ? 'submitting' : 'idle'}
       statusMessage={workflow.error || (workflow.submitting ? (workflow.deleting ? 'Deleting school...' : 'Saving school...') : undefined)}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose} disabled={workflow.submitting}>Cancel</Button>
+          <Button variant="secondary" onClick={workflow.close} disabled={workflow.submitting}>Cancel</Button>
           <Button
             type={workflow.deleting ? 'button' : 'submit'}
             form={workflow.deleting ? undefined : 'school-action-form'}

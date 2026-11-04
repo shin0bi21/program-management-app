@@ -39,9 +39,10 @@ export function useStaffReferences(feature: StaffReferenceFeature) {
   });
 }
 
-export function useSchoolReferences() {
+export function useSchoolReferences({ enabled = true }: { enabled?: boolean } = {}) {
   return useListQuery({
     queryKey: referenceDataKeys.schools,
+    enabled,
     queryFn: ({ signal }) => getSchoolReferences({ signal }),
     errorMessage: 'Could not load schools',
   });

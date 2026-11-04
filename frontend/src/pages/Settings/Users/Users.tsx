@@ -9,6 +9,8 @@ import PageMessageOverlay, { type PageMessageValue } from '../../../common/compo
 import PageBody from '../../../common/components/PageBody/PageBody';
 import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import SchoolModal from '../../../common/features/SchoolModal/SchoolModal';
+import useSchoolModal from '../../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
 import { USER_TABLE_KEYS, type UserFilters } from './types';
 import AccountModal from './components/AccountModal/AccountModal';
@@ -49,6 +51,11 @@ export default function Users() {
 
   // Account, youth-invitation, and confirmation modal workflows.
   const modals = useAccountModals({ revokeInvite, toggleStatus });
+  const schoolModal = useSchoolModal();
+  const closeYouthInvite = () => {
+    schoolModal.close();
+    modals.youthInvite.close();
+  };
 
   // Table configuration.
   const { columns } = useUserTable({
@@ -130,12 +137,15 @@ export default function Users() {
       {modals.youthInvite.open && (
         <YouthModal
           isOpen
-          showLoginEmail
-          onClose={modals.youthInvite.close}
+          inviteYouth
+          suspended={schoolModal.action !== null}
+          onManageSchool={schoolModal.open}
+          onClose={closeYouthInvite}
           onSuccess={syncYouthInvitation}
         />
       )}
 
+      <SchoolModal workflow={schoolModal} />
       <ConfirmModal
         action={modals.confirmation.action}
         onClose={modals.confirmation.close}
