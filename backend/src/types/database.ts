@@ -246,17 +246,6 @@ export interface ProgramSessions {
   updated_by: string | null;
 }
 
-export interface ProjectSettings {
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  id: Generated<string>;
-  singleton: Generated<boolean>;
-  timezone: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-  week_start: string;
-}
-
 export interface SchemaMigrations {
   applied_at: Generated<Timestamp>;
   checksum: string | null;
@@ -530,7 +519,6 @@ export interface DB {
   program_enrollments: ProgramEnrollments;
   program_sessions: ProgramSessions;
   programs: Programs;
-  project_settings: ProjectSettings;
   schema_migrations: SchemaMigrations;
   schools: Schools;
   session_attachment_has_youth: SessionAttachmentHasYouth;
