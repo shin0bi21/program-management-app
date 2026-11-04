@@ -19,7 +19,6 @@ describe('ConfirmModal', () => {
       action={{
         title: 'Delete Task',
         message: 'Delete this task?',
-        confirmLabel: 'Delete',
         confirmVariant: 'danger',
         onConfirm,
       }}
@@ -29,7 +28,7 @@ describe('ConfirmModal', () => {
     expect(screen.getByRole('dialog', { name: 'Delete Task' })).toBeInTheDocument();
     expect(screen.getByText('Delete this task?')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());

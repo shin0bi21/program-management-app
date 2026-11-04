@@ -66,7 +66,6 @@ export function useManageRosterModal({ cohort, refresh, onSuccess }: UseManageRo
     setConfirmAction({
       title: 'Withdraw Youth',
       message: `Withdraw ${profile.firstName} ${profile.lastName} from ${cohort.programName} - ${cohort.name}? Their existing attendance history will be kept.`,
-      confirmLabel: 'Withdraw',
       confirmVariant: 'danger',
       successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
       onConfirm: async () => {

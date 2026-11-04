@@ -106,7 +106,7 @@ describe('SessionAttachmentsDashboardCard', () => {
     await screen.findByText(attachment.title);
     fireEvent.click(screen.getByRole('button', { name: `Delete ${attachment.title}` }));
     const deleteModal = screen.getByRole('heading', { name: 'Delete Attachment' }).closest('.modal-container');
-    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(api.deleteSessionAttachment).toHaveBeenCalledWith(
       session.id,

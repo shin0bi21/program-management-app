@@ -11,7 +11,6 @@ describe('ModalFormFooter', () => {
     render(
       <ModalFormFooter
         formId="example-form"
-        submitLabel="Save"
         submitStatus="idle"
         onClose={onClose}
       />,
@@ -26,7 +25,6 @@ describe('ModalFormFooter', () => {
     const { rerender } = render(
       <ModalFormFooter
         formId="example-form"
-        submitLabel="Save"
         submitStatus="submitting"
         onClose={vi.fn()}
       />,
@@ -38,7 +36,6 @@ describe('ModalFormFooter', () => {
     rerender(
       <ModalFormFooter
         formId="example-form"
-        submitLabel="Save"
         submitStatus="success"
         onClose={vi.fn()}
       />,
@@ -52,7 +49,6 @@ describe('ModalFormFooter', () => {
     render(
       <ModalFormFooter
         formId="example-form"
-        submitLabel="Save"
         submitStatus="idle"
         submitDisabled
         onClose={vi.fn()}

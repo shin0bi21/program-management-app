@@ -41,7 +41,7 @@ describe('LeadNoteModal', () => {
     expect(await screen.findByText('Adding follow-up note...')).toBeInTheDocument();
     expect(document.getElementById('lead-note-form')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByLabelText('Note *')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 });

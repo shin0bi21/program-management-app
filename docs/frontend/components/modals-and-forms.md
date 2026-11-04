@@ -39,8 +39,9 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
     onClose={onClose}
     footer={<ModalFormFooter
       formId="example-form"
-      onCancel={onClose}
-      disabled={workflow.locked}
+      onClose={onClose}
+      submitStatus={workflow.submitStatus}
+      submitDisabled={workflow.locked}
     />}
   >
     <form id="example-form" onSubmit={workflow.submit}>
@@ -51,6 +52,11 @@ function ExampleModal({ state, onClose, onSaved }: ExampleModalProps) {
   </Modal>;
 }
 ```
+
+Form modal footers use **Cancel** and **Save** for both creation and editing.
+`ModalFormFooter` owns these labels; callers do not customize them. Confirmation footers use **Cancel** and **Confirm**, including destructive
+actions; their titles and messages describe the action. Close-only dialogs keep
+**Close**.
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 

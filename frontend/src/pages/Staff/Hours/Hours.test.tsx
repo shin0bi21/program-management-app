@@ -508,7 +508,7 @@ describe('Hours', () => {
       name: 'Actions for Meeting on 2026-08-09',
     }));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteHours).toHaveBeenCalledWith('entry-1'));
   });

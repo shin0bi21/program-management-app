@@ -121,7 +121,6 @@ export default function useHoursActions({
   const requestDelete = useCallback((target: HoursEntryTarget) => setConfirmAction({
     title: 'Delete logged hours',
     message: `Delete these ${target.item.categoryLabel.toLowerCase()} hours?`,
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     onConfirm: async () => {
       if (!startEntryAction(target.item.id)) return;

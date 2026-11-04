@@ -29,7 +29,6 @@ export default function ProgramCyclesModal({
     statusMessage={workflow.statusMessage}
     footer={<ModalFormFooter
       formId="program-cycles-form"
-      submitLabel="Save Assigned Cycles"
       submitStatus={workflow.submitStatus}
       submitDisabled={!workflow.ready}
       onClose={onClose}

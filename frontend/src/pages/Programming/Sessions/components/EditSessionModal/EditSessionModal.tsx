@@ -30,7 +30,6 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
       footer={(
         <ModalFormFooter
           formId="edit-session-form"
-          submitLabel="Save Changes"
           submitStatus={status}
           submitDisabled={!sessionTypeId}
           onClose={onClose}

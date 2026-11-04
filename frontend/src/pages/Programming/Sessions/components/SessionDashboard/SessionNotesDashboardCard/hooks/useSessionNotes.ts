@@ -42,7 +42,6 @@ export function useSessionNotes({ queryKey, session, onMessageChange }: {
     setConfirmAction({
       title: 'Delete Note',
       message: 'Delete this session note? This cannot be undone.',
-      confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Session note successfully deleted.',
       onConfirm: async () => {

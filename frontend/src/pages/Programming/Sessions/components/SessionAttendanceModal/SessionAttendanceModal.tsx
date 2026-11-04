@@ -24,7 +24,6 @@ export default function SessionAttendanceModal({
   const footer = (
     <ModalFormFooter
       formId="attendance-form"
-      submitLabel="Save Attendance"
       submitStatus={workflow.submitStatus}
       submitDisabled={workflow.rosterLoading || workflow.rosterUnavailable || (
         !workflow.isOpenRoster && !workflow.roster.length

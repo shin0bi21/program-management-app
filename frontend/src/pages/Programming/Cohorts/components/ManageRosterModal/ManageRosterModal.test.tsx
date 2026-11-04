@@ -84,7 +84,7 @@ describe('ManageRosterModal', () => {
     expect(confirmation).toHaveTextContent('Their existing attendance history will be kept.');
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
 
-    await user.click(within(confirmation as HTMLElement).getByRole('button', { name: 'Withdraw' }));
+    await user.click(within(confirmation as HTMLElement).getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(api.withdrawYouth).toHaveBeenCalledWith('cohort-1', 'youth-1'));
     expect(onSuccess).toHaveBeenCalledOnce();
   });

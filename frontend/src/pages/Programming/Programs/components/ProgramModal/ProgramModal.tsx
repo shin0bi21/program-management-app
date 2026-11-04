@@ -26,7 +26,6 @@ export default function ProgramModal({ isOpen, program, onClose, onSaved }: Prog
       footer={(
         <ModalFormFooter
           formId="program-form"
-          submitLabel={program ? 'Save Changes' : 'Add Program'}
           submitStatus={workflow.submitStatus}
           onClose={onClose}
         />

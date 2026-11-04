@@ -47,7 +47,7 @@ export default function TaskModal(props: TaskModalProps) {
             form="task-form"
             disabled={modal.submissionComplete || !modal.draft.staffId || !modal.draft.category || !modal.draft.startDate || !modal.draft.dueDate}
           >
-            {isEdit ? 'Save task' : 'Add task'}
+            Save
           </Button>
         </>
       )}

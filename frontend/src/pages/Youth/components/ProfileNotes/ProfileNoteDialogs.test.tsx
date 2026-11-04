@@ -70,14 +70,14 @@ describe('ProfileNoteDialogs', () => {
       'Delete this profile note? This cannot be undone.',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     expect(onCancelDelete).toHaveBeenCalledOnce();
     expect(onConfirmDelete).toHaveBeenCalledOnce();
 
     rerender(<ProfileNoteDialogs {...baseProps} confirmingDelete deleting deleteError="Delete failed" />);
     expect(screen.getByRole('alert')).toHaveTextContent('Delete failed');
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
   });
 
   it('forwards existing and new editor targets to the profile-note workflow', () => {

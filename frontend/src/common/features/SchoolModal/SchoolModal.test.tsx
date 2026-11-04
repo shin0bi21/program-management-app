@@ -17,7 +17,7 @@ describe('SchoolModal', () => {
     vi.mocked(createSchool).mockResolvedValue(school);
     render(<SchoolModal action={{ type: 'add' }} onClose={vi.fn()} onUpsert={onUpsert} onDelete={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central High' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(createSchool).toHaveBeenCalledWith('Central High'));
     expect(onUpsert).toHaveBeenCalledWith(school);
   });
@@ -44,7 +44,7 @@ describe('SchoolModal', () => {
     const onDelete = vi.fn();
     vi.mocked(deleteSchool).mockResolvedValue();
     render(<SchoolModal action={{ type: 'delete', school }} onClose={vi.fn()} onUpsert={vi.fn()} onDelete={onDelete} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(deleteSchool).toHaveBeenCalledWith(school.id));
     expect(onDelete).toHaveBeenCalledWith(school);
   });
@@ -54,10 +54,10 @@ describe('SchoolModal', () => {
     render(<SchoolModal action={{ type: 'add' }} onClose={vi.fn()} onUpsert={vi.fn()} onDelete={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central High' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('network failed');
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 });

@@ -61,7 +61,6 @@ export function useConfirmModal({
   else if (confirming) status = 'submitting';
   else if (confirmError) status = 'error';
 
-  const confirmLabel = action?.confirmLabel ?? 'Confirm';
   const confirmVariant = action?.confirmVariant ?? 'primary';
   const successMessage = action?.successMessage;
 
@@ -73,7 +72,7 @@ export function useConfirmModal({
     <>
       <Button variant="secondary" onClick={onClose} disabled={confirming}>Cancel</Button>
       <Button variant={confirmVariant} onClick={handleConfirm} disabled={confirming || confirmSuccess}>
-        {confirming ? 'Please wait...' : confirmLabel}
+        Confirm
       </Button>
     </>
   );

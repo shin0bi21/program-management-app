@@ -32,7 +32,6 @@ export default function ProfileNoteModal({
         { value: 'preference', label: 'Preference' },
       ]}
       details={workflow.draft.details}
-      submitLabel="Save"
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       onCategoryChange={value => workflow.selectCategory(value as YouthProfileNoteCategory)}

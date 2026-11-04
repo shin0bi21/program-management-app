@@ -125,7 +125,7 @@ describe('YouthAttendanceModal', () => {
     expect(screen.queryByRole('group', { name: 'Link youth' })).not.toBeInTheDocument();
     expect(sessionNoteApi.getSessionRoster).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Good teamwork' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(sessionNoteApi.createSessionNote).toHaveBeenCalledWith(
       'session-2',
@@ -167,7 +167,7 @@ describe('YouthAttendanceModal', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Unlink session note' }));
     expect(screen.getByText(/The session note will remain available/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Unlink' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(sessionNoteApi.unlinkSessionNoteYouth).toHaveBeenCalledWith(
       'session-1',
       'note-1',
@@ -196,7 +196,7 @@ describe('YouthAttendanceModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Attendance for Teamwork/ }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Late' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Attendance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(api.setYouthCohortAttendance).toHaveBeenCalledWith(
       'youth-1',
@@ -221,6 +221,6 @@ describe('YouthAttendanceModal', () => {
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Attendance unavailable');
-    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 });

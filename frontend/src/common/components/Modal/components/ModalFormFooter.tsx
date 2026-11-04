@@ -3,7 +3,6 @@ import type { SubmitStatus } from '../../../hooks/useSubmitStatus';
 
 interface ModalFormFooterProps {
   formId: string;
-  submitLabel: string;
   submitStatus: SubmitStatus;
   submitDisabled?: boolean;
   onClose: () => void;
@@ -11,7 +10,6 @@ interface ModalFormFooterProps {
 
 export default function ModalFormFooter({
   formId,
-  submitLabel,
   submitStatus,
   submitDisabled = false,
   onClose,
@@ -24,7 +22,7 @@ export default function ModalFormFooter({
         Cancel
       </Button>
       <Button type="submit" form={formId} disabled={submissionComplete || submitDisabled}>
-        {submitLabel}
+        Save
       </Button>
     </>
   );

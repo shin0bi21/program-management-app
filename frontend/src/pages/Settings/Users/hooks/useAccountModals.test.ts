@@ -33,7 +33,7 @@ describe('useAccountModals', () => {
     act(() => result.current.confirmation.requestStatusToggle(account));
 
     expect(result.current.confirmation.action).toMatchObject({
-      title: 'Deactivate Account', confirmLabel: 'Deactivate', confirmVariant: 'danger',
+      title: 'Deactivate Account', confirmVariant: 'danger',
     });
     await result.current.confirmation.action?.onConfirm();
     expect(toggleStatus).toHaveBeenCalledWith(account);

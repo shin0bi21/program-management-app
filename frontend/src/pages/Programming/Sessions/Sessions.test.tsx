@@ -405,7 +405,7 @@ describe('Sessions', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
     await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
     await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());

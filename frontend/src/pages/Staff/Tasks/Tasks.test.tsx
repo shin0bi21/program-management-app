@@ -487,7 +487,7 @@ describe('Tasks', () => {
 
     const confirmation = screen.getByRole('dialog', { name: 'Delete Task' });
     expect(confirmation).toHaveTextContent('Delete “Prepare workshop”?');
-    fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteTask).toHaveBeenCalledWith(task.id));
   });

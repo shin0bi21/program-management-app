@@ -58,19 +58,15 @@ export default function YouthModal({
   const birthDateBounds = getDateOfBirthBounds();
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   let title = 'Add Youth Profile';
-  let submitLabel = 'Add Profile';
 
   if (showLoginEmail) {
     title = 'Invite Youth';
-    submitLabel = 'Invite Youth';
   }
   if (youthData) {
     title = 'Update Youth Profile';
-    submitLabel = 'Update Profile';
   }
   if (contactOnly) {
     title = 'Primary Contact';
-    submitLabel = 'Save Contact';
   }
 
   let modalStatusMessage: string | undefined;
@@ -93,7 +89,6 @@ export default function YouthModal({
   const footer = (
     <ModalFormFooter
       formId="youth-form"
-      submitLabel={submitLabel}
       submitStatus={submitStatus}
       onClose={closeYouthModal}
     />

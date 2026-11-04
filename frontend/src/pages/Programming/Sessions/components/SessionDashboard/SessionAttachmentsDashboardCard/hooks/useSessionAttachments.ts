@@ -42,7 +42,6 @@ export function useSessionAttachments({ queryKey, session, onMessageChange }: {
     setConfirmAction({
       title: 'Delete Attachment',
       message: `Delete “${attachment.title}”? This cannot be undone.`,
-      confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Attachment successfully deleted.',
       onConfirm: async () => {

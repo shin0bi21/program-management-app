@@ -111,7 +111,7 @@ describe('SessionNotesDashboardCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete session note' }));
     const deleteModal = screen.getByRole('heading', { name: 'Delete Note' }).closest('.modal-container');
-    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(api.deleteSessionNote).toHaveBeenCalledWith(session.id, note.id));
     await waitFor(() => expect(screen.queryByText(note.details)).not.toBeInTheDocument());

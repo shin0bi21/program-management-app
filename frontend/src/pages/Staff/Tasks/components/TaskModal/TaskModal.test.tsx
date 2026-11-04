@@ -73,7 +73,7 @@ describe('TaskModal', () => {
     fireEvent.submit(document.getElementById('task-form')!);
 
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add task' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Task program' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Task category' })).toBeDisabled();
     expect(screen.getByLabelText('Start date *')).toBeDisabled();

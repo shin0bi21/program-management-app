@@ -64,7 +64,6 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
       footer={(
         <ModalFormFooter
           formId="sign-up-lead-form"
-          submitLabel="Create Profile"
           submitStatus={workflow.submitStatus}
           submitDisabled={workflow.loading}
           onClose={onClose}

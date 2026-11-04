@@ -29,7 +29,7 @@ export default function SchoolModal({ action, onClose, onUpsert, onDelete }: Pro
   };
 
   const title = workflow.deleting ? 'Delete School' : workflow.editing ? 'Edit School' : 'Add School';
-  const submitLabel = workflow.deleting ? 'Delete' : workflow.editing ? 'Save' : 'Add';
+  const submitLabel = workflow.deleting ? 'Confirm' : 'Save';
 
   return (
     <Modal
