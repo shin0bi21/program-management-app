@@ -1,11 +1,13 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
+import type { SchoolAction, SchoolSelection } from '../../common/features/SchoolModal/types';
 import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
 const mockUseYouthTableData = vi.fn();
+const schoolSelectionChanged = vi.hoisted(() => vi.fn());
 const youthApi = vi.hoisted(() => ({
   getYouthProfileNotes: vi.fn(),
   setYouthProfileNote: vi.fn(),
@@ -20,6 +22,9 @@ vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
   default: (filters: unknown) => mockUseYouthTableData(filters),
 }));
 vi.mock('./youth.api', () => youthApi);
+vi.mock('../../common/features/SchoolModal/schoolModal.api', () => ({
+  createSchool: vi.fn().mockResolvedValue({ id: 'school-new', name: 'Saved School' }),
+}));
 vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
@@ -30,21 +35,24 @@ vi.mock('../../common/features/referenceData/hooks/useReferenceData', async impo
   },
 }));
 
-vi.mock('../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn() }));
+vi.mock('../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getSchoolReferences: vi.fn().mockResolvedValue([]) }));
 
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
 }));
 
 vi.mock('./components/YouthModal/YouthModal', () => ({
-  default: ({ isOpen, mode, youthData, onSuccess }: {
+  default: ({ isOpen, suspended, onManageSchool, mode, youthData, onSuccess }: {
     isOpen: boolean;
+    suspended?: boolean;
+    onManageSchool?: (action: SchoolAction, selection: SchoolSelection) => void;
     mode?: string;
     youthData?: ReturnType<typeof makeYouthProfile>;
     onSuccess: (profile: ReturnType<typeof makeYouthProfile>) => void;
-  }) => isOpen
+  }) => isOpen && !suspended
     ? <div data-testid="youth-modal">
       {mode ?? 'full'}
+      {onManageSchool && <button onClick={() => onManageSchool({ type: 'add' }, { schoolId: '', onChange: schoolSelectionChanged })}>Manage school</button>}
       {youthData && <button onClick={() => onSuccess({
         ...youthData,
         firstName: 'Authoritative',
@@ -75,6 +83,7 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
+    schoolSelectionChanged.mockClear();
     authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
     vi.mocked(getCycleReferences).mockResolvedValue([{
@@ -233,6 +242,28 @@ describe('Youth', () => {
   });
 
   // Commands and dialogs.
+  it('opens a sibling school dialog and returns to the youth form after cancel or save', async () => {
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+    fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manage school' }));
+
+    expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
+    expect(screen.queryByTestId('youth-modal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByTestId('youth-modal')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Add School' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage school' }));
+    fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'New School' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add School' })).not.toBeInTheDocument());
+    expect(screen.getByTestId('youth-modal')).toBeInTheDocument();
+    expect(schoolSelectionChanged).toHaveBeenCalledWith('school-new');
+  });
+
   it('opens the cohort attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
       cohorts: [{

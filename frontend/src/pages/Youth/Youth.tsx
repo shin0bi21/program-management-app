@@ -8,6 +8,8 @@ import PageMessageOverlay, { type PageMessageValue } from '../../common/componen
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
+import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
+import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from './components/YouthModal/YouthModal';
 import { YOUTH_TABLE_KEYS, type YouthFilters } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
@@ -76,7 +78,11 @@ export default function Youth() {
 
   // Youth modal.
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const closeYouthModal = () => setModalTarget(null);
+  const schoolModal = useSchoolModal();
+  const closeYouthModal = () => {
+    schoolModal.close();
+    setModalTarget(null);
+  };
 
   // Primary-contact modal.
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
@@ -178,10 +184,13 @@ export default function Youth() {
 
       <YouthModal
         isOpen={modalTarget !== null}
+        suspended={schoolModal.action !== null}
+        onManageSchool={schoolModal.open}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={closeYouthModal}
         onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
       />
+      <SchoolModal workflow={schoolModal} />
       <YouthAttendanceModal
         youth={selectedProfile}
         cohort={attendanceTarget}

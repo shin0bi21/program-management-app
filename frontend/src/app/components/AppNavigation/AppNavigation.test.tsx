@@ -75,7 +75,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Schools' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Leads' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Users' })).not.toBeInTheDocument();
   });
 
   it('opens homepage management from Settings for staff with homepage access', () => {
@@ -91,7 +91,7 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('active');
     expect(screen.getByRole('menuitem', { name: 'Manage Homepage' })).toHaveClass('active');
-    expect(screen.queryByRole('menuitem', { name: 'Manage Users' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Users' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
   });
 

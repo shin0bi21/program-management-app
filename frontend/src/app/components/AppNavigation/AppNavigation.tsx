@@ -212,7 +212,7 @@ export default function AppNavigation() {
               onClick={() => go('/settings/users')}
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
-              Manage Users
+              Users
             </button>
           )}
           {canManageHomepage && (
