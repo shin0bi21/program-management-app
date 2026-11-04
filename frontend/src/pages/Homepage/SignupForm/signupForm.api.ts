@@ -7,4 +7,3 @@ export function getManagedHomepageSignup(opts: RequestOptions = {}) {
 export function updateHomepageSignup(enabled: boolean) {
   return apiClient.patch<{ signupEnabled: boolean }>('/homepage/signup', { enabled });
 }
-
