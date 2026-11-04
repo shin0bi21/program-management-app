@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { useAppNavigation } from './useAppNavigation';
 
-const floatingMenus = vi.hoisted(() => Array.from({ length: 5 }, () => ({
+const floatingMenus = vi.hoisted(() => Array.from({ length: 4 }, () => ({
   isOpen: false,
   toggle: vi.fn(),
   close: vi.fn(),
@@ -101,34 +101,6 @@ describe('useAppNavigation', () => {
     expect(result.current.active.programming).toBe(true);
   });
 
-  it('tracks Homepage destinations independently of Settings and closes other menus', async () => {
-    auth.permissions = ['read:homepage'];
-    const { result } = renderHook(() => useAppNavigation(), { wrapper });
-    floatingMenus.forEach(menu => menu.close.mockClear());
-
-    act(() => result.current.toggleMenu('homepage'));
-
-    expect(floatingMenus[4].toggle).toHaveBeenCalledOnce();
-    expect(floatingMenus[4].close).not.toHaveBeenCalled();
-    [0, 1, 2, 3].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
-    expect(result.current.permissions.canManageHomepage).toBe(true);
-
-    act(() => navigateFromRouter('/homepage/images'));
-
-    await waitFor(() => expect(result.current.active.homepage).toBe(true));
-    expect(result.current.active.settings).toBe(false);
-    expect(result.current.isActive('/homepage/images')).toBe(true);
-
-    act(() => navigateFromRouter('/homepage/signup'));
-
-    await waitFor(() => expect(result.current.isActive('/homepage/signup')).toBe(true));
-    expect(result.current.active.homepage).toBe(true);
-
-    act(() => navigateFromRouter('/'));
-
-    await waitFor(() => expect(result.current.active.homepage).toBe(false));
-  });
-
   it('keeps menus mutually exclusive and closes navigation state after routing', async () => {
     const { result } = renderHook(() => useAppNavigation(), { wrapper });
     floatingMenus.forEach(menu => menu.close.mockClear());
@@ -136,14 +108,15 @@ describe('useAppNavigation', () => {
     act(() => result.current.toggleMenu('staff'));
     expect(floatingMenus[1].toggle).toHaveBeenCalledOnce();
     expect(floatingMenus[1].close).not.toHaveBeenCalled();
-    [0, 2, 3, 4].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
+    [0, 2, 3].forEach(index => expect(floatingMenus[index].close).toHaveBeenCalledOnce());
 
     floatingMenus.forEach(menu => menu.close.mockClear());
     act(() => result.current.setMobileOpen(true));
-    act(() => result.current.go('/programming/calendar'));
+    act(() => result.current.go('/homepage/images'));
 
-    await waitFor(() => expect(result.current.isActive('/programming/calendar')).toBe(true));
-    expect(result.current.active.programming).toBe(true);
+    await waitFor(() => expect(result.current.isActive('/homepage/images')).toBe(true));
+    expect(result.current.active.homepage).toBe(true);
+    expect(result.current.active.settings).toBe(false);
     expect(result.current.mobileOpen).toBe(false);
     floatingMenus.forEach(menu => expect(menu.close).toHaveBeenCalled());
   });

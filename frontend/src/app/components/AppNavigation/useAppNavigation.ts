@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../auth/authContext';
 import { useFloatingMenu } from '../../../common/components/FloatingMenu/hooks/useFloatingMenu';
 
-type MenuName = 'staff' | 'leads' | 'settings' | 'programming' | 'homepage';
+type MenuName = 'staff' | 'leads' | 'settings' | 'programming';
 
 export function useAppNavigation() {
   const navigate = useNavigate();
@@ -14,7 +14,6 @@ export function useAppNavigation() {
   const staffRef = useRef<HTMLButtonElement>(null);
   const programmingRef = useRef<HTMLButtonElement>(null);
   const settingsRef = useRef<HTMLButtonElement>(null);
-  const homepageRef = useRef<HTMLButtonElement>(null);
 
   const leads = useFloatingMenu(
     leadsRef,
@@ -28,24 +27,21 @@ export function useAppNavigation() {
     { widthEstimate: 180, heightEstimate: 165 },
   );
   const programming = useFloatingMenu(programmingRef, { side: 'right', align: 'start' }, { widthEstimate: 160, heightEstimate: 100 });
-  const homepage = useFloatingMenu(homepageRef, { side: 'right', align: 'start' }, { widthEstimate: 180, heightEstimate: 100 });
   const closeProgramming = programming.close;
   const closeLeads = leads.close;
   const closeStaff = staff.close;
   const closeSettings = settings.close;
-  const closeHomepage = homepage.close;
 
   const closeAllMenus = useCallback((except?: MenuName) => {
     if (except !== 'leads') closeLeads();
     if (except !== 'staff') closeStaff();
     if (except !== 'settings') closeSettings();
     if (except !== 'programming') closeProgramming();
-    if (except !== 'homepage') closeHomepage();
-  }, [closeLeads, closeSettings, closeStaff, closeProgramming, closeHomepage]);
+  }, [closeLeads, closeSettings, closeStaff, closeProgramming]);
 
   const toggleMenu = (menu: MenuName) => {
     closeAllMenus(menu);
-    ({ staff, leads, settings, programming, homepage })[menu].toggle();
+    ({ staff, leads, settings, programming })[menu].toggle();
   };
 
   const go = (path: string) => {
@@ -68,8 +64,8 @@ export function useAppNavigation() {
     logout,
     mobileOpen,
     setMobileOpen,
-    refs: { staff: staffRef, leads: leadsRef, settings: settingsRef, programming: programmingRef, homepage: homepageRef },
-    menus: { staff, leads, settings, programming, homepage },
+    refs: { staff: staffRef, leads: leadsRef, settings: settingsRef, programming: programmingRef },
+    menus: { staff, leads, settings, programming },
     permissions: {
       canManageHomepage: grantedPermissions.includes('read:homepage'),
       canViewYouth: grantedPermissions.includes('read:youth_profiles'),

@@ -1,4 +1,3 @@
-import Button from '../../../common/components/Button/Button';
 import HeroSection from './components/HeroSection/HeroSection';
 import HistorySection from './components/HistorySection/HistorySection';
 import PartnersSection from './components/PartnersSection/PartnersSection';
@@ -8,7 +7,6 @@ import SignupSection from './components/SignupSection/SignupSection';
 import SiteFooter from './components/SiteFooter/SiteFooter';
 import TeamSection from './components/TeamSection/TeamSection';
 
-import { useHomepageSignup } from './hooks/useHomepageSignup';
 import { useHomepageImages } from './hooks/useHomepageImages';
 import { useHomepagePrograms } from './hooks/useHomepagePrograms';
 import { useSectionRouting } from './hooks/useSectionRouting';
@@ -19,8 +17,7 @@ import '../../../common/styles/forms.css';
 export default function PublicHomepage() {
   const imageQuery = useHomepageImages();
   const programQuery = useHomepagePrograms();
-  const signupQuery = useHomepageSignup();
-  useSectionRouting({ disabled: imageQuery.loading || programQuery.loading || signupQuery.loading });
+  useSectionRouting({ disabled: imageQuery.loading || programQuery.loading });
 
   const managedPhotos = imageQuery.images.map((image) => ({
     src: image.imageUrl,
@@ -31,7 +28,7 @@ export default function PublicHomepage() {
 
   return (
     <div className="homepage-theme">
-      <PublicTopBar signupEnabled={signupQuery.signupEnabled} />
+      <PublicTopBar />
       <main className="homepage-container homepage-theme">
         <HeroSection
           photos={managedPhotos}
@@ -45,11 +42,7 @@ export default function PublicHomepage() {
           error={programQuery.error}
           onRetry={() => void programQuery.refresh()}
         />
-        {signupQuery.error && <section role="alert" aria-label="Signup availability">
-          <p>{signupQuery.error}</p>
-          <Button onClick={() => void signupQuery.refresh()}>Retry signup availability</Button>
-        </section>}
-        {signupQuery.signupEnabled && <SignupSection />}
+        <SignupSection />
         <HistorySection />
         <TeamSection />
         <PartnersSection />

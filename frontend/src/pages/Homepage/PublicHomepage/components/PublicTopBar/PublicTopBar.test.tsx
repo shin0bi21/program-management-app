@@ -14,7 +14,7 @@ function renderTopBar(initialPath = '/') {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
-        <Route path="*" element={<PublicTopBar signupEnabled />} />
+        <Route path="*" element={<PublicTopBar />} />
         <Route path="/login" element={<div>Login page</div>} />
         <Route path="/settings/account" element={<div>Account page</div>} />
       </Routes>
@@ -85,18 +85,5 @@ describe('PublicTopBar', () => {
     for (const link of screen.getAllByRole('link')) {
       expect(link).not.toHaveAttribute('aria-current');
     }
-  });
-
-  it('omits signup links when homepage signup is disabled', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <PublicTopBar signupEnabled={false} />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('link', { name: 'Sign Up' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    expect(screen.queryByRole('menuitem', { name: 'Sign Up' })).not.toBeInTheDocument();
   });
 });

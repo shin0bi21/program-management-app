@@ -70,8 +70,6 @@ describe('AppNavigation', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Images' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Sign-up Form' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'My Account' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
@@ -80,13 +78,9 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Users' })).not.toBeInTheDocument();
   });
 
-  it.each([
-    ['Images', '/homepage/images'],
-    ['Sign-up Form', '/homepage/signup'],
-  ])('opens %s from Homepage and closes the mobile sidebar', async (label, path) => {
+  it('opens image management directly from Homepage and closes the mobile sidebar', async () => {
     authState.permissions = ['read:homepage'];
     const user = userEvent.setup();
-
     render(
       <MemoryRouter initialEntries={['/settings/account']}>
         <AppNavigation />
@@ -94,15 +88,19 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('button', { name: 'Homepage' })).toHaveAttribute('aria-haspopup', 'menu');
-    expect(screen.queryByRole('menuitem', { name: 'Manage Homepage' })).not.toBeInTheDocument();
-
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
-    await user.click(screen.getByRole('menuitem', { name: label }));
+    await user.click(screen.getByRole('button', { name: 'Homepage' }));
 
-    expect(screen.getByTestId('current-path')).toHaveTextContent(path);
-    expect(screen.getByRole('menuitem', { name: label })).toHaveClass('active');
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/homepage/images');
+    expect(screen.getByRole('button', { name: 'Homepage' })).toHaveClass('active');
     expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
+  });
+
+  it('requires Homepage read access even when the user has write access', () => {
+    authState.permissions = ['write:homepage'];
+    render(<MemoryRouter><AppNavigation /></MemoryRouter>);
+
+    expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
   });
 
   it('shows Leads as top-level navigation for users with outreach access', () => {

@@ -12,14 +12,6 @@
   min-height: 0;
 }
 
-.homepage-management-card {
-  padding: 1rem 1.25rem;
-  border: var(--border-line-soft);
-  border-radius: var(--radius-md);
-  background: var(--color-card-surface);
-  box-shadow: var(--shadow-card);
-}
-
 @media (max-width: 768px) {
   .homepage-management-page {
     height: auto;

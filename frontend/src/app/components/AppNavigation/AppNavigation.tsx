@@ -127,11 +127,8 @@ export default function AppNavigation() {
 
               {canManageHomepage && (
                 <button
-                  ref={refs.homepage}
-                  onClick={() => toggleMenu('homepage')}
-                  aria-haspopup="menu"
-                  aria-expanded={menus.homepage.isOpen}
-                  className={`sidebar-link${active.homepage || menus.homepage.isOpen ? ' active' : ''}`}
+                  onClick={() => go('/homepage/images')}
+                  className={`sidebar-link${active.homepage ? ' active' : ''}`}
                 >
                   <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
                   <span>Homepage</span>
@@ -201,30 +198,6 @@ export default function AppNavigation() {
         <FloatingMenuPanel menuRef={menus.programming.menuRef} position={menus.programming.position} onClose={menus.programming.close} className="settings-flyout">
           {canViewPrograms && <button role="menuitem" onClick={() => go('/programming/programs')} className={`settings-flyout-item${isActive('/programming/programs') ? ' active' : ''}`}>Programs</button>}
           {canViewSessions && <button role="menuitem" onClick={() => go('/programming/sessions')} className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}>Sessions</button>}
-        </FloatingMenuPanel>
-      )}
-
-      {canManageHomepage && menus.homepage.position && (
-        <FloatingMenuPanel
-          menuRef={menus.homepage.menuRef}
-          position={menus.homepage.position}
-          onClose={menus.homepage.close}
-          className="settings-flyout"
-        >
-          <button
-            role="menuitem"
-            onClick={() => go('/homepage/images')}
-            className={`settings-flyout-item${isActive('/homepage/images') ? ' active' : ''}`}
-          >
-            Images
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => go('/homepage/signup')}
-            className={`settings-flyout-item${isActive('/homepage/signup') ? ' active' : ''}`}
-          >
-            Sign-up Form
-          </button>
         </FloatingMenuPanel>
       )}
 

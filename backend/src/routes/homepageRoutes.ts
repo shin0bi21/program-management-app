@@ -4,13 +4,11 @@ import {
   handleDeleteHomepageImage,
   handleGetHomepageImageFile,
   handleGetManagedHomepage,
-  handleGetHomepageSignup,
   handleGetPublicHomepageImages,
   handleGetPublicHomepagePrograms,
   handlePublicLead,
   handleReorderHomepageImages,
   handleUpdateHomepageImage,
-  handleUpdateHomepageSignup,
 } from '../controllers/homepageController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { uploadFile } from '../middleware/fileUpload';
@@ -22,13 +20,11 @@ import {
   homepageImageParamsSchema,
   reorderHomepageImagesSchema,
   updateHomepageImageSchema,
-  updateHomepageSignupSchema,
 } from '../validation/homepageSchemas';
 import { publicLeadSchema } from '../validation/publicSchemas';
 
 export const publicHomepageRoutes = Router();
 
-publicHomepageRoutes.get('/homepage/signup', generalLimiter, asyncHandler(handleGetHomepageSignup));
 publicHomepageRoutes.get('/homepage/images', generalLimiter, asyncHandler(handleGetPublicHomepageImages));
 publicHomepageRoutes.get('/homepage/programs', generalLimiter, asyncHandler(handleGetPublicHomepagePrograms));
 publicHomepageRoutes.get(
@@ -50,13 +46,6 @@ const router = Router();
 router.use(authenticateToken, requirePermission('read:homepage'), generalLimiter);
 
 router.get('/', asyncHandler(handleGetManagedHomepage));
-router.get('/signup', asyncHandler(handleGetHomepageSignup));
-router.patch(
-  '/signup',
-  requirePermission('write:homepage'),
-  validateRequest(updateHomepageSignupSchema),
-  asyncHandler(handleUpdateHomepageSignup),
-);
 router.post(
   '/images',
   requirePermission('write:homepage'),
