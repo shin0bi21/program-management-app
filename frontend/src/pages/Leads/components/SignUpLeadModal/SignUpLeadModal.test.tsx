@@ -136,7 +136,7 @@ describe('SignUpLeadModal', () => {
     const noteType = screen.getByRole('button', { name: 'Type of note' });
     fireEvent.click(noteType);
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Health' }));
-    const createProfile = screen.getByRole('button', { name: 'Create Profile' });
+    const createProfile = screen.getByRole('button', { name: 'Save' });
     await waitFor(() => expect(createProfile).toBeEnabled());
     expect(noteType).toHaveTextContent('Health');
   });
@@ -147,7 +147,7 @@ describe('SignUpLeadModal', () => {
 
     renderWithQueryClient(<SignUpLeadModal queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY} lead={lead} onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    const createProfile = screen.getByRole('button', { name: 'Create Profile' });
+    const createProfile = screen.getByRole('button', { name: 'Save' });
     await waitFor(() => expect(createProfile).toBeEnabled());
     fireEvent.click(createProfile);
 

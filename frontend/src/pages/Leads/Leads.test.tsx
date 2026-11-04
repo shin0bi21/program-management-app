@@ -159,7 +159,7 @@ describe('Leads', () => {
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
     fireEvent.change(screen.getByLabelText('Phone Number *'), { target: { value: '416-555-0188' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Update Lead' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('416-555-0188')).toBeInTheDocument();
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
@@ -177,7 +177,7 @@ describe('Leads', () => {
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign Up' }));
-    const submit = screen.getByRole('button', { name: 'Create Profile' });
+    const submit = screen.getByRole('button', { name: 'Save' });
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
 
@@ -200,7 +200,7 @@ describe('Leads', () => {
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteLead).toHaveBeenCalledWith('lead-1'));
     await waitFor(() => expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument());
@@ -221,7 +221,7 @@ describe('Leads', () => {
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
     fireEvent.click(screen.getByRole('button', { name: 'More actions for Sam Stable' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteLead).toHaveBeenCalledWith('lead-2'));
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();

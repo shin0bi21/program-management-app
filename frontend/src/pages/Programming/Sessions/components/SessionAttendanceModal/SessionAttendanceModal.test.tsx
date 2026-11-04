@@ -64,7 +64,7 @@ describe('SessionAttendanceModal', () => {
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
     expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
   it('checks in an existing youth and locks the pending attendance draft', async () => {
@@ -98,14 +98,14 @@ describe('SessionAttendanceModal', () => {
     await user.click(await screen.findByRole('button', { name: 'Check in' }));
     expect(screen.getByText('Jordan Drop In')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(api.setSessionAttendance).toHaveBeenCalledOnce();
     expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
     screen.getAllByRole('button', { name: 'Remove' }).forEach(button => {
       expect(button).toBeDisabled();
     });
-    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
 
     await act(async () => finishSave([]));

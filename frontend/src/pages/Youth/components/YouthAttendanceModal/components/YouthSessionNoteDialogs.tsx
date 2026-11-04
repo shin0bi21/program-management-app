@@ -61,7 +61,7 @@ export default function YouthSessionNoteDialogs({
         statusMessage={unlinkError || (unlinking ? 'Unlinking session note...' : undefined)}
         footer={<>
           <Button variant="secondary" disabled={unlinking} onClick={onCloseUnlink}>Cancel</Button>
-          <Button variant="danger" disabled={unlinking} onClick={() => void onConfirmUnlink()}>Unlink</Button>
+          <Button variant="danger" disabled={unlinking} onClick={() => void onConfirmUnlink()}>Confirm</Button>
         </>}
       >
         {unlinkTarget && youth && (

@@ -34,7 +34,6 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
   const footer = (
     <ModalFormFooter
       formId="lead-form"
-      submitLabel={isEdit ? 'Update Lead' : 'Create Lead'}
       submitStatus={submitStatus}
       onClose={handleClose}
     />

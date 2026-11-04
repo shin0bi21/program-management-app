@@ -170,7 +170,7 @@ describe('Programs', () => {
 
     await user.clear(screen.getByRole('textbox', { name: 'Program Name' }));
     await user.type(screen.getByRole('textbox', { name: 'Program Name' }), saved.name);
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
     expect(await screen.findByRole('heading', { name: 'Updated Skills - Fall 2026 Overview' })).toBeInTheDocument();
@@ -209,7 +209,7 @@ describe('Programs', () => {
     await user.type(screen.getByRole('textbox', { name: 'Program Name' }), 'Job Readiness');
     await user.type(screen.getByRole('spinbutton', { name: 'Minimum Age' }), '16');
     await user.type(screen.getByRole('spinbutton', { name: 'Maximum Age' }), '19');
-    await user.click(screen.getByRole('button', { name: 'Add Program' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(programsApi.createProgram).toHaveBeenCalledOnce());
     expect(await screen.findByText('Program added successfully.')).toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('Programs', () => {
 
     await user.clear(screen.getByRole('textbox', { name: 'Cycle name' }));
     await user.type(screen.getByRole('textbox', { name: 'Cycle name' }), 'Updated cycle');
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('cell', { name: 'Updated cycle' }, { timeout: 3000 })).toBeInTheDocument();
     expect(programmingApi.getCycleList).toHaveBeenCalledOnce();
@@ -246,7 +246,7 @@ describe('Programs', () => {
 
     expect(screen.getByRole('heading', { name: 'Delete Cycle' })).toBeInTheDocument();
     expect(screen.getByText(/Cycles assigned to cohorts or logged hours cannot be deleted/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(programmingApi.deleteProgramCycle).toHaveBeenCalledWith('cycle-1'));
     await waitFor(() => expect(screen.queryByText('Fall 2026')).not.toBeInTheDocument());
@@ -261,7 +261,7 @@ describe('Programs', () => {
     await user.click(screen.getByRole('button', { name: 'Manage Cycles' }));
     await user.click(await screen.findByRole('button', { name: 'Actions for Fall 2026' }));
     await user.click(screen.getByRole('menuitem', { name: 'Delete Cycle' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle cannot be deleted because it is still in use');
     await user.click(screen.getByRole('button', { name: 'Close' }));

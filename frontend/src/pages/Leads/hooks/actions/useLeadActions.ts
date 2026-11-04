@@ -65,7 +65,6 @@ export default function useLeadActions({
   const requestDelete = useCallback((lead: Lead) => setConfirmAction({
     title: 'Delete Lead',
     message: `Delete ${lead.youthFirstName} ${lead.youthLastName} and all follow-up notes? This cannot be undone.`,
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Lead deleted',
     onConfirm: async () => {

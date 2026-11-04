@@ -18,7 +18,6 @@ export default function LeadNoteEditModal({ note, onClose, onSaved }: {
     categoryOptions={[{ value: 'follow_up', label: 'Follow-up' }]}
     categoryDisabled
     details={workflow.details}
-    submitLabel="Save"
     submitStatus={workflow.submitStatus}
     statusMessage={workflow.statusMessage}
     maxLength={500}

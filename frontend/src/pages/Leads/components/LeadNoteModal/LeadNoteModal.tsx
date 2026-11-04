@@ -25,7 +25,6 @@ export default function LeadNoteModal({
       categoryOptions={[{ value: 'follow_up', label: 'Follow-up' }]}
       categoryDisabled
       details={workflow.details}
-      submitLabel="Add Note"
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       maxLength={500}

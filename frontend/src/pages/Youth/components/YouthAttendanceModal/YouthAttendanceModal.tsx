@@ -74,7 +74,6 @@ export default function YouthAttendanceModal({
         footer={(
           <ModalFormFooter
             formId="youth-attendance-form"
-            submitLabel="Save Attendance"
             submitStatus={submitStatus}
             submitDisabled={loading || Boolean(loadError) || !attendance?.sessions.length}
             onClose={close}

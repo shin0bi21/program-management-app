@@ -32,7 +32,6 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
       footer={(
         <ModalFormFooter
           formId="homepage-image-form"
-          submitLabel={image ? 'Save' : 'Add Image'}
           submitStatus={workflow.status}
           onClose={onClose}
         />

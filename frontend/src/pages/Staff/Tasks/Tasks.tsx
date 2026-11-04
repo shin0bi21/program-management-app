@@ -127,7 +127,6 @@ export default function Tasks() {
   const openDeleteConfirmation = useCallback((task: Task) => setConfirmationState({
     title: 'Delete Task',
     message: `Delete “${task.title}”? Tasks with logged time cannot be deleted.`,
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Task deleted',
     onConfirm: () => deleteTaskAction(task),

@@ -28,7 +28,6 @@ export function useHomepageModals({ deleteImage }: UseHomepageModalsOptions) {
   const confirmDeleteImage = (image: ManagedHomepageImage) => setConfirmAction({
     title: 'Delete Homepage Image',
     message: `Delete “${image.caption}”? This cannot be undone.`,
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Homepage image deleted',
     onConfirm: () => deleteImage(image.id),

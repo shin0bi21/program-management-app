@@ -29,7 +29,7 @@ describe('CycleModal', () => {
     await user.type(screen.getByRole('textbox', { name: 'Cycle name' }), 'Fall 2026');
     await user.type(screen.getByLabelText('Starts on'), '2026-09-01');
     await user.type(screen.getByLabelText('Ends on'), '2027-01-31');
-    await user.click(screen.getByRole('button', { name: 'Add Cycle' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(setProgramCycle).toHaveBeenCalledWith({
       name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: ['program-1'],
@@ -46,8 +46,8 @@ describe('CycleModal', () => {
     expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('Fall 2026');
     expect(screen.getByLabelText('Starts on')).toHaveValue('2026-09-01');
     expect(screen.getByLabelText('Ends on')).toHaveValue('2027-01-31');
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Cycle updated successfully.')).toBeInTheDocument();
   });
@@ -57,8 +57,8 @@ describe('CycleModal', () => {
     const user = userEvent.setup();
     render(<CycleModal programs={programs} isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle dates overlap');
     expect(screen.getByRole('dialog', { name: 'Edit Cycle' })).toBeInTheDocument();
@@ -70,8 +70,8 @@ describe('CycleModal', () => {
     const props = { onClose: vi.fn(), onSaved: vi.fn() };
     const view = render(<CycleModal programs={programs} isOpen cycle={cycle} {...props} />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Cycle dates overlap');
 
     view.rerender(<CycleModal programs={programs} isOpen={false} cycle={cycle} {...props} />);

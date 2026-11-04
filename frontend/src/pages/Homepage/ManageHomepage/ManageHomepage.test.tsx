@@ -102,7 +102,7 @@ describe('ManageHomepage', () => {
 
     await user.click(screen.getByRole('button', { name: 'More actions for Adventure Bay trip.' }));
     await user.click(screen.getByRole('menuitem', { name: 'Delete Image' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     expect(homepage.deleteImage).toHaveBeenCalledWith('image-1');
   });

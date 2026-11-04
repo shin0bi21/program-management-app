@@ -58,7 +58,6 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
     setConfirmAction({
       title: 'Delete Cycle',
       message: `Delete ${cycle.name}? Cycles assigned to cohorts or logged hours cannot be deleted.`,
-      confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Cycle deleted',
       onConfirm: async () => {

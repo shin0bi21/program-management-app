@@ -75,7 +75,7 @@ describe('YouthModal', () => {
       renderModal({ youthData: makeYouthProfile(), mode: 'contact' });
 
       expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Save Contact' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'General Information' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Address/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('School')).not.toBeInTheDocument();

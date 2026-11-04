@@ -63,7 +63,7 @@ describe('SessionNoteModal', () => {
   it('keeps submission available while the optional roster loads', () => {
     api.getSessionRoster.mockReturnValue(new Promise(() => {}));
     render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Add Note' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(screen.getByText('Loading youth…')).toBeInTheDocument();
   });
 
@@ -93,12 +93,12 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), {
       target: { value: 'Pending note' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledOnce());
 
     expect(screen.getByRole('textbox', { name: 'Note *' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
     await act(async () => resolve({}));
   });
