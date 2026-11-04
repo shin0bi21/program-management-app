@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionNote } from '../../../types';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import SessionNotesDashboardCard from './SessionNotesDashboardCard';
 
@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('../../../sessions.api', () => api);
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 
 const note = {
   id: 'note-1',
@@ -54,7 +54,7 @@ describe('SessionNotesDashboardCard', () => {
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add notes' }));
     expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
-    expect(await screen.findByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
+    expect(await screen.findByText('No youth are enrolled in this cycle.')).toBeInTheDocument();
   });
 
   it('shows note metadata and linked-youth details', async () => {
@@ -111,7 +111,7 @@ describe('SessionNotesDashboardCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete session note' }));
     const deleteModal = screen.getByRole('heading', { name: 'Delete Note' }).closest('.modal-container');
-    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(api.deleteSessionNote).toHaveBeenCalledWith(session.id, note.id));
     await waitFor(() => expect(screen.queryByText(note.details)).not.toBeInTheDocument());

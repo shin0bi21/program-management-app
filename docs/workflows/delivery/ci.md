@@ -49,6 +49,10 @@ stable required-check identity without coupling it to lint or shell analysis.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests.
 
+Program-cycle services run the Programs suite plus Sessions, Youth, Hours,
+Outreach, Homepage, and reference-data integration consumers. Session services run
+their Sessions suite plus Youth, Hours, Homepage, and reference-data consumers.
+
 Backend verification owns type checking, migrations, migration status, generated database types, selected tests, and the backend build in one database-backed job. Recognized domains run focused Jest directories in one invocation; shared infrastructure, migrations, dependencies, and unmapped backend files escalate to the complete backend suite.
 
 Production image and Compose checks are selected by changed production inputs for

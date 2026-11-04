@@ -59,7 +59,7 @@ export default function ProfileNoteDialogs({
         statusMessage={deleteError || (deleting ? 'Deleting profile note...' : undefined)}
         footer={selectedNote && canManage ? confirmingDelete ? <>
           <Button variant="secondary" disabled={deleting} onClick={onCancelDelete}>Cancel</Button>
-          <Button variant="danger" disabled={deleting} onClick={() => void onConfirmDelete()}>Delete</Button>
+          <Button variant="danger" disabled={deleting} onClick={() => void onConfirmDelete()}>Confirm</Button>
         </> : <>
           <Button onClick={() => onEdit(selectedNote)}>Edit</Button>
           <Button variant="danger" onClick={() => onRequestDelete(selectedNote)}>Delete</Button>

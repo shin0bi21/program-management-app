@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionAttendanceDashboardCard from './SessionAttendanceDashboardCard';
 
-const session = makeCohortSession({
+const session = makeProgramSession({
   attendedCount: 4,
   attendanceMarkedCount: 5,
   attendanceRate: 80,

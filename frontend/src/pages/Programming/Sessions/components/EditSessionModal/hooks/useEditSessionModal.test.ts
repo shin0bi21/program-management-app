@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { updateSession } from '../../../sessions.api';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { useEditSessionModal } from './useEditSessionModal';
 
 vi.mock('../../../sessions.api', () => ({ updateSession: vi.fn() }));
@@ -31,7 +31,7 @@ describe('useEditSessionModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('normalizes the update command and awaits owner reconciliation', async () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     vi.mocked(updateSession).mockResolvedValue({ session });
     let resolveRefresh!: () => void;
     const onUpdated = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
@@ -67,7 +67,7 @@ describe('useEditSessionModal', () => {
   });
 
   it('reports failures and permits retry', async () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     vi.mocked(updateSession)
       .mockRejectedValueOnce(new Error('Session overlaps another session'))
       .mockResolvedValueOnce({ session });
@@ -87,8 +87,8 @@ describe('useEditSessionModal', () => {
   });
 
   it('resets workflow state for a different session target', async () => {
-    const first = makeCohortSession();
-    const second = makeCohortSession({ id: 'session-2', sessionTypeId: 'type-2' });
+    const first = makeProgramSession();
+    const second = makeProgramSession({ id: 'session-2', sessionTypeId: 'type-2' });
     vi.mocked(updateSession).mockRejectedValue(new Error('Update failed'));
     const { result, rerender } = renderHook(
       ({ session }) => useEditSessionModal(session, vi.fn()),
@@ -109,10 +109,10 @@ describe('useEditSessionModal', () => {
   it('locks same-tick submissions until the save workflow settles', async () => {
     let resolveUpdate!: () => void;
     vi.mocked(updateSession).mockReturnValue(new Promise(resolve => {
-      resolveUpdate = () => resolve({ session: makeCohortSession() });
+      resolveUpdate = () => resolve({ session: makeProgramSession() });
     }));
     const onUpdated = vi.fn().mockResolvedValue(undefined);
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
 
     await act(async () => result.current.setSessionTypeId('type-2'));

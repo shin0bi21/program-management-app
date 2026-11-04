@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
 describe('SessionItem', () => {
-  it('shows only the theme on the bar and gives type, Toronto times, cohort, status and description in its details', async () => {
-    const session = makeCohortSession({
+  it('shows only the theme on the bar and gives type, Toronto times, cycle, status and description in its details', async () => {
+    const session = makeProgramSession({
       sessionTypeName: 'Guest Speaker', state: 'cancelled',
       cancelledAt: '2026-08-09T12:00:00Z', description: 'Meet a local employer.',
     });
@@ -27,7 +27,7 @@ describe('SessionItem', () => {
     expect(within(details).queryByText('Ends')).not.toBeInTheDocument();
   });
   it('keeps both local dates when a session crosses midnight', async () => {
-    render(<SessionItem session={makeCohortSession({
+    render(<SessionItem session={makeProgramSession({
       startsAt: '2026-12-22T04:00:00Z', endsAt: '2026-12-22T06:30:00Z',
     })} />);
     fireEvent.mouseEnter(screen.getByRole('button', { name: /Communication/ }));

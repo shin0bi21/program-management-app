@@ -20,10 +20,10 @@ owning separate capabilities.
 | Assigned tasks `/tasks` | [taskRoutes](../../backend/src/routes/taskRoutes.ts) | [taskSchemas](../../backend/src/validation/taskSchemas.ts) | [Tasks](../../backend/src/services/staff/tasks/) |
 | Youth profiles `/youth` | [youthRoutes](../../backend/src/routes/youthRoutes.ts) | [youthSchemas](../../backend/src/validation/youthSchemas.ts) | [Youth](../../backend/src/services/youth/) |
 | Programs `/programs` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programSchemas](../../backend/src/validation/programSchemas.ts) | [Program service](../../backend/src/services/programService.ts) |
-| Cycles `/cohorts/cycles` | [cycleRoutes](../../backend/src/routes/cycleRoutes.ts) | [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) | [Cycle service](../../backend/src/services/programming/cycles/programCycleService.ts) |
-| Cohorts and rosters `/cohorts` | [cohortRoutes](../../backend/src/routes/cohortRoutes.ts) | [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) | [Cohorts](../../backend/src/services/programming/cohorts/) |
-| Sessions and attendance `/cohorts` | [sessionRoutes](../../backend/src/routes/sessionRoutes.ts) | [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) | [Sessions](../../backend/src/services/programming/sessions/) |
-| Enrollment `/cohorts` | [enrollmentRoutes](../../backend/src/routes/enrollmentRoutes.ts) | [cohortSchemas](../../backend/src/validation/cohortSchemas.ts) | [Enrollment service](../../backend/src/services/programming/cohorts/enrollmentService.ts) |
+| Cycles `/cycles` | [cycleRoutes](../../backend/src/routes/cycleRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Cycle service](../../backend/src/services/programming/cycles/programCycleService.ts) |
+| Program-cycle summaries and rosters `/programs` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Program cycles](../../backend/src/services/programming/programCycles/) |
+| Sessions and attendance `/sessions` | [sessionRoutes](../../backend/src/routes/sessionRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Sessions](../../backend/src/services/programming/sessions/) |
+| Enrollment `/programs/:programId/cycles/:cycleId` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts) |
 | Schools `/schools` | [schoolRoutes](../../backend/src/routes/schoolRoutes.ts) | [schoolSchemas](../../backend/src/validation/schoolSchemas.ts) | [Youth school service](../../backend/src/services/youth/youthSchoolService.ts) |
 | Leads `/leads` | [leadRoutes](../../backend/src/routes/leadRoutes.ts) | [leadSchemas](../../backend/src/validation/leadSchemas.ts) | [Leads](../../backend/src/services/outreach/leads/) |
 | Homepage `/homepage`, public content and intake `/public` | [Homepage and public routers](../../backend/src/routes/homepageRoutes.ts) | [homepageSchemas](../../backend/src/validation/homepageSchemas.ts), [publicSchemas](../../backend/src/validation/publicSchemas.ts) | [Homepage service](../../backend/src/services/homepageService.ts) |
@@ -99,17 +99,20 @@ Program/cycle options used elsewhere remain shared reference data.
 
 ### Program-Cycle Assignments
 
-Programs and cycles share cohort relationships. Assignment edits replace the
-checked set atomically while preserving retained cohort IDs. Removing a
+Allowed program × cycle combinations are stored in `program_cycle_assignments`
+with the composite primary key `(program_id, cycle_id)` and no surrogate ID.
+Sessions and enrollments reference this pair directly; hours already stores it.
+Attendance, notes, and attachments remain session-owned. Assignment edits replace
+the checked set atomically while preserving retained pairs and all linked history. Removing a
 relationship with sessions, enrollment history (including withdrawals), or
 logged hours rejects the entire request. Deleting a referenced cycle also fails.
 Program defaults affect future session creation, not existing timestamps.
 
-[Assignment service](../../backend/src/services/programming/cohorts/assignmentService.ts)
+[Assignment service](../../backend/src/services/programming/programCycles/assignmentService.ts)
 and [cycle service](../../backend/src/services/programming/cycles/programCycleService.ts)
-own the shared lock order: programs, cycles, then cohort relationships. Cycle
+own the shared lock order: programs, cycles, then program-cycle relationships. Cycle
 editing locks current programs in ID order before its cycle. Child foreign keys
-coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before cohort
+coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before program-cycle
 and session rows, serializing them with session moves. Keep this ordering aligned with
 session scheduling; [assignment tests](../../backend/tests/programs/assignments.test.ts)
 cover atomic replacement and concurrency.
@@ -123,17 +126,17 @@ default weekday, including today only before the default start time. Supplied
 dates remain unchanged. Local times are stored and returned as UTC instants;
 skipped or repeated daylight-saving times are rejected.
 
-Program-based creation resolves exactly one assigned cycle/cohort from the local
-date inside the assignment-locking transaction. The UI supplies the program,
-not a guessed cohort ID. Missing or overlapping matches conflict. Cohort-based
-creation validates the date against that cohort's cycle. See
+Program-based creation resolves exactly one allowed cycle from the local date
+inside the assignment-locking transaction; missing or overlapping matches conflict.
+Direct pair creation validates the session dates against the selected program/cycle
+combination. See
 [session service](../../backend/src/services/programming/sessions/sessionService.ts)
-and [session-default tests](../../backend/tests/cohorts/sessionDefaults.test.ts).
+and [session-default tests](../../backend/tests/sessions/sessionDefaults.test.ts).
 
-Session queries combine cycle, program, cohort, type, status, search, and date
+Session queries combine cycle, program, type, status, search, and date
 filters while preserving program access. Paired timestamps use an exclusive end;
 multi-year ranges and real calendar dates in years 0001–9999 are supported.
-[Date-range tests](../../backend/tests/cohorts/dateRangeValidation.test.ts) and
+[Date-range tests](../../backend/tests/sessions/dateRangeValidation.test.ts) and
 [session list service](../../backend/src/services/programming/sessions/sessionListService.ts)
 own range validation and filtering.
 
@@ -146,8 +149,8 @@ complete moved session. Recorded attendance, notes, attachments, or session-link
 hours prevent moving to another cycle. Ambiguous DST times conflict; unrelated
 session fields remain unchanged. Its authoritative response supplies the new
 placement for cache reconciliation. See the strict request in
-[cohortSchemas](../../backend/src/validation/cohortSchemas.ts) and the
-[session-move tests](../../backend/tests/cohorts/sessionMove.test.ts).
+[programmingSchemas](../../backend/src/validation/programmingSchemas.ts) and the
+[session-move tests](../../backend/tests/sessions/sessionMove.test.ts).
 
 ### Roster Eligibility
 
@@ -156,15 +159,16 @@ pagination, plus existing enrollments even after aging out so they can be
 withdrawn. Ages use today's Toronto date and inclusive program bounds; unknown
 DOB is eligible only without age bounds. Open-attendance programs do not use this
 roster. Enrollment writes recheck eligibility inside the transaction and reject
-an invalid batch atomically. See [roster service](../../backend/src/services/programming/cohorts/cohortRosterService.ts),
-[enrollment service](../../backend/src/services/programming/cohorts/enrollmentService.ts),
-and [roster tests](../../backend/tests/cohorts/cohortRoster.test.ts).
+an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts),
+[enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts),
+and [roster tests](../../backend/tests/programs/roster.test.ts).
 
 ## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
-even when a program's session list is empty. Signup availability is independent
-of managed photos; disabling signup rejects new public intake with `409`.
+even when a program's session list is empty. Public intake accepts valid lead
+submissions with request validation and strict rate limiting. The signup form is
+always available; it has no runtime availability setting.
 The [homepage tests](../../backend/tests/homepage/homepage.test.ts) and
 [public intake tests](../../backend/tests/public/public.test.ts) cover projections,
-permissions, and the signup gate. Leads own follow-up and conversion.
+permissions, and public lead submission. Leads own follow-up and conversion.

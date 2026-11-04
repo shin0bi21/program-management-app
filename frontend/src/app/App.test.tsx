@@ -22,9 +22,11 @@ vi.mock('../pages/Programming/Sessions/Sessions', () => ({ default: () => <h1>Se
 
 vi.mock('../pages/Programming/Programs/Programs', () => ({ default: () => <h1>Programs</h1> }));
 
-describe('Programming routes', () => {
+vi.mock('../pages/Homepage/Images/Images', () => ({ default: () => <h1>Images</h1> }));
+
+describe('Application routes', () => {
   beforeEach(() => {
-    authState.permissions = ['read:sessions', 'read:programs'];
+    authState.permissions = ['read:sessions', 'read:programs', 'read:homepage'];
     window.history.replaceState(null, '', '/');
   });
 
@@ -42,6 +44,7 @@ describe('Programming routes', () => {
     ['/programming/calendar?sessionId=42&view=calendar', '/programming/sessions', 'Sessions'],
     ['/programming/cohorts?cohortId=7', '/programming/programs', 'Programs'],
     ['/settings/programming', '/programming/programs', 'Programs'],
+    ['/homepage/manage', '/homepage/images', 'Images'],
   ])('preserves deep-link parameters when redirecting %s', async (path, destination, title) => {
     window.history.replaceState(null, '', path);
 
@@ -55,6 +58,7 @@ describe('Programming routes', () => {
   it.each([
     ['/programming/sessions', 'read:sessions', 'Sessions'],
     ['/programming/programs', 'read:programs', 'Programs'],
+    ['/homepage/images', 'read:homepage', 'Images'],
   ])('allows the matching reader to open %s', async (path, permission, title) => {
     authState.permissions = [permission];
     window.history.replaceState(null, '', path);
@@ -71,6 +75,8 @@ describe('Programming routes', () => {
     ['/programming/programs', 'read:sessions'],
     ['/programming/cohorts', 'read:sessions'],
     ['/settings/programming', 'write:programs'],
+    ['/homepage/images', 'write:homepage'],
+    ['/homepage/manage', 'read:accounts'],
   ])('requires the destination read permission through %s', async (path, permission) => {
     authState.permissions = [permission];
     window.history.replaceState(null, '', path);

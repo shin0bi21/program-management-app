@@ -19,7 +19,7 @@ export default function AddSessionModal({ onClose, ...options }: AddSessionModal
   const workflow = useAddSessionModal(options);
   return <Modal isOpen onClose={onClose} title="Add Session" status={workflow.status}
     statusMessage={workflow.message}
-    footer={<ModalFormFooter formId="add-session-form" submitLabel="Add Session"
+    footer={<ModalFormFooter formId="add-session-form"
       submitStatus={workflow.status} submitDisabled={!workflow.program} onClose={onClose} />}>
     <form id="add-session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
       <FormField id="session-program" label="Program">

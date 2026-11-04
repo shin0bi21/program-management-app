@@ -1,4 +1,4 @@
-import type { ProgramCohort } from '../Programming/Cohorts/types';
+import type { ProgramCycleAssignment } from '../Programming/Programs/types';
 import { apiClient } from '../../http/client';
 import type { RequestOptions } from '../../http/client';
 import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../query/types';
@@ -53,15 +53,21 @@ export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<L
 export const updateLeadStatus = (id: string, status: EditableLeadStatus) =>
   apiClient.patch<Lead>(`/leads/${id}/status`, { status });
 export const deleteLead = (id: string) => apiClient.delete<{ id: string }>(`/leads/${id}`);
-export interface LeadSignUpResult { lead: Lead; updatedCohort?: ProgramCohort }
+export interface LeadSignUpResult { lead: Lead; updatedProgramCycle?: ProgramCycleAssignment }
 
 export const signUpLead = (
   id: string,
-  cohortId: string | null,
+  programCycle: { programId: string; cycleId: string } | null,
   noteCategory?: 'general' | 'health' | 'preference',
   dateOfBirth?: string,
 ) =>
-  apiClient.post<LeadSignUpResult>(`/leads/${id}/sign-up`, { cohortId, ...(noteCategory && { noteCategory }), ...(dateOfBirth && { dateOfBirth }) });
+  apiClient.post<LeadSignUpResult>(`/leads/${id}/sign-up`, {
+    programId: programCycle?.programId ?? null,
+    cycleId: programCycle?.cycleId ?? null,
+    ...(noteCategory && { noteCategory }),
+    ...(dateOfBirth && { dateOfBirth }),
+  });
+
 export const getLeadNotes = (leadId: string, opts?: RequestOptions) =>
   opts
     ? apiClient.get<LeadNote[]>(`/leads/${leadId}/notes`, opts)

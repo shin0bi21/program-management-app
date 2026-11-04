@@ -68,7 +68,7 @@ export default function HoursModal({
           : draft.source === 'session' ? !draft.sessionId : false
       )}
     >
-      {initialItem ? 'Save changes' : 'Log hours'}
+      Save
     </Button>
   </>;
 

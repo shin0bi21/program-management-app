@@ -67,7 +67,7 @@ describe('useYouthModal', () => {
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useYouthModal({
       isOpen: true,
-      includeLoginEmail: true,
+      inviteYouth: true,
       onClose: vi.fn(),
       onSuccess,
     }));

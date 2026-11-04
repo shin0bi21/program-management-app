@@ -24,11 +24,11 @@ interface UseYouthModalProps {
   youthData?: YouthProfile;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
-  includeLoginEmail?: boolean;
+  inviteYouth?: boolean;
   mode?: 'full' | 'contact';
 }
 
-export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLoginEmail = false, mode = 'full' }: UseYouthModalProps) {
+export function useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYouth = false, mode = 'full' }: UseYouthModalProps) {
   const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
   const { tryLock, unlock } = useSubmitLock();
 
@@ -44,7 +44,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     defaultValues,
   });
 
-  const { schools, upsertSchool, removeSchool, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const { schools, loading: schoolsLoading, error: schoolsError } = useSchools();
   const schoolId = watch('schoolId');
 
   const {
@@ -126,7 +126,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
           ...(youthData && { id: youthData.id }),
           firstName: data.firstName.trim(),
           lastName: data.lastName.trim(),
-          ...(includeLoginEmail && data.email && { email: data.email.trim() }),
+          ...(inviteYouth && data.email && { email: data.email.trim() }),
           dateOfBirth: data.dateOfBirth || null,
           ...(data.schoolId && { schoolId: data.schoolId }),
           addresses: getAddressPayload(),
@@ -154,8 +154,6 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
     onValid,
     // Sub-entity state
     schools,
-    upsertSchool,
-    removeSchool,
     schoolsLoading,
     schoolsError,
     schoolId,

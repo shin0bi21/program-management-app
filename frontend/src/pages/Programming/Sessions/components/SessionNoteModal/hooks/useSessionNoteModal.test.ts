@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import {
   createSessionNote,
@@ -17,7 +17,7 @@ vi.mock('../../../sessions.api', () => ({
   updateSessionNote: vi.fn(),
 }));
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 const note: SessionNote = {
   id: 'note-1',
   sessionId: session.id,

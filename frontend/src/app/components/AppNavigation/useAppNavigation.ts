@@ -79,6 +79,7 @@ export function useAppNavigation() {
       canViewStaff: canViewTasks || canViewHours,
     },
     active: {
+      homepage: location.pathname.startsWith('/homepage/'),
       settings: location.pathname.startsWith('/settings'),
       leads: location.pathname.startsWith('/leads'),
       youth: location.pathname.startsWith('/youth'),

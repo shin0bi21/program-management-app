@@ -3,7 +3,7 @@ import FormFieldGroup from '../../../../../../../common/components/FormField/For
 import Checklist from '../../../../../../../common/components/Checklist/Checklist';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
-import type { CohortSession, SessionAttachment } from '../../../../types';
+import type { ProgramSession, SessionAttachment } from '../../../../types';
 import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
 import './SessionAttachmentModal.css';
 
@@ -15,7 +15,7 @@ export default function SessionAttachmentModal({
   onSaved,
 }: {
   queryKey: readonly unknown[];
-  session: CohortSession | null;
+  session: ProgramSession | null;
   attachment?: SessionAttachment | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -30,7 +30,7 @@ export default function SessionAttachmentModal({
       title={attachment ? 'Edit Attachment' : 'Add Attachment'}
       status={submitStatus}
       statusMessage={statusMessage || undefined}
-      footer={<ModalFormFooter formId="session-attachment-form" submitLabel={attachment ? 'Save' : 'Add Attachment'} submitStatus={submitStatus} onClose={onClose} />}
+      footer={<ModalFormFooter formId="session-attachment-form" submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
         <FormField id="session-attachment-title" label="Title">
@@ -66,7 +66,7 @@ export default function SessionAttachmentModal({
               onToggle={toggleYouth}
               disabled={submissionComplete}
             />
-          ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cohort.'}</p>}
+          ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cycle.'}</p>}
         </FormFieldGroup>
       </form>
     </Modal>

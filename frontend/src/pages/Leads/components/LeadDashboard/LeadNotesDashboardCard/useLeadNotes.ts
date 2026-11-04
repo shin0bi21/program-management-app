@@ -53,7 +53,6 @@ export default function useLeadNotes(lead: Lead | null) {
   const requestDelete = useCallback((note: LeadNote) => setConfirmAction({
     title: 'Delete Follow-up Note',
     message: 'Delete this follow-up note? This cannot be undone.',
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Follow-up note deleted',
     onConfirm: async () => {

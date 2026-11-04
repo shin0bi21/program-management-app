@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { createSessionAttachment, getSessionRoster, updateSessionAttachment } from '../../../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../../../common/hooks/useSubmitLock';
-import type { CohortSession, SessionAttachment, SessionRosterMember } from '../../../../../types';
+import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../../../../../types';
 
 export function useSessionAttachmentModal({ queryKey, session, attachment, onSaved }: {
   queryKey: readonly unknown[];
-  session: CohortSession | null;
+  session: ProgramSession | null;
   attachment: SessionAttachment | null;
   onSaved: () => void | Promise<void>;
 }) {

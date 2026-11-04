@@ -1,4 +1,4 @@
-import { makeCohortSession } from '../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../tests/factories/session';
 import type { InfiniteData } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -71,13 +71,13 @@ describe('useYouthActions', () => {
   it('reconciles attendance response rows and selection without invalidating table queries', () => {
     const rendered = renderActions();
     const youth = makeYouthProfile();
-    const session = makeCohortSession({ attendedCount: 1 });
+    const session = makeProgramSession({ attendedCount: 1 });
     const key = ['sessions', 'table'];
-    rendered.queryClient.setQueryData(key, { pages: [{ rows: [makeCohortSession()], nextCursor: null }], pageParams: [null] });
+    rendered.queryClient.setQueryData(key, { pages: [{ rows: [makeProgramSession()], nextCursor: null }], pageParams: [null] });
     const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries');
 
     act(() => rendered.result.current.reconcileAttendance({
-      cohort: { id: 'cohort-1', name: 'Summer', programName: 'Skills', enrollmentRequired: true },
+      programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycleName: 'Summer', programName: 'Skills', enrollmentRequired: true },
       sessions: [], youth, updatedSessions: [session],
     }));
 
@@ -85,6 +85,6 @@ describe('useYouthActions', () => {
     expect(rendered.queryClient.getQueryData(key)).toEqual({ pages: [{ rows: [session], nextCursor: null }], pageParams: [null] });
     expect(rendered.queryClient.getQueryState(key)?.isInvalidated).toBe(false);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'calendar'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['cohorts', 'options'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
   });
 });

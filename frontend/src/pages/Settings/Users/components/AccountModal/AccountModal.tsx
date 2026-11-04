@@ -35,7 +35,7 @@ export default function AccountModal(props: AccountModalProps) {
         submitStatus === 'success' ? (isEdit ? 'Account updated!' : 'Invitation sent!') :
         submitStatus === 'error' ? error : undefined
       }
-      footer={<ModalFormFooter formId="account-form" submitLabel={isEdit ? 'Update' : 'Send Invite'} submitStatus={submitStatus} onClose={handleClose} />}
+      footer={<ModalFormFooter formId="account-form" submitStatus={submitStatus} onClose={handleClose} />}
     >
       <form id="account-form" onSubmit={onSubmit}>
         <div className="form-row">

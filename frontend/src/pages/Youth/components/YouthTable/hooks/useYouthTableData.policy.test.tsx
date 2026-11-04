@@ -8,19 +8,19 @@ import useYouthTableData from './useYouthTableData';
 vi.mock('../../../../../query/hooks/useInfiniteListQuery', () => ({ default: vi.fn(() => ({ rows: [] })) }));
 beforeEach(() => vi.clearAllMocks());
 
-const participation: YouthProfile['cohorts'][number] = {
-  id: 'cohort-1', cycleId: 'cycle-1', name: 'Fall', programId: 'program-1', programName: 'Skills', enrollmentRequired: true,
+const participation: YouthProfile['programCycles'][number] = {
+  cycleId: 'cycle-1', cycleName: 'Fall', programId: 'program-1', programName: 'Skills', enrollmentRequired: true,
   startsOn: '2026-09-01', endsOn: '2026-12-31', enrolledOn: '2026-09-01', withdrawnOn: null,
   presentCount: 1, lateCount: 0, absentCount: 0, lastAttendedOn: '2026-10-01',
 };
-const row = makeYouthProfile({ cohorts: [participation] });
+const row = makeYouthProfile({ programCycles: [participation] });
 
 const sortChanges: Array<[YouthSortKey, Partial<YouthProfile>]> = [
   ['firstName', { firstName: 'Other' }],
   ['lastName', { lastName: 'Other' }],
   ['dateOfBirth', { dateOfBirth: '2012-01-01' }],
   ['school', { schoolName: 'Other' }],
-  ['program', { cohorts: [{ ...participation, programName: 'Other' }] }],
+  ['program', { programCycles: [{ ...participation, programName: 'Other' }] }],
   ['status', { status: 'inactive' }],
 ];
 
@@ -40,7 +40,7 @@ it('ignores active filter and search changes outside the sort column', () => {
   renderHook(() => useYouthTableData(filters, { key, direction: 'desc' }));
   expect(vi.mocked(useInfiniteListQuery).mock.calls[0][0].ordering?.direction).toBe('desc');
   const getValue = vi.mocked(useInfiniteListQuery<YouthProfile>).mock.calls[0][0].ordering!.getValue;
-  const changedRows: YouthProfile[] = [{ ...row, schoolName: 'Other' }, { ...row, cohorts: [{ ...participation, cycleId: 'other' }] }, { ...row, cohorts: [{ ...participation, programId: 'other' }] }, { ...row, cohorts: [{ ...participation, withdrawnOn: '2026-10-02' }] }];
+  const changedRows: YouthProfile[] = [{ ...row, schoolName: 'Other' }, { ...row, programCycles: [{ ...participation, cycleId: 'other' }] }, { ...row, programCycles: [{ ...participation, programId: 'other' }] }, { ...row, programCycles: [{ ...participation, withdrawnOn: '2026-10-02' }] }];
 
   for (const changed of changedRows) expect(getValue(changed)).toEqual(getValue(row));
   expect(getValue({ ...row, contacts: [{ id: 'contact', phoneNumber: '4165550100', type: 'parent' }] })).toEqual(getValue(row));
@@ -49,16 +49,16 @@ it('ignores active filter and search changes outside the sort column', () => {
 it('uses the first raw program name among current enrollments before case normalization', () => {
   renderHook(() => useYouthTableData({}, { key: 'program', direction: 'asc' }));
   const getValue = vi.mocked(useInfiniteListQuery<YouthProfile>).mock.calls[0][0].ordering!.getValue;
-  const cohorts = [
+  const programCycles = [
     { ...participation, programName: 'apple' },
     { ...participation, programName: 'Zoo' },
     { ...participation, programName: 'Aged out', withdrawnOn: '2026-10-02' },
     { ...participation, programName: 'Attended only', enrolledOn: null },
   ];
 
-  expect(getValue({ ...row, cohorts })).toBe('zoo');
-  expect(getValue({ ...row, cohorts: [] })).toBe('');
-  expect(getValue({ ...row, cohorts: [{ ...participation, programName: '\u{10000}' }, { ...participation, programName: '\ue000' }] })).toBe('\ue000');
+  expect(getValue({ ...row, programCycles })).toBe('zoo');
+  expect(getValue({ ...row, programCycles: [] })).toBe('');
+  expect(getValue({ ...row, programCycles: [{ ...participation, programName: '\u{10000}' }, { ...participation, programName: '\ue000' }] })).toBe('\ue000');
 });
 
 it('normalizes nullable school and date values like the server', () => {

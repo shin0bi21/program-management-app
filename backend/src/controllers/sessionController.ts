@@ -7,8 +7,8 @@ import { listSessions } from '../services/programming/sessions/sessionListServic
 import { getSessionRoster, setSessionAttendance } from '../services/programming/sessions/sessionAttendanceService';
 import { createSessionNote, deleteSessionNote, getSessionNotes, unlinkYouthFromSessionNote, updateSessionNote } from '../services/programming/sessions/sessionNoteService';
 import { createSessionAttachment, deleteSessionAttachment, getSessionAttachmentFile, getSessionAttachments, updateSessionAttachment } from '../services/programming/sessions/sessionAttachmentService';
-import type { CreateProgramSessionInput, CreateSessionInput, CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, GenerateSessionsInput, SetAttendanceInput, UpdateSessionNoteInput, UpdateSessionInput } from '../validation/cohortSchemas';
-import type { SessionListQuery } from '../validation/cohortSchemas';
+import type { CreateProgramSessionInput, CreateSessionInput, CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, GenerateSessionsInput, SetAttendanceInput, UpdateSessionNoteInput, UpdateSessionInput } from '../validation/programmingSchemas';
+import type { SessionListQuery } from '../validation/programmingSchemas';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 
@@ -30,7 +30,7 @@ export const handleCreateProgramSession = async (req: Request, res: Response) =>
 };
 
 export const handleCreateSession = async (req: Request, res: Response) => {
-  res.status(201).json(await createSession(req.params.cohortId, req.body as CreateSessionInput, actor(req)));
+  res.status(201).json(await createSession(req.params.programId, req.params.cycleId, req.body as CreateSessionInput, actor(req)));
 };
 
 export const handleMoveSessionDate = async (req: Request, res: Response) => {
@@ -39,7 +39,7 @@ export const handleMoveSessionDate = async (req: Request, res: Response) => {
 
 export const handleGenerateSessions = async (req: Request, res: Response) => {
   res.status(201).json(await generateSessions(
-    req.params.cohortId,
+    req.params.programId, req.params.cycleId,
     req.body as GenerateSessionsInput,
     actor(req),
   ));

@@ -24,5 +24,5 @@ it('shows failed assignment loading without presenting unchecked cycles as saved
   render(<ProgramCyclesModal {...props} />);
   expect(screen.getByRole('alert')).toHaveTextContent('Assignments unavailable');
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Save Assigned Cycles' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 });

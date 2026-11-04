@@ -57,7 +57,7 @@ describe('AccountModal program assignments', () => {
     await user.type(screen.getByLabelText('Email *'), 'manager@example.com');
     await user.click(screen.getByRole('button', { name: 'Role' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Project Manager' }));
-    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith(expect.objectContaining({
       role: 'project_manager', email: 'manager@example.com',
@@ -82,7 +82,7 @@ describe('AccountModal program assignments', () => {
     await user.type(screen.getByLabelText('Email *'), 'sam@example.com');
     await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
     await user.click(screen.getByRole('checkbox', { name: 'Drop In' }));
-    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith({
       firstName: 'Sam',
@@ -123,7 +123,7 @@ describe('AccountModal program assignments', () => {
     expect(screen.getByRole('checkbox', { name: 'Job Readiness' })).not.toBeChecked();
     await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
     await user.click(screen.getByRole('checkbox', { name: 'Job Readiness' }));
-    await user.click(screen.getByRole('button', { name: 'Update' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(updateAccount).toHaveBeenCalledWith({
       id: '33333333-3333-4333-8333-333333333333',
@@ -165,7 +165,7 @@ describe('AccountModal program assignments', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Admin' }));
 
     expect(screen.getByRole('checkbox', { name: 'Soft Skills' })).toBeChecked();
-    await user.click(screen.getByRole('button', { name: 'Send Invite' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(inviteAccount).toHaveBeenCalledWith(expect.objectContaining({
       role: 'admin',
       programIds: [softSkillsId],

@@ -7,8 +7,8 @@ import { inviteYouthAccount } from '../services/accounts/accountService';
 import type { SetYouthContactsInput, YouthQuery } from '../validation/youthSchemas';
 import { deleteYouthProfileNote, getYouthProfileNotes, setYouthProfileNote } from '../services/youth/youthProfileNoteService';
 import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
-import { getYouthCohortAttendance, setYouthCohortAttendance } from '../services/youth/youthAttendanceService';
-import type { SetYouthCohortAttendanceInput } from '../validation/youthSchemas';
+import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../services/youth/youthAttendanceService';
+import type { SetYouthProgramCycleAttendanceInput } from '../validation/youthSchemas';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
   const filters = req.query as unknown as YouthQuery;
@@ -36,17 +36,18 @@ export const handleGetYouthSessionNotes = async (req: Request, res: Response) =>
   res.json(await listSessionNotesForYouth(req.params.id, actor));
 };
 
-export const handleGetYouthCohortAttendance = async (req: Request, res: Response) => {
+export const handleGetYouthProgramCycleAttendance = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
-  res.json(await getYouthCohortAttendance(req.params.id, req.params.cohortId, actor));
+  res.json(await getYouthProgramCycleAttendance(req.params.id, req.params.programId, req.params.cycleId, actor));
 };
 
-export const handleSetYouthCohortAttendance = async (req: Request, res: Response) => {
+export const handleSetYouthProgramCycleAttendance = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
-  res.json(await setYouthCohortAttendance(
+  res.json(await setYouthProgramCycleAttendance(
     req.params.id,
-    req.params.cohortId,
-    req.body as SetYouthCohortAttendanceInput,
+    req.params.programId,
+    req.params.cycleId,
+    req.body as SetYouthProgramCycleAttendanceInput,
     actor,
   ));
 };

@@ -4,7 +4,7 @@ import { deleteProgramCycle, getProgramCycles, setProgramCycle } from '../servic
 
 import { listCycles } from '../services/programming/cycles/cycleListService';
 
-import type { SetProgramCycleInput, CycleListQuery } from '../validation/cohortSchemas';
+import type { SetProgramCycleInput, CycleListQuery } from '../validation/programmingSchemas';
 
 const actor = (req: Request) => (req as AuthRequest).user!;
 

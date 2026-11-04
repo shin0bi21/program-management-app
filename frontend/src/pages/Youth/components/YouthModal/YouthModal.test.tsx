@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
 import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
@@ -44,6 +44,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {
       isOpen={true}
       onClose={vi.fn()}
       onSuccess={vi.fn()}
+      onManageSchool={vi.fn()}
       {...props}
     />
   );
@@ -75,7 +76,7 @@ describe('YouthModal', () => {
       renderModal({ youthData: makeYouthProfile(), mode: 'contact' });
 
       expect(screen.getByRole('heading', { name: 'Primary Contact' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Save Contact' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'General Information' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Address/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('School')).not.toBeInTheDocument();
@@ -90,7 +91,7 @@ describe('YouthModal', () => {
     });
 
     it('shows an existing account email as read-only in account mode', () => {
-      renderModal({ showLoginEmail: true, youthData: makeYouthProfile({ account: { email: 'youth@example.com', status: 'active' } }) });
+      renderModal({ inviteYouth: true, youthData: makeYouthProfile({ account: { email: 'youth@example.com', status: 'active' } }) });
       expect(screen.getByLabelText('Login Email')).toHaveValue('youth@example.com');
       expect(screen.getByLabelText('Login Email')).toBeDisabled();
     });
@@ -116,14 +117,43 @@ describe('YouthModal', () => {
       expect(screen.getByRole('menuitem', { name: 'Delete Central High' })).toBeInTheDocument();
     });
 
-    it('shows only the school action dialog while managing a school', () => {
-      renderModal();
+    it('delegates school actions and accepts the new school selection', async () => {
+      const onManageSchool = vi.fn();
+      renderModal({ onManageSchool });
+      fillRequiredFields();
+
       fireEvent.click(screen.getByRole('button', { name: 'School' }));
       fireEvent.click(screen.getByRole('menuitem', { name: '+ Add school' }));
 
-      expect(screen.getAllByRole('dialog')).toHaveLength(1);
-      expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
-      expect(screen.queryByRole('dialog', { name: 'Add Youth Profile' })).not.toBeInTheDocument();
+      expect(onManageSchool).toHaveBeenCalledWith({ type: 'add' }, {
+        schoolId: '', onChange: expect.any(Function),
+      });
+      expect(screen.queryByRole('dialog', { name: 'Add School' })).not.toBeInTheDocument();
+
+      act(() => onManageSchool.mock.calls[0][1].onChange('school-new'));
+      submitForm();
+
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-new' })));
+    });
+
+    it('preserves an edited profile draft while its dialog is suspended', () => {
+      const youthData = makeYouthProfile();
+      const props = { isOpen: true, youthData, onClose: vi.fn(), onSuccess: vi.fn() };
+      const { rerender } = renderModal(props);
+      fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Unsaved name' } });
+
+      rerender(<YouthModal {...props} suspended />);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      rerender(<YouthModal {...props} />);
+      expect(screen.getByLabelText('First Name *')).toHaveValue('Unsaved name');
+    });
+
+    it('omits school management when the caller does not supply a workflow', () => {
+      renderModal({ onManageSchool: undefined });
+      fireEvent.click(screen.getByRole('button', { name: 'School' }));
+
+      expect(screen.queryByRole('menuitem', { name: '+ Add school' })).not.toBeInTheDocument();
     });
   });
 
@@ -227,7 +257,7 @@ describe('YouthModal', () => {
     });
 
     it('includes login email when inviting during youth creation', async () => {
-      renderModal({ showLoginEmail: true });
+      renderModal({ inviteYouth: true });
       fillRequiredFields();
       fireEvent.change(screen.getByLabelText('Login Email'), { target: { value: 'new-youth@example.com' } });
       submitForm();
@@ -307,7 +337,7 @@ describe('YouthModal', () => {
       ]));
     });
 
-    it('does not submit the cohort-derived status when updating', async () => {
+    it('does not submit the programCycle-derived status when updating', async () => {
       const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' });
       renderModal({ youthData: profile });
       submitForm();

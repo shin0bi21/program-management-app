@@ -28,13 +28,13 @@ describe('ProgramModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('saves No as enrollmentRequired false', async () => {
-    vi.mocked(updateProgram).mockResolvedValue({ program: { ...program, enrollmentRequired: false }, updatedCohorts: [], removedCohortIds: [], createdCohortIds: [] });
+    vi.mocked(updateProgram).mockResolvedValue({ program: { ...program, enrollmentRequired: false }, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     const user = userEvent.setup();
     render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Enrollment Required' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'No' }));
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(updateProgram).toHaveBeenCalledWith(
       program.id,
@@ -47,7 +47,7 @@ describe('ProgramModal', () => {
     const user = userEvent.setup();
     render(<ProgramModal isOpen program={program} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const nameInput = screen.getByRole('textbox', { name: 'Program Name' });
     await waitFor(() => expect(nameInput.closest('form')).toHaveAttribute('aria-busy', 'true'));
@@ -58,7 +58,7 @@ describe('ProgramModal', () => {
     expect(screen.getByRole('button', { name: 'Session Timezone' })).toBeDisabled();
     expect(screen.getByRole('spinbutton', { name: 'Minimum Age' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Enrollment Required' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 });

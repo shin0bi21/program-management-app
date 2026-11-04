@@ -1,8 +1,8 @@
 import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import type { CohortSession } from '../../../types';
+import type { ProgramSession } from '../../../types';
 
-const getAttendanceSummary = (session: CohortSession | null) => {
+const getAttendanceSummary = (session: ProgramSession | null) => {
   if (!session || session.attendanceRate === null) return null;
   if (!session.enrollmentRequired) return session.attendanceMarkedCount ? `${session.attendanceMarkedCount} check-ins` : null;
   return `${session.attendedCount}/${session.attendanceMarkedCount}`;
@@ -10,7 +10,7 @@ const getAttendanceSummary = (session: CohortSession | null) => {
 
 export default function SessionAttendanceDashboardCard({
   session, canWrite, onManage,
-}: { session: CohortSession | null; canWrite: boolean; onManage: (session: CohortSession) => void }) {
+}: { session: ProgramSession | null; canWrite: boolean; onManage: (session: ProgramSession) => void }) {
   const summary = getAttendanceSummary(session);
   return <DashboardCard
     title="Attendance"

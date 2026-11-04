@@ -17,7 +17,7 @@ const cycles: ProgramCycle[] = [
   { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
 ];
 const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
-const tableKeys = ['program', 'cohort', 'theme', 'date', 'time', 'type', 'status'] as const;
+const tableKeys = ['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'] as const;
 
 describe('useSessionControls', () => {
   beforeEach(() => {
@@ -63,6 +63,23 @@ describe('useSessionControls', () => {
       view: 'table', filters: { cycleIds: [], programIds: ['program-1'], statuses: ['completed'] },
     });
     expect(result.current.filters).not.toHaveProperty('cohortId');
+  });
+
+  it('restores the existing cycle column layout saved under its previous internal key', async () => {
+    localStorage.setItem('table-layout:v1:user-1:session-filters', JSON.stringify({
+      columnWidths: { cohort: 240, theme: 180 }, hiddenColumns: ['cohort'],
+    }));
+    preferenceApi.getPreference.mockResolvedValue({ sorting: { key: 'cycle', direction: 'asc' } });
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
+    }), { wrapper: wrapper() });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.table).toMatchObject({
+      sorting: { key: 'cycle', direction: 'asc' },
+      columnWidths: { cycle: 240, theme: 180 }, hiddenColumns: ['cycle'],
+    });
   });
 
   it('offers independent program and cycle filters', async () => {

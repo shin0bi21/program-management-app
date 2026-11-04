@@ -4,9 +4,9 @@ import { renderWithQueryClient as render } from '../../../tests/queryClientTestU
 import YouthReportModal from './YouthReportModal';
 
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
-vi.mock('./youthReport.api', () => ({ getCohortYouthReportPdf: api.getReportPdf }));
+vi.mock('./youthReport.api', () => ({ getProgramCycleYouthReportPdf: api.getReportPdf }));
 
-const cohort = { id: 'cohort-1', programName: 'Soft Skills', name: 'Summer 2026' };
+const programCycle = { programId: 'program-1', cycleId: 'cycle-1', programName: 'Soft Skills', cycleName: 'Summer 2026' };
 
 describe('YouthReportModal', () => {
   beforeEach(() => {
@@ -22,14 +22,14 @@ describe('YouthReportModal', () => {
     });
   });
 
-  it('loads and displays the generated report for the selected cohort and optional youth', async () => {
-    render(<YouthReportModal cohort={cohort} youthId="youth-1" onClose={vi.fn()} />);
+  it('loads and displays the generated report for the selected programCycle and optional youth', async () => {
+    render(<YouthReportModal programCycle={programCycle} youthId="youth-1" onClose={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Summer 2026 Youth Report' })).toBeInTheDocument();
     expect(await screen.findByTitle('Summer 2026 Youth Report preview')).toHaveAttribute('src', 'blob:youth-report');
     expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveAttribute('href', 'blob:youth-report');
     expect(api.getReportPdf).toHaveBeenCalledWith(
-      'cohort-1',
+      programCycle,
       { youthId: 'youth-1' },
       { signal: expect.any(AbortSignal) },
     );
@@ -38,24 +38,24 @@ describe('YouthReportModal', () => {
   it('shows an error when the report cannot be loaded', async () => {
     api.getReportPdf.mockRejectedValue(new Error('failed'));
 
-    render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
+    render(<YouthReportModal programCycle={programCycle} onClose={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the youth report.');
   });
 
   it('revokes generated URLs when the report target changes and on unmount', async () => {
-    const nextCohort = { ...cohort, id: 'cohort-2', name: 'Fall 2026' };
+    const nextProgramCycle = { ...programCycle, cycleId: 'cycle-2', cycleName: 'Fall 2026' };
     api.getReportPdf
       .mockResolvedValueOnce(new Blob(['first'], { type: 'application/pdf' }))
       .mockResolvedValueOnce(new Blob(['second'], { type: 'application/pdf' }));
     vi.mocked(URL.createObjectURL)
       .mockReturnValueOnce('blob:first-report')
       .mockReturnValueOnce('blob:second-report');
-    const view = render(<YouthReportModal cohort={cohort} onClose={vi.fn()} />);
+    const view = render(<YouthReportModal programCycle={programCycle} onClose={vi.fn()} />);
 
     expect(await screen.findByTitle('Summer 2026 Youth Report preview')).toHaveAttribute('src', 'blob:first-report');
 
-    view.rerender(<YouthReportModal cohort={nextCohort} onClose={vi.fn()} />);
+    view.rerender(<YouthReportModal programCycle={nextProgramCycle} onClose={vi.fn()} />);
 
     expect(await screen.findByTitle('Fall 2026 Youth Report preview')).toHaveAttribute('src', 'blob:second-report');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:first-report');

@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import useSessionSelection from './useSessionSelection';
 
 function Router({ children }: PropsWithChildren) {
@@ -15,7 +15,7 @@ function Router({ children }: PropsWithChildren) {
 
 describe('useSessionSelection', () => {
   it('resolves the selected record from the active view owner', () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
 
     act(() => result.current.setSelectedTableSession(session));
@@ -26,8 +26,8 @@ describe('useSessionSelection', () => {
   });
 
   it('replaces selected records from an authoritative mutation without changing selection', () => {
-    const session = makeCohortSession();
-    const saved = makeCohortSession({ theme: 'Updated theme', attendedCount: 3 });
+    const session = makeProgramSession();
+    const saved = makeProgramSession({ theme: 'Updated theme', attendedCount: 3 });
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
     act(() => {
       result.current.setSelectedTableSession(session);
@@ -42,7 +42,7 @@ describe('useSessionSelection', () => {
   });
 
   it('clears a removed selected session from every selection owner', () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
 
     act(() => {
@@ -57,8 +57,8 @@ describe('useSessionSelection', () => {
   });
 
   it('resolves a clicked table session immediately when switching records', () => {
-    const first = makeCohortSession();
-    const next = makeCohortSession({ id: 'session-2' });
+    const first = makeProgramSession();
+    const next = makeProgramSession({ id: 'session-2' });
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
 
     act(() => result.current.selectSession(first));
@@ -69,7 +69,7 @@ describe('useSessionSelection', () => {
   });
 
   it('clears resolved records when its buffered record disappears or is removed', () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
 
     act(() => result.current.selectCalendarSession(session));

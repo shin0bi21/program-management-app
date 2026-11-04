@@ -1,0 +1,24 @@
+.homepage-management-page {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.homepage-management-page .page-table {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .homepage-management-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .homepage-management-page .page-table {
+    flex: initial;
+  }
+}

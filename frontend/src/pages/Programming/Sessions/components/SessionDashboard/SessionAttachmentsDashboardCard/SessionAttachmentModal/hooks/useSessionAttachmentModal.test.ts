@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createSessionAttachment, updateSessionAttachment } from '../../../../../sessions.api';
 import type { SessionAttachment } from '../../../../../types';
-import { makeCohortSession } from '../../../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../../tests/queryClientTestUtils';
 import { useSessionAttachmentModal } from './useSessionAttachmentModal';
 
@@ -31,7 +31,7 @@ describe('useSessionAttachmentModal', () => {
     vi.mocked(createSessionAttachment).mockResolvedValue({} as never);
     const onSaved = vi.fn();
     const wrapper = createQueryClientWrapper(createTestQueryClient());
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(() => useSessionAttachmentModal({
       queryKey: ['sessions'], session, attachment: null, onSaved,
     }), { wrapper });
@@ -54,7 +54,7 @@ describe('useSessionAttachmentModal', () => {
   });
 
   it('initializes an edit target and sends metadata without a file', async () => {
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const attachment = {
       id: 'attachment-1',
       sessionId: session.id,
@@ -85,7 +85,7 @@ describe('useSessionAttachmentModal', () => {
       .mockRejectedValueOnce(new Error('Upload failed'))
       .mockResolvedValueOnce({} as never);
     const wrapper = createQueryClientWrapper(createTestQueryClient());
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const onSaved = vi.fn();
     const { result } = renderHook(() => useSessionAttachmentModal({
       queryKey: ['sessions'], session, attachment: null, onSaved,
@@ -107,7 +107,7 @@ describe('useSessionAttachmentModal', () => {
     }));
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const wrapper = createQueryClientWrapper(createTestQueryClient());
-    const session = makeCohortSession();
+    const session = makeProgramSession();
     const { result } = renderHook(() => useSessionAttachmentModal({
       queryKey: ['sessions'],
       session,

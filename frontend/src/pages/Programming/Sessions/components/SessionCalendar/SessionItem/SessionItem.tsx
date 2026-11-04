@@ -2,14 +2,14 @@ import type { ItemCalendarProps } from '../../../../../../common/components/Time
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
-import type { CohortSession } from '../../../types';
+import type { ProgramSession } from '../../../types';
 import './SessionItem.css';
 
 const statusLabels = { upcoming: 'Upcoming', completed: 'Completed', cancelled: 'Cancelled' } as const;
 
 export default function SessionItem<TRow, TItemData>({ calendar, session, timezone = 'America/Toronto', selected = false, onEdit, onDelete }: {
   calendar?: ItemCalendarProps<TRow, TItemData>;
-  session: CohortSession;
+  session: ProgramSession;
   timezone?: string;
   selected?: boolean;
   onEdit?: () => void;
@@ -25,7 +25,7 @@ export default function SessionItem<TRow, TItemData>({ calendar, session, timezo
     calendar={calendar}
     id={session.id}
     selected={selected}
-    ariaLabel={`${session.theme}, ${session.programName}, ${session.cohortName}, ${session.sessionTypeName}, ${startsAt} to ${endsAt}, ${status}`}
+    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionTypeName}, ${startsAt} to ${endsAt}, ${status}`}
     summary={session.theme}
     detailTitle={<span className="session-item__detail-title">
       <span>{session.theme}</span>
@@ -36,7 +36,7 @@ export default function SessionItem<TRow, TItemData>({ calendar, session, timezo
     </span>}
     details={[
       { label: 'Program', value: session.programName },
-      { label: 'Cohort', value: session.cohortName },
+      { label: 'Cycle', value: session.cycleName },
       { label: 'Date', value: dateRange, sectionStart: true },
       ...(session.description ? [{ label: 'Description', value: session.description, multiline: true }] : []),
     ]}

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionAttachment } from '../../../types';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentsDashboardCard from './SessionAttachmentsDashboardCard';
 
@@ -30,7 +30,7 @@ vi.mock('./SessionAttachmentViewerModal/SessionAttachmentViewerModal', () => ({
   },
 }));
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 
 const attachment: SessionAttachment = {
   id: 'attachment-1',
@@ -106,7 +106,7 @@ describe('SessionAttachmentsDashboardCard', () => {
     await screen.findByText(attachment.title);
     fireEvent.click(screen.getByRole('button', { name: `Delete ${attachment.title}` }));
     const deleteModal = screen.getByRole('heading', { name: 'Delete Attachment' }).closest('.modal-container');
-    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(deleteModal as HTMLElement).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(api.deleteSessionAttachment).toHaveBeenCalledWith(
       session.id,

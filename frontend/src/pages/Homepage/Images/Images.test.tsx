@@ -1,0 +1,105 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import Images from './Images';
+
+const homepage = vi.hoisted(() => ({
+  images: [{
+    id: 'image-1',
+    imageUrl: '/programming/adventure_bay.png',
+    mobileUrl: '/programming/adventure_bay-mobile.webp',
+    thumbnailUrl: '/programming/adventure_bay.png',
+    altText: 'Youth group trip',
+    caption: 'Adventure Bay trip.',
+    displayOrder: 0,
+    createdAt: '2026-07-27T12:00:00.000Z',
+    updatedAt: '2026-07-27T12:00:00.000Z',
+  }],
+  loading: false,
+  error: null as string | null,
+  refresh: vi.fn(),
+  deleteImage: vi.fn(),
+  reorderImages: vi.fn(),
+  reordering: false,
+}));
+
+const auth = vi.hoisted(() => ({ permissions: ['read:homepage', 'write:homepage'] as string[] }));
+vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
+
+vi.mock('./hooks/useManagedHomepage', () => ({
+  useManagedHomepage: () => homepage,
+}));
+
+const renderPage = () => render(
+  <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Images />
+  </MemoryRouter>,
+);
+
+describe('Images', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    homepage.loading = false;
+    homepage.error = null;
+    homepage.reordering = false;
+    auth.permissions = ['read:homepage', 'write:homepage'];
+  });
+
+  // Rendered states.
+
+  it('keeps homepage content readable and removes write entry points for read-only users', () => {
+    auth.permissions = ['read:homepage'];
+    renderPage();
+
+    expect(screen.getByText('Adventure Bay trip.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions for Adventure Bay trip.' })).not.toBeInTheDocument();
+  });
+
+  it('does not expose write controls while an image reorder is saving', () => {
+    homepage.reordering = true;
+    renderPage();
+
+    expect(screen.getByRole('button', { name: '+ Add' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'More actions for Adventure Bay trip.' })).toBeDisabled();
+    expect(screen.getByRole('listitem')).toHaveAttribute('draggable', 'false');
+  });
+
+  it('reports page-owned errors through the shared overlay with a retry action', async () => {
+    const user = userEvent.setup();
+    homepage.error = 'Could not load homepage images';
+    renderPage();
+
+    const errorOverlay = screen.getByRole('alert');
+    expect(errorOverlay).toHaveTextContent('Could not load homepage images');
+    await user.click(within(errorOverlay).getByRole('button', { name: 'Retry' }));
+
+    expect(homepage.refresh).toHaveBeenCalledOnce();
+  });
+
+  // Commands and dialogs.
+  it('opens the page-owned image editor from the page header', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const header = screen.getByRole('banner');
+    await user.click(within(header).getByRole('button', { name: '+ Add' }));
+
+    expect(screen.getByRole('dialog', { name: 'Manage Images' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Image')).toBeInTheDocument();
+  });
+
+  it('connects confirmed deletion to the managed homepage hook', async () => {
+    const user = userEvent.setup();
+    homepage.deleteImage.mockResolvedValue(undefined);
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Adventure Bay trip.' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete Image' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    expect(homepage.deleteImage).toHaveBeenCalledWith('image-1');
+  });
+});

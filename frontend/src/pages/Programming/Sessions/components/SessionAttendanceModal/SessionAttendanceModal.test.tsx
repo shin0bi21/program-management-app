@@ -2,7 +2,7 @@ import { act, screen } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CohortSession } from '../../types';
+import type { ProgramSession } from '../../types';
 import SessionAttendanceModal from './SessionAttendanceModal';
 
 const api = vi.hoisted(() => ({
@@ -13,14 +13,13 @@ const api = vi.hoisted(() => ({
 
 vi.mock('../../sessions.api', () => api);
 
-const session: CohortSession = {
+const session: ProgramSession = {
       id: 'session-1',
-      cohortId: 'cohort-1',
-      cycleId: 'cycle-1',
+  cycleId: 'cycle-1',
       sessionTypeId: 'type-regular',
       sessionTypeName: 'Regular',
   theme: 'Communication',
-  cohortName: 'Summer 2026',
+  cycleName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
   enrollmentRequired: true,
@@ -64,7 +63,7 @@ describe('SessionAttendanceModal', () => {
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
     expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
   it('checks in an existing youth and locks the pending attendance draft', async () => {
@@ -98,14 +97,14 @@ describe('SessionAttendanceModal', () => {
     await user.click(await screen.findByRole('button', { name: 'Check in' }));
     expect(screen.getByText('Jordan Drop In')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Save Attendance' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(api.setSessionAttendance).toHaveBeenCalledOnce();
     expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
     screen.getAllByRole('button', { name: 'Remove' }).forEach(button => {
       expect(button).toBeDisabled();
     });
-    expect(screen.getByRole('button', { name: 'Save Attendance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
 
     await act(async () => finishSave([]));

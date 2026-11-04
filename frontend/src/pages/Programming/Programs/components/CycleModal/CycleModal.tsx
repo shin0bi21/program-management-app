@@ -41,7 +41,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
       title={cycle ? 'Edit Cycle' : 'Add Cycle'}
       status={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
-      footer={<ModalFormFooter formId="cycle-form" submitLabel={cycle ? 'Save Changes' : 'Add Cycle'} submitStatus={workflow.submitStatus} submitDisabled={!workflow.assignmentsReady} onClose={onClose} />}
+      footer={<ModalFormFooter formId="cycle-form" submitStatus={workflow.submitStatus} submitDisabled={!workflow.assignmentsReady} onClose={onClose} />}
     >
       <form
         key={cycle?.id ?? 'new'}

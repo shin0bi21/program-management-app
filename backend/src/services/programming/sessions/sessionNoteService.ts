@@ -5,7 +5,7 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionNoteInput,
   UpdateSessionNoteInput,
-} from '../../../validation/cohortSchemas';
+} from '../../../validation/programmingSchemas';
 
 export async function getSessionNotes(sessionId: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, sessionId);
@@ -49,9 +49,8 @@ export async function createSessionNote(
     const trx = asTransactionSql(tx);
     const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
       SELECT cs.id, p.enrollment_required
-      FROM cohort_sessions cs
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      INNER JOIN programs p ON p.id = pc.program_id
+      FROM program_sessions cs
+      INNER JOIN programs p ON p.id = cs.program_id
       WHERE cs.id = ${sessionId}
       FOR UPDATE OF cs
     `;
@@ -110,9 +109,8 @@ export async function updateSessionNote(
     const notes = await trx<{ id: string; enrollmentRequired: boolean }[]>`
       SELECT sn.id, p.enrollment_required
       FROM session_notes sn
-      INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      INNER JOIN programs p ON p.id = pc.program_id
+      INNER JOIN program_sessions cs ON cs.id = sn.session_id
+      INNER JOIN programs p ON p.id = cs.program_id
       WHERE sn.id = ${noteId}
         AND sn.session_id = ${sessionId}
       FOR UPDATE OF sn
@@ -187,7 +185,7 @@ export async function unlinkYouthFromSessionNote(
 export async function listSessionNotesForYouth(
   youthId: string,
   actor: AccessTokenPayload,
-  cohortId?: string,
+  programCycle?: { programId: string; cycleId: string },
 ) {
   const profiles = await sql`SELECT 1 FROM youth_profiles WHERE user_id = ${youthId} LIMIT 1`;
   if (!profiles.length) throw new NotFoundError('Youth profile not found');
@@ -196,8 +194,8 @@ export async function listSessionNotesForYouth(
     SELECT
       sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
-      cs.theme AS session_theme, cs.starts_at, pc.id AS cohort_id,
-      cycle.name AS cohort_name, p.id AS program_id, p.name AS program_name, p.enrollment_required,
+      cs.theme AS session_theme, cs.starts_at, cs.cycle_id,
+      cycle.name AS cycle_name, p.id AS program_id, p.name AS program_name, p.enrollment_required,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(
@@ -211,16 +209,15 @@ export async function listSessionNotesForYouth(
     FROM session_notes sn
     INNER JOIN session_note_has_youth selected_youth
       ON selected_youth.note_id = sn.id AND selected_youth.youth_id = ${youthId}
-    INNER JOIN cohort_sessions cs ON cs.id = sn.session_id
-    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-    INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
-    INNER JOIN programs p ON p.id = pc.program_id
+    INNER JOIN program_sessions cs ON cs.id = sn.session_id
+    INNER JOIN program_cycles cycle ON cycle.id = cs.cycle_id
+    INNER JOIN programs p ON p.id = cs.program_id
     LEFT JOIN users author ON author.id = sn.created_by
     LEFT JOIN session_note_has_youth linked_note ON linked_note.note_id = sn.id
     LEFT JOIN users linked_youth ON linked_youth.id = linked_note.youth_id
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
-      AND ${cohortId ? sql`cs.cohort_id = ${cohortId}` : sql`TRUE`}
-    GROUP BY sn.id, author.id, cs.id, pc.id, cycle.id, p.id
+      AND ${programCycle ? sql`cs.program_id = ${programCycle.programId} AND cs.cycle_id = ${programCycle.cycleId}` : sql`TRUE`}
+    GROUP BY sn.id, author.id, cs.id, cycle.id, p.id
     ORDER BY cs.starts_at DESC, sn.created_at DESC
   `;
 }
@@ -242,8 +239,8 @@ async function assertYouthEligibility(
       `
     : await trx<{ youthId: string }[]>`
         SELECT ce.youth_id
-        FROM cohort_sessions cs
-        INNER JOIN cohort_enrollments ce ON ce.cohort_id = cs.cohort_id
+        FROM program_sessions cs
+        INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
         WHERE cs.id = ${sessionId}
           AND ce.youth_id = ANY(${sql.array(youthIds)}::uuid[])
           AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date

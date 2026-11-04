@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import SessionNoteModal from './SessionNoteModal';
 
@@ -16,7 +16,7 @@ vi.mock('../../sessions.api', () => ({
   updateSessionNote: api.updateSessionNote,
 }));
 
-const session = makeCohortSession({
+const session = makeProgramSession({
   sessionTypeId: 'type-regular',
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',
@@ -63,7 +63,7 @@ describe('SessionNoteModal', () => {
   it('keeps submission available while the optional roster loads', () => {
     api.getSessionRoster.mockReturnValue(new Promise(() => {}));
     render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Add Note' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     expect(screen.getByText('Loading youth…')).toBeInTheDocument();
   });
 
@@ -93,12 +93,12 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), {
       target: { value: 'Pending note' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledOnce());
 
     expect(screen.getByRole('textbox', { name: 'Note *' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add Note' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
     await act(async () => resolve({}));
   });

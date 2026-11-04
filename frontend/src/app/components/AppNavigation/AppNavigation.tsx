@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock, faHouse } from '@fortawesome/free-solid-svg-icons';
 import logoUrl from '../../../assets/logo.webp';
 import logo160Url from '../../../assets/logo-160.webp';
 import logo320Url from '../../../assets/logo-320.webp';
@@ -125,6 +125,16 @@ export default function AppNavigation() {
                 </button>
               )}
 
+              {canManageHomepage && (
+                <button
+                  onClick={() => go('/homepage/images')}
+                  className={`sidebar-link${active.homepage ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
+                  <span>Homepage</span>
+                </button>
+              )}
+
               <button
                 ref={refs.settings}
                 onClick={() => toggleMenu('settings')}
@@ -212,16 +222,7 @@ export default function AppNavigation() {
               onClick={() => go('/settings/users')}
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
-              Manage Users
-            </button>
-          )}
-          {canManageHomepage && (
-            <button
-              role="menuitem"
-              onClick={() => go('/homepage/manage')}
-              className={`settings-flyout-item${isActive('/homepage/manage') ? ' active' : ''}`}
-            >
-              Manage Homepage
+              Users
             </button>
           )}
         </FloatingMenuPanel>

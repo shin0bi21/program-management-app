@@ -19,7 +19,6 @@ describe('NoteModal', () => {
         { value: 'health', label: 'Health' },
       ]}
       details="Current note"
-      submitLabel="Save"
       submitStatus="idle"
       onCategoryChange={onCategoryChange}
       onDetailsChange={onDetailsChange}
@@ -48,7 +47,6 @@ describe('NoteModal', () => {
       category="new"
       categoryOptions={[{ value: 'new', label: 'New' }]}
       details="Required reason"
-      submitLabel="Save"
       submitStatus="submitting"
       onCategoryChange={vi.fn()}
       onDetailsChange={vi.fn()}

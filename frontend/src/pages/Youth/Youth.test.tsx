@@ -1,11 +1,13 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
+import type { SchoolAction, SchoolSelection } from '../../common/features/SchoolModal/types';
 import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
 const mockUseYouthTableData = vi.fn();
+const schoolSelectionChanged = vi.hoisted(() => vi.fn());
 const youthApi = vi.hoisted(() => ({
   getYouthProfileNotes: vi.fn(),
   setYouthProfileNote: vi.fn(),
@@ -20,6 +22,9 @@ vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
   default: (filters: unknown) => mockUseYouthTableData(filters),
 }));
 vi.mock('./youth.api', () => youthApi);
+vi.mock('../../common/features/SchoolModal/schoolModal.api', () => ({
+  createSchool: vi.fn().mockResolvedValue({ id: 'school-new', name: 'Saved School' }),
+}));
 vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
@@ -30,21 +35,24 @@ vi.mock('../../common/features/referenceData/hooks/useReferenceData', async impo
   },
 }));
 
-vi.mock('../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn() }));
+vi.mock('../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getSchoolReferences: vi.fn().mockResolvedValue([]) }));
 
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff', permissions: authState.permissions }),
 }));
 
 vi.mock('./components/YouthModal/YouthModal', () => ({
-  default: ({ isOpen, mode, youthData, onSuccess }: {
+  default: ({ isOpen, suspended, onManageSchool, mode, youthData, onSuccess }: {
     isOpen: boolean;
+    suspended?: boolean;
+    onManageSchool?: (action: SchoolAction, selection: SchoolSelection) => void;
     mode?: string;
     youthData?: ReturnType<typeof makeYouthProfile>;
     onSuccess: (profile: ReturnType<typeof makeYouthProfile>) => void;
-  }) => isOpen
+  }) => isOpen && !suspended
     ? <div data-testid="youth-modal">
       {mode ?? 'full'}
+      {onManageSchool && <button onClick={() => onManageSchool({ type: 'add' }, { schoolId: '', onChange: schoolSelectionChanged })}>Manage school</button>}
       {youthData && <button onClick={() => onSuccess({
         ...youthData,
         firstName: 'Authoritative',
@@ -54,13 +62,13 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     : null,
 }));
 vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
-  default: ({ cohort }: { cohort: { name: string } | null }) => cohort
-    ? <div data-testid="youth-attendance-modal">{cohort.name}</div>
+  default: ({ programCycle }: { programCycle: { cycleName: string } | null }) => programCycle
+    ? <div data-testid="youth-attendance-modal">{programCycle.cycleName}</div>
     : null,
 }));
 vi.mock('../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ cohort, youthId }: { cohort: { name: string }; youthId?: string }) => (
-    <div data-testid="youth-report-modal">{cohort.name} · {youthId}</div>
+  default: ({ programCycle, youthId }: { programCycle: { cycleName: string }; youthId?: string }) => (
+    <div data-testid="youth-report-modal">{programCycle.cycleName} · {youthId}</div>
   ),
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
@@ -75,6 +83,7 @@ vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
 describe('Youth', () => {
   beforeEach(() => {
     localStorage.clear();
+    schoolSelectionChanged.mockClear();
     authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
     vi.mocked(getCycleReferences).mockResolvedValue([{
@@ -130,7 +139,7 @@ describe('Youth', () => {
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More actions for Jamie Test' })).toBeInTheDocument();
-    expect(screen.queryByText('Manage Cohorts')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manage ProgramCycles')).not.toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate')).not.toBeInTheDocument();
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
@@ -156,7 +165,7 @@ describe('Youth', () => {
     render(<Youth />);
     fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
     expect(screen.getByLabelText('Search youth')).toHaveValue('Jamie');
-    expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /^Status/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
@@ -187,10 +196,9 @@ describe('Youth', () => {
     mockUseYouthTableData.mockReturnValue({
       rows: [makeYouthProfile({
         lastAttendedOn: '2026-07-21',
-        cohorts: [{
-          id: 'cohort-1',
-    cycleId: 'cycle-1',
-          name: 'Summer 2026',
+        programCycles: [{
+          cycleId: 'cycle-1',
+          cycleName: 'Summer 2026',
           programId: 'program-1',
           programName: 'Soft Skills',
           enrollmentRequired: true,
@@ -233,10 +241,32 @@ describe('Youth', () => {
   });
 
   // Commands and dialogs.
-  it('opens the cohort attendance report filtered to the selected youth', async () => {
+  it('opens a sibling school dialog and returns to the youth form after cancel or save', async () => {
+    render(<Youth />);
+    await screen.findByRole('button', { name: 'Filters' });
+    fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Manage school' }));
+
+    expect(screen.getByRole('dialog', { name: 'Add School' })).toBeInTheDocument();
+    expect(screen.queryByTestId('youth-modal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByTestId('youth-modal')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Add School' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage school' }));
+    fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'New School' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add School' })).not.toBeInTheDocument());
+    expect(screen.getByTestId('youth-modal')).toBeInTheDocument();
+    expect(schoolSelectionChanged).toHaveBeenCalledWith('school-new');
+  });
+
+  it('opens the programCycle attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
-      cohorts: [{
-        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+      programCycles: [{
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
@@ -273,10 +303,10 @@ describe('Youth', () => {
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
   });
 
-  it('opens youth-centric attendance management from a cohort summary', async () => {
+  it('opens youth-centric attendance management from a programCycle summary', async () => {
     const profile = makeYouthProfile({
-      cohorts: [{
-        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+      programCycles: [{
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',

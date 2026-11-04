@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { CohortSession } from '../../types';
+import type { ProgramSession } from '../../types';
 
 export default function useSessionSelection() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [calendarSessions, setCalendarSessions] = useState<CohortSession[]>([]);
-  const [selectedTableSession, setSelectedTableSession] = useState<CohortSession | null>(null);
+  const [calendarSessions, setCalendarSessions] = useState<ProgramSession[]>([]);
+  const [selectedTableSession, setSelectedTableSession] = useState<ProgramSession | null>(null);
   const selectedSessionId = searchParams.get('session') ?? '';
 
   const clearSelectedSession = useCallback(() => {
@@ -16,7 +16,7 @@ export default function useSessionSelection() {
     setSelectedTableSession(null);
   }, [searchParams, setSearchParams]);
 
-  const selectSession = useCallback((session: CohortSession) => {
+  const selectSession = useCallback((session: ProgramSession) => {
     setSelectedTableSession(session);
 
     const next = new URLSearchParams(searchParams);
@@ -24,7 +24,7 @@ export default function useSessionSelection() {
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
-  const selectCalendarSession = useCallback((session: CohortSession) => {
+  const selectCalendarSession = useCallback((session: ProgramSession) => {
     setCalendarSessions(current => current.some(candidate => candidate.id === session.id)
       ? current
       : [...current, session]);
@@ -36,7 +36,7 @@ export default function useSessionSelection() {
     if (selectedSessionId === sessionId) clearSelectedSession();
   }, [clearSelectedSession, selectedSessionId]);
 
-  const syncSelectedSession = useCallback((session: CohortSession) => {
+  const syncSelectedSession = useCallback((session: ProgramSession) => {
     setSelectedTableSession(current => current?.id === session.id ? session : current);
     setCalendarSessions(current => current.map(row => row.id === session.id ? session : row));
   }, []);

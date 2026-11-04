@@ -3,8 +3,8 @@ import { useSchoolReferences } from '../../referenceData/hooks/useReferenceData'
 
 export type { School };
 
-export function useSchools() {
-  const query = useSchoolReferences();
+export function useSchools({ enabled = true }: { enabled?: boolean } = {}) {
+  const query = useSchoolReferences({ enabled });
 
   return {
     schools: query.rows,

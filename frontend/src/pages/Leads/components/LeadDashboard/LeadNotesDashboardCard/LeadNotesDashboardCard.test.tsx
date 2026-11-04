@@ -99,7 +99,7 @@ describe('LeadNotesDashboardCard', () => {
 
     await screen.findByText('Notes (1)');
     fireEvent.click(screen.getByRole('button', { name: 'Delete follow-up note' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(api.deleteLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id));
     expect(await screen.findByText('Notes (0)')).toBeInTheDocument();

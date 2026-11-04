@@ -14,7 +14,7 @@ describe('cycle API', () => {
     const signal = new AbortController().signal;
     getCycleList({ key: 'name', direction: 'asc', cursor: 'next-page', limit: 25 }, { signal });
 
-    expect(apiClient.get).toHaveBeenCalledWith('/cohorts/cycles/list?sort=name&direction=asc&limit=25&cursor=next-page', { signal });
+    expect(apiClient.get).toHaveBeenCalledWith('/cycles/list?sort=name&direction=asc&limit=25&cursor=next-page', { signal });
   });
 
   it('creates, updates, and deletes cycles through the existing endpoints', () => {
@@ -23,8 +23,8 @@ describe('cycle API', () => {
     setProgramCycle(input, 'cycle-1');
     deleteProgramCycle('cycle-1');
 
-    expect(apiClient.post).toHaveBeenCalledWith('/cohorts/cycles', input);
-    expect(apiClient.put).toHaveBeenCalledWith('/cohorts/cycles/cycle-1', input);
-    expect(apiClient.delete).toHaveBeenCalledWith('/cohorts/cycles/cycle-1');
+    expect(apiClient.post).toHaveBeenCalledWith('/cycles', input);
+    expect(apiClient.put).toHaveBeenCalledWith('/cycles/cycle-1', input);
+    expect(apiClient.delete).toHaveBeenCalledWith('/cycles/cycle-1');
   });
 });

@@ -3,14 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
-import type { CohortSession, SessionNote } from '../../../../types';
+import type { ProgramSession, SessionNote } from '../../../../types';
 
 export function useSessionNotes({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
-  session: CohortSession | null;
+  session: ProgramSession | null;
   onMessageChange?: PageMessageChangeHandler;
 }) {
-  const [noteTarget, setNoteTarget] = useState<CohortSession | null>(null);
+  const [noteTarget, setNoteTarget] = useState<ProgramSession | null>(null);
   const [editNote, setEditNote] = useState<SessionNote | null>(null);
   const [detailNote, setDetailNote] = useState<SessionNote | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -42,7 +42,6 @@ export function useSessionNotes({ queryKey, session, onMessageChange }: {
     setConfirmAction({
       title: 'Delete Note',
       message: 'Delete this session note? This cannot be undone.',
-      confirmLabel: 'Delete',
       confirmVariant: 'danger',
       successMessage: 'Session note successfully deleted.',
       onConfirm: async () => {

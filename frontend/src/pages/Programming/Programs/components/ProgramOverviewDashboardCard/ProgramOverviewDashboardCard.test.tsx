@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../../common/features/programs/types';
-import type { ProgramCohort } from '../../../Cohorts/types';
+import type { ProgramCycleAssignment } from '../../types';
 import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
 
 const program: Program = {
@@ -11,34 +11,33 @@ const program: Program = {
 
   enrollmentRequired: true, minAge: null, maxAge: null,
 };
-const cohort: ProgramCohort = {
-  id: 'cohort-1', programId: program.id, programName: program.name,
+const programCycle: ProgramCycleAssignment = {
+  programId: program.id, programName: program.name,
 
   enrollmentRequired: true, minAge: null, maxAge: null,
-  cycleId: 'cycle-1', cycleName: 'Fall', name: 'Weekly art',
-  startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
+  cycleId: 'cycle-1', cycleName: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
   averageAttendance: 75, attendanceAttendedCount: 9,
   attendanceRecordedCount: 12, uniqueAttendeeCount: 10,
 };
-const openCohort: ProgramCohort = {
-  ...cohort, id: 'cohort-2', cycleName: 'Winter', name: 'Drop In art',
+const openProgramCycle: ProgramCycleAssignment = {
+  ...programCycle, cycleId: 'cycle-2', cycleName: 'Winter',
   enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
 };
 const makeProps = () => ({
-  program, cohorts: [cohort, openCohort], canManageRoster: true, canViewYouthReport: true,
+  program, assignments: [programCycle, openProgramCycle], canManageRoster: true, canViewYouthReport: true,
   onManageRoster: vi.fn(), onViewReport: vi.fn(),
 });
 
 describe('ProgramOverviewDashboardCard', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-27T16:00:00Z')); });
   afterEach(() => vi.useRealTimers());
-  it('shows selection, loading, and filtered empty states without cohort actions', () => {
+  it('shows selection, loading, and filtered empty states without current-cycle actions', () => {
     const props = makeProps();
     const { rerender } = render(<ProgramOverviewDashboardCard {...props} program={null} />);
 
     expect(screen.getByRole('heading', { name: 'Program Overview' })).toBeInTheDocument();
-    expect(screen.getByText('Select a program to view its current cohort.')).toBeInTheDocument();
+    expect(screen.getByText('Select a program to view its current cycle.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
 
     rerender(<ProgramOverviewDashboardCard {...props} loading />);
@@ -46,24 +45,24 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
 
-    rerender(<ProgramOverviewDashboardCard {...props} cohorts={[]} />);
+    rerender(<ProgramOverviewDashboardCard {...props} assignments={[]} />);
     expect(screen.getByRole('heading', { name: `${program.name} Overview` })).toBeInTheDocument();
     expect(screen.queryByText(program.description!)).not.toBeInTheDocument();
-    expect(screen.getByText('No current cohort matches the selected filters.')).toBeInTheDocument();
+    expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
   });
 
-  it('preserves a failed cohort load as unavailable and offers recovery', () => {
+  it('preserves a failed program-cycle load as unavailable and offers recovery', () => {
     const props = makeProps();
     const onRetry = vi.fn();
-    render(<ProgramOverviewDashboardCard {...props} cohorts={[]} error="Request failed" onRetry={onRetry} />);
+    render(<ProgramOverviewDashboardCard {...props} assignments={[]} error="Request failed" onRetry={onRetry} />);
 
     expect(screen.getByText('Program rosters unavailable')).toBeInTheDocument();
-    expect(screen.queryByText('No current cohort matches the selected filters.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No current cycle for this program.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it('shows only the current cohort and delegates its actions', () => {
+  it('shows only the current cycle and delegates its actions', () => {
     const props = makeProps();
     render(<ProgramOverviewDashboardCard {...props} />);
 
@@ -71,7 +70,7 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.queryByRole('heading', { name: 'Art - Winter Overview' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
 
-    const enrolled = within(screen.getByRole('region', { name: 'Fall: Weekly art' }));
+    const enrolled = within(screen.getByRole('region', { name: 'Fall' }));
     expect(enrolled.queryByText('active')).not.toBeInTheDocument();
     expect(enrolled.getByText('Enrollment').nextElementSibling).toHaveTextContent('12');
     expect(enrolled.getByText('Average attendance').nextElementSibling).toHaveTextContent('75%');
@@ -79,18 +78,18 @@ describe('ProgramOverviewDashboardCard', () => {
     const header = screen.getByRole('heading', { name: 'Art - Fall Overview' }).parentElement!;
     fireEvent.click(within(header).getByRole('button', { name: 'Manage Roster' }));
     fireEvent.click(within(header).getByRole('button', { name: 'Attendance Report' }));
-    expect(props.onManageRoster).toHaveBeenCalledWith(cohort);
-    expect(props.onViewReport).toHaveBeenCalledWith(cohort);
+    expect(props.onManageRoster).toHaveBeenCalledWith(programCycle);
+    expect(props.onViewReport).toHaveBeenCalledWith(programCycle);
 
-    expect(screen.queryByRole('button', { name: 'Edit Cohort' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete Cohort' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit ProgramCycle' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete ProgramCycle' })).not.toBeInTheDocument();
   });
 
-  it('shows an empty state when only past and upcoming cohorts exist', () => {
-    render(<ProgramOverviewDashboardCard {...makeProps()} cohorts={[
-      { ...cohort, startsOn: '2026-01-01', endsOn: '2026-06-30', state: 'completed' }, openCohort,
+  it('shows an empty state when only past and upcoming programCycles exist', () => {
+    render(<ProgramOverviewDashboardCard {...makeProps()} assignments={[
+      { ...programCycle, startsOn: '2026-01-01', endsOn: '2026-06-30', state: 'completed' }, openProgramCycle,
     ]} />);
-    expect(screen.getByText('No current cohort matches the selected filters.')).toBeInTheDocument();
+    expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
 
@@ -101,8 +100,8 @@ describe('ProgramOverviewDashboardCard', () => {
   });
 
   it('keeps the current drop-in report disabled', () => {
-    render(<ProgramOverviewDashboardCard {...makeProps()} cohorts={[
-      { ...openCohort, startsOn: cohort.startsOn, endsOn: cohort.endsOn, state: 'active' },
+    render(<ProgramOverviewDashboardCard {...makeProps()} assignments={[
+      { ...openProgramCycle, startsOn: programCycle.startsOn, endsOn: programCycle.endsOn, state: 'active' },
     ]} />);
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
@@ -113,8 +112,8 @@ describe('ProgramOverviewDashboardCard', () => {
     const { rerender } = render(<ProgramOverviewDashboardCard {...props} canManageRoster={false} />);
 
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit Cohort' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete Cohort' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit ProgramCycle' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Attendance Report' })).toHaveLength(1);
 
     rerender(<ProgramOverviewDashboardCard {...props} canViewYouthReport={false} />);
@@ -126,7 +125,7 @@ describe('ProgramOverviewDashboardCard', () => {
     const view = render(<ProgramOverviewDashboardCard {...props} />);
     const card = screen.getByRole('heading', { name: 'Art - Fall Overview' }).closest('article');
 
-    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} cohorts={[]} loading />);
+    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} assignments={[]} loading />);
 
     expect(screen.getByRole('heading', { name: 'Music Overview' }).closest('article')).toBe(card);
     expect(screen.getByText('Enrollment')).toBeInTheDocument();
@@ -136,7 +135,7 @@ describe('ProgramOverviewDashboardCard', () => {
   });
 
   it('keeps metrics and disabled actions when a pending program load fails', () => {
-    const props = { ...makeProps(), cohorts: [] };
+    const props = { ...makeProps(), assignments: [] };
     const view = render(<ProgramOverviewDashboardCard {...props} loading />);
     const heading = screen.getByRole('heading', { name: 'Art Overview' });
     const card = heading.closest('article');

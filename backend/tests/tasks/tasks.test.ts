@@ -21,7 +21,6 @@ describe('Tasks API', () => {
   let unrelatedStaffToken: string;
   let programId: string;
   let cycleId: string;
-  let cohortId: string;
   const taskIds = new Set<string>();
 
   const rememberTask = <T extends { body: { id?: string } }>(response: T) => {
@@ -73,12 +72,7 @@ describe('Tasks API', () => {
       RETURNING id
     `;
     cycleId = cycles[0].id;
-    const cohorts = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cohorts (program_id, cycle_id)
-      VALUES (${programId}, ${cycleId})
-      RETURNING id
-    `;
-    cohortId = cohorts[0].id;
+    await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${programId}, ${cycleId})`;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
@@ -92,7 +86,7 @@ describe('Tasks API', () => {
       await sql`DELETE FROM tasks WHERE id IN ${sql(ids)}`;
       await sql`DELETE FROM audit_log WHERE table_name = 'tasks' AND record_id IN ${sql(ids)}`;
     }
-    await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
+    await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
     await sql`DELETE FROM program_cycles WHERE id = ${cycleId}`;
     await deleteTestUser(unrelatedStaffId);
     await deleteTestUser(secondStaffId);

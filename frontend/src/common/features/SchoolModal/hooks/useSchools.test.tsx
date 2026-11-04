@@ -33,4 +33,16 @@ describe('useSchools', () => {
       { id: 'school-2', name: 'West High' },
     ]));
   });
+
+  it('defers loading while its consumer is inactive', async () => {
+    const { result, rerender } = renderHook(({ enabled }) => useSchools({ enabled }), {
+      initialProps: { enabled: false },
+      wrapper: createQueryClientWrapper(createTestQueryClient()),
+    });
+
+    expect(getSchoolReferences).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.schools).toHaveLength(1));
+  });
 });

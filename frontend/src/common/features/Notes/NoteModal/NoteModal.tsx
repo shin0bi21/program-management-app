@@ -14,7 +14,6 @@ interface NoteModalProps {
   categoryOptions: Array<{ value: string; label: string }>;
   categoryDisabled?: boolean;
   details: string;
-  submitLabel: string;
   submitStatus: SubmitStatus;
   statusMessage?: string;
   maxLength?: number;
@@ -34,7 +33,6 @@ export default function NoteModal({
   categoryOptions,
   categoryDisabled = false,
   details,
-  submitLabel,
   submitStatus,
   statusMessage,
   maxLength = 5000,
@@ -57,7 +55,7 @@ export default function NoteModal({
       title={title}
       status={submitStatus}
       statusMessage={statusMessage}
-      footer={<ModalFormFooter formId={formId} submitLabel={submitLabel} submitStatus={submitStatus} onClose={onClose} />}
+      footer={<ModalFormFooter formId={formId} submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id={formId} aria-busy={submissionComplete || undefined} onSubmit={submit}>
         <FormField id={`${formId}-category`} label={categoryLabel}>

@@ -25,7 +25,6 @@ export default function useAccountModals({ revokeInvite, toggleStatus }: Account
   const requestRevoke = useCallback((account: User) => setConfirmation({
     title: 'Revoke Invitation',
     message: `Revoke the invitation for ${account.firstName} ${account.lastName}?`,
-    confirmLabel: 'Revoke',
     confirmVariant: 'danger',
     successMessage: 'Invitation revoked',
     onConfirm: () => revokeInvite(account),
@@ -35,7 +34,6 @@ export default function useAccountModals({ revokeInvite, toggleStatus }: Account
     setConfirmation({
       title: activating ? 'Activate Account' : 'Deactivate Account',
       message: `${activating ? 'Activate' : 'Deactivate'} login access for ${account.firstName} ${account.lastName}?`,
-      confirmLabel: activating ? 'Activate' : 'Deactivate',
       confirmVariant: activating ? 'primary' : 'danger',
       successMessage: activating ? 'Account activated' : 'Account deactivated',
       onConfirm: () => toggleStatus(account),

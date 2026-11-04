@@ -112,10 +112,11 @@ describe('useAppNavigation', () => {
 
     floatingMenus.forEach(menu => menu.close.mockClear());
     act(() => result.current.setMobileOpen(true));
-    act(() => result.current.go('/programming/calendar'));
+    act(() => result.current.go('/homepage/images'));
 
-    await waitFor(() => expect(result.current.isActive('/programming/calendar')).toBe(true));
-    expect(result.current.active.programming).toBe(true);
+    await waitFor(() => expect(result.current.isActive('/homepage/images')).toBe(true));
+    expect(result.current.active.homepage).toBe(true);
+    expect(result.current.active.settings).toBe(false);
     expect(result.current.mobileOpen).toBe(false);
     floatingMenus.forEach(menu => expect(menu.close).toHaveBeenCalled());
   });

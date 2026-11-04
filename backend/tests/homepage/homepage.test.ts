@@ -1,7 +1,7 @@
 import request from 'supertest';
 import sharp from 'sharp';
 import { createApp } from '../shared/app';
-import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
+import { deleteTestProgramCycle, deleteTestUser, seedTestProgramCycle, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -13,7 +13,7 @@ describe('Homepage management API', () => {
   let homepageReadToken: string;
   let youthId: string;
   let youthToken: string;
-  let cohortId: string;
+  let programId: string;
   let cycleId: string;
   let uploadedImageId: string | undefined;
 
@@ -37,15 +37,16 @@ describe('Homepage management API', () => {
       VALUES (${staffId}, ${program.id})
       ON CONFLICT DO NOTHING
     `;
-    ({ cohortId, cycleId } = await seedTestCohort({
+    programId = program.id;
+    ({ cycleId } = await seedTestProgramCycle({
       programId: program.id,
       name: `Homepage Test ${Date.now()}`,
     }));
 
     await sql`
-      INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
+      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
       SELECT
-        ${cohortId},
+        ${programId}, ${cycleId},
         'Homepage Session ' || day_number,
         NOW() + (day_number || ' days')::interval,
         NOW() + (day_number || ' days')::interval + interval '2 hours'
@@ -54,11 +55,11 @@ describe('Homepage management API', () => {
   });
 
   afterAll(async () => {
-    await sql`UPDATE homepage_settings SET signup_enabled = TRUE WHERE id = 1`;
     if (uploadedImageId) {
       await request(app).delete(`/api/homepage/images/${uploadedImageId}`).set('Authorization', `Bearer ${staffToken}`);
     }
-    await deleteTestCohort(cohortId, cycleId);
+    await sql`DELETE FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
+    await deleteTestProgramCycle(programId, cycleId);
     await deleteTestUser(youthId);
     await deleteTestUser(staffId);
   });
@@ -76,28 +77,6 @@ describe('Homepage management API', () => {
         }),
       ]),
     );
-  });
-
-  it('lets staff close and reopen homepage signup', async () => {
-    const disabled = await request(app)
-      .patch('/api/homepage/signup')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ enabled: false });
-
-    expect(disabled.status).toBe(200);
-    expect(disabled.body).toEqual({ signupEnabled: false });
-    const managed = await request(app)
-      .get('/api/homepage/signup')
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(managed.body.signupEnabled).toBe(false);
-    expect((await request(app).get('/api/public/homepage/signup')).body.signupEnabled).toBe(false);
-
-    const enabled = await request(app)
-      .patch('/api/homepage/signup')
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ enabled: true });
-    expect(enabled.status).toBe(200);
-    expect(enabled.body).toEqual({ signupEnabled: true });
   });
 
   it('allows staff to upload, edit, serve, and delete a homepage image', async () => {
@@ -186,9 +165,8 @@ describe('Homepage management API', () => {
     `;
     const expected = await sql<{ id: string }[]>`
       SELECT cs.id
-      FROM cohort_sessions cs
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      WHERE pc.program_id = ${program.id}
+      FROM program_sessions cs
+      WHERE cs.program_id = ${program.id}
         AND cs.ends_at >= NOW()
         AND cs.cancelled_at IS NULL
       ORDER BY cs.starts_at
@@ -222,26 +200,20 @@ describe('Homepage management API', () => {
     expect(response.status).toBe(403);
   });
 
-  it('lets read-only staff view signup status separately from photos', async () => {
-    const signup = await request(app)
-      .get('/api/homepage/signup')
-      .set('Authorization', `Bearer ${homepageReadToken}`);
+  it('lets read-only staff view managed photos', async () => {
     const photos = await request(app)
       .get('/api/homepage')
       .set('Authorization', `Bearer ${homepageReadToken}`);
 
-    expect(signup.status).toBe(200);
-    expect(signup.body).toEqual({ signupEnabled: true });
     expect(photos.status).toBe(200);
-    expect(photos.body.signupEnabled).toBeUndefined();
-    expect((await request(app).get('/api/public/homepage/images')).body.signupEnabled).toBeUndefined();
+    expect(photos.body.images).toEqual(expect.any(Array));
   });
 
-  it('requires homepage write permission to change signup availability', async () => {
-    const update = await request(app)
-      .patch('/api/homepage/signup')
-      .set('Authorization', `Bearer ${homepageReadToken}`)
-      .send({ enabled: false });
-    expect(update.status).toBe(403);
+  it('requires homepage write permission to upload photos', async () => {
+    const response = await request(app)
+      .post('/api/homepage/images')
+      .set('Authorization', `Bearer ${homepageReadToken}`);
+
+    expect(response.status).toBe(403);
   });
 });

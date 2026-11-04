@@ -214,7 +214,7 @@ or server assignment policy. Follow their implementations and colocated tests:
 | Sessions table columns and labels | [Table configuration](../../../frontend/src/pages/Programming/Sessions/components/SessionTable/hooks/useSessionTable.tsx) |
 | Current-cohort dashboard selection | [Program overview card](../../../frontend/src/pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard.tsx) |
 | Session movement capabilities and buffer reconciliation | [Session calendar](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionCalendar.tsx) |
-| Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) and [move regression tests](../../../backend/tests/cohorts/sessionMove.test.ts) |
+| Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) and [move regression tests](../../../backend/tests/sessions/sessionMove.test.ts) |
 
 ## Save and Reconcile Changes
 

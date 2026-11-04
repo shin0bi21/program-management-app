@@ -37,13 +37,13 @@ describe('leads API', () => {
   });
 
   it('uses focused signup, status, and note endpoints', () => {
-    signUpLead('lead-1', 'cohort-1', 'health', '2012-07-24');
+    signUpLead('lead-1', { programId: 'program-1', cycleId: 'cycle-1' }, 'health', '2012-07-24');
     updateLeadStatus('lead-1', 'contacted');
     createLeadNote('lead-1', 'Called guardian.');
     deleteLeadNote('lead-1', 'note-1');
 
     expect(apiClient.post).toHaveBeenNthCalledWith(1, '/leads/lead-1/sign-up', {
-      cohortId: 'cohort-1',
+      programId: 'program-1', cycleId: 'cycle-1',
       noteCategory: 'health',
       dateOfBirth: '2012-07-24',
     });

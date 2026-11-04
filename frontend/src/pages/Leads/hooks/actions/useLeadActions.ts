@@ -5,8 +5,8 @@ import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query
 import { deleteLead, updateLeadStatus, type LeadSignUpResult } from '../../leads.api';
 import type { EditableLeadStatus, Lead } from '../../types';
 
-const COHORT_TABLE_QUERY_KEY = ['cohorts', 'table'] as const;
-const COHORT_OPTIONS_QUERY_KEY = ['cohorts', 'options'] as const;
+import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
+const PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY = ['programs', 'cycle-assignments'] as const;
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
 interface UseLeadActionsOptions {
@@ -65,7 +65,6 @@ export default function useLeadActions({
   const requestDelete = useCallback((lead: Lead) => setConfirmAction({
     title: 'Delete Lead',
     message: `Delete ${lead.youthFirstName} ${lead.youthLastName} and all follow-up notes? This cannot be undone.`,
-    confirmLabel: 'Delete',
     confirmVariant: 'danger',
     successMessage: 'Lead deleted',
     onConfirm: async () => {
@@ -78,12 +77,12 @@ export default function useLeadActions({
 
   const reconcileSignUp = useCallback(async (saved: LeadSignUpResult) => {
     syncLead(saved.lead);
-    if (saved.updatedCohort) {
-      replaceInfiniteListRow(queryClient, COHORT_TABLE_QUERY_KEY, saved.updatedCohort);
+    if (saved.updatedProgramCycle) {
+      updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: COHORT_OPTIONS_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY }),
     ]);
   }, [queryClient, syncLead]);
 

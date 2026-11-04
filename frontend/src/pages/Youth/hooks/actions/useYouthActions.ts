@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { YouthProfile } from '../../types';
 import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 
+import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
+
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
 interface UseYouthActionsOptions {
@@ -27,11 +29,11 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
     for (const session of saved.updatedSessions ?? []) {
       replaceInfiniteListRow(queryClient, ['sessions', 'table'], session);
     }
-    if (saved.updatedCohort) {
-      replaceInfiniteListRow(queryClient, ['cohorts', 'table'], saved.updatedCohort);
+    if (saved.updatedProgramCycle) {
+      updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
     void queryClient.invalidateQueries({ queryKey: ['sessions', 'calendar'] });
-    void queryClient.invalidateQueries({ queryKey: ['cohorts', 'options'] });
+    void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
   }, [queryClient, reconcileSavedYouth]);
 
   return { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance };

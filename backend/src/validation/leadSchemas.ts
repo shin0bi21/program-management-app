@@ -72,10 +72,14 @@ export const updateLeadSchema = z.object({
 export const signUpLeadSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
   body: z.object({
-    cohortId: z.string().uuid('Invalid cohort ID').nullable().optional(),
+    programId: z.string().uuid('Invalid program ID').nullable().optional(),
+    cycleId: z.string().uuid('Invalid cycle ID').nullable().optional(),
     dateOfBirth: dateOfBirthSchema.optional(),
     noteCategory: z.enum(['general', 'health', 'preference']).optional().default('general'),
-  }).strict(),
+  }).strict().refine(data => Boolean(data.programId) === Boolean(data.cycleId), {
+    message: 'Select both a program and a cycle',
+    path: ['cycleId'],
+  }),
 });
 
 export const leadIdSchema = z.object({

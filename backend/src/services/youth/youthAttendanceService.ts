@@ -1,18 +1,19 @@
-import { lockAssignmentProgram } from '../programming/cohorts/assignmentService';
+import { lockAssignmentProgram } from '../programming/programCycles/assignmentService';
 import { getYouthRowsByIds } from './youthRecordQuery';
 import { getSessionRowsByIds } from '../programming/sessions/sessionRecordQuery';
-import { getCohortRowsByIds } from '../programming/cohorts/cohortRecordQuery';
+import { getProgramCycleRowsByKeys } from '../programming/programCycles/programCycleRecordQuery';
 import { programAccessPredicate } from '../../policies/programAccessPolicy';
 import { asTransactionSql, sql } from '../../db/client';
 import { ConflictError, NotFoundError } from '../../errors';
-import { assertCanAccessCohort } from '../../policies/programAccessPolicy';
+import { assertCanAccessProgramCycle } from '../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../types/auth';
-import type { SetYouthCohortAttendanceInput } from '../../validation/youthSchemas';
+import type { SetYouthProgramCycleAttendanceInput } from '../../validation/youthSchemas';
 import { listSessionNotesForYouth } from '../programming/sessions/sessionNoteService';
 
-interface YouthCohortContext {
-  id: string;
-  name: string;
+interface YouthProgramCycleContext {
+  programId: string;
+  cycleId: string;
+  cycleName: string;
   programName: string;
   enrollmentRequired: boolean;
 }
@@ -28,16 +29,17 @@ interface YouthAttendanceSession {
   notes: string | null;
 }
 
-export async function getYouthCohortAttendance(
+export async function getYouthProgramCycleAttendance(
   youthId: string,
-  cohortId: string,
+  programId: string,
+  cycleId: string,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessCohort(actor, cohortId);
-  const cohort = await getYouthCohortContext(sql, youthId, cohortId);
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  const programCycle = await getYouthProgramCycleContext(sql, youthId, programId, cycleId);
   const [sessions, sessionNotes] = await Promise.all([
-    getYouthAttendanceSessions(sql, youthId, cohortId),
-    listSessionNotesForYouth(youthId, actor, cohortId),
+    getYouthAttendanceSessions(sql, youthId, programId, cycleId),
+    listSessionNotesForYouth(youthId, actor, { programId, cycleId }),
   ]);
   const notesBySession = new Map<string, Array<(typeof sessionNotes)[number]>>();
   for (const note of sessionNotes) {
@@ -45,7 +47,7 @@ export async function getYouthCohortAttendance(
     notesBySession.set(sessionId, [...(notesBySession.get(sessionId) ?? []), note]);
   }
   return {
-    cohort,
+    programCycle,
     sessions: sessions.map(session => ({
       ...session,
       sessionNotes: notesBySession.get(session.id) ?? [],
@@ -53,42 +55,39 @@ export async function getYouthCohortAttendance(
   };
 }
 
-export async function setYouthCohortAttendance(
+export async function setYouthProgramCycleAttendance(
   youthId: string,
-  cohortId: string,
-  data: SetYouthCohortAttendanceInput,
+  programId: string,
+  cycleId: string,
+  data: SetYouthProgramCycleAttendanceInput,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessCohort(actor, cohortId);
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
 
   const updatedRows = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const [assignment] = await trx<{ programId: string }[]>`
-      SELECT program_id FROM program_cohorts WHERE id = ${cohortId}
-    `;
-    if (!assignment) throw new NotFoundError('Cohort not found');
-
-    // Session moves also take the program lock before touching cohort or session rows.
-    await lockAssignmentProgram(trx, assignment.programId, actor);
-    const lockedCohort = await trx<{ id: string }[]>`
-      SELECT pc.id FROM program_cohorts pc
-      WHERE pc.id = ${cohortId} AND ${programAccessPredicate(actor, sql`pc.program_id`)}
+    // Match assignment changes and session moves: lock the program before the pair and sessions.
+    await lockAssignmentProgram(trx, programId, actor);
+    const locked = await trx`
+      SELECT pc.program_id, pc.cycle_id FROM program_cycle_assignments pc
+      WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
+        AND ${programAccessPredicate(actor, sql`pc.program_id`)}
       FOR UPDATE OF pc
     `;
-    if (!lockedCohort.length) throw new NotFoundError('Cohort not found');
+    if (!locked.length) throw new NotFoundError('Program cycle not found');
 
-    const cohort = await getYouthCohortContext(trx, youthId, cohortId);
-    const sessions = await getYouthAttendanceSessions(trx, youthId, cohortId, true);
+    const programCycle = await getYouthProgramCycleContext(trx, youthId, programId, cycleId);
+    const sessions = await getYouthAttendanceSessions(trx, youthId, programId, cycleId, true);
     const sessionIds = new Set(sessions.map(session => session.id));
 
     if (
       data.records.length !== sessionIds.size
       || data.records.some(record => !sessionIds.has(record.sessionId))
     ) {
-      throw new ConflictError('Cohort sessions changed while attendance was being edited');
+      throw new ConflictError('Program cycle sessions changed while attendance was being edited');
     }
     if (
-      !cohort.enrollmentRequired
+      !programCycle.enrollmentRequired
       && data.records.some(record => record.status !== null && record.status !== 'present')
     ) {
       throw new ConflictError('Open sessions only record whether a youth attended');
@@ -123,54 +122,56 @@ export async function setYouthCohortAttendance(
     const updatedSessions = actor.permissions.includes('read:sessions')
       ? await getSessionRowsByIds(trx, actor, [...sessionIds])
       : undefined;
-    const updatedCohort = actor.permissions.includes('read:programs')
-      ? (await getCohortRowsByIds(trx, actor, [cohortId]))[0]
+    const updatedProgramCycle = actor.permissions.includes('read:programs')
+      ? (await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]))[0]
       : undefined;
-    return { youth, updatedSessions, updatedCohort };
+    return { youth, updatedSessions, updatedProgramCycle };
   });
 
-  return { ...await getYouthCohortAttendance(youthId, cohortId, actor), ...updatedRows };
+  return { ...await getYouthProgramCycleAttendance(youthId, programId, cycleId, actor), ...updatedRows };
 }
 
-async function getYouthCohortContext(
+async function getYouthProgramCycleContext(
   database: typeof sql,
   youthId: string,
-  cohortId: string,
+  programId: string,
+  cycleId: string,
 ) {
   const youth = await database`SELECT 1 FROM youth_profiles WHERE user_id = ${youthId} LIMIT 1`;
   if (!youth.length) throw new NotFoundError('Youth profile not found');
 
-  const cohorts = await database<YouthCohortContext[]>`
-    SELECT pc.id, cycle.name, p.name AS program_name, p.enrollment_required
-    FROM program_cohorts pc
+  const programCycles = await database<YouthProgramCycleContext[]>`
+    SELECT pc.program_id, pc.cycle_id, cycle.name AS cycle_name, p.name AS program_name, p.enrollment_required
+    FROM program_cycle_assignments pc
     INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id
-    WHERE pc.id = ${cohortId}
+    WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
     LIMIT 1
   `;
-  if (!cohorts.length) throw new NotFoundError('Cohort not found');
+  if (!programCycles.length) throw new NotFoundError('Program cycle not found');
 
-  const cohort = cohorts[0];
-  if (cohort.enrollmentRequired) {
+  const programCycle = programCycles[0];
+  if (programCycle.enrollmentRequired) {
     const enrollment = await database`
       SELECT 1
-      FROM cohort_enrollments
-      WHERE cohort_id = ${cohortId}
+      FROM program_enrollments
+      WHERE program_id = ${programId} AND cycle_id = ${cycleId}
         AND youth_id = ${youthId}
       LIMIT 1
     `;
     if (!enrollment.length) {
-      throw new ConflictError('Youth is not enrolled in this cohort');
+      throw new ConflictError('Youth is not enrolled in this program cycle');
     }
   }
 
-  return cohort;
+  return programCycle;
 }
 
 function getYouthAttendanceSessions(
   database: typeof sql,
   youthId: string,
-  cohortId: string,
+  programId: string,
+  cycleId: string,
   lock = false,
 ) {
   return database<YouthAttendanceSession[]>`
@@ -183,21 +184,20 @@ function getYouthAttendanceSessions(
       cs.cancelled_at,
       ar.status,
       ar.notes
-    FROM cohort_sessions cs
+    FROM program_sessions cs
     INNER JOIN session_types st ON st.id = cs.session_type_id
-    INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-    INNER JOIN programs p ON p.id = pc.program_id
+    INNER JOIN programs p ON p.id = cs.program_id
     LEFT JOIN attendance_records ar
       ON ar.session_id = cs.id
       AND ar.youth_id = ${youthId}
-    WHERE cs.cohort_id = ${cohortId}
+    WHERE cs.program_id = ${programId} AND cs.cycle_id = ${cycleId}
       AND (
         p.enrollment_required = FALSE
         OR ar.id IS NOT NULL
         OR EXISTS (
           SELECT 1
-          FROM cohort_enrollments ce
-          WHERE ce.cohort_id = cs.cohort_id
+          FROM program_enrollments ce
+          WHERE ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
             AND ce.youth_id = ${youthId}
             AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
             AND (

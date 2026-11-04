@@ -33,7 +33,7 @@ describe('SessionYouthChecklist', () => {
     view.rerender(
       <SessionYouthChecklist {...props} enrollmentRequired={true} loading={false} error={undefined} />,
     );
-    expect(screen.getByText('No youth are enrolled in this cohort.')).toBeInTheDocument();
+    expect(screen.getByText('No youth are enrolled in this cycle.')).toBeInTheDocument();
   });
 
   it('renders checked state, forwards toggles, and disables the completed form', () => {

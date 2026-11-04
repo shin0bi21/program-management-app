@@ -24,9 +24,9 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
       header: 'Program',
       accessorFn: profile => {
         const names = [...new Set(
-          profile.cohorts
-            .filter(cohort => cohort.withdrawnOn === null)
-            .map(cohort => cohort.programName),
+          profile.programCycles
+            .filter(programCycle => programCycle.withdrawnOn === null)
+            .map(programCycle => programCycle.programName),
         )];
         return names.length ? names.join(', ') : '—';
       },

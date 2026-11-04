@@ -70,6 +70,8 @@ Route tests own cross-view reconciliation and dialog entry wiring. Child owners 
 For a collection page, render one `main.page-container` with `PageHeader`, `PageMessageOverlay` and `PageBody` in that
 order, followed by dialogs. Pass page actions and controls to the header, and the dashboard
 or summary plus one active data view to the body.
+Omit the dashboard prop when a page only needs its data view; the body leaves out
+the dashboard region and its spacing.
 
 The shared header always renders a title row and a controls container, even when the
 controls container is empty. All pages use the same header layout rules; title-row

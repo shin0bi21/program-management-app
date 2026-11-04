@@ -8,6 +8,8 @@ import PageMessageOverlay, { type PageMessageValue } from '../../common/componen
 import PageHeader from '../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../common/components/SearchInput/SearchInput';
 import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
+import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
+import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from './components/YouthModal/YouthModal';
 import { YOUTH_TABLE_KEYS, type YouthFilters } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
@@ -59,7 +61,7 @@ export default function Youth() {
   } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['programCycles'][number] | null>(null);
   const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
   const { selectedProfile, selectedProfileId, selectProfile, reconcileSavedProfile } = useYouthSelection({
     onSelectedProfileIdChange: closeAttendanceModal,
@@ -76,7 +78,11 @@ export default function Youth() {
 
   // Youth modal.
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
-  const closeYouthModal = () => setModalTarget(null);
+  const schoolModal = useSchoolModal();
+  const closeYouthModal = () => {
+    schoolModal.close();
+    setModalTarget(null);
+  };
 
   // Primary-contact modal.
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
@@ -84,7 +90,7 @@ export default function Youth() {
 
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    cohort: YouthProfile['cohorts'][number];
+    programCycle: YouthProfile['programCycles'][number];
     youthId: string;
   } | null>(null);
   const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
@@ -161,8 +167,8 @@ export default function Youth() {
             canManageAttendance={canManageAttendance}
             onManageAttendance={setAttendanceTarget}
             canViewAttendanceReport={canViewAttendanceReport}
-            onViewAttendanceReport={cohort => {
-              if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
+            onViewAttendanceReport={programCycle => {
+              if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
             }}
             profileNotes={profileNotes.notes}
             profileNotesLoading={profileNotes.loading}
@@ -178,18 +184,21 @@ export default function Youth() {
 
       <YouthModal
         isOpen={modalTarget !== null}
+        suspended={schoolModal.action !== null}
+        onManageSchool={schoolModal.open}
         youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
         onClose={closeYouthModal}
         onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
       />
+      <SchoolModal workflow={schoolModal} />
       <YouthAttendanceModal
         youth={selectedProfile}
-        cohort={attendanceTarget}
+        programCycle={attendanceTarget}
         onClose={closeAttendanceModal}
         onSaved={reconcileAttendance}
       />
       {attendanceReportTarget && <YouthReportModal
-        cohort={attendanceReportTarget.cohort}
+        programCycle={attendanceReportTarget.programCycle}
         youthId={attendanceReportTarget.youthId}
         onClose={closeAttendanceReportModal}
       />}

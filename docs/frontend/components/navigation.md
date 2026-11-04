@@ -32,6 +32,11 @@ remains separate.
 
 Public authentication routes and redirect-only aliases remain route concerns and intentionally skip navigation registration.
 
+Homepage is a direct top-level navigation item above Settings that opens image
+management at `/homepage/images`. Viewing requires `read:homepage`; editing
+requires `write:homepage`. The former `/homepage/manage` URL redirects to Images.
+The image workflow belongs to `pages/Homepage/Images/`.
+
 Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners provide positioning, focus, keyboard navigation, outside/Escape dismissal, and focus return. App navigation owns only which menu is open, its domain destinations, and the callbacks and anchor refs passed to the shared primitives.
 
 ## Testing
