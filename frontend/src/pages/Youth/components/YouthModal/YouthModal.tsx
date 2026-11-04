@@ -126,8 +126,8 @@ export default function YouthModal({
               </div>
 
               <div className="form-row">
-                <FormField id="dateOfBirth" label="Date of Birth *" error={errors.dateOfBirth?.message}>
-                  <input id="dateOfBirth" type="date" required {...birthDateBounds} disabled={submissionComplete} {...register('dateOfBirth')} />
+                <FormField id="dateOfBirth" label="Date of Birth (optional)" error={errors.dateOfBirth?.message}>
+                  <input id="dateOfBirth" type="date" {...birthDateBounds} disabled={submissionComplete} {...register('dateOfBirth')} />
                 </FormField>
               </div>
 

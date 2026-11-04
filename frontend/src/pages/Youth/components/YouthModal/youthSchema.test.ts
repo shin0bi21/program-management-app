@@ -8,14 +8,18 @@ const profile = { firstName: 'Jamie', lastName: 'Test', email: '' };
 describe('Youth birthdate validation', () => {
   afterEach(() => vi.useRealTimers());
 
-  it.each([undefined, null, '', 'not-a-date', '0000-01-01', '2012-02-30', '2026-10-28', '2026-10-29'])(
-    'rejects missing, invalid, today, or future birthdate %s', dateOfBirth => {
+  it.each([undefined, null, 'not-a-date', '0000-01-01', '2012-02-30', '2026-10-28', '2026-10-29'])(
+    'rejects invalid, today, or future birthdate %s', dateOfBirth => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-10-28T16:00:00Z'));
 
       expect(youthSchema.safeParse({ ...profile, dateOfBirth }).success).toBe(false);
     },
   );
+
+  it('accepts a blank birthdate while it is unknown', () => {
+    expect(youthSchema.safeParse({ ...profile, dateOfBirth: '' }).success).toBe(true);
+  });
 
   it.each(['2012-02-29', '1980-01-01', '2026-10-27'])(
     'accepts a real past date without an intake age limit: %s', dateOfBirth => {
