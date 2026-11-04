@@ -32,6 +32,12 @@ remains separate.
 
 Public authentication routes and redirect-only aliases remain route concerns and intentionally skip navigation registration.
 
+Homepage is a top-level menu above Settings with Images (`/homepage/images`) and
+Sign-up Form (`/homepage/signup`). Both destinations require `read:homepage`;
+editing requires `write:homepage`. The former `/homepage/manage` URL redirects to
+Images. Each page owns its workflow under `pages/Homepage/Images/` or
+`pages/Homepage/SignupForm/`.
+
 Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners provide positioning, focus, keyboard navigation, outside/Escape dismissal, and focus return. App navigation owns only which menu is open, its domain destinations, and the callbacks and anchor refs passed to the shared primitives.
 
 ## Testing

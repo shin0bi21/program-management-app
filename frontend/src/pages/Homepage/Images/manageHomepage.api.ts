@@ -24,14 +24,6 @@ export async function getManagedHomepage(opts?: RequestOptions) {
   return { images: content.images.map(resolveImageUrl) };
 }
 
-export function getManagedHomepageSignup(opts: RequestOptions = {}) {
-  return apiClient.get<{ signupEnabled: boolean }>('/homepage/signup', opts);
-}
-
-export function updateHomepageSignup(enabled: boolean) {
-  return apiClient.patch<{ signupEnabled: boolean }>('/homepage/signup', { enabled });
-}
-
 export function createHomepageImage(data: { image: File; caption: string }) {
   const body = new FormData();
   body.set('file', data.image);

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ManageHomepage from './ManageHomepage';
+import Images from './Images';
 
 const homepage = vi.hoisted(() => ({
   images: [{
@@ -32,17 +32,13 @@ vi.mock('./hooks/useManagedHomepage', () => ({
   useManagedHomepage: () => homepage,
 }));
 
-vi.mock('./components/HomepageSignupSetting/HomepageSignupSetting', () => ({
-  default: () => <section aria-label="Homepage signup setting" />,
-}));
-
 const renderPage = () => render(
   <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-    <ManageHomepage />
+    <Images />
   </MemoryRouter>,
 );
 
-describe('ManageHomepage', () => {
+describe('Images', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     homepage.loading = false;
@@ -84,12 +80,12 @@ describe('ManageHomepage', () => {
   });
 
   // Commands and dialogs.
-  it('opens the page-owned image editor from the Images card', async () => {
+  it('opens the page-owned image editor from the page header', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const images = screen.getByRole('region', { name: 'Images' });
-    await user.click(within(images).getByRole('button', { name: '+ Add' }));
+    const header = screen.getByRole('banner');
+    await user.click(within(header).getByRole('button', { name: '+ Add' }));
 
     expect(screen.getByRole('dialog', { name: 'Manage Images' })).toBeInTheDocument();
     expect(screen.getByLabelText('Image')).toBeInTheDocument();

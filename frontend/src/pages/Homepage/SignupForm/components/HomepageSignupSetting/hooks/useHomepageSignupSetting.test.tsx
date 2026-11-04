@@ -1,14 +1,18 @@
 import { createTestQueryClient, createQueryClientWrapper } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getManagedHomepage, getManagedHomepageSignup, reorderHomepageImages, updateHomepageSignup } from '../../../manageHomepage.api';
-import { useManagedHomepage } from '../../../hooks/useManagedHomepage';
+import { getManagedHomepage, reorderHomepageImages } from '../../../../Images/manageHomepage.api';
+import { getManagedHomepageSignup, updateHomepageSignup } from '../../../signupForm.api';
+import { useManagedHomepage } from '../../../../Images/hooks/useManagedHomepage';
 import { useHomepageSignupSetting } from './useHomepageSignupSetting';
 
-vi.mock('../../../manageHomepage.api', () => ({
+vi.mock('../../../../Images/manageHomepage.api', () => ({
   getManagedHomepage: vi.fn(),
-  getManagedHomepageSignup: vi.fn(),
   reorderHomepageImages: vi.fn(),
+}));
+
+vi.mock('../../../signupForm.api', () => ({
+  getManagedHomepageSignup: vi.fn(),
   updateHomepageSignup: vi.fn(),
 }));
 

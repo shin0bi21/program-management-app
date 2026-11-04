@@ -69,7 +69,9 @@ describe('AppNavigation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('menuitem', { name: 'Manage Homepage' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Images' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Sign-up Form' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'My Account' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Youth' })).not.toBeInTheDocument();
@@ -78,21 +80,29 @@ describe('AppNavigation', () => {
     expect(screen.queryByRole('menuitem', { name: 'Users' })).not.toBeInTheDocument();
   });
 
-  it('opens homepage management from Settings for staff with homepage access', () => {
+  it.each([
+    ['Images', '/homepage/images'],
+    ['Sign-up Form', '/homepage/signup'],
+  ])('opens %s from Homepage and closes the mobile sidebar', async (label, path) => {
     authState.permissions = ['read:homepage'];
-    authState.role = 'staff';
+    const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={['/homepage/manage']}>
+      <MemoryRouter initialEntries={['/settings/account']}>
         <AppNavigation />
+        <CurrentPath />
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('button', { name: 'Homepage' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Settings' })).toHaveClass('active');
-    expect(screen.getByRole('menuitem', { name: 'Manage Homepage' })).toHaveClass('active');
-    expect(screen.queryByRole('menuitem', { name: 'Users' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Manage Programming' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Homepage' })).toHaveAttribute('aria-haspopup', 'menu');
+    expect(screen.queryByRole('menuitem', { name: 'Manage Homepage' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    await user.click(screen.getByRole('menuitem', { name: label }));
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent(path);
+    expect(screen.getByRole('menuitem', { name: label })).toHaveClass('active');
+    expect(document.querySelector('.sidebar')).not.toHaveClass('sidebar--open');
   });
 
   it('shows Leads as top-level navigation for users with outreach access', () => {
