@@ -2,7 +2,7 @@ import { act, screen } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CohortSession } from '../../types';
+import type { ProgramSession } from '../../types';
 import SessionAttendanceModal from './SessionAttendanceModal';
 
 const api = vi.hoisted(() => ({
@@ -13,14 +13,13 @@ const api = vi.hoisted(() => ({
 
 vi.mock('../../sessions.api', () => api);
 
-const session: CohortSession = {
+const session: ProgramSession = {
       id: 'session-1',
-      cohortId: 'cohort-1',
-      cycleId: 'cycle-1',
+  cycleId: 'cycle-1',
       sessionTypeId: 'type-regular',
       sessionTypeName: 'Regular',
   theme: 'Communication',
-  cohortName: 'Summer 2026',
+  cycleName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
   enrollmentRequired: true,

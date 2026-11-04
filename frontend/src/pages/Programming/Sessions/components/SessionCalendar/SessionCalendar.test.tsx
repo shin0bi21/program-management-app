@@ -3,15 +3,15 @@ import type { ReactElement } from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import { buildDayPeriod } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import type { Program } from '../../../../../common/features/programs/types';
-import type { CohortSession, SessionCalendarCache, SessionListFilters } from '../../types';
+import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';
 import SessionCalendar from './SessionCalendar';
 import SessionItem from './SessionItem/SessionItem';
 
-type CalendarProps = TimelineCalendarProps<Program, CohortSession>;
+type CalendarProps = TimelineCalendarProps<Program, ProgramSession>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 const api = vi.hoisted(() => ({ getSessions: vi.fn() }));
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
@@ -26,7 +26,7 @@ const programs: Program[] = [
   { id: 'program-1', name: 'Future Ready', enrollmentRequired: true, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
   { id: 'program-2', name: 'Job Readiness', enrollmentRequired: false, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
 ];
-const session = makeCohortSession();
+const session = makeProgramSession();
 const period = buildDayPeriod(new Date(2026, 7, 10));
 
 function renderCalendar(filters: SessionListFilters = {}, editable = true) {
@@ -80,7 +80,7 @@ describe('SessionCalendar', () => {
       programIds: ['program-1', 'program-2'], cycleIds: ['cycle-1'],
       sessionTypeIds: ['type-1'], statuses: ['upcoming'], search: 'Communication',
     };
-    const otherSession = makeCohortSession({ id: 'session-2', programId: 'program-2' });
+    const otherSession = makeProgramSession({ id: 'session-2', programId: 'program-2' });
     api.getSessions.mockResolvedValue([session, otherSession]);
     const rendered = renderCalendar(filters);
     act(() => calendarState.props!.onInitialPeriods!([period]));
@@ -131,7 +131,7 @@ describe('SessionCalendar', () => {
   });
 
   it('enables future session moves within the same program and reconciles the visible buffer', async () => {
-    const future = makeCohortSession({ startsAt: '2099-08-10T21:00:00Z', endsAt: '2099-08-10T23:00:00Z' });
+    const future = makeProgramSession({ startsAt: '2099-08-10T21:00:00Z', endsAt: '2099-08-10T23:00:00Z' });
     const updated = { ...future, cycleId: 'cycle-1', startsAt: '2099-08-11T21:00:00Z', endsAt: '2099-08-11T23:00:00Z' };
     const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
     const move = vi.fn().mockImplementation(async () => {
@@ -163,10 +163,10 @@ describe('SessionCalendar', () => {
     act(() => calendarState.props!.onInitialPeriods!([period]));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([session]));
 
-    act(() => calendarCacheRef.current.upsert(makeCohortSession({ cycleId: 'cycle-2' })));
+    act(() => calendarCacheRef.current.upsert(makeProgramSession({ cycleId: 'cycle-2' })));
     await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
 
-    const saved = makeCohortSession({ theme: 'Authoritative edit' });
+    const saved = makeProgramSession({ theme: 'Authoritative edit' });
     act(() => calendarCacheRef.current.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([saved]));
 

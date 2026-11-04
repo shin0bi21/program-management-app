@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { createProgram, getPrograms, updateProgram } from '../services/programService';
 import { getProgramList } from '../services/programming/programs/programListService';
-import { setProgramCycles } from '../services/programming/cohorts/assignmentService';
+import { setProgramCycles } from '../services/programming/programCycles/assignmentService';
 import type { CreateProgramInput, UpdateProgramInput, SetProgramCyclesInput, ProgramListQuery } from '../validation/programSchemas';
 
 export const handleGetPrograms = async (req: Request, res: Response) => {

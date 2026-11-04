@@ -4,14 +4,14 @@ import {
   downloadSessionAttachment,
   getSessionAttachmentFile,
 } from '../../../../sessions.api';
-import type { CohortSession, SessionAttachment } from '../../../../types';
+import type { ProgramSession, SessionAttachment } from '../../../../types';
 
 export default function SessionAttachmentViewerModal({
   session,
   attachment,
   onClose,
 }: {
-  session: CohortSession | null;
+  session: ProgramSession | null;
   attachment: SessionAttachment | null;
   onClose: () => void;
 }) {

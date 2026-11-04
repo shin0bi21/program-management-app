@@ -8,8 +8,8 @@ import PageMessageOverlay, { type PageMessageValue } from '../../../common/compo
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramFilters } from './api/programs.api';
 import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
-import type { ProgramCohort } from '../Cohorts/types';
-import ManageRosterModal from '../Cohorts/components/ManageRosterModal/ManageRosterModal';
+import type { ProgramCycleAssignment } from './types';
+import ManageRosterModal from './components/ManageRosterModal/ManageRosterModal';
 import CycleModal from './components/CycleModal/CycleModal';
 import CycleTable from './components/CycleTable/CycleTable';
 import useCycleTable from './components/CycleTable/hooks/useCycleTable';
@@ -20,7 +20,7 @@ import ProgramModal from './components/ProgramModal/ProgramModal';
 import ProgramOverviewDashboardCard from './components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard';
 import useProgramsActions from './hooks/actions/useProgramsActions';
 import useProgramsData from './hooks/data/useProgramsData';
-import { useCohorts } from './hooks/data/useCohorts';
+import { useProgramCycleAssignments } from './hooks/data/useProgramCycleAssignments';
 import useProgramsModals from './hooks/useProgramsModals';
 
 const PROGRAM_TABLE_QUERY_KEY = ['programs', 'table'] as const;
@@ -35,7 +35,7 @@ export default function Programs() {
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
   const data = useProgramsData();
-  const cohorts = useCohorts();
+  const assignments = useProgramCycleAssignments();
 
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const actions = useProgramsActions({
@@ -46,10 +46,10 @@ export default function Programs() {
 
   const modals = useProgramsModals();
   const [cyclesOpen, setCyclesOpen] = useState(false);
-  const [rosterTarget, setRosterTarget] = useState<ProgramCohort | null>(null);
-  const [reportTarget, setReportTarget] = useState<ProgramCohort | null>(null);
+  const [rosterTarget, setRosterTarget] = useState<ProgramCycleAssignment | null>(null);
+  const [reportTarget, setReportTarget] = useState<ProgramCycleAssignment | null>(null);
 
-  const { columns: programColumns } = useProgramTable(modals.program.open, modals.assignments.open, canWritePrograms, cohorts);
+  const { columns: programColumns } = useProgramTable(modals.program.open, modals.assignments.open, canWritePrograms, assignments);
   const { columns: cycleColumns } = useCycleTable({ onEdit: modals.cycle.open, onDelete: actions.requestCycleDeletion });
 
   return <>
@@ -63,16 +63,16 @@ export default function Programs() {
         cycleTableError,
         data.programsError ? { message: data.programsError, action: { label: 'Retry', onClick: data.retryPrograms } } : null,
         data.cyclesError ? { message: data.cyclesError, action: { label: 'Retry', onClick: data.refreshCycles } } : null,
-        cohorts.error ? { message: cohorts.error, action: { label: 'Retry', onClick: cohorts.refresh } } : null,
+        assignments.error ? { message: assignments.error, action: { label: 'Retry', onClick: assignments.refresh } } : null,
       ]} />
       <PageBody
         ariaLabel="Programs and overview"
         dashboard={<ProgramOverviewDashboardCard
           program={selectedProgram}
-          cohorts={cohorts.cohorts.filter(cohort => cohort.programId === selectedProgram?.id)}
-          loading={cohorts.loading}
-          error={cohorts.error}
-          onRetry={cohorts.refresh}
+          assignments={assignments.assignments.filter(assignment => assignment.programId === selectedProgram?.id)}
+          loading={assignments.loading}
+          error={assignments.error}
+          onRetry={assignments.refresh}
           canManageRoster={canManageRoster}
           canViewYouthReport={canViewYouthReport}
           onManageRoster={setRosterTarget}
@@ -104,8 +104,8 @@ export default function Programs() {
         onClose={modals.cycle.close} onSaved={actions.syncCycle} />
       <ConfirmModal action={actions.confirmAction} onClose={actions.closeConfirmation} />
     </>}
-    {canManageRoster && <ManageRosterModal cohort={rosterTarget} onClose={() => setRosterTarget(null)}
-      onSuccess={saved => setRosterTarget(saved.cohort)} />}
-    {canViewYouthReport && reportTarget && <YouthReportModal cohort={reportTarget} onClose={() => setReportTarget(null)} />}
+    {canManageRoster && <ManageRosterModal assignment={rosterTarget} onClose={() => setRosterTarget(null)}
+      onSuccess={saved => setRosterTarget(saved.programCycle)} />}
+    {canViewYouthReport && reportTarget && <YouthReportModal programCycle={reportTarget} onClose={() => setReportTarget(null)} />}
   </>;
 }

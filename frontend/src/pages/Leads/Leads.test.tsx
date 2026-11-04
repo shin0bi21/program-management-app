@@ -35,8 +35,8 @@ vi.mock('../../common/features/referenceData/hooks/useReferenceData', async impo
   useProgramReferences: () => ({ rows: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
 }));
 
-vi.mock('../Programming/Cohorts/cohorts.api', () => ({
-  getCohorts: vi.fn().mockResolvedValue([]),
+vi.mock('../Programming/Programs/api/programCycleAssignments.api', () => ({
+  getProgramCycleAssignments: vi.fn().mockResolvedValue([]),
 }));
 
 describe('Leads', () => {

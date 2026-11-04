@@ -29,7 +29,7 @@ describe('Cycle table list', () => {
     await deleteTestUser(userId);
   });
 
-  const list = () => request(app).get('/api/cohorts/cycles/list').set('Authorization', `Bearer ${token}`);
+  const list = () => request(app).get('/api/cycles/list').set('Authorization', `Bearer ${token}`);
 
   it('paginates cycle rows with a stable ID tie-breaker and complete lifecycle state', async () => {
     const first = await list();
@@ -49,8 +49,8 @@ describe('Cycle table list', () => {
   });
 
   it('keeps capability checks authoritative', async () => {
-    expect((await request(app).get('/api/cohorts/cycles/list')).status).toBe(401);
+    expect((await request(app).get('/api/cycles/list')).status).toBe(401);
     const denied = generateToken(userId, 'admin', undefined, ['write:programs']);
-    expect((await request(app).get('/api/cohorts/cycles/list').set('Authorization', `Bearer ${denied}`)).status).toBe(403);
+    expect((await request(app).get('/api/cycles/list').set('Authorization', `Bearer ${denied}`)).status).toBe(403);
   });
 });

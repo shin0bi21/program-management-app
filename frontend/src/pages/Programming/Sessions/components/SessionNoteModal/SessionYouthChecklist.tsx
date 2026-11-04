@@ -1,9 +1,9 @@
-import type { CohortSession, SessionRosterMember } from '../../types';
+import type { ProgramSession, SessionRosterMember } from '../../types';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 
 interface SessionYouthChecklistProps {
-  enrollmentRequired: CohortSession['enrollmentRequired'];
+  enrollmentRequired: ProgramSession['enrollmentRequired'];
   roster: readonly SessionRosterMember[];
   selectedYouthIds: readonly string[];
   loading: boolean;
@@ -39,7 +39,7 @@ export default function SessionYouthChecklist({
       ) : (
         <p>{!enrollmentRequired
           ? 'No youth have checked into this session yet.'
-          : 'No youth are enrolled in this cohort.'}</p>
+          : 'No youth are enrolled in this cycle.'}</p>
       )}
     </FormFieldGroup>
   );

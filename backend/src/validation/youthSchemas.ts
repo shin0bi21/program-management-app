@@ -40,15 +40,16 @@ export const youthSessionNotesSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid youth ID') }),
 });
 
-export const youthCohortAttendanceSchema = z.object({
+export const youthProgramCycleAttendanceSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid youth ID'),
-    cohortId: z.string().uuid('Invalid cohort ID'),
+    programId: z.string().uuid('Invalid program ID'),
+    cycleId: z.string().uuid('Invalid cycle ID'),
   }),
 });
 
-export const setYouthCohortAttendanceSchema = z.object({
-  params: youthCohortAttendanceSchema.shape.params,
+export const setYouthProgramCycleAttendanceSchema = z.object({
+  params: youthProgramCycleAttendanceSchema.shape.params,
   body: z.object({
     records: z.array(z.object({
       sessionId: z.string().uuid('Invalid session ID'),
@@ -61,7 +62,7 @@ export const setYouthCohortAttendanceSchema = z.object({
   }),
 });
 
-export type SetYouthCohortAttendanceInput = z.infer<typeof setYouthCohortAttendanceSchema.shape.body>;
+export type SetYouthProgramCycleAttendanceInput = z.infer<typeof setYouthProgramCycleAttendanceSchema.shape.body>;
 
 export type YouthQuery = z.infer<typeof youthQuerySchema.shape.query>;
 

@@ -1,15 +1,15 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessCohort, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
-import { lockAssignmentProgram } from '../cohorts/assignmentService';
+import { assertCanAccessProgramCycle, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
+import { lockAssignmentProgram } from '../programCycles/assignmentService';
 import { getSessionRowsByIds } from './sessionRecordQuery';
-import { getCohortRowsByIds } from '../cohorts/cohortRecordQuery';
+import { getProgramCycleRowsByKeys, type ProgramCycleKey } from '../programCycles/programCycleRecordQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionInput,
   GenerateSessionsInput,
   UpdateSessionInput,
-} from '../../../validation/cohortSchemas';
+} from '../../../validation/programmingSchemas';
 
 const intervalFor = {
   weekly: '1 week',
@@ -43,80 +43,77 @@ export async function createProgramSession(programId: string, data: CreateSessio
 
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
-    const cohorts = await trx<{ id: string }[]>`
-      SELECT cohort.id
-      FROM program_cohorts cohort
-      INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
-      WHERE cohort.program_id = ${programId}
+    const assignments = await trx<ProgramCycleKey[]>`
+      SELECT assignment.program_id, assignment.cycle_id
+      FROM program_cycle_assignments assignment
+      INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
+      WHERE assignment.program_id = ${programId}
         AND ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      ORDER BY cycle.id, cohort.id
-      FOR UPDATE OF cycle, cohort
+      ORDER BY cycle.id
+      FOR UPDATE OF cycle, assignment
     `;
-    if (!cohorts.length) {
+    if (!assignments.length) {
       throw new ConflictError('No assigned cycle covers this session date. Assign a cycle covering this date in Programming settings.');
     }
-    if (cohorts.length > 1) {
+    if (assignments.length > 1) {
       throw new ConflictError('Multiple assigned cycles cover this session date. Adjust the overlapping cycle dates in Programming settings.');
     }
 
-    return createScheduledSession(trx, cohorts[0].id, data, actor, schedule, date);
+    return createScheduledSession(trx, programId, assignments[0].cycleId, data, actor, schedule, date);
   });
 }
 
-export async function createSession(cohortId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
-  await assertCanAccessCohort(actor, cohortId);
+export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    await lockSessionAssignment(trx, cohortId, actor);
-    const [cohort] = await trx<{ programId: string; startsOn: string; endsOn: string }[]>`
-      SELECT cohort.program_id, cycle.starts_on::text, cycle.ends_on::text
-      FROM program_cohorts cohort
-      INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
-      WHERE cohort.id = ${cohortId}
+    await lockSessionAssignment(trx, programId, cycleId, actor);
+    const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
+      SELECT cycle.starts_on::text, cycle.ends_on::text
+      FROM program_cycles cycle
+      WHERE cycle.id = ${cycleId}
     `;
 
-    const schedule = await getProgramSchedule(trx, cohort.programId);
+    const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
-    if (date < cohort.startsOn || date > cohort.endsOn) {
-      throw new ConflictError('Sessions must fall within the cohort date range');
+    if (date < cycle.startsOn || date > cycle.endsOn) {
+      throw new ConflictError('Sessions must fall within the cycle date range');
     }
 
-    return createScheduledSession(trx, cohortId, data, actor, schedule, date);
+    return createScheduledSession(trx, programId, cycleId, data, actor, schedule, date);
   });
 }
 
-export async function generateSessions(cohortId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
-  await assertCanAccessCohort(actor, cohortId);
+export async function generateSessions(programId: string, cycleId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
-    await lockSessionAssignment(trx, cohortId, actor);
+    await lockSessionAssignment(trx, programId, cycleId, actor);
     const theme = data.theme;
-    const cohorts = await trx<{ startsOn: string; endsOn: string; timezone: string }[]>`
+    const cycles = await trx<{ startsOn: string; endsOn: string; timezone: string }[]>`
       SELECT cycle.starts_on::text AS starts_on, cycle.ends_on::text AS ends_on, program.timezone
-      FROM program_cohorts cohort
-      INNER JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
-      INNER JOIN programs program ON program.id = cohort.program_id
-      WHERE cohort.id = ${cohortId}
-      FOR UPDATE OF cohort
+      FROM program_cycles cycle
+      CROSS JOIN programs program
+      WHERE cycle.id = ${cycleId} AND program.id = ${programId}
     `;
 
-    const cohort = cohorts[0];
+    const cycle = cycles[0];
     const lastDate = data.frequency === 'once' ? data.startsOn : data.endsOn!;
-    if (data.startsOn < cohort.startsOn || lastDate > cohort.endsOn) {
-      throw new ConflictError('Sessions must fall within the cohort date range');
+    if (data.startsOn < cycle.startsOn || lastDate > cycle.endsOn) {
+      throw new ConflictError('Sessions must fall within the cycle date range');
     }
 
     if (data.frequency === 'once') {
       await trx`
-        INSERT INTO cohort_sessions (
-          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        INSERT INTO program_sessions (
+          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES (
-          ${cohortId},
+          ${programId}, ${cycleId},
           ${data.sessionTypeId},
           ${theme},
-          (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cohort.timezone},
-          (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE ${cohort.timezone},
+          (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
+          (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
           ${actor.userId},
           ${actor.userId}
         )
@@ -127,15 +124,15 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
         throw new ConflictError('No session dates match the selected weekday and date range');
       }
       await trx`
-        INSERT INTO cohort_sessions (
-          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        INSERT INTO program_sessions (
+          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
-          ${cohortId},
+          ${programId}, ${cycleId},
           ${data.sessionTypeId},
           ${theme},
-          (session_date::date + ${data.startTime}::time) AT TIME ZONE ${cohort.timezone},
-          (session_date::date + ${data.endTime}::time) AT TIME ZONE ${cohort.timezone},
+          (session_date::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
+          (session_date::date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
           ${actor.userId},
           ${actor.userId}
         FROM generate_series(
@@ -146,15 +143,15 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
       `;
     } else {
       await trx`
-        INSERT INTO cohort_sessions (
-          cohort_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+        INSERT INTO program_sessions (
+          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
         )
         SELECT
-          ${cohortId},
+          ${programId}, ${cycleId},
           ${data.sessionTypeId},
           ${theme},
-          (candidate.session_date + ${data.startTime}::time) AT TIME ZONE ${cohort.timezone},
-          (candidate.session_date + ${data.endTime}::time) AT TIME ZONE ${cohort.timezone},
+          (candidate.session_date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
+          (candidate.session_date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
           ${actor.userId},
           ${actor.userId}
         FROM generate_series(
@@ -171,22 +168,22 @@ export async function generateSessions(cohortId: string, data: GenerateSessionsI
     }
 
     const sessions = await trx`
-      SELECT cs.id, cs.cohort_id, cs.session_type_id, st.name AS session_type_name,
+      SELECT cs.id, cs.program_id, cs.cycle_id, cs.session_type_id, st.name AS session_type_name,
         cs.theme, cs.starts_at, cs.ends_at, cs.cancelled_at, cs.description
-      FROM cohort_sessions cs
+      FROM program_sessions cs
       INNER JOIN session_types st ON st.id = cs.session_type_id
-      WHERE cs.cohort_id = ${cohortId}
+      WHERE cs.program_id = ${programId} AND cs.cycle_id = ${cycleId}
         AND cs.session_type_id = ${data.sessionTypeId}
         AND cs.theme = ${theme}
-        AND cs.starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cohort.timezone}
-        AND cs.starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE ${cohort.timezone}
+        AND cs.starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone}
+        AND cs.starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone}
       ORDER BY cs.starts_at
     `;
     if (!sessions.length) {
       throw new ConflictError('No session dates match the selected schedule and date range');
     }
 
-    return { sessions, updatedCohorts: await getUpdatedCohorts(trx, actor, [cohortId]) };
+    return { sessions, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
   });
 }
 
@@ -194,12 +191,12 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const [session] = await trx<{ cohortId: string }[]>`SELECT cohort_id FROM cohort_sessions WHERE id = ${id}`;
+    const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!session) throw new NotFoundError('Session not found');
-    await lockSessionAssignment(trx, session.cohortId, actor);
+    await lockSessionAssignment(trx, session.programId, session.cycleId, actor);
 
     const rows = await trx`
-      UPDATE cohort_sessions
+      UPDATE program_sessions
       SET session_type_id = COALESCE(${data.sessionTypeId ?? null}, session_type_id),
           theme = ${data.theme},
           starts_at = ${data.startsAt}, ends_at = ${data.endsAt},
@@ -210,7 +207,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     if (!rows.length) throw new NotFoundError('Session not found');
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new NotFoundError('Session not found');
-    return { session: saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [saved.cohortId]) };
+    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [saved]) };
   });
 }
 
@@ -219,8 +216,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const [lookup] = await trx<{ programId: string }[]>`
-      SELECT cohort.program_id FROM cohort_sessions session
-      JOIN program_cohorts cohort ON cohort.id = session.cohort_id
+      SELECT session.program_id FROM program_sessions session
       WHERE session.id = ${id}
     `;
     if (!lookup) throw new NotFoundError('Session not found');
@@ -228,33 +224,33 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
 
     const schedule = await getProgramSchedule(trx, lookup.programId);
     const [session] = await trx<{
-      cohortId: string; movable: boolean; startLocal: string; endLocal: string; endDate: string;
+      cycleId: string; movable: boolean; startLocal: string; endLocal: string; endDate: string;
     }[]>`
-      SELECT cohort_id, cancelled_at IS NULL AND starts_at > clock_timestamp() AS movable,
+      SELECT cycle_id, cancelled_at IS NULL AND starts_at > clock_timestamp() AS movable,
         (${date}::date + (starts_at AT TIME ZONE ${schedule.timezone})::time)::text AS start_local,
         (${date}::date + ((ends_at AT TIME ZONE ${schedule.timezone})::date
           - (starts_at AT TIME ZONE ${schedule.timezone})::date)
           + (ends_at AT TIME ZONE ${schedule.timezone})::time)::text AS end_local,
         (${date}::date + ((ends_at AT TIME ZONE ${schedule.timezone})::date
           - (starts_at AT TIME ZONE ${schedule.timezone})::date))::text AS end_date
-      FROM cohort_sessions WHERE id = ${id} FOR UPDATE
+      FROM program_sessions WHERE id = ${id} FOR UPDATE
     `;
     if (!session) throw new NotFoundError('Session not found');
     if (!session.movable) throw new ConflictError('Only future, non-cancelled sessions can be moved');
 
-    const cohorts = await trx<{ id: string; name: string; cycleId: string }[]>`
-      SELECT cohort.id, cycle.name, cycle.id AS cycle_id
-      FROM program_cohorts cohort
-      JOIN program_cycles cycle ON cycle.id = cohort.cycle_id
-      WHERE cohort.program_id = ${lookup.programId}
+    const assignments = await trx<ProgramCycleKey[]>`
+      SELECT assignment.program_id, assignment.cycle_id
+      FROM program_cycle_assignments assignment
+      JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
+      WHERE assignment.program_id = ${lookup.programId}
         AND ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
         AND ${session.endDate}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      ORDER BY cycle.id, cohort.id FOR UPDATE OF cycle, cohort
+      ORDER BY cycle.id FOR UPDATE OF cycle, assignment
     `;
-    if (!cohorts.length) throw new ConflictError('No assigned cycle covers this session date');
-    if (cohorts.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
+    if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
+    if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
 
-    if (cohorts[0].id !== session.cohortId) {
+    if (assignments[0].cycleId !== session.cycleId) {
       const [records] = await trx<{ recorded: boolean }[]>`
         SELECT EXISTS (SELECT 1 FROM attendance_records WHERE session_id = ${id})
           OR EXISTS (SELECT 1 FROM session_notes WHERE session_id = ${id})
@@ -268,15 +264,15 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!timing.future) throw new ConflictError('Session destination must be in the future');
 
     await trx`
-      UPDATE cohort_sessions SET cohort_id = ${cohorts[0].id},
+      UPDATE program_sessions SET cycle_id = ${assignments[0].cycleId},
         starts_at = ${timing.startsAt}, ends_at = ${timing.endsAt},
         updated_at = NOW(), updated_by = ${actor.userId}
       WHERE id = ${id}
-      RETURNING id, cohort_id, starts_at, ends_at
+      RETURNING id, program_id, cycle_id, starts_at, ends_at
     `;
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new NotFoundError('Session not found');
-    return { session: saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [session.cohortId, saved.cohortId]) };
+    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved]) };
   });
 }
 
@@ -284,10 +280,10 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const [lookup] = await trx<{ cohortId: string }[]>`SELECT cohort_id FROM cohort_sessions WHERE id = ${id}`;
+    const [lookup] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!lookup) throw new NotFoundError('Session not found');
-    await lockSessionAssignment(trx, lookup.cohortId, actor);
-    const [session] = await trx<{ id: string; cohortId: string }[]>`SELECT id, cohort_id FROM cohort_sessions WHERE id = ${id} FOR UPDATE`;
+    await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, actor);
+    const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id} FOR UPDATE`;
     if (!session) throw new NotFoundError('Session not found');
 
     const attendance = await trx`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
@@ -303,8 +299,8 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
       throw new ConflictError('Session cannot be deleted because attachments have been added');
     }
 
-    await trx`DELETE FROM cohort_sessions WHERE id = ${id}`;
-    return { id, updatedCohorts: await getUpdatedCohorts(trx, actor, [session.cohortId]) };
+    await trx`DELETE FROM program_sessions WHERE id = ${id}`;
+    return { id, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [session]) };
   });
 }
 
@@ -319,16 +315,14 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
   return first.toISOString().slice(0, 10);
 }
 
-async function lockSessionAssignment(trx: typeof sql, cohortId: string, actor: AccessTokenPayload) {
-  const [assignment] = await trx<{ programId: string }[]>`SELECT program_id FROM program_cohorts WHERE id = ${cohortId}`;
-  if (!assignment) throw new NotFoundError('Cohort not found');
-  await lockAssignmentProgram(trx, assignment.programId, actor);
-
-  const [current] = await trx<{ cycleId: string }[]>`SELECT cycle_id FROM program_cohorts WHERE id = ${cohortId}`;
-  if (!current) throw new NotFoundError('Cohort not found');
-  await trx`SELECT id FROM program_cycles WHERE id = ${current.cycleId} FOR UPDATE`;
-  const cohorts = await trx`SELECT id FROM program_cohorts WHERE id = ${cohortId} FOR UPDATE`;
-  if (!cohorts.length) throw new NotFoundError('Cohort not found');
+async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, actor: AccessTokenPayload) {
+  await lockAssignmentProgram(trx, programId, actor);
+  await trx`SELECT id FROM program_cycles WHERE id = ${cycleId} FOR UPDATE`;
+  const assignments = await trx`
+    SELECT program_id FROM program_cycle_assignments
+    WHERE program_id = ${programId} AND cycle_id = ${cycleId} FOR UPDATE
+  `;
+  if (!assignments.length) throw new NotFoundError('Program cycle not found');
 }
 
 async function getProgramSchedule(trx: typeof sql, programId: string): Promise<ProgramSchedule> {
@@ -356,7 +350,8 @@ function resolveSessionDate(date: string | undefined, schedule: ProgramSchedule)
 
 async function createScheduledSession(
   trx: typeof sql,
-  cohortId: string,
+  programId: string,
+  cycleId: string,
   data: CreateSessionInput,
   actor: AccessTokenPayload,
   schedule: ProgramSchedule,
@@ -369,23 +364,23 @@ async function createScheduledSession(
   const timing = await sessionTiming(trx, `${date}T${startTime}`, `${date}T${endTime}`, schedule.timezone);
 
   const [session] = await trx`
-    INSERT INTO cohort_sessions (
-      cohort_id, session_type_id, theme, starts_at, ends_at, description, created_by, updated_by
+    INSERT INTO program_sessions (
+      program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description, created_by, updated_by
     ) VALUES (
-      ${cohortId}, ${data.sessionTypeId}, ${data.theme},
+      ${programId}, ${cycleId}, ${data.sessionTypeId}, ${data.theme},
       ${timing.startsAt}, ${timing.endsAt},
       ${data.description ?? null}, ${actor.userId}, ${actor.userId}
     )
-    RETURNING id, cohort_id, session_type_id, theme, starts_at, ends_at, description
+    RETURNING id, program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description
   `;
   const [saved] = await getSessionRowsByIds(trx, actor, [session.id]);
   if (!saved) throw new NotFoundError('Session not found');
-  return { ...saved, updatedCohorts: await getUpdatedCohorts(trx, actor, [cohortId]) };
+  return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
 }
 
-function getUpdatedCohorts(trx: typeof sql, actor: AccessTokenPayload, ids: string[]) {
+function getUpdatedProgramCycles(trx: typeof sql, actor: AccessTokenPayload, keys: ProgramCycleKey[]) {
   return actor.permissions.includes('read:programs')
-    ? getCohortRowsByIds(trx, actor, [...new Set(ids)])
+    ? getProgramCycleRowsByKeys(trx, actor, keys)
     : undefined;
 }
 

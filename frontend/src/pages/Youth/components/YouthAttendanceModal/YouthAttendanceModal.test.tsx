@@ -5,8 +5,8 @@ import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
 
 const api = vi.hoisted(() => ({
-  getYouthCohortAttendance: vi.fn(),
-  setYouthCohortAttendance: vi.fn(),
+  getYouthProgramCycleAttendance: vi.fn(),
+  setYouthProgramCycleAttendance: vi.fn(),
 }));
 const sessionNoteApi = vi.hoisted(() => ({
   createSessionNote: vi.fn(),
@@ -18,10 +18,9 @@ const sessionNoteApi = vi.hoisted(() => ({
 vi.mock('./youthAttendance.api', () => api);
 vi.mock('../../../Programming/Sessions/sessions.api', () => sessionNoteApi);
 
-const cohort = {
-  id: 'cohort-1',
-    cycleId: 'cycle-1',
-  name: 'Summer 2026',
+const programCycle = {
+  cycleId: 'cycle-1',
+  cycleName: 'Summer 2026',
   programId: 'program-1',
   programName: 'Soft Skills',
   enrollmentRequired: true,
@@ -36,11 +35,12 @@ const cohort = {
 };
 
 const attendance = {
-  cohort: {
-    id: cohort.id,
-    name: cohort.name,
-    programName: cohort.programName,
-    enrollmentRequired: cohort.enrollmentRequired,
+  programCycle: {
+    programId: programCycle.programId,
+    cycleId: programCycle.cycleId,
+    cycleName: programCycle.cycleName,
+    programName: programCycle.programName,
+    enrollmentRequired: programCycle.enrollmentRequired,
   },
   sessions: [
     {
@@ -66,8 +66,8 @@ const attendance = {
 describe('YouthAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getYouthCohortAttendance.mockResolvedValue(attendance);
-    api.setYouthCohortAttendance.mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
+    api.getYouthProgramCycleAttendance.mockResolvedValue(attendance);
+    api.setYouthProgramCycleAttendance.mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
     sessionNoteApi.createSessionNote.mockResolvedValue({});
     sessionNoteApi.unlinkSessionNoteYouth.mockResolvedValue(undefined);
     sessionNoteApi.getSessionRoster.mockResolvedValue([
@@ -79,8 +79,8 @@ describe('YouthAttendanceModal', () => {
   it('shows note metadata in the row and full details on demand', async () => {
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -111,8 +111,8 @@ describe('YouthAttendanceModal', () => {
   it('adds a prelinked youth note without showing link controls', async () => {
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -138,8 +138,8 @@ describe('YouthAttendanceModal', () => {
   it('edits and unlinks session notes without deleting them', async () => {
     const view = render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -158,8 +158,8 @@ describe('YouthAttendanceModal', () => {
     view.unmount();
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -175,12 +175,12 @@ describe('YouthAttendanceModal', () => {
     ));
   });
 
-  it('loads every cohort session and saves statuses for only the selected youth', async () => {
+  it('loads every programCycle session and saves statuses for only the selected youth', async () => {
     const onSaved = vi.fn();
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         onClose={vi.fn()}
         onSaved={onSaved}
       />,
@@ -188,9 +188,9 @@ describe('YouthAttendanceModal', () => {
 
     expect(await screen.findByText('Teamwork')).toBeInTheDocument();
     expect(screen.getByText('Communication')).toBeInTheDocument();
-    expect(api.getYouthCohortAttendance).toHaveBeenCalledWith(
+    expect(api.getYouthProgramCycleAttendance).toHaveBeenCalledWith(
       'youth-1',
-      'cohort-1',
+      { programId: 'program-1', cycleId: 'cycle-1' },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
@@ -198,9 +198,9 @@ describe('YouthAttendanceModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Late' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(api.setYouthCohortAttendance).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.setYouthProgramCycleAttendance).toHaveBeenCalledWith(
       'youth-1',
-      'cohort-1',
+      { programId: 'program-1', cycleId: 'cycle-1' },
       [
         { sessionId: 'session-2', status: 'late', notes: null },
         { sessionId: 'session-1', status: 'present', notes: 'Participated fully' },
@@ -210,11 +210,11 @@ describe('YouthAttendanceModal', () => {
   });
 
   it('shows a load failure without enabling a destructive save', async () => {
-    api.getYouthCohortAttendance.mockRejectedValue(new Error('Attendance unavailable'));
+    api.getYouthProgramCycleAttendance.mockRejectedValue(new Error('Attendance unavailable'));
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', cohorts: [cohort] })}
-        cohort={cohort}
+        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        programCycle={programCycle}
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />,

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionAttachment } from '../../../../types';
-import { makeCohortSession } from '../../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentModal from './SessionAttachmentModal';
 
@@ -16,7 +16,7 @@ const api = vi.hoisted(() => ({
 vi.mock('../../../../sessions.api', () => api);
 
 const queryKey = ['sessions'] as const;
-const session = makeCohortSession();
+const session = makeProgramSession();
 const attachment: SessionAttachment = {
   id: 'attachment-1',
   sessionId: session.id,

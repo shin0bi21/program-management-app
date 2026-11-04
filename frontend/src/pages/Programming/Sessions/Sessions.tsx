@@ -11,7 +11,7 @@ import PageHeader from '../../../common/components/PageHeader/PageHeader';
 import SearchInput from '../../../common/components/SearchInput/SearchInput';
 import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
 import type { Program } from '../../../common/features/programs/types';
-import { SESSION_TABLE_KEYS, type CohortSession, type SessionListFilters } from './types';
+import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
 import AddSessionModal from './components/AddSessionModal/AddSessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import EditSessionModal from './components/EditSessionModal/EditSessionModal';
@@ -74,7 +74,7 @@ export default function Sessions() {
     if (source !== 'item') selection.clearSelectedSession();
     setSelectedProgramId(program.id);
   };
-  const selectSession = (session: CohortSession) => {
+  const selectSession = (session: ProgramSession) => {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
@@ -91,7 +91,7 @@ export default function Sessions() {
   };
 
   // Attendance modal.
-  const [attendanceTarget, setAttendanceTarget] = useState<CohortSession | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<ProgramSession | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
   // Single-session creation from the page or a calendar date.
@@ -99,7 +99,7 @@ export default function Sessions() {
   const closeAddSessionModal = () => setAddSessionTarget(null);
 
   // Edit session modal.
-  const [editTarget, setEditTarget] = useState<CohortSession | null>(null);
+  const [editTarget, setEditTarget] = useState<ProgramSession | null>(null);
   const closeEditSessionModal = () => setEditTarget(null);
 
   // Table configuration.
@@ -186,7 +186,7 @@ export default function Sessions() {
               onChange={(event) => search.setValue(event.target.value)}
               onApply={search.apply}
               onClear={search.clear}
-              placeholder="Search titles, themes, descriptions, or cohorts"
+              placeholder="Search titles, themes, descriptions, or program cycles"
             />
           }
 

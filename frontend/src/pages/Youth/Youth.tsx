@@ -61,7 +61,7 @@ export default function Youth() {
   } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['cohorts'][number] | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['programCycles'][number] | null>(null);
   const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
   const { selectedProfile, selectedProfileId, selectProfile, reconcileSavedProfile } = useYouthSelection({
     onSelectedProfileIdChange: closeAttendanceModal,
@@ -90,7 +90,7 @@ export default function Youth() {
 
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    cohort: YouthProfile['cohorts'][number];
+    programCycle: YouthProfile['programCycles'][number];
     youthId: string;
   } | null>(null);
   const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
@@ -167,8 +167,8 @@ export default function Youth() {
             canManageAttendance={canManageAttendance}
             onManageAttendance={setAttendanceTarget}
             canViewAttendanceReport={canViewAttendanceReport}
-            onViewAttendanceReport={cohort => {
-              if (selectedProfile) setAttendanceReportTarget({ cohort, youthId: selectedProfile.id });
+            onViewAttendanceReport={programCycle => {
+              if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
             }}
             profileNotes={profileNotes.notes}
             profileNotesLoading={profileNotes.loading}
@@ -193,12 +193,12 @@ export default function Youth() {
       <SchoolModal workflow={schoolModal} />
       <YouthAttendanceModal
         youth={selectedProfile}
-        cohort={attendanceTarget}
+        programCycle={attendanceTarget}
         onClose={closeAttendanceModal}
         onSaved={reconcileAttendance}
       />
       {attendanceReportTarget && <YouthReportModal
-        cohort={attendanceReportTarget.cohort}
+        programCycle={attendanceReportTarget.programCycle}
         youthId={attendanceReportTarget.youthId}
         onClose={closeAttendanceReportModal}
       />}

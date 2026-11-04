@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { handleMoveSessionDate, handleCreateProgramSession, handleGetSessionList, handleGetSessionReferenceData, handleGetSessionTypes, handleCreateSession, handleGenerateSessions, handleGetSessionRoster, handleSetSessionAttendance, handleGetSessionNotes, handleCreateSessionNote, handleUpdateSessionNote, handleUnlinkSessionNoteYouth, handleDeleteSessionNote, handleGetSessionAttachments, handleCreateSessionAttachment, handleGetSessionAttachmentFile, handleUpdateSessionAttachment, handleDeleteSessionAttachment, handleUpdateSession, handleDeleteSession } from '../controllers/sessionController';
+import { handleMoveSessionDate, handleCreateProgramSession, handleGetSessionList, handleGetSessionReferenceData, handleGetSessionTypes, handleGetSessionRoster, handleSetSessionAttendance, handleGetSessionNotes, handleCreateSessionNote, handleUpdateSessionNote, handleUnlinkSessionNoteYouth, handleDeleteSessionNote, handleGetSessionAttachments, handleCreateSessionAttachment, handleGetSessionAttachmentFile, handleUpdateSessionAttachment, handleDeleteSessionAttachment, handleUpdateSession, handleDeleteSession } from '../controllers/sessionController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
-import { moveSessionDateSchema, createProgramSessionSchema, sessionListQuerySchema, createSessionSchema, generateSessionsSchema, saveAttendanceSchema, sessionNotesSchema, createSessionNoteSchema, updateSessionNoteSchema, unlinkSessionNoteYouthSchema, deleteSessionNoteSchema, sessionAttachmentsSchema, createSessionAttachmentSchema, sessionAttachmentParamsSchema, updateSessionAttachmentSchema, updateSessionSchema, deleteSessionSchema } from '../validation/cohortSchemas';
+import { moveSessionDateSchema, createProgramSessionSchema, sessionListQuerySchema, saveAttendanceSchema, sessionNotesSchema, createSessionNoteSchema, updateSessionNoteSchema, unlinkSessionNoteYouthSchema, deleteSessionNoteSchema, sessionAttachmentsSchema, createSessionAttachmentSchema, sessionAttachmentParamsSchema, updateSessionAttachmentSchema, updateSessionSchema, deleteSessionSchema } from '../validation/programmingSchemas';
 import { uploadFile } from '../middleware/fileUpload';
 
 const router = Router();
@@ -12,8 +12,6 @@ router.get('/sessions', authenticateToken, requirePermission('read:sessions'), g
 router.get('/sessions/reference-data', authenticateToken, requirePermission('read:sessions'), generalLimiter, asyncHandler(handleGetSessionReferenceData));
 router.get('/session-types', authenticateToken, requirePermission('read:sessions'), generalLimiter, asyncHandler(handleGetSessionTypes));
 router.post('/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createProgramSessionSchema), asyncHandler(handleCreateProgramSession));
-router.post('/:cohortId/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createSessionSchema), asyncHandler(handleCreateSession));
-router.post('/:cohortId/sessions/generate', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(generateSessionsSchema), asyncHandler(handleGenerateSessions));
 router.get('/sessions/:sessionId/roster', authenticateToken, requirePermission('read:attendance'), generalLimiter, asyncHandler(handleGetSessionRoster));
 router.put('/sessions/:sessionId/attendance', authenticateToken, requirePermission('write:attendance'), generalLimiter, validateRequest(saveAttendanceSchema), asyncHandler(handleSetSessionAttendance));
 router.get('/sessions/:sessionId/notes', authenticateToken, requirePermission('read:sessions'), generalLimiter, validateRequest(sessionNotesSchema), asyncHandler(handleGetSessionNotes));

@@ -13,10 +13,11 @@ export interface YouthAttendanceSession {
   sessionNotes: SessionNote[];
 }
 
-export interface YouthCohortAttendance {
-  cohort: {
-    id: string;
-    name: string;
+export interface YouthProgramCycleAttendance {
+  programCycle: {
+    programId: string;
+    cycleId: string;
+    cycleName: string;
     programName: string;
     enrollmentRequired: boolean;
   };

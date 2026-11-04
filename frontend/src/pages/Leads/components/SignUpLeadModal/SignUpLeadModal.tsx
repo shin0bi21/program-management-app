@@ -39,11 +39,11 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
     onSuccess,
   });
 
-  const cohortOptions = [
+  const programCycleOptions = [
     { value: '', label: 'Do not enroll yet' },
-    ...workflow.visibleCohorts.map(cohort => ({
-      value: cohort.id,
-      label: `${cohort.programName} — ${cohort.name} · ${formatDate(cohort.startsOn)}–${formatDate(cohort.endsOn)}`,
+    ...workflow.visibleProgramCycles.map(programCycle => ({
+      value: `${programCycle.programId}:${programCycle.cycleId}`,
+      label: `${programCycle.programName} — ${programCycle.cycleName} · ${formatDate(programCycle.startsOn)}–${formatDate(programCycle.endsOn)}`,
     })),
   ];
   const modalStatus = workflow.submitStatus === 'idle' && workflow.loadError
@@ -108,24 +108,24 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
           </FormField>
 
           <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">
-            <h3 id="sign-up-lead-enrollment-title">Cohort enrollment</h3>
+            <h3 id="sign-up-lead-enrollment-title">Program and cycle enrollment</h3>
             <FloatingSelect
-              id="sign-up-cohort"
-              ariaLabel="Cohort enrollment"
-              value={workflow.cohortId}
-              onChange={workflow.selectCohort}
-              options={cohortOptions}
-              placeholder={workflow.loading ? 'Loading cohorts...' : 'Do not enroll yet'}
+              id="sign-up-programCycle"
+              ariaLabel="Program and cycle enrollment"
+              value={workflow.selectedPairKey}
+              onChange={workflow.selectProgramCycle}
+              options={programCycleOptions}
+              placeholder={workflow.loading ? 'Loading program cycles...' : 'Do not enroll yet'}
               disabled={workflow.loading || workflow.submissionComplete}
             />
             <Button type="button" size="sm" variant="secondary" onClick={() => workflow.setShowAllPrograms(!workflow.showAllPrograms)} disabled={workflow.loading || workflow.submissionComplete}>
               {workflow.showAllPrograms ? 'Show eligible program' : 'View all programs'}
             </Button>
-            {!workflow.loading && workflow.visibleCohorts.length === 0 && (
+            {!workflow.loading && workflow.visibleProgramCycles.length === 0 && (
               <p className="sign-up-lead-empty">
-                {workflow.cohorts.length
-                  ? 'No cohorts match this youth’s age. Create the profile now and manage cohorts later.'
-                  : 'No eligible cohorts are available. The youth profile can still be created.'}
+                {workflow.programCycles.length
+                  ? 'No program cycles match this youth’s age. Create the profile now and manage enrollment later.'
+                  : 'No eligible program cycles are available. The youth profile can still be created.'}
               </p>
             )}
           </section>

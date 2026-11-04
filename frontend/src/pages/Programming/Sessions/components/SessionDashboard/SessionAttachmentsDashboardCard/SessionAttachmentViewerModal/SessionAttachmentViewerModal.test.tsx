@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SessionAttachment } from '../../../../types';
-import { makeCohortSession } from '../../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../../tests/factories/session';
 import { renderWithQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal';
 
@@ -21,7 +21,7 @@ vi.mock('@panzoom/panzoom', () => ({
   })),
 }));
 
-const session = makeCohortSession();
+const session = makeProgramSession();
 const attachment: SessionAttachment = {
   id: 'attachment-1',
   sessionId: session.id,

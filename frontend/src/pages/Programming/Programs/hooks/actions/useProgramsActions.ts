@@ -8,7 +8,7 @@ import type { ConfirmAction } from '../../../../../common/components/ConfirmModa
 import { deleteProgramCycle, type SetCycleResult } from '../../api/cycles.api';
 import type { ProgramMutationResult } from '../../api/programs.api';
 import { CYCLE_TABLE_QUERY_KEY } from '../../components/CycleTable/queryKeys';
-import { syncCohortChanges } from '../../../Cohorts/hooks/actions/cohortCache';
+import { syncProgramCycleAssignmentChanges } from './programCycleAssignmentCache';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 
 interface UseProgramsActionsOptions {
@@ -31,7 +31,7 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
     }
 
     void queryClient.invalidateQueries({ queryKey: ['programs', 'options'] });
-    syncCohortChanges(queryClient, result);
+    syncProgramCycleAssignmentChanges(queryClient, result);
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(false) });
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(true) });
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.sessionScheduling });
@@ -43,7 +43,7 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
     } else {
       replaceInfiniteListRow(queryClient, CYCLE_TABLE_QUERY_KEY, result.cycle);
     }
-    syncCohortChanges(queryClient, result);
+    syncProgramCycleAssignmentChanges(queryClient, result);
     const choices = queryClient.getQueryData<ProgramCycle[]>(referenceDataKeys.cycles);
     if (choices) {
       queryClient.setQueryData(referenceDataKeys.cycles, choices.some(cycle => cycle.id === result.cycle.id)
@@ -57,7 +57,7 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
   const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
     setConfirmAction({
       title: 'Delete Cycle',
-      message: `Delete ${cycle.name}? Cycles assigned to cohorts or logged hours cannot be deleted.`,
+      message: `Delete ${cycle.name}? Cycles assigned to programs or logged hours cannot be deleted.`,
       confirmVariant: 'danger',
       successMessage: 'Cycle deleted',
       onConfirm: async () => {

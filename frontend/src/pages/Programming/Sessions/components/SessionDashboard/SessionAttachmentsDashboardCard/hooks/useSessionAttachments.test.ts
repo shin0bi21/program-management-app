@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageMessageItem } from '../../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
 import type { SessionAttachment } from '../../../../types';
-import { makeCohortSession } from '../../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import { useSessionAttachments } from './useSessionAttachments';
 
@@ -13,8 +13,8 @@ vi.mock('../../../../sessions.api', () => ({
   getSessionAttachments: vi.fn(),
 }));
 
-const session = makeCohortSession();
-const nextSession = makeCohortSession({ id: 'session-2' });
+const session = makeProgramSession();
+const nextSession = makeProgramSession({ id: 'session-2' });
 const attachment: SessionAttachment = {
   id: 'attachment-1', sessionId: session.id, title: 'Workshop photo', description: null,
   originalFilename: 'photo.png', mimeType: 'image/png', fileSize: 1024,

@@ -7,10 +7,9 @@ export type YouthRecordRow =
   DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id'>> &
   DbRow<Pick<Schools, 'name'>> & {
     status: 'active' | 'inactive';
-    cohorts: Array<{
-      id: string;
+    programCycles: Array<{
       cycleId: string;
-      name: string;
+      cycleName: string;
       programId: string;
       programName: string;
       enrollmentRequired: boolean;
@@ -30,9 +29,8 @@ export type YouthRecordRow =
   };
 
 export const youthActiveStatus = sql`CASE WHEN EXISTS (
-  SELECT 1 FROM cohort_enrollments current_enrollment
-  INNER JOIN program_cohorts current_cohort ON current_cohort.id = current_enrollment.cohort_id
-  INNER JOIN program_cycles current_cycle ON current_cycle.id = current_cohort.cycle_id
+  SELECT 1 FROM program_enrollments current_enrollment
+  INNER JOIN program_cycles current_cycle ON current_cycle.id = current_enrollment.cycle_id
   WHERE current_enrollment.youth_id = u.id
     AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
     AND (current_enrollment.withdrawn_on IS NULL OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
@@ -54,7 +52,7 @@ export const youthRecordColumns = sql`
   (
     SELECT (MAX(cs.starts_at) AT TIME ZONE 'America/Toronto')::date::text
     FROM attendance_records ar
-    INNER JOIN cohort_sessions cs ON cs.id = ar.session_id
+    INNER JOIN program_sessions cs ON cs.id = ar.session_id
     WHERE ar.youth_id = u.id
       AND ar.status IN ('present', 'late')
   ) AS last_attended_on,
@@ -62,9 +60,8 @@ export const youthRecordColumns = sql`
   COALESCE((
     SELECT json_agg(
       json_build_object(
-        'id', pc.id,
         'cycleId', cycle.id,
-        'name', cycle.name,
+        'cycleName', cycle.name,
         'programId', p.id,
         'programName', p.name,
         'enrollmentRequired', p.enrollment_required,
@@ -81,35 +78,36 @@ export const youthRecordColumns = sql`
     )
     FROM (
       SELECT
-        ce.cohort_id,
+        ce.program_id,
+        ce.cycle_id,
         ce.enrolled_on,
         ce.withdrawn_on
-      FROM cohort_enrollments ce
+      FROM program_enrollments ce
       WHERE ce.youth_id = u.id
 
       UNION ALL
 
       SELECT
-        open_cs.cohort_id,
+        open_cs.program_id,
+        open_cs.cycle_id,
         NULL::date AS enrolled_on,
         NULL::date AS withdrawn_on
       FROM attendance_records open_ar
-      INNER JOIN cohort_sessions open_cs ON open_cs.id = open_ar.session_id
-      INNER JOIN program_cohorts open_pc ON open_pc.id = open_cs.cohort_id
-      INNER JOIN programs open_program ON open_program.id = open_pc.program_id
+      INNER JOIN program_sessions open_cs ON open_cs.id = open_ar.session_id
+      INNER JOIN programs open_program ON open_program.id = open_cs.program_id
       WHERE open_ar.youth_id = u.id
         AND open_program.enrollment_required = FALSE
         AND NOT EXISTS (
           SELECT 1
-          FROM cohort_enrollments existing_enrollment
-          WHERE existing_enrollment.cohort_id = open_cs.cohort_id
+          FROM program_enrollments existing_enrollment
+          WHERE existing_enrollment.program_id = open_cs.program_id
+            AND existing_enrollment.cycle_id = open_cs.cycle_id
             AND existing_enrollment.youth_id = u.id
         )
-      GROUP BY open_cs.cohort_id
+      GROUP BY open_cs.program_id, open_cs.cycle_id
     ) participation
-    INNER JOIN program_cohorts pc ON pc.id = participation.cohort_id
-    INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
-    INNER JOIN programs p ON p.id = pc.program_id
+    INNER JOIN program_cycles cycle ON cycle.id = participation.cycle_id
+    INNER JOIN programs p ON p.id = participation.program_id
     LEFT JOIN LATERAL (
       SELECT
         COUNT(ar.id) FILTER (WHERE ar.status = 'present')::int AS present_count,
@@ -119,13 +117,13 @@ export const youthRecordColumns = sql`
           MAX(cs.starts_at) FILTER (WHERE ar.status IN ('present', 'late'))
           AT TIME ZONE 'America/Toronto'
         )::date::text AS last_attended_on
-      FROM cohort_sessions cs
+      FROM program_sessions cs
       INNER JOIN attendance_records ar
         ON ar.session_id = cs.id
         AND ar.youth_id = u.id
-      WHERE cs.cohort_id = pc.id
+      WHERE cs.program_id = participation.program_id AND cs.cycle_id = participation.cycle_id
     ) attendance ON TRUE
-  ), '[]'::json) AS cohorts,
+  ), '[]'::json) AS program_cycles,
   (
     SELECT json_agg(
       json_build_object(

@@ -62,13 +62,13 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     : null,
 }));
 vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
-  default: ({ cohort }: { cohort: { name: string } | null }) => cohort
-    ? <div data-testid="youth-attendance-modal">{cohort.name}</div>
+  default: ({ programCycle }: { programCycle: { cycleName: string } | null }) => programCycle
+    ? <div data-testid="youth-attendance-modal">{programCycle.cycleName}</div>
     : null,
 }));
 vi.mock('../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ cohort, youthId }: { cohort: { name: string }; youthId?: string }) => (
-    <div data-testid="youth-report-modal">{cohort.name} · {youthId}</div>
+  default: ({ programCycle, youthId }: { programCycle: { cycleName: string }; youthId?: string }) => (
+    <div data-testid="youth-report-modal">{programCycle.cycleName} · {youthId}</div>
   ),
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
@@ -139,7 +139,7 @@ describe('Youth', () => {
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More actions for Jamie Test' })).toBeInTheDocument();
-    expect(screen.queryByText('Manage Cohorts')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manage ProgramCycles')).not.toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate')).not.toBeInTheDocument();
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('Youth', () => {
     render(<Youth />);
     fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
     expect(screen.getByLabelText('Search youth')).toHaveValue('Jamie');
-    expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /^Status/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
@@ -196,10 +196,9 @@ describe('Youth', () => {
     mockUseYouthTableData.mockReturnValue({
       rows: [makeYouthProfile({
         lastAttendedOn: '2026-07-21',
-        cohorts: [{
-          id: 'cohort-1',
-    cycleId: 'cycle-1',
-          name: 'Summer 2026',
+        programCycles: [{
+          cycleId: 'cycle-1',
+          cycleName: 'Summer 2026',
           programId: 'program-1',
           programName: 'Soft Skills',
           enrollmentRequired: true,
@@ -264,10 +263,10 @@ describe('Youth', () => {
     expect(schoolSelectionChanged).toHaveBeenCalledWith('school-new');
   });
 
-  it('opens the cohort attendance report filtered to the selected youth', async () => {
+  it('opens the programCycle attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
-      cohorts: [{
-        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+      programCycles: [{
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
@@ -304,10 +303,10 @@ describe('Youth', () => {
     expect(screen.queryByRole('dialog', { name: 'New profile note' })).not.toBeInTheDocument();
   });
 
-  it('opens youth-centric attendance management from a cohort summary', async () => {
+  it('opens youth-centric attendance management from a programCycle summary', async () => {
     const profile = makeYouthProfile({
-      cohorts: [{
-        id: 'cohort-1', cycleId: 'cycle-1', name: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+      programCycles: [{
+        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',

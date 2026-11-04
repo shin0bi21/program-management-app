@@ -36,7 +36,7 @@ describe('Lead date of birth validation', () => {
     }
   });
 
-  it('allows profile signup outside program age bounds when no cohort is selected', () => {
+  it('allows profile signup outside program age bounds when no program cycle is selected', () => {
     const params = { id: '00000000-0000-4000-8000-000000000001' };
     expect(signUpLeadSchema.safeParse({ params, body: { dateOfBirth: '2000-01-01' } }).success).toBe(true);
     expect(signUpLeadSchema.safeParse({ params, body: { age: 14 } }).success).toBe(false);

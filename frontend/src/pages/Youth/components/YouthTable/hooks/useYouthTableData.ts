@@ -18,9 +18,9 @@ export default function useYouthTableData(
         lastName: profile.lastName.toLowerCase(),
         dateOfBirth: profile.dateOfBirth ?? '',
         school: profile.schoolName?.toLowerCase() ?? '',
-        program: profile.cohorts
-          .filter(cohort => cohort.enrolledOn !== null && cohort.withdrawnOn === null)
-          .map(cohort => cohort.programName).sort(compareListSortValues)[0]?.toLowerCase() ?? '',
+        program: profile.programCycles
+          .filter(programCycle => programCycle.enrolledOn !== null && programCycle.withdrawnOn === null)
+          .map(programCycle => programCycle.programName).sort(compareListSortValues)[0]?.toLowerCase() ?? '',
         status: profile.status,
       }[sorting.key]),
     },

@@ -5,7 +5,7 @@ import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import {
   SESSION_TABLE_KEYS,
-  type CohortSession,
+  type ProgramSession,
   type SessionListFilters,
   type SessionSortKey,
 } from '../../types';
@@ -14,16 +14,16 @@ import { useSessionTableData } from './hooks/useSessionTableData';
 
 interface SessionTableProps {
   queryKey: readonly unknown[];
-  columns: TableColumnDef<CohortSession>[];
+  columns: TableColumnDef<ProgramSession>[];
   hiddenColumnKeys: string[];
   filters: SessionListFilters;
   sorting: ListSort<SessionSortKey>;
   columnWidths: Record<string, number>;
   selectedSessionId: string;
-  onSessionSelect: (session: CohortSession) => void;
+  onSessionSelect: (session: ProgramSession) => void;
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onSelectedSessionResolved: (session: CohortSession | null) => void;
+  onSelectedSessionResolved: (session: ProgramSession | null) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 

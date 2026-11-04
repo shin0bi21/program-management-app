@@ -4,7 +4,7 @@ import type { CellContext } from '@tanstack/react-table';
 import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { CohortSession } from '../../../types';
+import type { ProgramSession } from '../../../types';
 import type { Program } from '../../../../../../common/features/programs/types';
 import { sessionDateTime } from '../../../utils/sessionSchedule';
 import { formatShortDate } from '../../../../../../common/utils/date';
@@ -20,12 +20,12 @@ export default function useSessionTable({
 }: {
   programs?: Program[];
   canWriteSessions: boolean;
-  onEdit: (session: CohortSession) => void;
-  onDelete: (session: CohortSession) => void;
+  onEdit: (session: ProgramSession) => void;
+  onDelete: (session: ProgramSession) => void;
 }) {
-  return useMemo<TableColumnDef<CohortSession>[]>(() => [
+  return useMemo<TableColumnDef<ProgramSession>[]>(() => [
     { id: 'program', header: 'Program', accessorFn: session => session.programName },
-    { id: 'cohort', header: 'Cycle', accessorFn: session => session.cohortName },
+    { id: 'cycle', header: 'Cycle', accessorFn: session => session.cycleName },
     { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
     {
       id: 'date', header: 'Date', size: 135,
@@ -64,7 +64,7 @@ export default function useSessionTable({
       enableResizing: false,
       enableHiding: false,
       header: '',
-      cell: ({ row: { original: session } }: CellContext<CohortSession, unknown>) => <ActionsMenu
+      cell: ({ row: { original: session } }: CellContext<ProgramSession, unknown>) => <ActionsMenu
         ariaLabel={`More actions for ${session.theme}`}
         items={[
           { id: 'edit', label: 'Edit', onClick: () => onEdit(session) },

@@ -2,16 +2,15 @@ import crypto from 'crypto';
 import request from 'supertest';
 import { asTransactionSql } from '../../src/db/client';
 import { createApp } from '../shared/app';
-import { deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
+import { deleteTestUser, seedTestProgramCycle, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
-it('serializes Youth attendance saves and same-cohort session moves through the program lock', async () => {
+it('serializes Youth attendance saves and same-cycle session moves through the program lock', async () => {
   const userIds: string[] = [];
   let programId: string | undefined;
   let cycleId: string | undefined;
-  let cohortId: string | undefined;
   let sessionId: string | undefined;
   let blocker: Promise<unknown> | undefined;
   const requests: Array<Promise<request.Response>> = [];
@@ -30,13 +29,12 @@ it('serializes Youth attendance saves and same-cohort session moves through the 
       INSERT INTO programs (name) VALUES (${`Attendance lock ${crypto.randomUUID()}`}) RETURNING id
     `;
     programId = program.id;
-    const fixture = await seedTestCohort({ programId, startsOn: `${year}-01-01`, endsOn: `${year}-12-31` });
-    cohortId = fixture.cohortId;
+    const fixture = await seedTestProgramCycle({ programId, startsOn: `${year}-01-01`, endsOn: `${year}-12-31` });
     cycleId = fixture.cycleId;
-    await sql`INSERT INTO cohort_enrollments (cohort_id, youth_id) VALUES (${cohortId}, ${youth.userId})`;
+    await sql`INSERT INTO program_enrollments (program_id, cycle_id, youth_id) VALUES (${programId}, ${cycleId}, ${youth.userId})`;
     const [session] = await sql<{ id: string }[]>`
-      INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
-      VALUES (${cohortId}, 'Concurrent attendance', ${`${year}-03-03T22:30:00Z`}, ${`${year}-03-04T00:30:00Z`})
+      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
+      VALUES (${programId}, ${cycleId}, 'Concurrent attendance', ${`${year}-03-03T22:30:00Z`}, ${`${year}-03-04T00:30:00Z`})
       RETURNING id
     `;
     sessionId = session.id;
@@ -61,11 +59,11 @@ it('serializes Youth attendance saves and same-cohort session moves through the 
     ]);
     clearTimeout(readinessTimer);
 
-    requests.push(request(app).put(`/api/youth/${youth.userId}/cohorts/${cohortId}/attendance`)
+    requests.push(request(app).put(`/api/youth/${youth.userId}/programs/${programId}/cycles/${cycleId}/attendance`)
       .set('Authorization', `Bearer ${token}`)
       .send({ records: [{ sessionId, status: 'present' }] })
       .then(response => response));
-    requests.push(request(app).put(`/api/cohorts/sessions/${sessionId}/date`)
+    requests.push(request(app).put(`/api/sessions/${sessionId}/date`)
       .set('Authorization', `Bearer ${token}`)
       .send({ date: `${year}-03-10` })
       .then(response => response));
@@ -93,9 +91,9 @@ it('serializes Youth attendance saves and same-cohort session moves through the 
     }
     expect(waitingRequests).toBe(2);
 
-    // Neither command may hold the cohort while it is waiting to enter through the program lock.
+    // Neither command may hold the assignment while it is waiting to enter through the program lock.
     await sql.begin(async tx => {
-      await asTransactionSql(tx)`SELECT id FROM program_cohorts WHERE id = ${cohortId!} FOR UPDATE NOWAIT`;
+      await asTransactionSql(tx)`SELECT program_id FROM program_cycle_assignments WHERE program_id = ${programId!} AND cycle_id = ${cycleId!} FOR UPDATE NOWAIT`;
     });
     releaseBlocker();
     await blocker;
@@ -105,12 +103,12 @@ it('serializes Youth attendance saves and same-cohort session moves through the 
     expect(moved.status).toBe(200);
     expect(attendance.body.youth.id).toBe(youth.userId);
     expect(attendance.body.updatedSessions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: sessionId, cohortId, attendedCount: 1 }),
+      expect.objectContaining({ id: sessionId, programId, cycleId, attendedCount: 1 }),
     ]));
-    expect(moved.body.session).toEqual(expect.objectContaining({ id: sessionId, cohortId, theme: 'Concurrent attendance' }));
+    expect(moved.body.session).toEqual(expect.objectContaining({ id: sessionId, programId, cycleId, theme: 'Concurrent attendance' }));
     const [stored] = await sql<{ date: string; status: string }[]>`
       SELECT (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date, attendance.status
-      FROM cohort_sessions session
+      FROM program_sessions session
       INNER JOIN attendance_records attendance ON attendance.session_id = session.id
       WHERE session.id = ${sessionId} AND attendance.youth_id = ${youth.userId}
     `;
@@ -121,11 +119,11 @@ it('serializes Youth attendance saves and same-cohort session moves through the 
     await Promise.allSettled([...(blocker ? [blocker] : []), ...requests]);
     if (sessionId) {
       await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
-      await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
+      await sql`DELETE FROM program_sessions WHERE id = ${sessionId}`;
     }
-    if (cohortId) {
-      await sql`DELETE FROM cohort_enrollments WHERE cohort_id = ${cohortId}`;
-      await sql`DELETE FROM program_cohorts WHERE id = ${cohortId}`;
+    if (programId && cycleId) {
+      await sql`DELETE FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
+      await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
     }
     if (cycleId) await sql`DELETE FROM program_cycles WHERE id = ${cycleId}`;
     if (programId) await sql`DELETE FROM programs WHERE id = ${programId}`;

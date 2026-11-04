@@ -3,17 +3,17 @@ import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getYouthCohortAttendance, setYouthCohortAttendance } from '../youthAttendance.api';
-import type { YouthCohortAttendance } from '../types';
+import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../youthAttendance.api';
+import type { YouthProgramCycleAttendance } from '../types';
 import useYouthAttendance from './useYouthAttendance';
 
 vi.mock('../youthAttendance.api', () => ({
-  getYouthCohortAttendance: vi.fn(),
-  setYouthCohortAttendance: vi.fn(),
+  getYouthProgramCycleAttendance: vi.fn(),
+  setYouthProgramCycleAttendance: vi.fn(),
 }));
 
-const attendance: YouthCohortAttendance = {
-  cohort: { id: 'cohort-1', name: 'Cohort', programName: 'Program', enrollmentRequired: true },
+const attendance: YouthProgramCycleAttendance = {
+  programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycleName: 'ProgramCycle', programName: 'Program', enrollmentRequired: true },
   sessions: [{
     id: 'session-1',
     sessionTypeName: 'Regular',
@@ -30,8 +30,8 @@ const attendance: YouthCohortAttendance = {
 describe('useYouthAttendance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getYouthCohortAttendance).mockResolvedValue(attendance);
-    vi.mocked(setYouthCohortAttendance).mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
+    vi.mocked(getYouthProgramCycleAttendance).mockResolvedValue(attendance);
+    vi.mocked(setYouthProgramCycleAttendance).mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
   });
 
   it('loads attendance and saves the selected session status', async () => {
@@ -39,7 +39,7 @@ describe('useYouthAttendance', () => {
     const queryClient = createTestQueryClient();
     const { result } = renderHook(() => useYouthAttendance({
       youthId: 'youth-1',
-      cohortId: 'cohort-1',
+      programId: 'program-1', cycleId: 'cycle-1',
       onSaved,
     }), { wrapper: createQueryClientWrapper(queryClient) });
 
@@ -47,7 +47,7 @@ describe('useYouthAttendance', () => {
     act(() => result.current.updateStatus('session-1', 'present'));
     await act(async () => result.current.save());
 
-    expect(setYouthCohortAttendance).toHaveBeenCalledWith('youth-1', 'cohort-1', [{
+    expect(setYouthProgramCycleAttendance).toHaveBeenCalledWith('youth-1', { programId: 'program-1', cycleId: 'cycle-1' }, [{
       sessionId: 'session-1',
       status: 'present',
       notes: 'Existing note',

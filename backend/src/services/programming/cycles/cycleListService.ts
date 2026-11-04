@@ -1,5 +1,5 @@
 import { sql } from '../../../db/client';
-import type { CycleListQuery } from '../../../validation/cohortSchemas';
+import type { CycleListQuery } from '../../../validation/programmingSchemas';
 import { cursorPage, decodeCursor, DEFAULT_BATCH_SIZE } from '../../shared/cursorPagination';
 import { cycleRecordColumns, type CycleRow } from './cycleRecordQuery';
 

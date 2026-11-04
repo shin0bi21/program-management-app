@@ -1,7 +1,7 @@
 import request from 'supertest';
 import sharp from 'sharp';
 import { createApp } from '../shared/app';
-import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
+import { deleteTestProgramCycle, deleteTestUser, seedTestProgramCycle, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -13,7 +13,7 @@ describe('Homepage management API', () => {
   let homepageReadToken: string;
   let youthId: string;
   let youthToken: string;
-  let cohortId: string;
+  let programId: string;
   let cycleId: string;
   let uploadedImageId: string | undefined;
 
@@ -37,15 +37,16 @@ describe('Homepage management API', () => {
       VALUES (${staffId}, ${program.id})
       ON CONFLICT DO NOTHING
     `;
-    ({ cohortId, cycleId } = await seedTestCohort({
+    programId = program.id;
+    ({ cycleId } = await seedTestProgramCycle({
       programId: program.id,
       name: `Homepage Test ${Date.now()}`,
     }));
 
     await sql`
-      INSERT INTO cohort_sessions (cohort_id, theme, starts_at, ends_at)
+      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
       SELECT
-        ${cohortId},
+        ${programId}, ${cycleId},
         'Homepage Session ' || day_number,
         NOW() + (day_number || ' days')::interval,
         NOW() + (day_number || ' days')::interval + interval '2 hours'
@@ -58,7 +59,8 @@ describe('Homepage management API', () => {
     if (uploadedImageId) {
       await request(app).delete(`/api/homepage/images/${uploadedImageId}`).set('Authorization', `Bearer ${staffToken}`);
     }
-    await deleteTestCohort(cohortId, cycleId);
+    await sql`DELETE FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
+    await deleteTestProgramCycle(programId, cycleId);
     await deleteTestUser(youthId);
     await deleteTestUser(staffId);
   });
@@ -186,9 +188,8 @@ describe('Homepage management API', () => {
     `;
     const expected = await sql<{ id: string }[]>`
       SELECT cs.id
-      FROM cohort_sessions cs
-      INNER JOIN program_cohorts pc ON pc.id = cs.cohort_id
-      WHERE pc.program_id = ${program.id}
+      FROM program_sessions cs
+      WHERE cs.program_id = ${program.id}
         AND cs.ends_at >= NOW()
         AND cs.cancelled_at IS NULL
       ORDER BY cs.starts_at

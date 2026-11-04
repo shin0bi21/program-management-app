@@ -1,0 +1,118 @@
+import { asTransactionSql, sql } from '../../../db/client';
+import { ConflictError, NotFoundError } from '../../../errors';
+import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
+import { lockAssignmentProgram } from './assignmentService';
+import type { AccessTokenPayload } from '../../../types/auth';
+import type { EnrollYouthInput } from '../../../validation/programmingSchemas';
+import { getProgramCycleRowsByKeys } from './programCycleRecordQuery';
+import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
+
+export async function enrollYouth(programId: string, cycleId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  return sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+
+    // Match assignment mutations: lock the program before its programCycle, then validate current values.
+    await lockAssignmentProgram(trx, programId, actor);
+
+    const programCycles = await trx<{
+      programId: string;
+      enrollmentRequired: boolean;
+      minAge: number | null;
+      maxAge: number | null;
+    }[]>`
+      SELECT pc.program_id, p.enrollment_required, p.min_age, p.max_age
+      FROM program_cycle_assignments pc
+      INNER JOIN programs p ON p.id = pc.program_id
+      WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
+      FOR UPDATE OF pc
+    `;
+    if (!programCycles.length) throw new NotFoundError('Program cycle not found');
+    if (!programCycles[0].enrollmentRequired) {
+      throw new ConflictError('Open attendance programs do not use enrollment');
+    }
+
+    const age = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
+    const youth = await trx<{ id: string; age: number | null }[]>`
+      SELECT user_id AS id, ${age} AS age
+      FROM youth_profiles
+      WHERE user_id = ANY(${sql.array(data.youthIds)}::uuid[])
+      ORDER BY user_id
+      FOR SHARE
+    `;
+    if (youth.length !== data.youthIds.length) {
+      throw new NotFoundError('One or more youth profiles were not found');
+    }
+
+    const outsideAgeRange = youth.some(({ age: youthAge }) => (
+      (programCycles[0].minAge !== null && (youthAge === null || youthAge < programCycles[0].minAge))
+      || (programCycles[0].maxAge !== null && (youthAge === null || youthAge > programCycles[0].maxAge))
+    ));
+    if (outsideAgeRange) {
+      throw new ConflictError('One or more youth profiles do not meet this program age range');
+    }
+
+    const enrollments = await trx`
+      INSERT INTO program_enrollments (
+        program_id, cycle_id, youth_id, created_by, updated_by
+      )
+      SELECT
+        ${programId}, ${cycleId},
+        selected.youth_id,
+        ${actor.userId},
+        ${actor.userId}
+      FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
+      ON CONFLICT (program_id, cycle_id, youth_id) DO UPDATE SET
+        withdrawn_on = NULL,
+        enrolled_on = EXCLUDED.enrolled_on,
+        updated_at = NOW(),
+        updated_by = EXCLUDED.updated_by
+      RETURNING
+        id,
+        program_id, cycle_id,
+        youth_id,
+        enrolled_on::text AS enrolled_on,
+        withdrawn_on::text AS withdrawn_on,
+        created_at,
+        updated_at
+    `;
+    const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
+    return {
+      enrollments,
+      programCycle: programCycle,
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, data.youthIds) : [],
+    };
+  });
+}
+
+export async function withdrawYouth(
+  programId: string, cycleId: string,
+  youthId: string,
+  actor: AccessTokenPayload,
+) {
+  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  return sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
+    await lockAssignmentProgram(trx, programId, actor);
+    await trx`SELECT program_id FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycleId} FOR UPDATE`;
+
+    const [enrollment] = await trx`
+      UPDATE program_enrollments
+      SET withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
+          updated_at = NOW(), updated_by = ${actor.userId}
+      WHERE program_id = ${programId} AND cycle_id = ${cycleId} AND youth_id = ${youthId} AND withdrawn_on IS NULL
+      RETURNING id, program_id, cycle_id, youth_id, enrolled_on::text AS enrolled_on,
+        withdrawn_on::text AS withdrawn_on, created_at, updated_at
+    `;
+    if (!enrollment) throw new NotFoundError('Active programCycle enrollment not found');
+
+    const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
+    return {
+      enrollment,
+      programCycle: programCycle,
+      updatedYouth: actor.permissions.includes('read:youth_profiles')
+        ? await getYouthRowsByIds(trx, [youthId]) : [],
+    };
+  });
+}

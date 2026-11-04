@@ -1,4 +1,4 @@
-import type { CohortChanges } from '../../Cohorts/cohorts.api';
+import type { ProgramCycleAssignmentChanges } from './programCycleAssignments.api';
 import { apiClient, type RequestOptions } from '../../../../http/client';
 import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../../query/types';
 import type { Program, ProgramWeekday } from '../../../../common/features/programs/types';
@@ -17,7 +17,7 @@ export interface CreateProgramInput {
 
 export type UpdateProgramInput = CreateProgramInput;
 
-export interface ProgramMutationResult extends CohortChanges { program: Program }
+export interface ProgramMutationResult extends ProgramCycleAssignmentChanges { program: Program }
 
 export function createProgram(data: CreateProgramInput) {
   return apiClient.post<ProgramMutationResult>('/programs', data);
@@ -27,7 +27,7 @@ export function updateProgram(programId: string, data: UpdateProgramInput) {
   return apiClient.put<ProgramMutationResult>(`/programs/${programId}`, data);
 }
 
-export interface ProgramCycleAssignments extends CohortChanges {
+export interface ProgramCycleAssignments extends ProgramCycleAssignmentChanges {
   programId: string;
   cycleIds: string[];
 }

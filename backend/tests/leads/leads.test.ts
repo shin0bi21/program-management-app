@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../shared/app';
-import { deleteTestCohort, deleteTestUser, seedTestCohort, seedTestUser, sql } from '../shared/db';
+import { deleteTestProgramCycle, deleteTestUser, seedTestProgramCycle, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
@@ -20,13 +20,11 @@ describe('Leads API', () => {
   let youthToken: string;
   let eligibleProgramId: string;
   let eligibleProgramName: string;
-  let eligibleProgramCohortId: string;
-  let otherProgramCohortId: string;
   let otherProgramId: string;
   let eligibleProgramCycleId: string;
   let otherProgramCycleId: string;
   let convertedYouthId: string | undefined;
-  let convertedYouthWithoutCohortId: string | undefined;
+  let convertedYouthWithoutProgramCycleId: string | undefined;
   let convertedExternalYouthId: string | undefined;
   let externalLeadId: string | undefined;
   let crossProgramYouthId: string | undefined;
@@ -61,7 +59,7 @@ describe('Leads API', () => {
     eligibleProgramId = program.id;
     eligibleProgramName = program.name;
     await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${staffUserId}, ${eligibleProgramId})`;
-    ({ cohortId: eligibleProgramCohortId, cycleId: eligibleProgramCycleId } = await seedTestCohort({
+    ({ cycleId: eligibleProgramCycleId } = await seedTestProgramCycle({
       programId: eligibleProgramId,
       name: `Lead Conversion ${Date.now()}`,
     }));
@@ -70,7 +68,7 @@ describe('Leads API', () => {
       VALUES (${`Lead alternate program ${Date.now()}`}, TRUE) RETURNING id
     `;
     otherProgramId = otherProgram.id;
-    ({ cohortId: otherProgramCohortId, cycleId: otherProgramCycleId } = await seedTestCohort({
+    ({ cycleId: otherProgramCycleId } = await seedTestProgramCycle({
       programId: otherProgram.id,
       name: `Other Program ${Date.now()}`,
     }));
@@ -79,20 +77,20 @@ describe('Leads API', () => {
   afterAll(async () => {
     await sql`DELETE FROM leads WHERE created_by = ${staffUserId}`;
     if (convertedYouthId) {
-      await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${convertedYouthId}`;
+      await sql`DELETE FROM program_enrollments WHERE youth_id = ${convertedYouthId}`;
       await sql`DELETE FROM users WHERE id = ${convertedYouthId}`;
     }
-    if (convertedYouthWithoutCohortId) {
-      await sql`DELETE FROM users WHERE id = ${convertedYouthWithoutCohortId}`;
+    if (convertedYouthWithoutProgramCycleId) {
+      await sql`DELETE FROM users WHERE id = ${convertedYouthWithoutProgramCycleId}`;
     }
     if (convertedExternalYouthId) await sql`DELETE FROM users WHERE id = ${convertedExternalYouthId}`;
     if (externalLeadId) await sql`DELETE FROM leads WHERE id = ${externalLeadId}`;
     if (crossProgramYouthId) {
-      await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId}`;
+      await sql`DELETE FROM program_enrollments WHERE youth_id = ${crossProgramYouthId}`;
       await sql`DELETE FROM users WHERE id = ${crossProgramYouthId}`;
     }
-    await deleteTestCohort(eligibleProgramCohortId, eligibleProgramCycleId);
-    await deleteTestCohort(otherProgramCohortId, otherProgramCycleId);
+    await deleteTestProgramCycle(eligibleProgramId, eligibleProgramCycleId);
+    await deleteTestProgramCycle(otherProgramId, otherProgramCycleId);
     await sql`DELETE FROM programs WHERE id = ${otherProgramId}`;
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
@@ -459,7 +457,7 @@ describe('Leads API', () => {
     const res = await request(app)
       .post(`/api/leads/${lead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: eligibleProgramCohortId, noteCategory: 'preference' });
+      .send({ programId: eligibleProgramId, cycleId: eligibleProgramCycleId, noteCategory: 'preference' });
 
     expect(res.status).toBe(201);
     expect(res.body.lead).toEqual(expect.objectContaining({
@@ -468,11 +466,11 @@ describe('Leads API', () => {
       convertedYouthId: expect.any(String),
     }));
     convertedYouthId = res.body.lead.convertedYouthId;
-    const cohortRows = await request(app).get('/api/cohorts').query({ limit: 25 })
+    const assignmentRows = await request(app).get('/api/programs/cycle-assignments').query({ programId: eligibleProgramId })
       .set('Authorization', `Bearer ${staffToken}`);
-    expect(cohortRows.status).toBe(200);
-    expect(res.body.updatedCohort).toEqual(cohortRows.body.rows.find((row: { id: string }) => row.id === eligibleProgramCohortId));
-    expect(res.body.updatedCohort.enrolledCount).toBe(1);
+    expect(assignmentRows.status).toBe(200);
+    expect(res.body.updatedProgramCycle).toEqual(assignmentRows.body.find((row: { programId: string; cycleId: string }) => row.programId === eligibleProgramId && row.cycleId === eligibleProgramCycleId));
+    expect(res.body.updatedProgramCycle.enrolledCount).toBe(1);
 
 
     const [profile] = await sql<{ firstName: string; dateOfBirth: string }[]>`
@@ -497,13 +495,13 @@ describe('Leads API', () => {
     `;
     expect(signupNoteCount).toBe(0);
 
-    const [enrollment] = await sql<{ cohortId: string; youthId: string }[]>`
-      SELECT cohort_id, youth_id
-      FROM cohort_enrollments
+    const [enrollment] = await sql<{ programId: string; cycleId: string; youthId: string }[]>`
+      SELECT program_id, cycle_id, youth_id
+      FROM program_enrollments
       WHERE youth_id = ${convertedYouthId!}
     `;
     expect(enrollment).toEqual({
-      cohortId: eligibleProgramCohortId,
+      programId: eligibleProgramId, cycleId: eligibleProgramCycleId,
       youthId: convertedYouthId,
     });
 
@@ -520,7 +518,7 @@ describe('Leads API', () => {
     const duplicate = await request(app)
       .post(`/api/leads/${lead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: null });
+      .send({ programId: null, cycleId: null });
     expect(duplicate.status).toBe(409);
 
     const statusChange = await request(app)
@@ -537,27 +535,27 @@ describe('Leads API', () => {
     expect(edit.body.error).toBe('Signed-up leads must be edited through their youth profile');
   });
 
-  it('does not expose a cohort projection without its read capability during signup', async () => {
+  it('does not expose a program cycle projection without its read capability during signup', async () => {
     const created = await request(app).post('/api/leads').set('Authorization', `Bearer ${staffToken}`)
       .send({ ...payload, youthFirstName: 'ProjectionPermission' });
     expect(created.status).toBe(201);
     const token = generateToken(staffUserId, 'staff', undefined, ['write:outreach', 'write:youth_profiles', 'write:enrollments']);
     const signedUp = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
-      .set('Authorization', `Bearer ${token}`).send({ cohortId: eligibleProgramCohortId, noteCategory: 'general' });
+      .set('Authorization', `Bearer ${token}`).send({ programId: eligibleProgramId, cycleId: eligibleProgramCycleId, noteCategory: 'general' });
     try {
       expect(signedUp.status).toBe(201);
       expect(signedUp.body.lead).toMatchObject({ id: created.body.id, status: 'signed_up' });
-      expect(signedUp.body).not.toHaveProperty('updatedCohort');
+      expect(signedUp.body).not.toHaveProperty('updatedProgramCycle');
     } finally {
       await sql`DELETE FROM leads WHERE id = ${created.body.id}`;
       if (signedUp.body.lead?.convertedYouthId) {
-        await sql`DELETE FROM cohort_enrollments WHERE youth_id = ${signedUp.body.lead.convertedYouthId}`;
+        await sql`DELETE FROM program_enrollments WHERE youth_id = ${signedUp.body.lead.convertedYouthId}`;
         await sql`DELETE FROM users WHERE id = ${signedUp.body.lead.convertedYouthId}`;
       }
     }
   });
 
-  it('can create a youth profile without enrolling it in a cohort', async () => {
+  it('can create a youth profile without enrolling it in a program cycle', async () => {
     const created = await request(app)
       .post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`)
@@ -570,15 +568,15 @@ describe('Leads API', () => {
     const res = await request(app)
       .post(`/api/leads/${created.body.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: null });
+      .send({ programId: null, cycleId: null });
 
     expect(res.status).toBe(201);
-    convertedYouthWithoutCohortId = res.body.lead.convertedYouthId;
-    expect(res.body).not.toHaveProperty('updatedCohort');
+    convertedYouthWithoutProgramCycleId = res.body.lead.convertedYouthId;
+    expect(res.body).not.toHaveProperty('updatedProgramCycle');
     const [{ count }] = await sql<{ count: number }[]>`
       SELECT COUNT(*)::int AS count
-      FROM cohort_enrollments
-      WHERE youth_id = ${convertedYouthWithoutCohortId!}
+      FROM program_enrollments
+      WHERE youth_id = ${convertedYouthWithoutProgramCycleId!}
     `;
     expect(count).toBe(0);
   });
@@ -611,7 +609,7 @@ describe('Leads API', () => {
     const signedUp = await request(app)
       .post(`/api/leads/${externalLead.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: null, noteCategory: 'general' });
+      .send({ programId: null, cycleId: null, noteCategory: 'general' });
     expect(signedUp.status).toBe(201);
     expect(signedUp.body.lead).toEqual(expect.objectContaining({
       id: externalLead.id,
@@ -622,7 +620,7 @@ describe('Leads API', () => {
     convertedExternalYouthId = signedUp.body.lead.convertedYouthId;
   });
 
-  it('allows staff to choose an age-eligible cohort outside the recommended program', async () => {
+  it('allows staff to choose an age-eligible program cycle outside the recommended program', async () => {
     const youthLastName = `Rollback-${Date.now()}`;
     const created = await request(app)
       .post('/api/leads')
@@ -636,15 +634,15 @@ describe('Leads API', () => {
     const res = await request(app)
       .post(`/api/leads/${created.body.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: otherProgramCohortId });
+      .send({ programId: otherProgramId, cycleId: otherProgramCycleId });
 
     expect(res.status).toBe(201);
     crossProgramYouthId = res.body.lead.convertedYouthId;
-    expect(res.body).not.toHaveProperty('updatedCohort');
-    const [enrollment] = await sql<{ cohortId: string }[]>`
-      SELECT cohort_id FROM cohort_enrollments WHERE youth_id = ${crossProgramYouthId!}
+    expect(res.body).not.toHaveProperty('updatedProgramCycle');
+    const [enrollment] = await sql<{ cycleId: string }[]>`
+      SELECT cycle_id FROM program_enrollments WHERE youth_id = ${crossProgramYouthId!}
     `;
-    expect(enrollment.cohortId).toBe(otherProgramCohortId);
+    expect(enrollment.cycleId).toBe(otherProgramCycleId);
   });
 
   it('rechecks the selected program enrollment requirement at signup', async () => {
@@ -653,9 +651,9 @@ describe('Leads API', () => {
     await sql`UPDATE programs SET enrollment_required = FALSE WHERE id = ${otherProgramId}`;
     try {
       const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
-        .set('Authorization', `Bearer ${staffToken}`).send({ cohortId: otherProgramCohortId });
+        .set('Authorization', `Bearer ${staffToken}`).send({ programId: otherProgramId, cycleId: otherProgramCycleId });
       expect(rejected.status).toBe(409);
-      expect(rejected.body.error).toBe('Open attendance cohorts do not use enrollment');
+      expect(rejected.body.error).toBe('Open attendance programs do not use enrollment');
       const [lead] = await sql<{ convertedYouthId: string | null }[]>`
         SELECT converted_youth_id FROM leads WHERE id = ${created.body.id}
       `;
@@ -703,7 +701,7 @@ describe('Leads API', () => {
     }
   });
 
-  it('rolls back signup, DOB correction, and all audits when the selected cohort age is ineligible', async () => {
+  it('rolls back signup, DOB correction, and all audits when the selected program age is ineligible', async () => {
     const youthLastName = `AgeRollback-${Date.now()}`;
     const created = await request(app).post('/api/leads')
       .set('Authorization', `Bearer ${staffToken}`).send({ ...payload, youthLastName });
@@ -712,7 +710,7 @@ describe('Leads API', () => {
     `;
     const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ cohortId: eligibleProgramCohortId, dateOfBirth: birthDateForAge(50) });
+      .send({ programId: eligibleProgramId, cycleId: eligibleProgramCycleId, dateOfBirth: birthDateForAge(50) });
     expect(rejected.status).toBe(409);
     const [lead] = await sql<{ dateOfBirth: string; status: string; convertedYouthId: string | null }[]>`
       SELECT date_of_birth::text AS date_of_birth, status, converted_youth_id FROM leads WHERE id = ${created.body.id}

@@ -96,33 +96,6 @@ export interface BaseTable {
   updated_by: string | null;
 }
 
-export interface CohortEnrollments {
-  cohort_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  enrolled_on: Generated<Timestamp>;
-  id: Generated<string>;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-  withdrawn_on: Timestamp | null;
-  youth_id: string;
-}
-
-export interface CohortSessions {
-  cancelled_at: Timestamp | null;
-  cohort_id: string;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  description: string | null;
-  ends_at: Timestamp;
-  id: Generated<string>;
-  session_type_id: Generated<string>;
-  starts_at: Timestamp;
-  theme: string;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-}
-
 export interface Contacts {
   created_at: Generated<Timestamp>;
   created_by: string | null;
@@ -211,11 +184,10 @@ export interface Leads {
   youth_last_name: string;
 }
 
-export interface ProgramCohorts {
+export interface ProgramCycleAssignments {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
-  id: Generated<string>;
   program_id: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -232,6 +204,19 @@ export interface ProgramCycles {
   updated_by: string | null;
 }
 
+export interface ProgramEnrollments {
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  cycle_id: string;
+  enrolled_on: Generated<Timestamp>;
+  id: Generated<string>;
+  program_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  withdrawn_on: Timestamp | null;
+  youth_id: string;
+}
+
 export interface Programs {
   default_day_of_week: Generated<string>;
   default_end_time: Generated<string>;
@@ -243,6 +228,22 @@ export interface Programs {
   min_age: number | null;
   name: string;
   timezone: Generated<ProgramTimezone>;
+}
+
+export interface ProgramSessions {
+  cancelled_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  cycle_id: string;
+  description: string | null;
+  ends_at: Timestamp;
+  id: Generated<string>;
+  program_id: string;
+  session_type_id: Generated<string>;
+  starts_at: Timestamp;
+  theme: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
 }
 
 export interface SchemaMigrations {
@@ -507,16 +508,16 @@ export interface DB {
   audit_log: AuditLog;
   auth_log: AuthLog;
   base_table: BaseTable;
-  cohort_enrollments: CohortEnrollments;
-  cohort_sessions: CohortSessions;
   contacts: Contacts;
   expressions_of_interest: ExpressionsOfInterest;
   homepage_images: HomepageImages;
   homepage_settings: HomepageSettings;
   lead_notes: LeadNotes;
   leads: Leads;
-  program_cohorts: ProgramCohorts;
+  program_cycle_assignments: ProgramCycleAssignments;
   program_cycles: ProgramCycles;
+  program_enrollments: ProgramEnrollments;
+  program_sessions: ProgramSessions;
   programs: Programs;
   schema_migrations: SchemaMigrations;
   schools: Schools;

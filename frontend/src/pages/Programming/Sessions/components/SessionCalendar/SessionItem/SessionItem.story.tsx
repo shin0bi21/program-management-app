@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import TimelineCalendar from '../../../../../../common/components/TimelineCalendar/TimelineCalendar';
-import { makeCohortSession } from '../../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
 const program = { id: 'program-1', name: 'Soft Skills' };
-const session = makeCohortSession({ startsAt: '2026-08-09T21:30:00Z', endsAt: '2026-08-09T23:30:00Z' });
+const session = makeProgramSession({ startsAt: '2026-08-09T21:30:00Z', endsAt: '2026-08-09T23:30:00Z' });
 
 export function InteractiveSessionItem() {
   const [action, setAction] = useState('');

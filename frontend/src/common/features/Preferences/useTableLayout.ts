@@ -9,6 +9,27 @@ interface TableLayout {
   hiddenColumns: string[];
 }
 
+function renameLayoutColumns(value: unknown, aliases: Readonly<Record<string, string>> | undefined): unknown {
+  if (!aliases || !value || typeof value !== 'object' || Array.isArray(value)) return value;
+
+  let layout = value as Record<string, unknown>;
+  for (const [previous, current] of Object.entries(aliases)) {
+    const widths = layout.columnWidths;
+    if (widths && typeof widths === 'object' && !Array.isArray(widths) && Object.prototype.hasOwnProperty.call(widths, previous)) {
+      const renamed = { ...widths } as Record<string, unknown>;
+      if (!Object.prototype.hasOwnProperty.call(renamed, current)) renamed[current] = renamed[previous];
+      delete renamed[previous];
+      layout = { ...layout, columnWidths: renamed };
+    }
+
+    if (Array.isArray(layout.hiddenColumns) && layout.hiddenColumns.includes(previous)) {
+      const hiddenColumns = [...new Set(layout.hiddenColumns.map(key => key === previous ? current : key))];
+      layout = { ...layout, hiddenColumns };
+    }
+  }
+  return layout;
+}
+
 function readUserId() {
   try {
     const id = getUser()?.id;
@@ -30,9 +51,10 @@ function readLayout(storageKey: string | null): unknown {
   }
 }
 
-export default function useTableLayout({ key, tableKeys }: {
+export default function useTableLayout({ key, tableKeys, columnKeyAliases }: {
   key: PreferenceKey;
   tableKeys: readonly string[];
+  columnKeyAliases?: Readonly<Record<string, string>>;
 }) {
   const client = useQueryClient();
   const userId = readUserId();
@@ -47,7 +69,7 @@ export default function useTableLayout({ key, tableKeys }: {
     queryFn: skipToken,
     initialData: () => {
       try {
-        return readLayout(storageKey);
+        return renameLayoutColumns(readLayout(storageKey), columnKeyAliases);
       } catch {
         return null;
       }
@@ -58,7 +80,17 @@ export default function useTableLayout({ key, tableKeys }: {
   useEffect(() => {
     const restore = () => {
       try {
-        client.setQueryData(queryKey, readLayout(storageKey));
+        const stored = readLayout(storageKey);
+        const restored = renameLayoutColumns(stored, columnKeyAliases);
+        client.setQueryData(queryKey, restored);
+
+        if (storageKey && restored !== stored) {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(restored));
+          } catch {
+            // A failed migration write must not discard the restored layout in memory.
+          }
+        }
       } catch {
         // Blocked storage must leave this session's in-memory layout usable.
       }
@@ -70,7 +102,7 @@ export default function useTableLayout({ key, tableKeys }: {
     restore();
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [client, queryKey, storageKey]);
+  }, [client, columnKeyAliases, queryKey, storageKey]);
 
   const updateLayout = (patch: Partial<TableLayout>) => {
     const current = normalizePreferences(fields, client.getQueryData(queryKey));

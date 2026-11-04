@@ -20,8 +20,6 @@ describe('Hours API', () => {
   let unrelatedStaffToken: string;
   let programId: string;
   let programName: string;
-  let activeCohortId: string;
-  let upcomingCohortId: string;
   let activeCycleId: string;
   let upcomingCycleId: string;
   let upcomingWorkDate: string;
@@ -64,7 +62,7 @@ describe('Hours API', () => {
     `;
     programId = programs[0].id;
     programName = programs[0].name;
-    const cohorts = await sql<Array<{ id: string; cycleId: string }>>`
+    const assignments = await sql<Array<{ cycleId: string }>>`
       WITH cycles AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
         VALUES
@@ -76,12 +74,11 @@ describe('Hours API', () => {
           (${`Upcoming Hours ${stamp}`}, ${workDate}::date + 14, ${workDate}::date + 28)
         RETURNING id, starts_on
       )
-      INSERT INTO program_cohorts (program_id, cycle_id)
+      INSERT INTO program_cycle_assignments (program_id, cycle_id)
       SELECT ${programId}, id FROM cycles ORDER BY starts_on
-      RETURNING id, cycle_id
+      RETURNING cycle_id
     `;
-    [activeCohortId, upcomingCohortId] = cohorts.map(cohort => cohort.id);
-    [activeCycleId, upcomingCycleId] = cohorts.map(cohort => cohort.cycleId);
+    [activeCycleId, upcomingCycleId] = assignments.map(assignment => assignment.cycleId);
     const upcomingDates = await sql<Array<{ startsOn: string }>>`
       SELECT starts_on::text FROM program_cycles WHERE id = ${upcomingCycleId}
     `;
@@ -91,8 +88,8 @@ describe('Hours API', () => {
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
     const [session] = await sql<Array<{ id: string }>>`
-      INSERT INTO cohort_sessions (cohort_id, session_type_id, theme, starts_at, ends_at)
-      SELECT ${activeCohortId}, type.id, 'Hours workshop',
+      INSERT INTO program_sessions (program_id, cycle_id, session_type_id, theme, starts_at, ends_at)
+      SELECT ${programId}, ${activeCycleId}, type.id, 'Hours workshop',
         ${workDate}::date + TIME '10:00', ${workDate}::date + TIME '12:00'
       FROM session_types type
       ORDER BY type.name
@@ -105,8 +102,8 @@ describe('Hours API', () => {
   afterAll(async () => {
     await sql`DELETE FROM time_entries WHERE staff_id IN (${adminId}, ${firstStaffId}, ${secondStaffId}, ${unrelatedStaffId})`;
     if (assignedTaskId) await sql`DELETE FROM tasks WHERE id = ${assignedTaskId}`;
-    if (sessionId) await sql`DELETE FROM cohort_sessions WHERE id = ${sessionId}`;
-    await sql`DELETE FROM program_cohorts WHERE id IN (${activeCohortId}, ${upcomingCohortId})`;
+    if (sessionId) await sql`DELETE FROM program_sessions WHERE id = ${sessionId}`;
+    await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id IN (${activeCycleId}, ${upcomingCycleId})`;
     await sql`DELETE FROM program_cycles WHERE id IN (${activeCycleId}, ${upcomingCycleId})`;
     await deleteTestUser(unrelatedStaffId);
     await deleteTestUser(secondStaffId);
@@ -978,17 +975,17 @@ describe('Hours API', () => {
   });
 
   it('rejects work dates covered by multiple eligible cycles', async () => {
-    const [overlap] = await sql<Array<{ cycleId: string; cohortId: string }>>`
+    const [overlap] = await sql<Array<{ cycleId: string }>>`
       WITH cycle AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
         VALUES ('Overlapping write cycle', ${workDate}, ${workDate})
         RETURNING id
-      ), cohort AS (
-        INSERT INTO program_cohorts (program_id, cycle_id)
+      ), assignment AS (
+        INSERT INTO program_cycle_assignments (program_id, cycle_id)
         SELECT ${programId}, id FROM cycle
-        RETURNING id, cycle_id
+        RETURNING cycle_id
       )
-      SELECT cycle_id, id AS cohort_id FROM cohort
+      SELECT cycle_id FROM assignment
     `;
     try {
       const response = await request(app)
@@ -999,7 +996,7 @@ describe('Hours API', () => {
       expect(response.status).toBe(409);
       expect(response.body.error).toBe('Multiple cycles cover the selected work date');
     } finally {
-      await sql`DELETE FROM program_cohorts WHERE id = ${overlap.cohortId}`;
+      await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${overlap.cycleId}`;
       await sql`DELETE FROM program_cycles WHERE id = ${overlap.cycleId}`;
     }
   });

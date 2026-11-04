@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setProgramCycle } from '../../../api/cycles.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { getCohorts } from '../../../../Cohorts/cohorts.api';
+import { getProgramCycleAssignments } from '../../../api/programCycleAssignments.api';
 import useCycleModal from './useCycleModal';
 
 vi.mock('../../../api/cycles.api', () => ({
   setProgramCycle: vi.fn(),
 }));
 
-vi.mock('../../../../Cohorts/cohorts.api', () => ({ getCohorts: vi.fn() }));
+vi.mock('../../../api/programCycleAssignments.api', () => ({ getProgramCycleAssignments: vi.fn() }));
 const programs = [{ id: 'program-1', name: 'Skills' }] as import('../../../../../../common/features/programs/types').Program[];
 const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 
@@ -18,10 +18,10 @@ const input = { name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31' 
 const cycle = { id: 'cycle-1', ...input, state: 'upcoming' as const };
 
 describe('useCycleModal', () => {
-  beforeEach(() => { vi.resetAllMocks(); vi.mocked(getCohorts).mockResolvedValue([{ programId: 'program-1', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getCohorts>>); });
+  beforeEach(() => { vi.resetAllMocks(); vi.mocked(getProgramCycleAssignments).mockResolvedValue([{ programId: 'program-1', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getProgramCycleAssignments>>); });
 
   it('creates a cycle and waits for page data reconciliation', async () => {
-    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedCohorts: [], createdCohortIds: [], removedCohortIds: [] });
+    vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedProgramCycles: [], createdProgramCycles: [], removedProgramCycles: [] });
     let resolveRefresh!: () => void;
     const onSaved = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useCycleModal({ isOpen: true, cycle: null, programs, onSaved }), { wrapper: wrapper() });
@@ -48,7 +48,7 @@ describe('useCycleModal', () => {
   it('updates a cycle and permits retry after a failure', async () => {
     vi.mocked(setProgramCycle)
       .mockRejectedValueOnce(new Error('Cycle dates overlap'))
-      .mockResolvedValueOnce({ cycle, updatedCohorts: [], createdCohortIds: [], removedCohortIds: [] });
+      .mockResolvedValueOnce({ cycle, updatedProgramCycles: [], createdProgramCycles: [], removedProgramCycles: [] });
     const { result } = renderHook(() => useCycleModal({
       isOpen: true,
       cycle,
@@ -82,15 +82,15 @@ describe('useCycleModal', () => {
   });
 
   it('loads only the edited cycle relationships and retains choices after a usage conflict', async () => {
-    vi.mocked(getCohorts).mockResolvedValue([
+    vi.mocked(getProgramCycleAssignments).mockResolvedValue([
       { programId: 'program-1', cycleId: 'cycle-1' },
       { programId: 'program-2', cycleId: 'other-cycle' },
-    ] as Awaited<ReturnType<typeof getCohorts>>);
+    ] as Awaited<ReturnType<typeof getProgramCycleAssignments>>);
     vi.mocked(setProgramCycle).mockRejectedValueOnce(new Error('An assignment with logged hours cannot be removed.'));
     const { result } = renderHook(() => useCycleModal({ isOpen: true, cycle, programs, onSaved: vi.fn() }), { wrapper: wrapper() });
     expect(result.current.assignmentsReady).toBe(false);
     await waitFor(() => expect(result.current.selectedProgramIds).toEqual(['program-1']));
-    expect(getCohorts).toHaveBeenCalledWith(undefined, { includeAllPrograms: true }, { signal: expect.any(AbortSignal) });
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith(undefined, { includeAllPrograms: true }, { signal: expect.any(AbortSignal) });
     act(() => result.current.toggleProgram('program-1'));
     await act(async () => result.current.submit(input));
     expect(result.current.selectedProgramIds).toEqual([]);
@@ -99,21 +99,21 @@ describe('useCycleModal', () => {
   });
 
   it('keeps failures distinct from empty assignments and ignores a cancelled old target load', async () => {
-    let resolveLoad!: (value: Awaited<ReturnType<typeof getCohorts>>) => void;
-    vi.mocked(getCohorts).mockReturnValueOnce(new Promise(resolve => { resolveLoad = resolve; }));
+    let resolveLoad!: (value: Awaited<ReturnType<typeof getProgramCycleAssignments>>) => void;
+    vi.mocked(getProgramCycleAssignments).mockReturnValueOnce(new Promise(resolve => { resolveLoad = resolve; }));
     const { result, rerender } = renderHook(({ target }) => useCycleModal({ isOpen: true, cycle: target, programs, onSaved: vi.fn() }), {
       initialProps: { target: cycle }, wrapper: wrapper(),
     });
-    const signal = vi.mocked(getCohorts).mock.calls[0][2]?.signal;
-    vi.mocked(getCohorts).mockRejectedValueOnce(new Error('Assignments unavailable'));
+    const signal = vi.mocked(getProgramCycleAssignments).mock.calls[0][2]?.signal;
+    vi.mocked(getProgramCycleAssignments).mockRejectedValueOnce(new Error('Assignments unavailable'));
     rerender({ target: { ...cycle, id: 'cycle-2' } });
     expect(signal?.aborted).toBe(true);
     await waitFor(() => expect(result.current.assignmentsError).toBe('Assignments unavailable'));
-    await act(async () => resolveLoad([{ programId: 'old', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getCohorts>>));
+    await act(async () => resolveLoad([{ programId: 'old', cycleId: 'cycle-1' }] as Awaited<ReturnType<typeof getProgramCycleAssignments>>));
     expect(result.current.selectedProgramIds).toBeNull();
     await act(async () => result.current.submit(input));
     expect(setProgramCycle).not.toHaveBeenCalled();
-    vi.mocked(getCohorts).mockResolvedValueOnce([]);
+    vi.mocked(getProgramCycleAssignments).mockResolvedValueOnce([]);
     act(() => result.current.retryAssignments());
     await waitFor(() => expect(result.current.selectedProgramIds).toEqual([]));
   });

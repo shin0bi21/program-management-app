@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getSessionTypes, updateSession } from '../../sessions.api';
-import { makeCohortSession } from '../../../../../tests/factories/session';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import EditSessionModal from './EditSessionModal';
 
 vi.mock('../../sessions.api', () => ({
@@ -12,7 +12,7 @@ vi.mock('../../sessions.api', () => ({
   updateSession: vi.fn(),
 }));
 
-const session = makeCohortSession({ description: 'Practice session' });
+const session = makeProgramSession({ description: 'Practice session' });
 
 describe('EditSessionModal', () => {
   beforeEach(() => {

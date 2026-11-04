@@ -1,6 +1,6 @@
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getSessions } from '../../../sessions.api';
-import type { CohortSession, SessionListFilters, SessionSortKey } from '../../../types';
+import type { ProgramSession, SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
@@ -20,11 +20,11 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     statuses,
     search,
   };
-  const query = useInfiniteListQuery<CohortSession>({
+  const query = useInfiniteListQuery<ProgramSession>({
     ordering: {
       direction: sorting.direction,
       getValue: session => ({
-        program: session.programName.toLowerCase(), cohort: session.cohortName.toLowerCase(), theme: session.theme.toLowerCase(),
+        program: session.programName.toLowerCase(), cycle: session.cycleName.toLowerCase(), theme: session.theme.toLowerCase(),
         date: new Date(session.startsAt), time: new Date(session.startsAt), type: session.sessionTypeName.toLowerCase(), status: session.state,
       }[sorting.key]),
     },

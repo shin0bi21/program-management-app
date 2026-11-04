@@ -8,7 +8,7 @@ import type { SessionPreference } from './hooks/useSessionControls';
 import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import Sessions from './Sessions';
 import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
-import { makeCohortSession } from '../../../tests/factories/session';
+import { makeProgramSession } from '../../../tests/factories/session';
 
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
@@ -20,12 +20,13 @@ function LocationProbe() {
 
 const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
-const getCohorts = vi.fn();
+const getProgramCycleAssignments = vi.fn();
 const getCycleReferences = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionAttachments = vi.fn();
 const getSessionTypes = vi.fn();
 const deleteSession = vi.fn();
+const createSession = vi.fn();
 const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
   role: 'admin',
   permissions: ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
@@ -49,8 +50,8 @@ const preferenceApi = vi.hoisted(() => ({
   setPreference: vi.fn(),
 }));
 
-vi.mock('../Cohorts/cohorts.api', () => ({
-  getCohorts: (...args: unknown[]) => getCohorts(...args),
+vi.mock('../Programs/api/programCycleAssignments.api', () => ({
+  getProgramCycleAssignments: (...args: unknown[]) => getProgramCycleAssignments(...args),
 }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: (...args: unknown[]) => getCycleReferences(...args),
@@ -64,7 +65,7 @@ vi.mock('./sessions.api', () => ({
   getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
   getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
   createSessionNote: vi.fn(),
-  createSession: vi.fn(),
+  createSession: (...args: unknown[]) => createSession(...args),
   setSessionAttendance: vi.fn(),
   deleteSession: (...args: unknown[]) => deleteSession(...args),
 }));
@@ -96,7 +97,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
       <button
         type="button"
         onClick={() =>
-          onSessionSelect(makeCohortSession({
+          onSessionSelect(makeProgramSession({
             sessionTypeId: 'type-1',
             theme: 'Communication',
             programId: 'program-1',
@@ -144,16 +145,14 @@ describe('Sessions', () => {
     }, {
       id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
     }]);
-    getCohorts.mockResolvedValue([
+    getProgramCycleAssignments.mockResolvedValue([
       {
-        id: 'cohort-1',
         cycleId: 'cycle-1',
         cycleName: 'Summer 2026',
         programId: 'program-1',
         programName: 'Soft Skills',
 
         enrollmentRequired: true,
-        name: 'Summer 2026',
         startsOn: '2020-01-01',
         endsOn: '2100-12-31',
         state: 'active',
@@ -166,7 +165,7 @@ describe('Sessions', () => {
         uniqueAttendeeCount: 0,
       },
     ]);
-    getSessions.mockResolvedValue({ rows: [makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeProgramSession({
       sessionTypeId: 'type-regular',
       theme: 'Communication',
       programId: 'program-1',
@@ -241,9 +240,8 @@ describe('Sessions', () => {
 
   // Rendered states.
   it('shows open attendance as a check-in count', async () => {
-    getSessions.mockResolvedValue({ rows: [makeCohortSession({
+    getSessions.mockResolvedValue({ rows: [makeProgramSession({
       id: 'drop-in-session',
-      cohortId: 'drop-in-cohort',
       sessionTypeId: 'type-field-trip',
       sessionTypeName: 'Field Trip',
       theme: 'Friday Drop In',
@@ -324,7 +322,6 @@ describe('Sessions', () => {
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
 
     await user.click(await screen.findByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: 'Cohort' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fall 2026' }));
@@ -334,7 +331,7 @@ describe('Sessions', () => {
       expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
       expect.any(Object), expect.any(Object),
     ));
-    expect(getSessions.mock.lastCall?.[0]).not.toHaveProperty('cohortId');
+    expect(getSessions.mock.lastCall?.[0]).not.toHaveProperty('cycleId');
     await waitFor(() => expect(preferenceApi.value?.cycleIds).toEqual(['cycle-1', 'cycle-2']));
 
     await user.click(screen.getByRole('button', { name: 'View: Table' }));
@@ -472,11 +469,11 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
   });
 
+
   it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    getCohorts.mockResolvedValue([{
-      id: 'cohort-1', programId: 'program-1', programName: 'Soft Skills', name: 'Summer 2026',
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
+    getProgramCycleAssignments.mockResolvedValue([{
+      programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
       state: 'completed', enrollmentRequired: true, enrolledCount: 0, averageAttendance: null,
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
@@ -485,7 +482,6 @@ describe('Sessions', () => {
     await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cohort' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');
     expect(screen.getByLabelText('Program')).toBeEnabled();
     expect(screen.getByLabelText('Session Date')).not.toHaveAttribute('max');

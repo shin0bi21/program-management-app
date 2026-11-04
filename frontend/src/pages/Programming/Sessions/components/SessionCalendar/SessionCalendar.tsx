@@ -13,7 +13,7 @@ import type {
 import type { Program } from '../../../../../common/features/programs/types';
 import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import { getSessions } from '../../sessions.api';
-import type { CohortSession, SessionCalendarCache, SessionListFilters } from '../../types';
+import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';
 import { getSessionRequestRange } from '../../utils/sessionDateRange';
 import { getSessionRange } from './sessionCalendarDates';
 import SessionItem from './SessionItem/SessionItem';
@@ -30,23 +30,23 @@ interface SessionCalendarProps {
   pendingSessionIds?: string[];
 
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
-  onSessionsLoaded?: (sessions: CohortSession[]) => void;
-  onSessionSelect: (session: CohortSession) => void;
-  onSessionMove?: (session: CohortSession, date: string) => Promise<CohortSession | null>;
+  onSessionsLoaded?: (sessions: ProgramSession[]) => void;
+  onSessionSelect: (session: ProgramSession) => void;
+  onSessionMove?: (session: ProgramSession, date: string) => Promise<ProgramSession | null>;
   onAddSession?: (program: Program, date: string) => void;
-  onSessionEdit?: (session: CohortSession) => void;
-  onSessionDelete?: (session: CohortSession) => void;
+  onSessionEdit?: (session: ProgramSession) => void;
+  onSessionDelete?: (session: ProgramSession) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
 const getProgramId = (program: Program) => program.id;
-const getSessionId = (session: CohortSession) => session.id;
+const getSessionId = (session: ProgramSession) => session.id;
 
 function renderProgramRow({ row }: RenderRowContext<Program>) {
   return <span>{row.name}</span>;
 }
 
-function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, CohortSession>) {
+function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, ProgramSession>) {
   return row.id === destinationRow.id;
 }
 
@@ -77,7 +77,7 @@ export default function SessionCalendar({
     const requestFilters = { ...filters, ...requestRange };
     const sessions = await getSessions(requestFilters, { signal });
 
-    const data: Record<string, Record<string, CohortSession[]>> = {};
+    const data: Record<string, Record<string, ProgramSession[]>> = {};
     for (const session of sessions) {
       data[session.programId] ??= {};
       data[session.programId][start.key] ??= [];
@@ -135,7 +135,7 @@ export default function SessionCalendar({
     onSessionsLoaded?.(sessions);
   }, [onSessionsLoaded, sessions]);
 
-  function buildItem({ data: session, row, calendar: itemCalendar }: BuildItemContext<Program, CohortSession>) {
+  function buildItem({ data: session, row, calendar: itemCalendar }: BuildItemContext<Program, ProgramSession>) {
     const isPending = pendingSessionIds.includes(session.id);
 
     return (
@@ -150,7 +150,7 @@ export default function SessionCalendar({
     );
   }
 
-  function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, CohortSession>) {
+  function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, ProgramSession>) {
     const draggable = Boolean(onSessionMove)
       && !session.cancelledAt
       && new Date(session.startsAt).getTime() > Date.now()
@@ -159,7 +159,7 @@ export default function SessionCalendar({
     return { draggable, resizable: false };
   }
 
-  async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, CohortSession>) {
+  async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, ProgramSession>) {
     await onSessionMove?.(session, nextRange.start);
   }
 

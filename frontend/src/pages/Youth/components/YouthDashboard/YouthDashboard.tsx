@@ -5,16 +5,16 @@ import type { YouthProfileNote } from '../../types';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
 import YouthNotesDashboardCard from './YouthNotesDashboardCard/YouthNotesDashboardCard';
 
-type AttendanceCohort = YouthProfile['cohorts'][number];
+type AttendanceProgramCycle = YouthProfile['programCycles'][number];
 
 interface YouthDashboardProps {
   profile: YouthProfile | null;
   canWrite: boolean;
   onManagePrimaryContact: (profile: YouthProfile) => void;
   canManageAttendance: boolean;
-  onManageAttendance: (cohort: AttendanceCohort) => void;
+  onManageAttendance: (programCycle: AttendanceProgramCycle) => void;
   canViewAttendanceReport: boolean;
-  onViewAttendanceReport: (cohort: AttendanceCohort) => void;
+  onViewAttendanceReport: (programCycle: AttendanceProgramCycle) => void;
   profileNotes: YouthProfileNote[];
   profileNotesLoading: boolean;
   profileNotesError: string | null;
@@ -66,7 +66,7 @@ export default function YouthDashboard({
       ) : undefined}
     />
     <YouthAttendanceDashboardCard
-      cohorts={profile?.cohorts}
+      programCycles={profile?.programCycles}
       selected={selected}
       canManage={canManageAttendance}
       onManage={onManageAttendance}

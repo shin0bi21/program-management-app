@@ -12,11 +12,11 @@ import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 const SESSION_QUERY_KEY = ['sessions'] as const;
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { AttendanceStatus } from '../../../../../../common/features/AttendanceStatusSelect/types';
-import type { AttendanceYouth, CohortSession, SessionRosterMember } from '../../../types';
+import type { AttendanceYouth, ProgramSession, SessionRosterMember } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface UseSessionAttendanceModalOptions {
-  session: CohortSession | null;
+  session: ProgramSession | null;
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
