@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faGear, faRightFromBracket, faBars, faChevronLeft, faBullhorn, faBookOpen, faClock, faHouse } from '@fortawesome/free-solid-svg-icons';
 import logoUrl from '../../../assets/logo.webp';
 import logo160Url from '../../../assets/logo-160.webp';
 import logo320Url from '../../../assets/logo-320.webp';
@@ -125,6 +125,19 @@ export default function AppNavigation() {
                 </button>
               )}
 
+              {canManageHomepage && (
+                <button
+                  ref={refs.homepage}
+                  onClick={() => toggleMenu('homepage')}
+                  aria-haspopup="menu"
+                  aria-expanded={menus.homepage.isOpen}
+                  className={`sidebar-link${active.homepage || menus.homepage.isOpen ? ' active' : ''}`}
+                >
+                  <span className="sidebar-link-icon"><FontAwesomeIcon icon={faHouse} /></span>
+                  <span>Homepage</span>
+                </button>
+              )}
+
               <button
                 ref={refs.settings}
                 onClick={() => toggleMenu('settings')}
@@ -191,6 +204,30 @@ export default function AppNavigation() {
         </FloatingMenuPanel>
       )}
 
+      {canManageHomepage && menus.homepage.position && (
+        <FloatingMenuPanel
+          menuRef={menus.homepage.menuRef}
+          position={menus.homepage.position}
+          onClose={menus.homepage.close}
+          className="settings-flyout"
+        >
+          <button
+            role="menuitem"
+            onClick={() => go('/homepage/images')}
+            className={`settings-flyout-item${isActive('/homepage/images') ? ' active' : ''}`}
+          >
+            Images
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => go('/homepage/signup')}
+            className={`settings-flyout-item${isActive('/homepage/signup') ? ' active' : ''}`}
+          >
+            Sign-up Form
+          </button>
+        </FloatingMenuPanel>
+      )}
+
       {/* Settings flyout — portalled via FloatingMenuPanel */}
       {menus.settings.position && (
         <FloatingMenuPanel
@@ -213,15 +250,6 @@ export default function AppNavigation() {
               className={`settings-flyout-item${isActive('/settings/users') ? ' active' : ''}`}
             >
               Users
-            </button>
-          )}
-          {canManageHomepage && (
-            <button
-              role="menuitem"
-              onClick={() => go('/homepage/manage')}
-              className={`settings-flyout-item${isActive('/homepage/manage') ? ' active' : ''}`}
-            >
-              Manage Homepage
             </button>
           )}
         </FloatingMenuPanel>

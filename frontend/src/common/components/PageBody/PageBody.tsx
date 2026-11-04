@@ -6,7 +6,7 @@ type PageBodyContent =
   | { table?: never; calendar: ReactNode };
 
 type PageBodyProps = PageBodyContent & {
-  dashboard: ReactNode;
+  dashboard?: ReactNode;
   ariaLabel: string;
 };
 
@@ -16,7 +16,7 @@ export default function PageBody({ dashboard, table, calendar, ariaLabel }: Page
 
   return (
     <section className="page-body" aria-label={ariaLabel}>
-      <aside className="page-dashboard">{dashboard}</aside>
+      {dashboard != null && <aside className="page-dashboard">{dashboard}</aside>}
       <div className={contentClassName}>{content}</div>
     </section>
   );

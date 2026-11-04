@@ -1,0 +1,32 @@
+.homepage-management-page {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.homepage-management-page .page-table {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.homepage-management-card {
+  padding: 1rem 1.25rem;
+  border: var(--border-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-card-surface);
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 768px) {
+  .homepage-management-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .homepage-management-page .page-table {
+    flex: initial;
+  }
+}

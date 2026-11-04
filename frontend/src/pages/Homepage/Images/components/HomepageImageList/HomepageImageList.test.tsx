@@ -34,7 +34,6 @@ const defaultProps = {
   loading: false,
   error: null,
   onRetry: vi.fn(),
-  onAdd: vi.fn(),
   onEdit: vi.fn(),
   onDelete: vi.fn(),
   onReorder: vi.fn(),
@@ -61,7 +60,6 @@ describe('HomepageImageList', () => {
     render(<HomepageImageList {...defaultProps} canWrite={false} />);
 
     expect(screen.getByText('First image.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions for First image.' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('listitem').every((row) => row.getAttribute('draggable') === 'false')).toBe(true);
   });
@@ -69,7 +67,6 @@ describe('HomepageImageList', () => {
   it('disables mutations and dragging while a reorder is pending', () => {
     render(<HomepageImageList {...defaultProps} mutationsPending />);
 
-    expect(screen.getByRole('button', { name: '+ Add' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'More actions for First image.' })).toBeDisabled();
     expect(screen.getAllByRole('listitem').every((row) => row.getAttribute('draggable') === 'false')).toBe(true);
   });

@@ -8,8 +8,6 @@ import {
   getManagedHomepage,
   reorderHomepageImages,
   updateHomepageImage,
-  getManagedHomepageSignup,
-  updateHomepageSignup,
 } from './manageHomepage.api';
 
 vi.mock('../../../http/client', () => ({
@@ -61,15 +59,6 @@ describe('manageHomepage API', () => {
     expect(apiClient.put).toHaveBeenNthCalledWith(2, '/homepage/images/order', { imageIds: ['image-2', 'image-1'] });
     expect(apiClient.delete).toHaveBeenCalledWith('/homepage/images/image-1');
   });
-  it('reads and updates signup independently with cancellation forwarding', async () => {
-    const signal = new AbortController().signal;
-    vi.mocked(apiClient.get).mockResolvedValue({ signupEnabled: true });
-    vi.mocked(apiClient.patch).mockResolvedValue({ signupEnabled: false });
 
-    expect(await getManagedHomepageSignup({ signal })).toEqual({ signupEnabled: true });
-    expect(await updateHomepageSignup(false)).toEqual({ signupEnabled: false });
-    expect(apiClient.get).toHaveBeenCalledWith('/homepage/signup', { signal });
-    expect(apiClient.patch).toHaveBeenCalledWith('/homepage/signup', { enabled: false });
-  });
 
 });

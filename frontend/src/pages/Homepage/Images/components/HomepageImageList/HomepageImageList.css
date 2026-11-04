@@ -1,30 +1,9 @@
-.homepage-management-section {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.homepage-management-section h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.homepage-management-section__header {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
 .homepage-image-list {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  height: 100%;
   flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
