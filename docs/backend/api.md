@@ -60,9 +60,10 @@ The [Hours](../../backend/tests/hours/hours.test.ts) and
 
 [Shared DOB validation](../../backend/src/validation/dateOfBirth.ts) requires a
 real date before today's Toronto date without an intake age restriction. Public
-and internal Lead intake and the Youth UI require DOB. The Youth API temporarily
-allows unknown DOB: omission preserves an existing value, explicit null clears
-it, and creation without a value stores null. Youth responses expose DOB rather
+and internal Lead intake require DOB. The Youth UI and API temporarily
+allow unknown DOB: omission preserves an existing value, explicit null clears
+it, and creation without a value stores null. The Youth form submits a blank DOB
+as null. Youth responses expose DOB rather
 than age or grade. Age eligibility belongs to program enrollment, so an existing
 profile remains editable as a person ages.
 
