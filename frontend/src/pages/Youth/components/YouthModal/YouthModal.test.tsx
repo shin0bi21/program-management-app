@@ -52,7 +52,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {
 function fillRequiredFields(firstName = 'Jamie', lastName = 'Test') {
   fireEvent.change(document.getElementById('firstName')!, { target: { value: firstName } });
   fireEvent.change(document.getElementById('lastName')!, { target: { value: lastName } });
-  fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: '2012-08-19' } });
+  fireEvent.change(screen.getByLabelText('Date of Birth (optional)'), { target: { value: '2012-08-19' } });
 }
 
 function submitForm() {
@@ -128,23 +128,21 @@ describe('YouthModal', () => {
   });
 
   describe('interactions', () => {
-    it('requires birthdate and exposes its validation error accessibly', async () => {
+    it('submits a profile without a birthdate', async () => {
       renderModal();
       fillRequiredFields();
-      const input = screen.getByLabelText('Date of Birth *');
-      expect(input).toBeRequired();
+      const input = screen.getByLabelText('Date of Birth (optional)');
+      expect(input).not.toBeRequired();
       fireEvent.change(input, { target: { value: '' } });
       submitForm();
 
-      await waitFor(() => expect(input).toHaveAccessibleDescription('Date of birth is required'));
-      expect(input).toHaveAttribute('aria-invalid', 'true');
-      expect(mockSetYouth).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: null })));
     });
 
     it('uses yesterday as maximum and accepts an adult DOB when creating', async () => {
       renderModal();
       fillRequiredFields();
-      const input = screen.getByLabelText('Date of Birth *');
+      const input = screen.getByLabelText('Date of Birth (optional)');
       const bounds = getDateOfBirthBounds();
       expect(input).not.toHaveAttribute('min');
       expect(input).toHaveAttribute('max', bounds.max);
@@ -156,7 +154,7 @@ describe('YouthModal', () => {
 
     it('allows a historical profile birthdate outside intake ages when editing', async () => {
       renderModal({ youthData: makeYouthProfile({ dateOfBirth: '1980-01-01' }) });
-      const input = screen.getByLabelText('Date of Birth *');
+      const input = screen.getByLabelText('Date of Birth (optional)');
       expect(input).not.toHaveAttribute('min');
       submitForm();
 

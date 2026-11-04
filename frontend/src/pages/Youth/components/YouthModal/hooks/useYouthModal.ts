@@ -127,7 +127,7 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, includeLo
           firstName: data.firstName.trim(),
           lastName: data.lastName.trim(),
           ...(includeLoginEmail && data.email && { email: data.email.trim() }),
-          dateOfBirth: data.dateOfBirth,
+          dateOfBirth: data.dateOfBirth || null,
           ...(data.schoolId && { schoolId: data.schoolId }),
           addresses: getAddressPayload(),
           contacts: getContactPayload(),

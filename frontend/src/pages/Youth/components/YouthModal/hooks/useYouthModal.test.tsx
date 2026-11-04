@@ -87,6 +87,21 @@ describe('useYouthModal', () => {
     expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ id: 'youth-1' }));
   });
 
+  it.each([undefined, null, '2012-08-19'])('saves blank DOB as null for a profile with DOB %s', async dateOfBirth => {
+    const youthData = dateOfBirth === undefined ? undefined : makeYouthProfile({ dateOfBirth });
+    const { result } = renderHook(() => useYouthModal({
+      isOpen: true, youthData, onClose: vi.fn(), onSuccess: vi.fn(),
+    }));
+
+    await act(async () => result.current.onValid({ ...formData, dateOfBirth: '' }));
+
+    expect(setYouth).toHaveBeenCalledWith(expect.objectContaining({
+      ...(youthData && { id: youthData.id }),
+      dateOfBirth: null,
+    }));
+    expect(result.current.submitStatus).toBe('success');
+  });
+
   it('saves legacy contacts without validating or writing other profile fields', async () => {
     const legacy = makeYouthProfile({ dateOfBirth: null });
     const saved = makeYouthProfile({ firstName: 'Authoritative', dateOfBirth: null });
