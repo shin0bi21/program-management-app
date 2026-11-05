@@ -12,6 +12,7 @@
 
 - Use this file as the single automatic agent entry point.
 - Use `.agents/skills/develop-feature/` for application changes. Its `SKILL.md` routes work through the human-facing owner documentation.
+- Use `.agents/skills/review-file-structure/` for file-level structure reviews and the structural pass during implementation and change review. It routes [file ownership and structure](docs/workflows/file-structure.md), including the [script pattern](docs/workflows/scripts.md), to the canonical owner guides.
 - After implementation and before deep review or shipping, use `.agents/skills/map-changes/` to produce the top-level concern map. A cohesive diff produces a one-concern map; a mixed diff produces multiple independently reviewable and shippable concerns.
 - Use `.agents/skills/review-changes/` for repeatable concern-level change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
 - Use the workflow order `implementation → concern map → concern review and focused verification → explicitly authorized concern commit/PR/merge to develop → separately authorized deployment`. Do not infer shipping permission from implementation or review, and do not infer deployment permission from commit or merge approval.
@@ -28,7 +29,7 @@
 ## Stable invariants
 
 - Do not change pinned runtime, database, framework, or TypeScript versions unless the user explicitly requests it.
-- Never edit a committed migration or one applied to a shared environment. An uncommitted migration used only in confirmed-disposable local databases may be folded before shipping, but reset every affected database so checksums and generated types match.
+- Never edit a committed migration or one applied to a shared environment. Retire applied files only through the explicitly authorized, verified [database collapse workflow](docs/workflows/delivery/collapse-database.md). An uncommitted migration used only in confirmed-disposable local databases may be folded before shipping, but reset every affected database so checksums and generated types match.
 - Preserve the middleware ordering and permission checks defined in `docs/backend/middleware.md`. Use `asyncHandler` for Express 4 async routes.
 - Use parameterized database queries and join existing transactions rather than opening nested transactions.
 - Use `requireEnv()` for required backend environment variables.

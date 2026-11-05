@@ -2,7 +2,7 @@
 
 ## Create a Migration
 
-1. Add a SQL file under `backend/db/migrations/` named `YYYY-MM-DD_#_description.sql`. Use the date written, an integer starting at 1 for that date, and a short snake_case description. Files run in lexicographic order.
+1. Add structural SQL under `backend/db/schema/migrations/` or seed/backfill SQL under `backend/db/data/migrations/`, named `YYYY-MM-DD_#_description.sql`. Use the date written, an integer starting at 1 for that date, and a short snake_case description. Filenames must be unique across both folders; all files run in one lexicographic order. Existing `backend/db/migrations/` history remains supported until the first explicit collapse.
 2. Encode the persistence contract and use the base-table pattern below for new data tables.
 3. Update seeds and fixtures for required fields and relationships.
 4. Apply the migration and regenerate database types using the [local migration commands](../workflows/local-development/README.md#migrations-and-database-types).
@@ -12,9 +12,14 @@
 
 ### Keep Migration History Immutable
 
-Once a migration is committed or applied to a shared environment, never edit, rename, delete, or squash it. Add a forward migration instead. Uncommitted migrations used only in confirmed-disposable local databases may be folded before shipping; reset every affected database to match the final checksums. Keep independently shippable concerns in separate migrations.
+Once a migration is committed or applied to a shared environment, never edit or rename it. Add a forward migration instead. The explicit [database collapse workflow](../workflows/delivery/collapse-database.md) is the sole exception for retiring history: it exports the current PostgreSQL state, verifies a replacement database with the same data, and replaces the ledger and covered files only after a successful switch. Uncommitted migrations used only in confirmed-disposable local databases may be folded before shipping; reset every affected database to match the final checksums. Keep independently shippable concerns in separate migrations.
 
-The runner applies each file and its tracking record in one transaction. A failed file rolls back; previously applied files remain committed. An advisory lock prevents parallel migration runs, and strict checksum validation rejects changed or missing applied files. Do not use `--no-strict` to conceal drift. Runner details live in [update_schemas.ts](../../backend/db/scripts/update_schemas.ts).
+The runner applies each file and its tracking record in one transaction. A failed file rolls back; previously applied files remain committed. An advisory lock prevents parallel migration runs, and strict checksum validation rejects changed or missing applied files. The runner does not automatically clear or adopt history. Use `db:migrate -- --dry-run` to inspect the same plan without applying it, and add `--check` for a nonzero exit on pending files. Drift always fails validation. `db:status` remains an alias for dry-run mode. Runner details live in [update_schemas.ts](../../backend/db/scripts/update_schemas.ts).
+
+The schema runner, collapse workflow, and migration immutability check use the same
+[migration catalog](../../backend/db/scripts/helpers/read-migrations.ts) for file discovery,
+safe paths, baseline checksums, and shared schema/data ordering. Keep those rules
+in the catalog so maintenance commands cannot accept a different history.
 
 ## Create a Data Table
 
@@ -106,5 +111,3 @@ rewrite those audit rows or transaction IDs, or replay retired fields into live
 tables. Historical age must use DOB and the event date, not today's date;
 birthdays do not themselves generate audit events. DOB backfills and column
 removals are recorded in migration history without per-record audit entries.
-See the [Lead DOB migration tests](../../backend/tests/leads/leadBirthDateBackfill.test.ts)
-for the legacy backfill contract.

@@ -31,7 +31,7 @@ export const navigation = [
         items: [
           { label: 'UI Basics', source: 'docs/frontend/components/README.md' },
           { label: 'Tables', source: 'docs/frontend/components/tables.md' },
-          { label: 'Row Updates', source: 'docs/frontend/components/table-rows.md' },
+          { label: 'Table Rows', source: 'docs/frontend/components/table-rows.md' },
           { label: 'Calendars', source: 'docs/frontend/components/calendars.md' },
           { label: 'Dashboards', source: 'docs/frontend/components/dashboards.md' },
           { label: 'Forms', source: 'docs/frontend/components/modals-and-forms.md' },
@@ -70,8 +70,17 @@ export const navigation = [
     label: 'Workflows',
     items: [
       { label: 'Overview', source: 'docs/workflows/delivery/README.md' },
-      { label: 'Refresh Local Data', source: 'docs/workflows/delivery/refresh-data.md' },
+      {
+        label: 'Refresh Local Data',
+        items: [
+          { label: 'Running the Script', source: 'docs/workflows/delivery/refresh-data.md' },
+          { label: 'Script Details', source: 'docs/workflows/delivery/refresh-data/script-walkthrough.md' },
+        ],
+      },
+      { label: 'Collapse Database History', source: 'docs/workflows/delivery/collapse-database.md' },
       { label: 'Testing', source: 'docs/workflows/delivery/testing.md' },
+      { label: 'File Structure and Ownership', source: 'docs/workflows/file-structure.md' },
+      { label: 'Script Structure', source: 'docs/workflows/scripts.md' },
       { label: 'Review and Merge Changes', source: 'docs/workflows/delivery/review-and-merge.md' },
       { label: 'Deploy, Verify, and Recover', source: 'docs/workflows/delivery/deployment.md' },
       { label: 'CI', source: 'docs/workflows/delivery/ci.md' },

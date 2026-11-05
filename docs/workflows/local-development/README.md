@@ -73,8 +73,37 @@ out, refreshing the browser, or restarting Node does not apply migrations.
 Check migration state with:
 
 ```bash
-docker compose exec backend npm run db:status
+docker compose exec backend npm run db:migrate -- --dry-run
 ```
+
+## Backend Database Scripts
+
+Runnable database workflows live directly under `backend/db/scripts/`. Shared
+modules live under `backend/db/scripts/helpers/` and are imported by those
+workflows; they are not standalone commands. Setup and import reuse the same
+administrator helper: setup preserves existing accounts, while local import
+explicitly resets its configured administrator within the authentication cleanup
+transaction.
+
+Use the migration commands above for local schema updates and the
+[refresh workflow](../delivery/refresh-data.md) for importing production data or
+saving a download. The [collapse workflow](../delivery/collapse-database.md) owns
+its Docker execution, service downtime, health checks, and recovery.
+
+To export a local snapshot independently, mount a private host directory into a
+one-off container so the archive survives its removal:
+
+```bash
+snapshot_directory="$(mktemp -d /tmp/my-webapp-snapshots.XXXXXX)"
+docker compose run -T --rm --no-deps --user "$(id -u):$(id -g)" \
+  -v "$snapshot_directory:/snapshots" backend \
+  npm exec -- tsx db/scripts/snapshot-data.ts --output /snapshots/current.dump
+```
+
+`snapshot-data.ts` exports and verifies a full PostgreSQL archive. It does not
+change authentication or apply migrations. Collapse reuses that exporter for
+its recovery archive. `import-data.ts` separately prepares authentication in an
+imported local staging database; its target and authentication guards always apply.
 
 ## Tests
 
@@ -110,12 +139,14 @@ migrations, installs dependencies, or otherwise changes the environment.
 Condense repetitive browser or backend logs for manual review:
 
 ```bash
-pbpaste | bash scripts/dev/condense-logs.sh
-bash scripts/dev/condense-logs.sh path/to/console.log
+pbpaste | npm run report:logs
+npm run report:logs -- path/to/console.log
+npm run report:logs -- --docker backend --since 5m --match TypeError
 ```
 
-The condenser groups repeated HTTP failures, warnings, errors, and application
-stack frames. It organizes evidence without assigning a speculative root cause.
+The log report groups repeated HTTP failures, warnings, errors, and application
+stack frames, with source locations and surrounding context. See
+[Reports](../delivery/reports.md#log-report) for filters and input options.
 
 Use logs to identify the failing service before restarting or rebuilding
 unrelated services.
@@ -134,3 +165,9 @@ installed dependency volumes, and uploaded-file volume. It then rebuilds the
 stack, migrates the development and test databases, seeds the configured admin,
 and regenerates database types. Do not use it as routine troubleshooting when
 local data must be retained.
+
+The command explicitly selects the development Compose file and checks local
+Docker endpoint and the configured administrator before deleting volumes. Service
+readiness is bounded; migration, admin-seeding, or type-generation failures exit
+nonzero and identify the failed phase. A completion message means every required
+step succeeded.

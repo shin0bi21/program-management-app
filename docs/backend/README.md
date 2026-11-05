@@ -17,7 +17,7 @@ Dependencies flow from routes through middleware and controllers to services and
 4. Put SQL, business rules, transactions, locking, policy checks, audits, and external coordination in the service owner.
 5. Define validation, keep controllers thin, and compose the route with the standard middleware order.
 6. Mount new routers in `backend/src/index.ts` and `backend/tests/shared/app.ts`.
-7. Add authoritative feature tests and register new paths in changed-suite routing.
+7. Add authoritative feature tests; related-test selection follows Jest's import graph.
 8. Update the API overview when area responsibilities change, restart after TypeScript changes, and run the focused runner.
 
 ## API Areas
@@ -44,7 +44,8 @@ Route files remain authoritative for methods, paths, validation, and permissions
 
 ```text
 backend/
-├── db/migrations/<date>_add_example.sql # only when persistence changes
+├── db/schema/migrations/<date>_add_example.sql # structural changes
+├── db/data/migrations/<date>_backfill_example.sql # seeds and data changes
 ├── src/policies/examplePolicy.ts
 ├── src/services/<product-area>/<capability>/
 │   ├── exampleListService.ts

@@ -2,10 +2,11 @@
 
 ## Own Tests by Domain
 
-- Give each non-trivial backend domain a focused test directory and runner. Add its package command when the runner delegates to one, and register its paths in `scripts/ci/select-tests.ts` changed-file routing.
+- Give each non-trivial backend domain a focused test directory and runner. Add its package command when the runner delegates to one, related-test selection follows Jest's import graph without registering domain paths.
 - Keep domain behavior owned by that suite. Cross-domain suites should retain only integration assertions at their boundary, not duplicate another domain's CRUD, policy, validation, and audit matrix.
 - Use the shared test application and database helpers so route composition, authentication, errors, and cleanup follow repository conventions.
 - Keep fixtures deterministic and clean up created records without weakening foreign-key or history assertions.
+- Shared program and homepage examples are seeded explicitly by `tests/shared/seedTestDefaults.ts` for each suite and its created rows are removed after domain cleanup; tests must not depend on existing business records or retired migrations inserting examples. Required application seeds remain in the database data init.
 
 ## Cover Public and Persistence Behavior
 

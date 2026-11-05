@@ -31,23 +31,17 @@ npm run typecheck
 
 echo "Running script tests..."
 node --test \
-  scripts/agents/*.test.ts \
-  scripts/agents/scaffold/frontend/*.test.ts \
+  scripts/scaffold/frontend/*.test.ts \
   scripts/ci/*.test.ts \
-  scripts/dev/*.test.ts \
-  scripts/patterns/enforce/*.test.ts \
-  scripts/patterns/enforce/frontend/*.test.ts \
-  scripts/patterns/review/*.test.ts \
+  scripts/patterns/*.test.ts \
+  scripts/patterns/frontend/*.test.ts \
   scripts/reports/*.test.ts
 
 echo "Checking report commands..."
-loc_total=$(bash scripts/reports/loc-report.sh app | awk '/^TOTAL/{print $2}')
+loc_total=$(node scripts/reports/loc-report.ts app | awk '/^TOTAL/{print $2}')
 if [ -z "$loc_total" ] || [ "$loc_total" -eq 0 ]; then
   echo "ERROR: LOC report did not count repository source files"
   exit 1
 fi
-
-echo "Checking documentation links..."
-node scripts/tests/check-doc-links.ts
 
 echo "Static checks passed!"

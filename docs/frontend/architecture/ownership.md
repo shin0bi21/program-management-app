@@ -69,4 +69,7 @@ Inside a typed owner, do not manufacture required values with placeholders, cast
 
 Colocate each component, hook, API adapter, and page test with its narrowest public owner. Test behavior where it is owned and add consumer wiring coverage only when correctness crosses owners.
 
-`node scripts/patterns/check-patterns.ts --changed` enforces deterministic repository invariants and reports review signals. A narrowly justified `pattern-review-ignore` annotation may suppress a review-only signal, but correcting ownership is preferred.
+`node scripts/patterns/run-pattern-checks.ts --changed` enforces deterministic repository
+invariants. The [owner guides and scaffolds](../pages/scaffolding.md#maintain-the-pattern)
+define the patterns applied during human or LLM-assisted change review; scaffold
+tests verify generated structure.

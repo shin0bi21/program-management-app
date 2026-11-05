@@ -35,15 +35,23 @@ run_full_suite() {
   echo "=========================================="
 }
 
-run_selected_backend_tests() {
+run_related_backend_tests() {
   if [ "$#" -eq 0 ]; then
-    echo "ERROR: Selected backend tests require at least one test path." >&2
+    echo "ERROR: Related backend tests require at least one changed path." >&2
     exit 2
   fi
 
   source scripts/tests/backend/_docker-health.sh
   export BACKEND_TEST_ENV_READY=1
-  docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand "$@"
+  # Deleted or renamed-away inputs cannot be resolved in the current graph.
+  for changed_path in "$@"; do
+    if [ ! -f "backend/$changed_path" ]; then
+      docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand
+      return
+    fi
+  done
+
+  docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand --findRelatedTests "$@"
 }
 
 run_related_frontend_tests() {
@@ -126,7 +134,7 @@ run_changed_suites() {
         deploy) echo "  scripts/tests/test-deploy.sh" ;;
         static) echo "  scripts/tests/test-static.sh" ;;
         backend-full) echo "  scripts/tests/backend/test-apis.sh" ;;
-        backend-focused) echo "  backend Jest paths: $value" ;;
+        backend-related) echo "  backend Jest related to: $value" ;;
         frontend-full) echo "  scripts/tests/frontend/test-ui.sh" ;;
         frontend-related) echo "  frontend Vitest dependency graph from $base_ref" ;;
       esac
@@ -139,9 +147,9 @@ run_changed_suites() {
       deploy) bash scripts/tests/test-deploy.sh ;;
       static) bash scripts/tests/test-static.sh ;;
       backend-full) bash scripts/tests/backend/test-apis.sh ;;
-      backend-focused)
+      backend-related)
         read -r -a backend_paths <<< "$value"
-        run_selected_backend_tests "${backend_paths[@]}"
+        run_related_backend_tests "${backend_paths[@]}"
         ;;
       frontend-full) bash scripts/tests/frontend/test-ui.sh ;;
       frontend-related) run_related_frontend_tests "$base_ref" ;;

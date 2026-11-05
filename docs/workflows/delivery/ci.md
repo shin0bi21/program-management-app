@@ -36,7 +36,7 @@ The main CI workflow classifies the diff once, then runs independent selected wo
 ```text
 change classification
   ├── static and changed pattern checks
-  ├── focused or full backend verification
+  ├── related or full backend verification
   ├── related or full frontend tests + build
   └── conditional production image and Compose validation
 ```
@@ -49,11 +49,27 @@ stable required-check identity without coupling it to lint or shell analysis.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests.
 
-Program-cycle services run the Programs suite plus Sessions, Youth, Hours,
-Outreach, Homepage, and reference-data integration consumers. Session services run
-their Sessions suite plus Youth, Hours, Homepage, and reference-data consumers.
+Backend verification owns type checking, migrations, migration status, generated
+database types, selected tests, and the backend build in one database-backed job.
+Changed backend source and test paths are passed directly to Jest's
+`--findRelatedTests`; no domain ownership catalog or consumer map is maintained.
+Jest indexes both `src/` and `tests/` to follow transitive imports. Shared test
+setup, database, dependencies, configuration, and other backend inputs run the
+complete backend suite. Deleted or renamed-away inputs also run the full suite
+because the current dependency graph cannot reliably resolve their old edges.
 
-Backend verification owns type checking, migrations, migration status, generated database types, selected tests, and the backend build in one database-backed job. Recognized domains run focused Jest directories in one invocation; shared infrastructure, migrations, dependencies, and unmapped backend files escalate to the complete backend suite.
+Shared test-app imports can make a service change select many API suites. This
+is a consequence of the test dependencies, rather than a manually declared
+cross-domain relationship. Directly changed test files select themselves.
+
+Development maintenance shell wrappers receive Bash syntax and ShellCheck
+validation; their orchestration is verified manually when changed. Migration
+catalog and database worker tests use the backend Jest suite. Worker
+tests use disposable databases and PostgreSQL 18 clients matching the test server;
+the backend job installs them from the official PostgreSQL Apt repository and
+selects those clients explicitly. Schema init, data init,
+manifest, and both incremental migration folders
+retain full backend coverage; database changes select deployment migration checks.
 
 Production image and Compose checks are selected by changed production inputs for
 feature pull requests. Release pull requests to `main` run all production checks.
@@ -67,8 +83,8 @@ The shared selector applies these rules locally and in CI:
   install and build use `docs/package-lock.json`, independently of app dependencies.
 - Repository automation changes run static and changed pattern checks.
 - Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
-- Recognized backend domains run their authoritative Jest directories in one invocation, including declared integration consumers such as Hours for Task changes.
-- Shared backend infrastructure, migrations, dependencies, and unmapped backend paths run the full backend suite.
+- Backend source and test paths select related tests through Jest's dependency graph.
+- Shared test setup, database changes, dependencies, configuration, other backend inputs, and deleted graph inputs run the full backend suite.
 - Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
 - Changed production inputs select deployment planning, image builds, and Compose validation.
 - Unrecognized paths fail closed to the full local application plan until deliberately classified.
@@ -81,9 +97,17 @@ Jobs use job-level conditions rather than workflow path filters so required chec
 and browser environment selection. The workflow table above identifies which
 checks run on pull requests and which are scheduled or manual.
 
-Pattern checks require colocated hook and API-adapter tests but do not require a
-test file for every component or route. Component coverage follows observable
-behavior rather than file counts; presentation-only wrappers need no placeholder suite.
+Pattern checks enforce dependency direction, centralized frontend HTTP and
+documentation, focused endpoint HTTP methods, Express async-handler wrapping,
+route-validated controller queries, and committed migration immutability.
+Frontend composition, naming, file layout, and test ownership follow the
+[owner documentation and scaffold patterns](../../frontend/pages/scaffolding.md#maintain-the-pattern)
+through scaffolding, behavioral tests, and contextual change review. The pattern
+checker does not enforce those architecture conventions or require test files.
+
+Repository scripts run directly through Node's TypeScript support. ESLint requires
+explicit type-only imports, while the root no-emit typecheck also checks imports
+of backend helpers written for CommonJS compilation.
 
 ## Diagnose a Failed Check
 
@@ -116,7 +140,7 @@ frontend application jobs follow changed-path selection.
 
 ## Change CI
 
-Changed-pattern failures and non-blocking review findings appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
+Changed-pattern enforcement failures appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
 
 | Owner | Responsibility |
 |---|---|

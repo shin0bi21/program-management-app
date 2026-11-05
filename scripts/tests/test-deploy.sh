@@ -121,6 +121,11 @@ write_test_file backend/db/migrations/002_change.sql "SELECT 2;"
 MIGRATION_REVISION_SHA="$(commit_test_state migration)"
 assert_plan migration "$MIGRATION_REVISION_SHA" "$BACKEND_REVISION_SHA" "$BACKEND_REVISION_SHA" "$BACKEND_REVISION_SHA" false true true false
 
+write_test_file backend/db/schema/init.sql "CREATE TABLE example (id integer);"
+write_test_file backend/db/data/migrations/003_seed.sql "INSERT INTO example VALUES (1);"
+BASELINE_REVISION_SHA="$(commit_test_state baseline-layout)"
+assert_plan baseline-layout "$BASELINE_REVISION_SHA" "$MIGRATION_REVISION_SHA" "$MIGRATION_REVISION_SHA" "$MIGRATION_REVISION_SHA" false true true false
+
 write_test_file docker-compose.prod.yml "services: { nginx: {} }"
 INFRASTRUCTURE_REVISION_SHA="$(commit_test_state infrastructure)"
 assert_plan infrastructure "$INFRASTRUCTURE_REVISION_SHA" "$MIGRATION_REVISION_SHA" "$MIGRATION_REVISION_SHA" "$MIGRATION_REVISION_SHA" true true true true

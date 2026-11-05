@@ -10,6 +10,6 @@
     "sourceMap": true,
     "types": ["node", "jest"]
   },
-  "include": ["src/**/*", "db/**/*", "scripts/**/*", "tests/**/*"],
+  "include": ["src/**/*", "db/**/*", "integrations/**/*", "tests/**/*"],
   "exclude": ["node_modules"]
 }
