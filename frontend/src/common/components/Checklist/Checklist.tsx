@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import { useChecklistItems } from './hooks/useChecklistItems';
+import SearchInput from '../SearchInput/SearchInput';
 import './Checklist.css';
 
 interface ChecklistProps {
@@ -41,21 +42,21 @@ export default function Checklist({
       aria-label={ariaLabel}
     >
       {searchEnabled && (
-        <div className="checklist-search form-field">
-          <input
-            type="search"
-            aria-label={`Search ${ariaLabel}`}
-            placeholder="Search…"
-            value={search}
-            disabled={disabled}
-            onChange={event => setSearch(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === 'Enter') event.preventDefault();
+        <SearchInput
+          className="checklist-search"
+          type="search"
+          label={`Search ${ariaLabel}`}
+          placeholder="Search…"
+          value={search}
+          disabled={disabled}
+          onChange={event => setSearch(event.target.value)}
+          onClear={() => setSearch('')}
+          onKeyDown={event => {
+            if (event.key === 'Enter') event.preventDefault();
 
-              if (event.key !== 'Escape' && event.key !== 'Tab') event.stopPropagation();
-            }}
-          />
-        </div>
+            if (event.key !== 'Escape' && event.key !== 'Tab') event.stopPropagation();
+          }}
+        />
       )}
       <div className="checklist-items" ref={itemsRef} onScroll={handleScroll}>
         {items.map((option, index) => {

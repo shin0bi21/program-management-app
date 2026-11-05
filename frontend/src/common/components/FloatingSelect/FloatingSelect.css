@@ -67,6 +67,31 @@
   color: var(--brand-primary);
 }
 
+.floating-select-option[role="option"] {
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  padding: 9px 12px;
+}
+
+.floating-select-option[aria-selected="true"] {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.floating-select-option--active {
+  background: var(--accent-10);
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+}
+
+.floating-select-option-actions {
+  display: flex;
+  flex: 0 0 auto;
+  border-top: 1px solid var(--ink-08);
+}
+
 .floating-menu-panel .floating-select-option-action {
   flex: 0 0 2rem;
   padding: 0.5rem;
@@ -88,4 +113,12 @@
   flex: 0 0 auto;
   margin-bottom: 2px;
   padding-bottom: 11px;
+}
+
+.floating-select-menu .floating-select-search {
+  flex: 0 0 auto;
+  height: 39px;
+  max-width: none;
+  margin: var(--space-3);
+  width: calc(100% - 2 * var(--space-3));
 }
