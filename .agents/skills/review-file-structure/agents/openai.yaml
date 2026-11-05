@@ -1,4 +1,0 @@
-interface:
-  display_name: "Review File Structure"
-  short_description: "Review file ownership, structure, and reading order"
-  default_prompt: "Use $review-file-structure to review the specified files against their owning guides and applicable scaffolds."

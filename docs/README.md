@@ -85,34 +85,15 @@ instructions are not copied into the site.
 
 ## Write and Maintain a Guide
 
-Use the [Local Development walkthrough](workflows/local-development/tools.md)
-as the model for the writing voice. Speak directly to the reader as "you" and
-guide them through the task in the order they will perform it. Open with what
-they are about to do and why it matters. When a page follows another, connect
-it to what they have just completed.
-
-Explain unfamiliar terms when they first appear. Before a command or set of
-clicks, say where to perform it and what it will accomplish. Afterward, explain
-what the reader should see and when they are ready to continue. Use the site's built-in Previous and Next links for sequential navigation; do
-not repeat them in closing sections or add unrelated task lists to setup pages.
-Prefer natural paragraphs for explanation and numbered steps for actions.
-Avoid compressed phrases such as "fresh checkout" or "owned runner" when a
-plain explanation would be clearer. Keep the tone helpful and conversational
-without repeating the same introduction in every section. Keep introductions brief: state
-what the section covers and what the reader needs to do. Omit obvious instructions
-and headings that merely repeat the introduction.
-
-Give each guide one reader purpose: explain an architectural decision, define a
-shared contract, or walk through a task. Split when those purposes or audiences
-differ; merge thin guides that describe one responsibility. Keep ownership rules
-in their owner guide and link to them from consumers and agent skills.
-
-Keep implementation details in source and tests unless the reader needs them to
-make a decision. Document meaningful constraints and the reason for exceptions;
-avoid parallel endpoint inventories, styling values, or historical incident
-narratives in current instructions. Operational tasks identify the environment,
-prerequisites, steps, expected results, outcome verification, and recovery path.
-Update the applicable guide in the same change as its contract or procedure.
+- Keep each guide focused on its assigned responsibility and place in the sequence.
+- Link to other owners for their rules; do not repeat their content or expand into their tasks.
+- Prefer short rules, numbered actions, and concrete examples. Use paragraphs only when explanation is necessary.
+- Choose clarity over brevity, but remove repetition, obvious instructions, filler, and unnecessary introductions.
+- Speak directly to the reader. Explain unfamiliar terms when needed.
+- For commands, identify the location, prerequisites, expected result, and verification; include recovery when relevant.
+- Use the site's Previous and Next links for sequential navigation.
+- Keep implementation details in source and tests unless readers need them to act or decide.
+- Update the owning guide when its contract or procedure changes.
 
 ## Further Reading
 

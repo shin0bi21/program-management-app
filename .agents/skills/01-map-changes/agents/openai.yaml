@@ -1,0 +1,4 @@
+interface:
+  display_name: "01 Map Changes"
+  short_description: "Map concerns and prepare separate stashes when authorized"
+  default_prompt: "Use $01-map-changes to assign files and hunks to concerns and, when authorized, prepare named concern stashes. Leave review, shipping, and cleanup to their owners."

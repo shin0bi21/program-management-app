@@ -8,9 +8,10 @@ Production release is a separate, explicitly authorized workflow.
 | Populate the local stack with production records | [Refresh Local Data](refresh-data.md) |
 | Replace migration history with a current PostgreSQL init | [Collapse Database History](collapse-database.md) |
 | Choose focused tests and understand suite ownership | [Testing](testing.md) |
-| Review file responsibilities, reading order, and layer boundaries | [File Structure and Ownership](../file-structure.md) |
+| Write clear expressions, branching, names, and function phases | [Code Readability](../readability.md) |
+| Document function contracts, examples, and non-obvious rules | [Code Documentation](../documentation.md) |
 | Structure a runnable script and its helpers | [Script Structure](../scripts.md) |
-| Map concerns, review changes, and ship approved work to `develop` | [Review and Merge Changes](review-and-merge.md) |
+| Map, review, ship, and clean up changes | [Phase order](../../../AGENTS.md#canonical-documentation); [Map](../../../.agents/skills/01-map-changes/SKILL.md), [Review](../../../.agents/skills/02-review-changes/SKILL.md), [Ship](../../../.agents/skills/03-update-repo/SKILL.md), [Complete](../../../.agents/skills/04-complete-changes/SKILL.md) |
 | Release `develop` to `main`, verify deployment, or investigate a failed release | [Deploy to Production](../production/deployment.md) |
 | Understand required checks, diagnose CI, or change automation | [Continuous Integration](ci.md) |
 | Measure CI, deployment history, or repository size | [Repository Reports](reports.md) |

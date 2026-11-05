@@ -11,8 +11,7 @@ for authenticated collection routes.
 Templates implement the contracts in the focused owner guides. When a contract
 changes, update its template and scaffold tests together. Scaffold tests verify
 the generated files; follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
-for application coverage and [File Structure and Ownership](../../workflows/file-structure.md)
-for reviewing handwritten or generated code.
+for application coverage and [Ownership](ownership.md) for source placement.
 
 ## Choose a Preset
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "03 Update Repo"
+  short_description: "Ship approved changes through tested pull requests"
+  default_prompt: "Use $03-update-repo to prepare one issue branch and restore its mapped concern, yield to that branch's review, then resume explicitly authorized commit/PR/merge delivery. Mapping owns splitting; completion owns cleanup."

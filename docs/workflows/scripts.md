@@ -56,8 +56,9 @@ the CLI workflow merely because a test or another script imports them.
 
 ## Make Individual Steps Understandable
 
-Follow the [repository readability rules](../../AGENTS.md#readability) inside
-every phase. In particular:
+Follow [Code Readability](readability.md) inside every phase and
+[Code Documentation](documentation.md) for function contracts and comments.
+In particular:
 
 - Give argument options a named contract when an inline type obscures the flow.
   Keep flag handling, value lookup, validation, and assignment easy to distinguish.

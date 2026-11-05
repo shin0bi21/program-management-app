@@ -11,20 +11,25 @@
 ## Canonical documentation
 
 - Use this file as the single automatic agent entry point.
-- Use `.agents/skills/develop-feature/` for application changes. Its `SKILL.md` routes work through the human-facing owner documentation.
-- Use `.agents/skills/review-file-structure/` for file-level structure reviews and the structural pass during implementation and change review. It routes [file ownership and structure](docs/workflows/file-structure.md), including the [script pattern](docs/workflows/scripts.md), to the canonical owner guides.
-- After implementation and before deep review or shipping, use `.agents/skills/map-changes/` to produce the top-level concern map. A cohesive diff produces a one-concern map; a mixed diff produces multiple independently reviewable and shippable concerns.
-- Use `.agents/skills/review-changes/` for repeatable concern-level change reviews and `.agents/skills/ship-changes/` for issue, branch, test, commit, pull-request, and merge workflows.
-- Use the workflow order `implementation → concern map → concern review and focused verification → explicitly authorized concern commit/PR/merge to develop → separately authorized deployment`. Do not infer shipping permission from implementation or review, and do not infer deployment permission from commit or merge approval.
+- Follow [Documentation Maintenance](docs/README.md#write-and-maintain-a-guide) when writing or editing guides.
+- During implementation and review, follow the affected frontend or backend owner guides and applicable scaffolds; use [Script Structure](docs/workflows/scripts.md) for scripts.
+- Follow [Code Readability](docs/workflows/readability.md) for names, expressions, control flow, and spacing, and [Code Documentation](docs/workflows/documentation.md) for function design recipes and comments.
+- After implementation and before deep review or shipping, use `.agents/skills/01-map-changes/` to classify concerns and, when splitting/stashing is authorized, prepare their separate stashes. A review-only prerequisite map remains read-only. Mapping owns file/hunk assignments; other phases reuse them.
+- Use `.agents/skills/02-review-changes/` for one restored concern on one prepared branch per review and `.agents/skills/03-update-repo/` for issue, branch, test, commit, pull-request, and merge workflows.
+- Use `.agents/skills/04-complete-changes/` after each authorized concern merge for issue closure, branch deletion, stash/worktree cleanup, and final reconciliation. Keep `03-update-repo` scoped to issue creation, branch creation/restoration of the prepared concern, verification, commits, PRs, and merge to `develop`.
+- Keep `02-review-changes` scoped to assessment and evidence. Require explicit owner-rule/reference comparisons for patterns; automated pattern checks alone do not establish alignment. Route fixes to implementation, scope changes to mapping, and delivery to shipping.
+- Use the workflow order `implementation → concern map/stashes → issue branch preparation/restoration → review that branch → explicitly authorized concern commit/PR/merge to develop → concern completion and cleanup → separately authorized deployment`. Do not infer shipping permission from implementation, review, or completion, and do not infer deployment permission from commit or merge approval.
+- For each concern, shipping prepares one branch, review assesses it, authorized shipping delivers it, and completion returns the cleanup checkpoint before the next branch.
+- This file orchestrates the skills: "ship changes" or "full shipping workflow" runs mapping, preparation, review, delivery to `develop`, and cleanup. "Commit changes" runs mapping, preparation, review, and local commits; "push" or "merge" stops at that requested operation. Explicit limits such as "commit only" take precedence. Deployment always requires separate authorization.
 - Treat every arrow in that workflow as a handoff boundary. Stop after the current phase and report its deliverable unless the user's current request explicitly includes the next phase.
 - A request for "full implementation" authorizes implementation, concern mapping, review, fixes, and re-review. It does not authorize shipping or deployment; each still requires its own explicit request.
 - Map mixed work logically in one concern map, but ship it serially. Complete one concern through merge, return to a clean `develop`, synchronize it with `origin/develop`, and only then create or prepare the next concern branch.
-- Before creating a concern branch or worktree, create or reuse its GitHub issue and use an issue-numbered branch. Choose stash-based or worktree-based isolation as appropriate; both follow the same tracking, authorization, review, merge, and cleanup contract in `docs/workflows/delivery/review-and-merge.md`.
+- Before creating a concern branch or worktree, create or reuse its GitHub issue and use an issue-numbered branch. Choose stash-based or worktree-based isolation as appropriate; follow the owning delivery skill for each phase.
 - Start application work at the routing overview in `README.md`.
 - Read `docs/frontend/README.md` before changing frontend ownership, component, hook, query, or test structure, then follow the narrowest focused guide under `docs/frontend/`.
 - Read `docs/backend/README.md` before changing backend behavior, then follow the narrowest focused guide under `docs/backend/` for middleware, authentication, authorization, services, policies, database, errors, testing, API, or integrations.
 - Choose the workflow category from `README.md`; read `docs/workflows/local-development/README.md` for local Docker, dependency, migration, and restart procedures.
-- Use `.agents/skills/maintain-ci/` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations. That skill routes the canonical CI documentation.
+- Read `docs/workflows/delivery/ci.md` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations.
 
 ## Stable invariants
 
@@ -38,17 +43,6 @@
 - Preserve the frontend dependency direction `pages → common/features → common/components`.
 - Keep endpoint-only request, filter, and payload types in their API adapter; keep component-, hook-, and page-only types beside that owner. Reserve a page-root `types.ts` for contracts genuinely shared by sibling page units.
 - Enforce separation of concerns at the lowest valid owner. Keep page-specific APIs, types, constants, hooks, and components inside that page; use `pages/<RouteFamily>/common/` only for code with real sibling-route consumers; promote code to global `common/features/` only when multiple route families genuinely consume it. Do not centralize code merely because values look similar or future reuse seems possible.
-
-## Readability
-
-- Organize non-trivial functions in execution or lifecycle order so they can be read from top to bottom without reconstructing the control flow.
-- Separate distinct phases inside a function with blank lines: setup and lookups, guards, derived values, state changes, validation, and side effects. This applies inside callbacks and methods, not only between top-level declarations; do not compress an entire flow into one uninterrupted block.
-- Name intermediate values and decisions when the name makes intent clearer than an inline expression. Avoid both repeated re-derivation and tiny helper extraction that scatters a cohesive flow.
-- Prefer scanability over speculative micro-optimizations. Add memoization, callback indirection, or caching when stable identity is part of the contract or evidence shows material value, not as a blanket default.
-- Let names, types, and structure explain obvious behavior. Add concise comments only for information a casual reader cannot recover from the code: intent, invariants, ordering constraints, assumptions, error behavior, or a deliberate exception to the usual pattern.
-- Place a comment immediately above the non-trivial statement group it explains, at the same indentation, with no blank line between the comment and that code. Describe what or why; do not translate each statement into English or leave commented-out code.
-- Document a subtle ordering requirement at the point where the order matters. For exported abstractions, add a one-sentence purpose or caller-visible constraint only when the name and TypeScript contract do not already say it clearly; avoid boilerplate parameter and return comments.
-- Keep comments accurate as behavior changes. A stale or redundant comment is worse than no comment.
 
 ## Testing
 
