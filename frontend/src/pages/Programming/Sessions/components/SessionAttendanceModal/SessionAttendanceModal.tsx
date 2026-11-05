@@ -25,9 +25,7 @@ export default function SessionAttendanceModal({
     <ModalFormFooter
       formId="attendance-form"
       submitStatus={workflow.submitStatus}
-      submitDisabled={workflow.attendanceLoading || workflow.rosterUnavailable || workflow.youthUnavailable || (
-        !workflow.isOpenRoster && !workflow.roster.length
-      )}
+      submitDisabled={workflow.submitDisabled}
       onClose={onClose}
     />
   );
@@ -68,11 +66,10 @@ export default function SessionAttendanceModal({
           <OpenAttendancePicker
             key={session?.id}
             youth={workflow.youth}
-            selectedYouthIds={workflow.roster.map(member => member.youthId)}
+            selectedYouthIds={workflow.selectedYouthIds}
             loading={workflow.attendanceLoading}
-            unavailable={workflow.rosterUnavailable || workflow.youthUnavailable}
-            disabled={workflow.submissionComplete || workflow.attendanceLoading
-              || workflow.rosterUnavailable || workflow.youthUnavailable}
+            unavailable={workflow.attendanceUnavailable}
+            disabled={workflow.controlsDisabled}
             onToggle={workflow.toggleOpenAttendee}
           />
         ) : (
@@ -80,7 +77,7 @@ export default function SessionAttendanceModal({
             loading={workflow.attendanceLoading}
             roster={workflow.roster}
             selections={workflow.selections}
-            disabled={workflow.submissionComplete || workflow.rosterUnavailable}
+            disabled={workflow.controlsDisabled}
             onStatusChange={workflow.updateAttendanceStatus}
           />
         )}

@@ -62,8 +62,9 @@ Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their co
 
 Open Session attendance uses a form `Checklist` with `search` and `dynamicItems`
 enabled. Load all youth through the existing authorized Youth lookup when the
-modal opens; filter and reveal batches locally. Existing attendees start checked,
-checked youth save as present, and unchecked youth are omitted from the attendance
+modal opens; filter and reveal batches locally. Existing attendees initialize separate checked IDs; editing them never mutates
+the loaded youth or attendance records. Compare the draft with the initial checks
+and disable unchanged saves. Checked youth save as present, and unchecked youth are omitted from the attendance
 replacement. Preserve saved notes when toggling an existing attendee. Block edits
 and saving until both the roster and youth lookup are ready; a failed lookup must
 not become an empty replacement. Enrollment-based attendance retains its roster

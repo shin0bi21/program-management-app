@@ -6,6 +6,7 @@ import {
   getAttendanceYouth,
   setSessionAttendance,
   type SessionAttendanceResult,
+  type SessionAttendanceRecord,
   type AttendanceYouth,
 } from '../../../sessions.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
@@ -30,6 +31,7 @@ export default function useSessionAttendanceModal({
   const sessionId = session?.id;
 
   const [roster, setRoster] = useState<SessionRosterMember[]>([]);
+  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -42,6 +44,7 @@ export default function useSessionAttendanceModal({
     draftDirtyRef.current = false;
     unlock();
     setRoster([]);
+    setSelectedYouthIds([]);
     setSelections({});
     setSubmitStatus('idle');
     setStatusMessage('');
@@ -57,6 +60,7 @@ export default function useSessionAttendanceModal({
     if (!rosterQuery.data || draftDirtyRef.current) return;
 
     setRoster(rosterQuery.data);
+    setSelectedYouthIds(rosterQuery.data.map(member => member.youthId));
     setSelections(Object.fromEntries(
       rosterQuery.data.map(member => [member.youthId, member.status ?? '']),
     ));
@@ -70,59 +74,66 @@ export default function useSessionAttendanceModal({
   const rosterUnavailable = Boolean(rosterQuery.error && !rosterQuery.data);
   const youthUnavailable = isOpenRoster && Boolean(youthQuery.error);
   const attendanceLoading = rosterQuery.isLoading || (isOpenRoster && youthQuery.isLoading);
+  const attendanceUnavailable = rosterUnavailable || youthUnavailable;
+  const controlsDisabled = submissionComplete || attendanceLoading || attendanceUnavailable;
 
   const youth = [...(youthQuery.data ?? [])];
   const youthIds = new Set(youth.map(profile => profile.id));
   // Keep saved attendees available even if the current youth lookup no longer includes them.
-  for (const member of rosterQuery.data ?? []) {
+  for (const member of roster) {
     if (!youthIds.has(member.youthId)) {
       youth.push({ id: member.youthId, firstName: member.firstName, lastName: member.lastName });
     }
   }
   youth.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 
-  const toggleOpenAttendee = (youthId: string) => {
-    if (!isOpenRoster || submissionComplete || attendanceLoading || rosterUnavailable || youthUnavailable) return;
+  const savedYouthIds = new Set(roster.map(member => member.youthId));
+  const hasAttendanceChanges = selectedYouthIds.length !== savedYouthIds.size
+    || selectedYouthIds.some(youthId => !savedYouthIds.has(youthId));
+  const noOpenAttendanceChanges = isOpenRoster && !hasAttendanceChanges;
+  const emptyEnrolledRoster = !isOpenRoster && roster.length === 0;
+  const submitDisabled = controlsDisabled || noOpenAttendanceChanges || emptyEnrolledRoster;
 
-    const profile = youth.find(candidate => candidate.id === youthId);
-    if (!profile) return;
+  const toggleOpenAttendee = (youthId: string) => {
+    if (!isOpenRoster || controlsDisabled) return;
+
+    if (!youth.some(profile => profile.id === youthId)) return;
 
     draftDirtyRef.current = true;
-    setRoster(current => {
-      if (current.some(member => member.youthId === youthId)) {
-        return current.filter(member => member.youthId !== youthId);
-      }
-
-      const savedMember = rosterQuery.data?.find(member => member.youthId === youthId);
-      return [...current, {
-        youthId,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        status: 'present' as const,
-        notes: savedMember?.notes ?? null,
-      }].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
-    });
+    setSelectedYouthIds(current => current.includes(youthId)
+      ? current.filter(id => id !== youthId)
+      : [...current, youthId]);
   };
 
   const updateAttendanceStatus = (youthId: string, status: AttendanceStatus | '') => {
+    if (controlsDisabled) return;
+
     draftDirtyRef.current = true;
     setSelections(current => ({ ...current, [youthId]: status }));
   };
 
   const submit = async () => {
-    if (!session || attendanceLoading || rosterUnavailable || youthUnavailable || !tryLock()) return;
+    if (!session || submitDisabled || !tryLock()) return;
 
     const sessionName = session.theme || `${session.programName} session`;
-    const attendance = isOpenRoster
-      ? roster.map(member => ({
-          youthId: member.youthId,
-          status: 'present' as const,
-          notes: member.notes,
-        }))
-      : roster.flatMap(member => {
-          const status = selections[member.youthId];
-          return status ? [{ youthId: member.youthId, status, notes: member.notes }] : [];
+    const attendance: SessionAttendanceRecord[] = [];
+    if (isOpenRoster) {
+      for (const youthId of selectedYouthIds) {
+        const savedMember = roster.find(member => member.youthId === youthId);
+        attendance.push({
+          youthId,
+          status: 'present',
+          notes: savedMember?.notes ?? null,
         });
+      }
+    } else {
+      for (const member of roster) {
+        const status = selections[member.youthId];
+        if (!status) continue;
+
+        attendance.push({ youthId: member.youthId, status, notes: member.notes });
+      }
+    }
 
     setSubmitStatus('submitting');
     setStatusMessage(`Saving attendance for ${sessionName}...`);
@@ -152,10 +163,15 @@ export default function useSessionAttendanceModal({
 
   return {
     roster,
+    selectedYouthIds,
+    hasAttendanceChanges,
     selections,
     youth,
     isOpenRoster,
     attendanceLoading,
+    attendanceUnavailable,
+    controlsDisabled,
+    submitDisabled,
     youthUnavailable,
     rosterError: rosterQuery.error
       ? getErrorMessage(rosterQuery.error, 'Could not load session roster')

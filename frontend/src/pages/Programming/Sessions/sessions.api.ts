@@ -138,9 +138,15 @@ export interface SessionAttendanceResult {
   updatedProgramCycle?: ProgramCycleAssignment;
 }
 
+export interface SessionAttendanceRecord {
+  youthId: string;
+  status: AttendanceStatus;
+  notes?: string | null;
+}
+
 export function setSessionAttendance(
   sessionId: string,
-  records: Array<{ youthId: string; status: AttendanceStatus; notes?: string | null }>,
+  records: SessionAttendanceRecord[],
 ) {
   return apiClient.put<SessionAttendanceResult>(`/sessions/${sessionId}/attendance`, { records });
 }

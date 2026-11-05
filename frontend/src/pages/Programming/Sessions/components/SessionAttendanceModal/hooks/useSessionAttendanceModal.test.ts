@@ -116,7 +116,7 @@ describe('useSessionAttendanceModal', () => {
     expect(getAttendanceYouth).toHaveBeenCalledWith(expect.objectContaining({ signal: expect.any(AbortSignal) }));
 
     act(() => result.current.toggleOpenAttendee('youth-1'));
-    expect(result.current.roster).toEqual([]);
+    expect(result.current.selectedYouthIds).toEqual([]);
     act(() => result.current.toggleOpenAttendee('youth-2'));
     act(() => result.current.toggleOpenAttendee('youth-1'));
     await act(() => result.current.submit());
@@ -136,6 +136,27 @@ describe('useSessionAttendanceModal', () => {
     await act(() => result.current.submit());
 
     expect(setSessionAttendance).toHaveBeenCalledWith(openSession.id, []);
+  });
+
+  it('keeps source attendance and youth unchanged while comparing the draft checks', async () => {
+    const openSession = makeProgramSession({ enrollmentRequired: false });
+    const { result, queryClient } = renderWorkflow({ session: openSession });
+    await waitFor(() => expect(result.current.attendanceLoading).toBe(false));
+    const loadedYouth = queryClient.getQueryData([...SESSION_QUERY_KEY, 'attendance-youth']);
+    expect(result.current.hasAttendanceChanges).toBe(false);
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    expect(result.current.selectedYouthIds).toEqual([]);
+    expect(result.current.hasAttendanceChanges).toBe(true);
+    expect(result.current.roster).toBe(roster);
+    expect(queryClient.getQueryData([...SESSION_QUERY_KEY, openSession.id, 'roster'])).toBe(roster);
+    expect(queryClient.getQueryData([...SESSION_QUERY_KEY, 'attendance-youth'])).toBe(loadedYouth);
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    expect(result.current.selectedYouthIds).toEqual(['youth-1']);
+    expect(result.current.hasAttendanceChanges).toBe(false);
+    await act(() => result.current.submit());
+    expect(setSessionAttendance).not.toHaveBeenCalled();
   });
 
   it('blocks saving and draft changes when the youth lookup fails', async () => {
@@ -248,9 +269,10 @@ describe('useSessionAttendanceModal', () => {
     await waitFor(() => expect(view.result.current.roster).toEqual(roster));
 
     act(() => view.result.current.toggleOpenAttendee('youth-1'));
-    expect(view.result.current.roster).toEqual([]);
+    expect(view.result.current.selectedYouthIds).toEqual([]);
     view.rerender({ target: nextSession });
 
     expect(view.result.current.roster).toEqual(roster);
+    expect(view.result.current.selectedYouthIds).toEqual(['youth-1']);
   });
 });
