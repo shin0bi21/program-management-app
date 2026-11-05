@@ -1,5 +1,6 @@
 import { TABLE_PAGE_SIZE } from '../../../../../query/types';
-import { compareListSortValues } from '../../../../../query/listOrdering';
+import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
+import { getActiveProgramLabels, getCompletedProgramLabels } from '../programColumns';
 import { getYouth } from '../../../youth.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { YouthFilters, YouthSortKey } from '../../../types';
@@ -18,10 +19,8 @@ export default function useYouthTableData(
         lastName: profile.lastName.toLowerCase(),
         dateOfBirth: profile.dateOfBirth ?? '',
         school: profile.schoolName?.toLowerCase() ?? '',
-        program: profile.programCycles
-          .filter(programCycle => programCycle.enrolledOn !== null && programCycle.withdrawnOn === null)
-          .map(programCycle => programCycle.programName).sort(compareListSortValues)[0]?.toLowerCase() ?? '',
-        status: profile.status,
+        activePrograms: getActiveProgramLabels(profile, getDateKeyInTimeZone())[0]?.toLowerCase() ?? '',
+        completedPrograms: getCompletedProgramLabels(profile, getDateKeyInTimeZone())[0]?.toLowerCase() ?? '',
       }[sorting.key]),
     },
     queryKey: ['youth', 'table', filters, sorting],

@@ -32,7 +32,7 @@ export const youthQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
-    ...cursorListFields(['firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status'], 'firstName', 'asc'),
+    ...cursorListFields(['firstName', 'lastName', 'dateOfBirth', 'school', 'activePrograms', 'completedPrograms', 'status'], 'firstName', 'asc'),
   }),
 });
 

@@ -56,5 +56,5 @@ export interface YouthFilters {
   cycleIds?: string[];
 }
 
-export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'dateOfBirth', 'school', 'program', 'status'] as const;
+export const YOUTH_TABLE_KEYS = ['firstName', 'lastName', 'dateOfBirth', 'school', 'activePrograms', 'completedPrograms'] as const;
 export type YouthSortKey = typeof YOUTH_TABLE_KEYS[number];
