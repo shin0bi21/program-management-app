@@ -137,8 +137,11 @@ bash scripts/dev/collapse-database.sh --environment production --reuse-baseline 
 
 Run this on the server checkout at `/home/ubuntu/my-webapp`, with Docker available. It explicitly uses `docker-compose.prod.yml`; there is no SSH
 or production mutation from the local command.
-The source ledger must exactly match `baseline.json.replaces` and its current
-schema must match the reviewed schema. Both conditions are checked before cutover.
+The source ledger must exactly match `baseline.json.replaces`. The reviewed schema
+is restored into the disposable replacement database and exported with the same
+PostgreSQL tools as the source before comparing them. This accepts equivalent SQL
+formatting while rejecting schema and constraint drift. Both conditions are checked
+before loading business data or cutting over.
 Local reuse uses `--environment local --reuse-baseline --apply`.
 
 Reuse preserves that environment's complete data, including its own seed IDs and

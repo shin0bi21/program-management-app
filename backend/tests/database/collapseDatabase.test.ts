@@ -190,6 +190,61 @@ it.each([false, true])('preserves rows and sequences through prepare and commit 
   expect(query('postgres', `SELECT count(*) FROM pg_database WHERE datname IN ('${test.state().capture}', '${test.state().stage}');`)).toBe('0');
 }, 30000);
 
+function reviseReviewedSchema(files: string, transform: (sql: string) => string): void {
+  const schemaFile = path.join(files, initFiles[0]);
+  fs.writeFileSync(schemaFile, transform(fs.readFileSync(schemaFile, 'utf8')));
+
+  const manifestFile = path.join(files, 'baseline.json');
+  const baseline = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+  baseline.files[initFiles[0]] = calculateChecksum(schemaFile);
+  fs.writeFileSync(manifestFile, JSON.stringify(baseline));
+}
+
+it('reuses equivalent reviewed SQL despite different dump formatting', () => {
+  const test = fixture(true);
+  reviseReviewedSchema(test.files, sql => sql.replaceAll('CREATE TABLE', 'CREATE  TABLE').replaceAll('\n\n', '\n\n\n'));
+  const contents = test.contents();
+  const files = fileContents(test.files);
+
+  test.run('prepare');
+  test.run('commit');
+
+  expect(test.contents()).toBe(contents);
+  expect(fileContents(test.files)).toEqual(files);
+  expect(test.state().phase).toBe('committed');
+  test.run('cleanup');
+}, 30000);
+
+it('reuses equivalent array casts in reviewed check constraints', () => {
+  const test = fixture(true);
+  query(test.target, `ALTER TABLE roles ALTER COLUMN label TYPE varchar(255);
+    ALTER TABLE roles ADD CONSTRAINT label_options CHECK (label::text = ANY ((ARRAY['existing environment'::varchar, 'fresh install'::varchar])::text[]));`);
+  reviseReviewedSchema(test.files, sql => `${sql}\nALTER TABLE public.roles ALTER COLUMN label TYPE varchar(255);
+    ALTER TABLE public.roles ADD CONSTRAINT label_options CHECK (label::text = ANY (ARRAY[('existing environment'::varchar)::text, ('fresh install'::varchar)::text]));\n`);
+  const contents = test.contents();
+
+  test.run('prepare');
+  test.run('commit');
+
+  expect(test.contents()).toBe(contents);
+  test.run('cleanup');
+}, 30000);
+
+it('rejects a reviewed constraint change even when existing data satisfies it', () => {
+  const test = fixture(true);
+  reviseReviewedSchema(test.files, sql => `${sql}\nALTER TABLE public.records ADD CONSTRAINT reviewed_payload_check CHECK (payload IS NOT NULL);\n`);
+  const contents = test.contents();
+  const oid = query('postgres', `SELECT oid FROM pg_database WHERE datname = '${test.target}';`);
+
+  expect(() => test.run('prepare')).toThrow('Current schema differs from the reviewed baseline');
+
+  expect(test.state().phase).toBe('rolled-back');
+  expect(test.contents()).toBe(contents);
+  expect(query('postgres', `SELECT oid FROM pg_database WHERE datname = '${test.target}';`)).toBe(oid);
+  expect(query(test.target, 'SHOW default_transaction_read_only;')).toBe('off');
+  test.run('cleanup');
+}, 30000);
+
 it.each(['history', 'schema'])('rejects %s drift without replacing the source or files', drift => {
   const test = fixture(true);
   if (drift === 'history') query(test.target, "UPDATE schema_migrations SET checksum = repeat('0', 64);");
