@@ -1,3 +1,4 @@
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
@@ -13,8 +14,8 @@ import type {
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import { getTasksCalendarData } from '../../tasks.api';
-import type { AddTaskModalInitialValues, Task, TaskCalendarCache, TaskResource, TasksFilters } from '../../types';
+import { getTasksCalendarData, type TasksFilters } from '../../tasks.api';
+import type { AddTaskModalInitialValues, Task, TaskCalendarCache, TaskResource } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -41,6 +42,7 @@ export interface TaskCalendarActions {
 interface TaskCalendarProps {
   resources: TaskResource[];
   filters: TasksFilters;
+  dateRange?: DateRange;
   canWrite: boolean;
   selectedResourceId: string | null;
   selectedTaskId: string | null;
@@ -69,6 +71,7 @@ function canReassignTask(task: Task) {
 export default function TaskCalendar({
   resources,
   filters,
+  dateRange,
   canWrite,
   selectedResourceId,
   selectedTaskId,
@@ -81,7 +84,7 @@ export default function TaskCalendar({
   onEditTask,
   onMessageChange,
 }: TaskCalendarProps) {
-  const { staffIds, dateRange } = filters;
+  const { staffIds } = filters;
 
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key }, { signal });

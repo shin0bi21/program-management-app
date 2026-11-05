@@ -23,7 +23,7 @@ const baseProps = {
   queryKey: ['tasks', 'table'] as const,
   today: '2026-08-11',
   columns: [], hiddenColumnKeys: [],
-  filters: { staffIds: [], programIds: [], categories: [], statuses: [], search: '' },
+  filters: { cycleIds: [], staffIds: [], programIds: [], categories: [], statuses: [], search: '' },
   sorting: { key: 'dueDate' as const, direction: 'asc' as const }, columnWidths: {}, selectedTaskId: null,
   onTaskSelect: vi.fn(), onSortingChange: vi.fn(), onColumnWidthsChange: vi.fn(),
   onMessageChange: vi.fn(),

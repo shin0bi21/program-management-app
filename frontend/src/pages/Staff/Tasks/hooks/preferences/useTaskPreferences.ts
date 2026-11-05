@@ -126,6 +126,14 @@ export default function useTaskPreferences({
     { id: 'statuses' as const, label: 'Status', options: referenceData?.statuses ?? [] },
   ], [referenceData, cycles, resources, programs]);
 
+  const filterValues = useMemo(() => ({
+    cycleIds: preferences.cycleIds,
+    staffIds: preferences.staffIds,
+    programIds: preferences.programIds,
+    categories: preferences.categories,
+    statuses: preferences.statuses,
+  }), [preferences]);
+
   // Table sorting.
   const setSorting = (sorting: ListSort<TaskSortKey>) => {
     updatePreferences({ sorting });
@@ -147,13 +155,7 @@ export default function useTaskPreferences({
     },
 
     filters: createPreferenceFilters({
-      values: {
-        cycleIds: preferences.cycleIds,
-        staffIds: preferences.staffIds,
-        programIds: preferences.programIds,
-        categories: preferences.categories,
-        statuses: preferences.statuses,
-      },
+      values: filterValues,
       definitions: filterDefinitions,
       updatePreferences,
     }),

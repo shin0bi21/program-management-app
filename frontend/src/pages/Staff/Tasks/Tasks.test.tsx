@@ -206,7 +206,7 @@ describe('Tasks', () => {
   });
 
   // Controls and views.
-  it('shares cycle-derived bounds longer than a year between table and calendar', async () => {
+  it('sends cycle IDs to the table and uses multi-year bounds for calendar display', async () => {
     const dateRange = { start: '2024-01-01', end: '2027-12-31' };
     vi.mocked(getCycleReferences).mockResolvedValue([
       { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
@@ -216,24 +216,27 @@ describe('Tasks', () => {
     renderTasks();
 
     await screen.findByRole('table', { name: 'Tasks' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
       expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
-  it('uses all cycle dates when none are selected and persists a selected cycle', async () => {
+  it('sends an empty cycle selection for all cycles and applies a selected cycle to the query', async () => {
     renderTasks();
 
     await screen.findByRole('table', { name: 'Tasks' });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({
-      dateRange: { start: '2025-01-01', end: '2027-12-31' },
+      cycleIds: [],
     }), expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(expect.objectContaining({
+      cycleIds: ['cycle-1'],
+    }), expect.anything(), expect.anything()));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ cycleIds: ['cycle-1'] })));
     expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
   });

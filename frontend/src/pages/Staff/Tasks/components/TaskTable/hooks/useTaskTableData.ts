@@ -1,6 +1,6 @@
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
-import { getTasksTableData } from '../../../tasks.api';
-import type { Task, TasksFilters } from '../../../types';
+import { getTasksTableData, type TasksFilters } from '../../../tasks.api';
+import type { Task } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { TaskSortKey } from '../../../types';

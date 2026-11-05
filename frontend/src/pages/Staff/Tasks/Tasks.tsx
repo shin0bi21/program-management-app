@@ -20,13 +20,12 @@ import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
-import { getTaskDashboardData } from './tasks.api';
+import { getTaskDashboardData, type TasksFilters } from './tasks.api';
 import {
   TASK_TABLE_KEYS,
   type AddTaskModalInitialValues,
   type Task,
   type TaskModalState,
-  type TasksFilters,
 } from './types';
 
 import './Tasks.css';
@@ -71,20 +70,9 @@ export default function Tasks() {
     [pageData.cycles, preferences.filters.values.cycleIds],
   );
   const taskFilters = useMemo<TasksFilters>(() => ({
-    dateRange,
+    ...preferences.filters.values,
     search: preferences.search.appliedValue,
-    staffIds: preferences.filters.values.staffIds,
-    programIds: preferences.filters.values.programIds,
-    categories: preferences.filters.values.categories,
-    statuses: preferences.filters.values.statuses,
-  }), [
-    dateRange,
-    preferences.filters.values.categories,
-    preferences.filters.values.programIds,
-    preferences.filters.values.staffIds,
-    preferences.filters.values.statuses,
-    preferences.search.appliedValue,
-  ]);
+  }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useTaskSelection({ resources: pageData.resources });
@@ -165,6 +153,7 @@ export default function Tasks() {
       key={JSON.stringify(taskFilters)}
       resources={pageData.resources}
       filters={taskFilters}
+      dateRange={dateRange}
       canWrite={canWrite}
       selectedResourceId={selection.selectedResourceId}
       selectedTaskId={selection.selectedTaskId}

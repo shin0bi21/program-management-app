@@ -10,11 +10,14 @@ import {
   taskRecordFrom,
   type TaskRow,
 } from './taskRecordQuery';
-import { buildTaskFilters } from './taskFilters';
+import { buildTaskFilters, resolveTaskDateRange } from './taskFilters';
 
 export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuery) {
   const cursor = decodeCursor(query.cursor);
   const direction = query.direction;
+  const range = await resolveTaskDateRange(query);
+  if (!range) return { rows: [], nextCursor: null };
+
   const { status, predicate } = buildTaskFilters(query);
   const sortValue = {
     firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, title: sql`LOWER(task.title)`,
@@ -27,9 +30,7 @@ export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuer
     ${taskRecordFrom}
     WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${predicate}
-      AND ${query.start && query.end
-        ? sql`task.start_date <= ${query.end}::date AND task.due_date >= ${query.start}::date`
-        : sql`TRUE`}
+      AND task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date
     ) listed
     WHERE ${cursor ? (direction === 'asc'
       ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
