@@ -95,6 +95,69 @@ describe('Youth API', () => {
       }
     });
 
+    it('sorts eligible enrollment program names rather than cycle labels', async () => {
+      const surname = `ProgramSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
+      const youthIds: string[] = [];
+      const fixtures: Array<{ programId: string; cycleId: string }> = [];
+      const [today] = await sql<{ date: string }[]>`
+        SELECT (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date
+      `;
+      const [openProgram] = await sql<{ id: string }[]>`
+        SELECT id FROM programs WHERE enrollment_required = FALSE LIMIT 1
+      `;
+      const [jobProgram] = await sql<{ id: string }[]>`
+        SELECT id FROM programs WHERE name = 'Job Readiness'
+      `;
+
+      try {
+        for (let index = 0; index < 3; index += 1) {
+          const saved = await request(app).post('/api/youth')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ ...baseYouth, lastName: surname });
+          expect(saved.status).toBe(201);
+          youthIds.push(saved.body.id);
+        }
+
+        for (const [programId, name, startsOn, endsOn] of [
+          [jobProgram.id, 'Zulu current', today.date, today.date],
+          [softSkillsProgramId, 'Alpha current', today.date, today.date],
+          [softSkillsProgramId, 'Alpha completed', '2000-01-01', '2000-12-31'],
+          [jobProgram.id, 'Zulu completed', '2000-01-01', '2000-12-31'],
+          [jobProgram.id, 'Future', '2999-01-01', '2999-12-31'],
+        ] as const) {
+          fixtures.push(await seedTestProgramCycle({ programId, name: `${name} ${surname}`, startsOn, endsOn }));
+        }
+        fixtures.push(await seedTestProgramCycle({ programId: openProgram.id, name: `Open ${surname}` }));
+
+        for (const [fixtureIndex, youthIndex, withdrawn] of [
+          [0, 0, false], [1, 1, false], [2, 0, false], [3, 1, false],
+          [0, 2, true], [2, 2, true], [4, 2, false], [5, 2, false],
+        ] as const) {
+          const fixture = fixtures[fixtureIndex];
+          await sql`
+            INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on, withdrawn_on)
+            VALUES (${fixture.programId}, ${fixture.cycleId}, ${youthIds[youthIndex]},
+              '2000-01-01', ${withdrawn ? '2000-06-01' : null})
+          `;
+        }
+
+        for (const [sort, expected] of [
+          ['activePrograms', [youthIds[2], youthIds[0], youthIds[1]]],
+          ['completedPrograms', [youthIds[2], youthIds[1], youthIds[0]]],
+        ] as const) {
+          const response = await request(app).get('/api/youth')
+            .query({ search: surname, sort, direction: 'asc', limit: 3 })
+            .set('Authorization', `Bearer ${adminToken}`);
+
+          expect(response.status).toBe(200);
+          expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual(expected);
+        }
+      } finally {
+        for (const id of youthIds) await deleteTestYouth(id);
+        for (const fixture of fixtures) await deleteTestProgramCycle(fixture.programId, fixture.cycleId);
+      }
+    });
+
     it('should allow staff access', async () => {
       const staff = await seedTestUser({ email: `youth-staff-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staff.userId, 'staff', staff.email);
