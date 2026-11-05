@@ -112,7 +112,7 @@ earliest selected start through latest selected end, or the full span of all cyc
 when nothing is selected. There is no one-year maximum. Build
 the bounded set of period descriptors once; virtualization renders only visible columns
 and rows, while buffered requests load data as needed. Cycle selection and persistence
-follow [page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles).
+follow [page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles).
 
 A range change replaces the page calendar's buffer through its applied-filter key.
 Clamp stored positions and navigation targets to those bounds; Today is disabled when
@@ -134,7 +134,7 @@ Pass the derived bounds through the page's single filter object to both table an
 filter on the server before pagination. Programming and Hours additionally filter by cycle
 membership; Tasks use cycle dates as a time window. Cycle metadata uses the shared reference
 endpoint under the consuming page's read permission. Persist selected IDs according to
-[page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles), without a
+[page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles), without a
 separate date-range control.
 
 ## Assign Calendar and Item Ownership

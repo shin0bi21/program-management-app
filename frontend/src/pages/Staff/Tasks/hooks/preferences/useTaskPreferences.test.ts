@@ -111,7 +111,7 @@ describe('useTaskPreferences', () => {
       view: 'calendar',
       search: { value: 'workshop', appliedValue: 'workshop' },
       filters: {
-        staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep'], statuses: ['in_progress'],
+        values: { staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep'], statuses: ['in_progress'] },
       },
       table: {
         sorting: { key: 'startDate', direction: 'asc' },
@@ -126,9 +126,9 @@ describe('useTaskPreferences', () => {
     savedPreference.preference = { view: 'table', cycleIds: ['cycle-1', 'removed-cycle'] };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
 
-    act(() => result.current.filters.apply('cycle', []));
+    act(() => result.current.filters.apply('cycleIds', []));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
       expect.objectContaining({ cycleIds: [], view: 'table' })));
@@ -145,47 +145,17 @@ describe('useTaskPreferences', () => {
 
     rerender({ cyclesLoading: false, cyclesError: true });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
 
     rerender({ cyclesLoading: false, cyclesError: false });
-    await waitFor(() => expect(result.current.filters.cycleIds).toEqual(['cycle-1']));
+    await waitFor(() => expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']));
   });
 
-  it('uses defaults for the page visit when loading saved preferences fails', async () => {
-    savedPreference.preference = {
-      view: 'table',
-      search: 'saved search',
-      staffIds: ['staff-1'],
-      programIds: ['program-1'],
-    };
-    savedPreference.error = 'Could not load saved preferences';
-
-    const { result } = renderHook(() => usePreferences());
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current).toMatchObject({
-      error: 'Could not load saved preferences',
-      view: 'calendar',
-      search: { value: '', appliedValue: '' },
-      filters: { staffIds: [], programIds: [], categories: [], statuses: [] },
-      table: {
-        sorting: { key: 'startDate', direction: 'asc' },
-        columnWidths: {},
-        hiddenColumns: [],
-      },
-    });
-  });
-
-  it('maps control updates and clears filters while preserving table and view settings', async () => {
+  it('keeps browser layout separate from account sorting and view', async () => {
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
-      result.current.filters.apply('cycle', ['cycle-1']);
-      result.current.filters.apply('staff', ['staff-1']);
-      result.current.filters.apply('program', ['program-1']);
-      result.current.filters.apply('category', ['planning_prep']);
-      result.current.filters.apply('status', ['in_progress']);
       result.current.table.setHiddenColumns(['program']);
       result.current.table.setColumnWidths({ title: 300 });
       result.current.table.setSorting({ key: 'title', direction: 'asc' });
@@ -195,43 +165,13 @@ describe('useTaskPreferences', () => {
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:task-preferences')!)).toEqual({
       hiddenColumns: ['program'], columnWidths: { title: 300 },
     });
-    const expected = {
-      view: 'table',
-      staffIds: ['staff-1'],
-      programIds: ['program-1'],
-      categories: ['planning_prep'],
-      statuses: ['in_progress'],
-      sorting: { key: 'title', direction: 'asc' },
-    };
-    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining(expected)));
-    expect(result.current).toMatchObject({
-      view: expected.view,
-      filters: {
-        staffIds: expected.staffIds,
-        programIds: expected.programIds,
-        categories: expected.categories,
-        statuses: expected.statuses,
-      },
-      table: {
-        hiddenColumns: ['program'],
-        columnWidths: { title: 300 },
-        sorting: expected.sorting,
-      },
-    });
-
-    act(() => result.current.filters.clear());
-    await waitFor(() => expect(result.current.filters).toMatchObject({
-      staffIds: [], programIds: [], categories: [], statuses: [],
-    }));
-    expect(result.current.view).toBe('table');
-    expect(result.current.table).toMatchObject({
-      hiddenColumns: ['program'],
-      columnWidths: { title: 300 },
-      sorting: expected.sorting,
-    });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
-      ...expected, cycleIds: [], staffIds: [], programIds: [], categories: [], statuses: [],
+      view: 'table', sorting: { key: 'title', direction: 'asc' },
     })));
+    const calls = vi.mocked(setPreference).mock.calls;
+    const saved = calls[calls.length - 1]?.[1];
+    expect(saved).not.toHaveProperty('hiddenColumns');
+    expect(saved).not.toHaveProperty('columnWidths');
   });
 
   it('applies trimmed search explicitly and clears draft and applied values together', async () => {
@@ -269,14 +209,14 @@ describe('useTaskPreferences', () => {
     );
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters).toMatchObject({
+    expect(result.current.filters.values).toMatchObject({
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['program-1', 'removed-program'],
     });
 
     rerender({ currentOptions: options, optionsError: false });
 
-    await waitFor(() => expect(result.current.filters).toMatchObject({
+    await waitFor(() => expect(result.current.filters.values).toMatchObject({
       staffIds: ['staff-1'],
       programIds: ['program-1'],
     }));

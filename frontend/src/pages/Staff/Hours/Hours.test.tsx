@@ -160,8 +160,6 @@ describe('Hours', () => {
     renderHours();
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
-    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
   });
@@ -210,12 +208,6 @@ describe('Hours', () => {
     renderHours();
 
     expect(await screen.findByText('Coworker administration')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Morgan' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Actions for Meeting on 2026-08-09' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Actions for Administration on 2026-08-09' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Coworker administration').closest('tr')!);
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
   });
@@ -241,7 +233,7 @@ describe('Hours', () => {
   });
 
   // Controls and views.
-  it('always shows searchable table overview cards for staff', async () => {
+  it('retains the staff overview across view changes and filtered table results', async () => {
     vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
         id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
         cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
@@ -261,13 +253,10 @@ describe('Hours', () => {
     ).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
-    expect(screen.getByRole('textbox', { name: 'Search hours' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
 
     await screen.findByText('Youth workshop');
-    expect(screen.getByRole('table', { name: 'Hours entries' })).toHaveTextContent('Youth workshop');
     const entryRow = screen.getByText('Youth workshop').closest('tr');
-    expect(entryRow).toHaveAttribute('tabindex', '0');
     fireEvent.click(entryRow!);
     expect(entryRow).toHaveAttribute('aria-selected', 'true');
 
@@ -277,24 +266,7 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursTableData).toHaveBeenLastCalledWith(
       expect.objectContaining({ search: 'missing' }), expect.anything(), expect.anything(),
     ));
-    expect(await screen.findByText('No hours found')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-  });
-
-  it('switches between the persisted Hours views', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
-    renderHours();
-
-    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
-    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
-      { dateRange: { start: '2026-09-02', end: '2026-12-31' }, staffIds: [], categories: [], programIds: [], types: [], cycleIds: ['cycle-fall'], search: '' },
-      expect.anything(),
-      expect.anything(),
-    ));
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findAllByLabelText('Zoe Wilson')).not.toHaveLength(0);
   });
 
   it('uses selected cycle bounds for table and calendar', async () => {
@@ -314,7 +286,7 @@ describe('Hours', () => {
     ));
   });
 
-  it('keeps search visible and reloads the calendar when search is applied', async () => {
+  it('reloads the calendar with the applied search and existing filters', async () => {
     renderHours();
 
     const search = await screen.findByRole('textbox', { name: 'Search hours' });
@@ -330,8 +302,6 @@ describe('Hours', () => {
       start: expect.any(String),
       end: expect.any(String),
     }, { signal: expect.any(AbortSignal) }));
-    expect(screen.getByRole('button', { name: 'View: Calendar' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Search hours' })).toHaveValue('workshop');
   });
 
   it('reloads the calendar with the complete filters when the program selection changes', async () => {

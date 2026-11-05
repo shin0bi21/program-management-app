@@ -13,22 +13,13 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
   const directory = join(context.frontendRoot, 'pages', ...parts);
   const hookName = `use${name}Data`;
 
-  const pageHeaderImport = context.relativeImport(
+  const pageContainerImport = context.relativeImport(
     directory,
-    join(context.frontendRoot, 'common/components/PageHeader/PageHeader'),
-  );
-  const pageBodyImport = context.relativeImport(
-    directory,
-    join(context.frontendRoot, 'common/components/PageBody/PageBody'),
-  );
-  const pageMessageOverlayImport = context.relativeImport(
-    directory,
-    join(context.frontendRoot, 'common/components/PageMessageOverlay/PageMessageOverlay'),
+    join(context.frontendRoot, 'common/components/PageContainer/PageContainer'),
   );
   const component = context.sourceFile(join(directory, `${name}.tsx`), `
-import PageBody from '${pageBodyImport}';
-import PageMessageOverlay from '${pageMessageOverlayImport}';
-import PageHeader from '${pageHeaderImport}';
+import PageContainer from '${pageContainerImport}';
+import type { PageMessageValue } from '${context.relativeImport(directory, join(context.frontendRoot, 'common/components/PageMessageOverlay/PageMessageOverlay'))}';
 import ${hookName} from './hooks/data/${hookName}';
 
 export default function ${name}() {
@@ -41,9 +32,11 @@ export default function ${name}() {
   // TODO: Pass loaded options to preferences and page children.
 
   // TODO: Saved preferences, when this page has durable controls.
-  // Use a page hook backed by usePreferences; follow docs/frontend/pages/preferences.md.
+  // Use a page hook backed by usePreferences; follow docs/frontend/features/preferences.md.
   // Return grouped search, filters, and table controls, with ready/error at the top level.
-  // Gate every preference-backed control, including search, on ready before allowing edits.
+  // Build filters with createPreferenceFilters; definition IDs match filters.values keys.
+  // Pass the hook result as controls={controls} to PageContainer; it gates controls and content.
+  // Supply search labels/placeholders and column definitions separately; the container connects state.
   // Keep view/setView at the top level when multiple views are supported.
 
   // TODO: Filter configuration passed to every page data view.
@@ -52,44 +45,40 @@ export default function ${name}() {
 
   // TODO: Modal and confirmation workflows.
 
-  // TODO: Table, calendar, dashboard, and body initialization.
+  // TODO: Table, calendar, and dashboard configuration.
   const dashboard = <p>${name} dashboard</p>;
   const primaryView = <p>${name} content</p>;
 
   // TODO: Derived messages and presentation state.
-  const pageMessages = [];
+  const pageMessages: PageMessageValue[] = [];
 
   // Render.
   return (
-    <main className="page-container">
-      <PageHeader title="${name}" />
-      <PageMessageOverlay messages={pageMessages} />
-      <PageBody
-        ariaLabel="${name} overview"
-        dashboard={dashboard}
-        table={primaryView}
-      />
-    </main>
+    <PageContainer
+      title="${name}"
+      ariaLabel="${name} overview"
+      messages={pageMessages}
+      dashboard={dashboard}
+      table={primaryView}
+    />
   );
 }
 `);
   const test = context.sourceFile(join(directory, `${name}.test.tsx`), `
 import { describe, it } from 'vitest';
 
-// Page tests own applied inputs, permissions, selection, and dialog coordination.
-// Child table, query, and pure policy suites own their internal behavior.
+// Follow docs/workflows/delivery/testing.md for test ownership and assertions.
 describe('${name}', () => {
   // Entry and readiness.
   it.todo('shows only the page actions allowed by the current permissions');
-  it.todo('shows the page loading state while required data loads');
-  it.todo('keeps preference-backed search and filters unavailable until saved preferences are restored');
+  it.todo('waits for domain reference dependencies before restoring saved controls');
 
   // Rendered states.
   it.todo('reports page-owned failures through the shared message overlay');
 
   // Controls and views.
   it.todo('applies search and filters to each active data view');
-  it.todo('connects restored controls and view changes to the active content');
+  it.todo('connects restored domain controls to the intended data inputs');
 
   // Selection and coordination.
   it.todo('shares selected context across page views');

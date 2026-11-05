@@ -59,7 +59,7 @@ and work that must remain uncommitted.
 <a id="2-review-the-exact-diff"></a>
 
 Use the focused owner documentation as the review contract. For frontend
-structure, follow the [documentation and scaffold ownership](../../frontend/pages/scaffolding.md#maintain-the-pattern)
+structure, follow the [documentation and scaffold ownership](../../frontend/architecture/scaffolding.md#maintain-the-pattern)
 contract. Human and LLM-assisted reviewers identify the specific rule and diff
 evidence behind each finding; advisory architecture heuristics are not a
 separate source of rules.

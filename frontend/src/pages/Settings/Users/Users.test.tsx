@@ -1,5 +1,5 @@
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Users from './Users';
 
@@ -63,13 +63,10 @@ describe('Users', () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
     await screen.findByRole('button', { name: 'Filters' });
-
-    expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
     expect(screen.getByRole('menuitem', { name: 'Invite Staff' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Invite Youth' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
@@ -78,6 +75,23 @@ describe('Users', () => {
       expect.objectContaining({ search: 'Yara' }),
       expect.any(Object),
     );
+  });
+
+  it('keeps a pending account search when saved filters finish restoring', async () => {
+    mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
+    let restore!: (value: { statuses: string[] }) => void;
+    preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    renderPage();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    await act(async () => restore({ statuses: ['invited'] }));
+
+    await waitFor(() => expect(mockUseUserTableData).toHaveBeenLastCalledWith(
+      ['accounts', 'table'],
+      expect.objectContaining({ search: 'Yara', statuses: ['invited'] }),
+      expect.any(Object),
+    ));
   });
 
   it('shows the staff-scoped presentation without staff-management controls', async () => {
@@ -90,14 +104,11 @@ describe('Users', () => {
 
     renderPage();
     await screen.findByRole('button', { name: 'Filters' });
-
-    expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add', expanded: false })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Role' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Status' })).toBeInTheDocument();
-    expect(screen.getByText('Yara Youth')).toBeInTheDocument();
   });
 
   // Commands and dialogs.

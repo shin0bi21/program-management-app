@@ -1,8 +1,8 @@
+import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import { useMemo, useState } from 'react';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
-import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
 import {
@@ -109,14 +109,14 @@ export default function useHoursPreferences({
   };
 
   // Filter preferences.
-  const filterDefinitions = useMemo<FilterCardCategory[]>(() => [
+  const filterDefinitions = useMemo(() => [
     ...(role === 'admin' ? [{
-      id: 'staff',
+      id: 'staffIds' as const,
       label: 'Staff',
       options: toFilterOptions(resources),
     }] : []),
     {
-      id: 'program',
+      id: 'programIds' as const,
       label: 'Program',
       options: [
         { value: 'general', label: 'General' },
@@ -124,29 +124,13 @@ export default function useHoursPreferences({
       ],
     },
     {
-      id: 'cycle',
+      id: 'cycleIds' as const,
       label: 'Cycle',
       options: toFilterOptions(cycles),
     },
-    { id: 'type', label: 'Type', options: [...types] },
-    { id: 'entryType', label: 'Category', options: [...categories] },
+    { id: 'types' as const, label: 'Type', options: [...types] },
+    { id: 'categories' as const, label: 'Category', options: [...categories] },
   ], [categories, cycles, programs, resources, role, types]);
-
-  const applyFilter = (id: string, selected: string[]) => {
-    if (id === 'staff') updatePreferences({ staffIds: selected });
-    if (id === 'program') updatePreferences({ programIds: selected });
-    if (id === 'entryType') updatePreferences({ categories: selected as HoursCategory[] });
-    if (id === 'type') updatePreferences({ types: selected as HoursEntryType[] });
-    if (id === 'cycle') updatePreferences({ cycleIds: selected });
-  };
-
-  const clearFilters = () => updatePreferences({
-    staffIds: [],
-    programIds: [],
-    categories: [],
-    types: [],
-    cycleIds: [],
-  });
 
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {
     updatePreferences({ sorting });
@@ -168,15 +152,18 @@ export default function useHoursPreferences({
     },
 
     filters: {
-      staffIds: preferences.staffIds,
-      programIds: preferences.programIds,
-      categories: preferences.categories,
-      types: preferences.types,
-      cycleIds: preferences.cycleIds,
+      ...createPreferenceFilters({
+        values: {
+          staffIds: preferences.staffIds,
+          programIds: preferences.programIds,
+          categories: preferences.categories,
+          types: preferences.types,
+          cycleIds: preferences.cycleIds,
+        },
+        definitions: filterDefinitions,
+        updatePreferences,
+      }),
       dateRange,
-      definitions: filterDefinitions,
-      apply: applyFilter,
-      clear: clearFilters,
     },
 
     table: {

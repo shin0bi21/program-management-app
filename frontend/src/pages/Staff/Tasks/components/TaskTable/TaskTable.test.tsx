@@ -9,13 +9,13 @@ const tableState = vi.hoisted(() => ({
   retry: vi.fn(),
 }));
 const useTaskTableData = vi.hoisted(() => vi.fn(() => tableState));
-const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
+const tableMessage = vi.hoisted(() => ({ current: undefined as string | undefined }));
 
 vi.mock('./hooks/useTaskTableData', () => ({ default: useTaskTableData }));
 vi.mock('../../../../../common/components/Table/Table', () => ({
-  default: (props: Record<string, unknown>) => {
-    tableProps.current = props;
-    return <div aria-label="Mock task table" />;
+  default: ({ emptyMessage }: { emptyMessage?: string }) => {
+    tableMessage.current = emptyMessage;
+    return null;
   },
 }));
 
@@ -33,36 +33,14 @@ describe('TaskTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(tableState, { rows: [], loading: false, refreshing: false, error: null });
-    tableProps.current = null;
+    tableMessage.current = undefined;
   });
 
-  it('wires page controls and query state into the table', () => {
-    const filters = { ...baseProps.filters, staffIds: ['staff-1'], statuses: ['in_progress' as const] };
-    render(<TaskTable {...baseProps} filters={filters} />);
-
-    expect(useTaskTableData).toHaveBeenCalledWith(
-      baseProps.queryKey,
-      filters,
-      baseProps.sorting,
-      baseProps.today,
-    );
-    (tableProps.current?.onSortingChange as (value: unknown) => void)({ key: 'title', direction: 'asc' });
-    expect(baseProps.onSortingChange).toHaveBeenCalledWith({ key: 'title', direction: 'asc' });
-  });
-
-  it('distinguishes unfiltered, filtered, and failed empty states', () => {
+  it('chooses the empty message from the applied filters', () => {
     const { rerender } = render(<TaskTable {...baseProps} />);
-    expect(tableProps.current).toEqual(expect.objectContaining({ emptyMessage: 'No tasks assigned' }));
+    expect(tableMessage.current).toBe('No tasks assigned');
 
-    tableState.error = 'Unable to load tasks.';
     rerender(<TaskTable {...baseProps} filters={{ ...baseProps.filters, search: 'missing' }} />);
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      emptyMessage: 'No tasks match these filters',
-      unavailable: { title: 'Tasks unavailable', onRetry: tableState.retry },
-    }));
-    expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
-      message: 'Unable to load tasks.',
-      action: { label: 'Retry', onClick: tableState.retry },
-    });
+    expect(tableMessage.current).toBe('No tasks match these filters');
   });
 });

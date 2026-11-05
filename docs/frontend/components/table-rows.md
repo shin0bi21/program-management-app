@@ -109,8 +109,9 @@ only if their retained position still violates the loaded sort order.
 
 ## Testing
 
-Row tests cover values, accessible action names, emitted records and permissions. Mutation
-tests cover focused payloads and the operation table above: affected variants change,
+Row tests cover derived values, domain-specific formatting, accessible action names,
+emitted records and permissions. Mutation tests cover focused payloads and the
+operation table above: affected variants change,
 unaffected references remain stable, and only permitted queries are invalidated. Cover
 selection and other required reconciliation, failed and duplicate actions, and preservation
 of fields changed after the client's original read. See [Testing](../../workflows/delivery/testing.md)

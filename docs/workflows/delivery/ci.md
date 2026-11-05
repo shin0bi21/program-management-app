@@ -101,7 +101,7 @@ Pattern checks enforce dependency direction, centralized frontend HTTP and
 documentation, focused endpoint HTTP methods, Express async-handler wrapping,
 route-validated controller queries, and committed migration immutability.
 Frontend composition, naming, file layout, and test ownership follow the
-[owner documentation and scaffold patterns](../../frontend/pages/scaffolding.md#maintain-the-pattern)
+[owner documentation and scaffold patterns](../../frontend/architecture/scaffolding.md#maintain-the-pattern)
 through scaffolding, behavioral tests, and contextual change review. The pattern
 checker does not enforce those architecture conventions or require test files.
 

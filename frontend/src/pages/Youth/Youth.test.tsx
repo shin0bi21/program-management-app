@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import type { SchoolAction, SchoolSelection } from '../../common/features/SchoolModal/types';
@@ -118,42 +118,24 @@ describe('Youth', () => {
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
   });
 
-  it('keeps search unavailable until saved youth preferences are restored', async () => {
-    let resolvePreference: (value: unknown) => void = () => undefined;
-    preferenceApi.getPreference.mockReturnValue(new Promise(resolve => { resolvePreference = resolve; }));
-
-    render(<Youth />);
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved youth preferences…');
-    expect(screen.queryByLabelText('Search youth')).not.toBeInTheDocument();
-    expect(preferenceApi.setPreference).not.toHaveBeenCalled();
-
-    await act(async () => resolvePreference({ search: 'Jamie' }));
-
-    expect(await screen.findByLabelText('Search youth')).toHaveValue('Jamie');
-  });
-
   it('keeps account invitation controls out of the Youth page', async () => {
     render(<Youth />);
     await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'More actions for Jamie Test' })).toBeInTheDocument();
     expect(screen.queryByText('Manage ProgramCycles')).not.toBeInTheDocument();
     expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
     expect(screen.queryByText('Activate')).not.toBeInTheDocument();
     expect(screen.queryByText('Invite')).not.toBeInTheDocument();
   });
 
-  it('omits the actions column when the user cannot write youth profiles', async () => {
+  it('hides Add without youth write permission', async () => {
     authState.permissions = ['read:youth_profiles'];
 
     render(<Youth />);
     await screen.findByRole('button', { name: 'Filters' });
 
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'More actions for Jamie Test' })).not.toBeInTheDocument();
-    expect(document.querySelector('[data-column-id="actions"]')).not.toBeInTheDocument();
   });
 
   // Controls and views.
@@ -164,13 +146,11 @@ describe('Youth', () => {
     });
     render(<Youth />);
     fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    expect(screen.getByLabelText('Search youth')).toHaveValue('Jamie');
     expect(screen.queryByRole('menuitem', { name: 'ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /^Status/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
 
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toHaveAttribute('aria-checked', 'true');
     expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'],
     });

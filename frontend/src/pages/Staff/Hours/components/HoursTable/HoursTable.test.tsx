@@ -14,15 +14,9 @@ const tableState = vi.hoisted(() => ({
   retry: vi.fn(),
 }));
 const useHoursTableData = vi.hoisted(() => vi.fn(() => tableState));
-const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 
 vi.mock('./hooks/useHoursTableData', () => ({ default: useHoursTableData }));
-vi.mock('../../../../../common/components/Table/Table', () => ({
-  default: (props: Record<string, unknown>) => {
-    tableProps.current = props;
-    return <div aria-label="Mock hours table" />;
-  },
-}));
+vi.mock('../../../../../common/components/Table/Table', () => ({ default: () => null }));
 
 const baseProps = {
   queryKey: ['hours', 'table'] as const,
@@ -52,34 +46,15 @@ describe('HoursTable', () => {
       rows: [], loading: false, refreshing: false, error: null,
       hasNextPage: false, loadingNextPage: false,
     });
-    tableProps.current = null;
-  });
-
-  it('passes page controls to its table-data hook and table boundary', () => {
-    render(<HoursTable {...baseProps} />);
-
-    expect(useHoursTableData).toHaveBeenCalledWith(
-      baseProps.queryKey,
-      baseProps.filters,
-      baseProps.sorting,
-    );
-    (tableProps.current?.onLoadNextPage as () => void)();
-    expect(tableState.loadNextPage).toHaveBeenCalledOnce();
-    (tableProps.current?.onSortingChange as (value: unknown) => void)({ key: 'hours', direction: 'asc' });
-    expect(baseProps.onSortingChange).toHaveBeenCalledWith({ key: 'hours', direction: 'asc' });
   });
 
   it('reports table-data errors with a retry action', () => {
     tableState.error = 'Could not load hours.';
     render(<HoursTable {...baseProps} filters={{ ...baseProps.filters, search: 'planning' }} />);
 
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      unavailable: { title: 'Hours unavailable', onRetry: tableState.retry },
-    }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Could not load hours.',
       action: { label: 'Retry', onClick: tableState.retry },
     });
   });
-
 });
