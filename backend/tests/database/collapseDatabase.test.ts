@@ -136,7 +136,7 @@ afterEach(() => {
     if (fs.existsSync(stateFile)) {
       const state = JSON.parse(fs.readFileSync(stateFile, 'utf8')) as { id: string };
       if (!/^[a-f0-9]{16}$/.test(state.id)) throw new Error('Invalid disposable recovery database ID');
-      databases.push(...['capture', 'stage', 'backup'].map(kind => `collapse_${kind}_${state.id}`));
+      databases.push(...['capture', 'stage', 'backup', 'schema'].map(kind => `collapse_${kind}_${state.id}`));
     }
     for (const database of databases) query('postgres', `DROP DATABASE IF EXISTS "${database}" WITH (FORCE);`);
     fs.rmSync(root, { recursive: true, force: true });
@@ -227,6 +227,59 @@ it('reuses equivalent array casts in reviewed check constraints', () => {
   test.run('commit');
 
   expect(test.contents()).toBe(contents);
+  test.run('cleanup');
+}, 30000);
+
+it('round-trips historical source exports before comparing reviewed constraints', () => {
+  const test = fixture(true);
+  query(test.target, `ALTER TABLE roles ALTER COLUMN label TYPE varchar(255);
+    ALTER TABLE roles ADD CONSTRAINT label_options CHECK (label::text = ANY (ARRAY[('existing environment'::varchar)::text, ('fresh install'::varchar)::text]));`);
+  reviseReviewedSchema(test.files, () => command('pg_dump', test.target, ['--schema-only', '--no-owner', '--no-acl', '--no-tablespaces']) + '\n');
+  const contents = test.contents();
+  const spawn = childProcess.spawnSync;
+  const sourceFile = path.join(test.work, 'schema.sql');
+  let injected = false;
+
+  jest.spyOn(childProcess, 'spawnSync').mockImplementation((program, args, options) => {
+    const result = spawn(program, args!, options!);
+    if (!injected && program === 'pg_dump' && fs.existsSync(sourceFile)) {
+      const sql = fs.readFileSync(sourceFile, 'utf8');
+      const current = "ARRAY[('existing environment'::character varying)::text, ('fresh install'::character varying)::text]";
+      const historical = "(ARRAY['existing environment'::character varying, 'fresh install'::character varying])::text[]";
+      expect(sql).toContain(current);
+      fs.writeFileSync(sourceFile, sql.replace(current, historical).replace('SET row_security = off;', 'SET row_security = off;\n\n\n'));
+      injected = true;
+    }
+    return result;
+  });
+
+  test.run('prepare');
+  test.run('commit');
+
+  expect(injected).toBe(true);
+  expect(test.contents()).toBe(contents);
+  test.run('cleanup');
+}, 30000);
+
+it('removes the schema reference database after a comparison restore fails', () => {
+  const test = fixture(true);
+  const contents = test.contents();
+  const spawn = childProcess.spawnSync;
+  let injected = false;
+
+  jest.spyOn(childProcess, 'spawnSync').mockImplementation((program, args, options) => {
+    if (!injected && program === 'psql' && options?.env?.PGDATABASE?.startsWith('collapse_schema_') && args?.includes('-f')) {
+      injected = true;
+      throw new Error('Injected comparison restore failure');
+    }
+    return spawn(program, args!, options!);
+  });
+
+  expect(() => test.run('prepare')).toThrow('Injected comparison restore failure');
+
+  expect(test.state().phase).toBe('rolled-back');
+  expect(test.contents()).toBe(contents);
+  expect(query('postgres', `SELECT count(*) FROM pg_database WHERE datname = 'collapse_schema_${test.state().id}';`)).toBe('0');
   test.run('cleanup');
 }, 30000);
 

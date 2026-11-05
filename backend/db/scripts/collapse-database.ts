@@ -138,6 +138,7 @@ export function collapse(options: Options): void {
   }
 
   const { capture, stage, backup } = state;
+  const schemaReference = `collapse_schema_${state.id}`;
   // Child credentials stay in the environment and are never persisted or passed in argv.
   const childEnv = {
     ...process.env, PGHOST: url.hostname, PGPORT: url.port || '5432',
@@ -232,6 +233,16 @@ export function collapse(options: Options): void {
     runPsql(database, args, undefined, file);
   }
 
+  function renderSourceSchema(inputFile: string, outputFile: string): void {
+    psql('postgres', `CREATE DATABASE "${schemaReference}" TEMPLATE template0;`);
+    try {
+      load(schemaReference, inputFile);
+      dump(schemaReference, outputFile, ['--schema-only']);
+    } finally {
+      psql('postgres', `DROP DATABASE "${schemaReference}" WITH (FORCE);`);
+    }
+  }
+
   function fingerprints(database: string): string {
     return psql(database, `SELECT format(
       'SELECT %L, count(*), md5(coalesce(string_agg(md5(to_jsonb(t)::text), '''' ORDER BY md5(to_jsonb(t)::text)), '''')) FROM %I.%I t;',
@@ -315,6 +326,9 @@ export function collapse(options: Options): void {
     dump(capture, join(work, 'data.sql'), ['--data-only', `--exclude-table-data=${ledger}`]);
     dump(capture, join(work, 'seed.sql'), ['--data-only', '--inserts', ...seedTables.flatMap(table => ['--table', table])]);
 
+    // Historical catalog expressions must pass through the current parser on both sides.
+    renderSourceSchema(join(work, 'schema.sql'), join(work, 'canonical-schema.sql'));
+
     if (!baseline) {
       copyMigrationFiles(join(work, 'schema.sql'), join(candidate, initFiles.schema));
       copyMigrationFiles(join(work, 'seed.sql'), join(candidate, initFiles.data));
@@ -341,7 +355,7 @@ export function collapse(options: Options): void {
     if (state.reuse) {
       // Compare server-rendered schemas so equivalent reviewed SQL can be reused across dump versions.
       dump(stage, join(work, 'reviewed-schema.sql'), ['--schema-only']);
-      const sourceSchema = normalizeDump(readFileSync(join(work, 'schema.sql'), 'utf8'));
+      const sourceSchema = normalizeDump(readFileSync(join(work, 'canonical-schema.sql'), 'utf8'));
       const reviewedSchema = normalizeDump(readFileSync(join(work, 'reviewed-schema.sql'), 'utf8'));
       if (sourceSchema !== reviewedSchema) throw new Error('Current schema differs from the reviewed baseline');
     }
@@ -354,7 +368,7 @@ export function collapse(options: Options): void {
     if (fingerprints(capture) !== fingerprints(stage)) throw new Error('Restored table contents differ from the source');
     if (sequenceStates(capture) !== sequenceStates(stage)) throw new Error('Restored sequence values differ from the source');
     dump(stage, join(work, 'restored-schema.sql'), ['--schema-only']);
-    if (normalizeDump(readFileSync(join(work, 'schema.sql'), 'utf8')) !== normalizeDump(readFileSync(join(work, 'restored-schema.sql'), 'utf8'))) throw new Error('Restored schema differs from the source');
+    if (normalizeDump(readFileSync(join(work, 'canonical-schema.sql'), 'utf8')) !== normalizeDump(readFileSync(join(work, 'restored-schema.sql'), 'utf8'))) throw new Error('Restored schema differs from the source');
 
     // Exercise the seed init on an empty database too; it is not replayed over
     // the full business-data snapshot, which already contains those rows.
@@ -462,6 +476,8 @@ export function collapse(options: Options): void {
   function cleanup(): void {
     if (state.rollbackFailed) throw new Error('Cleanup prohibited after a failed rollback');
     if (state.phase !== 'committed' && state.phase !== 'rolled-back') throw new Error('Commit or rollback before cleanup');
+    // The name is derived from the persisted operation ID, including after an interrupted restore.
+    psql('postgres', `DROP DATABASE IF EXISTS "${schemaReference}" WITH (FORCE);`);
     if (state.captured) {
       psql('postgres', `DROP DATABASE IF EXISTS "${capture}" WITH (FORCE);`);
       state.captured = false;
