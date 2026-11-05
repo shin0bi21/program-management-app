@@ -11,7 +11,7 @@ import {
   getSessionAttachmentDownloadName,
   getSessions,
   getSessionReferenceData,
-  searchAttendanceYouth,
+  getAttendanceYouth,
 } from './sessions.api';
 
 vi.mock('../../../http/client', () => ({
@@ -96,10 +96,11 @@ describe('session API', () => {
     expect(form.get('file')).toBe(file);
   });
 
-  it('searches youth through the attendance contract', () => {
-    searchAttendanceYouth('  Maya + Lee  ');
+  it('loads all attendance youth and forwards cancellation', () => {
+    const signal = new AbortController().signal;
+    getAttendanceYouth({ signal });
 
-    expect(apiClient.get).toHaveBeenCalledWith('/youth?search=Maya+%2B+Lee');
+    expect(apiClient.get).toHaveBeenCalledWith('/youth', { signal });
   });
 
   it('builds safe attachment downloads from the title and MIME type', () => {

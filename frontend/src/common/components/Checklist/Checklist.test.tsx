@@ -47,3 +47,36 @@ it('preserves checkbox menu semantics without submitting a surrounding form', as
   expect(onToggle).toHaveBeenCalledWith('spring');
   expect(onSubmit).not.toHaveBeenCalled();
 });
+
+it('filters labels immediately without changing selected values or submitting the form', async () => {
+  const user = userEvent.setup();
+  const onToggle = vi.fn();
+  const onSubmit = vi.fn(event => event.preventDefault());
+  render(<form onSubmit={onSubmit}>
+    <Checklist options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" search />
+  </form>);
+  const search = screen.getByRole('searchbox', { name: 'Search Cycles' });
+
+  await user.type(search, 'SPRING');
+  expect(screen.queryByRole('checkbox', { name: 'Fall 2026' })).not.toBeInTheDocument();
+  await user.keyboard('{Enter}');
+  expect(onSubmit).not.toHaveBeenCalled();
+  expect(onToggle).not.toHaveBeenCalled();
+
+  await user.clear(search);
+  expect(screen.getByRole('checkbox', { name: 'Fall 2026' })).toBeChecked();
+  await user.type(search, 'absent');
+  expect(screen.getByRole('status')).toHaveTextContent('No matching items.');
+});
+
+it('allows selection of a search result beyond the initial batch', async () => {
+  const user = userEvent.setup();
+  const onToggle = vi.fn();
+  const rows = Array.from({ length: 60 }, (_, index) => ({ value: String(index), label: `Person ${index + 1}` }));
+  render(<Checklist options={rows} value={[]} onToggle={onToggle} ariaLabel="People" dynamicItems search />);
+  expect(screen.getAllByRole('checkbox')).toHaveLength(25);
+
+  await user.type(screen.getByRole('searchbox'), 'Person 60');
+  await user.click(screen.getByRole('checkbox', { name: 'Person 60' }));
+  expect(onToggle).toHaveBeenCalledWith('59');
+});

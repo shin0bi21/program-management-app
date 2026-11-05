@@ -65,8 +65,18 @@ Buttons, inputs and other small primitives do not need separate guides unless th
 Use `Checklist` for controlled lists of labeled choices, accepting options, selected
 values, a toggle callback, and a disabled state. Use `variant="form"` in forms for
 native accent-colored checkboxes, a rounded border, row dividers, and roomier spacing.
-Form checklists have a shared 240px maximum height and scroll vertically as needed;
-use a caller class through `className` to override that limit when required.
+Form checklists cap only their scrolling items area at 400px; search stays above
+that area. The checklist shrinks within a height-constrained container. Use a
+caller class through `className` to override the items limit when required.
+Enable `search` to place an immediate, case-insensitive label substring search
+above the separately scrolling items. Enable `dynamicItems` to reveal the supplied
+options in batches of 25 as the user scrolls or focuses the last revealed choice.
+Both are opt-in; dynamic mode also caps the compact items area at 400px. Search filters
+the complete supplied options array before batching, resets the scroll position
+and batch, and never clears selected values. These are client-side behaviors;
+callers still own fetching the options. A searchable checklist in a floating
+surface needs the shared overlay's form keyboard mode and native checkbox
+semantics so typing and Tab navigation remain available.
 The default `compact` appearance serves filters; `inMenu` preserves menu checkbox
 semantics and the floating menu's keyboard navigation. Appearance does not select
 interaction semantics. Callers own drafts, single/multiple selection rules,

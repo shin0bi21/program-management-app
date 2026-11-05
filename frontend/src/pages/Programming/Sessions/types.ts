@@ -40,12 +40,6 @@ export interface SessionType {
   name: string;
 }
 
-export interface AttendanceYouth {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
 export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
 
 export interface SessionRosterMember {
