@@ -91,7 +91,6 @@ export default function Users() {
         search={{
           label: 'Search accounts',
           placeholder: 'Search by name or email',
-          availableWhileLoading: true,
         }}
         columns={columns}
         messages={[preferencesError, viewError]}

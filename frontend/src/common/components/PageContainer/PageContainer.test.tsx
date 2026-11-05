@@ -75,14 +75,14 @@ describe('PageContainer', () => {
     expect(contentMounted).toHaveBeenCalledTimes(2);
   });
 
-  it('allows explicitly local search while preference-backed content waits', () => {
+  it('connects search changes, application, and clearing once ready', () => {
     const controls = makeControls();
     const { search } = controls;
     render(<PageContainer
       title="Records"
       ariaLabel="Records"
-      controls={{ ready: false, search }}
-      search={{ label: 'Search records', availableWhileLoading: true }}
+      controls={{ ready: true, search }}
+      search={{ label: 'Search records' }}
       table={<p>Records</p>}
     />);
 
@@ -93,7 +93,6 @@ describe('PageContainer', () => {
     expect(search.setValue).toHaveBeenCalledWith('next');
     expect(search.apply).toHaveBeenCalledOnce();
     expect(search.clear).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('region', { name: 'Records' })).not.toBeInTheDocument();
   });
 
   it('selects the active view and exposes columns only for the table', () => {

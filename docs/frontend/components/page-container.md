@@ -24,7 +24,7 @@ that contract and filter declarations. The container connects those groups to
 
 Keep presentation inputs at the route:
 
-- `search`: `label`, optional `placeholder`, and optional `availableWhileLoading`.
+- `search`: `label` and optional `placeholder`.
 - `columns`: the actual table column definitions; visibility comes from `controls.table`.
 - Optional `dashboard`, `table`, and optional `calendar`: page-owned content.
   Declare these content props in that order so source order matches the layout.
@@ -59,8 +59,8 @@ retry actions, and dismissal.
 The container reads `controls.ready` to gate controls and prevent dashboard/view
 mounts before saved inputs are restored. An early preference edit can replace a
 pending read with defaults and overwrite saved sibling fields. Actions and
-messages remain available during restoration; only explicitly local,
-non-persisted search may use `availableWhileLoading: true`.
+messages remain available during restoration; search waits for readiness along
+with the other controls.
 
 `loadingLabel` customizes the pending status, and `loadingSpinner` adds the
 standard spinner presentation. Once ready, the body uses `ariaLabel` for its
