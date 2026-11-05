@@ -96,6 +96,16 @@ own spacing within their layout. `useOptionSearch` owns search text and
 case-insensitive substring filtering of supplied option labels, preserving each option's data. Checklist filters
 before batching. Callers still own data fetching, loading, and selected values.
 
+Enable `search` on `FloatingSelect` for a searchable single-choice popup. Its input
+uses combobox/listbox semantics inside the shared form-mode floating dialog. Arrow
+keys highlight choices, Enter selects an existing option, and Escape dismisses with
+focus return. Typing alone never changes the controlled value. Closing discards search
+and navigation state; reopening highlights the current selection. Option actions
+appear below the list for the highlighted choice, outside the listbox; Tab reaches
+Clear and action buttons. Without `search`, existing menu behavior is preserved.
+Keep navigation and selection lifecycle with each control rather than the shared
+filter. Future list virtualization belongs after filtering at the list owner.
+
 ## Type and Status Labels
 
 Labels are non-interactive. Use [Label](../../../frontend/src/common/components/Label/Label.tsx)
