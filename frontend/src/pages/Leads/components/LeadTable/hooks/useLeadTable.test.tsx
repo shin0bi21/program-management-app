@@ -70,4 +70,18 @@ describe('useLeadTable', () => {
 
     expect(renderCell(actionsColumn, { ...lead, status: 'signed_up' })).toBeNull();
   });
+
+  it.each(['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed'] as const)(
+    'does not offer Mark New for a %s lead',
+    status => {
+      const callbacks = { onEdit: vi.fn(), onDelete: vi.fn(), onSignUp: vi.fn(), onStatusChange: vi.fn() };
+      const { result } = renderHook(() => useLeadTable({ origin: 'external', canWrite: true, ...callbacks }));
+      const actionsColumn = result.current.columns.find(column => column.id === 'actions')!;
+
+      render(<>{renderCell(actionsColumn, { ...lead, status })}</>);
+
+      expect(menu.items.some(item => item.id === 'new')).toBe(false);
+      expect(menu.items.some(item => item.id === status)).toBe(false);
+    },
+  );
 });

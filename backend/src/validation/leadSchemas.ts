@@ -89,7 +89,7 @@ export const leadIdSchema = z.object({
 export const updateLeadStatusSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid lead ID') }),
   body: z.object({
-    status: z.enum(['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed']),
+    status: z.enum(['contacted', 'eligible', 'ineligible', 'deferred', 'closed']),
   }).strict(),
 });
 

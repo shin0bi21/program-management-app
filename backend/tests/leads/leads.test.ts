@@ -389,7 +389,7 @@ describe('Leads API', () => {
     expect(invalidSubmitter.status).toBe(400);
   });
 
-  it.each(['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed'] as const)(
+  it.each(['contacted', 'eligible', 'ineligible', 'deferred', 'closed'] as const)(
     'directly updates an unsigned Lead status to %s without creating a note',
     async status => {
       const [lead] = await sql<{ id: string }[]>`
@@ -418,14 +418,14 @@ describe('Leads API', () => {
     },
   );
 
-  it('does not allow signed_up through direct status updates', async () => {
+  it.each(['new', 'signed_up'])('does not allow %s through direct status updates', async status => {
     const [lead] = await sql<{ id: string }[]>`
       SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
     `;
     const res = await request(app)
       .patch(`/api/leads/${lead.id}/status`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ status: 'signed_up' });
+      .send({ status });
 
     expect(res.status).toBe(400);
   });
