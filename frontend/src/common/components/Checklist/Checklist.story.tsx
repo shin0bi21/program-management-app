@@ -18,3 +18,17 @@ export function FormAndFilter() {
       onApply={(_, value) => setFilters(value)} />
   </div>;
 }
+
+const longOptions = Array.from({ length: 63 }, (_, index) => ({ value: String(index), label: `Person ${index + 1}` }));
+
+export function SearchableDynamic({ variant = 'form', containerHeight }: {
+  variant?: 'compact' | 'form';
+  containerHeight?: number;
+}) {
+  const [selected, setSelected] = useState<string[]>([]);
+
+  return <div style={{ padding: 24, maxWidth: 400, height: containerHeight, display: 'grid' }}>
+    <Checklist options={longOptions} value={selected} ariaLabel="People" variant={variant} dynamicItems search
+      onToggle={value => setSelected(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
+  </div>;
+}
