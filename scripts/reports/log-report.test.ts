@@ -2,18 +2,21 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join } from 'node:path';
-import test from 'node:test';
+import { delimiter, join, resolve } from 'node:path';
+import test, { type TestContext } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { parseArgs, renderLogReport } from './log-report.ts';
 
 const script = fileURLToPath(new URL('./log-report.ts', import.meta.url));
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const defaults = { match: null, type: null, context: 0 } as const;
 
 test('accepts Docker windows, service selection, and combined filters', () => {
   const options = parseArgs(['--docker', 'backend', 'frontend', '--since', '5m', '--match', 'TypeError', '--type', 'error', '--context', '4']);
   assert.equal(options.docker, true);
+  assert.equal(options.stack, null);
+  assert.equal(parseArgs(['--production', '--docker', 'nginx']).stack, 'production');
   assert.deepEqual(options.sources, ['backend', 'frontend']);
   assert.equal(options.since, '5m');
   assert.equal(options.match, 'TypeError');
@@ -24,7 +27,7 @@ test('accepts Docker windows, service selection, and combined filters', () => {
 
 test('rejects incomplete, incompatible, and invalid options', () => {
   for (const args of [
-    ['--since', '5m'], ['--match'], ['--match', '--docker'], ['--unknown'],
+    ['--development'], ['--docker', '--production', '--development'], ['--production'], ['--production', 'saved.log'], ['--since', '5m'], ['--match'], ['--match', '--docker'], ['--unknown'],
     ['--context', '-1'], ['--context', '1.5'], ['--context', 'Infinity'],
     ['--type', 'request'], ['--docker', '--', '--follow'], ['--docker', 'path/to/log'],
   ]) {
@@ -97,29 +100,100 @@ test('CLI reads stdin and files, and propagates read failures', (context) => {
   assert.equal(missing.stdout, '');
 });
 
-test('CLI captures a finite Docker log window and reports Docker failures', (context) => {
+function createDockerFixture(context: TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'log-report-docker-'));
   context.after(() => rmSync(root, { recursive: true, force: true }));
   const executable = join(root, 'docker');
   const argumentsFile = join(root, 'arguments.json');
   writeFileSync(executable, `#!${process.execPath}
-require('node:fs').writeFileSync(process.env.LOG_REPORT_ARGUMENTS, JSON.stringify(process.argv.slice(2)));
+const args = process.argv.slice(2);
+require('node:fs').appendFileSync(process.env.LOG_REPORT_ARGUMENTS, JSON.stringify(args) + '\\n');
 if (process.env.LOG_REPORT_FAIL) { console.error('Docker unavailable'); process.exit(1); }
+if (args[0] === 'ps') { console.log(process.env.LOG_REPORT_CONFIGS); process.exit(0); }
 console.log('backend-1 | 2026-11-04T12:00:00Z TypeError: fixture failure');
 `);
   chmodSync(executable, 0o700);
-  const env = { ...process.env, PATH: `${root}${delimiter}${process.env.PATH}`, LOG_REPORT_ARGUMENTS: argumentsFile };
+  const env = { ...process.env, PATH: `${root}${delimiter}${process.env.PATH}`, LOG_REPORT_ARGUMENTS: argumentsFile, LOG_REPORT_CONFIGS: resolve(repoRoot, 'docker-compose.yml') };
+
+  return {
+    env,
+    readCalls: () => readFileSync(argumentsFile, 'utf8').trim().split('\n').map(line => JSON.parse(line) as string[]),
+  };
+}
+
+test('CLI detects development Compose and captures a finite service log window', (context) => {
+  const { env, readCalls } = createDockerFixture(context);
 
   const result = spawnSync(process.execPath, [script, '--docker', 'backend', '--since', '5m', '--match', 'TypeError'], { env, encoding: 'utf8' });
+
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /1x TypeError: fixture failure/);
-  const args = JSON.parse(readFileSync(argumentsFile, 'utf8')) as string[];
-  assert.deepEqual(args.slice(args.indexOf('logs')), ['logs', '--no-color', '--timestamps', '--since', '5m', 'backend']);
-  assert.ok(args.includes('--project-directory'));
-  assert.ok(!args.includes('--follow'));
+  const [discovery, args] = readCalls();
+  assert.ok(discovery!.includes(`label=com.docker.compose.project.working_dir=${resolve(repoRoot)}`));
+  assert.ok(discovery!.includes('--all'));
+  assert.deepEqual(args!.slice(args!.indexOf('logs')), ['logs', '--no-color', '--timestamps', '--since', '5m', 'backend']);
+  assert.equal(args![args!.indexOf('-f') + 1], resolve(repoRoot, 'docker-compose.yml'));
+  assert.ok(!args!.includes('--follow'));
+});
 
-  const failed = spawnSync(process.execPath, [script, '--docker'], { env: { ...env, LOG_REPORT_FAIL: '1' }, encoding: 'utf8' });
-  assert.equal(failed.status, 1);
-  assert.equal(failed.stdout, '');
-  assert.match(failed.stderr, /Docker unavailable/);
+test('CLI detects production Compose and deduplicates labels from multiple services', (context) => {
+  const { env, readCalls } = createDockerFixture(context);
+  const config = resolve(repoRoot, 'docker-compose.prod.yml');
+
+  const result = spawnSync(process.execPath, [script, '--docker'], {
+    env: { ...env, LOG_REPORT_CONFIGS: `${config}\n${config}` }, encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const args = readCalls().at(-1)!;
+  assert.equal(args[args.indexOf('-f') + 1], config);
+});
+
+for (const stack of ['production', 'development'] as const) {
+  test(`CLI explicitly selects ${stack} without discovering containers`, (context) => {
+    const { env, readCalls } = createDockerFixture(context);
+
+    const result = spawnSync(process.execPath, [script, '--docker', `--${stack}`, 'backend', '--since', '10m'], { env, encoding: 'utf8' });
+
+    assert.equal(result.status, 0, result.stderr);
+    const calls = readCalls();
+    assert.equal(calls.length, 1);
+    const args = calls[0]!;
+    const filename = stack === 'production' ? 'docker-compose.prod.yml' : 'docker-compose.yml';
+    assert.equal(args[args.indexOf('-f') + 1], resolve(repoRoot, filename));
+    assert.deepEqual(args.slice(args.indexOf('logs')), ['logs', '--no-color', '--timestamps', '--since', '10m', 'backend']);
+  });
+}
+
+for (const [name, configs] of [
+  ['no containers', ''],
+  ['both stacks', [resolve(repoRoot, 'docker-compose.yml'), resolve(repoRoot, 'docker-compose.prod.yml')].join('\n')],
+  ['custom overrides', `${resolve(repoRoot, 'docker-compose.yml')},${resolve(repoRoot, 'override.yml')}`],
+]) {
+  test(`CLI refuses automatic selection with ${name}`, (context) => {
+    const { env, readCalls } = createDockerFixture(context);
+
+    const result = spawnSync(process.execPath, [script, '--docker'], {
+      env: { ...env, LOG_REPORT_CONFIGS: configs }, encoding: 'utf8',
+    });
+
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /Choose --development or --production/);
+    const calls = readCalls();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]![0], 'ps');
+  });
+}
+
+test('CLI reports Docker acquisition failures without an empty success report', (context) => {
+  const { env } = createDockerFixture(context);
+
+  const result = spawnSync(process.execPath, [script, '--docker'], {
+    env: { ...env, LOG_REPORT_FAIL: '1' }, encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /Docker unavailable/);
 });
