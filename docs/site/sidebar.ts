@@ -1,5 +1,13 @@
+export type NavigationEntry =
+  | { label: string; source: string; items?: never }
+  | { label: string; items: NavigationEntry[]; source?: never };
+
+type SidebarEntry =
+  | { label: string; slug: string }
+  | { label: string; items: SidebarEntry[] };
+
 // Navigation follows reader tasks; source paths remain the canonical document identities.
-export const navigation = [
+export const navigation: NavigationEntry[] = [
   { label: 'Overview', source: 'README.md' },
   {
     label: 'Local Development',
@@ -110,10 +118,10 @@ export const navigation = [
   },
 ];
 
-export function buildSidebar(routes, entries = navigation) {
-  const listed = new Set();
+export function buildSidebar(routes: Record<string, string>, entries: NavigationEntry[] = navigation) {
+  const listed = new Set<string>();
 
-  const convert = entry => {
+  const convert = (entry: NavigationEntry): SidebarEntry => {
     if (entry.items) return { label: entry.label, items: entry.items.map(convert) };
     if (!Object.hasOwn(routes, entry.source)) throw new Error(`Unknown navigation source: ${entry.source}`);
     if (listed.has(entry.source)) throw new Error(`Duplicate navigation source: ${entry.source}`);
