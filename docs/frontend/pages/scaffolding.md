@@ -2,9 +2,31 @@
 
 `npm run scaffold:frontend` generates colocated test outlines alongside each
 implementation owner automatically; no separate test command or flag is needed.
+The generator and its tests live under `scripts/scaffold/frontend/`.
 The `page` preset starts an authenticated collection page with controls, a dashboard,
 and a table or calendar. Informational, authentication, and public pages follow their
 existing route owners; do not add empty collection regions to fit this preset.
+
+## Maintain the Pattern
+
+The focused owner guides and scaffold templates are the source of truth for
+frontend structure. The guides define ownership and behavior; the templates
+encode those decisions in generated code. When an agreed pattern changes,
+update its guide, applicable templates, and scaffold tests together.
+
+Scaffold tests verify the generator's output and file ownership. Generated
+application tests cover the behavior added by the implemented feature, following
+the [test ownership rules](../../workflows/delivery/testing.md#test-ownership).
+
+Human and LLM-assisted change reviews apply the same owner guides and scaffold
+patterns to handwritten and modified code. Findings must cite the applicable
+contract and concrete diff evidence. Do not maintain a separate advisory
+architecture checker or its synthetic source-snippet test matrix. Automated
+pattern checks retain dependency and runtime safeguards; frontend composition,
+naming, file layout, and test ownership stay with the guides, scaffolds,
+behavioral tests, and contextual review.
+
+## Choose a Preset
 
 The presets keep source and test ownership aligned:
 
@@ -43,12 +65,16 @@ pages/Youth/Placements/
     PlacementCalendar.test.tsx
 ```
 
-The page suite covers filters, selection, and dialog coordination. The page-data
-suite covers its reference queries. The calendar suite covers domain range inputs,
+The page suite covers applied filters, permissions, selection, and dialog coordination.
+The page-data suite covers its reference queries. A generated table suite covers
+domain cells, actions, and selection wiring; its data hook suite covers query identity,
+adapter inputs (including sort and cursor forwarding), and row shaping. Shared Table
+and query suites own sorting, resizing, caching, and pagination mechanics; pure policy
+suites own eligibility matrices. The calendar suite covers domain range inputs,
 item mapping, and callback wiring; shared calendar mechanics stay in shared suites.
 When adding saved controls, follow the [preference readiness gate](preferences.md#expose-page-controls),
-including search. The page scaffold prompts for pending-control behavior and the
-first search save preserving restored sibling filters.
+including search. The page scaffold prompts for pending-control behavior. The
+owning preference hook covers restoring sibling filters during the first search save.
 Connect the generated calendar to the page when implementing the feature; the
 component preset does not edit its parent or register a route.
 

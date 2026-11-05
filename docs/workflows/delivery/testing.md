@@ -15,7 +15,7 @@ test environment when needed.
 | Backend APIs | `bash scripts/tests/backend/test-apis.sh` |
 | Frontend tests | `bash scripts/tests/frontend/test-ui.sh` |
 | Real-browser components | `bash scripts/tests/frontend/test-browser.sh` |
-| Changed repository patterns | `node scripts/patterns/check-patterns.ts --changed` |
+| Changed repository patterns | `node scripts/patterns/run-pattern-checks.ts --changed` |
 
 `test-app.sh` and `test-app.sh --full` run deployment checks, backend API
 tests, and frontend Vitest tests. Playwright remains explicit and separate so
@@ -31,10 +31,11 @@ bash scripts/tests/test-app.sh --changed HEAD~1
 ```
 
 The shared selector in [`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts)
-routes recognized backend domains to focused Jest suites and uses Vitest's
-dependency graph for frontend changes. Shared infrastructure, configuration,
-dependencies, migrations, runner changes, and unknown paths conservatively
-escalate to the relevant full suite. See [Continuous Integration](ci.md) for
+passes changed backend source/test paths to Jest's `--findRelatedTests` and uses
+Vitest's dependency graph for frontend changes. No domain registration is needed.
+Shared test setup, configuration, dependencies, migrations, runner changes, and
+unknown inputs conservatively escalate to the relevant full suite. Deleted
+backend inputs also run the full suite because their old graph edges are absent. See [Continuous Integration](ci.md) for
 the complete routing and merge-gate contract.
 
 ## During Implementation
@@ -74,36 +75,24 @@ otherwise rerun it. For shell changes, run `bash -n` and ShellCheck (included in
 | Components, hooks, storage, DOM APIs, and browser globals | Vitest with the default jsdom environment |
 | Layout, scrolling, pointer behavior, and real browser focus | Playwright |
 
-Place tests with the narrowest owner of the behavior. A consumer should test
-only the coordination or domain outcome it adds, not repeat a child's mechanics.
-Apply the same ownership boundaries as implementation: a hook suite owns its
-policy and lifecycle; a component suite owns rendered states and event wiring;
-a page suite owns composition, entry context, and coordination across children.
-Running a real hook or child in a consumer test is fine when the assertions
-describe the consumer's contract. Keep detailed payload, normalization, cache,
-and lifecycle cases in their owning suites instead of repeating them through
-the page. Use small typed stubs when only inputs or callbacks matter, and
-explicit API response fixtures rather than recreating server filtering or sorting.
-Cover lifecycle and error states only when they are part of that owner's
-contract. Describe observable behavior and avoid arbitrary sleeps, private
-implementation assertions, and mocks that bypass the boundary under test.
-Test observable contracts, not private methods or a copy of the implementation.
-Do not add tests merely to confirm static labels, enabled options, CSS classes,
-wrapper structure, or configuration flags copied from the implementation. A
-presentation-only component or page does not need its own test file. Test an
-option when eligibility depends on permissions or domain state, or when choosing
-it changes an observable outcome. Cover visual layout in the browser when it
-protects a concrete behavior such as scrolling, clipping, or resizing.
+Place tests with the narrowest owner:
 
-Shared mechanics have one authoritative suite; each consumer covers only the
-input handling, callbacks, or domain outcome it adds. For example, shared
-table tests cover keyboard selection, a domain table covers selection wiring,
-and a page covers updating its dashboard from the selected record.
+| Suite | Owns |
+|---|---|
+| Hook | Policy and lifecycle |
+| Component | Rendered states and event wiring |
+| Page | Composition, entry context, and coordination across children |
 
-For surface-specific ownership rules, start at the
-[frontend guide](../../frontend/README.md#find-the-right-guide). It routes pages,
-components, hooks, tables, calendars, overlays, navigation, and preferences to
-their authoritative testing guidance.
+- Test shared mechanics once; consumers cover only the behavior they add.
+- Assert observable outcomes. Skip private details, copied implementation,
+  arbitrary sleeps, and tests that only confirm static presentation or configuration.
+- Cover errors, lifecycle, and option eligibility only when part of the owner's contract.
+- Use real children or small typed stubs without bypassing the tested boundary.
+  Use explicit API fixtures instead of simulating server logic.
+- Test layout in the browser when it protects behavior such as scrolling or clipping.
+
+See the [frontend guide](../../frontend/README.md#find-the-right-guide) for
+surface-specific rules.
 
 ## Organize Tests for Reading
 
@@ -130,6 +119,9 @@ conventions, not a requirement to add every lifecycle case to every owner.
 Frontend presets generate colocated implementation and test owners together.
 See [Frontend Scaffolding](../../frontend/pages/scaffolding.md) for commands, generated
 layouts, and how to turn test outlines into meaningful coverage.
+Scaffold tests verify generated artifacts against the documented pattern;
+application tests cover the implemented owner's behavior. Maintain those contracts
+through the [owner guides and scaffold templates](../../frontend/pages/scaffolding.md#maintain-the-pattern).
 
 ## Browser Component Tests
 
@@ -150,7 +142,31 @@ CI; failed scheduled runs retain traces for 14 days.
 
 ## Test Ownership
 
-- Repository-tool tests live beside their scripts. Register new script folders in the root lint command and `scripts/tests/test-static.sh`; the snapshot download/refresh tests in `scripts/dev/` use mocked SSH and Docker commands and never require live data.
+Choose the authoritative owner before adding a test. Cover a shared behavior's
+matrix there once; sibling consumers need coverage only for their own decisions
+and the inputs or outputs they connect across a boundary. Following the same
+implementation pattern is not a reason to copy its test matrix into every page
+or script.
+
+| Behavior | Authoritative owner | Consumer coverage |
+|---|---|---|
+| Table sort controls, direction changes, row navigation | Shared `Table` | Domain actions and derived cells only |
+| List comparison, ties, accumulation, retry and cursor mechanics | Shared ordering/query or backend cursor helper | Domain query inputs and computed sort values, without replaying the mechanics matrix |
+| Domain eligibility and derived labels | Narrow domain policy/helper | Verify wiring; do not repeat its eligibility cases in hooks, components and pages |
+| SQL filtering and computed sort expressions | Backend domain query/service | One representative API boundary check; UI tests cannot prove SQL semantics |
+| Database preservation, validation and recovery | Database worker against disposable test databases | Development shell wrappers are checked manually when changed |
+
+Development maintenance wrappers in `scripts/dev/` use Bash syntax checks and
+ShellCheck, with manual verification of the affected flow when changed. They do
+not have TypeScript mock-command suites. Database behavior and recovery remain
+covered by the backend worker tests against disposable databases.
+
+Different implementations at separate boundaries still need their own contract
+checks: a shared table test does not execute domain SQL. Keep those checks focused
+on the boundary's extra behavior rather than repeating lower-layer cases.
+
+- Repository-tool tests live beside their scripts. Register new TypeScript script
+  folders in the root lint command and `scripts/tests/test-static.sh`.
 - Backend suites live in `backend/tests/<domain>/` and share helpers from
   `backend/tests/shared/`.
 - Frontend tests are colocated with the component, hook, page, or feature they
@@ -160,10 +176,9 @@ CI; failed scheduled runs retain traces for 14 days.
   `createQueryClientWrapper` serves hooks. Shared complete fixtures with typed
   overrides belong in `frontend/src/tests/factories/`; scenario values stay in
   the owning test.
-- Register backend domains and integration consumers in
-  `scripts/ci/select-tests.ts`, with routing coverage in
-  `scripts/ci/select-tests.test.ts`. Frontend source routing comes from Vitest's
-  dependency graph.
+- Backend and frontend related-test selection follows the test runners' import
+  graphs. Keep real dependencies visible to the runners; do not maintain a
+  parallel source-to-suite ownership map.
 - Mount new backend routes in both `backend/src/index.ts` and
   `backend/tests/shared/app.ts`.
 

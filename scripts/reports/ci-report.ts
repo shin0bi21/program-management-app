@@ -1,7 +1,24 @@
 #!/usr/bin/env node
 
+/**
+ * Compare GitHub pull-request CI timing across pipeline changes.
+ *
+ * Flow: validate arguments → collect GitHub data → summarize runs → print report.
+ * Read-only: reads Git origin and GitHub through authenticated gh; no remote changes.
+ *
+ * Usage: npm run report:ci -- --branch develop --last 20
+ */
+
+// ============================================================================
+// 1. Imports
+// ============================================================================
+
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+// ============================================================================
+// 2. Configuration and report contracts
+// ============================================================================
 
 type GhField = [name: string, value: string];
 
@@ -136,6 +153,10 @@ const CI_PATHS = [
   /(^|\/)jest\.config\.(js|ts)$/,
 ];
 
+// ============================================================================
+// 3. CLI arguments
+// ============================================================================
+
 function usage(): string {
   return `Usage: npm run report:ci -- [options]
 
@@ -156,8 +177,10 @@ Examples:
 
 export function parseArgs(argv: string[]): ReportOptions {
   const options: ReportOptions = { branch: 'all', last: 5, since: null, until: null, json: false };
+
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
+
     if (argument === '--help') return { ...options, help: true };
     if (argument === '--json') {
       options.json = true;
@@ -166,14 +189,17 @@ export function parseArgs(argv: string[]): ReportOptions {
     if (!['--branch', '--last', '--since', '--until'].includes(argument)) {
       throw new Error(`Unknown option: ${argument}`);
     }
+
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value`);
     index += 1;
+
     if (argument === '--branch') options.branch = value;
     if (argument === '--last') options.last = Number(value);
     if (argument === '--since') options.since = value;
     if (argument === '--until') options.until = value;
   }
+
   if (!['develop', 'main', 'all'].includes(options.branch)) {
     throw new Error('--branch must be develop, main, or all');
   }
@@ -181,15 +207,22 @@ export function parseArgs(argv: string[]): ReportOptions {
     throw new Error('--last must be a positive integer');
   }
   for (const [name, value] of [['--since', options.since], ['--until', options.until]]) {
-    if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`)))) {
+    if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value)
+      || !Number.isFinite(Date.parse(`${value}T00:00:00Z`))
+      || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value)) {
       throw new Error(`${name} must use a valid YYYY-MM-DD date`);
     }
   }
   if (options.since && options.until && options.since > options.until) {
     throw new Error('--since must not be after --until');
   }
+
   return options;
 }
+
+// ============================================================================
+// 4. GitHub access and input normalization
+// ============================================================================
 
 export function isCiPath(filename: string): boolean {
   return CI_PATHS.some((pattern) => pattern.test(filename));
@@ -202,19 +235,16 @@ function run(command: string, args: string[]): string {
   return result.stdout.trim();
 }
 
-function ghJson(endpoint: string, fields: GhField[] = [], paginate = true): unknown[] {
-  const args = ['api'];
-  if (paginate) args.push('--paginate', '--slurp');
-  args.push('-X', 'GET', endpoint);
+function ghJson(endpoint: string, fields: GhField[] = []): unknown[] {
+  const args = ['api', '--paginate', '--slurp', '-X', 'GET', endpoint];
   for (const [name, value] of fields) args.push('-f', `${name}=${value}`);
+
   const output = run('gh', args);
   if (!output) return [];
   const parsed: unknown = JSON.parse(output);
-  if (paginate) {
-    if (!Array.isArray(parsed)) throw new Error(`Unexpected paginated response from ${endpoint}`);
-    return parsed;
-  }
-  return [parsed];
+  if (!Array.isArray(parsed)) throw new Error(`Unexpected paginated response from ${endpoint}`);
+
+  return parsed;
 }
 
 function flattenPages<T>(pages: unknown[], key: string | null = null): T[] {
@@ -259,6 +289,10 @@ function durationSeconds(start: string | null | undefined, end: string | null | 
   return Math.max(0, (Date.parse(end) - Date.parse(start)) / 1000);
 }
 
+// ============================================================================
+// 5. Pipeline timing summaries
+// ============================================================================
+
 function median(values: number[]): number | null {
   if (!values.length) return null;
   const sorted = [...values].sort((left, right) => left - right);
@@ -281,6 +315,7 @@ export function summarizeRuns(runs: ComparableRun[], pullRequestCount: number | 
     const completions = prRuns.map((run) => Date.parse(run.completedAt)).filter(Number.isFinite);
     const creations = prRuns.map((run) => Date.parse(run.createdAt)).filter(Number.isFinite);
     const firstStart = Math.min(...starts);
+
     return {
       prNumber,
       conclusion: prRuns.every((run) => run.conclusion === 'success') ? 'success' : 'failure',
@@ -289,6 +324,7 @@ export function summarizeRuns(runs: ComparableRun[], pullRequestCount: number | 
       runnerSeconds: prRuns.reduce((total, run) => total + run.runnerSeconds, 0),
     };
   });
+
   const successful = pipelines.filter((pipeline) => pipeline.conclusion === 'success');
   const values = (field: 'queueSeconds' | 'wallSeconds' | 'runnerSeconds') => (
     successful.map((pipeline) => pipeline[field]).filter(Number.isFinite)
@@ -296,6 +332,7 @@ export function summarizeRuns(runs: ComparableRun[], pullRequestCount: number | 
   const queue = values('queueSeconds');
   const wall = values('wallSeconds');
   const runner = values('runnerSeconds');
+
   return {
     pullRequests: pullRequestCount ?? new Set(runs.map((run) => run.prNumber)).size,
     pipelines: pipelines.length,
@@ -310,11 +347,16 @@ export function summarizeRuns(runs: ComparableRun[], pullRequestCount: number | 
   };
 }
 
+// ============================================================================
+// 6. Pull-request and workflow discovery
+// ============================================================================
+
 function pullRequests(repo: string, branches: string[], options: ReportOptions, bounds: UtcBounds): PullRequestRecord[] {
   const records = branches.flatMap((branch) => {
+    // Closed, unmerged PRs can fill a page before the requested merged sample.
     const pages = ghJson(`repos/${repo}/pulls`, [
       ['state', 'closed'], ['base', branch], ['sort', 'updated'], ['direction', 'desc'], ['per_page', '100'],
-    ], Boolean(options.since));
+    ]);
     return flattenPages<ApiPullRequest>(pages)
       .filter((pr): pr is ApiPullRequest & { merged_at: string } => Boolean(pr.merged_at) && inBounds(pr.merged_at as string, bounds))
       .map((pr) => ({
@@ -388,36 +430,39 @@ function workflowRuns(repo: string, prs: EnrichedPullRequest[], bounds: UtcBound
   });
 }
 
+// ============================================================================
+// 7. Timeline aggregation and output
+// ============================================================================
+
 export function buildSegments<T extends SegmentPullRequest>(prs: T[], runs: ComparableRun[]): ReportSegment<T>[] {
   if (!prs.length) return [];
-  const changes = prs.filter((pr) => pr.ciFiles.length);
-  const boundaries = [prs[0]!.mergedAt, ...changes.map((pr) => pr.mergedAt), prs.at(-1)!.mergedAt];
   const segments: ReportSegment<T>[] = [];
-  for (let index = 0; index < boundaries.length - 1; index += 1) {
-    const start = boundaries[index];
-    const end = boundaries[index + 1];
-    const includeEnd = index === boundaries.length - 2;
-    const segmentPrs = prs.filter((pr) => pr.mergedAt >= start && (includeEnd ? pr.mergedAt <= end : pr.mergedAt < end));
-    if (segmentPrs.length) {
-      const numbers = new Set(segmentPrs.map((pr) => pr.number));
-      segments.push({
-        start: segmentPrs[0].mergedAt,
-        end: segmentPrs.at(-1)!.mergedAt,
-        pullRequests: segmentPrs.map((pr) => pr.number),
-        summary: summarizeRuns(runs.filter((run) => numbers.has(run.prNumber)), segmentPrs.length),
-      });
-    }
-    const change = changes.find((pr) => pr.mergedAt === end);
-    if (change) segments.push({ change });
-  }
-  if (boundaries.length === 2 && !segments.length) {
+  let pending: T[] = [];
+
+  const appendSummary = () => {
+    if (!pending.length) return;
+
+    const numbers = new Set(pending.map((pr) => pr.number));
     segments.push({
-      start: prs[0].mergedAt,
-      end: prs.at(-1)!.mergedAt,
-      pullRequests: prs.map((pr) => pr.number),
-      summary: summarizeRuns(runs, prs.length),
+      start: pending[0].mergedAt,
+      end: pending.at(-1)!.mergedAt,
+      pullRequests: pending.map((pr) => pr.number),
+      summary: summarizeRuns(runs.filter((run) => numbers.has(run.prNumber)), pending.length),
     });
+    pending = [];
+  };
+
+  // Each CI change starts the next comparison group, including timestamp ties.
+  for (const pr of prs) {
+    if (pr.ciFiles.length) {
+      appendSummary();
+      segments.push({ change: pr });
+    }
+
+    pending.push(pr);
   }
+
+  appendSummary();
   return segments;
 }
 
@@ -471,17 +516,23 @@ function render(report: CiReport): string {
   return lines.join('\n');
 }
 
-async function main(): Promise<void> {
+// ============================================================================
+// 8. Main workflow
+// ============================================================================
+
+function main(): void {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
     return;
   }
+
   const repo = repositoryName();
   const branches = options.branch === 'all' ? ['develop', 'main'] : [options.branch];
   const bounds = utcBounds(options);
   const prs = enrichPullRequests(repo, pullRequests(repo, branches, options, bounds));
   const runs = workflowRuns(repo, prs, bounds);
+
   const report: CiReport = {
     repository: repo,
     branches,
@@ -494,13 +545,20 @@ async function main(): Promise<void> {
     pullRequests: prs,
     workflowRuns: runs,
   };
+
   console.log(options.json ? JSON.stringify(report, null, 2) : render(report));
 }
 
+// ============================================================================
+// 9. Entrypoint and error reporting
+// ============================================================================
+
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
-  main().catch((error: unknown) => {
+  try {
+    main();
+  } catch (error: unknown) {
     console.error(`ci-report: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
-  });
+  }
 }

@@ -47,8 +47,9 @@ request-ID design are owned by [Error handling](../../backend/errors.md).
 
 Use `bash scripts/dev/check-dev-env.sh` for combined container, health,
 migration, dependency, and staleness diagnostics. For a large captured log,
-use `bash scripts/dev/condense-logs.sh <path>` or pipe pasted output into the
-same script.
+use `npm run report:logs -- <path>` or pipe pasted output into the report.
+Use `npm run report:logs -- --docker backend --since 5m --match TypeError` to
+isolate an error in recent development Docker logs.
 
 ## Production Login Fails While Sending a Verification Email
 

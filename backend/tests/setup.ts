@@ -20,15 +20,20 @@ if (!/_test(\b|$)/.test(process.env.DATABASE_URL ?? '')) {
 }
 
 import { sql } from '../src/db/client';
+import { deleteTestDefaults, seedTestDefaults } from './shared/seedTestDefaults';
+
+let testDefaults: Awaited<ReturnType<typeof seedTestDefaults>> | undefined;
 
 // Increase timeout for database operations
 jest.setTimeout(10000);
 
 // Suppress console noise in test output. Tests that need to assert on log
 // calls should re-spy locally with a mock implementation in their own file.
-beforeAll(() => {
+beforeAll(async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+  testDefaults = await seedTestDefaults();
 });
 
 afterAll(() => {
@@ -37,6 +42,8 @@ afterAll(() => {
 
 // Clean up after all tests
 afterAll(async () => {
+  if (testDefaults) await deleteTestDefaults(testDefaults);
+
   // Close database connection
   await sql.end({ timeout: 5 });
 });

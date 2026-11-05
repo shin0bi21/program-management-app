@@ -10,6 +10,9 @@ authentication failures.
 1. Confirm the approved release scope is merged into `develop`, its checks have
    passed, and migration or operational prerequisites are understood. Resolve
    outstanding production-access failures before merging the release.
+   A release retiring migration history must complete the
+   [collapse bootstrap and baseline reuse](collapse-database.md#reuse-the-reviewed-baseline-on-another-environment)
+   before ordinary deployment runs migration validation.
 2. Open a release pull request from `develop` to `main`. Review its complete diff
    and wait for the [required checks](ci.md#required-checks), including production
    image and Compose validation.
@@ -86,7 +89,7 @@ and infrastructure revisions in `.deploy-state/`:
 |---|---|
 | Frontend | Build and replace nginx/frontend |
 | Backend | Build, validate migrations, replace backend, and check health |
-| Migration files | Snapshot and apply migrations before backend replacement |
+| Database files (including schema/data init and baseline manifest) | Snapshot and apply migrations before backend replacement |
 | Production infrastructure or shared TypeScript policy | Conservative full flow |
 | Recognized documentation, local-test, data-refresh, or report tooling paths only | No production container rebuild |
 

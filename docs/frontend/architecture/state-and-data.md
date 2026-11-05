@@ -109,13 +109,17 @@ A controlled shared component receives the selected key and emits a selection ev
 | Owner | Cover |
 |---|---|
 | API adapter | Method, path, serialized inputs, cancellation and response normalization; mock the HTTP client |
-| Domain query hook | Query key, enabled condition, adapter inputs, cursors and domain shaping; use an isolated `QueryClient` |
+| Domain query hook | Query key, enabled condition, adapter inputs, cursors and domain shaping at the shared-query boundary |
 | Shared query wrapper | Repository behavior such as accumulation, deduplication, mapped errors and retry policy |
 | Stateful hook | The effects or coordination it adds, including cleanup where applicable |
 | Pure utility or finite policy | Representative inputs, invalid values and meaningful boundaries; every permission or capability case |
 
 For example, a domain hook proves that `pageParam: 'next'` becomes `cursor: 'next'`;
-`useInfiniteListQuery` proves that pages accumulate without duplicate rows. Test the behavior
-the owner adds, not TanStack Query itself. Simple state wiring stays in its component test.
+`useInfiniteListQuery` proves that pages accumulate without duplicate rows. Capture
+the domain hook's shared-query options and invoke its request callback directly
+when that fully exercises its contract. Use an isolated `QueryClient` for domain
+coordination that needs a real query lifecycle; do not repeat shared accumulation,
+refresh, retry or ordering matrices in each consumer. Simple state wiring stays
+in its component test.
 
 Use the helpers and isolation rules in [Test Ownership](../../workflows/delivery/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).

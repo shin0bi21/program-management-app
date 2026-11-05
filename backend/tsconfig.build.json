@@ -5,14 +5,12 @@
   },
   "include": [
     "src/**/*",
-    "db/scripts/migration_status.ts",
-    "db/scripts/seed-admin.ts",
-    "db/scripts/update_schemas.ts"
+    "db/scripts/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "tests",
-    "scripts"
+    "integrations"
   ]
 }

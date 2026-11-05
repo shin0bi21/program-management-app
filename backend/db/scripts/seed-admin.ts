@@ -1,112 +1,36 @@
 #!/usr/bin/env node
 
-/**
- * ADMIN USER SEEDING
- * 
- * Creates the initial admin user from environment variables.
- * Idempotent - safe to run multiple times (won't duplicate).
- * 
- * Usage:
- *   npx tsx db/scripts/seed-admin.ts
- * 
- * Required env vars:
- *   ADMIN_EMAIL - Admin email address
- *   ADMIN_PASSWORD - Admin password (plaintext, will be hashed)
- *   ADMIN_FIRST_NAME - Admin first name (optional, defaults to "Admin")
- *   ADMIN_LAST_NAME - Admin last name (optional, defaults to "User")
- */
-
+/** Creates the configured administrator without changing an existing account. */
 import postgres from 'postgres';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import { adminSeedConfiguration, seedAdmin } from './helpers/seed-admin';
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error('ERROR: DATABASE_URL environment variable not set');
-  process.exit(1);
-}
+async function main(): Promise<void> {
+  const configuration = adminSeedConfiguration();
+  const sql = postgres(configuration.databaseUrl, { max: 1 });
 
-if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
-  console.error('ERROR: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required');
-  console.error('\nUsage:');
-  console.error('  ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=SecurePass123! npx tsx db/scripts/seed-admin.ts');
-  process.exit(1);
-}
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_FIRST_NAME = process.env.ADMIN_FIRST_NAME || 'Bilal';
-const ADMIN_LAST_NAME = process.env.ADMIN_LAST_NAME || 'Khan';
-
-const sql = postgres(DATABASE_URL);
-
-async function main() {
-  console.log(`\n========================================`);
-  console.log(`ADMIN USER SEEDING`);
-  console.log(`========================================\n`);
-  
   try {
-    // Check if admin already exists
-    const existing = await sql`
-      SELECT user_id FROM user_credentials WHERE email = ${ADMIN_EMAIL}
-    `;
-    
-    if (existing.length > 0) {
-      console.log(`Admin user already exists: ${ADMIN_EMAIL}`);
-      console.log(`Skipping creation.\n`);
+    const result = await sql.begin(transaction => {
+      // Match the application adapter for postgres.js transaction callable typings.
+      return seedAdmin(transaction as unknown as typeof sql, configuration);
+    });
+
+    if (!result.created) {
+      console.log(`Account already exists for ${configuration.email}; credentials were left unchanged.`);
       return;
     }
-    
-    console.log(`Creating admin user: ${ADMIN_EMAIL}`);
-    
-    // Generate secure password hash
-    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-    
-    // Generate UUID (idempotency handled by email check above)
-    const adminId = crypto.randomUUID();
-    
-    // Get admin role id
-    const roles = await sql`
-      SELECT id FROM user_roles WHERE name = 'admin' LIMIT 1
-    `;
 
-    if (roles.length === 0) {
-      console.error('ERROR: admin role not found. Has the init migration been applied?');
-      process.exit(1);
-    }
-
-    const adminRoleId = roles[0].id;
-
-    // Insert admin user
-    await sql`
-      INSERT INTO users (id, first_name, last_name, role_id)
-      VALUES (${adminId}::uuid, ${ADMIN_FIRST_NAME}, ${ADMIN_LAST_NAME}, ${adminRoleId}::uuid)
-    `;
-    
-    // Insert admin credentials
-    await sql`
-      INSERT INTO user_credentials (user_id, email, password_hash, email_verified, status)
-      VALUES (${adminId}::uuid, ${ADMIN_EMAIL}, ${passwordHash}, true, 'active')
-    `;
-    
-    console.log(`\n========================================`);
-    console.log(`ADMIN USER CREATED SUCCESSFULLY`);
-    console.log(`========================================\n`);
-    console.log(`Email: ${ADMIN_EMAIL}`);
-    console.log(`Name: ${ADMIN_FIRST_NAME} ${ADMIN_LAST_NAME}`);
-    console.log(`\nAdmin can now log in with the provided credentials.\n`);
-    
-  } catch (error) {
-    console.error('ERROR: Failed to create admin user');
-    console.error(error);
-    process.exit(1);
+    console.log(`Admin user created: ${configuration.email}`);
+    console.log(`Name: ${configuration.firstName} ${configuration.lastName}`);
+    console.log('Admin can now log in with the configured credentials.');
   } finally {
     await sql.end({ timeout: 5 });
   }
 }
 
-main().catch(async (error) => {
-  console.error('Fatal error:', error);
-  await sql.end({ timeout: 5 });
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(() => {
+    // Database exceptions may contain query values, including credential material.
+    console.error('Admin seeding failed. Verify the database init, DATABASE_URL, and ADMIN_* configuration.');
+    process.exitCode = 1;
+  });
+}

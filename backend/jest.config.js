@@ -1,7 +1,8 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
+  // Index source imports as well as tests for --findRelatedTests traversal.
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',

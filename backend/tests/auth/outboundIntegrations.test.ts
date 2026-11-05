@@ -1,4 +1,4 @@
-import { getSheetsClient } from '../../scripts/googleSheets/client';
+import { getSheetsClient } from '../../integrations/googleSheets/client';
 
 jest.mock('googleapis', () => ({
   google: { auth: { GoogleAuth: jest.fn() }, sheets: jest.fn(() => ({ spreadsheets: {} })) },
