@@ -1,6 +1,10 @@
-# Restore Server GitHub Authentication
+# Restore Repository Access from the Server
 
-Follow the [production operating rules](README.md) and establish
+Use this guide when the Lightsail server cannot fetch code from the private GitHub
+repository. This connection runs from the server to GitHub; SSH deployment access
+runs from GitHub Actions to the server.
+
+Establish
 [SSH access](access.md#deployment-access) before starting. This procedure
 repairs repository access; it does not authorize a deployment.
 

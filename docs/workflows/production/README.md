@@ -1,28 +1,21 @@
 # Production
 
-Choose a runbook from the observed failure. Routine releases follow
-[Deploy, Verify, and Recover](../delivery/deployment.md).
+Deploy, verify, and troubleshoot the live application. Run server commands from
+`/home/ubuntu/my-webapp` on Lightsail.
 
-| Failure or task | Guide |
+## Deployment
+
+Use [Deploy to Production](deployment.md) for automatic or manual deployment,
+verification, and recovery.
+
+## Common Issues
+
+Listed below are common production issues that have arisen. Use as required.
+
+| Issue or task | Guide |
 |---|---|
-| Configure deployment secrets or diagnose SSH access | [Configure Production Access](access.md) |
-| Perform an authorized manual release or recovery | [Admin: Manual Access and Deployment](../admin/manual-deployment.md) |
-| SSH works but GitHub fetch fails | [Restore Server GitHub Authentication](github-authentication.md) |
-| Login fails while sending its verification email | [Restore Verification Email](email-recovery.md) |
-| Investigate nginx, HTTPS, or certificate renewal | [Inspect NGINX and TLS](nginx-and-tls.md) |
-
-## Operating Rules
-
-Run server commands only in `/home/ubuntu/my-webapp` on Lightsail and use
-`docker compose -f docker-compose.prod.yml` for manual container operations.
-The default Compose file starts development services.
-
-Keep tokens, private keys, and email passwords out of Git, chat, logs, remote
-URLs, and shell arguments. Never overwrite unrelated `.env` values while
-replacing a credential. Verify the failed boundary before making a change and
-verify its recovery afterward; a healthy HTTP endpoint does not prove email
-delivery or GitHub authentication.
-
-Access setup and incident recovery do not implicitly authorize a release.
-Follow the [deployment workflow](../delivery/deployment.md) for an authorized
-release or deployment retry.
+| Configure deployment secrets or diagnose SSH access | [Configure SSH Access to the Server](common-issues/github/access.md) |
+| SSH works but GitHub fetch fails | [Restore Repository Access from the Server](common-issues/github/github-authentication.md) |
+| Login fails while sending its verification email | [Restore Verification Email](common-issues/email-recovery.md) |
+| Verify HTTPS certificate renewal | [Renew HTTPS Certificates](common-issues/certificate-renewal.md) |
+| Reload nginx after a certificate or backend replacement | [Reload NGINX](common-issues/nginx-reload.md) |
