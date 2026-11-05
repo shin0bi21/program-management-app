@@ -3,7 +3,7 @@
 /**
  * LOG REPORT — isolate and group problems from Docker, files, or pasted logs.
  * Flow: validate options → read logs → select entries → group and report context.
- * Read-only: Docker input reads the development Compose stack without changing it.
+ * Read-only: Docker input reads the selected Compose stack without changing it.
  * Usage: npm run report:logs -- --docker backend --since 5m --match TypeError
  */
 
@@ -25,6 +25,7 @@ interface LogInput {
 
 export interface ReportOptions {
   docker: boolean;
+  stack: 'development' | 'production' | null;
   sources: string[];
   since: string | null;
   match: string | null;
@@ -40,7 +41,9 @@ function usage(): string {
        npm run report:logs -- --docker [SERVICE ...] [options]
 
   Options:
-    --docker           Read development Docker Compose logs instead of files/stdin.
+    --docker           Read Compose logs; detect the stack from container labels.
+    --development      Select docker-compose.yml explicitly; requires --docker.
+    --production       Select docker-compose.prod.yml explicitly; requires --docker.
     --since <time>     Docker time window, such as 5m or 1h (default: 5m).
     --match <text>     Match literal text, ignoring case (for example TypeError).
     --type <category>  Select error, warning, http, or frame entries.
@@ -61,6 +64,7 @@ function usage(): string {
 export function parseArgs(argv: string[]): ReportOptions {
   const options: ReportOptions = {
     docker: false,
+    stack: null,
     sources: [],
     since: null,
     match: null,
@@ -87,6 +91,16 @@ export function parseArgs(argv: string[]): ReportOptions {
     // Select Docker Compose logs as the input source.
     if (argument === '--docker') {
       options.docker = true;
+      continue;
+    }
+
+    if (argument === '--production' || argument === '--development') {
+      const stack = argument === '--production' ? 'production' : 'development';
+      if (options.stack && options.stack !== stack) {
+        throw new Error('--development and --production cannot be combined');
+      }
+
+      options.stack = stack;
       continue;
     }
 
@@ -132,6 +146,10 @@ export function parseArgs(argv: string[]): ReportOptions {
     }
   }
 
+  if (options.stack && !options.docker) {
+    throw new Error('--development and --production require --docker');
+  }
+
   if (options.since && !options.docker) {
     throw new Error('--since requires --docker');
   }
@@ -145,10 +163,44 @@ export function parseArgs(argv: string[]): ReportOptions {
 
 // 3. Log acquisition
 
+function selectComposeFile(stack: ReportOptions['stack']): string {
+  const developmentFile = resolve(REPO_ROOT, 'docker-compose.yml');
+  const productionFile = resolve(REPO_ROOT, 'docker-compose.prod.yml');
+
+  if (stack) return stack === 'production' ? productionFile : developmentFile;
+
+  // Include stopped services so failures remain inspectable after a container exits.
+  const output = execFileSync('docker', [
+    'ps', '--all',
+    '--filter', `label=com.docker.compose.project.working_dir=${REPO_ROOT}`,
+    '--filter', 'label=com.docker.compose.oneoff=False',
+    '--format', '{{.Label "com.docker.compose.project.config_files"}}',
+  ], {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    timeout: 30_000,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  const configurations = [...new Set(output.split(/\r?\n/).map(line => line.trim()).filter(Boolean))];
+  if (configurations.length !== 1) {
+    throw new Error('Cannot identify one Compose stack for this checkout. Choose --development or --production.');
+  }
+
+  const composeFile = configurations[0];
+  if (composeFile !== developmentFile && composeFile !== productionFile) {
+    throw new Error('Containers use an unrecognized Compose configuration. Choose --development or --production to read a repository stack explicitly.');
+  }
+
+  return composeFile;
+}
+
 export function loadLogs(options: ReportOptions): LogInput[] {
   if (options.docker) {
+    const composeFile = selectComposeFile(options.stack);
+
     const text = execFileSync('docker', [
-      'compose', '--project-directory', REPO_ROOT, '-f', resolve(REPO_ROOT, 'docker-compose.yml'),
+      'compose', '--project-directory', REPO_ROOT, '-f', composeFile,
       'logs', '--no-color', '--timestamps', '--since', options.since ?? '5m', ...options.sources,
     ], {
       encoding: 'utf8',

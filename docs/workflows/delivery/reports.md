@@ -7,7 +7,7 @@ and npm commands use the `report:<subject>` prefix.
 
 ## Log Report
 
-Read development Docker logs, captured files, or pasted console output:
+Read Docker logs, captured files, or pasted console output:
 
 ```bash
 npm run report:logs -- --docker backend --since 5m --match TypeError
@@ -16,10 +16,27 @@ npm run report:logs -- browser-console.txt --match "Failed to fetch" --context 4
 pbpaste | npm run report:logs
 ```
 
-Docker input uses the repository's development Compose stack. Supply service names
-or omit them to read all services. `--since` accepts Docker time values such as
-`5m`, `1h`, or an absolute timestamp and defaults to `5m`. The command captures
-existing output; it does not follow logs, restart containers, or alter data.
+Docker input identifies the stack from Compose labels on this checkout's containers,
+including stopped services. With one recognized configuration, it automatically
+selects `docker-compose.yml` or `docker-compose.prod.yml`. Supply service names or
+omit them to read all services. `--since` accepts Docker time values such as `5m`,
+`1h`, or an absolute timestamp and defaults to `5m`.
+
+If no stack can be identified, both stacks are present, or containers use custom
+Compose overrides, the report stops. Select a repository stack explicitly with
+`--development` or `--production` when needed; both flags require `--docker`.
+The command captures existing output without following logs, restarting containers,
+or altering data.
+
+On Lightsail, run from `/home/ubuntu/my-webapp` with Node 24 and Docker Compose
+available on the host. The report uses only Node built-ins and needs no `npm install`:
+
+```bash
+node scripts/reports/log-report.ts --docker nginx backend --since 5m --context 4
+```
+
+This reads the selected stack through the host's Docker CLI. It does not run
+inside the application containers or require an application image rebuild.
 
 Without filters, the report groups recognized HTTP failures, errors, warnings,
 and application frames. `--match` selects literal text ignoring case, including
