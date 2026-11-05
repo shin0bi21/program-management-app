@@ -6,7 +6,7 @@ choose the local equivalent of a failed check.
 
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
-pull requests to `main` are rejected. See [Review and Merge Changes](review-and-merge.md#shipping) and
+pull requests to `main` are rejected. See [Shipping](../../../.agents/skills/03-update-repo/SKILL.md) and
 [Deployment](../production/deployment.md) for those procedures.
 
 ## Workflow Topology

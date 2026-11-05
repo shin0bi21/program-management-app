@@ -1,0 +1,4 @@
+interface:
+  display_name: "04 Complete Changes"
+  short_description: "Clean merged concerns and reconcile final repository state"
+  default_prompt: "Use $04-complete-changes to close completed issues, clean merged branches and recovery sources, and reconcile the final repository state."

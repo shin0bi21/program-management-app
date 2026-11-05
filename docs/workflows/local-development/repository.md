@@ -72,7 +72,7 @@ git status --short --branch
 
 The final command should show `develop...origin/develop` with no changed files.
 If you are reusing an existing clone with changes, preserve that work before
-switching branches. See [Review and Merge Changes](../delivery/review-and-merge.md)
+switching branches. See [Shipping](../../../.agents/skills/03-update-repo/SKILL.md)
 when you are ready to create a branch for a code change.
 
 ## Continue to Docker Setup

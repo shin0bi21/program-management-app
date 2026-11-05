@@ -1,4 +1,0 @@
-interface:
-  display_name: "Maintain CI"
-  short_description: "Evolve and measure repository CI safely"
-  default_prompt: "Use $maintain-ci to improve or assess this repository’s CI workflows."

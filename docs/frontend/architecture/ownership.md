@@ -93,6 +93,5 @@ There is no Cohorts page or owner directory. Legacy Cohorts and calendar URLs re
 
 ## Enforcement
 
-See [File Structure and Ownership](../../workflows/file-structure.md) for review
-and enforcement, and [Scaffolding](scaffolding.md) for generating files at the
-chosen owner.
+See [Review](../../../.agents/skills/02-review-changes/SKILL.md) for assessment
+and evidence, and [Scaffolding](scaffolding.md) for generating files at the chosen owner.
