@@ -25,7 +25,7 @@ export default function SessionAttendanceModal({
     <ModalFormFooter
       formId="attendance-form"
       submitStatus={workflow.submitStatus}
-      submitDisabled={workflow.rosterLoading || workflow.rosterUnavailable || (
+      submitDisabled={workflow.attendanceLoading || workflow.rosterUnavailable || workflow.youthUnavailable || (
         !workflow.isOpenRoster && !workflow.roster.length
       )}
       onClose={onClose}
@@ -60,35 +60,30 @@ export default function SessionAttendanceModal({
         {workflow.rosterError && (
           <p className="form-error" role="alert">{workflow.rosterError}</p>
         )}
-        {workflow.searchError && (
-          <p className="form-error" role="alert">{workflow.searchError}</p>
+        {workflow.youthError && (
+          <p className="form-error" role="alert">{workflow.youthError}</p>
         )}
 
-        {workflow.isOpenRoster && (
+        {workflow.isOpenRoster ? (
           <OpenAttendancePicker
-            search={workflow.search}
-            appliedSearch={workflow.appliedSearch}
-            searchResults={workflow.searchResults}
-            searching={workflow.searching}
-            disabled={workflow.submissionComplete
-              || workflow.rosterLoading
-              || workflow.rosterUnavailable}
-            onSearchChange={workflow.setSearch}
-            onSearchApply={workflow.applySearch}
-            onSearchClear={workflow.clearSearch}
-            onCheckIn={workflow.addOpenAttendee}
+            key={session?.id}
+            youth={workflow.youth}
+            selectedYouthIds={workflow.roster.map(member => member.youthId)}
+            loading={workflow.attendanceLoading}
+            unavailable={workflow.rosterUnavailable || workflow.youthUnavailable}
+            disabled={workflow.submissionComplete || workflow.attendanceLoading
+              || workflow.rosterUnavailable || workflow.youthUnavailable}
+            onToggle={workflow.toggleOpenAttendee}
+          />
+        ) : (
+          <SessionAttendanceRoster
+            loading={workflow.attendanceLoading}
+            roster={workflow.roster}
+            selections={workflow.selections}
+            disabled={workflow.submissionComplete || workflow.rosterUnavailable}
+            onStatusChange={workflow.updateAttendanceStatus}
           />
         )}
-
-        <SessionAttendanceRoster
-          loading={workflow.rosterLoading}
-          isOpenRoster={workflow.isOpenRoster}
-          roster={workflow.roster}
-          selections={workflow.selections}
-          disabled={workflow.submissionComplete || workflow.rosterUnavailable}
-          onRemove={workflow.removeOpenAttendee}
-          onStatusChange={workflow.updateAttendanceStatus}
-        />
       </form>
     </Modal>
   );

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getSessionRoster,
-  searchAttendanceYouth,
+  getAttendanceYouth,
   setSessionAttendance,
 } from '../../../sessions.api';
 import { makeProgramSession } from '../../../../../../tests/factories/session';
@@ -17,7 +17,7 @@ const SESSION_QUERY_KEY = ['sessions'] as const;
 
 vi.mock('../../../sessions.api', () => ({
   getSessionRoster: vi.fn(),
-  searchAttendanceYouth: vi.fn(),
+  getAttendanceYouth: vi.fn(),
   setSessionAttendance: vi.fn(),
 }));
 
@@ -51,7 +51,7 @@ describe('useSessionAttendanceModal', () => {
     vi.clearAllMocks();
     vi.mocked(getSessionRoster).mockResolvedValue(roster);
     vi.mocked(setSessionAttendance).mockResolvedValue({ roster, session });
-    vi.mocked(searchAttendanceYouth).mockResolvedValue([]);
+    vi.mocked(getAttendanceYouth).mockResolvedValue([{ id: 'youth-2', firstName: 'Jordan', lastName: 'Lee' }]);
   });
 
   it('initializes enrolled attendance and submits only marked youth', async () => {
@@ -68,6 +68,7 @@ describe('useSessionAttendanceModal', () => {
     }]);
     expect(onSaved).toHaveBeenCalledWith({ roster, session });
     expect(result.current.submitStatus).toBe('success');
+    expect(getAttendanceYouth).not.toHaveBeenCalled();
   });
 
   it('submits every checked-in youth as present for an open roster', async () => {
@@ -75,12 +76,8 @@ describe('useSessionAttendanceModal', () => {
     const openSession = makeProgramSession({ enrollmentRequired: false, theme: 'Drop In' });
     const { result } = renderWorkflow({ session: openSession });
 
-    await waitFor(() => expect(result.current.rosterLoading).toBe(false));
-    act(() => result.current.addOpenAttendee({
-      id: 'youth-2',
-      firstName: 'Jordan',
-      lastName: 'Lee',
-    }));
+    await waitFor(() => expect(result.current.attendanceLoading).toBe(false));
+    act(() => result.current.toggleOpenAttendee('youth-2'));
     await act(() => result.current.submit());
 
     expect(setSessionAttendance).toHaveBeenCalledWith(openSession.id, [{
@@ -105,6 +102,68 @@ describe('useSessionAttendanceModal', () => {
     await act(() => result.current.submit());
     expect(setSessionAttendance).toHaveBeenCalledTimes(2);
     expect(result.current.submitStatus).toBe('success');
+  });
+
+  it('initializes checked attendance and preserves saved notes when unchecking and rechecking', async () => {
+    const savedRoster = [{ ...roster[0], notes: 'Existing attendance note' }];
+    vi.mocked(getSessionRoster).mockResolvedValue(savedRoster);
+    const openSession = makeProgramSession({ enrollmentRequired: false });
+    const { result } = renderWorkflow({ session: openSession });
+
+    await waitFor(() => expect(result.current.attendanceLoading).toBe(false));
+    expect(result.current.roster).toEqual(savedRoster);
+    expect(result.current.youth.map(profile => profile.id)).toContain('youth-1');
+    expect(getAttendanceYouth).toHaveBeenCalledWith(expect.objectContaining({ signal: expect.any(AbortSignal) }));
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    expect(result.current.roster).toEqual([]);
+    act(() => result.current.toggleOpenAttendee('youth-2'));
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    await act(() => result.current.submit());
+
+    expect(setSessionAttendance).toHaveBeenCalledWith(openSession.id, [
+      { youthId: 'youth-2', status: 'present', notes: null },
+      { youthId: 'youth-1', status: 'present', notes: 'Existing attendance note' },
+    ]);
+  });
+
+  it('saves an unchecked open roster as an empty replacement', async () => {
+    const openSession = makeProgramSession({ enrollmentRequired: false });
+    const { result } = renderWorkflow({ session: openSession });
+    await waitFor(() => expect(result.current.attendanceLoading).toBe(false));
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    await act(() => result.current.submit());
+
+    expect(setSessionAttendance).toHaveBeenCalledWith(openSession.id, []);
+  });
+
+  it('blocks saving and draft changes when the youth lookup fails', async () => {
+    vi.mocked(getAttendanceYouth).mockRejectedValue(new Error('Youth unavailable'));
+    const openSession = makeProgramSession({ enrollmentRequired: false });
+    const { result } = renderWorkflow({ session: openSession });
+    await waitFor(() => expect(result.current.youthUnavailable).toBe(true));
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    await act(() => result.current.submit());
+
+    expect(result.current.youthError).toBe('Youth unavailable');
+    expect(result.current.roster).toEqual(roster);
+    expect(setSessionAttendance).not.toHaveBeenCalled();
+  });
+
+  it('waits for the complete youth list before allowing attendance replacement', async () => {
+    vi.mocked(getAttendanceYouth).mockReturnValue(new Promise(() => {}));
+    const openSession = makeProgramSession({ enrollmentRequired: false });
+    const { result } = renderWorkflow({ session: openSession });
+    await waitFor(() => expect(result.current.roster).toEqual(roster));
+
+    act(() => result.current.toggleOpenAttendee('youth-1'));
+    await act(() => result.current.submit());
+
+    expect(result.current.attendanceLoading).toBe(true);
+    expect(result.current.roster).toEqual(roster);
+    expect(setSessionAttendance).not.toHaveBeenCalled();
   });
 
   it('does not submit when the initial roster could not load', async () => {
@@ -170,5 +229,28 @@ describe('useSessionAttendanceModal', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     ));
     await waitFor(() => expect(view.result.current.selections['youth-1']).toBe('present'));
+  });
+
+  it('initializes a different cached session even when its roster reference is unchanged', async () => {
+    const firstSession = makeProgramSession({ enrollmentRequired: false });
+    const nextSession = makeProgramSession({ id: 'session-2', enrollmentRequired: false });
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryDefaults(SESSION_QUERY_KEY, { staleTime: Infinity });
+    queryClient.setQueryData([...SESSION_QUERY_KEY, firstSession.id, 'roster'], roster);
+    queryClient.setQueryData([...SESSION_QUERY_KEY, nextSession.id, 'roster'], roster);
+    queryClient.setQueryData([...SESSION_QUERY_KEY, 'attendance-youth'], [{
+      id: 'youth-1', firstName: 'Maya', lastName: 'Thompson',
+    }]);
+    const view = renderHook(
+      ({ target }) => useSessionAttendanceModal({ session: target, onSaved: vi.fn() }),
+      { initialProps: { target: firstSession }, wrapper: createQueryClientWrapper(queryClient) },
+    );
+    await waitFor(() => expect(view.result.current.roster).toEqual(roster));
+
+    act(() => view.result.current.toggleOpenAttendee('youth-1'));
+    expect(view.result.current.roster).toEqual([]);
+    view.rerender({ target: nextSession });
+
+    expect(view.result.current.roster).toEqual(roster);
   });
 });

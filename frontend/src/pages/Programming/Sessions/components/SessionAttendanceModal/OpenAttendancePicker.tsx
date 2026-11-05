@@ -1,68 +1,42 @@
-import Button from '../../../../../common/components/Button/Button';
-import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
-import type { AttendanceYouth } from '../../types';
+import Checklist from '../../../../../common/components/Checklist/Checklist';
+import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
+import type { AttendanceYouth } from '../../sessions.api';
 
 interface OpenAttendancePickerProps {
-  search: string;
-  appliedSearch: string;
-  searchResults: AttendanceYouth[];
-  searching: boolean;
+  youth: readonly AttendanceYouth[];
+  selectedYouthIds: readonly string[];
+  loading: boolean;
+  unavailable: boolean;
   disabled: boolean;
-  onSearchChange: (value: string) => void;
-  onSearchApply: () => void;
-  onSearchClear: () => void;
-  onCheckIn: (profile: AttendanceYouth) => void;
+  onToggle: (youthId: string) => void;
 }
 
 export default function OpenAttendancePicker({
-  search,
-  appliedSearch,
-  searchResults,
-  searching,
+  youth,
+  selectedYouthIds,
+  loading,
+  unavailable,
   disabled,
-  onSearchChange,
-  onSearchApply,
-  onSearchClear,
-  onCheckIn,
+  onToggle,
 }: OpenAttendancePickerProps) {
-  const showResults = appliedSearch.length >= 2;
-
   return (
-    <div className="open-attendance-picker">
-      <div className="open-attendance-picker__controls">
-        <SearchInput
-          label="Find youth profile"
-          value={search}
-          appliedValue={appliedSearch}
-          onChange={(event) => onSearchChange(event.target.value)}
-          onApply={onSearchApply}
-          onClear={onSearchClear}
-          placeholder="Search youth profiles"
+    <FormFieldGroup label="Youth attendance" disabled={disabled}>
+      {loading ? (
+        <p className="page-empty">Loading youth…</p>
+      ) : unavailable ? null : youth.length === 0 ? (
+        <p className="page-empty">No youth profiles available.</p>
+      ) : (
+        <Checklist
+          variant="form"
+          ariaLabel="Youth attendance"
+          options={youth.map(profile => ({ value: profile.id, label: `${profile.firstName} ${profile.lastName}` }))}
+          value={selectedYouthIds}
+          onToggle={onToggle}
           disabled={disabled}
+          search
+          dynamicItems
         />
-      </div>
-
-      {showResults && (
-        <div className="open-attendance-results" aria-label="Youth profile results">
-          {searching && <p className="page-empty">Searching…</p>}
-          {!searching && !searchResults.length && (
-            <p className="page-empty">No matching profiles.</p>
-          )}
-          {!searching && searchResults.map(profile => (
-            <div className="open-attendance-results__row" key={profile.id}>
-              <span>{profile.firstName} {profile.lastName}</span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => onCheckIn(profile)}
-                disabled={disabled}
-              >
-                Check in
-              </Button>
-            </div>
-          ))}
-        </div>
       )}
-    </div>
+    </FormFieldGroup>
   );
 }

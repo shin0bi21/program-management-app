@@ -6,7 +6,6 @@ import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 import type {
-  AttendanceYouth,
   ProgramSession,
   SessionAttachment,
   SessionListFilters,
@@ -44,12 +43,16 @@ interface UpdateSessionInput {
   description?: string | null;
 }
 
-export function searchAttendanceYouth(search: string, opts?: RequestOptions) {
-  const query = new URLSearchParams({ search: search.trim() });
-  const path = `/youth?${query}`;
+export interface AttendanceYouth {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export function getAttendanceYouth(opts?: RequestOptions) {
   return opts
-    ? apiClient.get<AttendanceYouth[]>(path, opts)
-    : apiClient.get<AttendanceYouth[]>(path);
+    ? apiClient.get<AttendanceYouth[]>('/youth', opts)
+    : apiClient.get<AttendanceYouth[]>('/youth');
 }
 
 export interface CreateSessionInput {

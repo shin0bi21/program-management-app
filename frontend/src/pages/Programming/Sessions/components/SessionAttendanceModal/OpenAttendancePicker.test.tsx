@@ -1,85 +1,44 @@
-import type { ComponentProps } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-
-import type { AttendanceYouth } from '../../types';
+import { expect, it, vi } from 'vitest';
 import OpenAttendancePicker from './OpenAttendancePicker';
 
-const profile = {
-  id: 'youth-1',
-  firstName: 'Maya',
-  lastName: 'Thompson',
-} satisfies AttendanceYouth;
+const youth = Array.from({ length: 60 }, (_, index) => ({
+  id: `youth-${index + 1}`,
+  firstName: 'Person',
+  lastName: String(index + 1),
+}));
 
-function renderPicker(overrides: Partial<ComponentProps<typeof OpenAttendancePicker>> = {}) {
-  const props: ComponentProps<typeof OpenAttendancePicker> = {
-    search: '',
-    appliedSearch: '',
-    searchResults: [],
-    searching: false,
-    disabled: false,
-    onSearchChange: vi.fn(),
-    onSearchApply: vi.fn(),
-    onSearchClear: vi.fn(),
-    onCheckIn: vi.fn(),
-    ...overrides,
-  };
-  render(<OpenAttendancePicker {...props} />);
-  return props;
-}
+it('wires the complete youth list and current attendance into a searchable dynamic checklist', () => {
+  const onToggle = vi.fn();
+  render(<OpenAttendancePicker youth={youth} selectedYouthIds={['youth-1']}
+    loading={false} unavailable={false} disabled={false} onToggle={onToggle} />);
+  expect(screen.getAllByRole('checkbox')).toHaveLength(25);
+  expect(screen.getByRole('checkbox', { name: /^Person 1$/ })).toBeChecked();
 
-describe('OpenAttendancePicker', () => {
-  it('forwards search changes without showing premature results', () => {
-    const props = renderPicker();
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Find youth profile' }), {
-      target: { value: 'M' },
-    });
-    expect(props.onSearchChange).toHaveBeenCalledWith('M');
-    expect(screen.queryByLabelText('Youth profile results')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search Youth attendance' }), {
+    target: { value: 'Person 60' },
   });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Person 60' }));
+  expect(onToggle).toHaveBeenCalledWith('youth-60');
+});
 
-  it('renders search states and forwards check-in', () => {
-    const props = renderPicker({ search: 'Ma', appliedSearch: 'Ma', searchResults: [profile] });
+it('distinguishes loading, unavailable, and successful empty lists', () => {
+  const props = { youth: [], selectedYouthIds: [], disabled: false, onToggle: vi.fn() };
+  const view = render(<OpenAttendancePicker {...props} loading unavailable={false} />);
+  expect(screen.getByText('Loading youth…')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Check in' }));
+  view.rerender(<OpenAttendancePicker {...props} loading={false} unavailable />);
+  expect(screen.queryByText('No youth profiles available.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
 
-    expect(screen.getByText('Maya Thompson')).toBeInTheDocument();
-    expect(props.onCheckIn).toHaveBeenCalledWith(profile);
-  });
+  view.rerender(<OpenAttendancePicker {...props} loading={false} unavailable={false} />);
+  expect(screen.getByText('No youth profiles available.')).toBeInTheDocument();
+});
 
-  it('renders searching and empty-result states', () => {
-    const view = render(<OpenAttendancePicker
-      search="Ma"
-      appliedSearch="Ma"
-      searchResults={[]}
-      searching
-      disabled={false}
-      onSearchChange={vi.fn()}
-      onSearchApply={vi.fn()}
-      onSearchClear={vi.fn()}
-      onCheckIn={vi.fn()}
-    />);
-    expect(screen.getByText('Searching…')).toBeInTheDocument();
+it('locks search and choices while saving', () => {
+  render(<OpenAttendancePicker youth={youth} selectedYouthIds={[]}
+    loading={false} unavailable={false} disabled onToggle={vi.fn()} />);
 
-    view.rerender(<OpenAttendancePicker
-      search="Ma"
-      appliedSearch="Ma"
-      searchResults={[]}
-      searching={false}
-      disabled={false}
-      onSearchChange={vi.fn()}
-      onSearchApply={vi.fn()}
-      onSearchClear={vi.fn()}
-      onCheckIn={vi.fn()}
-    />);
-    expect(screen.getByText('No matching profiles.')).toBeInTheDocument();
-  });
-
-  it('disables every action while attendance is saving', () => {
-    renderPicker({ search: 'Ma', appliedSearch: 'Ma', searchResults: [profile], disabled: true });
-
-    expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Check in' })).toBeDisabled();
-  });
+  expect(screen.getByRole('searchbox')).toBeDisabled();
+  expect(screen.getAllByRole('checkbox').every(checkbox => checkbox.hasAttribute('disabled'))).toBe(true);
 });
