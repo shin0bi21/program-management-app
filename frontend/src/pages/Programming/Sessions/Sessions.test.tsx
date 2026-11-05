@@ -190,25 +190,16 @@ describe('Sessions', () => {
   });
 
   // Entry and readiness.
-  it('applies an ephemeral search drafted while preferences are restoring', async () => {
-    let finishLoading!: (value: SessionPreference | null) => void;
-    preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
-    const rendered = render(
+  it('applies an ephemeral search after preferences are restored', async () => {
+    render(
       <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
         <Sessions />
       </MemoryRouter>,
     );
 
-    const search = screen.getByRole('textbox', { name: 'Search sessions' });
+    const search = await screen.findByRole('textbox', { name: 'Search sessions' });
     fireEvent.change(search, { target: { value: 'Communication' } });
     fireEvent.keyDown(search, { key: 'Enter' });
-
-    finishLoading(preferenceApi.value);
-    rendered.rerender(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
 
     await screen.findByRole('table', { name: 'Sessions' });
     await waitFor(() => expect(getSessions).toHaveBeenCalledWith(

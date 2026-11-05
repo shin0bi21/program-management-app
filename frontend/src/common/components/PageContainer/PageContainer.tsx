@@ -13,7 +13,6 @@ import ViewMenu from '../ViewMenu/ViewMenu';
 interface PageSearch {
   label: string;
   placeholder?: string;
-  availableWhileLoading?: boolean;
 }
 
 type PageContent =
@@ -59,8 +58,6 @@ export default function PageContainer<T>({
   const filters = controls?.filters;
   const searchControls = controls?.search;
 
-  // Only local search may accept edits before persisted controls finish restoring.
-  const searchAvailable = ready || search?.availableWhileLoading;
   const activeView = controls?.view ?? 'table';
   const content = activeView === 'calendar' ? { calendar } : { table };
 
@@ -69,7 +66,7 @@ export default function PageContainer<T>({
       <PageHeader
         title={title}
         actions={actions}
-        search={search && searchControls && searchAvailable ? <SearchInput
+        search={ready && search && searchControls ? <SearchInput
           label={search.label}
           placeholder={search.placeholder}
           value={searchControls.value}
