@@ -1,19 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
   getSessionRoster,
-  searchAttendanceYouth,
+  getAttendanceYouth,
   setSessionAttendance,
   type SessionAttendanceResult,
+  type SessionAttendanceRecord,
+  type AttendanceYouth,
 } from '../../../sessions.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
-
-const SESSION_QUERY_KEY = ['sessions'] as const;
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { AttendanceStatus } from '../../../../../../common/features/AttendanceStatusSelect/types';
-import type { AttendanceYouth, ProgramSession, SessionRosterMember } from '../../../types';
+import type { ProgramSession, SessionRosterMember } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
+
+const SESSION_QUERY_KEY = ['sessions'] as const;
 
 interface UseSessionAttendanceModalOptions {
   session: ProgramSession | null;
@@ -29,9 +31,8 @@ export default function useSessionAttendanceModal({
   const sessionId = session?.id;
 
   const [roster, setRoster] = useState<SessionRosterMember[]>([]);
+  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
-  const [search, setSearch] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -43,9 +44,8 @@ export default function useSessionAttendanceModal({
     draftDirtyRef.current = false;
     unlock();
     setRoster([]);
+    setSelectedYouthIds([]);
     setSelections({});
-    setSearch('');
-    setAppliedSearch('');
     setSubmitStatus('idle');
     setStatusMessage('');
   }, [sessionId, unlock]);
@@ -60,71 +60,80 @@ export default function useSessionAttendanceModal({
     if (!rosterQuery.data || draftDirtyRef.current) return;
 
     setRoster(rosterQuery.data);
+    setSelectedYouthIds(rosterQuery.data.map(member => member.youthId));
     setSelections(Object.fromEntries(
       rosterQuery.data.map(member => [member.youthId, member.status ?? '']),
     ));
-  }, [rosterQuery.data]);
+  }, [rosterQuery.data, sessionId]);
 
-  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
-  const clearSearch = useCallback(() => {
-    setSearch('');
-    setAppliedSearch('');
-  }, []);
-
-  const searchQuery = useQuery<AttendanceYouth[]>({
-    queryKey: ['sessions', 'attendance-youth-search', appliedSearch],
-    queryFn: ({ signal }) => searchAttendanceYouth(appliedSearch, { signal }),
-    enabled: Boolean(isOpenRoster && appliedSearch.length >= 2),
+  const youthQuery = useQuery<AttendanceYouth[]>({
+    queryKey: [...SESSION_QUERY_KEY, 'attendance-youth'],
+    queryFn: ({ signal }) => getAttendanceYouth({ signal }),
+    enabled: isOpenRoster,
   });
-
-  const searchResults = useMemo(() => {
-    const checkedInYouthIds = new Set(roster.map(member => member.youthId));
-    return (searchQuery.data ?? []).filter(profile => !checkedInYouthIds.has(profile.id));
-  }, [roster, searchQuery.data]);
   const rosterUnavailable = Boolean(rosterQuery.error && !rosterQuery.data);
+  const youthUnavailable = isOpenRoster && Boolean(youthQuery.error);
+  const attendanceLoading = rosterQuery.isLoading || (isOpenRoster && youthQuery.isLoading);
+  const attendanceUnavailable = rosterUnavailable || youthUnavailable;
+  const controlsDisabled = submissionComplete || attendanceLoading || attendanceUnavailable;
 
-  const addOpenAttendee = (
-    profile: AttendanceYouth,
-  ) => {
-    draftDirtyRef.current = true;
-    setRoster(current => current.some(member => member.youthId === profile.id)
-      ? current
-      : [...current, {
-          youthId: profile.id,
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          status: 'present' as const,
-          notes: null,
-        }].sort((a, b) => (
-          `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
-        )));
-    setSearch('');
-  };
+  const youth = [...(youthQuery.data ?? [])];
+  const youthIds = new Set(youth.map(profile => profile.id));
+  // Keep saved attendees available even if the current youth lookup no longer includes them.
+  for (const member of roster) {
+    if (!youthIds.has(member.youthId)) {
+      youth.push({ id: member.youthId, firstName: member.firstName, lastName: member.lastName });
+    }
+  }
+  youth.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 
-  const removeOpenAttendee = (youthId: string) => {
+  const savedYouthIds = new Set(roster.map(member => member.youthId));
+  const hasAttendanceChanges = selectedYouthIds.length !== savedYouthIds.size
+    || selectedYouthIds.some(youthId => !savedYouthIds.has(youthId));
+  const noOpenAttendanceChanges = isOpenRoster && !hasAttendanceChanges;
+  const emptyEnrolledRoster = !isOpenRoster && roster.length === 0;
+  const submitDisabled = controlsDisabled || noOpenAttendanceChanges || emptyEnrolledRoster;
+
+  const toggleOpenAttendee = (youthId: string) => {
+    if (!isOpenRoster || controlsDisabled) return;
+
+    if (!youth.some(profile => profile.id === youthId)) return;
+
     draftDirtyRef.current = true;
-    setRoster(current => current.filter(member => member.youthId !== youthId));
+    setSelectedYouthIds(current => current.includes(youthId)
+      ? current.filter(id => id !== youthId)
+      : [...current, youthId]);
   };
 
   const updateAttendanceStatus = (youthId: string, status: AttendanceStatus | '') => {
+    if (controlsDisabled) return;
+
     draftDirtyRef.current = true;
     setSelections(current => ({ ...current, [youthId]: status }));
   };
 
   const submit = async () => {
-    if (!session || rosterUnavailable || !tryLock()) return;
+    if (!session || submitDisabled || !tryLock()) return;
 
     const sessionName = session.theme || `${session.programName} session`;
-    const attendance = isOpenRoster
-      ? roster.map(member => ({
-          youthId: member.youthId,
-          status: 'present' as const,
-          notes: member.notes,
-        }))
-      : roster.flatMap(member => {
-          const status = selections[member.youthId];
-          return status ? [{ youthId: member.youthId, status, notes: member.notes }] : [];
+    const attendance: SessionAttendanceRecord[] = [];
+    if (isOpenRoster) {
+      for (const youthId of selectedYouthIds) {
+        const savedMember = roster.find(member => member.youthId === youthId);
+        attendance.push({
+          youthId,
+          status: 'present',
+          notes: savedMember?.notes ?? null,
         });
+      }
+    } else {
+      for (const member of roster) {
+        const status = selections[member.youthId];
+        if (!status) continue;
+
+        attendance.push({ youthId: member.youthId, status, notes: member.notes });
+      }
+    }
 
     setSubmitStatus('submitting');
     setStatusMessage(`Saving attendance for ${sessionName}...`);
@@ -154,28 +163,27 @@ export default function useSessionAttendanceModal({
 
   return {
     roster,
+    selectedYouthIds,
+    hasAttendanceChanges,
     selections,
-    search,
-    appliedSearch,
-    searchResults,
+    youth,
     isOpenRoster,
-    rosterLoading: rosterQuery.isLoading,
+    attendanceLoading,
+    attendanceUnavailable,
+    controlsDisabled,
+    submitDisabled,
+    youthUnavailable,
     rosterError: rosterQuery.error
       ? getErrorMessage(rosterQuery.error, 'Could not load session roster')
       : null,
     rosterUnavailable,
-    searching: searchQuery.isFetching,
-    searchError: searchQuery.error
-      ? getErrorMessage(searchQuery.error, 'Could not search youth profiles')
+    youthError: isOpenRoster && youthQuery.error
+      ? getErrorMessage(youthQuery.error, 'Could not load youth profiles')
       : null,
     submitStatus,
     statusMessage: statusMessage || undefined,
     submissionComplete,
-    setSearch,
-    applySearch,
-    clearSearch,
-    addOpenAttendee,
-    removeOpenAttendee,
+    toggleOpenAttendee,
     updateAttendanceStatus,
     submit,
   };

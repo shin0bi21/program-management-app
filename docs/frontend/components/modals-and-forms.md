@@ -60,6 +60,16 @@ actions; their titles and messages describe the action. Close-only dialogs keep
 
 Use `FormField`, `FloatingSelect`, `Button`, and `ModalFormFooter` when their contracts fit. Portalled choices use shared floating primitives so positioning, dismissal, keyboard behavior, and focus return remain centralized.
 
+Open Session attendance uses a form `Checklist` with `search` and `dynamicItems`
+enabled. Load all youth through the existing authorized Youth lookup when the
+modal opens; filter and reveal batches locally. Existing attendees initialize separate checked IDs; editing them never mutates
+the loaded youth or attendance records. Compare the draft with the initial checks
+and disable unchanged saves. Checked youth save as present, and unchecked youth are omitted from the attendance
+replacement. Preserve saved notes when toggling an existing attendee. Block edits
+and saving until both the roster and youth lookup are ready; a failed lookup must
+not become an empty replacement. Enrollment-based attendance retains its roster
+and per-youth status controls.
+
 `Modal` closes automatically 1000 ms after its status becomes `success`. Omit
 `successDelay` to use this standard; pass an explicit delay only when a workflow
 needs different timing, or `0` to disable automatic closure. Shared modal wrappers

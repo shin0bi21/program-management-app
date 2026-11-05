@@ -2,36 +2,21 @@ import { act, screen } from '@testing-library/react';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProgramSession } from '../../types';
+import { makeProgramSession } from '../../../../../tests/factories/session';
 import SessionAttendanceModal from './SessionAttendanceModal';
 
 const api = vi.hoisted(() => ({
   getSessionRoster: vi.fn(),
   setSessionAttendance: vi.fn(),
-  searchAttendanceYouth: vi.fn(),
+  getAttendanceYouth: vi.fn(),
 }));
 
 vi.mock('../../sessions.api', () => api);
 
-const session: ProgramSession = {
-      id: 'session-1',
-  cycleId: 'cycle-1',
-      sessionTypeId: 'type-regular',
-      sessionTypeName: 'Regular',
-  theme: 'Communication',
-  cycleName: 'Summer 2026',
-  programId: 'program-1',
-  programName: 'Soft Skills',
-  enrollmentRequired: true,
+const session = makeProgramSession({
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',
-  cancelledAt: null,
-  description: null,
-  attendanceMarkedCount: 0,
-  attendedCount: 0,
-  attendanceRate: null,
-  state: 'upcoming',
-};
+});
 
 describe('SessionAttendanceModal', () => {
   beforeEach(() => {
@@ -44,7 +29,7 @@ describe('SessionAttendanceModal', () => {
       notes: null,
     }]);
     api.setSessionAttendance.mockResolvedValue({ roster: [], session });
-    api.searchAttendanceYouth.mockResolvedValue([]);
+    api.getAttendanceYouth.mockResolvedValue([]);
   });
 
   it('renders session context and roster failures', async () => {
@@ -62,7 +47,7 @@ describe('SessionAttendanceModal', () => {
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
-    expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
@@ -70,7 +55,7 @@ describe('SessionAttendanceModal', () => {
     const user = userEvent.setup();
     let finishSave: (value: unknown[]) => void = () => {};
     api.getSessionRoster.mockResolvedValue([]);
-    api.searchAttendanceYouth.mockResolvedValue([{
+    api.getAttendanceYouth.mockResolvedValue([{
       id: 'youth-2',
       firstName: 'Jordan',
       lastName: 'Drop In',
@@ -89,25 +74,62 @@ describe('SessionAttendanceModal', () => {
       />,
     );
 
-    expect(await screen.findByText('No youth have checked in yet.')).toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: 'Jordan Drop In' })).not.toBeChecked();
     expect(screen.queryByText('Late')).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole('textbox', { name: 'Find youth profile' }), 'Jordan');
-    await user.click(screen.getByRole('button', { name: 'Search' }));
-    await user.click(await screen.findByRole('button', { name: 'Check in' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Jordan Drop In' }));
     expect(screen.getByText('Jordan Drop In')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(api.setSessionAttendance).toHaveBeenCalledOnce();
-    expect(screen.getByRole('textbox', { name: 'Find youth profile' })).toBeDisabled();
-    screen.getAllByRole('button', { name: 'Remove' }).forEach(button => {
-      expect(button).toBeDisabled();
-    });
+    expect(screen.getByRole('searchbox', { name: 'Search Youth attendance' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Jordan Drop In' })).toBeDisabled();
+    expect(api.getAttendanceYouth).toHaveBeenCalledOnce();
+    expect(api.setSessionAttendance).toHaveBeenCalledWith('session-1', [{ youthId: 'youth-2', status: 'present', notes: null }]);
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
 
     await act(async () => finishSave([]));
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  it('searches all youth locally and saves only the checked choices', async () => {
+    const user = userEvent.setup();
+    const youth = Array.from({ length: 60 }, (_, index) => ({
+      id: `youth-${index + 1}`,
+      firstName: 'Person',
+      lastName: String(index + 1).padStart(2, '0'),
+    }));
+    api.getAttendanceYouth.mockResolvedValue(youth);
+    api.getSessionRoster.mockResolvedValue([{
+      youthId: 'youth-1', firstName: 'Person', lastName: '01', status: 'present', notes: null,
+    }]);
+    render(<SessionAttendanceModal session={{ ...session, enrollmentRequired: false }}
+      onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(await screen.findByRole('checkbox', { name: 'Person 01' })).toBeChecked();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(25);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Person 01' }));
+    await user.type(screen.getByRole('searchbox'), 'Person 60');
+    await user.click(screen.getByRole('checkbox', { name: 'Person 60' }));
+    await user.clear(screen.getByRole('searchbox'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(api.getAttendanceYouth).toHaveBeenCalledOnce();
+    expect(api.setSessionAttendance).toHaveBeenCalledWith('session-1', [
+      { youthId: 'youth-60', status: 'present', notes: null },
+    ]);
+  });
+
+  it('shows a youth lookup failure and prevents saving incomplete attendance', async () => {
+    api.getAttendanceYouth.mockRejectedValue(new Error('Youth unavailable'));
+    render(<SessionAttendanceModal session={{ ...session, enrollmentRequired: false }}
+      onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Youth unavailable');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByText('No youth profiles available.')).not.toBeInTheDocument();
   });
 });
