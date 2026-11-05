@@ -1,8 +1,11 @@
-# Configure Production Access
+# Configure SSH Access to the Server
 
-Use this guide to configure GitHub Actions and workstation SSH access to
-Lightsail. Follow the [production operating rules](README.md) before using
-server credentials or changing production.
+Configure SSH access from GitHub Actions and your workstation to the Lightsail
+server. GitHub Actions uses this connection to run deployment commands on the
+server.
+
+The server also needs a separate connection to fetch code from GitHub. See
+[Restore Repository Access from the Server](github-authentication.md) for that credential.
 
 ## Deployment Access
 
@@ -25,7 +28,7 @@ pbcopy < ~/.ssh/be-original-key.pem
 
 Create the GitHub environment `production`, which the deployment job uses for
 environment protection rules and environment-scoped secrets when configured.
-Configure the [required checks](../delivery/ci.md#required-checks) in repository rulesets.
+Configure the [required checks](../../../delivery/ci.md#required-checks) in repository rulesets.
 
 From an authorized workstation, verify manual server access:
 
@@ -34,7 +37,7 @@ ssh -i ~/.ssh/be-original-key.pem ubuntu@18.216.104.46
 ```
 
 Successful SSH confirms workstation access; the deployment job must also verify
-the Actions secret. Follow [deployment monitoring](../delivery/deployment.md#monitoring-and-rerunning-a-deployment)
+the Actions secret. Follow [deployment monitoring](../../deployment.md#monitoring-and-rerunning-a-deployment)
 for an already authorized release. If access still fails, diagnose the reported
 secret, key, host, or SSH error before changing application containers.
 
@@ -43,7 +46,7 @@ secret, key, host, or SSH error before changing application containers.
 <a id="server-github-access"></a>
 
 If SSH works but repository fetches fail, use
-[Restore Server GitHub Authentication](github-authentication.md).
+[Restore Repository Access from the Server](github-authentication.md).
 
 <a id="create-a-replacement-token"></a>
 
@@ -64,4 +67,4 @@ For the release already authorized, follow
 <a id="restore-verification-email"></a>
 
 If login fails while sending a verification code, use
-[Restore Verification Email](email-recovery.md).
+[Restore Verification Email](../email-recovery.md).

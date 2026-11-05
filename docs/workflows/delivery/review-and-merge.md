@@ -149,5 +149,5 @@ revalidate the remaining map and prepare the next concern. Continue only when
 the shipping request covers it. Report blocked cleanup before preparing another
 branch; never prepare multiple concern branches from the same pre-merge base.
 
-Shipping ends at `develop`. Follow [Production deployment](deployment.md) only
+Shipping ends at `develop`. Follow [Production deployment](../production/deployment.md) only
 after separate explicit authorization.

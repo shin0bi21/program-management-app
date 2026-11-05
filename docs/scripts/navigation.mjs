@@ -82,25 +82,30 @@ export const navigation = [
       { label: 'File Structure and Ownership', source: 'docs/workflows/file-structure.md' },
       { label: 'Script Structure', source: 'docs/workflows/scripts.md' },
       { label: 'Review and Merge Changes', source: 'docs/workflows/delivery/review-and-merge.md' },
-      { label: 'Deploy, Verify, and Recover', source: 'docs/workflows/delivery/deployment.md' },
       { label: 'CI', source: 'docs/workflows/delivery/ci.md' },
       { label: 'Repository Reports', source: 'docs/workflows/delivery/reports.md' },
-    ],
-  },
-  {
-    label: 'Admin',
-    items: [
-      { label: 'Manual Access and Deployment', source: 'docs/workflows/admin/manual-deployment.md' },
     ],
   },
   {
     label: 'Production',
     items: [
       { label: 'Overview', source: 'docs/workflows/production/README.md' },
-      { label: 'Configure Access', source: 'docs/workflows/production/access.md' },
-      { label: 'Restore GitHub Authentication', source: 'docs/workflows/production/github-authentication.md' },
-      { label: 'Restore Verification Email', source: 'docs/workflows/production/email-recovery.md' },
-      { label: 'Inspect NGINX and TLS', source: 'docs/workflows/production/nginx-and-tls.md' },
+      { label: 'Deploy to Production', source: 'docs/workflows/production/deployment.md' },
+      {
+        label: 'Common Issues',
+        items: [
+          {
+            label: 'GitHub',
+            items: [
+              { label: 'SSH Access to the Server', source: 'docs/workflows/production/common-issues/github/access.md' },
+              { label: 'Repository Access from the Server', source: 'docs/workflows/production/common-issues/github/github-authentication.md' },
+            ],
+          },
+          { label: 'Restore Verification Email', source: 'docs/workflows/production/common-issues/email-recovery.md' },
+          { label: 'Renew HTTPS Certificates', source: 'docs/workflows/production/common-issues/certificate-renewal.md' },
+          { label: 'Reload NGINX', source: 'docs/workflows/production/common-issues/nginx-reload.md' },
+        ],
+      },
     ],
   },
 ];

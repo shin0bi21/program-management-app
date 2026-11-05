@@ -12,6 +12,17 @@ const manifest = await prepareContent({ gitRef });
 export default defineConfig({
   output: 'static',
   redirects: {
+    '/workflows/delivery/deployment/': '/workflows/production/deployment/',
+    '/workflows/production/manual-deployment/': '/workflows/production/deployment/',
+    '/workflows/production/email-recovery/': '/workflows/production/common-issues/email-recovery/',
+    '/workflows/production/certificate-renewal/': '/workflows/production/common-issues/certificate-renewal/',
+    '/workflows/production/github/access/': '/workflows/production/common-issues/github/access/',
+    '/workflows/production/github/github-authentication/': '/workflows/production/common-issues/github/github-authentication/',
+
+    '/workflows/production/nginx-and-tls/': '/workflows/production/common-issues/certificate-renewal/',
+    '/workflows/production/access/': '/workflows/production/common-issues/github/access/',
+    '/workflows/production/github-authentication/': '/workflows/production/common-issues/github/github-authentication/',
+    '/workflows/admin/manual-deployment/': '/workflows/production/deployment/',
     '/workflows/': '/#documentation',
     '/frontend/pages/message-overlays/': '/frontend/components/message-overlays/',
     '/frontend/scaffolding/': '/frontend/pages/scaffolding/',
@@ -21,7 +32,7 @@ export default defineConfig({
     '/backend/reports/': '/backend/services/#render-reports',
     '/workflows/review/': '/workflows/delivery/review-and-merge/#review',
     '/workflows/shipping/': '/workflows/delivery/review-and-merge/#shipping',
-    '/workflows/github-credentials/': '/workflows/production/github-authentication/#server-github-access',
+    '/workflows/github-credentials/': '/workflows/production/common-issues/github/github-authentication/#server-github-access',
     '/workflows/setup/': '/workflows/local-development/setup/',
     '/workflows/debugging/': '/workflows/local-development/debugging/',
     '/workflows/data-snapshots/': '/workflows/delivery/refresh-data/',
@@ -30,8 +41,8 @@ export default defineConfig({
     '/workflows/changes/': '/workflows/delivery/review-and-merge/',
     '/workflows/ci/': '/workflows/delivery/ci/',
     '/workflows/reports/': '/workflows/delivery/reports/',
-    '/workflows/deployment/': '/workflows/delivery/deployment/',
-    '/workflows/access/': '/workflows/production/access/',
+    '/workflows/deployment/': '/workflows/production/deployment/',
+    '/workflows/access/': '/workflows/production/common-issues/github/access/',
   },
   markdown: {
     processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),

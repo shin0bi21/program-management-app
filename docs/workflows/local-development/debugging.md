@@ -53,7 +53,7 @@ isolate an error in recent development Docker logs.
 
 ## Production Login Fails While Sending a Verification Email
 
-Use [Restore Verification Email](../production/email-recovery.md#restore-verification-email) for
+Use [Restore Verification Email](../production/common-issues/email-recovery.md#restore-verification-email) for
 production SMTP credential failures. Local debugging commands below use the
 development Compose configuration and must not be copied into production.
 

@@ -7,7 +7,7 @@ choose the local equivalent of a failed check.
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
 pull requests to `main` are rejected. See [Review and Merge Changes](review-and-merge.md#shipping) and
-[Deployment](deployment.md) for those procedures.
+[Deployment](../production/deployment.md) for those procedures.
 
 ## Workflow Topology
 
@@ -122,7 +122,7 @@ of backend helpers written for CommonJS compilation.
 
 Changed pattern checks run in the quality job alongside static analysis.
 Scheduled Playwright retains failure traces. Deployment failures and
-reruns belong to the [deployment guide](deployment.md#monitoring-and-rerunning-a-deployment).
+reruns belong to the [deployment guide](../production/deployment.md#monitoring-and-rerunning-a-deployment).
 
 ## Required Checks
 
@@ -140,7 +140,7 @@ frontend application jobs follow changed-path selection.
 
 ## Change CI
 
-Changed-pattern enforcement failures appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](deployment.md).
+Changed-pattern enforcement failures appear in the quality job logs. Scheduled Playwright retains failure traces. Deployment monitoring and reruns are documented in [production deployment](../production/deployment.md).
 
 | Owner | Responsibility |
 |---|---|
