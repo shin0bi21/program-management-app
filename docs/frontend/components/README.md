@@ -80,9 +80,21 @@ semantics so typing and Tab navigation remain available.
 The default `compact` appearance serves filters; `inMenu` preserves menu checkbox
 semantics and the floating menu's keyboard navigation. Appearance does not select
 interaction semantics. Callers own drafts, single/multiple selection rules,
-loading/errors/empty states, and submission. Wrap a form checklist in `FormFieldGroup`
-for its visible title, native fieldset/legend, and standard form-label spacing.
+loading/errors/empty states, and submission. A visible title is optional. When
+useful, wrap a form checklist in
+`FormFieldGroup` for its title, native fieldset/legend, and standard label spacing.
+Keep the Checklist accessible name even when no visible title is shown.
 React Hook Form consumers connect array fields through `Controller`.
+
+## Searching Loaded Choices
+
+`SearchInput` accepts controlled `value`, `onChange`, and `onClear`. Supply `onApply`
+when a separate Search action is needed; otherwise changes take effect as the user
+types. `appliedValue` keeps Clear available when an applied search differs from the
+current text. The shared input owns styling and clear-button focus return; callers
+own spacing within their layout. `useOptionSearch` owns search text and
+case-insensitive substring filtering of supplied option labels, preserving each option's data. Checklist filters
+before batching. Callers still own data fetching, loading, and selected values.
 
 ## Type and Status Labels
 

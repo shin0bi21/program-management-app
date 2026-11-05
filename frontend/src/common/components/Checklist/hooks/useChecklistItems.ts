@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { useOptionSearch } from '../../../hooks/useOptionSearch';
 
 interface ChecklistOption {
   value: string;
@@ -15,11 +16,9 @@ const BATCH_SIZE = 25;
 
 export function useChecklistItems({ options, dynamicItems, searchEnabled }: ChecklistItemsOptions) {
   const itemsRef = useRef<HTMLDivElement>(null);
-  const [search, setSearch] = useState('');
+  const { search, setSearch, query, matches } = useOptionSearch(options, searchEnabled);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
-  const query = searchEnabled ? search.toLowerCase() : '';
-  const matches = query ? options.filter(option => option.label.toLowerCase().includes(query)) : options;
   const items = dynamicItems ? matches.slice(0, visibleCount) : matches;
   const hasMoreItems = items.length < matches.length;
 
