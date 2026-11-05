@@ -1,12 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
+import PageContainer from '../../common/components/PageContainer/PageContainer';
 import Button from '../../common/components/Button/Button';
-import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
-import FilterCard from '../../common/components/FilterCard/FilterCard';
-import PageBody from '../../common/components/PageBody/PageBody';
-import PageMessageOverlay, { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../common/components/SearchInput/SearchInput';
+import { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
 import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
 import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
@@ -56,9 +52,9 @@ export default function Youth() {
   // Filter configuration.
   const youthFilters = useMemo<YouthFilters | null>(() => controlsReady ? {
     search: search.appliedValue,
-    programIds: filters.programIds,
-    cycleIds: filters.cycleIds,
-  } : null, [search.appliedValue, controlsReady, filters.programIds, filters.cycleIds]);
+    programIds: filters.values.programIds,
+    cycleIds: filters.values.cycleIds,
+  } : null, [search.appliedValue, controlsReady, filters.values.programIds, filters.values.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['programCycles'][number] | null>(null);
@@ -109,32 +105,15 @@ export default function Youth() {
   // Render.
   return (
     <>
-      <main className="page-container">
-        <PageHeader
-          title="Profiles"
-          actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-          search={controlsReady ? <SearchInput
-            label="Search youth"
-            value={search.value}
-            appliedValue={search.appliedValue}
-            onChange={event => search.setValue(event.target.value)}
-            onApply={search.apply}
-            onClear={search.clear}
-            placeholder="Search youth, school, or program"
-          /> : undefined}
-          columns={controlsReady ? <ColumnVisibilityMenu
-            columns={youthColumns}
-            hiddenColumnKeys={table.hiddenColumns}
-            onHiddenColumnKeysChange={table.setHiddenColumns}
-          /> : undefined}
-          filters={controlsReady ? <FilterCard
-            categories={filters.definitions}
-            values={{ program: filters.programIds, cycle: filters.cycleIds }}
-            onApply={filters.apply}
-            onClearAll={filters.clear}
-          /> : undefined}
-        />
-        <PageMessageOverlay messages={[
+      <PageContainer
+        title="Profiles"
+        actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
+        ariaLabel="Youth profiles"
+        controls={controls}
+        loadingLabel="Loading saved youth preferences…"
+        search={{ label: 'Search youth', placeholder: 'Search youth, school, or program' }}
+        columns={youthColumns}
+        messages={[
           preferencesError,
           programsError,
           cyclesError,
@@ -143,44 +122,40 @@ export default function Youth() {
             message: profileNotes.error,
             action: { label: 'Retry', onClick: profileNotes.retry },
           } : null,
-        ]} />
-
-        {!controlsReady ? <p role="status">Loading saved youth preferences…</p> : <PageBody
-          ariaLabel="Youth profiles"
-          table={<YouthTable
-            columns={youthColumns}
-            filters={youthFilters}
-            hiddenColumnKeys={table.hiddenColumns}
-            selectedProfileId={selectedProfileId}
-            onSelectedProfileResolved={selectProfile}
-            onRowSelect={selectProfile}
-            sorting={table.sorting}
-            onSortingChange={table.setSorting}
-            columnWidths={table.columnWidths}
-            onColumnWidthsChange={table.setColumnWidths}
-            onMessageChange={setViewError}
-          />}
-          dashboard={<YouthDashboard
-            profile={selectedProfile}
-            canWrite={canWrite}
-            onManagePrimaryContact={setContactTarget}
-            canManageAttendance={canManageAttendance}
-            onManageAttendance={setAttendanceTarget}
-            canViewAttendanceReport={canViewAttendanceReport}
-            onViewAttendanceReport={programCycle => {
-              if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
-            }}
-            profileNotes={profileNotes.notes}
-            profileNotesLoading={profileNotes.loading}
-            profileNotesError={profileNotes.error}
-            onRetryProfileNotes={profileNotes.retry}
-            onSelectProfileNote={profileNotes.openDetails}
-            onAddProfileNote={() => profileNotes.openEditor('new')}
-            onEditProfileNote={profileNotes.openEditor}
-            onDeleteProfileNote={profileNotes.requestDelete}
-          />}
+        ]}
+        dashboard={<YouthDashboard
+          profile={selectedProfile}
+          canWrite={canWrite}
+          onManagePrimaryContact={setContactTarget}
+          canManageAttendance={canManageAttendance}
+          onManageAttendance={setAttendanceTarget}
+          canViewAttendanceReport={canViewAttendanceReport}
+          onViewAttendanceReport={programCycle => {
+            if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
+          }}
+          profileNotes={profileNotes.notes}
+          profileNotesLoading={profileNotes.loading}
+          profileNotesError={profileNotes.error}
+          onRetryProfileNotes={profileNotes.retry}
+          onSelectProfileNote={profileNotes.openDetails}
+          onAddProfileNote={() => profileNotes.openEditor('new')}
+          onEditProfileNote={profileNotes.openEditor}
+          onDeleteProfileNote={profileNotes.requestDelete}
         />}
-      </main>
+        table={<YouthTable
+          columns={youthColumns}
+          filters={youthFilters}
+          hiddenColumnKeys={table.hiddenColumns}
+          selectedProfileId={selectedProfileId}
+          onSelectedProfileResolved={selectProfile}
+          onRowSelect={selectProfile}
+          sorting={table.sorting}
+          onSortingChange={table.setSorting}
+          columnWidths={table.columnWidths}
+          onColumnWidthsChange={table.setColumnWidths}
+          onMessageChange={setViewError}
+        />}
+      />
 
       <YouthModal
         isOpen={modalTarget !== null}

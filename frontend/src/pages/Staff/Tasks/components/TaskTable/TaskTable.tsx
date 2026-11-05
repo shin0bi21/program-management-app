@@ -2,7 +2,8 @@ import tableRefreshMessage from '../../../../../common/components/Table/tableRef
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { Task, TasksFilters } from '../../types';
+import type { TasksFilters } from '../../tasks.api';
+import type { Task } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
 import useTaskTableData from './hooks/useTaskTableData';

@@ -1,14 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
+import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import SchoolModal from '../../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
@@ -40,9 +36,9 @@ export default function Users() {
   // Filter configuration.
   const accountFilters = useMemo<UserFilters | null>(() => controlsReady ? {
     search: search.appliedValue,
-    roles: filters.roles,
-    statuses: filters.statuses,
-  } : null, [search.appliedValue, controlsReady, filters.roles, filters.statuses]);
+    roles: filters.values.roles,
+    statuses: filters.values.statuses,
+  } : null, [search.appliedValue, controlsReady, filters.values.roles, filters.values.statuses]);
 
   // Page-spanning account actions and cache reconciliation.
   const { revokeInvite, toggleStatus, syncSavedAccount, syncYouthInvitation } = useAccountActions({
@@ -69,61 +65,48 @@ export default function Users() {
   // Render.
   return (
     <>
-      <main className="page-container manage-accounts-page">
-        <PageHeader
-          title="Users"
-          actions={(
-            <div className="users-actions">
-              {isAdmin && canWrite && canInviteYouth ? (
-                <ActionsMenu
-                  triggerLabel="+ Add"
-                  items={[
-                    { id: 'invite-staff', label: 'Invite Staff', onClick: modals.account.openNew },
-                    { id: 'invite-youth', label: 'Invite Youth', onClick: modals.youthInvite.show },
-                  ]}
-                />
-              ) : canInviteYouth ? (
-                <Button onClick={modals.youthInvite.show}>+ Add</Button>
-              ) : isAdmin && canWrite ? (
-                <Button onClick={modals.account.openNew}>+ Add</Button>
-              ) : null}
-            </div>
-          )}
-          search={<SearchInput
-            label="Search accounts"
-            value={search.value}
-            appliedValue={search.appliedValue}
-            onChange={event => search.setValue(event.target.value)}
-            onApply={search.apply}
-            onClear={search.clear}
-            placeholder="Search by name or email"
-          />}
-          columns={controlsReady ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={table.hiddenColumns} onHiddenColumnKeysChange={table.setHiddenColumns} /> : undefined}
-          filters={controlsReady ? <FilterCard
-            categories={filters.definitions}
-            values={{ status: filters.statuses, role: filters.roles }}
-            onApply={filters.apply}
-            onClearAll={filters.clear}
-          /> : undefined}
-        />
-        <PageMessageOverlay messages={[preferencesError, viewError]} />
-
-        {!controlsReady ? <p role="status">Loading saved account preferences…</p> : <PageBody
-          ariaLabel="Account records"
-          dashboard={null}
-          table={<UserTable
-            queryKey={ACCOUNTS_TABLE_QUERY_KEY}
-            filters={accountFilters}
-            columns={columns}
-            hiddenColumnKeys={table.hiddenColumns}
-            sorting={table.sorting}
-            onSortingChange={table.setSorting}
-            columnWidths={table.columnWidths}
-            onColumnWidthsChange={table.setColumnWidths}
-            onMessageChange={setViewError}
-          />}
+      <PageContainer
+        title="Users"
+        className="manage-accounts-page"
+        ariaLabel="Account records"
+        controls={controls}
+        loadingLabel="Loading saved account preferences…"
+        actions={(
+          <div className="users-actions">
+            {isAdmin && canWrite && canInviteYouth ? (
+              <ActionsMenu
+                triggerLabel="+ Add"
+                items={[
+                  { id: 'invite-staff', label: 'Invite Staff', onClick: modals.account.openNew },
+                  { id: 'invite-youth', label: 'Invite Youth', onClick: modals.youthInvite.show },
+                ]}
+              />
+            ) : canInviteYouth ? (
+              <Button onClick={modals.youthInvite.show}>+ Add</Button>
+            ) : isAdmin && canWrite ? (
+              <Button onClick={modals.account.openNew}>+ Add</Button>
+            ) : null}
+          </div>
+        )}
+        search={{
+          label: 'Search accounts',
+          placeholder: 'Search by name or email',
+          availableWhileLoading: true,
+        }}
+        columns={columns}
+        messages={[preferencesError, viewError]}
+        table={<UserTable
+          queryKey={ACCOUNTS_TABLE_QUERY_KEY}
+          filters={accountFilters}
+          columns={columns}
+          hiddenColumnKeys={table.hiddenColumns}
+          sorting={table.sorting}
+          onSortingChange={table.setSorting}
+          columnWidths={table.columnWidths}
+          onColumnWidthsChange={table.setColumnWidths}
+          onMessageChange={setViewError}
         />}
-      </main>
+      />
 
       {isAdmin && canWrite && modals.account.target !== null && (
         <AccountModal

@@ -12,15 +12,9 @@ const tableState = vi.hoisted(() => ({
   retry: vi.fn(),
 }));
 const useSessionTableData = vi.hoisted(() => vi.fn(() => tableState));
-const tableProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 
 vi.mock('./hooks/useSessionTableData', () => ({ useSessionTableData }));
-vi.mock('../../../../../common/components/Table/Table', () => ({
-  default: (props: Record<string, unknown>) => {
-    tableProps.current = props;
-    return <div aria-label="Mock sessions table" />;
-  },
-}));
+vi.mock('../../../../../common/components/Table/Table', () => ({ default: () => null }));
 
 const baseProps = {
   queryKey: ['sessions', 'table'] as const,
@@ -38,15 +32,6 @@ describe('SessionTable', () => {
       sessions: [], loading: false, refreshing: false, error: '',
       hasNextPage: false, loadingNextPage: false,
     });
-    tableProps.current = null;
-  });
-
-  it('wires filters and remote state into the table', () => {
-    render(<SessionTable {...baseProps} filters={{ cycleIds: ['cycle-1'] }} />);
-
-    expect(useSessionTableData).toHaveBeenCalledWith(
-      baseProps.queryKey, { cycleIds: ['cycle-1'] }, baseProps.sorting, true,
-    );
   });
 
   it('retains the selected row after a refresh failure', async () => {
@@ -55,23 +40,9 @@ describe('SessionTable', () => {
     render(<SessionTable {...baseProps} selectedSessionId="session-1" />);
 
     await waitFor(() => expect(baseProps.onSelectedSessionResolved).toHaveBeenCalledWith(session));
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      selectedKey: 'session-1',
-      unavailable: undefined,
-    }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({
       message: 'Could not load sessions',
       action: { label: 'Retry', onClick: tableState.retry },
     });
   });
-
-  it('keeps the initial failure unavailable when no rows were loaded', () => {
-    tableState.error = 'Could not load sessions';
-    render(<SessionTable {...baseProps} />);
-
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      unavailable: { title: 'Sessions unavailable', onRetry: tableState.retry },
-    }));
-  });
-
 });

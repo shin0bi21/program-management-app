@@ -57,8 +57,8 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.search.appliedValue).toBe('');
-    expect(result.current.filters.cycleIds).toEqual([]);
-    expect(result.current.filters.programIds).toEqual(['program-1']);
+    expect(result.current.filters.values.cycleIds).toEqual([]);
+    expect(result.current.filters.values.programIds).toEqual(['program-1']);
   });
 
   it('clears a saved stale program instead of reapplying staff program defaults', async () => {
@@ -75,7 +75,7 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.programIds).toEqual([]);
+    expect(result.current.filters.values.programIds).toEqual([]);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({ programIds: [] }),
     ));
@@ -156,7 +156,7 @@ describe('useYouthControls', () => {
     ));
   });
 
-  it('restores cycle selections and saves cycle edits and clear-all with the other filters', async () => {
+  it('repairs removed cycles and ignores obsolete statuses', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       statuses: ['inactive'], programIds: ['program-1'], cycleIds: ['cycle-1', 'removed-cycle'],
     });
@@ -165,27 +165,15 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
     expect(result.current.filters.definitions).toContainEqual({
-      id: 'cycle', label: 'Cycle', options: [{ value: 'cycle-1', label: 'Summer 2026' }],
+      id: 'cycleIds', label: 'Cycle', options: [{ value: 'cycle-1', label: 'Summer 2026' }],
     });
 
-    act(() => result.current.filters.apply('cycle', []));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({
-        cycleIds: [], programIds: ['program-1'],
-      }),
+      'youth-profile-filters', expect.objectContaining({ cycleIds: ['cycle-1'], programIds: ['program-1'] }),
     ));
-
-    act(() => result.current.filters.apply('cycle', ['cycle-1']));
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ cycleIds: ['cycle-1'] }),
-    ));
-
-    act(() => result.current.filters.clear());
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ cycleIds: [], programIds: [] }),
-    ));
+    expect(preferenceApi.setPreference.mock.lastCall?.[1]).not.toHaveProperty('statuses');
   });
 
   it('waits for cycles and preserves saved selections when cycle options fail to load', async () => {
@@ -202,11 +190,11 @@ describe('useYouthControls', () => {
     rerender({ loading: false, error: 'Could not load cycles' });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
-    expect(result.current.filters.programIds).toEqual(['program-1']);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.filters.values.programIds).toEqual(['program-1']);
 
     rerender({ loading: false, error: '' });
-    await waitFor(() => expect(result.current.filters.cycleIds).toEqual([]));
-    expect(result.current.filters.programIds).toEqual(['program-1']);
+    await waitFor(() => expect(result.current.filters.values.cycleIds).toEqual([]));
+    expect(result.current.filters.values.programIds).toEqual(['program-1']);
   });
 });

@@ -23,6 +23,7 @@ const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value
 ), z.array(schema));
 
 const taskFilterFields = {
+  cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
   staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
   programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
   categories: commaSeparated(hoursCategorySchema),

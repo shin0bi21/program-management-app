@@ -1,4 +1,4 @@
-# Page Preferences
+# Preferences
 
 Use the shared `usePreferences` hook for account preferences that survive navigation and
 synchronize across devices. Keep table layout in the separate `useTableLayout` hook. Declare each
@@ -86,23 +86,49 @@ Expose the same grouped control contract from every page preference or control h
 | Group | Members |
 |---|---|
 | `search` | `value`, `setValue`, `appliedValue`, `apply`, `clear` |
-| `filters` | Page-specific selected values, `definitions`, `apply`, `clear` |
+| `filters` | `values`, `definitions`, `apply`, `clear`; optional domain-derived extras |
 | `table` | `sorting`, `setSorting`, `columnWidths`, `setColumnWidths`, `hiddenColumns`, `setHiddenColumns` |
 
 Keep `ready` and `error` at the top level, with `view` and `setView` when the page supports
 multiple views. Domain-specific derived values may remain top-level extras. Do not expose
 flat aliases for grouped controls. A route reads `controls.search.appliedValue` and
-`controls.filters.programIds` when building its data filters, and passes `controls.table`
+`controls.filters.values.programIds` when building its data filters, and passes `controls.table`
 values to its table. The groups describe the interface; each page retains its own fields,
 defaults and persistence choices.
 
-Keep preference-backed controls, including search, unavailable until `ready`.
-Applying an early edit can replace a pending preference read with normalized
-defaults and overwrite saved sibling fields. Gate those controls alongside the
-page's filters and views; ephemeral controls may remain available.
+Pass the grouped result as `controls` to [PageContainer](../components/page-container.md#pageheader-and-controls).
+It owns the standard control wiring and reads `ready` without per-route adapters.
 
-The preference pattern check enforces these groups. The page scaffold points new durable
-controls to this contract without inventing preference keys or filters for a new page.
+### Declare Filters Once
+
+Use `createPreferenceFilters` from `common/features/Preferences/createPreferenceFilters.ts`
+in the page hook to compose selected values, menu definitions, and preference updates:
+
+```ts
+const filters = createPreferenceFilters({
+  values: {
+    programIds: preferences.programIds,
+    statuses: preferences.statuses,
+  },
+  definitions: [
+    { id: 'programIds', label: 'Program', options: programOptions },
+    { id: 'statuses', label: 'Status', options: statusOptions },
+  ],
+  updatePreferences,
+});
+```
+
+Use the same key for the persisted field, `values` member, and definition ID.
+Use `Ids` for arrays of record IDs (`programIds`, `sessionTypeIds`) and plural
+names for enum arrays (`categories`, `statuses`, `roles`). Single selections use
+`Id` for record IDs or a singular enum name. Visible labels remain independent.
+Existing persisted field names stay unchanged when adopting this contract.
+
+The shared helper derives `apply` and `clear`; pages do not translate menu IDs or
+rebuild callbacks in the route. The page still declares field validation, defaults,
+option availability, and role restrictions through its preference rules. Keep
+derived values such as `dateRange` outside `filters.values`; that object contains
+only selectable fields. Add derived extras alongside the helper result when needed.
 
 ## Recover Invalid Values
 
@@ -126,25 +152,18 @@ loads cannot overwrite local choices.
 
 ## Derive Timeline Bounds from Cycles
 
-Persist `cycleIds` through the normal multi-select rules, then derive the range from
-authoritative cycle options. No selected IDs means all available cycles. Keep loading
-and failures with the page data owner, and wait for authoritative cycles before restoring
-preferences. Do not persist a second date range alongside the selected IDs. Shared rules
-discard obsolete keys and repair invalid IDs without resetting valid sibling preferences.
+Persist `cycleIds` through the normal multi-select rules and wait for authoritative
+cycle options before restoring them. Do not persist a second date range alongside
+the selected IDs.
 
 Follow [cycle-bounded calendars](../components/calendars.md#bound-the-timeline-by-cycle-dates)
 for range derivation, collection filters, and unavailable states. The page's controls hook
 owns any separate dashboard cycle focus; it must not silently rewrite collection filters.
 Filter menu drafts and dismissal follow the [overlay contract](../components/overlays.md#filter-menus).
 
-## Testing
+## Test Fixtures
 
-Shared preference tests own account normalization, restoration, recovery and asynchronous persistence.
-Shared layout tests own browser persistence, user/table isolation, field repair and storage failures.
-Page tests seed layout separately from API fixtures and verify layout controls do not enter API saves.
-Page preference tests own field rules, defaults, role restrictions and coordinated updates.
-Use the real shared hook with an isolated QueryClient and mocked preference API to verify those
-rules. Consolidate each page's field-rule examples and callback-to-save assertions rather
-than repeating separate shared debounce, rapid-merge or load-failure tests. Retain page-owned
-role defaults, independent option-source wiring, dependent filter changes and local drafts.
-Route tests cover restored controls and view wiring.
+Use the real shared hook with an isolated QueryClient and mocked preference API
+when verifying page-specific field rules. Seed browser-local layout separately
+from account API fixtures. Follow [test ownership](../../workflows/delivery/testing.md#test-ownership)
+for the shared-hook and consumer boundary.

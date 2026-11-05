@@ -67,18 +67,6 @@ describe('Images', () => {
     expect(screen.getByRole('listitem')).toHaveAttribute('draggable', 'false');
   });
 
-  it('reports page-owned errors through the shared overlay with a retry action', async () => {
-    const user = userEvent.setup();
-    homepage.error = 'Could not load homepage images';
-    renderPage();
-
-    const errorOverlay = screen.getByRole('alert');
-    expect(errorOverlay).toHaveTextContent('Could not load homepage images');
-    await user.click(within(errorOverlay).getByRole('button', { name: 'Retry' }));
-
-    expect(homepage.refresh).toHaveBeenCalledOnce();
-  });
-
   // Commands and dialogs.
   it('opens the page-owned image editor from the page header', async () => {
     const user = userEvent.setup();

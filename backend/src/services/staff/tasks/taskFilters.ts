@@ -1,5 +1,6 @@
 import { sql } from '../../../db/client';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
+import { resolveCycleDateRange } from '../../programming/cycles/cycleDateRange';
 import { TASK_CATEGORY_OPTIONS } from './taskReferenceData';
 
 type TaskFilters = Pick<
@@ -38,6 +39,16 @@ export function buildTaskFilters(filters: TaskFilters) {
   `;
 
   return { status, predicate };
+}
+
+export async function resolveTaskDateRange(query: Pick<TaskListQuery, 'cycleIds' | 'start' | 'end'>) {
+  const cycles = await resolveCycleDateRange(sql, query.cycleIds);
+  if (!cycles) return null;
+
+  const start = query.start && query.start > cycles.start ? query.start : cycles.start;
+  const end = query.end && query.end < cycles.end ? query.end : cycles.end;
+
+  return start <= end ? { start, end } : null;
 }
 
 function getMatchingCategories(search: string | undefined) {

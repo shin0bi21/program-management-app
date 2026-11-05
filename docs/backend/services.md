@@ -13,6 +13,12 @@ Keep list-only totals and direct-record-only relationships with the endpoint tha
 
 Keep product behavior with its capability even when several pages use it. Use `services/shared/` only for technical mechanisms such as audit writing, cursor encoding, or file uploads.
 
+Keep reusable cycle date resolution in `services/programming/cycles/`; collection
+services import that domain owner when a query uses cycles as date windows. Calendar
+viewport intersection belongs to the consuming query, while the browser may derive
+bounds separately for timeline presentation. Cycle membership remains a separate
+filter contract.
+
 See the [API source map](api.md#find-an-api-owner) for domain owners and
 [program-cycle assignments](api.md#program-cycle-assignments) for a transaction
 that spans several related services.

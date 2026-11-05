@@ -128,7 +128,7 @@ management session opens, and keep presentation visibility separate from its lif
 
 The page owns live search, applied filters, sorting preferences, browser-local column layout and view choice. Compose widths and hidden columns through `useTableLayout`; sorting remains an account preference. Restore saved preferences and required option data before enabling the list query.
 
-Consume the [grouped page-control contract](../pages/preferences.md#expose-page-controls).
+Consume the [grouped page-control contract](../features/preferences.md#expose-page-controls).
 Use the page's applied filters consistently in the query key, API inputs, and filtered-empty
 message; the table does not implement draft search or preference persistence.
 
@@ -170,22 +170,26 @@ own preview/release geometry, touch release, scrolling, fixed columns, and the g
 
 ## Test the Table
 
-Page-table tests cover only domain cells, permission-aware actions, selection
-coordination, and wiring to the shared owners. Verify loading, failure, pagination
-and retry handoffs at that boundary; do not replay their state-transition matrices.
-Do not enumerate fixed column lists or assert copied table configuration.
+Shared `Table` tests cover rendering, controlled selection, sort controls,
+keyboard navigation, resizing, and scroll behavior. Its public interface can
+exercise internal components such as `TableRow`. Internal hook suites cover their
+policy and lifecycle cases. Browser tests cover table geometry.
 
-The common `Table` and its internal owners are the sole owners of generic table
-rendering, sort controls, keyboard navigation, resizing and scroll behavior tests.
-Shared ordering and query suites own comparisons, ties, accumulation, refresh and
-retry mechanics. Browser tests for table geometry stay with the common table.
+Page-owned table tests cover domain-specific formatting, permission-aware actions,
+conditional input adaptation, and selection reconciliation. Exercise the decision
+that owner makes, such as choosing recovery for a page message or resolving a
+selected record from loaded results. Use a typed stub when observing the decision's
+output is sufficient.
 
-Domain data-hook tests verify query keys, enabled gates, API inputs, cursor and
-cancellation forwarding, and any domain row shaping. Exercise the shared-query
-boundary directly for these contracts; a real query lifecycle is needed only
-when testing additional domain coordination. Pure policy suites own domain
-eligibility and canonical sort values; page and table tests do not repeat those
-cases. See [Testing](../../workflows/delivery/testing.md#test-ownership).
+Domain data-hook tests cover query keys, enabled gates, API inputs, cursor and
+cancellation forwarding, and domain row shaping. Exercise the shared-query
+boundary directly for these contracts; use a real query lifecycle when the case
+requires domain coordination. Pure policy suites cover domain eligibility and
+canonical sort values. Shared ordering and query suites cover comparisons, ties,
+accumulation, refresh, and retry mechanics.
+
+Follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
+for route coordination.
 
 ## Scaffolding
 

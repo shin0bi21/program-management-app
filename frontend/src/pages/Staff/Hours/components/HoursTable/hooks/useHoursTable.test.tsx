@@ -56,4 +56,19 @@ describe('useHoursTable', () => {
     expect(onDelete).toHaveBeenCalledWith(row);
   });
 
+  it('hides row actions for a read-only resource in a writable table', () => {
+    const { result } = renderHook(() => useHoursTable({
+      canWrite: true,
+      resourcesById: new Map([['staff-1', { ...writable, writable: false }]]),
+      isEntryPending: () => false,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }));
+
+    const actionsColumn = result.current.columns.find(column => column.id === 'actions')!;
+    render(<>{renderCell(actionsColumn, row)}</>);
+
+    expect(screen.queryByRole('button', { name: 'Actions for Prepare workshop on 2026-08-19' })).not.toBeInTheDocument();
+  });
+
 });

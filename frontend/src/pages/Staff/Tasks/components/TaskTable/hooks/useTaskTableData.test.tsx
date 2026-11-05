@@ -12,6 +12,7 @@ vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
 vi.mock('../../../tasks.api', () => ({ getTasksTableData: vi.fn() }));
 
 const filters = {
+  cycleIds: ['cycle-1'],
   staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep' as const],
   statuses: ['in_progress' as const], search: 'workshop',
 };

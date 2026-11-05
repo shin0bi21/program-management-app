@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
+import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
@@ -44,11 +44,11 @@ export function useLeadPreferences(
   const [searchDraft, setSearchDraft] = useState<string | null>(null);
   const searchValue = searchDraft ?? preferences.search;
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'program', label: 'Program', options: toFilterOptions(programs) },
-    { id: 'status', label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
+  const filterCategories = useMemo(() => [
+    { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
+    { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
     ...(origin === 'external' ? [{
-      id: 'submitterRole',
+      id: 'submitterRoles' as const,
       label: 'Filled Out By',
       options: externalSubmitterRoles.map(role => ({ value: role, label: statusLabel(role) })),
     }] : []),
@@ -64,14 +64,6 @@ export function useLeadPreferences(
     setSearchDraft(null);
   };
 
-  const applyFilter = (category: string, selected: string[]) => {
-    if (category === 'status') updatePreferences({ statuses: selected as LeadStatus[] });
-    if (category === 'program') updatePreferences({ programIds: selected });
-    if (category === 'submitterRole' && origin === 'external') {
-      updatePreferences({ submitterRoles: selected as LeadSubmitterRole[] });
-    }
-  };
-
   return {
     ready,
     error,
@@ -82,14 +74,15 @@ export function useLeadPreferences(
       apply: applySearch,
       clear: clearSearch,
     },
-    filters: {
-      statuses: preferences.statuses,
-      programIds: preferences.programIds,
-      submitterRoles: preferences.submitterRoles,
+    filters: createPreferenceFilters({
+      values: {
+        statuses: preferences.statuses,
+        programIds: preferences.programIds,
+        submitterRoles: preferences.submitterRoles,
+      },
       definitions: filterCategories,
-      apply: applyFilter,
-      clear: () => updatePreferences({ statuses: [], programIds: [], submitterRoles: [] }),
-    },
+      updatePreferences,
+    }),
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<LeadSortKey> }),

@@ -63,7 +63,7 @@ function renderCalendar({
   };
   const rendered = render(<TaskCalendar
     resources={resources}
-    filters={{ search: '', staffIds, programIds: [], categories: [], statuses: [] }}
+    filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
     selectedResourceId="staff-1"
     selectedTaskId={selectedTaskId}
@@ -98,7 +98,7 @@ describe('TaskCalendar', () => {
     act(() => calendarState.props?.onInitialPeriods?.(periods));
 
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
-      { search: '', staffIds: ['staff-1'], programIds: [], categories: [], statuses: [] },
+      { cycleIds: [], search: '', staffIds: ['staff-1'], programIds: [], categories: [], statuses: [] },
       { start: expect.any(String), end: expect.any(String) },
       { signal: expect.any(AbortSignal) },
     ));

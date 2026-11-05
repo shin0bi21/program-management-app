@@ -34,15 +34,15 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.search.appliedValue).toBe('');
-    expect(result.current.filters.roles).toEqual(['staff']);
-    expect(result.current.filters.statuses).toEqual(['active']);
+    expect(result.current.filters.values.roles).toEqual(['staff']);
+    expect(result.current.filters.values.statuses).toEqual(['active']);
     expect(result.current.table).toMatchObject({
       sorting: { key: 'email', direction: 'desc' }, columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     });
 
     act(() => {
-      result.current.filters.apply('status', ['inactive']);
-      result.current.filters.apply('role', ['youth']);
+      result.current.filters.apply('statuses', ['inactive']);
+      result.current.filters.apply('roles', ['youth']);
       result.current.table.setHiddenColumns(['email']);
       result.current.table.setColumnWidths({ name: 240 });
       result.current.table.setSorting({ key: 'status', direction: 'asc' });
@@ -65,7 +65,7 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.roles).toEqual(['project_manager']);
+    expect(result.current.filters.values.roles).toEqual(['project_manager']);
   });
 
   it('removes admin-only roles and obsolete sorting for staff', async () => {
@@ -78,9 +78,9 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.definitions.some(category => category.id === 'role')).toBe(false);
-    expect(result.current.filters.roles).toEqual([]);
-    expect(result.current.filters.statuses).toEqual(['active']);
+    expect(result.current.filters.definitions.some(category => category.id === 'roles')).toBe(false);
+    expect(result.current.filters.values.roles).toEqual([]);
+    expect(result.current.filters.values.statuses).toEqual(['active']);
     expect(result.current.table.sorting).toEqual({ key: 'name', direction: 'asc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
       roles: [], sorting: { key: 'name', direction: 'asc' },
@@ -97,8 +97,8 @@ describe('useAccountControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.roles).toEqual(['staff']);
-    expect(result.current.filters.statuses).toEqual([]);
+    expect(result.current.filters.values.roles).toEqual(['staff']);
+    expect(result.current.filters.values.statuses).toEqual([]);
     expect(result.current.table.columnWidths).toEqual({});
     expect(result.current.table.hiddenColumns).toEqual([]);
   });

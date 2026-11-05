@@ -1,9 +1,9 @@
+import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import type { TaskReferenceData } from '../../tasks.api';
 import { useMemo, useState } from 'react';
 
-import type { FilterCardCategory } from '../../../../../common/components/FilterCard/FilterCard';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
 import {
@@ -110,41 +110,29 @@ export default function useTaskPreferences({
   };
 
   // Filter preferences.
-  const filterDefinitions = useMemo<FilterCardCategory[]>(() => [
+  const filterDefinitions = useMemo(() => [
     {
-      id: 'staff',
+      id: 'staffIds' as const,
       label: 'Staff',
       options: toFilterOptions(resources),
     },
     {
-      id: 'program',
+      id: 'programIds' as const,
       label: 'Program',
       options: toFilterOptions(programs),
     },
-    { id: 'cycle', label: 'Cycle', options: toFilterOptions(cycles) },
-    { id: 'category', label: 'Category', options: referenceData?.categories ?? [] },
-    { id: 'status', label: 'Status', options: referenceData?.statuses ?? [] },
+    { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
+    { id: 'categories' as const, label: 'Category', options: referenceData?.categories ?? [] },
+    { id: 'statuses' as const, label: 'Status', options: referenceData?.statuses ?? [] },
   ], [referenceData, cycles, resources, programs]);
 
-  const applyFilter = (id: string, selected: string[]) => {
-    if (id === 'cycle') updatePreferences({ cycleIds: selected });
-    if (id === 'staff') updatePreferences({ staffIds: selected });
-    if (id === 'program') updatePreferences({ programIds: selected });
-    if (id === 'category') updatePreferences({
-      categories: selected as TaskCategory[],
-    });
-    if (id === 'status') updatePreferences({
-      statuses: selected as TaskStatus[],
-    });
-  };
-
-  const clearFilters = () => updatePreferences({
-    cycleIds: [],
-    staffIds: [],
-    programIds: [],
-    categories: [],
-    statuses: [],
-  });
+  const filterValues = useMemo(() => ({
+    cycleIds: preferences.cycleIds,
+    staffIds: preferences.staffIds,
+    programIds: preferences.programIds,
+    categories: preferences.categories,
+    statuses: preferences.statuses,
+  }), [preferences]);
 
   // Table sorting.
   const setSorting = (sorting: ListSort<TaskSortKey>) => {
@@ -166,16 +154,11 @@ export default function useTaskPreferences({
       clear: clearSearch,
     },
 
-    filters: {
-      cycleIds: preferences.cycleIds,
-      staffIds: preferences.staffIds,
-      programIds: preferences.programIds,
-      categories: preferences.categories,
-      statuses: preferences.statuses,
+    filters: createPreferenceFilters({
+      values: filterValues,
       definitions: filterDefinitions,
-      apply: applyFilter,
-      clear: clearFilters,
-    },
+      updatePreferences,
+    }),
 
     table: {
       sorting: preferences.sorting,

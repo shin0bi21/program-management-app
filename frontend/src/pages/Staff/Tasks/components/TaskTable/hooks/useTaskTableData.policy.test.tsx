@@ -1,7 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import type { Task, TasksFilters, TaskSortKey } from '../../../types';
+import type { TasksFilters } from '../../../tasks.api';
+import type { Task, TaskSortKey } from '../../../types';
 import { makeTask } from '../../../../../../tests/factories/task';
 import useTaskTableData from './useTaskTableData';
 
@@ -22,7 +23,7 @@ const sortValues: Array<[TaskSortKey, Partial<Task>, string]> = [
 ];
 
 it.each(sortValues)('maps %s to its canonical sort value', (key, changes, expected) => {
-  const filters: TasksFilters = { staffIds: [], programIds: [], categories: [], statuses: [], search: '' };
+  const filters: TasksFilters = { cycleIds: [], staffIds: [], programIds: [], categories: [], statuses: [], search: '' };
   renderHook(() => useTaskTableData(['tasks', 'table'], filters, { key, direction: 'asc' }, '2026-10-01'));
   const getValue = vi.mocked(useInfiniteListQuery<Task>).mock.calls[0][0].ordering!.getValue;
 

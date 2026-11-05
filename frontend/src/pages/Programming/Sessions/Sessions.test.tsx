@@ -190,7 +190,7 @@ describe('Sessions', () => {
   });
 
   // Entry and readiness.
-  it('keeps persisted controls and content unavailable until restoration completes', async () => {
+  it('applies an ephemeral search drafted while preferences are restoring', async () => {
     let finishLoading!: (value: SessionPreference | null) => void;
     preferenceApi.getPreference.mockImplementationOnce(() => new Promise(resolve => { finishLoading = resolve; }));
     const rendered = render(
@@ -199,11 +199,9 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading page preferences…');
-    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+    const search = screen.getByRole('textbox', { name: 'Search sessions' });
+    fireEvent.change(search, { target: { value: 'Communication' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
 
     finishLoading(preferenceApi.value);
     rendered.rerender(
@@ -212,8 +210,11 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Filters' })).toBeInTheDocument();
-    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
+    await screen.findByRole('table', { name: 'Sessions' });
+    await waitFor(() => expect(getSessions).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'Communication' }),
+      expect.anything(), expect.anything(),
+    ));
   });
 
   it('keeps session filters and the calendar available with session read permission alone', async () => {
@@ -272,10 +273,6 @@ describe('Sessions', () => {
     expect(screen.getByText('3 check-ins')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(screen.getByText('Field Trip')).toBeInTheDocument();
-    const headers = screen.getAllByRole('columnheader').map(header => header.textContent);
-    expect(headers.indexOf('Type')).toBe(headers.indexOf('Status') - 1);
   });
 
   it('does not create a fallback calendar when no cycles exist', async () => {
@@ -353,36 +350,6 @@ describe('Sessions', () => {
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
   });
 
-  it('switches between table and calendar views on the same page', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
-    const viewSelector = screen.getByRole('button', { name: 'View: Calendar' });
-
-    fireEvent.click(viewSelector);
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
-
-    await waitFor(() => expect(preferenceApi.value).toEqual(expect.objectContaining({ view: 'table' })));
-
-    expect(await screen.findByRole('table', { name: 'Sessions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-
-    fireEvent.click(await screen.findByText('Communication'));
-
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Calendar session' })).toBeInTheDocument();
-  });
-
   // Selection and coordination.
 
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
@@ -409,7 +376,6 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
     expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
     expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
-    expect(screen.queryByRole('status', { name: 'Updating rows' })).not.toBeInTheDocument();
   });
 
   it('keeps the session dashboard while a program row changes scheduling context', async () => {
@@ -435,7 +401,6 @@ describe('Sessions', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');

@@ -1,8 +1,16 @@
-import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
-import type { Task, TaskCategory, TaskStatus, TasksFilters } from './types';
+import type { Task, TaskCategory, TaskStatus } from './types';
+
+export interface TasksFilters {
+  cycleIds: string[];
+  search: string;
+  staffIds: string[];
+  programIds: string[];
+  categories: TaskCategory[];
+  statuses: TaskStatus[];
+}
 
 export interface SetTaskInput {
   title: string;
@@ -26,10 +34,6 @@ export function getTasksTableData(filters: TasksFilters, opts: RequestOptions | 
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyTaskFilters(params, filters);
-  if (filters.dateRange) {
-    params.set('start', filters.dateRange.start);
-    params.set('end', filters.dateRange.end);
-  }
   return apiClient.get<CursorPage<Task>>(`/tasks/list?${params}`, opts);
 }
 
@@ -38,10 +42,7 @@ export function getTasksCalendarData(
   range: { start: string; end: string },
   opts?: RequestOptions,
 ) {
-  const requestedRange = intersectDateRanges(range, filters.dateRange);
-  if (!requestedRange) return Promise.resolve<Task[]>([]);
-
-  const params = new URLSearchParams({ ...requestedRange });
+  const params = new URLSearchParams({ ...range });
   applyTaskFilters(params, filters);
   return apiClient.get<Task[]>(`/tasks/calendar?${params}`, opts);
 }
@@ -53,6 +54,7 @@ export function getTaskDashboardData(staffId: string, opts?: RequestOptions) {
 }
 
 function applyTaskFilters(params: URLSearchParams, filters: TasksFilters) {
+  if (filters.cycleIds.length) params.set('cycleIds', filters.cycleIds.join(','));
   if (filters.staffIds.length) params.set('staffIds', filters.staffIds.join(','));
   if (filters.programIds.length) params.set('programIds', filters.programIds.join(','));
   if (filters.categories.length) params.set('categories', filters.categories.join(','));

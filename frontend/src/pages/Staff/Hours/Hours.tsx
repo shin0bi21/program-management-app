@@ -1,15 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
-import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
+import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from './components/HoursModal/HoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
 import HoursDashboard from './components/HoursDashboard/HoursDashboard';
@@ -80,19 +74,19 @@ export default function Hours() {
   // Filter configuration.
   const hoursFilters = useMemo<HoursFilters>(() => ({
     dateRange: preferences.filters.dateRange,
-    staffIds: preferences.filters.staffIds,
-    categories: preferences.filters.categories,
-    programIds: preferences.filters.programIds,
-    types: preferences.filters.types,
-    cycleIds: preferences.filters.cycleIds,
+    staffIds: preferences.filters.values.staffIds,
+    categories: preferences.filters.values.categories,
+    programIds: preferences.filters.values.programIds,
+    types: preferences.filters.values.types,
+    cycleIds: preferences.filters.values.cycleIds,
     search: preferences.search.appliedValue,
   }), [
     preferences.filters.dateRange,
-    preferences.filters.categories,
-    preferences.filters.cycleIds,
-    preferences.filters.programIds,
-    preferences.filters.staffIds,
-    preferences.filters.types,
+    preferences.filters.values.categories,
+    preferences.filters.values.cycleIds,
+    preferences.filters.values.programIds,
+    preferences.filters.values.staffIds,
+    preferences.filters.values.types,
     preferences.search.appliedValue,
   ]);
 
@@ -147,7 +141,7 @@ export default function Hours() {
 
   // View configuration.
   const dashboardCycle = pageData.cycles.find(cycle => cycle.id === selection.dashboardCycleId);
-  const firstFilteredCycle = pageData.cycles.find(cycle => preferences.filters.cycleIds.includes(cycle.id));
+  const firstFilteredCycle = pageData.cycles.find(cycle => preferences.filters.values.cycleIds.includes(cycle.id));
   const overviewCycle = dashboardCycle
     ?? firstFilteredCycle
     ?? pageData.cycles.find(cycle => cycle.state === 'active')
@@ -189,62 +183,28 @@ export default function Hours() {
 
   const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
   const hasCycleBounds = Boolean(hoursFilters.dateRange) && !pageData.cyclesError;
-  const viewContent = preferences.view === 'table'
-    ? { table: hasCycleBounds ? hoursTable : viewUnavailable }
-    : { calendar: hasCycleBounds ? hoursCalendar : viewUnavailable };
 
   // Render.
   return <>
-    <main className="page-container hours-page">
-      <PageHeader
-        title="Hours"
-        actions={canWrite && pageData.writableResources.length ? <ActionsMenu
-          triggerLabel="+ Add"
-          ariaLabel="Add hours"
-          items={[
-            { id: 'session', label: 'Session Hours', onClick: () => openAddHoursModal({ source: 'session' }) },
-            { id: 'task', label: 'Task Hours', onClick: () => openAddHoursModal({ source: 'task' }) },
-            { id: 'regular', label: 'Regular Hours', onClick: () => openAddHoursModal({ source: 'regular' }) },
-          ]}
-        /> : undefined}
+    <PageContainer
+      className="hours-page"
+      ariaLabel="Hours overview and entries"
+      controls={preferences}
+      loadingSpinner
+      title="Hours"
+      actions={canWrite && pageData.writableResources.length ? <ActionsMenu
+        triggerLabel="+ Add"
+        ariaLabel="Add hours"
+        items={[
+          { id: 'session', label: 'Session Hours', onClick: () => openAddHoursModal({ source: 'session' }) },
+          { id: 'task', label: 'Task Hours', onClick: () => openAddHoursModal({ source: 'task' }) },
+          { id: 'regular', label: 'Regular Hours', onClick: () => openAddHoursModal({ source: 'regular' }) },
+        ]}
+      /> : undefined}
 
-        search={preferences.ready ? <SearchInput
-          label="Search hours"
-          value={preferences.search.value}
-          appliedValue={preferences.search.appliedValue}
-          onChange={event => preferences.search.setValue(event.target.value)}
-          onApply={preferences.search.apply}
-          onClear={preferences.search.clear}
-          placeholder="Search hours"
-        /> : undefined}
-
-        view={preferences.ready ? <ViewMenu
-          label="View"
-          value={preferences.view}
-          onChange={preferences.setView}
-          options={[{ value: 'calendar', label: 'Calendar' }, { value: 'table', label: 'Table' }]}
-        /> : undefined}
-
-        columns={preferences.ready && preferences.view === 'table' ? <ColumnVisibilityMenu
-          columns={table.columns}
-          hiddenColumnKeys={preferences.table.hiddenColumns}
-          onHiddenColumnKeysChange={preferences.table.setHiddenColumns}
-        /> : undefined}
-
-        filters={preferences.ready ? <FilterCard
-            categories={preferences.filters.definitions}
-            values={{
-              staff: preferences.filters.staffIds,
-              entryType: preferences.filters.categories,
-              program: preferences.filters.programIds,
-              type: preferences.filters.types,
-              cycle: preferences.filters.cycleIds,
-            }}
-            onApply={preferences.filters.apply}
-            onClearAll={preferences.filters.clear}
-          /> : undefined}
-      />
-      <PageMessageOverlay messages={[
+      search={{ label: 'Search hours', placeholder: 'Search hours' }}
+      columns={table.columns}
+      messages={[
         pageData.optionsError ? {
           message: 'Could not load hour options.',
           details: 'Staff, programs, hour categories, and hour types could not be loaded.',
@@ -257,18 +217,16 @@ export default function Hours() {
         actions.moveError,
         viewError,
         dashboardError,
-      ]} />
-      {!preferences.ready ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading page preferences…</p> : <PageBody
-        ariaLabel="Hours overview and entries"
-        dashboard={<HoursDashboard
-          queryKey={HOURS_QUERY_KEY}
-          staff={selection.selectedStaff}
-          cycle={overviewCycle}
-          onMessageChange={setDashboardError}
-        />}
-        {...viewContent}
+      ]}
+      dashboard={<HoursDashboard
+        queryKey={HOURS_QUERY_KEY}
+        staff={selection.selectedStaff}
+        cycle={overviewCycle}
+        onMessageChange={setDashboardError}
       />}
-    </main>
+      table={hasCycleBounds ? hoursTable : viewUnavailable}
+      calendar={hasCycleBounds ? hoursCalendar : viewUnavailable}
+    />
 
     <HoursModal
       isOpen={hoursModalState !== null}

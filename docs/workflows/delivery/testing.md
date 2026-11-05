@@ -75,21 +75,7 @@ otherwise rerun it. For shell changes, run `bash -n` and ShellCheck (included in
 | Components, hooks, storage, DOM APIs, and browser globals | Vitest with the default jsdom environment |
 | Layout, scrolling, pointer behavior, and real browser focus | Playwright |
 
-Place tests with the narrowest owner:
-
-| Suite | Owns |
-|---|---|
-| Hook | Policy and lifecycle |
-| Component | Rendered states and event wiring |
-| Page | Composition, entry context, and coordination across children |
-
-- Test shared mechanics once; consumers cover only the behavior they add.
-- Assert observable outcomes. Skip private details, copied implementation,
-  arbitrary sleeps, and tests that only confirm static presentation or configuration.
-- Cover errors, lifecycle, and option eligibility only when part of the owner's contract.
-- Use real children or small typed stubs without bypassing the tested boundary.
-  Use explicit API fixtures instead of simulating server logic.
-- Test layout in the browser when it protects behavior such as scrolling or clipping.
+Follow [Test Ownership](#test-ownership) for suite boundaries and assertions.
 
 See the [frontend guide](../../frontend/README.md#find-the-right-guide) for
 surface-specific rules.
@@ -108,20 +94,17 @@ such as changing a target during a pending request.
 Group longer suites by the owner's behavior, keeping failures and boundary cases
 beside the success case they qualify. Hook suites follow initialization, input
 changes, completion/failure, and cleanup where applicable. Component suites group
-rendered states and public interactions. Page suites follow the
-[page test reading order](../../frontend/pages/testing.md#test-page-coordination).
+rendered states and public interactions. For route components, order substantial
+suites by permission-dependent entry and domain readiness, unavailable states,
+applied domain controls, cross-child selection, then commands and dialogs.
 Use short section comments or describe blocks only when they help navigation;
 omit empty sections and leave small cohesive suites flat. These are reading
 conventions, not a requirement to add every lifecycle case to every owner.
 
 ## Scaffold Implementation and Tests Together
 
-Frontend presets generate colocated implementation and test owners together.
-See [Frontend Scaffolding](../../frontend/pages/scaffolding.md) for commands, generated
-layouts, and how to turn test outlines into meaningful coverage.
-Scaffold tests verify generated artifacts against the documented pattern;
-application tests cover the implemented owner's behavior. Maintain those contracts
-through the [owner guides and scaffold templates](../../frontend/pages/scaffolding.md#maintain-the-pattern).
+Use [Frontend Scaffolding](../../frontend/architecture/scaffolding.md) for commands
+and generated test outlines.
 
 ## Browser Component Tests
 
@@ -142,14 +125,55 @@ CI; failed scheduled runs retain traces for 14 days.
 
 ## Test Ownership
 
-Choose the authoritative owner before adding a test. Cover a shared behavior's
-matrix there once; sibling consumers need coverage only for their own decisions
-and the inputs or outputs they connect across a boundary. Following the same
-implementation pattern is not a reason to copy its test matrix into every page
-or script.
+Choose the narrowest authoritative owner before adding a test:
+
+| Suite | Owns |
+|---|---|
+| Hook | Stateful policy, asynchronous transitions, and lifecycle |
+| Component | Rendered states, accessibility, interactions, and emitted values |
+| Route component | Entry context, domain readiness, and coordination across children |
+
+Cover a shared behavior's matrix there once. Consumers cover the decisions,
+transformations, and coordination they add. Following the same implementation
+pattern is not a reason to copy its test matrix into another page or script.
+Assert observable outcomes; omit private details, copied implementation, arbitrary
+sleeps, and tests that only repeat static presentation or supplied options. Cover
+errors, lifecycle, and eligibility only when they are part of the owner's contract.
+
+Use real children or small typed stubs without bypassing the tested boundary, and
+explicit API fixtures instead of simulating server logic. A control lookup may
+synchronize a test or drive a domain workflow. Apply ownership to each assertion:
+omit incidental checks of shared headings, control visibility, input echo, or
+menu selection state when the domain outcome already proves the wiring.
+Permission-dependent affordances and domain option eligibility remain route
+assertions. For example, a child proves that Delete emits its record; the route
+proves that confirmation connects that record to the correct mutation.
+
+For a shared component, test its implemented flow once at that owner: inputs,
+rendered states, and emitted events. Changing the consumer's fixture from tasks
+to youth does not create a new requirement to prove that supplied rows render,
+loading ends, an empty result appears, or a Retry button calls its callback.
+Do not replace removed consumer duplicates with equivalent tests beside every
+domain component.
+
+TypeScript checks that each consumer satisfies the shared component's prop
+contract. Do not add a runtime test per consumer to recheck that shape or to
+capture unchanged props and invoke directly forwarded callbacks. A boundary test
+needs an additional decision to protect, such as choosing a retry target or
+resolving a selected record; the shared prop contract alone is not that decision.
+
+A component may exercise its internal subcomponents through its public interface.
+Separate test files are not required for each internal component. When a hook or
+subcomponent has its own policy or lifecycle suite, keep one representative
+composition check in the parent and keep the policy's case matrix at its owner.
+Do not reproduce the matrix at both levels.
 
 | Behavior | Authoritative owner | Consumer coverage |
 |---|---|---|
+| Page shell, readiness gate, standard controls and active-view selection | Shared `PageContainer` | Domain readiness dependencies, filter inputs and cross-child coordination |
+| Filter key dispatch, selected-value composition, and clearing | Shared `createPreferenceFilters` | Domain filter declarations and option eligibility, without repeating dispatch mechanics |
+| Preference restoration, normalization, failure recovery, and save timing | Shared `usePreferences` | Domain field rules, role defaults, independent option sources, coordinated updates, and local drafts |
+| Browser table-layout persistence, field repair, and storage failures | Shared `useTableLayout` | Domain column keys and separation from account API preferences |
 | Table sort controls, direction changes, row navigation | Shared `Table` | Domain actions and derived cells only |
 | List comparison, ties, accumulation, retry and cursor mechanics | Shared ordering/query or backend cursor helper | Domain query inputs and computed sort values, without replaying the mechanics matrix |
 | Domain eligibility and derived labels | Narrow domain policy/helper | Verify wiring; do not repeat its eligibility cases in hooks, components and pages |
@@ -169,8 +193,6 @@ on the boundary's extra behavior rather than repeating lower-layer cases.
   folders in the root lint command and `scripts/tests/test-static.sh`.
 - Backend suites live in `backend/tests/<domain>/` and share helpers from
   `backend/tests/shared/`.
-- Frontend tests are colocated with the component, hook, page, or feature they
-  exercise.
 - TanStack Query tests use `frontend/src/tests/queryClientTestUtils.tsx` and a
   fresh client per test: `renderWithQueryClient` serves components and
   `createQueryClientWrapper` serves hooks. Shared complete fixtures with typed
