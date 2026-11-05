@@ -396,20 +396,26 @@ test('resizes a ranged item with a clipped geometry-only preview', async ({ page
 
 test('keeps the opposite ghost edge fixed while resizing from the start', async ({ page, mount }) => {
   const component = await mount(storyId);
+  const viewport = component.getByLabel('Browser-tested row calendar');
   const item = component.getByRole('button', { name: 'Ranged task' });
   const wrapper = item.locator('xpath=ancestor::div[contains(@class, "positioned-item")]');
   const handle = component.getByRole('button', { name: 'Resize start of ranged-task' });
   const before = await wrapper.boundingBox();
   const handleBox = await handle.boundingBox();
   if (!before || !handleBox) throw new Error('Start-edge resize geometry is unavailable');
+  const initialScrollLeft = await viewport.evaluate(element => element.scrollLeft);
 
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(handleBox.x + handleBox.width / 2 + 100, handleBox.y + handleBox.height / 2, { steps: 6 });
-  const preview = await page.locator('.timeline-calendar-portal .item-preview').boundingBox();
-  if (!preview) throw new Error('Start-edge resize preview is unavailable');
+  const geometry = await viewport.evaluate(element => {
+    const preview = document.querySelector('.item-resize-preview')?.getBoundingClientRect();
+    if (!preview) throw new Error('Start-edge resize preview is unavailable');
 
-  expect(preview.x + preview.width).toBeCloseTo(before.x + before.width, 0);
+    return { right: preview.right, scrollLeft: element.scrollLeft };
+  });
+
+  expect(geometry.right).toBeCloseTo(before.x + before.width - (geometry.scrollLeft - initialScrollLeft), 0);
   await page.mouse.up();
 });
 
@@ -456,6 +462,56 @@ test('continues resizing after leaving and re-entering the calendar viewport', a
   await expect(component.getByTestId('resize-record')).not.toHaveValue('');
   await expect(page.locator('.timeline-calendar-portal .item-preview')).toHaveCount(0);
 });
+
+for (const edge of ['start', 'end'] as const) {
+  test(`keeps the opposite date anchored during ${edge} resize scrolling and capture recovery`, async ({ page, mount }) => {
+    const component = await mount(storyId);
+    const viewport = component.getByLabel('Browser-tested row calendar');
+    const handle = component.getByRole('button', { name: `Resize ${edge} of ranged-task` });
+    const wrapper = component.getByRole('button', { name: 'Ranged task' })
+      .locator('xpath=ancestor::div[contains(@class, "positioned-item")]');
+    const before = await wrapper.boundingBox();
+    const handleBox = await handle.boundingBox();
+    if (!before || !handleBox) throw new Error('Resize anchor geometry is unavailable');
+
+    const initialScrollLeft = await viewport.evaluate(element => element.scrollLeft);
+    const x = handleBox.x + handleBox.width / 2 + (edge === 'start' ? 25 : -25);
+    const y = handleBox.y + handleBox.height / 2;
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, y);
+    await page.mouse.down();
+    try {
+      await page.mouse.move(x, y);
+      await expect(page.locator('.item-resize-preview')).toBeVisible();
+      await viewport.evaluate(element => { element.scrollLeft += 40; });
+      await page.mouse.move(x + 5, y);
+
+      const expectAnchor = async () => {
+        const geometry = await viewport.evaluate(element => {
+          const preview = document.querySelector('.item-resize-preview')?.getBoundingClientRect();
+          if (!preview) throw new Error('Resize anchor preview disappeared');
+
+          return { left: preview.left, right: preview.right, scrollLeft: element.scrollLeft };
+        });
+
+        const expectedLeft = before.x - (geometry.scrollLeft - initialScrollLeft);
+        const actualEdge = edge === 'end' ? geometry.left : geometry.right;
+        const expectedEdge = edge === 'end' ? expectedLeft : expectedLeft + before.width;
+        expect(actualEdge).toBeCloseTo(expectedEdge, 0);
+      };
+
+      await expectAnchor();
+      await viewport.evaluate(element => element.releasePointerCapture(1));
+      await viewport.evaluate(element => { element.scrollLeft += 40; });
+      await page.mouse.move(x + 10, y);
+      await expectAnchor();
+    } finally {
+      await page.mouse.up();
+    }
+
+    await expect(page.locator('.timeline-calendar-portal')).toHaveCount(0);
+  });
+}
 
 test('recovers resize when viewport capture is lost before pointerup', async ({ page, mount }) => {
   const component = await mount(storyId);

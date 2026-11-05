@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
-import Label from '../../../../../common/components/Label/Label';
-import { formatShortDate } from '../../../../../common/utils/date';
+import { getActiveProgramLabels, getCompletedProgramLabels } from '../programColumns';
+import { formatShortDate, getDateKeyInTimeZone } from '../../../../../common/utils/date';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { YouthProfile } from '../../../types';
 
@@ -20,27 +20,14 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
     { id: 'dateOfBirth', header: 'Date of Birth', accessorFn: profile => formatBirthDate(profile.dateOfBirth), size: 150 },
     { id: 'school', header: 'School', accessorFn: profile => profile.schoolName ?? '—' },
     {
-      id: 'program',
-      header: 'Program',
-      accessorFn: profile => {
-        const names = [...new Set(
-          profile.programCycles
-            .filter(programCycle => programCycle.withdrawnOn === null)
-            .map(programCycle => programCycle.programName),
-        )];
-        return names.length ? names.join(', ') : '—';
-      },
+      id: 'activePrograms',
+      header: 'Active Program(s)',
+      accessorFn: profile => getActiveProgramLabels(profile, getDateKeyInTimeZone()).join(', ') || '—',
     },
     {
-      id: 'status',
-      header: 'Status',
-      size: 110,
-      accessorFn: profile => profile.status,
-      cell: ({ row: { original: profile } }: CellContext<YouthProfile, unknown>) => (
-        <Label tone={profile.status === 'active' ? 'positive' : 'negative'}>
-          {profile.status === 'active' ? 'Active' : 'Inactive'}
-        </Label>
-      ),
+      id: 'completedPrograms',
+      header: 'Completed Program(s)',
+      accessorFn: profile => getCompletedProgramLabels(profile, getDateKeyInTimeZone()).join(', ') || '—',
     },
     ...(canWrite ? [{
       id: 'actions' as const,

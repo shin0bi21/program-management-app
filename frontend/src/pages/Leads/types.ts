@@ -1,5 +1,5 @@
 export type LeadStatus = 'new' | 'contacted' | 'eligible' | 'ineligible' | 'deferred' | 'closed' | 'signed_up';
-export type EditableLeadStatus = Exclude<LeadStatus, 'signed_up'>;
+export type EditableLeadStatus = Exclude<LeadStatus, 'new' | 'signed_up'>;
 export type LeadOrigin = 'external' | 'internal';
 export type LeadSubmitterRole = 'youth' | 'parent' | 'guardian' | 'staff';
 export type LeadRelationship = 'parent' | 'sibling' | 'guardian';

@@ -170,12 +170,22 @@ own preview/release geometry, touch release, scrolling, fixed columns, and the g
 
 ## Test the Table
 
-Cover domain cell derivations, permission-aware actions, selection changes and
-loading, failure, and pagination outcomes. Do not enumerate fixed column lists or
-assert copied table configuration; exercise the behavior those settings enable.
-The data hook covers its query inputs, cursors, cancellation and row shaping; shared `Table`
-and `useInfiniteListQuery` tests cover rendering and pagination mechanics. Use browser tests
-for resizing, sticky layout and real scrolling. See [Testing](../../workflows/delivery/testing.md).
+Page-table tests cover only domain cells, permission-aware actions, selection
+coordination, and wiring to the shared owners. Verify loading, failure, pagination
+and retry handoffs at that boundary; do not replay their state-transition matrices.
+Do not enumerate fixed column lists or assert copied table configuration.
+
+The common `Table` and its internal owners are the sole owners of generic table
+rendering, sort controls, keyboard navigation, resizing and scroll behavior tests.
+Shared ordering and query suites own comparisons, ties, accumulation, refresh and
+retry mechanics. Browser tests for table geometry stay with the common table.
+
+Domain data-hook tests verify query keys, enabled gates, API inputs, cursor and
+cancellation forwarding, and any domain row shaping. Exercise the shared-query
+boundary directly for these contracts; a real query lifecycle is needed only
+when testing additional domain coordination. Pure policy suites own domain
+eligibility and canonical sort values; page and table tests do not repeat those
+cases. See [Testing](../../workflows/delivery/testing.md#test-ownership).
 
 ## Scaffolding
 

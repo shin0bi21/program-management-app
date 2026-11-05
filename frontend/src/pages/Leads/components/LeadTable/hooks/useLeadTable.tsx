@@ -18,7 +18,6 @@ const statusTones = {
 } as const;
 
 const editableStatuses: EditableLeadStatus[] = [
-  'new',
   'contacted',
   'eligible',
   'ineligible',

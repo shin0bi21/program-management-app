@@ -40,7 +40,7 @@ classify_changes() {
     BACKEND_CHANGED=true
   fi
 
-  if revision_changed "$BACKEND_REVISION" backend/db/migrations; then
+  if revision_changed "$BACKEND_REVISION" backend/db; then
     MIGRATIONS_CHANGED=true
   fi
 

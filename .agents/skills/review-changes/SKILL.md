@@ -13,7 +13,7 @@ Read the [review and merge guide](../../../docs/workflows/delivery/review-and-me
 
 1. Read repository instructions and the relevant owner documentation.
 2. Reuse the latest `map-changes` concern map. If no map exists, run the mapping workflow before deep review, even when the result is a single concern.
-3. Regenerate `node scripts/agents/snapshot-changes.ts --json` and compare its fingerprint and changed paths with the mapped snapshot. Inspect raw Git state only when resolving a mismatch or ambiguity. Update the map before deep review when the concern boundaries no longer hold.
+3. Regenerate `node scripts/reports/file-changes-report.ts --json` and compare its fingerprint and changed paths with the mapped snapshot. Inspect raw Git state only when resolving a mismatch or ambiguity. Update the map before deep review when the concern boundaries no longer hold.
 4. Distinguish user changes, generated artifacts, and unrelated pre-existing work.
 5. Identify affected features, ownership layers, and execution paths.
 6. For dependency, environment, migration, or container changes, read `docs/workflows/local-development/README.md` and verify required refresh or migration steps.
@@ -65,7 +65,7 @@ For the selected concern group:
 4. Match every user action to its mutation breadth. Focused commands such as status, placement, reorder, assignment, and resize must not replace unrelated fields from a cached record; verify locked authoritative reads and concurrent-change regression tests.
 5. For authorization changes, independently trace route capability, resource discovery, record reads, locked mutations, returned UI capabilities, and every consumer affordance. Test own, shared-readable, unrelated, and administrator cases rather than treating “permission coverage” as one checkbox.
 6. Check security boundaries, type precision, cleanup lifecycles, backward compatibility, and deploy requirements.
-7. Review new and changed code for cognitive complexity, verbose methods, and defensive clutter. Prefer concise execution-order methods and clean, thorough structures that make behavior explicit without speculative abstractions, redundant guards, or duplicated sources of truth.
+7. Apply [review-file-structure](../review-file-structure/SKILL.md) as the structural pass for this concern. Reuse its scope and evidence; inspect responsibilities, layer boundaries, complete function flows, applicable scaffolds, and test ownership. Include cognitive complexity and defensive clutter in that contextual review.
 8. Verify that tests cover public behavior and that composed runners include the changed locations. Run a test only when evidence is missing, stale, failed, or the concern changed during review.
 9. Determine whether each regression was possible because canonical guidance was absent, ambiguous, contradictory, or not routed into this task. Report that source-of-truth gap separately from the code defect; when the user has authorized documentation maintenance, correct the narrowest owning guide before the final review.
 

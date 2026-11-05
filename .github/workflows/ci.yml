@@ -35,7 +35,7 @@ jobs:
       static: ${{ steps.plan.outputs.static }}
       backend: ${{ steps.plan.outputs.backend }}
       backend_mode: ${{ steps.plan.outputs.backend_mode }}
-      backend_test_paths: ${{ steps.plan.outputs.backend_test_paths }}
+      backend_changed_paths: ${{ steps.plan.outputs.backend_changed_paths }}
       frontend: ${{ steps.plan.outputs.frontend }}
       frontend_mode: ${{ steps.plan.outputs.frontend_mode }}
       deploy: ${{ steps.plan.outputs.deploy }}
@@ -92,7 +92,7 @@ jobs:
       - name: Check changed repository patterns
         env:
           CHECK_PATTERNS_BASE_REF: ${{ github.event.pull_request.base.sha }}
-        run: node scripts/patterns/check-patterns.ts --changed
+        run: node scripts/patterns/run-pattern-checks.ts --changed
 
       - name: Test deployment planning
         if: needs.changes.outputs.deploy == 'true'
@@ -138,6 +138,19 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Select PostgreSQL 18 clients for database worker tests
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client-18
+          echo '/usr/lib/postgresql/18/bin' >> "$GITHUB_PATH"
+
       - name: Type check
         working-directory: backend
         run: npm run typecheck
@@ -161,7 +174,7 @@ jobs:
         working-directory: backend
         env:
           BACKEND_MODE: ${{ needs.changes.outputs.backend_mode }}
-          BACKEND_TEST_PATHS: ${{ needs.changes.outputs.backend_test_paths }}
+          BACKEND_CHANGED_PATHS: ${{ needs.changes.outputs.backend_changed_paths }}
           DATABASE_URL: postgresql://test:test@localhost:5432/myapp_test
           JWT_SECRET: ci-test-secret
           REFRESH_SECRET: ci-test-refresh-secret
@@ -173,8 +186,19 @@ jobs:
           if [ "$BACKEND_MODE" = full ]; then
             npm test
           else
-            read -r -a test_paths <<< "$BACKEND_TEST_PATHS"
-            npm test -- --runInBand "${test_paths[@]}"
+            read -r -a changed_paths <<< "$BACKEND_CHANGED_PATHS"
+            for changed_path in "${changed_paths[@]}"; do
+              if [ ! -f "$changed_path" ]; then
+                BACKEND_MODE=full
+                break
+              fi
+            done
+
+            if [ "$BACKEND_MODE" = full ]; then
+              npm test -- --runInBand
+            else
+              npm test -- --runInBand --findRelatedTests "${changed_paths[@]}"
+            fi
           fi
 
       - name: Build

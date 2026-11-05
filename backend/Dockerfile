@@ -26,6 +26,7 @@ FROM base AS prod
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/db/migrations ./dist/db/migrations
+# Keep SQL init files, manifests, and incremental migrations beside compiled scripts.
+COPY --from=builder /app/db ./dist/db
 EXPOSE 5001
 CMD ["npm", "start"]

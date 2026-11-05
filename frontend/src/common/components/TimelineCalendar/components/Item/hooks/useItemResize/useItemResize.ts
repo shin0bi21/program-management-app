@@ -15,7 +15,7 @@ interface ActiveResize {
   // Preview state
   resizing: boolean;
   x?: number;
-  preview?: ReturnType<typeof createItemPreview>;
+  preview?: ReturnType<typeof createItemPreview> & { scrollLeft: number };
 }
 
 /**
@@ -77,7 +77,10 @@ export default function useItemResize<TRow, TItemData>(
 
     if (!current || !viewport) return;
 
-    current.preview = createItemPreview(viewport, current.item, 'resize');
+    current.preview = {
+      ...createItemPreview(viewport, current.item, 'resize'),
+      scrollLeft: viewport.scrollLeft,
+    };
     current.resizing = true;
   }
 
@@ -202,7 +205,9 @@ function updateResizePreview(current: ActiveResize, environment: ItemEnvironment
   if (!preview) return;
 
   const pointerLeft = current.x - preview.host.getBoundingClientRect().left;
-  const previewLeft = preview.itemBounds.left - preview.bounds.left;
+  // Keep the opposite edge on its original date as the timeline scrolls beneath the portal.
+  const scrollDelta = viewport.scrollLeft - preview.scrollLeft;
+  const previewLeft = preview.itemBounds.left - preview.bounds.left - scrollDelta;
   const oppositeRight = previewLeft + preview.itemBounds.width;
 
   if (current.edge === 'start') {
@@ -210,6 +215,7 @@ function updateResizePreview(current: ActiveResize, environment: ItemEnvironment
     preview.element.style.left = `${draggedEdge}px`;
     preview.element.style.width = `${oppositeRight - draggedEdge}px`;
   } else {
+    preview.element.style.left = `${previewLeft}px`;
     preview.element.style.width = `${Math.max(pointerLeft, previewLeft) - previewLeft}px`;
   }
 }

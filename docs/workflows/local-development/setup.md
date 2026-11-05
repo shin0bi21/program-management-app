@@ -132,6 +132,10 @@ account already exists, the command leaves it in place and does not change its
 password. The migration command also updates the database types used by the
 backend code.
 
+Admin creation writes the account and credentials in one transaction. Failed
+creation leaves no partial account; concurrent seed runs for the same email
+create one account and leave an existing password unchanged.
+
 <a id="6-verify-the-application"></a>
 
 ## Open the Application

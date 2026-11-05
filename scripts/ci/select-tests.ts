@@ -1,10 +1,30 @@
 #!/usr/bin/env node
 
+/**
+ * SELECT TESTS — shared check planning for local runners and GitHub Actions.
+ *
+ * Flow: validate options → read changed paths → classify checks → emit a plan.
+ * Reads newline-delimited paths from stdin. Prints JSON or local commands, or
+ * appends outputs to --github-output FILE. Does not run the selected checks.
+ *
+ * Usage:
+ *   git diff --name-only HEAD | node scripts/ci/select-tests.ts --commands
+ *   node scripts/ci/select-tests.ts --help
+ */
+
+// ============================================================================
+// 1. Imports
+// ============================================================================
+
 import { appendFileSync } from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-type BackendMode = 'none' | 'focused' | 'full';
+// ============================================================================
+// 2. Plan contracts
+// ============================================================================
+
+type BackendMode = 'none' | 'related' | 'full';
 type FrontendMode = 'none' | 'related' | 'full';
 
 export interface TestPlan {
@@ -12,7 +32,7 @@ export interface TestPlan {
   deploy: boolean;
   backend: boolean;
   backendMode: BackendMode;
-  backendTestPaths: string[];
+  backendChangedPaths: string[];
   frontend: boolean;
   frontendMode: FrontendMode;
   backendImage: boolean;
@@ -22,157 +42,92 @@ export interface TestPlan {
 
 type PlanCommand = [command: string, value: string];
 
-type SourceDirectory = `${string}/`;
-type BackendDomain = {
-  testPaths: readonly string[];
-  sourceDirectories?: readonly SourceDirectory[];
-  sourceFiles: readonly string[];
-};
+// ============================================================================
+// 3. CLI arguments
+// ============================================================================
 
-// Each domain declares its authoritative tests and the source files they own.
-// Directories end in a slash; conventional files match exactly.
-const BACKEND_DOMAINS = {
-  referenceData: {
-    testPaths: ['tests/referenceData'],
-    sourceDirectories: ['services/referenceData/'],
-    sourceFiles: ['controllers/referenceDataController.ts', 'routes/referenceDataRoutes.ts', 'validation/referenceDataSchemas.ts'],
-  },
-  accounts: {
-    testPaths: ['tests/accounts'],
-    sourceDirectories: ['services/accounts/'],
-    sourceFiles: [
-      'controllers/accountController.ts',
-      'policies/accountPolicy.ts',
-      'routes/accountRoutes.ts',
-      'validation/accountSchemas.ts',
-    ],
-  },
-  auth: {
-    testPaths: ['tests/auth'],
-    sourceDirectories: ['services/auth/'],
-    sourceFiles: ['controllers/authController.ts', 'routes/authRoutes.ts', 'validation/authSchemas.ts'],
-  },
-  sessions: {
-    testPaths: ['tests/sessions'],
-    sourceDirectories: ['services/programming/sessions/'],
-    sourceFiles: ['controllers/sessionController.ts', 'routes/sessionRoutes.ts'],
-  },
-  homepage: {
-    testPaths: ['tests/homepage'],
-    sourceFiles: [
-      'validation/homepageSchemas.ts',
-    ],
-  },
-  outreach: {
-    testPaths: ['tests/public', 'tests/expressionOfInterest', 'tests/leads'],
-    sourceDirectories: ['services/outreach/'],
-    sourceFiles: [
-      'controllers/leadController.ts',
-      'routes/leadRoutes.ts',
-      'validation/leadNoteSchemas.ts',
-      'validation/leadSchemas.ts',
-      'validation/publicSchemas.ts',
-    ],
-  },
-  preferences: {
-    testPaths: ['tests/preferences'],
-    sourceFiles: [
-      'controllers/preferenceController.ts',
-      'routes/preferenceRoutes.ts',
-      'services/preferenceService.ts',
-      'validation/preferenceSchemas.ts',
-    ],
-  },
-  programs: {
-    testPaths: ['tests/programs'],
-    sourceDirectories: ['services/programming/programs/', 'services/programming/programCycles/', 'services/programming/cycles/', 'reports/programming/programCycles/'],
-    sourceFiles: [
-      'controllers/programController.ts',
-      'controllers/programCycleController.ts',
-      'controllers/cycleController.ts',
-      'controllers/enrollmentController.ts',
-      'routes/cycleRoutes.ts',
-      'routes/programRoutes.ts',
-      'services/programService.ts',
-      'validation/programSchemas.ts',
-    ],
-  },
-  schools: {
-    testPaths: ['tests/schools'],
-    sourceFiles: ['controllers/schoolController.ts', 'routes/schoolRoutes.ts', 'validation/schoolSchemas.ts'],
-  },
-  tasks: {
-    testPaths: ['tests/tasks'],
-    sourceDirectories: ['services/staff/tasks/'],
-    sourceFiles: [
-      'controllers/taskController.ts',
-      'policies/taskPolicy.ts',
-      'routes/taskRoutes.ts',
-      'validation/taskSchemas.ts',
-    ],
-  },
-  hours: {
-    testPaths: ['tests/hours'],
-    sourceDirectories: ['services/staff/hours/'],
-    sourceFiles: [
-      'controllers/hoursController.ts',
-      'policies/hoursPolicy.ts',
-      'routes/hoursRoutes.ts',
-      'validation/hoursSchemas.ts',
-    ],
-  },
-  youth: {
-    testPaths: ['tests/youth'],
-    sourceDirectories: ['services/youth/'],
-    sourceFiles: [
-      'controllers/youthController.ts',
-      'routes/youthRoutes.ts',
-      'validation/youthProfileNoteSchemas.ts',
-      'validation/youthSchemas.ts',
-    ],
-  },
-} as const satisfies Record<string, BackendDomain>;
+interface CliOptions {
+  baseRef: string;
+  commands: boolean;
+  githubOutput?: string;
+  help: boolean;
+}
 
-type BackendSuite = keyof typeof BACKEND_DOMAINS;
+function usage(): string {
+  return `Usage: node scripts/ci/select-tests.ts [--base-ref REF] [--commands | --github-output FILE]
 
-const RELATED_BACKEND_SUITES: Partial<Record<BackendSuite, readonly BackendSuite[]>> = {
-  tasks: ['hours', 'referenceData'],
-  hours: ['tasks', 'referenceData'],
-  programs: ['sessions', 'youth', 'hours', 'outreach', 'homepage', 'referenceData'],
-  schools: ['referenceData'],
-  sessions: ['youth', 'hours', 'homepage', 'referenceData'],
-  referenceData: ['hours'],
-};
+Read newline-delimited changed paths from stdin and plan checks without running them.
 
-const SHARED_BACKEND_FILES: Readonly<Record<string, readonly BackendSuite[]>> = {
-  'backend/src/validation/programmingSchemas.ts': ['programs', 'sessions', 'youth', 'hours', 'referenceData'],
-  'backend/src/policies/staffResourcePolicy.ts': ['tasks', 'hours', 'referenceData'],
-  'backend/src/controllers/homepageController.ts': ['homepage', 'outreach'],
-  'backend/src/routes/homepageRoutes.ts': ['homepage', 'outreach'],
-  'backend/src/services/homepageService.ts': ['homepage', 'outreach'],
-};
+  --base-ref REF       Target branch; main also selects production packaging checks.
+  --commands           Print tab-delimited commands for the local test runner.
+  --github-output FILE Append job outputs to this GitHub Actions output file.
+  -h, --help           Show this help.
 
-// Match a backend source or test file to the smallest safe domain suite. Files
-// without a known owner return null so the caller can fail closed to all tests.
-function backendSuitesFor(file: string): BackendSuite[] | null {
-  const sharedSuites = SHARED_BACKEND_FILES[file];
-  if (sharedSuites) return [...sharedSuites];
+Without an output option, print JSON. GitHub output takes precedence over commands.`;
+}
 
-  const sourcePath = file.startsWith('backend/src/') ? file.slice('backend/src/'.length) : null;
+function parseArgs(args: string[]): CliOptions {
+  const options: CliOptions = { baseRef: 'develop', commands: false, help: false };
 
-  for (const suite of Object.keys(BACKEND_DOMAINS) as BackendSuite[]) {
-    const domain: BackendDomain = BACKEND_DOMAINS[suite];
-    const ownsTest = domain.testPaths.some(testPath => file.startsWith(`backend/${testPath}/`));
-    const ownsSource = sourcePath !== null && (
-      domain.sourceFiles.includes(sourcePath)
-      || domain.sourceDirectories?.some(directory => sourcePath.startsWith(directory))
-    );
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
 
-    if (ownsTest || ownsSource) return [suite, ...(RELATED_BACKEND_SUITES[suite] ?? [])];
+    switch (argument) {
+      case '--base-ref':
+      case '--github-output': {
+        const value = args[index + 1];
+        const valueName = argument === '--base-ref' ? 'a revision' : 'a file path';
+        if (!value || value.startsWith('--')) {
+          throw new Error(`${argument} requires ${valueName}`);
+        }
+
+        if (argument === '--base-ref') {
+          options.baseRef = value;
+        } else {
+          options.githubOutput = value;
+        }
+
+        // Consume the value so it is not interpreted as the next option.
+        index += 1;
+        break;
+      }
+
+      case '--commands':
+        options.commands = true;
+        break;
+
+      case '-h':
+      case '--help':
+        options.help = true;
+        break;
+
+      default:
+        throw new Error(`Unknown argument: ${argument}`);
+    }
   }
 
-  return null;
+  return options;
 }
+
+// ============================================================================
+// 4. Input collection
+// ============================================================================
+
+// Changed paths are streamed over stdin by Git locally and in GitHub Actions.
+async function readFiles(): Promise<string[]> {
+  process.stdin.setEncoding('utf8');
+
+  let input = '';
+  for await (const chunk of process.stdin) {
+    input += chunk;
+  }
+
+  return input.split(/\r?\n/).filter(Boolean);
+}
+
+// ============================================================================
+// 5. Changed-path routing policy
+// ============================================================================
 
 // Start with no work selected. Each changed path only enables the checks it
 // owns, keeping documentation-only and unrelated jobs off paid runners.
@@ -182,7 +137,7 @@ function emptyPlan(): TestPlan {
     deploy: false,
     backend: false,
     backendMode: 'none',
-    backendTestPaths: [],
+    backendChangedPaths: [],
     frontend: false,
     frontendMode: 'none',
     backendImage: false,
@@ -205,9 +160,11 @@ function enableFullApplication(plan: TestPlan): void {
 // Classify repository-relative changed paths into static, application, and
 // production checks. This function is the shared policy for local and CI runs.
 export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?: string } = {}): TestPlan {
+  // Step 1. Start with no checks; paths can only add coverage.
   const plan = emptyPlan();
-  const backendSuites = new Set<BackendSuite>();
+  const backendChangedPaths = new Set<string>();
 
+  // Step 2. Classify each path, escalating unknown owners to full coverage.
   for (const file of files.filter(Boolean)) {
     // Documentation changes do not need application runners.
     if (file.startsWith('docs/') || file.endsWith('.md')) continue;
@@ -248,7 +205,6 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
     // Automation and repository-policy changes validate their own static layer.
     if (file.startsWith('.github/workflows/') || file.startsWith('scripts/ci/')
       || file === 'scripts/tests/test-app.sh' || file === 'scripts/tests/test-static.sh'
-      || /^scripts\/tests\/check-doc-links\.(?:js|ts)$/.test(file)
       || file.startsWith('.agents/skills/') || file === 'AGENTS.md'
       || file === 'eslint.config.js' || file === 'tsconfig.json'
       || file === 'package.json' || file === 'package-lock.json') {
@@ -271,29 +227,33 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
       continue;
     }
 
-    if (file.startsWith('scripts/agents/') || file.startsWith('scripts/patterns/')
+    if (file.startsWith('scripts/scaffold/') || file.startsWith('scripts/patterns/')
       || file.startsWith('scripts/reports/')) {
       plan.static = true;
       continue;
     }
 
-    // Known backend owners use focused Jest paths. Shared infrastructure,
-    // migrations, dependencies, and unknown backend paths run the full suite.
+    // Application sources and test files go directly to Jest's dependency graph.
+    // Database, configuration, and shared test setup changes require every suite.
     if (file.startsWith('backend/')) {
       plan.static = true;
       plan.backend = true;
-      if (/^backend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file)) plan.backendImage = true;
-      if (file.startsWith('backend/db/migrations/') || file.startsWith('backend/db/scripts/')
-        || /^backend\/(?:package(?:-lock)?\.json|tsconfig.*\.json|jest.*)/.test(file)) {
+      const affectsBackendImage = /^backend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file);
+      if (affectsBackendImage) {
+        plan.backendImage = true;
+      }
+
+      const isSource = file.startsWith('backend/src/');
+      const isTest = file.startsWith('backend/tests/');
+      const isSharedTestSetup = file.startsWith('backend/tests/shared/') || file === 'backend/tests/setup.ts';
+      if ((!isSource && !isTest) || isSharedTestSetup) {
         plan.backendMode = 'full';
         continue;
       }
-      const suites = backendSuitesFor(file);
-      if (!suites) {
-        plan.backendMode = 'full';
-      } else if (plan.backendMode !== 'full') {
-        plan.backendMode = 'focused';
-        suites.forEach(suite => backendSuites.add(suite));
+
+      if (plan.backendMode !== 'full') {
+        plan.backendMode = 'related';
+        backendChangedPaths.add(file.slice('backend/'.length));
       }
       continue;
     }
@@ -302,10 +262,18 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
     // unit's tests and tests for importing components and route pages. Tooling
     // or dependency changes run the complete frontend suite.
     if (file.startsWith('frontend/')) {
-      if (file.startsWith('frontend/playwright/') || file === 'frontend/playwright.config.ts') continue;
+      const belongsToBrowserSuite = file.startsWith('frontend/playwright/') || file === 'frontend/playwright.config.ts';
+      if (belongsToBrowserSuite) {
+        continue;
+      }
+
       plan.static = true;
       plan.frontend = true;
-      if (/^frontend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file)) plan.frontendImage = true;
+      const affectsFrontendImage = /^frontend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file);
+      if (affectsFrontendImage) {
+        plan.frontendImage = true;
+      }
+
       if (file.startsWith('frontend/src/') && plan.frontendMode !== 'full') {
         plan.frontendMode = 'related';
       } else {
@@ -326,22 +294,25 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
     enableFullApplication(plan);
   }
 
-  // Resolve selected backend domains into one deduplicated Jest invocation.
-  if (plan.backendMode === 'focused') {
-    plan.backendTestPaths = [...backendSuites]
-      .flatMap(suite => BACKEND_DOMAINS[suite].testPaths)
-      .filter((path, index, paths) => paths.indexOf(path) === index);
+  // Step 3. Deduplicate changed inputs for Jest; it discovers the affected tests.
+  if (plan.backendMode === 'related') {
+    plan.backendChangedPaths = [...backendChangedPaths];
   }
 
-  // Release pull requests always validate production packaging, even when the
+  // Step 4. Release pull requests always validate production packaging, even when the
   // individual changed paths would not select it for a feature pull request.
   if (baseRef === 'main') {
     plan.backendImage = true;
     plan.frontendImage = true;
     plan.compose = true;
   }
+
   return plan;
 }
+
+// ============================================================================
+// 6. Output representations
+// ============================================================================
 
 // Convert the plan into stable commands consumed by the local test-app runner.
 export function planCommands(plan: TestPlan): PlanCommand[] {
@@ -349,7 +320,7 @@ export function planCommands(plan: TestPlan): PlanCommand[] {
   if (plan.deploy) commands.push(['deploy', '']);
   if (plan.static) commands.push(['static', '']);
   if (plan.backendMode === 'full') commands.push(['backend-full', '']);
-  if (plan.backendMode === 'focused') commands.push(['backend-focused', plan.backendTestPaths.join(' ')]);
+  if (plan.backendMode === 'related') commands.push(['backend-related', plan.backendChangedPaths.join(' ')]);
   if (plan.frontendMode === 'full') commands.push(['frontend-full', '']);
   if (plan.frontendMode === 'related') commands.push(['frontend-related', '']);
   return commands;
@@ -362,7 +333,7 @@ function githubOutputs(plan: TestPlan): Record<string, string | boolean> {
     deploy: plan.deploy,
     backend: plan.backend,
     backend_mode: plan.backendMode,
-    backend_test_paths: plan.backendTestPaths.join(' '),
+    backend_changed_paths: plan.backendChangedPaths.join(' '),
     frontend: plan.frontend,
     frontend_mode: plan.frontendMode,
     backend_image: plan.backendImage,
@@ -371,36 +342,42 @@ function githubOutputs(plan: TestPlan): Record<string, string | boolean> {
   };
 }
 
-// Changed paths are streamed over stdin by Git locally and in GitHub Actions.
-async function readFiles(): Promise<string[]> {
-  let input = '';
-  process.stdin.setEncoding('utf8');
-  for await (const chunk of process.stdin) input += chunk;
-  return input.split(/\r?\n/).filter(Boolean);
-}
+// ============================================================================
+// 7. Main workflow
+// ============================================================================
 
-// Support human-readable JSON, local command planning, and GitHub outputs from
-// one entry point so CI cannot drift from the local --changed behavior.
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const outputIndex = args.indexOf('--github-output');
-  const baseIndex = args.indexOf('--base-ref');
-  const baseRef = baseIndex >= 0 ? args[baseIndex + 1] : 'develop';
-  const plan = selectTests(await readFiles(), { baseRef });
+  // Step 1. Validate options before reading stdin or appending GitHub outputs.
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
 
-  if (outputIndex >= 0) {
-    const outputFile = args[outputIndex + 1];
-    if (!outputFile) throw new Error('--github-output requires a file path');
+  // Step 2. Read changed paths and derive the shared local/CI test plan.
+  const files = await readFiles();
+  const plan = selectTests(files, { baseRef: options.baseRef });
+
+  // Step 3. Emit the requested representation; selected checks are not executed.
+  if (options.githubOutput) {
     const lines = Object.entries(githubOutputs(plan)).map(([key, value]) => `${key}=${value}`);
-    appendFileSync(outputFile, `${lines.join('\n')}\n`);
+    appendFileSync(options.githubOutput, `${lines.join('\n')}\n`);
     return;
   }
-  if (args.includes('--commands')) {
-    for (const [command, value] of planCommands(plan)) console.log(`${command}\t${value}`);
+
+  if (options.commands) {
+    for (const [command, value] of planCommands(plan)) {
+      console.log(`${command}\t${value}`);
+    }
     return;
   }
+
   console.log(JSON.stringify(plan, null, 2));
 }
+
+// ============================================================================
+// 8. Entrypoint
+// ============================================================================
 
 // Keep the exported planner testable without executing the command-line path.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

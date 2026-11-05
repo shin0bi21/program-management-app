@@ -1,6 +1,6 @@
 # Google Sheets Scripts
 
-Use the helpers in [backend/scripts/googleSheets](../../../backend/scripts/googleSheets/)
+Use the helpers in [backend/integrations/googleSheets](../../../backend/integrations/googleSheets/)
 for one-off spreadsheet imports and exports. They are script-only utilities, outside the
 Express request path.
 
@@ -28,7 +28,7 @@ operation does not need it.
 Run from the repository root with the local backend container running:
 
 ```bash
-docker compose exec backend npx tsx scripts/googleSheets/test-connection.ts <spreadsheet-id>
+docker compose exec backend npx tsx integrations/googleSheets/test-connection.ts <spreadsheet-id>
 ```
 
 The spreadsheet ID is the value between `/d/` and `/edit` in its URL. The smoke test reads
@@ -50,17 +50,18 @@ metadata and prints the spreadsheet title and tab names.
 | `appendToSheet({ spreadsheetId, range, values })` | Insert rows after the table's existing data |
 
 Ranges use A1 notation, such as `Sheet1!A2:F`. Writes use raw values without formula parsing.
-See the [helper implementation](../../../backend/scripts/googleSheets/index.ts) and
-[option types](../../../backend/scripts/googleSheets/types.ts) for the complete API.
+See the [helper implementation](../../../backend/integrations/googleSheets/index.ts) and
+[option types](../../../backend/integrations/googleSheets/types.ts) for the complete API.
 Use `getSheetsClient()` from the same module for operations outside these helpers.
 
 ## Add a Script
 
-Place scripts under `backend/scripts/`. For example, `backend/scripts/read-roster.ts`:
+Place Sheets scripts under `backend/integrations/googleSheets/`. For example,
+`backend/integrations/googleSheets/read-roster.ts`:
 
 ```ts
 import 'dotenv/config';
-import { readSheet } from './googleSheets';
+import { readSheet } from './index';
 
 async function main() {
   const spreadsheetId = process.argv[2];
@@ -76,6 +77,6 @@ main().catch(error => {
 });
 ```
 
-Run it with `docker compose exec backend npx tsx scripts/read-roster.ts <spreadsheet-id>`.
+Run it with `docker compose exec backend npx tsx integrations/googleSheets/read-roster.ts <spreadsheet-id>`.
 Validate spreadsheet values before importing them. If a script opens the database client,
 close it with `await sql.end()` in `finally` so failures also release the connection pool.

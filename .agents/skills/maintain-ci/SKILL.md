@@ -11,7 +11,7 @@ Evolve CI without weakening the merge gate or confusing local and remote test ow
 
 1. Read [`docs/workflows/delivery/ci.md`](../../../docs/workflows/delivery/ci.md) completely. It owns CI architecture, operations, gates, routing, performance, and failure handling.
 2. Inspect the affected workflow, its called repository scripts, and the package commands those scripts invoke.
-3. Read `docs/workflows/delivery/testing.md` when changing test ownership or runner composition. Read `docs/workflows/local-development/README.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/workflows/delivery/deployment.md` for any push-to-main or production path.
+3. Read `docs/workflows/delivery/testing.md` when changing test ownership or runner composition. Read `docs/workflows/local-development/README.md` when dependencies, containers, databases, or runtime setup are involved. Read `docs/workflows/production/deployment.md` for any push-to-main or production path.
 4. Trace both the pull-request path and any push, scheduled, manual, or deployment path affected by the change.
 
 Treat workflow files as orchestration, repository scripts as stable developer/CI entry points, and package scripts as framework-level commands.

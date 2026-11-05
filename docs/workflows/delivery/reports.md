@@ -2,6 +2,71 @@
 
 Repository reports summarize existing state; they do not change application code, CI configuration, containers, or production.
 
+Report scripts use a `-report.ts` suffix, colocated tests use `-report.test.ts`,
+and npm commands use the `report:<subject>` prefix.
+
+## Log Report
+
+Read Docker logs, captured files, or pasted console output:
+
+```bash
+npm run report:logs -- --docker backend --since 5m --match TypeError
+npm run report:logs -- --docker --since 1h --type error
+npm run report:logs -- browser-console.txt --match "Failed to fetch" --context 4
+pbpaste | npm run report:logs
+```
+
+Docker input identifies the stack from Compose labels on this checkout's containers,
+including stopped services. With one recognized configuration, it automatically
+selects `docker-compose.yml` or `docker-compose.prod.yml`. Supply service names or
+omit them to read all services. `--since` accepts Docker time values such as `5m`,
+`1h`, or an absolute timestamp and defaults to `5m`.
+
+If no stack can be identified, both stacks are present, or containers use custom
+Compose overrides, the report stops. Select a repository stack explicitly with
+`--development` or `--production` when needed; both flags require `--docker`.
+The command captures existing output without following logs, restarting containers,
+or altering data.
+
+On Lightsail, run from `/home/ubuntu/my-webapp` with Node 24 and Docker Compose
+available on the host. The report uses only Node built-ins and needs no `npm install`:
+
+```bash
+node scripts/reports/log-report.ts --docker nginx backend --since 5m --context 4
+```
+
+This reads the selected stack through the host's Docker CLI. It does not run
+inside the application containers or require an application image rebuild.
+
+Without filters, the report groups recognized HTTP failures, errors, warnings,
+and application frames. `--match` selects literal text ignoring case, including
+messages the classifier does not recognize. `--type` selects `error`, `warning`,
+`http`, or `frame`; both filters must match when combined. Grouping removes Compose
+prefixes and ISO timestamps; HTTP summaries omit hosts and query values.
+
+Each group includes its count, source line locations, and surrounding lines from
+its first occurrence. Context defaults to two lines on each side; use `--context 0`
+for counts and locations only. Docker line numbers refer to the captured output,
+not a persistent server file. Nearby frames and requests provide context without
+establishing a shared cause. Raw context retains the supplied log contents.
+No matches produces an explanatory message and a successful exit; input and
+Docker failures exit nonzero.
+
+## Changes Report
+
+Inspect branch commits and staged, unstaged, and untracked changes with:
+
+```bash
+npm run report:changes
+npm run report:changes -- --json --base origin/develop
+```
+
+The command lives in `scripts/reports/file-changes-report.ts`. It reports branch and
+upstream state, changed paths, ownership categories, existing stashes, a content
+fingerprint, and checks selected by the shared CI policy. It does not run checks
+or save a backup. `INSPECT_CHANGES_BASE_REF` overrides the default comparison base
+when `--base` is absent.
+
 ## CI Report
 
 Use the CI report to measure recent merge-gate performance from GitHub pull requests and Actions runs:
@@ -35,12 +100,21 @@ deployment timing data; the report does not query GitHub or maintain a second
 copy of the measurements. A type filter normally includes every deployment in
 which that component participated; add `--exclusive` to require exactly the
 selected component combination. Repeat `--type` to select combinations such as
-frontend plus backend. Date bounds are inclusive and use each deployment job's
-UTC start date.
+frontend plus backend. Exclusive migration selection includes its required backend;
+exclusive infrastructure selection includes all four components. Date bounds are inclusive and use each deployment job's
+UTC start date. Impossible calendar dates are rejected.
+
+With no filters, the table shows frontend-only, full, frontend-plus-backend, and
+frontend-plus-backend-plus-migrations deployments. Component or date filters
+allow every matching deployment path to appear. Custom history supplied with
+`--file` is validated before filtering and aggregation.
 
 ## LOC Report
 
-Use the LOC report for a repository-size breakdown. It excludes `.git`, `node_modules`, and `dist` output, and separates TypeScript and React source from their tests:
+Use the LOC report for a repository-size breakdown. The single TypeScript command
+`scripts/reports/loc-report.ts` discovers Git-tracked and nonignored untracked
+files, excludes `.git`, `node_modules`, `dist`, and `build`, and separates
+TypeScript and React source from their tests:
 
 ```bash
 npm run report:loc
@@ -53,7 +127,10 @@ npm run report:loc -- ts tsx sql
 `report:loc` defaults to application TypeScript and React files. Pass `all` to include CSS, SQL, and Markdown, or provide an explicit extension list.
 
 Blank and whitespace-only lines are always excluded. Comments count by default.
-Pass `--ignore-comments` to exclude comment-only lines for TypeScript/React (`//`, `/* */`, JSDoc,
-and JSX comments), CSS (`/* */`), SQL (`--` and `/* */`), and Markdown
-(`<!-- -->`). Lines containing both code and comments still count. Quoted comment markers remain content. Other requested extensions use
-nonblank line counts.
+With `--ignore-comments`, each line is trimmed before checking its prefix:
+`//` for TS/TSX, `--` for SQL, `/*` for TS/TSX/CSS/SQL, `{/*` for TSX, and
+`<!--` for Markdown. A block excludes every line through its first closing
+marker, including any code on that closing line. Inline comments on code lines
+do not change their count. This deliberately uses line rules rather than parsing
+strings, templates, Markdown fences, or nested block comments. Other extensions
+use nonblank line counts.

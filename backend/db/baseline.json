@@ -1,0 +1,340 @@
+{
+  "format": 1,
+  "id": "1462737286c43b7e",
+  "files": {
+    "schema/init.sql": "b24b10364cfb21ad70bdfeaa26eb26e899fca31dedfacf3fbef9c2206c196eb7",
+    "data/init.sql": "f33bac3399012d8a5bc3d2ff950b44b197cce50ccbb682913c01acc8f26f605d"
+  },
+  "replaces": [
+    {
+      "version": "2026-01-31_1_init.sql",
+      "checksum": "28e4b8c5e36f985008b6833f3e168b353cf7cf6ea109383ee5168a03daf7e1f3"
+    },
+    {
+      "version": "2026-05-19_2_add_user_status.sql",
+      "checksum": "5f749c81ff5080c664cb1c1e24a4edb1ab52b9dc32341a881827f30ee8f9b7c1"
+    },
+    {
+      "version": "2026-05-20_1_school_updates.sql",
+      "checksum": "d81d829b26fc7eaec6910fe875e63a15f4713047fd3b15399853980374f84733"
+    },
+    {
+      "version": "2026-06-24_1_add_cohort_interest_submissions.sql",
+      "checksum": "12ea553aa4bf757706173662de8b4a8655b8ac67120c662ac734042e76198e09"
+    },
+    {
+      "version": "2026-06-30_1_staff_cohort_interest_access.sql",
+      "checksum": "a76bd2962b1e2dd1aa0dbb6d086ccfd6467d72bcb0a3ad2ba4ba17d4ec0081e0"
+    },
+    {
+      "version": "2026-07-14_1_add_youth_profile_status.sql",
+      "checksum": "d3ad4d95c6ce448e9dda3e809de75da36b70982f332d2caa87158416d6ad6d04"
+    },
+    {
+      "version": "2026-07-14_2_add_user_credentials_status.sql",
+      "checksum": "371c48913417cebc172d467627ee4df14457a81c806e465465148c567278e2d5"
+    },
+    {
+      "version": "2026-07-14_3_remove_users_status.sql",
+      "checksum": "270027da9c1195ab05667bfc4c694bde8596cb67f7ec3f9675370c06c69aa744"
+    },
+    {
+      "version": "2026-07-18_1_add_account_permissions.sql",
+      "checksum": "982c59a4670f878dcf2a94132a73edd6beff0feb71a912d0c90ddf3e10c497fd"
+    },
+    {
+      "version": "2026-07-19_1_add_outreach_and_leads.sql",
+      "checksum": "6557ce37ee6170696292c9746e1cbe7825589fbe2ff95bfcff057c5b5cd93615"
+    },
+    {
+      "version": "2026-07-21_1_add_program_assignments.sql",
+      "checksum": "83230e86f2d24185b002c83c6a43ad4f48acd8a91343fb59e3078f51399f848a"
+    },
+    {
+      "version": "2026-07-21_2_add_youth_notes_and_lead_signup.sql",
+      "checksum": "dfce6f2919909e9577f9989bc9c0bab7a8bfe5cdcf7c3ab05c48c1c48336d847"
+    },
+    {
+      "version": "2026-07-24_1_add_programming_cohorts_and_attendance.sql",
+      "checksum": "df134e06181a41bae199d3591bd403363fe7169fb5338e1b99f105c15c32416b"
+    },
+    {
+      "version": "2026-07-24_2_migrate_youth_to_cohort_participation.sql",
+      "checksum": "e9395e7aee475f198c9349a0dd55c07c6309f225f699ee390d8e7ba0a8a75519"
+    },
+    {
+      "version": "2026-07-24_3_add_lead_program_interest.sql",
+      "checksum": "c03a19f4e39ce3248672d744b5183a18993892dc797a9313e6676ce529b98276"
+    },
+    {
+      "version": "2026-07-24_4_add_open_program_attendance.sql",
+      "checksum": "b554d60681f155ce2cabb0649afc3cfb9f647c705b283060d4dd7a26110645aa"
+    },
+    {
+      "version": "2026-07-24_5_simplify_cohort_sessions.sql",
+      "checksum": "cbcf123495c5163cb3a620e47c7748d2ac99fd651a0ae9218df3da58085e3903"
+    },
+    {
+      "version": "2026-07-24_6_make_session_theme_optional.sql",
+      "checksum": "c009c0a4f2f6475e1f60d2950b30be9275666ed324a76d0e4f1238966e7d6cae"
+    },
+    {
+      "version": "2026-07-25_1_add_staff_program_assignments.sql",
+      "checksum": "958d540df276420d009b46d8bf99237584012b69ba2fba3eeeb4c77cb7ebe0b1"
+    },
+    {
+      "version": "2026-07-26_1_add_program_age_ranges.sql",
+      "checksum": "24461ebf8f303289571654d83552047d3c44f5831aeb3fad22c51ee7fd14e79e"
+    },
+    {
+      "version": "2026-07-26_2_add_session_notes.sql",
+      "checksum": "90dd8bc7ddf1036e377291e7bfd9c0a40debb77ef03d722fd6b45bc6800a2a63"
+    },
+    {
+      "version": "2026-07-27_1_add_homepage_management.sql",
+      "checksum": "83d478cae9ca1c7eaa6ec7f026373e3a86b869195f4cdf6818ef49b057708f28"
+    },
+    {
+      "version": "2026-07-27_2_add_session_types.sql",
+      "checksum": "02d22a613df699e2f1ab9236fce58ce2997094368eb793abb5b8d7dabd0611bd"
+    },
+    {
+      "version": "2026-07-27_3_make_session_note_details_optional.sql",
+      "checksum": "bf24e50c5ff01c2a24d41805dff0a07c1010183224549f833cf1dbebb33cfc91"
+    },
+    {
+      "version": "2026-07-28_1_remove_primary_contact_names.sql",
+      "checksum": "d8d25328f9c3c4f3f651920d33dc91bd81f60e08f6ee0e70592dd03543f7e5d4"
+    },
+    {
+      "version": "2026-07-28_2_simplify_youth_addresses.sql",
+      "checksum": "11fd079353589c08e45e8d3806f2ecb7e222fcf82109a1a25ef3a2238f845c56"
+    },
+    {
+      "version": "2026-08-06_1_add_session_permissions.sql",
+      "checksum": "0737bfbdac7b1190cd3b7e496b408a851c08a5f936faafdad064383ca921901d"
+    },
+    {
+      "version": "2026-08-06_2_standardize_session_note_youth_name.sql",
+      "checksum": "59a3126aa8f44a6a25ddf569fa7fc5db143e285deef866528551435d091b584a"
+    },
+    {
+      "version": "2026-08-06_3_add_session_attachments.sql",
+      "checksum": "9c5ad56c8ad1f98bb7533ee74a1e0bd35665da0b5114099d319088cad302d140"
+    },
+    {
+      "version": "2026-08-06_4_add_user_preferences.sql",
+      "checksum": "e2a693c433716e9624fd325dc76e7b475250bb677c9af92997a69ba06a7fae07"
+    },
+    {
+      "version": "2026-08-06_5_simplify_schools.sql",
+      "checksum": "8a4fe32bb1457edd51450e20546d5b81ed6ce1b051efbdc797489b730df5c5fc"
+    },
+    {
+      "version": "2026-08-06_6_add_youth_profile_notes.sql",
+      "checksum": "4ca87c0b89217536adef86ddbf9f5925db3d315aab15a726359b4eb6578858f8"
+    },
+    {
+      "version": "2026-08-06_7_standardize_profile_note_titles.sql",
+      "checksum": "a595102831ed1aecd43f03581f8f6ba82324abe4400ca7c9381963a520cf6f44"
+    },
+    {
+      "version": "2026-08-06_8_align_profile_notes_with_session_notes.sql",
+      "checksum": "5d2fb8acab59148adc2d32f8fee8ec49bcfb31941b90ec8b72daa4668b9199ef"
+    },
+    {
+      "version": "2026-08-07_1_add_outreach_submitter_role.sql",
+      "checksum": "9d1036caa2e854a6f08b55e3cabfe1dab5d8968f6eafa3f0ad8564f8382f843c"
+    },
+    {
+      "version": "2026-08-07_2_add_lead_notes.sql",
+      "checksum": "c4a4c4d8338c1e1b248f76596a650da4030fc17880ffbd4b04402d2c6f44502e"
+    },
+    {
+      "version": "2026-08-07_3_scope_submitter_role_to_expressions.sql",
+      "checksum": "fe3757e9d9d1594368c64cccba2337d4f303e0102ff1595d0be6f4e146226f09"
+    },
+    {
+      "version": "2026-08-09_1_add_time_entries.sql",
+      "checksum": "c75e87e8d4623a685c278645accc0133999f957dc2b4ec62c0d00d889ff10eaf"
+    },
+    {
+      "version": "2026-08-10_1_add_program_cycles.sql",
+      "checksum": "0d1257e8b99e33d25b079c70d176289562ba698dec5d1453550977d3ed39a49f"
+    },
+    {
+      "version": "2026-08-10_2_rename_time_entry_promotion_to_outreach.sql",
+      "checksum": "7471a7116c78293dc0bb94497287d4c94697cfa2122e667d4ade2712c8afa874"
+    },
+    {
+      "version": "2026-08-10_3_make_time_entry_cycle_independent.sql",
+      "checksum": "ebbf0b058ac53d146931530782bd5dc0aabdf4c6017801068604f237225a4147"
+    },
+    {
+      "version": "2026-08-10_4_rename_time_entry_programming_to_program_delivery.sql",
+      "checksum": "87403c887011e32e3682c2c227ef25b3c218c25cf20c8bc8707529ce47ac6d7c"
+    },
+    {
+      "version": "2026-08-10_5_lock_converted_expression_status.sql",
+      "checksum": "1ed17ec0f0183ae75a685915e8f16bdf2126794709a3f648a36c1633b0544fa4"
+    },
+    {
+      "version": "2026-08-10_6_add_tasks.sql",
+      "checksum": "2b50737bd542d80f609f5fae582e65a3b48a11570c7381d8618e4745620b83ec"
+    },
+    {
+      "version": "2026-08-11_1_add_session_time_entries.sql",
+      "checksum": "d5dcdf90291a9f3ed7374b1f5928bfa5206156beaa9c08e616ea2003a252f248"
+    },
+    {
+      "version": "2026-08-11_2_rename_staff_program_assignments.sql",
+      "checksum": "0991f4b1563b8abf1fec486849e1a5c3086fde563577b2cde07a8a83dbba79f8"
+    },
+    {
+      "version": "2026-08-11_3_require_session_theme.sql",
+      "checksum": "4726cf733e4b7f2f0f1b3dc45a90887972bb0062e1593146e500fb7e46e2de92"
+    },
+    {
+      "version": "2026-08-11_4_enforce_time_entry_sources.sql",
+      "checksum": "56a79f2a7dcc5b674a0265f65c14150b65f9594aba8d99886a3a4da077132886"
+    },
+    {
+      "version": "2026-08-11_5_reassign_friday_drop_ins.sql",
+      "checksum": "5776b180522263f01f731cccc85d6bc48b5c6b07b88a128c6acc20377796f9cd"
+    },
+    {
+      "version": "2026-08-11_6_remove_task_cycles.sql",
+      "checksum": "46b9f064a32fe2007e0ea587f7bdc40e9fbdfd4bb20414de89d82ffbe4d38a57"
+    },
+    {
+      "version": "2026-08-11_7_cleanup_task_cycle_preferences.sql",
+      "checksum": "71a57b81ba3993ec4ccefa7d690b61fe5526087b670408689a1837c9b7ac819c"
+    },
+    {
+      "version": "2026-08-18_1_sanitize_legacy_preference_columns.sql",
+      "checksum": "d9b2c70b265fab351a34801bfac54cb89fd50f6332654233d53528089e598dce"
+    },
+    {
+      "version": "2026-08-18_2_allow_signed_up_expression_status.sql",
+      "checksum": "12578b56bd460c29b5c681f8b1298d769a04d44e64cd6e4c2f4fed69403461ce"
+    },
+    {
+      "version": "2026-08-19_1_restrict_outreach_ages.sql",
+      "checksum": "6b5cd90f6c1dda17ddfd3e61245958d7d889af5ab4bd46385de11f6a3375b306"
+    },
+    {
+      "version": "2026-08-19_2_replace_task_progress_statuses.sql",
+      "checksum": "2785eb1c509889c49735a957c4272a7908287c4432f3024a85de48ff6faac176"
+    },
+    {
+      "version": "2026-08-19_3_consolidate_outreach_leads.sql",
+      "checksum": "2072a0e15e4ec76784a88583201d26f9f3d309a485f5d4c494c9095a827b69fe"
+    },
+    {
+      "version": "2026-08-20_1_rename_timesheets_to_hours.sql",
+      "checksum": "8de99e2094cffa5595adeac0d201c21ace105de9bc92b7e52cc4ba0d65f925d6"
+    },
+    {
+      "version": "2026-08-24_1_rename_task_preferences.sql",
+      "checksum": "9d9c371652fd5d5203e4a2f62bdc25517dd587c2f493c65498e5034b9617a10c"
+    },
+    {
+      "version": "2026-08-25_1_rename_task_list_view.sql",
+      "checksum": "7f9027b517cfd5328c901141ff10989b8ae8c977e3d2d28b7ce3520a95fb9c9e"
+    },
+    {
+      "version": "2026-08-27_1_standardize_notes_and_lead_status_history.sql",
+      "checksum": "a0b66f0289a217c9727eb58dad299e66a8aeea890aadf2ed64b7e3d720ca9e66"
+    },
+    {
+      "version": "2026-08-27_2_remove_session_note_follow_up_category.sql",
+      "checksum": "45530f69c56bfcf2cc7e9239b6c7d6d44a62004be762682bc2569150a5b72e68"
+    },
+    {
+      "version": "2026-08-27_3_prepare_legacy_lead_note_categories.sql",
+      "checksum": "47e85890a6c783fd7cb7f4cf45a3f6f6d805b680154ebd48a2b33c4525c1d7de"
+    },
+    {
+      "version": "2026-08-27_4_decouple_lead_notes_from_status.sql",
+      "checksum": "cc71f1eaa0349e0a55bdd80eeade14d733404700777008ec1f70b834036d5518"
+    },
+    {
+      "version": "2026-09-22_1_add_homepage_signup_setting.sql",
+      "checksum": "48fed8a259acd96cc88ba36f06ab14e024bc7e7ed483431985aeec3e3efd17d7"
+    },
+    {
+      "version": "2026-10-27_1_add_program_session_defaults.sql",
+      "checksum": "73e4a218a0ef9fac6eee4673cad35ea904bd33c9344ec14497a206e29e7e929a"
+    },
+    {
+      "version": "2026-10-27_2_use_program_timezone_for_session_bounds.sql",
+      "checksum": "fa7cc5d0728a484b8069b20c9cb3c582c41994714c4ac88232dd0f2cba948c53"
+    },
+    {
+      "version": "2026-10-27_3_split_programming_permissions.sql",
+      "checksum": "406f0268b50cdc1b6af096674036be1432c757bc22f48768beed3b8efdbf4793"
+    },
+    {
+      "version": "2026-10-27_4_restrict_program_timezone.sql",
+      "checksum": "9aff2b0aba8180b224c10c0dac5e9729a168e0df969740520e5cb549efc6592b"
+    },
+    {
+      "version": "2026-10-28_1_use_program_enrollment_required.sql",
+      "checksum": "5ea271ad866375aeee1511861b3d01472d11cfbdfd607e3299799f0910b46c1c"
+    },
+    {
+      "version": "2026-10-28_2_replace_lead_age_with_date_of_birth.sql",
+      "checksum": "957d61442ee4fd573554eba69b22f3b38b17adfaf95afb2508c7ef8e7b711d75"
+    },
+    {
+      "version": "2026-10-28_3_backfill_lead_birth_dates_from_youth.sql",
+      "checksum": "f009537f3e5e786985a434a3151b8242afc64230a00019c382a9844771f1e8fe"
+    },
+    {
+      "version": "2026-10-28_4_remove_youth_grade.sql",
+      "checksum": "0a73545d5a8975e50d0b2f66023f0c6a4f63c2444777aeb8da16f6954973a016"
+    },
+    {
+      "version": "2026-10-28_5_remove_emergency_contact_relationship.sql",
+      "checksum": "d451edcb11eef1c41d40da9edd33cd8bd05ce7bea0bb36f51ecc97e13fe71c6d"
+    },
+    {
+      "version": "2026-10-29_1_add_project_manager_role.sql",
+      "checksum": "48997d7c0fac72aadf1acc56c2c66453b4a2bbea839de17076b8d10106bbe5ed"
+    },
+    {
+      "version": "2026-10-30_1_remove_table_layout_preferences.sql",
+      "checksum": "6ef9c7968c909d8e2555fd750d76f1b7b4a9272c2a34cfa62d2570c6ccf9138d"
+    },
+    {
+      "version": "2026-10-30_2_rename_task_filter_active_status.sql",
+      "checksum": "422c5c93d7f6a6a2646dec111b69f91b0d3b494688bd94c5dfdf865831d8ecb5"
+    },
+    {
+      "version": "2026-10-30_3_rename_task_preference_active_status.sql",
+      "checksum": "6d9c18b13d06add94d35794cb44d720da7f8670bbd83988c16762972697e4275"
+    },
+    {
+      "version": "2026-11-03_1_replace_cohorts_with_program_cycles.sql",
+      "checksum": "135d057d7b4f10e96dd15a41958f4e50c81d9f748da5349fe07d0b6e198cf315"
+    },
+    {
+      "version": "2026-11-03_3_preserve_session_assignment_delete_behavior.sql",
+      "checksum": "107812590166e6c5e4d628fade95038179a92ba13415ba10789ad1b043817888"
+    },
+    {
+      "version": "2026-11-03_4_preserve_session_cycle_sort_preference.sql",
+      "checksum": "6a273f92c39c7c8ed9e4111c9806a7ce4fce36ebaac35d4a9d13735fd66d455d"
+    },
+    {
+      "version": "2026-11-04_1_remove_homepage_signup_setting.sql",
+      "checksum": "7075b1a79bd0167d8daf1f7533116c2b80c5c8b4160ee7a97a0fe3a2a14145b7"
+    }
+  ],
+  "seedTables": [
+    "public.user_roles",
+    "public.user_permissions",
+    "public.user_role_has_permissions",
+    "public.session_types"
+  ]
+}

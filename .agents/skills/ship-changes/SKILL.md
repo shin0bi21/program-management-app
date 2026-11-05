@@ -28,7 +28,7 @@ This workflow ends after the approved changes are merged and pushed to `develop`
 
 ## 1. Audit the shipping input
 
-1. Run `node scripts/agents/snapshot-changes.ts --json` and compare its branch, upstream, complete change inventory, stashes, and fingerprint with the approved concern map and review evidence.
+1. Run `node scripts/reports/file-changes-report.ts --json` and compare its branch, upstream, complete change inventory, stashes, and fingerprint with the approved concern map and review evidence.
 2. Inspect raw Git state only to resolve snapshot mismatches or concern-level isolation details.
 3. Inspect existing stashes and registered worktrees without applying, dropping, or removing them when their purpose remains ambiguous. Inventory tracked/untracked drafts in the authorized scope; merged branch ancestry does not prove uncommitted edits shipped.
 4. Check for GitHub Issues and pull requests that already cover the work.
@@ -66,7 +66,7 @@ Use patch-based restoration when concerns overlap in a file. Never bundle an unr
 
 For every isolated branch:
 
-1. Run `node scripts/patterns/check-patterns.ts --changed`.
+1. Run `node scripts/patterns/run-pattern-checks.ts --changed`.
 2. Run the concern map's narrow authoritative suites against the isolated branch. Reuse prior evidence only when it covers that exact isolated diff; do not repeat equivalent runners.
 3. Fix branch-introduced failures and rerun only failed or affected focused checks.
 4. Review `git diff --check`, the final diff, and `git status`.

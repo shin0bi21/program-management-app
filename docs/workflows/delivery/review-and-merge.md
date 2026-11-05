@@ -58,12 +58,24 @@ and work that must remain uncommitted.
 
 <a id="2-review-the-exact-diff"></a>
 
+Use the focused owner documentation as the review contract. For frontend
+structure, follow the [documentation and scaffold ownership](../../frontend/pages/scaffolding.md#maintain-the-pattern)
+contract. Human and LLM-assisted reviewers identify the specific rule and diff
+evidence behind each finding; advisory architecture heuristics are not a
+separate source of rules.
+
+Apply [File Structure and Ownership](../file-structure.md) to affected files and
+their test boundaries, including complete changed functions. Agents use
+`review-file-structure` for this pass within the concern review, reusing its scope
+and verification evidence. Script structure follows the [script pattern](../scripts.md);
+frontend and backend files follow their own owner guides.
+
 Review the exact concern diff for correctness, regressions, security,
 authorization, ownership, maintainability, and test adequacy. Follow
 [Testing](testing.md) for focused runner selection and evidence reuse. Run:
 
 ```bash
-node scripts/patterns/check-patterns.ts --changed
+node scripts/patterns/run-pattern-checks.ts --changed
 git diff --check
 ```
 
@@ -137,5 +149,5 @@ revalidate the remaining map and prepare the next concern. Continue only when
 the shipping request covers it. Report blocked cleanup before preparing another
 branch; never prepare multiple concern branches from the same pre-merge base.
 
-Shipping ends at `develop`. Follow [Production deployment](deployment.md) only
+Shipping ends at `develop`. Follow [Production deployment](../production/deployment.md) only
 after separate explicit authorization.

@@ -1,4 +1,7 @@
 # shellcheck shell=bash disable=SC2034
+# Deployment database phase: snapshot → status → apply → status.
+# Sourced by main.sh; configuration and the EXIT rollback trap belong to the
+# deployment lifecycle. ROLLBACK_NEEDED covers migration apply and post-status.
 
 require_database() {
   : "${DB_USER:?DB_USER not set — check .env}"
@@ -28,7 +31,7 @@ take_database_snapshot() {
 }
 
 run_migration_status() {
-  docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/migration_status.js
+  docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js --dry-run
 }
 
 run_migration_flow() {
