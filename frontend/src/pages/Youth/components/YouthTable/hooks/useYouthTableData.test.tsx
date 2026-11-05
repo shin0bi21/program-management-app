@@ -1,37 +1,42 @@
-import { createTestQueryClient, createQueryClientWrapper } from '../../../../../tests/queryClientTestUtils';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import { getYouth } from '../../../youth.api';
-import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import useYouthTableData from './useYouthTableData';
 
+vi.mock('../../../../../query/hooks/useInfiniteListQuery', () => ({ default: vi.fn(() => ({ rows: [] })) }));
 vi.mock('../../../youth.api', () => ({ getYouth: vi.fn() }));
 
-const mockGetYouth = vi.mocked(getYouth);
-
 describe('useYouthTableData', () => {
-  beforeEach(() => mockGetYouth.mockReset());
+  beforeEach(() => vi.clearAllMocks());
 
-  it('loads youth through the canonical table query', async () => {
-    const profile = makeYouthProfile();
-    mockGetYouth.mockResolvedValue({ rows: [profile], nextCursor: null } as never);
+  it('configures the youth table key and forwards filters, sorting, cursors, and cancellation', async () => {
+    const filters = { search: 'avery', cycleIds: ['cycle-1'] };
+    const sorting = { key: 'lastName' as const, direction: 'desc' as const };
+    renderHook(() => useYouthTableData(filters, sorting));
 
-    const { result } = renderHook(
-      () => useYouthTableData(
-        { cycleIds: ['cycle-1'] },
-        { key: 'lastName', direction: 'desc' },
-      ),
-      { wrapper: createQueryClientWrapper(createTestQueryClient()) },
+    const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
+    expect(options.queryKey).toEqual(['youth', 'table', filters, sorting]);
+    expect(options.enabled).toBe(true);
+
+    const signal = new AbortController().signal;
+    const context = (pageParam: string | null) => ({ signal, pageParam } as Parameters<typeof options.queryFn>[0]);
+    await options.queryFn(context(null));
+    expect(getYouth).toHaveBeenLastCalledWith(
+      undefined, filters, { signal }, { ...sorting, cursor: undefined, limit: 50 },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.rows).toEqual([profile]);
-    expect(mockGetYouth).toHaveBeenCalledWith(
-      undefined,
-      { cycleIds: ['cycle-1'] },
-      { signal: expect.any(AbortSignal) },
-      expect.objectContaining({ key: 'lastName', direction: 'desc', limit: 50 }),
+    await options.queryFn(context('cursor-2'));
+    expect(getYouth).toHaveBeenLastCalledWith(
+      undefined, filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: 50 },
     );
+  });
+
+  it('disables the query until youth filters are initialized', () => {
+    renderHook(() => useYouthTableData(null));
+
+    const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
+    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual(['youth', 'table', null, { key: 'firstName', direction: 'asc' }]);
   });
 });
