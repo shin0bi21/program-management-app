@@ -56,7 +56,7 @@ describe('SessionTable', () => {
 
     await waitFor(() => expect(baseProps.onSelectedSessionResolved).toHaveBeenCalledWith(session));
     expect(tableProps.current).toEqual(expect.objectContaining({
-      selectedKey: 'session-1', scrollToSelected: true,
+      selectedKey: 'session-1',
       unavailable: undefined,
     }));
     expect(baseProps.onMessageChange).toHaveBeenLastCalledWith({

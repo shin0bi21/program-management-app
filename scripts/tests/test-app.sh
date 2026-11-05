@@ -142,6 +142,7 @@ run_changed_suites() {
     return
   fi
 
+  # Child runners must not consume the command list still being read by this loop.
   while IFS=$'\t' read -r command value; do
     case "$command" in
       deploy) bash scripts/tests/test-deploy.sh ;;
@@ -157,7 +158,7 @@ run_changed_suites() {
         echo "ERROR: Unknown planned test command '$command'." >&2
         exit 2
         ;;
-    esac
+    esac < /dev/null
   done <<< "$commands"
 
   echo ""

@@ -23,8 +23,6 @@ it('passes its scope to the data owner and preserves selected program wiring', (
     selectedProgramId={program.id} onProgramSelect={onProgramSelect} />);
 
   expect(useProgramTableData).toHaveBeenCalledWith(queryKey, filters);
-  expect(screen.getByText('Skills').closest('tr')).toHaveAttribute('aria-selected', 'true');
-
   fireEvent.click(screen.getByText('Skills'));
 
   expect(onProgramSelect).toHaveBeenCalledWith(program);

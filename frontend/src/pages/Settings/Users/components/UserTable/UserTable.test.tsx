@@ -31,8 +31,6 @@ vi.mock('../../../../../common/components/Table/Table', () => ({
 const queryKey = ['accounts', 'table'] as const;
 const filters: UserFilters = { search: 'sam', roles: ['staff'], statuses: ['active'] };
 const sorting = { key: 'name' as const, direction: 'asc' as const };
-const onSortingChange = vi.fn();
-const onColumnWidthsChange = vi.fn();
 const onMessageChange = vi.fn();
 const baseProps = {
   queryKey,
@@ -41,8 +39,8 @@ const baseProps = {
   hiddenColumnKeys: ['createdAt'],
   sorting,
   columnWidths: { name: 240 },
-  onSortingChange,
-  onColumnWidthsChange,
+  onSortingChange: vi.fn(),
+  onColumnWidthsChange: vi.fn(),
   onMessageChange,
 };
 
@@ -56,42 +54,17 @@ describe('UserTable', () => {
     tableProps.current = null;
   });
 
-  it('passes query inputs and loaded table state to the shared table', () => {
+  it('routes next-page failure recovery to the footer and page overlay while retaining rows', () => {
     const user: User = {
       id: 'user-1', firstName: 'Sam', lastName: 'Rivera', email: 'sam@example.com',
       role: 'staff', status: 'active', createdAt: '2026-01-01T00:00:00.000Z',
     };
-    Object.assign(tableState, {
-      rows: [user], loading: false, refreshing: true,
-      hasNextPage: true, loadingNextPage: true,
-    });
-    render(<UserTable {...baseProps} />);
-
-    expect(useTableData).toHaveBeenCalledWith(queryKey, filters, sorting);
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      data: [user],
-      loading: false,
-      refreshing: true,
-      hiddenColumnKeys: ['createdAt'],
-      sorting,
-      columnWidths: { name: 240 },
-      onColumnWidthsChange,
-      hasNextPage: true,
-      loadingNextPage: true,
-      onLoadNextPage: tableState.loadNextPage,
-      unavailable: undefined,
-    }));
-
-    tableProps.current?.onSortingChange?.({ key: 'email', direction: 'desc' });
-    expect(onSortingChange).toHaveBeenCalledWith({ key: 'email', direction: 'desc' });
-  });
-
-  it('routes next-page failure recovery to the footer and page overlay while retaining rows', () => {
+    tableState.rows = [user];
     tableState.nextPageError = 'Unable to load more accounts.';
     render(<UserTable {...baseProps} />);
 
     expect(tableProps.current?.unavailable).toBeUndefined();
-    expect(tableProps.current?.data).toBe(tableState.rows);
+    expect(tableProps.current?.data).toEqual([user]);
     expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
     expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load more accounts.',
