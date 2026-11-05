@@ -10,6 +10,8 @@ for (const width of [1280, 390]) {
 
     await search.fill('Person 60');
     await page.keyboard.press('Tab');
+    await expect(dialog.getByRole('button', { name: 'Clear search' })).toBeFocused();
+    await page.keyboard.press('Tab');
     const last = dialog.getByRole('checkbox', { name: 'Person 60' });
     await expect(last).toBeFocused();
     await page.keyboard.press('Space');

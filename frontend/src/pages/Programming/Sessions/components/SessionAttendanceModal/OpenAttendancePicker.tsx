@@ -1,6 +1,4 @@
-import type { ReactNode } from 'react';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
-import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import type { AttendanceYouth } from '../../sessions.api';
 
 interface OpenAttendancePickerProps {
@@ -20,36 +18,25 @@ export default function OpenAttendancePicker({
   disabled,
   onToggle,
 }: OpenAttendancePickerProps) {
-  let content: ReactNode;
-  if (loading) {
-    content = <p className="page-empty">Loading youth…</p>;
-  } else if (unavailable) {
-    content = null;
-  } else if (youth.length === 0) {
-    content = <p className="page-empty">No youth profiles available.</p>;
-  } else {
-    const options = youth.map(profile => ({
-      value: profile.id,
-      label: `${profile.firstName} ${profile.lastName}`,
-    }));
+  if (loading) return <p className="page-empty">Loading youth…</p>;
+  if (unavailable) return null;
+  if (youth.length === 0) return <p className="page-empty">No youth profiles available.</p>;
 
-    content = (
-      <Checklist
-        variant="form"
-        ariaLabel="Youth attendance"
-        options={options}
-        value={selectedYouthIds}
-        onToggle={onToggle}
-        disabled={disabled}
-        search
-        dynamicItems
-      />
-    );
-  }
+  const options = youth.map(profile => ({
+    value: profile.id,
+    label: `${profile.firstName} ${profile.lastName}`,
+  }));
 
   return (
-    <FormFieldGroup label="Youth attendance" disabled={disabled}>
-      {content}
-    </FormFieldGroup>
+    <Checklist
+      variant="form"
+      ariaLabel="Youth attendance"
+      options={options}
+      value={selectedYouthIds}
+      onToggle={onToggle}
+      disabled={disabled}
+      search
+      dynamicItems
+    />
   );
 }

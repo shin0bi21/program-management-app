@@ -1,13 +1,13 @@
-import type { InputHTMLAttributes, KeyboardEvent } from 'react';
+import { useRef, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../Button/Button';
 import './SearchInput.css';
 
-interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onKeyDown'> {
+interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
-  appliedValue: string;
-  onApply: () => void;
+  appliedValue?: string;
+  onApply?: () => void;
   onClear: () => void;
 }
 
@@ -20,31 +20,39 @@ export default function SearchInput({
   onClear,
   value,
   disabled,
+  onKeyDown,
   ...inputProps
 }: SearchInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    onKeyDown?.(event);
+    if (event.defaultPrevented) return;
+
     if (event.key === 'Enter') {
       event.preventDefault();
-      onApply();
+      onApply?.();
     }
   };
 
   return (
     <div className={`search-input${className ? ` ${className}` : ''}`}>
-      <Button
-        type="button"
-        size="sm"
-        className="search-input__apply"
-        aria-label="Search"
-        title="Search"
-        disabled={disabled}
-        onClick={onApply}
-      >
-        <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
-      </Button>
+      {onApply && (
+        <Button
+          type="button"
+          size="sm"
+          className="search-input__apply"
+          aria-label="Search"
+          title="Search"
+          disabled={disabled}
+          onClick={onApply}
+        >
+          <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+        </Button>
+      )}
       <label className="search-input__field">
         <span className="sr-only">{label}</span>
-        <input type={type} value={value} disabled={disabled} onKeyDown={handleKeyDown} {...inputProps} />
+        <input ref={inputRef} type={type} value={value} disabled={disabled} onKeyDown={handleKeyDown} {...inputProps} />
       </label>
       <Button
         type="button"
@@ -54,7 +62,10 @@ export default function SearchInput({
         aria-label="Clear search"
         title="Clear search"
         disabled={disabled || (!String(value ?? '') && !appliedValue)}
-        onClick={onClear}
+        onClick={() => {
+          onClear();
+          inputRef.current?.focus();
+        }}
       >
         <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
       </Button>
