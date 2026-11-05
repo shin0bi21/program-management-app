@@ -315,11 +315,7 @@ export function collapse(options: Options): void {
     dump(capture, join(work, 'data.sql'), ['--data-only', `--exclude-table-data=${ledger}`]);
     dump(capture, join(work, 'seed.sql'), ['--data-only', '--inserts', ...seedTables.flatMap(table => ['--table', table])]);
 
-    if (baseline) {
-      if (normalizeDump(readFileSync(join(work, 'schema.sql'), 'utf8')) !== normalizeDump(readFileSync(join(candidate, initFiles.schema), 'utf8'))) throw new Error('Current schema differs from the reviewed baseline');
-      // Seed IDs may differ between environments. The full snapshot supplies the
-      // source seed rows; the checked-in seed file is only used for fresh installs.
-    } else {
+    if (!baseline) {
       copyMigrationFiles(join(work, 'schema.sql'), join(candidate, initFiles.schema));
       copyMigrationFiles(join(work, 'seed.sql'), join(candidate, initFiles.data));
       baseline = {
@@ -341,6 +337,16 @@ export function collapse(options: Options): void {
     state.staged = true;
     saveState();
     load(stage, join(candidate, initFiles.schema));
+
+    if (state.reuse) {
+      // Compare server-rendered schemas so equivalent reviewed SQL can be reused across dump versions.
+      dump(stage, join(work, 'reviewed-schema.sql'), ['--schema-only']);
+      const sourceSchema = normalizeDump(readFileSync(join(work, 'schema.sql'), 'utf8'));
+      const reviewedSchema = normalizeDump(readFileSync(join(work, 'reviewed-schema.sql'), 'utf8'));
+      if (sourceSchema !== reviewedSchema) throw new Error('Current schema differs from the reviewed baseline');
+    }
+
+    // Preserve environment-specific seed IDs with the full snapshot, not the fresh-install seed file.
     load(stage, join(work, 'data.sql'), true);
     for (const file of initFilePaths) {
       psql(stage, `INSERT INTO ${ledger} (version, name, checksum) VALUES ('${file}', '${file}', '${checksum(join(candidate, file))}');`);
