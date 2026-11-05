@@ -57,15 +57,20 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.equal(files.length, 4);
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/components')), false);
   assert.match(read(files[0]), /import useScaffoldPageData from '\.\/hooks\/data\/useScaffoldPageData'/);
-  assert.match(read(files[0]), /import PageMessageOverlay from/);
+  assert.match(read(files[0]), /import PageContainer from/);
   assertOrdered(read(files[0]), ['Permissions and application services', 'useScaffoldPageData();', 'Saved preferences']);
-  assertOrdered(read(files[0]), ['<PageHeader', '<PageMessageOverlay messages={pageMessages}', '<PageBody']);
+  assert.match(read(files[0]), /<PageContainer[\s\S]*messages={pageMessages}/);
+  assert.doesNotMatch(read(files[0]), /<PageHeader|<PageBody|<PageMessageOverlay|<main/);
   assert.match(read(files[2]), /export default function useScaffoldPageData/);
   assert.match(read(files[3]), /describe\('useScaffoldPageData'/);
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
   assert.match(read(files[0]), /grouped search, filters, and table controls, with ready\/error at the top level/);
   assert.match(read(files[0]), /view\/setView at the top level/);
+  assert.match(read(files[0]), /createPreferenceFilters; definition IDs match filters\.values keys/);
+  assert.match(read(files[0]), /controls={controls} to PageContainer/);
+  assert.match(read(files[0]), /search labels\/placeholders and column definitions separately/);
+  assert.doesNotMatch(read(files[0]), /Pass ready and control contracts/);
   assert.match(read(files[0]), /Filter configuration passed to every page data view/);
   assertOrdered(read(files[1]), [
     'Entry and readiness',

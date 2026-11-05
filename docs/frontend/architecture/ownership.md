@@ -69,12 +69,6 @@ Inside a typed owner, do not:
 
 Correct the boundary instead.
 
-## Test at the Owning Boundary
-
-- Colocate each component, hook, API adapter, and page test with its narrowest public owner.
-- Test behavior where it is owned.
-- Add consumer wiring coverage only when correctness crosses owners.
-
 ## Programs and Cycles
 
 Program and cycle lookup options remain cross-app reference data.
@@ -99,7 +93,6 @@ There is no Cohorts page or owner directory. Legacy Cohorts and calendar URLs re
 
 ## Enforcement
 
-`node scripts/patterns/run-pattern-checks.ts --changed` enforces deterministic repository
-invariants. The [owner guides and scaffolds](../pages/scaffolding.md#maintain-the-pattern)
-define the patterns applied during human or LLM-assisted change review; scaffold
-tests verify generated structure.
+See [File Structure and Ownership](../../workflows/file-structure.md) for review
+and enforcement, and [Scaffolding](scaffolding.md) for generating files at the
+chosen owner.

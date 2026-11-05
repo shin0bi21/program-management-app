@@ -1,6 +1,6 @@
 # UI Basics
 
-Components own rendered interfaces and user interactions. Start with the page guide when a route coordinates several components. Use this guide when changing a rendered surface or deciding whether to extract one.
+Components own rendered interfaces and user interactions. Use [PageContainer](page-container.md) when a route coordinates collection components. Use this guide when changing a rendered surface or deciding whether to extract one.
 
 ## Keep Component and Test Contracts Focused
 
@@ -17,19 +17,10 @@ Keep executable examples and relevant boundary cases in colocated tests; compone
 helpers can be verified through their owner's behavior. Place helpers below the component
 in the order their callers use them.
 
-Keep component tests beside their owner when it has behavior to verify. Test state
-transitions, user interactions, accessibility behavior, conditional domain outcomes,
-and emitted values. Presentation-only wrappers do not need a test that repeats their
-markup or supplied options. A focused hook test owns the stateful policy or external
-lifecycle that justified the hook. Cross-component coordination belongs to the route page.
-
-Lifecycle is conditional. A hook that installs an observer tests callback guards,
-meaningful dependency changes, and cleanup. A label that only renders a supplied
-label and modifier does not need a dedicated test.
-
-A click can appear at a child and its consumer only when the assertions differ. For example, an action component proves that clicking Delete emits `onDelete(record)`. The route may invoke that public callback to prove that confirmation reaches its mutation workflow; it does not repeat how the child opens, dismisses, or manages focus.
-
-Use jsdom for semantic focus and keyboard interactions it can observe. Use Playwright when correctness depends on real focus geometry, portals, pointer geometry, scrolling or layout observers. The [testing guide](../../workflows/delivery/testing.md) explains runner selection.
+Follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
+for component, hook, and consumer coverage, and the
+[frontend environment table](../../workflows/delivery/testing.md#frontend-test-ownership)
+for Vitest and Playwright boundaries.
 
 For render-sensitive surfaces, trace which components rerender during scrolling, pointer movement, filtering, selection, and mutations. Keep transient values that do not affect the visible UI in refs. Preserve references for unaffected rows and cells; use memoization only when stable inputs prevent meaningful work. Check virtualization at the largest supported viewport and use targeted render-count or browser evidence when performance is part of the contract. Functional tests alone do not establish render performance.
 
@@ -47,16 +38,18 @@ contract; do not add a wrapper or hook merely to shorten its parent.
 
 | Surface | Guide |
 |---|---|
-| Type and status labels | [Type and Status Labels](#type-and-status-labels) |
-| Application sidebar and route navigation | [App Navigation](navigation.md) |
-| Page header and body regions | [Pages](../pages/composition.md#compose-page-components) |
+| Collection shell and route assembly | [PageContainer](page-container.md) |
+| Header actions and controls | [PageHeader and Controls](page-container.md#pageheader-and-controls) |
+| Page-level messages and retry actions | [Message Overlays](message-overlays.md) |
+| Readiness, dashboard region, and active view | [PageBody](page-container.md#readiness-and-pagebody) |
+| Summary cards and overview data | [Dashboards](dashboards.md) |
 | Remote tables and pagination | [Tables](tables.md) |
 | Table rows and mutations | [Table Rows](table-rows.md) |
 | Date ranges, calendar items and timeline views | [Calendars](calendars.md) |
-| Summary cards and overview data | [Dashboards](dashboards.md) |
-| Page-level messages and retry actions | [Message Overlays](message-overlays.md) |
 | Dialogs, floating menus and tooltips | [Overlays](overlays.md) |
 | Modal forms and submission workflows | [Modals and Forms](modals-and-forms.md) |
+| Type and status labels | [Type and Status Labels](#type-and-status-labels) |
+| Application sidebar and route navigation | [App Navigation](navigation.md) |
 
 Buttons, inputs and other small primitives do not need separate guides unless they gain a substantial repository-specific contract. Their components and tests remain the closest source of truth.
 
@@ -130,12 +123,8 @@ until a shared categorical palette is agreed.
 Dense calendar rows may scope compact sizing to the positioned item; hover/focus
 details retain the normal label size. See [calendar details](calendars.md#present-item-details).
 
-Test nontrivial domain derivations and conditional outcomes at their owner. Do not
-enumerate static label-to-class maps or repeat a child's presentation in consumers.
-Use browser tests for clipping, density, and selection geometry.
-
 ## Scaffold a Rendered Surface
 
 The table, calendar, dashboard, and modal presets generate implementation and colocated
-test outlines together. Follow [Frontend Scaffolding](../pages/scaffolding.md) to compose a new
+test outlines together. Follow [Frontend Scaffolding](../architecture/scaffolding.md) to compose a new
 page and its component owners; each surface guide describes its specific contract.

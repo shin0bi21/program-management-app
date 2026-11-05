@@ -11,7 +11,7 @@ function into its own file does not establish separation of concerns.
 |---|---|
 | Function phases, names, control flow, and comments | [Repository readability rules](../../AGENTS.md#readability) |
 | Frontend ownership and dependency direction | [Frontend ownership](../frontend/architecture/ownership.md) |
-| Frontend component, hook, API, or page structure | [Frontend guide routing](../frontend/README.md#find-the-right-guide) and [scaffold ownership](../frontend/pages/scaffolding.md#maintain-the-pattern) |
+| Frontend component, hook, API, or page structure | [Frontend guide routing](../frontend/README.md#find-the-right-guide) and [scaffold ownership](../frontend/architecture/scaffolding.md#maintain-the-pattern) |
 | Backend routes, controllers, services, policies, and persistence | [Backend layers and owner guides](../backend/README.md) |
 | Runnable scripts and their helpers | [Script Structure](scripts.md) |
 | Authoritative tests and consumer coverage | [Test Ownership](delivery/testing.md#test-ownership) and the affected owner guide |

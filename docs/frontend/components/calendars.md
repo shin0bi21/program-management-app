@@ -112,7 +112,7 @@ earliest selected start through latest selected end, or the full span of all cyc
 when nothing is selected. There is no one-year maximum. Build
 the bounded set of period descriptors once; virtualization renders only visible columns
 and rows, while buffered requests load data as needed. Cycle selection and persistence
-follow [page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles).
+follow [page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles).
 
 A range change replaces the page calendar's buffer through its applied-filter key.
 Clamp stored positions and navigation targets to those bounds; Today is disabled when
@@ -125,16 +125,21 @@ or window focus. The highlight and Today availability use that date; activating 
 rechecks the clock and current bounds before navigating. Midnight updates preserve the
 current viewport and do not reload calendar data.
 
-Data buffers preload beyond visible periods. Intersect every buffered request with the
-applied range before issuing HTTP requests, and return empty data for disjoint requests.
-Convert Programming dates into local-midnight timestamps with an exclusive next-day end;
-Tasks and Hours use inclusive date-only bounds. Preserve virtualization and lazy loading.
+Data buffers preload beyond visible periods. The query owner intersects buffered ranges
+with the applied domain bounds and returns empty data for disjoint ranges. Tasks send
+`cycleIds` and the buffered viewport to the backend, which resolves cycle dates through
+its [cycle owner](../../../backend/src/services/programming/cycles/cycleDateRange.ts).
+The frontend-derived task bounds are a calendar presentation prop, not a query filter.
+Programming and Hours retain their API adapters' range clipping and cycle membership
+filters. Convert Programming dates into local-midnight timestamps with an exclusive
+next-day end; Tasks and Hours use inclusive date-only bounds. Preserve virtualization
+and lazy loading.
 
-Pass the derived bounds through the page's single filter object to both table and calendar;
-filter on the server before pagination. Programming and Hours additionally filter by cycle
-membership; Tasks use cycle dates as a time window. Cycle metadata uses the shared reference
-endpoint under the consuming page's read permission. Persist selected IDs according to
-[page preferences](../pages/preferences.md#derive-timeline-bounds-from-cycles), without a
+Pass one page filter object to both table and calendar and filter on the server before
+pagination. Tasks use cycle dates as a time window rather than task membership. Cycle
+metadata uses the shared reference endpoint under the consuming page's read permission.
+Persist selected IDs according to
+[page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles), without a
 separate date-range control.
 
 ## Assign Calendar and Item Ownership

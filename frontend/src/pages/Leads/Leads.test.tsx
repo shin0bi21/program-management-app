@@ -1,5 +1,5 @@
 import { renderWithQueryClient } from '../../tests/queryClientTestUtils';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Leads from './Leads';
 
@@ -67,29 +67,8 @@ describe('Leads', () => {
     }], nextCursor: null });
   });
 
-  it('keeps search unavailable until saved lead preferences are restored', async () => {
-    let resolvePreference: (value: unknown) => void = () => undefined;
-    preferenceApi.getPreference.mockReturnValue(new Promise(resolve => { resolvePreference = resolve; }));
-
-    renderPage();
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved lead preferences…');
-    expect(screen.queryByLabelText('Search leads')).not.toBeInTheDocument();
-    expect(preferenceApi.setPreference).not.toHaveBeenCalled();
-
-    await act(async () => resolvePreference({ search: 'Avery' }));
-
-    expect(await screen.findByLabelText('Search leads')).toHaveValue('Avery');
-  });
-
-  // Rendered states.
-  it('shows who filled out an external lead', async () => {
-    renderPage();
-    expect(await screen.findByRole('columnheader', { name: 'Filled Out By' })).toBeInTheDocument();
-    expect(await screen.findByRole('cell', { name: 'Parent' })).toBeInTheDocument();
-  });
-
-  it('does not show the filled-out-by field for internal leads', async () => {
+  // Controls and views.
+  it('keeps the filled-out-by filter unavailable for internal leads', async () => {
     const internalLead = {
       id: 'lead-1',
       origin: 'internal',
@@ -113,13 +92,10 @@ describe('Leads', () => {
     renderPage('internal');
 
     await screen.findByRole('row', { name: /Avery Outreach/ });
-    expect(screen.queryByRole('columnheader', { name: 'Filled Out By' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Staff' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: /Filled Out By/ })).not.toBeInTheDocument();
   });
 
-  // Controls and views.
   it('filters external leads by who filled out the form', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });

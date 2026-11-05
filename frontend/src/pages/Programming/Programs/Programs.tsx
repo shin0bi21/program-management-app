@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
+import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
 import type { ProgramFilters } from './api/programs.api';
 import YouthReportModal from '../../../common/features/YouthReportModal/YouthReportModal';
@@ -53,41 +52,41 @@ export default function Programs() {
   const { columns: cycleColumns } = useCycleTable({ onEdit: modals.cycle.open, onDelete: actions.requestCycleDeletion });
 
   return <>
-    <main className="page-container programs-page">
-      <PageHeader title="Programs" actions={canWritePrograms ? <>
+    <PageContainer
+      className="programs-page"
+      title="Programs"
+      ariaLabel="Programs and overview"
+      actions={canWritePrograms ? <>
         <Button onClick={() => modals.program.open(null)}>+ Add Program</Button>
         <Button variant="secondary" onClick={() => setCyclesOpen(true)}>Manage Cycles</Button>
-      </> : undefined} />
-      <PageMessageOverlay messages={[
+      </> : undefined}
+      messages={[
         tableError,
         cycleTableError,
         data.programsError ? { message: data.programsError, action: { label: 'Retry', onClick: data.retryPrograms } } : null,
         data.cyclesError ? { message: data.cyclesError, action: { label: 'Retry', onClick: data.refreshCycles } } : null,
         assignments.error ? { message: assignments.error, action: { label: 'Retry', onClick: assignments.refresh } } : null,
-      ]} />
-      <PageBody
-        ariaLabel="Programs and overview"
-        dashboard={<ProgramOverviewDashboardCard
-          program={selectedProgram}
-          assignments={assignments.assignments.filter(assignment => assignment.programId === selectedProgram?.id)}
-          loading={assignments.loading}
-          error={assignments.error}
-          onRetry={assignments.refresh}
-          canManageRoster={canManageRoster}
-          canViewYouthReport={canViewYouthReport}
-          onManageRoster={setRosterTarget}
-          onViewReport={setReportTarget}
-        />}
-        table={<ProgramTable
-          columns={programColumns}
-          queryKey={PROGRAM_TABLE_QUERY_KEY}
-          filters={PROGRAM_FILTERS}
-          onMessageChange={setTableError}
-          selectedProgramId={selectedProgram?.id}
-          onProgramSelect={setSelectedProgram}
-        />}
-      />
-    </main>
+      ]}
+      dashboard={<ProgramOverviewDashboardCard
+        program={selectedProgram}
+        assignments={assignments.assignments.filter(assignment => assignment.programId === selectedProgram?.id)}
+        loading={assignments.loading}
+        error={assignments.error}
+        onRetry={assignments.refresh}
+        canManageRoster={canManageRoster}
+        canViewYouthReport={canViewYouthReport}
+        onManageRoster={setRosterTarget}
+        onViewReport={setReportTarget}
+      />}
+      table={<ProgramTable
+        columns={programColumns}
+        queryKey={PROGRAM_TABLE_QUERY_KEY}
+        filters={PROGRAM_FILTERS}
+        onMessageChange={setTableError}
+        selectedProgramId={selectedProgram?.id}
+        onProgramSelect={setSelectedProgram}
+      />}
+    />
 
     {canWritePrograms && <>
       <CycleTable columns={cycleColumns} onMessageChange={setCycleTableError}

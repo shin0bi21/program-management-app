@@ -63,8 +63,8 @@ describe('Tasks API', () => {
       INSERT INTO program_cycles (name, starts_on, ends_on)
       VALUES (
         ${`Tasks API ${stamp}`},
-        ${taskDate}::date - 7,
-        ${taskDate}::date + 28
+        LEAST(${taskDate}::date - 7, '2024-01-01'::date),
+        GREATEST(${taskDate}::date + 28, '2027-12-31'::date)
       )
       RETURNING id
     `;
@@ -511,6 +511,64 @@ describe('Tasks API', () => {
       .delete('/api/tasks/not-a-uuid')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(malformedId.status).toBe(400);
+  });
+
+  it('intersects task dates with selected cycle spans and endpoint ranges independently of program membership', async () => {
+    const cycles = await sql<Array<{ id: string }>>`
+      INSERT INTO program_cycles (name, starts_on, ends_on) VALUES
+        ('Tasks early boundary', '2081-01-01', '2081-01-31'),
+        ('Tasks late boundary', '2081-03-01', '2081-03-31')
+      RETURNING id
+    `;
+    const create = async (title: string, startDate: string, dueDate: string, linkedProgramId: string | null) => {
+      const response = rememberTask(await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ title: `Cycle resolution ${title}`, category: 'outreach', startDate, dueDate, staffId: firstStaffId, programId: linkedProgramId }));
+      expect(response.status).toBe(201);
+      return response.body.id as string;
+    };
+
+    try {
+      const early = await create('general boundary', '2080-12-30', '2081-01-01', null);
+      const gap = await create('gap', '2081-02-15', '2081-02-15', programId);
+      const late = await create('program without cycle assignment', '2081-03-31', '2081-04-02', programId);
+      const outside = await create('outside', '2081-04-03', '2081-04-03', null);
+      const spanning = await create('spans disjoint windows', '2080-01-01', '2082-01-01', null);
+
+      for (const endpoint of ['list', 'calendar']) {
+        const read = async (cycleIds: string, start = '2081-01-01', end = '2081-03-31') => {
+          const response = await request(app).get(`/api/tasks/${endpoint}`)
+            .query({ cycleIds, start, end, staffIds: firstStaffId, search: 'Cycle resolution' })
+            .set('Authorization', `Bearer ${adminToken}`);
+          expect(response.status).toBe(200);
+          const rows = endpoint === 'list' ? response.body.rows : response.body;
+          return rows.map((task: { id: string }) => task.id) as string[];
+        };
+
+        expect((await read(cycles.map(cycle => cycle.id).join(','))).sort()).toEqual([early, gap, late, spanning].sort());
+        expect((await read(cycles[0].id)).sort()).toEqual([early, spanning].sort());
+        expect(await read(cycles[0].id, '2081-03-01', '2081-03-31')).toEqual([]);
+        expect(await read('00000000-0000-4000-8000-000000000000')).toEqual([]);
+        expect((await read('')).sort()).toEqual([early, gap, late, spanning].sort());
+      }
+
+      const list = await request(app).get('/api/tasks/list')
+        .query({ cycleIds: cycles[1].id, staffIds: firstStaffId, search: 'Cycle resolution' })
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(list.status).toBe(200);
+      expect(list.body.rows).toEqual(expect.arrayContaining([expect.objectContaining({ id: late })]));
+      expect(list.body.rows.map((task: { id: string }) => task.id).sort()).toEqual([late, spanning].sort());
+      expect(list.body.rows).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: outside })]));
+
+      for (const endpoint of ['list', 'calendar']) {
+        const malformed = await request(app).get(`/api/tasks/${endpoint}`)
+          .query({ cycleIds: 'invalid', start: taskDate, end: taskDate })
+          .set('Authorization', `Bearer ${adminToken}`);
+        expect(malformed.status).toBe(400);
+      }
+    } finally {
+      await sql`DELETE FROM program_cycles WHERE id IN ${sql(cycles.map(cycle => cycle.id))}`;
+    }
   });
 
   it('returns complete tasks whose date ranges intersect the same table and calendar range', async () => {

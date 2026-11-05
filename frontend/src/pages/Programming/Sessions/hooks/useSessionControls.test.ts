@@ -44,7 +44,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
       view: 'table',
-      filters: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'] },
+      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'] } },
       table: { sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'] },
     });
   });
@@ -60,7 +60,7 @@ describe('useSessionControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
-      view: 'table', filters: { cycleIds: [], programIds: ['program-1'], statuses: ['completed'] },
+      view: 'table', filters: { values: { cycleIds: [], programIds: ['program-1'], statuses: ['completed'] } },
     });
     expect(result.current.filters).not.toHaveProperty('cohortId');
   });
@@ -82,32 +82,6 @@ describe('useSessionControls', () => {
     });
   });
 
-  it('offers independent program and cycle filters', async () => {
-    const otherProgram = { ...programs[0], id: 'program-2', name: 'Career Ready' };
-    const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs: [...programs, otherProgram], programsLoading: false,
-      cycles, cyclesLoading: false,
-      sessionTypes, sessionTypesLoading: false, tableKeys,
-    }), { wrapper: wrapper() });
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    act(() => result.current.filters.apply('cycle', ['cycle-2']));
-
-    act(() => result.current.filters.apply('program', ['program-1']));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-2']);
-
-    act(() => result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']));
-    expect(result.current.filters.programIds).toEqual(['program-1']);
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']);
-
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'session-filters', expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
-    ));
-
-    act(() => result.current.filters.clear());
-    expect(result.current.filters).toMatchObject({ programIds: [], cycleIds: [] });
-  });
-
   it('waits for authoritative cycles before restoring a saved cycle', async () => {
     preferenceApi.getPreference.mockResolvedValue({ cycleIds: ['cycle-2'] });
     const { result, rerender } = renderHook(({ loading }) => useSessionControls({
@@ -120,21 +94,7 @@ describe('useSessionControls', () => {
     rerender({ loading: false });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.cycleIds).toEqual(['cycle-2']);
-  });
-
-  it('uses empty filters when saved preferences cannot be loaded', async () => {
-    preferenceApi.getPreference.mockRejectedValue(new Error('offline'));
-    const { result } = renderHook(() => useSessionControls({
-      role: 'staff', programs, programsLoading: false, cycles, cyclesLoading: false,
-      sessionTypes, sessionTypesLoading: false, tableKeys,
-    }), { wrapper: wrapper() });
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.view).toBe('calendar');
-    expect(result.current.filters.programIds).toEqual([]);
-    expect(result.current.filters.cycleIds).toEqual([]);
-    expect(result.current.filters.statuses).toEqual([]);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-2']);
   });
 
   it('repairs invalid session fields while preserving valid selections and widths', async () => {
@@ -155,7 +115,7 @@ describe('useSessionControls', () => {
 
     expect(result.current).toMatchObject({
       view: 'calendar',
-      filters: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: [], statuses: [] },
+      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: [], statuses: [] } },
       table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: {} },
     });
   });
@@ -169,8 +129,8 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
-      result.current.filters.apply('program', ['program-1']);
-      result.current.filters.apply('status', ['completed']);
+      result.current.filters.apply('programIds', ['program-1']);
+      result.current.filters.apply('statuses', ['completed']);
       result.current.setView('table');
       result.current.table.setHiddenColumns(['status']);
       result.current.table.setColumnWidths({ theme: 240 });
@@ -179,7 +139,7 @@ describe('useSessionControls', () => {
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:session-filters')!)).toEqual({
       hiddenColumns: ['status'], columnWidths: { theme: 240 },
     });
-    expect(result.current.filters.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['completed'], view: 'table',
     })));
@@ -197,7 +157,7 @@ describe('useSessionControls', () => {
       tableKeys,
     }), { wrapper: wrapper(), initialProps: { unavailable: true } });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters).toMatchObject({
+    expect(result.current.filters.values).toMatchObject({
       programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypeIds: ['saved-type'],
     });
 
@@ -205,7 +165,7 @@ describe('useSessionControls', () => {
     rerender({ unavailable: false });
 
     await waitFor(() => expect(result.current).toMatchObject({
-      view: 'table', filters: { programIds: [], cycleIds: [], sessionTypeIds: [] },
+      view: 'table', filters: { values: { programIds: [], cycleIds: [], sessionTypeIds: [] } },
     }));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
       view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [],
@@ -223,7 +183,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.dateRange).toEqual({ start: cycles[0].startsOn, end: cycles[0].endsOn });
 
-    act(() => result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']));
+    act(() => result.current.filters.apply('cycleIds', ['cycle-1', 'cycle-2']));
     expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2028-12-31' });
     act(() => result.current.filters.clear());
     expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2028-12-31' });

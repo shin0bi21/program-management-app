@@ -41,16 +41,15 @@ needs a substantial multi-file set.
 |---|---|
 | Where code should live | [Ownership](architecture/ownership.md) |
 | State, API calls, queries, or mutations | [State and Data](architecture/state-and-data.md) |
-| Sidebar navigation or route visibility | [App Navigation](components/navigation.md) |
-| A page or route workflow, including its controls, content, errors, and dialogs | [Pages](pages/README.md) |
-| Page shell, data loading, or coordinated filters | [Page Composition](pages/composition.md) |
-| Page-level errors and retry actions | [Page Message Overlays](components/message-overlays.md) |
-| Page test ownership and suite organization | [Page Testing](pages/testing.md) |
-| Saved preferences, field rules, or grouped page controls | [Page Preferences](pages/preferences.md) |
+| Saved preferences, field rules, and browser-local table layout | [Preferences](features/preferences.md) |
+| Generate implementation and colocated test outlines | [Scaffolding](architecture/scaffolding.md) |
+| Test ownership and suite organization | [Testing](../workflows/delivery/testing.md#test-ownership) |
 | Shared components, type labels, and status labels | [UI Basics](components/README.md) |
+| Collection shell, route assembly, controls, and readiness | [PageContainer](components/page-container.md) |
+| Page-level errors and retry actions | [PageMessageOverlay](components/message-overlays.md) |
+| Summary cards and overview data | [Dashboards](components/dashboards.md) |
 | Tables and table rows | [Tables](components/tables.md) and [table rows](components/table-rows.md) |
 | Calendars | [Calendars](components/calendars.md) |
-| Dashboards | [Dashboards](components/dashboards.md) |
-| Form validation and submission | [Modals and Forms](components/modals-and-forms.md) |
 | Dialogs, floating menus, and tooltips | [Overlays](components/overlays.md) |
-| Generate implementation and colocated test outlines | [Scaffolding](pages/scaffolding.md) |
+| Form validation and submission | [Modals and Forms](components/modals-and-forms.md) |
+| Sidebar navigation or route visibility | [App Navigation](components/navigation.md) |

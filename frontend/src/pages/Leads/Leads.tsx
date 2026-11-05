@@ -1,13 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import Button from '../../common/components/Button/Button';
-import ColumnVisibilityMenu from '../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
+import PageContainer from '../../common/components/PageContainer/PageContainer';
 import ConfirmModal from '../../common/components/ConfirmModal/ConfirmModal';
-import FilterCard from '../../common/components/FilterCard/FilterCard';
-import PageBody from '../../common/components/PageBody/PageBody';
-import PageMessageOverlay, { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../common/components/SearchInput/SearchInput';
+import { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
 import LeadDashboard from './components/LeadDashboard/LeadDashboard';
 import LeadTable from './components/LeadTable/LeadTable';
 import useLeadTable from './components/LeadTable/hooks/useLeadTable';
@@ -46,11 +42,11 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Filter configuration.
   const leadFilters = useMemo<LeadFilters | null>(() => preferences.ready ? {
     search: preferences.search.appliedValue,
-    statuses: preferences.filters.statuses,
-    programIds: preferences.filters.programIds,
+    statuses: preferences.filters.values.statuses,
+    programIds: preferences.filters.values.programIds,
     origins: [origin],
-    submitterRoles: preferences.filters.submitterRoles,
-  } : null, [origin, preferences.filters.programIds, preferences.filters.statuses, preferences.filters.submitterRoles, preferences.ready, preferences.search.appliedValue]);
+    submitterRoles: preferences.filters.values.submitterRoles,
+  } : null, [origin, preferences.filters.values.programIds, preferences.filters.values.statuses, preferences.filters.values.submitterRoles, preferences.ready, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useLeadSelection();
@@ -84,58 +80,34 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Render.
   return <>
-    <main className="page-container">
-      <PageHeader
-        title={viewTitle}
-        actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
-        search={preferences.ready ? <SearchInput
-          label="Search leads"
-          value={preferences.search.value}
-          appliedValue={preferences.search.appliedValue}
-          onChange={event => preferences.search.setValue(event.target.value)}
-          onApply={preferences.search.apply}
-          onClear={preferences.search.clear}
-          placeholder="Search youth or school"
-        /> : undefined}
-        columns={preferences.ready ? <ColumnVisibilityMenu
-          columns={columns}
-          hiddenColumnKeys={preferences.table.hiddenColumns}
-          onHiddenColumnKeysChange={preferences.table.setHiddenColumns}
-        /> : undefined}
-        filters={preferences.ready ? <FilterCard
-          categories={preferences.filters.definitions}
-          values={{
-            status: preferences.filters.statuses,
-            program: preferences.filters.programIds,
-            submitterRole: preferences.filters.submitterRoles,
-          }}
-          onApply={preferences.filters.apply}
-          onClearAll={preferences.filters.clear}
-        /> : undefined}
-      />
-      <PageMessageOverlay messages={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]} />
-      {!preferences.ready ? <p role="status">Loading saved lead preferences…</p> : <PageBody
-        ariaLabel={viewTitle}
-        table={<LeadTable
-          queryKey={tableQueryKey}
-          columns={columns}
-          hiddenColumnKeys={preferences.table.hiddenColumns}
-          filters={leadFilters}
-          sorting={preferences.table.sorting}
-          columnWidths={preferences.table.columnWidths}
-          selectedLeadId={selection.selectedLeadId}
-          onLeadSelect={selection.selectLead}
-          onSortingChange={preferences.table.setSorting}
-          onColumnWidthsChange={preferences.table.setColumnWidths}
-          onMessageChange={setViewError}
-        />}
-        dashboard={<LeadDashboard
-          lead={selection.selectedLead}
-          canWrite={canWrite}
-          onMessageChange={setDashboardError}
-        />}
+    <PageContainer
+      title={viewTitle}
+      ariaLabel={viewTitle}
+      controls={preferences}
+      loadingLabel="Loading saved lead preferences…"
+      actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
+      search={{ label: 'Search leads', placeholder: 'Search youth or school' }}
+      columns={columns}
+      messages={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]}
+      dashboard={<LeadDashboard
+        lead={selection.selectedLead}
+        canWrite={canWrite}
+        onMessageChange={setDashboardError}
       />}
-    </main>
+      table={<LeadTable
+        queryKey={tableQueryKey}
+        columns={columns}
+        hiddenColumnKeys={preferences.table.hiddenColumns}
+        filters={leadFilters}
+        sorting={preferences.table.sorting}
+        columnWidths={preferences.table.columnWidths}
+        selectedLeadId={selection.selectedLeadId}
+        onLeadSelect={selection.selectLead}
+        onSortingChange={preferences.table.setSorting}
+        onColumnWidthsChange={preferences.table.setColumnWidths}
+        onMessageChange={setViewError}
+      />}
+    />
     <LeadModal
       isOpen={modalTarget !== null}
       lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}

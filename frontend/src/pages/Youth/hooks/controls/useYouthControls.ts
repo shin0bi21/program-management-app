@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
+import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
@@ -63,23 +63,18 @@ export function useYouthControls({
     updatePreferences({ search: '' });
   };
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
+  const filterCategories = useMemo(() => [
     {
-      id: 'program',
+      id: 'programIds' as const,
       label: 'Program',
       options: toFilterOptions(programs),
     },
     {
-      id: 'cycle',
+      id: 'cycleIds' as const,
       label: 'Cycle',
       options: toFilterOptions(cycles),
     },
   ], [programs, cycles]);
-
-  const applyFilter = (category: string, selected: string[]) => {
-    if (category === 'program') updatePreferences({ programIds: selected });
-    if (category === 'cycle') updatePreferences({ cycleIds: selected });
-  };
 
   return {
     ready,
@@ -91,13 +86,14 @@ export function useYouthControls({
       apply: applySearch,
       clear: clearSearch,
     },
-    filters: {
-      programIds: preferences.programIds,
-      cycleIds: preferences.cycleIds,
+    filters: createPreferenceFilters({
+      values: {
+        programIds: preferences.programIds,
+        cycleIds: preferences.cycleIds,
+      },
       definitions: filterCategories,
-      apply: applyFilter,
-      clear: () => updatePreferences({ programIds: [], cycleIds: [] }),
-    },
+      updatePreferences,
+    }),
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<YouthSortKey> }),

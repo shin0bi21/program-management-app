@@ -17,16 +17,13 @@ own that child's queries.
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
 
-For durable page controls, follow the [page preference contract](../pages/preferences.md). It owns the named field rules, grouped return shape, automatic repair and persistence lifecycle.
-
 Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
 
 ## Separate Page Controls from View Data
 
-Page data hooks load reference data needed across the page, such as filter options and
-resources used by selection or dialogs. Page controls own the user's choices, not the
-table or calendar collections. The route builds one applied filter object from those
-controls and passes it to each data view.
+Use [route assembly](../components/page-container.md#assemble-the-route) for
+page-wide references and applied filters, and [Preferences](../features/preferences.md)
+for durable controls. Table and calendar collections stay with their view owners.
 
 Shared filter and selector lookups belong to `common/features/referenceData`, with
 one projection, API adapter, query key, and option conversion per shared lookup.
@@ -35,12 +32,6 @@ Full records needed by a workflow stay with that feature rather than expanding
 the shared label projection. Follow the [reference-data contract](../../backend/reference-data.md)
 for permissions, scope-specific cache keys, mutation reconciliation, and failures.
 
-A page preference hook may contain view-specific settings when the page owns their
-restoration and persistence across view changes. For example, its `table` group stores
-account-wide sorting alongside browser-local column widths and hidden columns, while the
-table owns applying them and emitting edits. This does not make those settings calendar inputs or move table fetching
-and pagination into the page hook.
-
 Keep view-local interaction state with the view. Calendar navigation, visible periods,
 scroll position and pointer sessions belong to the calendar and its shared primitives.
 A page-specific position storage key identifies the saved position; it does not make
@@ -48,9 +39,8 @@ the page responsible for scrolling or restoration. Add calendar controls to a pa
 only when the page actually coordinates or persists those choices, not to mirror the
 table group.
 
-Follow [Page Preferences](../pages/preferences.md) for the control contract,
-[Tables](../components/tables.md) for collection ownership, and
-[Calendars](../components/calendars.md) for range loading and calendar interaction state.
+Follow [Tables](../components/tables.md) for collection ownership and
+[Calendars](../components/calendars.md) for range loading and interaction state.
 
 ## Fetch Remote Data
 

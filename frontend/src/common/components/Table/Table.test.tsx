@@ -226,7 +226,9 @@ describe('Table', () => {
     expect(row).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(row);
     fireEvent.keyDown(row, { key: 'Enter' });
-    expect(onSelect).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(row, { key: ' ' });
+    expect(onSelect).toHaveBeenCalledTimes(3);
+    expect(onSelect).toHaveBeenLastCalledWith({ id: '1', name: 'Jamie' });
   });
 
   it('wires row-key navigation to shared table selection and focus', () => {
@@ -264,6 +266,26 @@ describe('Table', () => {
     fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
 
     expect(onAction).toHaveBeenCalledOnce();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('leaves keyboard events inside row controls to the control', () => {
+    const onSelect = vi.fn();
+    const columnsWithInput: TableColumnDef<Row>[] = [
+      ...columns,
+      { id: 'note', header: 'Note', cell: ({ row }) => <input aria-label={`Note for ${row.original.name}`} /> },
+    ];
+    render(<Table ariaLabel="Accounts" columns={columnsWithInput}
+      data={[{ id: '1', name: 'First' }, { id: '2', name: 'Second' }]}
+      keyExtractor={row => row.id} selectedKey="1" onRowSelect={onSelect} />);
+    const input = screen.getByRole('textbox', { name: 'Note for First' });
+    input.focus();
+
+    for (const key of ['Enter', ' ', 'ArrowDown', 'ArrowUp', 'Home', 'End']) {
+      expect(fireEvent.keyDown(input, { key })).toBe(true);
+    }
+
+    expect(input).toHaveFocus();
     expect(onSelect).not.toHaveBeenCalled();
   });
 });

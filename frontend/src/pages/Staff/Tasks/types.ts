@@ -1,4 +1,3 @@
-import type { DateRange } from '../../../common/utils/dateRange';
 // Domain values and types.
 export type TaskState = 'open' | 'completed' | 'cancelled';
 export type TaskTiming = 'upcoming' | 'in_progress' | 'overdue';
@@ -39,16 +38,6 @@ export interface Task {
 
 // Shared task data contracts.
 export type { StaffReference as TaskResource, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
-
-// Shared table and calendar filters.
-export interface TasksFilters {
-  dateRange?: DateRange;
-  search: string;
-  staffIds: string[];
-  programIds: string[];
-  categories: TaskCategory[];
-  statuses: TaskStatus[];
-}
 
 // Shared table contracts.
 export const TASK_TABLE_KEYS = [

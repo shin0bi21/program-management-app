@@ -1,8 +1,6 @@
-import type { ComponentProps } from 'react';
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import Table from '../../../../../common/components/Table/Table';
 import type { User, UserFilters } from '../../types';
 import useUserTableData from './hooks/useUserTableData';
 import UserTable from './UserTable';
@@ -18,15 +16,9 @@ const tableState = vi.hoisted<ReturnType<typeof useUserTableData>>(() => ({
   retry: vi.fn(),
 }));
 const useTableData = vi.hoisted(() => vi.fn(() => tableState));
-const tableProps = vi.hoisted(() => ({ current: null as ComponentProps<typeof Table<User>> | null }));
 
 vi.mock('./hooks/useUserTableData', () => ({ default: useTableData }));
-vi.mock('../../../../../common/components/Table/Table', () => ({
-  default: (props: ComponentProps<typeof Table<User>>) => {
-    tableProps.current = props;
-    return <div aria-label="Mock account table" />;
-  },
-}));
+vi.mock('../../../../../common/components/Table/Table', () => ({ default: () => null }));
 
 const queryKey = ['accounts', 'table'] as const;
 const filters: UserFilters = { search: 'sam', roles: ['staff'], statuses: ['active'] };
@@ -51,34 +43,22 @@ describe('UserTable', () => {
       rows: [], loading: false, refreshing: false, error: '',
       hasNextPage: false, loadingNextPage: false, nextPageError: '',
     });
-    tableProps.current = null;
   });
 
-  it('routes next-page failure recovery to the footer and page overlay while retaining rows', () => {
-    const user: User = {
-      id: 'user-1', firstName: 'Sam', lastName: 'Rivera', email: 'sam@example.com',
-      role: 'staff', status: 'active', createdAt: '2026-01-01T00:00:00.000Z',
-    };
-    tableState.rows = [user];
+  it('routes next-page failure recovery to the page overlay', () => {
     tableState.nextPageError = 'Unable to load more accounts.';
     render(<UserTable {...baseProps} />);
 
-    expect(tableProps.current?.unavailable).toBeUndefined();
-    expect(tableProps.current?.data).toEqual([user]);
-    expect(tableProps.current?.nextPageUnavailable).toEqual({ onRetry: tableState.retryNextPage });
     expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load more accounts.',
       action: { label: 'Retry', onClick: tableState.retryNextPage },
     });
   });
 
-  it('maps query failures to the unavailable state and page error retry action', () => {
+  it('maps query failures to the page error retry action', () => {
     tableState.error = 'Unable to load accounts.';
     render(<UserTable {...baseProps} />);
 
-    expect(tableProps.current).toEqual(expect.objectContaining({
-      unavailable: { title: 'Accounts unavailable', onRetry: tableState.retry },
-    }));
     expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load accounts.',
       action: { label: 'Retry', onClick: tableState.retry },

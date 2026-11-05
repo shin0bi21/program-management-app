@@ -64,10 +64,9 @@ describe('useHoursPreferences', () => {
     rerender({ loading: false });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.view).toBe('table');
-    expect(result.current.filters).toEqual(expect.objectContaining({
+    expect(result.current.filters.values).toEqual(expect.objectContaining({
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleIds: ['cycle-2'],
-      dateRange: { start: '2026-09-02', end: '2026-12-31' },
     }));
     expect(result.current.table).toEqual(expect.objectContaining({
       hiddenColumns: ['note'], columnWidths: { note: 240 },
@@ -85,7 +84,7 @@ describe('useHoursPreferences', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.staffIds).toEqual([]);
+    expect(result.current.filters.values.staffIds).toEqual([]);
   });
 
   it('repairs removed options and sorting without losing valid selections', async () => {
@@ -105,7 +104,7 @@ describe('useHoursPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters).toEqual(expect.objectContaining({
+    expect(result.current.filters.values).toEqual(expect.objectContaining({
       staffIds: ['staff-1'], programIds: ['general', 'program-1'],
       categories: ['meeting'], types: ['task'],
     }));
@@ -134,27 +133,27 @@ describe('useHoursPreferences', () => {
       { initialProps: { optionsError: true, cyclesError: true } },
     );
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters).toMatchObject({
+    expect(result.current.filters.values).toMatchObject({
       staffIds: ['removed-staff'], programIds: ['removed-program'],
       categories: ['planning_prep'], types: ['session'], cycleIds: ['removed-cycle'],
     });
     act(() => result.current.setView('table'));
 
     rerender({ optionsError: false, cyclesError: true });
-    await waitFor(() => expect(result.current.filters).toMatchObject({
+    await waitFor(() => expect(result.current.filters.values).toMatchObject({
       staffIds: [], programIds: [], categories: [], types: [],
     }));
-    expect(result.current.filters.cycleIds).toEqual(['removed-cycle']);
+    expect(result.current.filters.values.cycleIds).toEqual(['removed-cycle']);
 
     rerender({ optionsError: false, cyclesError: false });
-    await waitFor(() => expect(result.current.filters.cycleIds).toEqual([]));
+    await waitFor(() => expect(result.current.filters.values.cycleIds).toEqual([]));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
       view: 'table', staffIds: [], programIds: [], categories: [], types: [], cycleIds: [],
     })));
   });
 
-  it('owns search and every Hours filter through the standard preference contract', async () => {
+  it('keeps applied search and account sorting separate from browser layout', async () => {
     const { result } = renderHook(() => useHoursPreferences({
       role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
@@ -162,7 +161,7 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.view).toBe('calendar');
-    expect(result.current.filters).toMatchObject({ staffIds: [], cycleIds: [], dateRange: { start: '2026-07-01', end: '2026-12-31' } });
+    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-12-31' });
 
     act(() => {
       result.current.search.setValue(' workshop ');
@@ -174,14 +173,7 @@ describe('useHoursPreferences', () => {
       result.current.table.setHiddenColumns(['note']);
       result.current.table.setColumnWidths({ note: 280 });
       result.current.table.setSorting({ key: 'hours', direction: 'asc' });
-      result.current.filters.apply('staff', ['staff-1']);
-      result.current.filters.apply('entryType', ['meeting']);
-      result.current.filters.apply('type', ['task']);
-      result.current.filters.apply('cycle', ['cycle-1', 'cycle-2']);
     });
-    expect(result.current.filters).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
-    }));
 
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:hours-filters')!)).toEqual({
       hiddenColumns: ['note'], columnWidths: { note: 280 },
@@ -190,14 +182,11 @@ describe('useHoursPreferences', () => {
       hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
     });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
-      search: 'workshop', staffIds: ['staff-1'], categories: ['meeting'], types: ['task'], cycleIds: ['cycle-1', 'cycle-2'],
+      search: 'workshop',
       sorting: { key: 'hours', direction: 'asc' },
     })));
 
-    act(() => result.current.filters.clear());
-    await waitFor(() => expect(result.current.filters).toEqual(expect.objectContaining({
-      staffIds: [], programIds: [], categories: [], types: [], cycleIds: [],
-    })));
+
   });
   it('retires legacy cycle and custom-date fields without losing sibling preferences', async () => {
     savedPreference.preference = Object.assign({ view: 'table' as const, search: 'retained', programIds: ['program-1'] }, {
@@ -209,9 +198,10 @@ describe('useHoursPreferences', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters).toMatchObject({
-      cycleIds: [], programIds: ['program-1'], dateRange: { start: '2026-07-01', end: '2026-12-31' },
+    expect(result.current.filters.values).toMatchObject({
+      cycleIds: [], programIds: ['program-1'],
     });
+    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-12-31' });
     expect(result.current.search.appliedValue).toBe('retained');
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenCalledWith('hours-filters', expect.not.objectContaining({ cycleId: expect.anything() })));

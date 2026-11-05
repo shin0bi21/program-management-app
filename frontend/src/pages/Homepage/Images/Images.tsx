@@ -1,9 +1,7 @@
 import { useAuth } from '../../../auth/authContext';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageMessageOverlay from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
 
 import HomepageImageList from './components/HomepageImageList/HomepageImageList';
 import HomepageImageModal from './components/HomepageImageModal/HomepageImageModal';
@@ -25,30 +23,27 @@ export default function Images() {
   // Render.
   return (
     <>
-      <main className="page-container homepage-management-page">
-        <PageHeader
-          title="Images"
-          actions={canWrite && <Button disabled={homepage.reordering} onClick={modals.image.openNew}>+ Add</Button>}
-        />
-        <PageMessageOverlay messages={[homepage.error ? {
+      <PageContainer
+        title="Images"
+        className="homepage-management-page"
+        ariaLabel="Homepage image management"
+        actions={canWrite && <Button disabled={homepage.reordering} onClick={modals.image.openNew}>+ Add</Button>}
+        messages={[homepage.error ? {
           message: homepage.error,
           action: { label: 'Retry', onClick: homepage.refresh },
-        } : null]} />
-        <PageBody
-          ariaLabel="Homepage image management"
-          table={<HomepageImageList
-            images={homepage.images}
-            loading={homepage.loading}
-            error={homepage.error}
-            onRetry={homepage.refresh}
-            onEdit={modals.image.openEdit}
-            onDelete={modals.deletion.open}
-            onReorder={homepage.reorderImages}
-            canWrite={canWrite}
-            mutationsPending={homepage.reordering}
-          />}
-        />
-      </main>
+        } : null]}
+        table={<HomepageImageList
+          images={homepage.images}
+          loading={homepage.loading}
+          error={homepage.error}
+          onRetry={homepage.refresh}
+          onEdit={modals.image.openEdit}
+          onDelete={modals.deletion.open}
+          onReorder={homepage.reorderImages}
+          canWrite={canWrite}
+          mutationsPending={homepage.reordering}
+        />}
+      />
 
       {canWrite && <HomepageImageModal
         image={modals.image.target}

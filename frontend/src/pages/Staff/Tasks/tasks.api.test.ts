@@ -60,6 +60,7 @@ describe('tasks API', () => {
 
   it('serializes shared filters for calendar range data', () => {
     getTasksCalendarData({
+      cycleIds: ['cycle-1'],
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
@@ -68,37 +69,24 @@ describe('tasks API', () => {
     }, { start: '2026-08-10', end: '2026-08-12' });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/calendar?start=2026-08-10&end=2026-08-12&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
+      '/tasks/calendar?start=2026-08-10&end=2026-08-12&cycleIds=cycle-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
       undefined,
     );
   });
 
-  it('uses the applied page range for table requests and the visible range for calendar requests', () => {
+  it('sends cycle selections to both collections and leaves viewport intersection to the backend', () => {
+    const controller = new AbortController();
     const filters = {
+      cycleIds: ['cycle-1', 'cycle-2'],
       staffIds: [], programIds: [], categories: [], statuses: [], search: '',
-      dateRange: { start: '2026-01-01', end: '2026-12-31' },
     };
-    getTasksTableData(filters, undefined, { key: 'startDate', direction: 'asc' });
-    getTasksCalendarData(filters, { start: '2026-08-10', end: '2026-08-12' });
+    getTasksTableData(filters, { signal: controller.signal }, { key: 'startDate', direction: 'asc' });
+    getTasksCalendarData(filters, { start: '2026-07-15', end: '2026-09-15' }, { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(1,
-      '/tasks/list?sort=startDate&direction=asc&limit=50&start=2026-01-01&end=2026-12-31', undefined);
+      '/tasks/list?sort=startDate&direction=asc&limit=50&cycleIds=cycle-1%2Ccycle-2', { signal: controller.signal });
     expect(apiClient.get).toHaveBeenNthCalledWith(2,
-      '/tasks/calendar?start=2026-08-10&end=2026-08-12', undefined);
-  });
-
-  it('clips buffered requests to the page range and skips requests entirely outside it', async () => {
-    const filters = {
-      staffIds: [], programIds: [], categories: [], statuses: [], search: '',
-      dateRange: { start: '2026-08-01', end: '2026-08-31' },
-    };
-    getTasksCalendarData(filters, { start: '2026-07-15', end: '2026-09-15' });
-    expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/calendar?start=2026-08-01&end=2026-08-31', undefined);
-    vi.mocked(apiClient.get).mockClear();
-
-    await expect(getTasksCalendarData(filters, { start: '2026-09-01', end: '2026-09-15' })).resolves.toEqual([]);
-    expect(apiClient.get).not.toHaveBeenCalled();
+      '/tasks/calendar?start=2026-07-15&end=2026-09-15&cycleIds=cycle-1%2Ccycle-2', { signal: controller.signal });
   });
 
   it('loads all task reference data in one request', () => {
@@ -113,6 +101,7 @@ describe('tasks API', () => {
 
   it('serializes list filters, derived timing states, and cursor pagination', () => {
     getTasksTableData({
+      cycleIds: ['cycle-1'],
       staffIds: ['staff-1'],
       programIds: ['program-1'],
       categories: ['planning_prep'],
@@ -126,7 +115,7 @@ describe('tasks API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/list?sort=dueDate&direction=desc&limit=50&cursor=cursor-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
+      '/tasks/list?sort=dueDate&direction=desc&limit=50&cursor=cursor-1&cycleIds=cycle-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
       undefined,
     );
   });

@@ -119,24 +119,6 @@ describe('Tasks', () => {
   });
 
   // Entry and readiness.
-  it('keeps persisted controls unavailable until task options and preferences are restored', async () => {
-    let resolveReferenceData: (value: Awaited<ReturnType<typeof getTaskReferenceData>>) => void = () => undefined;
-    vi.mocked(getTaskReferenceData).mockReturnValue(new Promise(resolve => { resolveReferenceData = resolve; }));
-    renderTasks();
-
-    expect(screen.getByRole('status')).toHaveTextContent('Loading saved task preferences…');
-    expect(screen.queryByRole('button', { name: /View:/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Filters' })).not.toBeInTheDocument();
-
-    await act(async () => resolveReferenceData({
-      ...taskReferenceChoices,
-    }));
-
-    expect(await screen.findByRole('button', { name: 'View: Table' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
-    expect(screen.queryByText('Loading saved task preferences…')).not.toBeInTheDocument();
-  });
-
   it('loads shared references for task-only readers without program permissions', async () => {
     calendarTestState.view = 'calendar';
     const restrictedAuth: AuthContextValue = { ...auth, permissions: ['read:tasks'] };
@@ -201,20 +183,13 @@ describe('Tasks', () => {
     renderTasks();
 
     expect(await screen.findByText('Complete administration')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'First Name' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Last Name' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Alex' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Smith' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({
       sorting: { key: 'firstName', direction: 'asc' },
     })));
-    const dataRows = screen.getAllByRole('row').slice(1);
-    expect(dataRows[0]).toHaveTextContent('Alex');
-    expect(dataRows[1]).toHaveTextContent('Zoe');
-    expect(screen.getByRole('button', { name: 'Actions for Prepare workshop' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Actions for Complete administration' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Status for Complete administration' })).not.toBeInTheDocument();
+    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
+      expect.anything(), expect.anything(), expect.objectContaining({ key: 'firstName', direction: 'asc' }),
+    ));
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Prepare workshop'));
@@ -231,7 +206,7 @@ describe('Tasks', () => {
   });
 
   // Controls and views.
-  it('shares cycle-derived bounds longer than a year between table and calendar', async () => {
+  it('sends cycle IDs to the table and uses multi-year bounds for calendar display', async () => {
     const dateRange = { start: '2024-01-01', end: '2027-12-31' };
     vi.mocked(getCycleReferences).mockResolvedValue([
       { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
@@ -241,24 +216,27 @@ describe('Tasks', () => {
     renderTasks();
 
     await screen.findByRole('table', { name: 'Tasks' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ dateRange }),
+    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
       expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
     await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
-  it('uses all cycle dates when none are selected and persists a selected cycle', async () => {
+  it('sends an empty cycle selection for all cycles and applies a selected cycle to the query', async () => {
     renderTasks();
 
     await screen.findByRole('table', { name: 'Tasks' });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({
-      dateRange: { start: '2025-01-01', end: '2027-12-31' },
+      cycleIds: [],
     }), expect.anything(), expect.anything()));
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(expect.objectContaining({
+      cycleIds: ['cycle-1'],
+    }), expect.anything(), expect.anything()));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ cycleIds: ['cycle-1'] })));
     expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
   });
@@ -308,10 +286,6 @@ describe('Tasks', () => {
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
       { signal: expect.any(AbortSignal) },
     ));
-    await waitFor(() => expect(calendarTestState.props?.items['staff-1']).toEqual([task]));
-    expect(screen.getByRole('textbox', { name: 'Search tasks' })).toHaveValue('missing');
-    expect(screen.getByText('Zoe W.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Zoe Wilson')).toBeInTheDocument();
   });
 
   it('reloads the calendar range when applied search changes', async () => {

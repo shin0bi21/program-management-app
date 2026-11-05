@@ -1,13 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { unified } from '@astrojs/markdown-remark';
-import { prepareContent } from './scripts/prepare-content.mjs';
-import remarkRepositoryLinks from './scripts/remark-repository-links.mjs';
+import { generateContent } from './site/generate-content.ts';
+import convertMarkdownLinks from './site/convert-markdown-links.ts';
 import { fileURLToPath, URL } from 'node:url';
 import process from 'node:process';
 
 const gitRef = process.env.DOCS_GIT_REF || 'main';
-const manifest = await prepareContent({ gitRef });
+const manifest = await generateContent({ gitRef });
 
 export default defineConfig({
   output: 'static',
@@ -25,7 +25,12 @@ export default defineConfig({
     '/workflows/admin/manual-deployment/': '/workflows/production/deployment/',
     '/workflows/': '/#documentation',
     '/frontend/pages/message-overlays/': '/frontend/components/message-overlays/',
-    '/frontend/scaffolding/': '/frontend/pages/scaffolding/',
+    '/frontend/scaffolding/': '/frontend/architecture/scaffolding/',
+    '/frontend/pages/': '/frontend/components/page-container/',
+    '/frontend/pages/composition/': '/frontend/components/page-container/',
+    '/frontend/pages/preferences/': '/frontend/features/preferences/',
+    '/frontend/pages/testing/': '/workflows/delivery/testing/#test-ownership',
+    '/frontend/pages/scaffolding/': '/frontend/architecture/scaffolding/',
     '/website/': '/workflows/local-development/',
     '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',
     '/backend/policies/': '/backend/authorization/',
@@ -45,7 +50,7 @@ export default defineConfig({
     '/workflows/access/': '/workflows/production/common-issues/github/access/',
   },
   markdown: {
-    processor: unified({ remarkPlugins: [[remarkRepositoryLinks, { manifest, gitRef }]] }),
+    processor: unified({ remarkPlugins: [[convertMarkdownLinks, { manifest, gitRef }]] }),
   },
   integrations: [
     {
@@ -57,11 +62,11 @@ export default defineConfig({
           server.watcher.add(sources);
           let refresh = Promise.resolve();
 
-          const onChange = (_event, path) => {
+          const onChange = (_event: string, path: string) => {
             if (!/\.(?:md|mmd)$/.test(path) || !sources.some(source => path === source || path.startsWith(source))) return;
 
             refresh = refresh.then(async () => {
-              const updated = await prepareContent({ gitRef });
+              const updated = await generateContent({ gitRef });
               Object.assign(manifest, updated);
               server.ws.send({ type: 'full-reload' });
             }).catch(error => logger.error(error.message));

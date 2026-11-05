@@ -1,5 +1,13 @@
+export type NavigationEntry =
+  | { label: string; source: string; items?: never }
+  | { label: string; items: NavigationEntry[]; source?: never };
+
+type SidebarEntry =
+  | { label: string; slug: string }
+  | { label: string; items: SidebarEntry[] };
+
 // Navigation follows reader tasks; source paths remain the canonical document identities.
-export const navigation = [
+export const navigation: NavigationEntry[] = [
   { label: 'Overview', source: 'README.md' },
   {
     label: 'Local Development',
@@ -17,27 +25,24 @@ export const navigation = [
     items: [
       { label: 'Overview', source: 'docs/frontend/README.md' },
       {
-        label: 'Pages',
-        items: [
-          { label: 'Overview', source: 'docs/frontend/pages/README.md' },
-          { label: 'Composition', source: 'docs/frontend/pages/composition.md' },
-          { label: 'Preferences', source: 'docs/frontend/pages/preferences.md' },
-          { label: 'Testing', source: 'docs/frontend/pages/testing.md' },
-          { label: 'Scaffolding', source: 'docs/frontend/pages/scaffolding.md' },
-        ],
-      },
-      {
         label: 'Components',
         items: [
           { label: 'UI Basics', source: 'docs/frontend/components/README.md' },
+          { label: 'Page Container', source: 'docs/frontend/components/page-container.md' },
+          { label: 'Message Overlays', source: 'docs/frontend/components/message-overlays.md' },
+          { label: 'Dashboards', source: 'docs/frontend/components/dashboards.md' },
           { label: 'Tables', source: 'docs/frontend/components/tables.md' },
           { label: 'Table Rows', source: 'docs/frontend/components/table-rows.md' },
           { label: 'Calendars', source: 'docs/frontend/components/calendars.md' },
-          { label: 'Dashboards', source: 'docs/frontend/components/dashboards.md' },
-          { label: 'Forms', source: 'docs/frontend/components/modals-and-forms.md' },
           { label: 'Overlays', source: 'docs/frontend/components/overlays.md' },
-          { label: 'Message Overlays', source: 'docs/frontend/components/message-overlays.md' },
-          { label: 'App Navigation', source: 'docs/frontend/components/navigation.md' },
+          { label: 'Forms', source: 'docs/frontend/components/modals-and-forms.md' },
+        ],
+      },
+      { label: 'App Navigation', source: 'docs/frontend/components/navigation.md' },
+      {
+        label: 'Features',
+        items: [
+          { label: 'Preferences', source: 'docs/frontend/features/preferences.md' },
         ],
       },
       {
@@ -45,6 +50,7 @@ export const navigation = [
         items: [
           { label: 'Ownership', source: 'docs/frontend/architecture/ownership.md' },
           { label: 'State and Data', source: 'docs/frontend/architecture/state-and-data.md' },
+          { label: 'Scaffolding', source: 'docs/frontend/architecture/scaffolding.md' },
         ],
       },
     ],
@@ -110,10 +116,10 @@ export const navigation = [
   },
 ];
 
-export function buildSidebar(routes, entries = navigation) {
-  const listed = new Set();
+export function buildSidebar(routes: Record<string, string>, entries: NavigationEntry[] = navigation) {
+  const listed = new Set<string>();
 
-  const convert = entry => {
+  const convert = (entry: NavigationEntry): SidebarEntry => {
     if (entry.items) return { label: entry.label, items: entry.items.map(convert) };
     if (!Object.hasOwn(routes, entry.source)) throw new Error(`Unknown navigation source: ${entry.source}`);
     if (listed.has(entry.source)) throw new Error(`Duplicate navigation source: ${entry.source}`);

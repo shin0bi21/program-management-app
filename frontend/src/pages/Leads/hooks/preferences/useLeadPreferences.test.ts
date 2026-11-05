@@ -41,13 +41,13 @@ describe('useLeadPreferences', () => {
     ));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.statuses).toEqual([]);
-    expect(result.current.filters.programIds).toEqual([]);
+    expect(result.current.filters.values.statuses).toEqual([]);
+    expect(result.current.filters.values.programIds).toEqual([]);
 
     act(() => result.current.search.setValue(' school '));
     act(() => result.current.search.apply());
-    act(() => result.current.filters.apply('status', ['contacted']));
-    act(() => result.current.filters.apply('submitterRole', ['youth']));
+    act(() => result.current.filters.apply('statuses', ['contacted']));
+    act(() => result.current.filters.apply('submitterRoles', ['youth']));
     act(() => {
       result.current.table.setHiddenColumns(['school']);
       result.current.table.setColumnWidths({ firstName: 240 });
@@ -58,8 +58,8 @@ describe('useLeadPreferences', () => {
       hiddenColumns: ['school'], columnWidths: { firstName: 240 },
     });
     expect(result.current.search.appliedValue).toBe('school');
-    expect(result.current.filters.statuses).toEqual(['contacted']);
-    expect(result.current.filters.submitterRoles).toEqual(['youth']);
+    expect(result.current.filters.values.statuses).toEqual(['contacted']);
+    expect(result.current.filters.values.submitterRoles).toEqual(['youth']);
     expect(result.current.table).toMatchObject({
       sorting: { key: 'school', direction: 'asc' }, hiddenColumns: ['school'], columnWidths: { firstName: 240 },
     });
@@ -80,9 +80,9 @@ describe('useLeadPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.filters.definitions).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'submitterRole' }),
+      expect.objectContaining({ id: 'submitterRoles' }),
     ]));
-    expect(result.current.filters.submitterRoles).toEqual([]);
+    expect(result.current.filters.values.submitterRoles).toEqual([]);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-internal-leads-filters', expect.objectContaining({ origins: ['internal'], submitterRoles: [] }),
     ));
@@ -101,9 +101,9 @@ describe('useLeadPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.search.value).toBe('school');
-    expect(result.current.filters.statuses).toEqual(['contacted']);
-    expect(result.current.filters.programIds).toEqual(['program-1']);
-    expect(result.current.filters.submitterRoles).toEqual(['parent']);
+    expect(result.current.filters.values.statuses).toEqual(['contacted']);
+    expect(result.current.filters.values.programIds).toEqual(['program-1']);
+    expect(result.current.filters.values.submitterRoles).toEqual(['parent']);
     expect(result.current.table.hiddenColumns).toEqual([]);
     expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
@@ -117,14 +117,14 @@ describe('useLeadPreferences', () => {
       useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, error, tableKeys)
     ), { initialProps: { error: 'offline' as string | null } });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.programIds).toEqual(['removed-program']);
+    expect(result.current.filters.values.programIds).toEqual(['removed-program']);
 
-    act(() => result.current.filters.apply('status', ['contacted']));
+    act(() => result.current.filters.apply('statuses', ['contacted']));
     act(() => result.current.search.setValue('unfinished search'));
     rerender({ error: null });
 
-    await waitFor(() => expect(result.current.filters.programIds).toEqual([]));
-    expect(result.current.filters.statuses).toEqual(['contacted']);
+    await waitFor(() => expect(result.current.filters.values.programIds).toEqual([]));
+    expect(result.current.filters.values.statuses).toEqual(['contacted']);
     expect(result.current.search.value).toBe('unfinished search');
     expect(result.current.search.appliedValue).toBe('');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(

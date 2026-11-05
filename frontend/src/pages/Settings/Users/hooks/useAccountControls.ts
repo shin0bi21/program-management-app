@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { FilterCardCategory } from '../../../../common/components/FilterCard/FilterCard';
+import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
@@ -36,24 +36,19 @@ export function useAccountControls(
     setAppliedSearch('');
   };
 
-  const filterCategories = useMemo<FilterCardCategory[]>(() => [
-    { id: 'status', label: 'Status', options: [
+  const filterCategories = useMemo(() => [
+    { id: 'statuses' as const, label: 'Status', options: [
       { value: 'active', label: 'Active' },
       { value: 'invited', label: 'Invited' },
       { value: 'inactive', label: 'Inactive' },
     ] },
-    ...(isAdmin ? [{ id: 'role', label: 'Role', options: [
+    ...(isAdmin ? [{ id: 'roles' as const, label: 'Role', options: [
       { value: 'admin', label: 'Admin' },
       { value: 'project_manager', label: 'Project Manager' },
       { value: 'staff', label: 'Staff' },
       { value: 'youth', label: 'Youth' },
     ] }] : []),
   ], [isAdmin]);
-
-  const applyFilter = (category: string, selected: string[]) => {
-    if (category === 'status') updatePreferences({ statuses: selected as UserStatus[] });
-    if (category === 'role' && isAdmin) updatePreferences({ roles: selected as UserRole[] });
-  };
 
   return {
     ready,
@@ -65,13 +60,14 @@ export function useAccountControls(
       apply: applySearch,
       clear: clearSearch,
     },
-    filters: {
-      statuses: preferences.statuses,
-      roles: preferences.roles,
+    filters: createPreferenceFilters({
+      values: {
+        statuses: preferences.statuses,
+        roles: preferences.roles,
+      },
       definitions: filterCategories,
-      apply: applyFilter,
-      clear: () => updatePreferences({ statuses: [], roles: [] }),
-    },
+      updatePreferences,
+    }),
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<UserSortKey> }),

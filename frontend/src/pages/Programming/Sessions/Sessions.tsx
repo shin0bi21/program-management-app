@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
-import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
-import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import LoadingSpinner from '../../../common/components/LoadingSpinner/LoadingSpinner';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
+import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
 import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
 import AddSessionModal from './components/AddSessionModal/AddSessionModal';
@@ -50,8 +44,8 @@ export default function Sessions() {
     sessionTypes, sessionTypesLoading: referencesLoading, sessionTypesError: referencesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
-  const { search, filters, table: tableControls, view, ready: filtersReady } = controls;
-  const { programIds: selectedProgramIds, cycleIds, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters;
+  const { search, filters, table: tableControls, view } = controls;
+  const { programIds: selectedProgramIds, cycleIds, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters.values;
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
@@ -163,77 +157,42 @@ export default function Sessions() {
     onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
     onMessageChange={setViewError}
   />;
-  const viewContent = view === 'table' ? { table: hasCycleBounds ? table : cycleState } : { calendar };
 
   return (
     <>
-      <main className="page-container sessions-page" data-view={view}>
-        <PageHeader
-          title="Sessions"
-          actions={
-            canWriteSessions ? (
-              <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
-                + Add
-              </Button>
-            ) : undefined
-          }
+      <PageContainer
+        title="Sessions"
+        className="sessions-page"
+        data-view={view}
+        ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
+        controls={{ ...controls, filters: { ...filters, apply: applyFilter, clear: clearFilters } }}
+        loadingSpinner
+        actions={
+          canWriteSessions ? (
+            <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
+              + Add
+            </Button>
+          ) : undefined
+        }
 
-          search={
-            <SearchInput
-              label="Search sessions"
-              value={search.value}
-              appliedValue={search.appliedValue}
-              onChange={(event) => search.setValue(event.target.value)}
-              onApply={search.apply}
-              onClear={search.clear}
-              placeholder="Search titles, themes, descriptions, or program cycles"
-            />
-          }
-
-          filters={filtersReady ? (
-            <FilterCard
-              categories={filters.definitions}
-              values={{
-                program: selectedProgramIds,
-                cycle: cycleIds,
-                status: statusFilters,
-                type: selectedSessionTypeIds,
-              }}
-              onApply={applyFilter}
-              onClearAll={clearFilters}
-            />
-          ) : undefined}
-
-          view={filtersReady ? (
-            <ViewMenu
-              value={view}
-              options={[
-                { value: 'calendar', label: 'Calendar' },
-                { value: 'table', label: 'Table' },
-              ]}
-              onChange={controls.setView}
-            />
-          ) : undefined}
-
-          columns={filtersReady && view === 'table'
-            ? <ColumnVisibilityMenu columns={columns} hiddenColumnKeys={tableControls.hiddenColumns} onHiddenColumnKeysChange={tableControls.setHiddenColumns} />
-            : undefined}
-        />
-        <PageMessageOverlay messages={[
+        search={{
+          label: 'Search sessions',
+          placeholder: 'Search titles, themes, descriptions, or program cycles',
+          availableWhileLoading: true,
+        }}
+        columns={columns}
+        messages={[
           controls.error,
           actions.moveError,
           referencesError,
           cyclesError,
           viewError,
           ...dashboardErrors,
-        ]} />
-
-        {!filtersReady ? <p className="page-loading-status" role="status"><LoadingSpinner />Loading page preferences…</p> : <PageBody
-          ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
-          dashboard={dashboard}
-          {...viewContent}
-        />}
-      </main>
+        ]}
+        dashboard={dashboard}
+        table={hasCycleBounds ? table : cycleState}
+        calendar={calendar}
+      />
 
       <SessionAttendanceModal
         session={attendanceTarget}

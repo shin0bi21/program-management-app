@@ -1,16 +1,11 @@
 import { getCycleDateRange } from '../../../common/features/programming/cycles/cycleDateRange';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
-import ColumnVisibilityMenu from '../../../common/components/ColumnVisibilityMenu/ColumnVisibilityMenu';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type ConfirmAction } from '../../../common/components/ConfirmModal/types';
-import FilterCard from '../../../common/components/FilterCard/FilterCard';
-import PageBody from '../../../common/components/PageBody/PageBody';
-import PageMessageOverlay, { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import PageHeader from '../../../common/components/PageHeader/PageHeader';
-import SearchInput from '../../../common/components/SearchInput/SearchInput';
-import ViewMenu from '../../../common/components/ViewMenu/ViewMenu';
+import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import TaskCalendar from './components/TaskCalendar/TaskCalendar';
 import TaskDashboard from './components/TaskDashboard/TaskDashboard';
@@ -25,13 +20,12 @@ import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDateKeyInTimeZone } from '../../../common/utils/date';
-import { getTaskDashboardData } from './tasks.api';
+import { getTaskDashboardData, type TasksFilters } from './tasks.api';
 import {
   TASK_TABLE_KEYS,
   type AddTaskModalInitialValues,
   type Task,
   type TaskModalState,
-  type TasksFilters,
 } from './types';
 
 import './Tasks.css';
@@ -72,24 +66,13 @@ export default function Tasks() {
 
   // Filter configuration.
   const dateRange = useMemo(
-    () => getCycleDateRange(pageData.cycles, preferences.filters.cycleIds),
-    [pageData.cycles, preferences.filters.cycleIds],
+    () => getCycleDateRange(pageData.cycles, preferences.filters.values.cycleIds),
+    [pageData.cycles, preferences.filters.values.cycleIds],
   );
   const taskFilters = useMemo<TasksFilters>(() => ({
-    dateRange,
+    ...preferences.filters.values,
     search: preferences.search.appliedValue,
-    staffIds: preferences.filters.staffIds,
-    programIds: preferences.filters.programIds,
-    categories: preferences.filters.categories,
-    statuses: preferences.filters.statuses,
-  }), [
-    dateRange,
-    preferences.filters.categories,
-    preferences.filters.programIds,
-    preferences.filters.staffIds,
-    preferences.filters.statuses,
-    preferences.search.appliedValue,
-  ]);
+  }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useTaskSelection({ resources: pageData.resources });
@@ -170,6 +153,7 @@ export default function Tasks() {
       key={JSON.stringify(taskFilters)}
       resources={pageData.resources}
       filters={taskFilters}
+      dateRange={dateRange}
       canWrite={canWrite}
       selectedResourceId={selection.selectedResourceId}
       selectedTaskId={selection.selectedTaskId}
@@ -190,61 +174,24 @@ export default function Tasks() {
 
   const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
   const hasCycleBounds = Boolean(dateRange) && !pageData.cyclesError;
-  const viewContent = preferences.view === 'table'
-    ? { table: hasCycleBounds ? taskTable : viewUnavailable }
-    : { calendar: hasCycleBounds ? taskCalendar : viewUnavailable };
 
   // Render.
   return <>
-    <main className="page-container">
-      <PageHeader
-        title="Tasks"
+    <PageContainer
+      title="Tasks"
+      ariaLabel="Task overview and assignments"
+      controls={preferences}
+      loadingLabel="Loading saved task preferences…"
+      actions={canWrite && pageData.writableResources.length ? <Button
+        disabled={pageData.referenceDataLoading || Boolean(pageData.referenceDataError)}
+        onClick={() => {
+          openAddTaskModal({ startDate: today, dueDate: today });
+        }}
+      >+ Add</Button> : undefined}
 
-        actions={canWrite && pageData.writableResources.length ? <Button
-          disabled={pageData.referenceDataLoading || Boolean(pageData.referenceDataError)}
-          onClick={() => {
-            openAddTaskModal({ startDate: today, dueDate: today });
-          }}
-        >+ Add</Button> : undefined}
-
-        search={preferences.ready ? <SearchInput
-          label="Search tasks"
-          value={preferences.search.value}
-          appliedValue={preferences.search.appliedValue}
-          onChange={event => preferences.search.setValue(event.target.value)}
-          onApply={preferences.search.apply}
-          onClear={preferences.search.clear}
-          placeholder="Search tasks"
-        /> : undefined}
-
-        view={preferences.ready ? <ViewMenu
-          value={preferences.view}
-          options={[{ value: 'calendar', label: 'Calendar' }, { value: 'table', label: 'Table' }]}
-          onChange={preferences.setView}
-        /> : undefined}
-
-        columns={preferences.ready && preferences.view === 'table'
-          ? <ColumnVisibilityMenu
-            columns={table.columns}
-            hiddenColumnKeys={preferences.table.hiddenColumns}
-            onHiddenColumnKeysChange={preferences.table.setHiddenColumns}
-          />
-          : undefined}
-        filters={preferences.ready ? <FilterCard
-            categories={preferences.filters.definitions}
-            values={{
-              staff: preferences.filters.staffIds,
-              cycle: preferences.filters.cycleIds,
-              program: preferences.filters.programIds,
-              category: preferences.filters.categories,
-              status: preferences.filters.statuses,
-            }}
-            onApply={preferences.filters.apply}
-            onClearAll={preferences.filters.clear}
-          /> : undefined}
-      />
-
-      <PageMessageOverlay messages={[
+      search={{ label: 'Search tasks', placeholder: 'Search tasks' }}
+      columns={table.columns}
+      messages={[
         actions.actionError,
         preferences.error,
         pageData.referenceDataError ? {
@@ -259,21 +206,19 @@ export default function Tasks() {
         } : null,
         viewError,
         dashboardError,
-      ]} />
-      {!preferences.ready ? <p role="status">Loading saved task preferences…</p> : <PageBody
-        ariaLabel="Task overview and assignments"
-        dashboard={selection.selectedResource ? <TaskDashboard
-          queryKey={TASK_QUERY_KEY}
-          resourceId={selection.selectedResource.id}
-          resourceName={selection.selectedResource.name}
-          today={today}
-          selectedTask={selection.selectedTask}
-          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
-          onMessageChange={setDashboardError}
-        /> : null}
-        {...viewContent}
-      />}
-    </main>
+      ]}
+      dashboard={selection.selectedResource ? <TaskDashboard
+        queryKey={TASK_QUERY_KEY}
+        resourceId={selection.selectedResource.id}
+        resourceName={selection.selectedResource.name}
+        today={today}
+        selectedTask={selection.selectedTask}
+        onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
+        onMessageChange={setDashboardError}
+      /> : null}
+      table={hasCycleBounds ? taskTable : viewUnavailable}
+      calendar={hasCycleBounds ? taskCalendar : viewUnavailable}
+    />
 
     {canWrite && taskModalState && <TaskModal
       target={taskModalState}
