@@ -1,4 +1,4 @@
-# Connect to the Local Database
+# 5. Connect to the Local Database
 
 Keep the local database running while connecting DBeaver.
 
@@ -8,7 +8,7 @@ Keep the local database running while connecting DBeaver.
 2. Open the **New Connection** wizard from the toolbar.
 3. Search for **PostgreSQL**, select it, and choose **Next**.
 4. Enter the values below. Your database name and credentials are in the root
-   `.env` file from [Set Up Your Environment File](environment.md).
+   `.env` file from [Set Up Your Environment File](03-environment.md).
 
 | Connection Field | Value |
 |---|---|
@@ -36,7 +36,7 @@ setup has completed, the local administrator should appear in `users`.
 This connection is to your development database. The test database uses port
 `5433`; leave it separate from the database you use to run the application.
 To change the database structure, add a project migration rather than editing
-tables manually in DBeaver. See [Create a Migration](../../backend/database.md#create-a-migration).
+tables manually in DBeaver. See [Create a Migration](../backend/database.md#create-a-migration).
 
 ## If the Connection Fails
 

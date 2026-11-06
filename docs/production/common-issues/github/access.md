@@ -28,7 +28,7 @@ pbcopy < ~/.ssh/be-original-key.pem
 
 Create the GitHub environment `production`, which the deployment job uses for
 environment protection rules and environment-scoped secrets when configured.
-Configure the [required checks](../../../delivery/ci.md#required-checks) in repository rulesets.
+Configure the [required checks](../../../workflows/delivery/ci.md#required-checks) in repository rulesets.
 
 From an authorized workstation, verify manual server access:
 

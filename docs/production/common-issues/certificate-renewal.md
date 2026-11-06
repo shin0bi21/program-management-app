@@ -9,8 +9,8 @@ The repository establishes these inputs:
 
 | Configuration | Renewal input |
 |---|---|
-| [Production Compose](../../../../docker-compose.prod.yml) | Mounts host `/etc/letsencrypt` and `/var/www/certbot` into nginx read-only |
-| [nginx configuration](../../../../nginx.conf) | Serves HTTP ACME challenges from `/var/www/certbot` |
+| [Production Compose](../../../docker-compose.prod.yml) | Mounts host `/etc/letsencrypt` and `/var/www/certbot` into nginx read-only |
+| [nginx configuration](../../../nginx.conf) | Serves HTTP ACME challenges from `/var/www/certbot` |
 | Certificate files | nginx reads `fullchain.pem` and `privkey.pem` under `/etc/letsencrypt/live/be-original.ca/` for both hostnames |
 
 ## Verify the Server Renewal Procedure

@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { unified } from '@astrojs/markdown-remark';
-import { generateContent } from './site/generate-content.ts';
+import { documentationDirectories, generateContent } from './site/generate-content.ts';
 import convertMarkdownLinks from './site/convert-markdown-links.ts';
 import { fileURLToPath, URL } from 'node:url';
 import process from 'node:process';
@@ -11,49 +11,6 @@ const manifest = await generateContent({ gitRef });
 
 export default defineConfig({
   output: 'static',
-  redirects: {
-    '/workflows/delivery/refresh-data/script-walkthrough/': '/workflows/delivery/refresh-data/recovery/',
-    '/workflows/delivery/review-and-merge/': '/workflows/delivery/',
-    '/workflows/file-structure/': '/workflows/delivery/',
-    '/workflows/delivery/deployment/': '/workflows/production/deployment/',
-    '/workflows/production/manual-deployment/': '/workflows/production/deployment/',
-    '/workflows/production/email-recovery/': '/workflows/production/common-issues/email-recovery/',
-    '/workflows/production/certificate-renewal/': '/workflows/production/common-issues/certificate-renewal/',
-    '/workflows/production/github/access/': '/workflows/production/common-issues/github/access/',
-    '/workflows/production/github/github-authentication/': '/workflows/production/common-issues/github/github-authentication/',
-
-    '/workflows/production/nginx-and-tls/': '/workflows/production/common-issues/certificate-renewal/',
-    '/workflows/production/access/': '/workflows/production/common-issues/github/access/',
-    '/workflows/production/github-authentication/': '/workflows/production/common-issues/github/github-authentication/',
-    '/workflows/admin/manual-deployment/': '/workflows/production/deployment/',
-    '/workflows/': '/#documentation',
-    '/frontend/pages/message-overlays/': '/frontend/components/message-overlays/',
-    '/frontend/scaffolding/': '/frontend/architecture/scaffolding/',
-    '/frontend/pages/': '/frontend/components/page-container/',
-    '/frontend/pages/composition/': '/frontend/components/page-container/',
-    '/frontend/pages/preferences/': '/frontend/architecture/preferences/',
-    '/frontend/features/preferences/': '/frontend/architecture/preferences/',
-    '/frontend/pages/testing/': '/workflows/delivery/testing/#test-ownership',
-    '/frontend/pages/scaffolding/': '/frontend/architecture/scaffolding/',
-    '/website/': '/workflows/local-development/setup/',
-    '/workflows/local-development/': '/workflows/local-development/setup/',
-    '/workflows/local-development/debugging/': '/workflows/debugging/',
-    '/frontend/components/badges/': '/frontend/components/#type-and-status-labels',
-    '/backend/policies/': '/backend/authorization/',
-    '/backend/reports/': '/backend/services/#render-reports',
-    '/workflows/review/': '/workflows/delivery/',
-    '/workflows/shipping/': '/workflows/delivery/',
-    '/workflows/github-credentials/': '/workflows/production/common-issues/github/github-authentication/#server-github-access',
-    '/workflows/setup/': '/workflows/local-development/setup/',
-    '/workflows/data-snapshots/': '/workflows/delivery/refresh-data/',
-    '/workflows/local-development/refresh-data/': '/workflows/delivery/refresh-data/',
-    '/workflows/testing/': '/workflows/delivery/testing/',
-    '/workflows/changes/': '/workflows/delivery/',
-    '/workflows/ci/': '/workflows/delivery/ci/',
-    '/workflows/reports/': '/workflows/delivery/reports/',
-    '/workflows/deployment/': '/workflows/production/deployment/',
-    '/workflows/access/': '/workflows/production/common-issues/github/access/',
-  },
   markdown: {
     processor: unified({ remarkPlugins: [[convertMarkdownLinks, { manifest, gitRef }]] }),
   },
@@ -62,8 +19,8 @@ export default defineConfig({
       name: 'canonical-documentation-reload',
       hooks: {
         'astro:server:setup': ({ server, logger }) => {
-          const sources = ['../README.md', './backend/', './frontend/', './workflows/']
-            .map(path => fileURLToPath(new URL(path, import.meta.url)));
+          const sources = ['README.md', ...documentationDirectories.map(directory => `${directory}/`)]
+            .map(path => fileURLToPath(new URL(`../${path}`, import.meta.url)));
           server.watcher.add(sources);
           let refresh = Promise.resolve();
 
@@ -71,8 +28,10 @@ export default defineConfig({
             if (!/\.(?:md|mmd)$/.test(path) || !sources.some(source => path === source || path.startsWith(source))) return;
 
             refresh = refresh.then(async () => {
-              const updated = await generateContent({ gitRef });
-              Object.assign(manifest, updated);
+              await generateContent({
+                gitRef,
+                onPrepared: updated => Object.assign(manifest, updated),
+              });
               server.ws.send({ type: 'full-reload' });
             }).catch(error => logger.error(error.message));
           };
@@ -86,7 +45,7 @@ export default defineConfig({
       title: 'Be Original · Developer Docs',
       description: 'Architecture, development guides, and operational runbooks for Be Original.',
       customCss: ['./src/styles/custom.css'],
-      sidebar: manifest.sidebar,
+      routeMiddleware: './src/route-data.ts',
     }),
   ],
 });

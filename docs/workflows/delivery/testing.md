@@ -177,6 +177,6 @@ behavior; do not duplicate a shared matrix at each consumer.
 - `scripts/dev/` wrappers use syntax checks, ShellCheck, and manual verification,
   without TypeScript mock-command suites. Database behavior belongs to worker tests.
 
-See [Run in Docker](../local-development/setup.md) for container operation,
+See [Run in Docker](../../local-development/04-setup.md) for container operation,
 [Database](../../backend/database.md#apply-local-migrations) for migrations, and
 [CI](ci.md) for pattern-check ownership.
