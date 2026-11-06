@@ -120,6 +120,11 @@ in the authorization guide.
 
 The [account service](../../backend/src/services/accounts/accountService.ts) creates invited credentials with an unusable password and sends a 7-day activation link to `/reset-password?token=...`. Youth credential creation reuses this mechanism. The normal password-reset endpoint sets the password and promotes `invited` to `active`.
 
+Invitation changes and password-reset issuance/completion lock the surviving user
+row before validating credential state or claiming reset tokens. Revocation
+invalidates earlier links; a reset must still have current credentials
+when its token is consumed. Email delivery happens after the issuing transaction commits.
+
 Account policies limit staff to youth accounts; administrators can manage staff, project manager, and administrator accounts. Project managers retain staff authority over youth accounts only.
 
 ## Record Auth Events
