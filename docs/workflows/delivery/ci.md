@@ -31,7 +31,7 @@ Direct feature pull requests to `main` are rejected. Shipping authorization ends
 
 ## Pull-Request Execution Graph
 
-The main CI workflow classifies the diff once, then runs independent selected work concurrently:
+For pull requests to `develop`, the main CI workflow classifies the diff once, then runs independent selected work concurrently:
 
 ```text
 change classification
@@ -41,11 +41,14 @@ change classification
   └── conditional production image and Compose validation
 ```
 
-Release pull requests also run the independent `Enforce develop → main only`
-job. Keeping this repository policy in its own job gives branch protection a
-stable required-check identity without coupling it to lint or shell analysis.
+Release pull requests to `main` run `Enforce develop → main only`, both production
+image builds, and Compose validation. They skip static/script tests and backend
+and frontend verification: changes have already passed the selected checks on
+pull requests into protected `develop`. Compose validation runs independently of
+the skipped quality job. Keeping branch enforcement in its own job gives branch
+protection a stable required-check identity.
 
-[`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. Unknown paths fail closed to the full application plan.
+[`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts) owns the routing policy used by both GitHub Actions and the local changed-suite runner. Job-level conditions preserve the required job identities while avoiding unrelated application runners. Branch-flow enforcement has its own required job on pull requests to `main`, independent of change classification and quality checks. On pull requests to `develop`, unknown paths fail closed to the full application plan.
 
 Frontend verification installs dependencies once and runs related or full Vitest coverage before the TypeScript production build. For source changes, Vitest follows its dependency graph from the diff, selecting colocated tests and tests for importing owners such as route pages. Frontend configuration, dependencies, and test-runner changes escalate to all frontend tests.
 
@@ -87,9 +90,9 @@ The shared selector applies these rules locally and in CI:
 - Shared test setup, database changes, dependencies, configuration, other backend inputs, and deleted graph inputs run the full backend suite.
 - Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
 - Changed production inputs select deployment planning, image builds, and Compose validation.
-- Unrecognized paths fail closed to the full local application plan until deliberately classified.
+- Unrecognized paths on pull requests to `develop` fail closed to the full local application plan until deliberately classified.
 
-Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate both production images and the production Compose configuration.
+Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate production packaging; the workflow skips static/script and application verification jobs while preserving their check identities. Local changed-suite selection still includes application checks when comparing against `main`.
 
 ## Test-Layer Ownership
 
@@ -131,12 +134,14 @@ Repository rulesets require a pull request for both integration branches:
 | Target | Required checks | Merge constraint |
 |---|---|---|
 | `develop` | `Lint & Shell Analysis`; `Backend — Typecheck, Migrate & Test`; `Frontend — Typecheck & Build` | Ship reviewed feature concerns here |
-| `main` | The three standard CI checks above; `Enforce develop → main only`; `Production Compose Validation`; `Backend Production Image`; `Frontend Production Image` | Source must be `develop`; use a regular merge commit so `develop` remains in production history |
+| `main` | `Enforce develop → main only`; `Production Compose Validation`; `Backend Production Image`; `Frontend Production Image`; the three standard CI identities remain present but skip execution | Source must be `develop`; use a regular merge commit so `develop` remains in production history |
 
 Job-level conditions preserve check names while skipping work unrelated to the
-diff. Pull requests to `main` always run merge-path enforcement, static checks,
-both production image builds, and production Compose validation. Backend and
-frontend application jobs follow changed-path selection.
+diff. Pull requests to `main` run merge-path enforcement, both production image
+builds, and production Compose validation. Static/script and backend/frontend
+verification execute on pull requests to `develop`, according to changed-path
+selection, and are skipped on release pull requests. Keep `develop` protected
+against direct pushes so releases inherit PR-validated changes.
 
 ## Change CI
 
