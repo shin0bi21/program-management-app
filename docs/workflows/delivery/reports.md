@@ -118,16 +118,16 @@ TypeScript and React source from their tests:
 
 ```bash
 npm run report:loc
-npm run report:loc -- --ignore-comments
-npm run report:loc -- all --ignore-comments
 npm run report:loc -- all
+npm run report:loc -- all --include-comments
 npm run report:loc -- ts tsx sql
 ```
 
 `report:loc` defaults to application TypeScript and React files. Pass `all` to include CSS, SQL, and Markdown, or provide an explicit extension list.
 
-Blank and whitespace-only lines are always excluded. Comments count by default.
-With `--ignore-comments`, each line is trimmed before checking its prefix:
+Blank lines and comment lines are excluded by default. Use `--include-comments`
+only when requested.
+Comment filtering trims each line before checking its prefix:
 `//` for TS/TSX, `--` for SQL, `/*` for TS/TSX/CSS/SQL, `{/*` for TSX, and
 `<!--` for Markdown. A block excludes every line through its first closing
 marker, including any code on that closing line. Inline comments on code lines

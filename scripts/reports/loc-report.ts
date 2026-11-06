@@ -4,12 +4,12 @@
  * LOC REPORT — count repository lines by file type, separating TS/TSX tests.
  *
  * Flow: validate options → discover files → count lines → print the report.
- * Blank lines never count. --ignore-comments uses line prefixes and block endings,
+ * Blank lines and comments are excluded by default, using line prefixes and block endings,
  * without parsing strings, templates, or Markdown code fences. No files are changed.
  *
  * Usage:
  *   npm run report:loc
- *   npm run report:loc -- all --ignore-comments
+ *   npm run report:loc -- all --include-comments
  *   npm run report:loc -- ts tsx sql
  */
 
@@ -50,24 +50,37 @@ interface ReportRow {
 // 2. CLI arguments
 // ============================================================================
 
+/**
+ * Returns CLI usage text describing modes, flags, and defaults.
+ * @returns A multiline help message without printing it.
+ * @example usage().startsWith('Usage: npm run report:loc') // true
+ */
 function usage(): string {
-  return `Usage: npm run report:loc -- [app | all | EXTENSION...] [--ignore-comments]
+  return `Usage: npm run report:loc -- [app | all | EXTENSION...] [--include-comments]
 
   app                Count TS and TSX files (default).
   all                Count TS, TSX, CSS, SQL, and Markdown files.
   EXTENSION...       Count the requested file extensions.
-  --ignore-comments  Skip lines starting with comments and their block continuations.
+  --include-comments Count comments as well as code.
   -h, --help         Show this help.`;
 }
 
+/**
+ * Resolves LOC modes, extensions, and flags from args.
+ * @param args - CLI tokens after the script name; omit the mode to count TS/TSX.
+ * @returns Selected extensions, comment filtering enabled by default, and the help flag.
+ * @throws When a flag is unknown or a preset mode is combined with another type.
+ * @example parseArgs([]) // { extensions: ['ts', 'tsx'], ignoreComments: true, help: false }
+ * @example parseArgs(['all', '--include-comments']).ignoreComments // false
+ */
 function parseArgs(args: string[]): ReportOptions {
-  const options: ReportOptions = { extensions: [], ignoreComments: false, help: false };
+  const options: ReportOptions = { extensions: [], ignoreComments: true, help: false };
   const requestedTypes: string[] = [];
 
   for (const argument of args) {
     switch (argument) {
-      case '--ignore-comments':
-        options.ignoreComments = true;
+      case '--include-comments':
+        options.ignoreComments = false;
         break;
 
       case '-h':
@@ -79,15 +92,18 @@ function parseArgs(args: string[]): ReportOptions {
         if (!/^[a-zA-Z0-9]+$/.test(argument)) {
           throw new Error(`Unknown argument: ${argument}`);
         }
+
         requestedTypes.push(argument);
     }
   }
 
   const mode = requestedTypes[0] ?? 'app';
+
   if (mode === 'app' || mode === 'all') {
     if (requestedTypes.length > 1) {
       throw new Error('Use app, all, or a list of extensions.');
     }
+
     options.extensions = mode === 'app' ? APP_EXTENSIONS : ALL_EXTENSIONS;
   } else {
     options.extensions = [...new Set(requestedTypes)];
@@ -100,9 +116,16 @@ function parseArgs(args: string[]): ReportOptions {
 // 3. Repository file discovery
 // ============================================================================
 
+/**
+ * Lists existing regular files from Git's tracked and nonignored untracked paths.
+ * @param repoRoot - Repository directory used for Git commands and relative paths.
+ * @returns Unique repository-relative paths, excluding dependency/build folders and symlinks.
+ * @throws When Git discovery or filesystem inspection fails.
+ * @example repositoryFiles(repoRoot).includes('node_modules/pkg/index.ts') // false
+ */
 function repositoryFiles(repoRoot: string): string[] {
-  // Git supplies tracked and untracked files while respecting repository ignores.
   const args = ['ls-files', '--cached', '--others', '--exclude-standard', '-z'];
+
   for (const ignoreFile of ['.codexignore', '.openaiignore']) {
     if (existsSync(resolve(repoRoot, ignoreFile))) {
       args.push(`--exclude-from=${ignoreFile}`);
@@ -110,13 +133,17 @@ function repositoryFiles(repoRoot: string): string[] {
   }
 
   const output = execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' });
+
+  // Git's NUL separators preserve filenames containing spaces or newlines.
   const paths = [...new Set(output.split('\0').filter(Boolean))];
 
   return paths.filter(path => {
     const isExcluded = path.split('/').some(part => EXCLUDED_DIRECTORIES.has(part));
+
     if (isExcluded) return false;
 
     const absolutePath = resolve(repoRoot, path);
+
     return existsSync(absolutePath) && lstatSync(absolutePath).isFile();
   });
 }
@@ -125,6 +152,15 @@ function repositoryFiles(repoRoot: string): string[] {
 // 4. Line counting
 // ============================================================================
 
+/**
+ * Counts nonblank lines in text, optionally filtering comment lines by file type.
+ * @param text - File contents; comment detection uses trimmed line prefixes, not a parser.
+ * @param extension - Lowercase extension without a dot; unknown types only skip blank lines.
+ * @param ignoreComments - Excludes comment starts and block continuations when true (default).
+ * @returns A non-negative line count; inline comments on code lines do not remove the line.
+ * @example countLines('// heading\nconst x = 1;\n', 'ts') // 1
+ * @example countLines('// heading\nconst x = 1;\n', 'ts', false) // 2
+ */
 export function countLines(text: string, extension: string, ignoreComments = true): number {
   const supportsSlashComments = extension === 'ts' || extension === 'tsx';
   const supportsBlockComments = supportsSlashComments || extension === 'css' || extension === 'sql';
@@ -133,6 +169,7 @@ export function countLines(text: string, extension: string, ignoreComments = tru
 
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
+
     if (!line) continue;
 
     if (!ignoreComments) {
@@ -150,10 +187,12 @@ export function countLines(text: string, extension: string, ignoreComments = tru
 
     const isSingleLineComment = (supportsSlashComments && line.startsWith('//'))
       || (extension === 'sql' && line.startsWith('--'));
+
     if (isSingleLineComment) continue;
 
     const startsBlockComment = supportsBlockComments && (line.startsWith('/*')
       || (extension === 'tsx' && line.startsWith('{/*')));
+
     if (startsBlockComment) {
       if (!line.includes('*/')) {
         blockCommentEnd = '*/';
@@ -178,17 +217,27 @@ export function countLines(text: string, extension: string, ignoreComments = tru
 // 5. Report aggregation and formatting
 // ============================================================================
 
+/**
+ * Counts selected repository file types, separating TS/TSX source from tests.
+ * @param repoRoot - Repository directory to inspect without changing files.
+ * @param options - Requested extensions and comment policy; help is handled by the CLI.
+ * @returns Rows in extension order, with a test row after each TS/TSX source row.
+ * @throws When repository discovery or file reading fails.
+ * @example collectRows(repoRoot, { extensions: [], ignoreComments: true, help: false }) // []
+ */
 export function collectRows(repoRoot: string, options: ReportOptions): ReportRow[] {
   const counts = new Map(options.extensions.map(extension => [extension, { source: 0, tests: 0 }]));
 
   for (const path of repositoryFiles(repoRoot)) {
     const extension = extname(path).slice(1);
     const count = counts.get(extension);
+
     if (!count) continue;
 
     const text = readFileSync(resolve(repoRoot, path), 'utf8');
     const lines = countLines(text, extension, options.ignoreComments);
     const isTest = /\.(?:test|spec)\.(?:ts|tsx)$/.test(path);
+
     if (isTest) {
       count.tests += lines;
     } else {
@@ -197,6 +246,7 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
   }
 
   const rows: ReportRow[] = [];
+
   for (const [extension, count] of counts) {
     rows.push({ label: LABELS[extension] ?? `.${extension}`, lines: count.source });
     if (APP_EXTENSIONS.includes(extension)) {
@@ -207,11 +257,25 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
   return rows;
 }
 
+/**
+ * Formats rows as a table with the counting policy and summed total.
+ * @param rows - Report labels and non-negative line counts in display order.
+ * @param ignoreComments - Selects the note describing the policy used to count rows.
+ * @returns Report text with leading/trailing newlines; does not print or recount files.
+ * @example formatReport([], true).includes('TOTAL                     0') // true
+ */
 function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
   const note = ignoreComments
     ? 'Excludes blank lines and lines starting or continuing comments.'
     : 'Excludes blank lines; includes comments.';
+
+  /**
+   * Pads label and value into the table's two columns without truncating either.
+   * @returns A label padded to at least 20 characters, a space, and a value padded to at least 6.
+   * @example formatRow('', '').length // 27
+   */
   const formatRow = (label: string, value: string | number) => `${label.padEnd(20)} ${String(value).padStart(6)}`;
+
   const divider = formatRow('--------------------', '------');
   const total = rows.reduce((sum, row) => sum + row.lines, 0);
 
@@ -227,9 +291,16 @@ function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
 // 6. Main workflow and entrypoint
 // ============================================================================
 
+/**
+ * Reads process arguments, discovers files, counts lines, and prints the LOC report.
+ * @returns Nothing; prints help instead when requested, without scanning repository files.
+ * @throws Argument, Git, and filesystem errors for the entrypoint to report with exit status 1.
+ * @example // With process.argv ending in ['--help'], main() prints usage without counting files.
+ */
 function main(): void {
   // Step 1. Validate arguments before reading repository files.
   const options = parseArgs(process.argv.slice(2));
+
   if (options.help) {
     console.log(usage());
     return;
