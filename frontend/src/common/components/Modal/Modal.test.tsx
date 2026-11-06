@@ -44,6 +44,48 @@ describe('Modal success lifecycle', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('starts a fresh success delay on each opening and cancels it while closed', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Modal isOpen={false} onClose={onClose} title="Saved" status="success" successDelay={500}>
+        Content
+      </Modal>,
+    );
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal isOpen onClose={onClose} title="Saved" status="success" successDelay={500}>
+        Content
+      </Modal>,
+    );
+    act(() => vi.advanceTimersByTime(250));
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal isOpen={false} onClose={onClose} title="Saved" status="success" successDelay={500}>
+        Content
+      </Modal>,
+    );
+    act(() => vi.advanceTimersByTime(1000));
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(
+      <Modal isOpen onClose={onClose} title="Saved" status="success" successDelay={500}>
+        Content
+      </Modal>,
+    );
+    act(() => vi.advanceTimersByTime(499));
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(onClose).toHaveBeenCalledOnce();
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('closes once through the latest callback after the success delay', () => {
     const firstClose = vi.fn();
     const latestClose = vi.fn();
