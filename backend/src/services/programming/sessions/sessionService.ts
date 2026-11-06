@@ -35,6 +35,14 @@ interface ProgramSchedule {
   localTime: string;
 }
 
+/**
+ * Creates a scheduled session in the one cycle covering its date; ambiguous assignments are 409.
+ * @param programId - Program the actor must be allowed to access.
+ * @param data - Validated session settings, with optional schedule defaults.
+ * @param actor - Actor used for authorization and write metadata.
+ * @returns The created session and any readable affected program-cycle rows after commit.
+ * @example await createProgramSession(programId, { sessionTypeId, theme: 'Cooking', date: '2027-01-15' }, actor) // session in the cycle covering January 15
+ */
 export async function createProgramSession(programId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
   await assertCanAccessProgram(actor, programId);
   return sql.begin(async tx => {
@@ -63,6 +71,15 @@ export async function createProgramSession(programId: string, data: CreateSessio
   }).catch(rethrowSessionConflict);
 }
 
+/**
+ * Creates a session in a required program-cycle assignment; dates outside that cycle are 409.
+ * @param programId - Program owning the session.
+ * @param cycleId - Assigned cycle the actor must be allowed to access.
+ * @param data - Validated session settings, with optional schedule defaults.
+ * @param actor - Actor used for authorization and write metadata.
+ * @returns The created session and any readable affected program-cycle rows after commit.
+ * @example await createSession(programId, cycleId, { sessionTypeId, theme: 'Cooking', date: '2027-01-15' }, actor) // January 15 session using program default times
+ */
 export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
@@ -85,6 +102,14 @@ export async function createSession(programId: string, cycleId: string, data: Cr
   }).catch(rethrowSessionConflict);
 }
 
+/**
+ * Creates sessions for a validated recurrence and returns affected cycle rows atomically.
+ * @param programId - Program owning the generated sessions.
+ * @param cycleId - Required assigned cycle containing the recurrence dates.
+ * @param data - Validated recurrence, date bounds, and local session times.
+ * @param actor - Actor used for authorization and write metadata.
+ * @example A weekly Monday schedule from 2027-01-01 through 2027-01-15 creates sessions on January 4 and 11.
+ */
 export async function generateSessions(programId: string, cycleId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async (tx) => {
@@ -189,6 +214,13 @@ export async function generateSessions(programId: string, cycleId: string, data:
   }).catch(rethrowSessionConflict);
 }
 
+/**
+ * Updates an accessible session and returns its stored row; missing targets are 404.
+ * @param id - Session the actor must be allowed to access.
+ * @param data - Validated replacement session fields.
+ * @param actor - Actor used for authorization, write metadata, and response scope.
+ * @example await updateSession(sessionId, { theme: 'Cooking', startsAt: '2027-01-15T22:00:00Z', endsAt: '2027-01-15T23:00:00Z' }, actor) // returns the saved session with its existing type and cleared description
+ */
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
@@ -213,6 +245,13 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
   }).catch(rethrowSessionConflict);
 }
 
+/**
+ * Moves a future session to one assigned cycle while preserving local times and recorded history.
+ * @param id - Accessible, non-cancelled session to move.
+ * @param date - Validated destination calendar date in the program timezone.
+ * @param actor - Actor used for authorization, write metadata, and response scope.
+ * @example await moveSessionDate(sessionId, '2030-03-10', actor) // a Toronto 17:30 session keeps 17:30 local time across the move
+ */
 export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
@@ -278,6 +317,12 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
   }).catch(rethrowSessionConflict);
 }
 
+/**
+ * Deletes an accessible session without attendance, notes, or attachments; dependencies are 409.
+ * @param id - Required session to delete.
+ * @param actor - Actor whose session access and response scope are enforced.
+ * @example await deleteSession(sessionId, actor) // removes an unrecorded session and returns { id: sessionId, updatedProgramCycles }
+ */
 export async function deleteSession(id: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
@@ -306,10 +351,20 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
   });
 }
 
+/**
+ * Lists session type IDs and names alphabetically.
+ * @example await getSessionTypes() // [{ id: regularTypeId, name: 'Regular' }] when Regular is the only type
+ */
 export function getSessionTypes() {
   return sql`SELECT id, name FROM session_types ORDER BY name`;
 }
 
+/**
+ * Returns the first requested weekday on or after an ISO calendar date.
+ * @param date - Validated YYYY-MM-DD calendar date.
+ * @param weekday - Weekday to find, including the supplied date when it matches.
+ * @example firstWeekdayOnOrAfter('2026-11-06', 'monday') // '2026-11-09'
+ */
 function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex) {
   const first = new Date(`${date}T12:00:00.000Z`);
   const offset = (weekdayIndex[weekday] - first.getUTCDay() + 7) % 7;
@@ -317,6 +372,14 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
   return first.toISOString().slice(0, 10);
 }
 
+/**
+ * Locks a program, cycle, and required assignment in order; missing assignments are 404.
+ * @param trx - Existing transaction owning all acquired locks.
+ * @param programId - Program to authorize and lock first.
+ * @param cycleId - Cycle whose assignment must remain present.
+ * @param actor - Actor whose program access must be enforced.
+ * @example await lockSessionAssignment(trx, programId, cycleId, actor) // an absent assignment throws 404; locks last until the transaction ends
+ */
 async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, actor: AccessTokenPayload) {
   await lockAssignmentProgram(trx, programId, actor);
   await trx`SELECT id FROM program_cycles WHERE id = ${cycleId} FOR UPDATE`;
@@ -327,6 +390,12 @@ async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId
   if (!assignments.length) throw new NotFoundError('Program cycle not found');
 }
 
+/**
+ * Returns required program defaults and its current local date/time; missing configuration is 500.
+ * @param trx - Database client or transaction used for the lookup.
+ * @param programId - Program whose schedule and timezone are needed.
+ * @example await getProgramSchedule(trx, programId) // includes defaultStartTime: '17:30' for a program starting at 17:30
+ */
 async function getProgramSchedule(trx: typeof sql, programId: string): Promise<ProgramSchedule> {
   const [schedule] = await trx<ProgramSchedule[]>`
     SELECT default_day_of_week,
@@ -340,6 +409,13 @@ async function getProgramSchedule(trx: typeof sql, programId: string): Promise<P
   return schedule;
 }
 
+/**
+ * Uses an explicit date or finds the next default weekday whose start time has not passed.
+ * @param date - Validated explicit calendar date, or undefined to use defaults.
+ * @param schedule - Program defaults and current local date/time.
+ * @example resolveSessionDate('2027-01-15', schedule) // '2027-01-15' regardless of defaults
+ * @example With Tuesday defaults at 17:30, Tuesday 2027-01-12 at 18:00 resolves to '2027-01-19'.
+ */
 function resolveSessionDate(date: string | undefined, schedule: ProgramSchedule) {
   if (date) return date;
 
@@ -351,6 +427,17 @@ function resolveSessionDate(date: string | undefined, schedule: ProgramSchedule)
   return nextWeek.toISOString().slice(0, 10);
 }
 
+/**
+ * Creates one session from local schedule values and returns visible affected cycle rows.
+ * @param trx - Existing transaction owning the session write.
+ * @param programId - Program owning the session.
+ * @param cycleId - Previously verified assigned cycle.
+ * @param data - Validated session details and optional time overrides.
+ * @param actor - Actor recorded on writes and used to scope response rows.
+ * @param schedule - Program default times and timezone.
+ * @param date - Resolved calendar date in the program timezone.
+ * @example await createScheduledSession(trx, programId, cycleId, { sessionTypeId, theme: 'Cooking' }, actor, schedule, '2027-01-15') // inserts January 15 using schedule defaults
+ */
 async function createScheduledSession(
   trx: typeof sql,
   programId: string,
@@ -382,12 +469,28 @@ async function createScheduledSession(
   return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
 }
 
+/**
+ * Returns affected cycle rows when the actor can read programs; otherwise returns undefined.
+ * @param trx - Existing transaction used to load related rows.
+ * @param actor - Actor whose read permission and row scope apply.
+ * @param keys - Program-cycle pairs affected by the session operation.
+ * @example getUpdatedProgramCycles(trx, sessionOnlyWriter, [{ programId, cycleId }]) // undefined without read:programs
+ */
 function getUpdatedProgramCycles(trx: typeof sql, actor: AccessTokenPayload, keys: ProgramCycleKey[]) {
   return actor.permissions.includes('read:programs')
     ? getProgramCycleRowsByKeys(trx, actor, keys)
     : undefined;
 }
 
+/**
+ * Resolves local timestamps and rejects invalid or ambiguous daylight-saving boundaries with 409.
+ * @param trx - Existing transaction used for timezone conversion.
+ * @param startLocal - Validated local session start timestamp without an offset.
+ * @param endLocal - Validated local session end timestamp without an offset.
+ * @param timezone - Program IANA timezone used for both conversions.
+ * @returns UTC instants and whether the start is in the future; the caller decides whether a past start is allowed.
+ * @example await sessionTiming(trx, '2027-01-15T17:30', '2027-01-15T19:30', 'America/Toronto') // startsAt is 2027-01-15T22:30:00Z
+ */
 async function sessionTiming(trx: typeof sql, startLocal: string, endLocal: string, timezone: string) {
   // Reject skipped or repeated wall-clock times instead of implicitly choosing a daylight-saving offset.
   const [timing] = await trx<{ valid: boolean; startsAt: Date; endsAt: Date; future: boolean }[]>`
@@ -417,12 +520,14 @@ async function sessionTiming(trx: typeof sql, startLocal: string, endLocal: stri
   return timing;
 }
 
-/** Adds context to duplicate session schedules without changing other failures.
- * @example rethrowSessionConflict(error) // duplicate program/cycle/theme/start becomes 409
+/**
+ * Adds context to duplicate session schedules without changing other failures.
+ * @param error - Original transaction failure; only the duplicate schedule constraint is translated.
+ * @example rethrowSessionConflict(new Error('offline')) // throws that same Error unchanged
  */
 function rethrowSessionConflict(error: unknown): never {
   if (isUniqueViolation(error, 'uq_program_sessions_program_cycle_theme_start')) {
-    throw new ConflictError('A session with this theme and start time already exists in this program cycle', error);
+    throw Object.assign(new ConflictError('A session with this theme and start time already exists in this program cycle'), { cause: error });
   }
   throw error;
 }

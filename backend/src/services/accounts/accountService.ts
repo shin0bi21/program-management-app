@@ -13,6 +13,15 @@ import { accountRecordColumns, accountRecordFrom, type AccountRow } from './acco
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Creates youth credentials and a seven-day invitation, then awaits email delivery after commit.
+ * Callers authorize the invitation; email failures reject after the account has been saved.
+ * @param userId - Required youth profile receiving the account.
+ * @param email - Validated invitation address; duplicate accounts or addresses are 409.
+ * @param actorId - User recorded in the account audit.
+ * @returns The invited email and status for the youth profile response.
+ * @example inviteYouthAccount(youthId, 'alex@example.org', actorId) // { email: 'alex@example.org', status: 'invited' }
+ */
 export async function inviteYouthAccount(userId: string, email: string, actorId: string) {
   const transactionId = crypto.randomUUID();
   const unusableHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
@@ -56,7 +65,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
   }).catch(error => {
     if (isUniqueViolation(error, 'user_credentials_email_key')
       || isUniqueViolation(error, 'user_credentials_user_id_key')) {
-      throw new ConflictError('This youth or email already has an account', error);
+      throw Object.assign(new ConflictError('This youth or email already has an account'), { cause: error });
     }
     throw error;
   });
@@ -66,6 +75,15 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
   return { email, status: 'invited' as const };
 }
 
+/**
+ * Creates an invited employee account or updates one after checking actor authority.
+ * Required emails are awaited after commit, so delivery failures do not roll back the account.
+ * @param data - Validated employee fields; omitted role defaults to staff. Omitted programIds preserves
+ * existing assignments on update; an empty list clears them.
+ * @param actor - Actor whose role permissions are checked and whose ID is audited.
+ * @returns The complete account row, including its role, status, and ordered program IDs.
+ * @example setAccount({ firstName: 'Alex', lastName: 'Lee', email: 'alex@example.org' }, admin) // invited staff account
+ */
 export async function setAccount(data: SetAccountInput, actor: AccessTokenPayload) {
   const { id, firstName, lastName, email, role = 'staff', programIds } = data;
   if (id) {
@@ -75,7 +93,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   const transactionId = crypto.randomUUID();
   const actorId = actor.userId;
 
-  // Get role ID
   const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
   if (!roles.length) throw new InternalServerError(`Required role '${role}' is not configured`);
   const roleId = roles[0].id;
@@ -83,7 +100,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   let userId!: string;
 
   if (id) {
-    // UPDATE path
     let oldEmail!: string;
     let userStatus!: string;
     let newInviteToken: string | undefined;
@@ -110,7 +126,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       `;
       if (emailConflict.length) throw new ConflictError('A user with this email already exists');
 
-      // Update user
       const updatedUsers = await trx<DbRow<Users>[]>`
         UPDATE users
         SET first_name = ${firstName},
@@ -135,7 +150,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         { id: updatedUsers[0].id, firstName: updatedUsers[0].firstName, lastName: updatedUsers[0].lastName }
       );
 
-      // Update email in credentials
       await trx`
         UPDATE user_credentials
         SET email = ${email},
@@ -176,7 +190,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       }
     }
   } else {
-    // CREATE path (invite new staff)
     const existing = await sql<{ id: string }[]>`
       SELECT user_id AS id FROM user_credentials WHERE email = ${email} LIMIT 1
     `;
@@ -218,7 +231,6 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
     await sendStaffInvite(email, firstName, inviteUrl);
   }
 
-  // Return updated/created staff user
   const staff = await sql<AccountRow[]>`
     SELECT ${accountRecordColumns}
     ${accountRecordFrom}
@@ -229,6 +241,14 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   return staff[0];
 }
 
+/**
+ * Toggles an authorized account between active and inactive and audits the change.
+ * Pending invitations are rejected with 409.
+ * @param userId - Required account whose status changes.
+ * @param actor - Actor whose authority is checked and whose ID is audited.
+ * @returns The complete account row with its committed status.
+ * @example toggleAccountStatus(activeYouthId, staffActor) // account row with status: 'inactive'
+ */
 export async function toggleAccountStatus(userId: string, actor: AccessTokenPayload) {
   assertCanManageAccount(actor, await getAccountRole(userId));
   const transactionId = crypto.randomUUID();
@@ -281,6 +301,13 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
   return result;
 }
 
+/**
+ * Revokes an authorized pending invitation and audits the deletion.
+ * Youth profiles survive credential deletion; employee users are deleted with their dependent records.
+ * @param userId - Required invited account; activated accounts are 409.
+ * @param actor - Actor whose authority is checked and whose ID is audited.
+ * @example revokeAccountInvite(invitedYouthId, staffActor) // removes credentials and preserves the youth profile
+ */
 export async function revokeAccountInvite(userId: string, actor: AccessTokenPayload) {
   const targetRole = await getAccountRole(userId);
   assertCanManageAccount(actor, targetRole);
@@ -321,6 +348,11 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
   });
 }
 
+/**
+ * Returns the role for a required account; a missing credential-backed account is 404.
+ * @param userId - Account whose stored role is required for authorization.
+ * @example getAccountRole(staffAccountId) // 'staff'
+ */
 async function getAccountRole(userId: string): Promise<UserRole> {
   const accounts = await sql<{ role: UserRole }[]>`
     SELECT ur.name AS role
@@ -334,6 +366,14 @@ async function getAccountRole(userId: string): Promise<UserRole> {
   return accounts[0].role;
 }
 
+/**
+ * Replaces account program assignments inside the caller transaction; unavailable selections are 409.
+ * @param trx - Existing transaction that rolls back deletion if validation or insertion fails.
+ * @param staffId - Account receiving the replacement assignments.
+ * @param programIds - Distinct validated program IDs; an empty list clears assignments.
+ * @param actorId - Actor recorded as assignment creator.
+ * @example replaceUserProgramAssignments(trx, staffId, [], actorId) // clears all program assignments
+ */
 async function replaceUserProgramAssignments(
   trx: typeof sql,
   staffId: string,
@@ -359,12 +399,15 @@ async function replaceUserProgramAssignments(
   `;
 }
 
-/** Preserves contextual errors and translates only the account email constraint.
- * @example rethrowAccountEmailConflict(error) // a duplicate email becomes a specific 409
+/**
+ * Translates the account email constraint to a contextual 409, preserving its cause.
+ * Other failures are rethrown unchanged.
+ * @param error - Rejection from an account transaction.
+ * @example rethrowAccountEmailConflict(new Error('offline')) // rethrows that same error
  */
 function rethrowAccountEmailConflict(error: unknown): never {
   if (isUniqueViolation(error, 'user_credentials_email_key')) {
-    throw new ConflictError('A user with this email already exists', error);
+    throw Object.assign(new ConflictError('A user with this email already exists'), { cause: error });
   }
   throw error;
 }
