@@ -24,6 +24,12 @@ interface TableBodyProps<T> {
   onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
 }
 
+/**
+ * Displays every supplied row, or a loading, failure, or empty message in that order of precedence.
+ * Refreshing retains the current content and makes the body inert until refreshing ends.
+ * @param props.rows - Model rows in the same order as data so keyboard navigation indices match.
+ * @example Two records render two rows; loading replaces both with a spinner spanning the visible columns.
+ */
 export default function TableBody<T>({
   rows,
   visibleColumnCount,

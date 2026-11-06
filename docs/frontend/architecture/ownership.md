@@ -41,7 +41,32 @@ Root infrastructure remains below those layers.
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
-See [Components](../components/README.md) for extraction and rendering patterns.
+## Rendered Components
+
+Extract a rendered region when it has a clear name and an independent contract.
+Keep simple local state and presentation handlers in the component. A focused hook
+owns stateful policy, effects, subscriptions, or asynchronous coordination; do not
+create one merely to rename a state value or forward props.
+Place private helpers below their component in the order their callers use them.
+
+Keep each interaction's guards, transitions, completion, cancellation, and cleanup
+together. Separate unrelated lifecycles. The narrowest shared owner coordinates
+global registrations; instance-specific resources stay with their instance.
+Match listener, observer, timer, subscription, and external-instance setup with
+cleanup on completion, cancellation, dependency changes, and unmount.
+
+For frequently updated surfaces, trace renders during scrolling, pointer movement,
+filtering, selection, and mutations. Keep non-rendered transient values in refs and
+preserve unaffected row/cell references. Memoize only when stable inputs avoid
+meaningful work.
+
+Component contracts live in source documentation, types, and tests. Use the
+[source map](../README.md#find-a-component) to find the rendered owner.
+
+The application shell owns sidebar destinations. Adding one connects its protected
+route in `app/App.tsx`, permission-derived visibility in `useAppNavigation`, and its
+label/URL in `AppNavigation`. Redirect aliases and public authentication routes do
+not need sidebar entries.
 
 ## Enforcement
 

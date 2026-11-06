@@ -35,7 +35,9 @@ for a complete caller.
 
 ### Recover Invalid Values
 
-- Pass `waiting` while initial dependencies load.
+- Pass `waiting` while initial option dependencies load or the role needed to
+  choose field rules is unresolved. Treat failed options as unavailable, rather
+  than waiting indefinitely or substituting an authoritative empty list.
 - For record-ID rules, pass `undefined` while options are loading or failed, and
   authoritative IDs after success. Unavailable options preserve selections; a
   successful empty list clears stale selections. Finite-option rules use `null`
@@ -44,12 +46,20 @@ for a complete caller.
   explicit nullable selections, and valid siblings when repairing invalid values.
   Do not reset preferences because of an unrelated application error.
 
+Restore and normalize controls before starting collection requests. Pass `ready`
+through to `PageContainer` so its views mount with the applied saved inputs; gate
+any preference-dependent queries owned outside those views separately. Readiness
+means restoration has settled, including a failed load that supplies defaults;
+keep preference and option errors visible without blocking all controls.
+
 ### Derive Timeline Bounds from Cycles
 
-Persist `cycleIds` through the normal multi-select rules and wait for authoritative
-options before restoration. Derive the range using
-[cycle-bounded calendars](../components/calendars.md#bound-the-timeline-by-cycle-dates);
-do not persist a second date range. A separate dashboard cycle focus belongs to
+Persist `cycleIds` through the normal multi-select rules and wait for initial
+cycle loading before restoration. Preserve selections if that load fails. Derive the range using
+[getCycleDateRange](../../../frontend/src/common/features/programming/cycles/cycleDateRange.ts);
+do not persist a second date range. Keep cycle-bounded views unavailable when
+cycle loading fails or no range can be derived; do not fall back to an unbounded
+collection request. A separate dashboard cycle focus belongs to
 the controls hook and must not silently rewrite collection filters.
 
 ## Table Layout Preferences
@@ -77,7 +87,7 @@ Return these groups from the page preference or control hook, without flat alias
 | `table` | `sorting`, `setSorting`, `columnWidths`, `setColumnWidths`, `hiddenColumns`, `setHiddenColumns` |
 
 Keep `ready`, `error`, and optional `view`/`setView` at the top level. Pass the result
-as `controls` to [PageContainer](../components/page-container.md#pageheader-and-controls).
+as `controls` to [PageContainer](../../../frontend/src/common/components/PageContainer/PageContainer.tsx).
 Build every view's page filters from `search.appliedValue` and `filters.values`.
 
 Keep the search draft local. Search or Enter saves the trimmed draft; Clear resets
@@ -91,4 +101,5 @@ name for single selections. Preserve existing persisted names.
 
 Keep derived values such as `dateRange` outside `filters.values`; domain-derived
 extras may accompany the groups. Filter drafts and dismissal follow
-[Overlays](../components/overlays.md#filter-menus).
+[FilterCard](../../../frontend/src/common/components/FilterCard/FilterCard.tsx) and its
+[category owner](../../../frontend/src/common/components/FilterCard/components/FilterCategoryCard.tsx).

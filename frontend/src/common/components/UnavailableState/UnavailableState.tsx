@@ -9,6 +9,11 @@ interface UnavailableStateProps {
   compact?: boolean;
 }
 
+/**
+ * Shows that content could not load, with an optional Retry button.
+ * @param props.onRetry - Starts another load; the caller manages its pending state and failures.
+ * @example <UnavailableState title="Tasks unavailable" onRetry={retryTasks} />
+ */
 export default function UnavailableState({
   title,
   message = 'Refresh to try loading this content again.',

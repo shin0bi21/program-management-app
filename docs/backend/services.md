@@ -40,7 +40,12 @@ Keep full-record selector lookups and small reference projections separate from 
 collections. Existing combined endpoints may retain array lookups, but table adapters
 must request the bounded cursor contract explicitly. A small current row count is not
 an exception to table pagination. Share the canonical row projection with mutation
-responses, following the frontend [row contract](../frontend/components/table-rows.md).
+responses. Commands updating existing table records return their complete canonical
+rows, including joined names, capabilities, and server-derived fields. List and command
+services share that projection and mapping. A command changing rows across application
+areas returns an endpoint-specific envelope of those rows; clients must not reconstruct
+server-owned fields from drafts or cached input. See the frontend
+[row reconciliation owner](../../frontend/src/query/infiniteListCache.ts).
 
 ## Write the Public Operations First
 
@@ -68,7 +73,7 @@ Name a command after the record it changes. Session attendance belongs to `sessi
   silently dropping submitted records.
 - Preserve unchanged data and deterministic response ordering.
 
-Use the repository error classes for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
+Use the [repository errors](errors.md#choose-an-error) for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
 
 ## Handle Audits and External Work
 
@@ -85,4 +90,4 @@ Keep report data and file rendering in separate owners.
 - A renderer under `src/reports/<product-area>/` accepts that result and produces a file. Renderers do not query the database, check permissions, or depend on Express requests and responses.
 - The controller obtains the authorized report result, passes it to the renderer, and sends the file with the appropriate HTTP headers.
 
-For cohort youth reports, `getCohortYouthReport` supplies the data and `renderCohortYouthPdf` renders the PDF. Keep format-specific layout and filename generation with the renderer.
+For program-cycle youth reports, [getProgramCycleYouthReport](../../backend/src/services/programming/programCycles/programCycleReportService.ts) supplies the data and [renderProgramCycleYouthPdf](../../backend/src/reports/programming/programCycles/programCycleYouthPdf.ts) renders the PDF. Keep format-specific layout and filename generation with the renderer.

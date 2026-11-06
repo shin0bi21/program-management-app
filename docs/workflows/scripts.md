@@ -9,9 +9,17 @@ Place tools by function rather than caller: frontend generators live under
 `scripts/scaffold/frontend/`, reports and change inspection under `scripts/reports/`,
 and test selection under `scripts/ci/`. Humans and skills use the same commands.
 
+Start with a comment stating the purpose, relevant side effects, and a numbered
+`Flow` list matching execution order. Point to `usage()` for the CLI reference.
+Define `usage()` in the CLI argument section and have `--help` print it.
+In report `usage()`, show concrete commands instead of bracketed argument grammars,
+followed by concise option descriptions with defaults and any essential prerequisites
+or output notes. Do not add a separate Examples section or repeat the header's
+purpose and flow. Workflow indexes link to commands; operational guides show how
+a command fits their procedure without maintaining a second CLI reference.
+
 ## Arrange a Substantial Script
 
-Start with its purpose, usage, side effects, and a short execution outline.
 Arrange declarations in the order the workflow uses them, keeping helpers beside
 their phase. Use numbered sections for substantial scripts and numbered phase
 comments in the main workflow when they help navigation. Keep the outline,
@@ -21,10 +29,10 @@ imports and contracts are not runtime phases.
 Use this adaptable layout, omitting sections the command does not need:
 
 ```text
-Purpose, usage, and execution outline
+Purpose, flow, and relevant side effects
 1. Imports
 2. Constants and contracts
-3. Argument parsing and validation
+3. CLI usage, argument parsing, and validation
 4. Setup and input discovery
 5. Workflow helpers in execution order
 6. Main workflow

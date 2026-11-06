@@ -114,13 +114,13 @@ Before changing CI:
 5. Inspect the first GitHub run at job level; local checks cannot fully verify triggers, services, permissions, caches, or rulesets.
 6. Update this guide when workflow ownership, routing, gates, or operation changes.
 
-Use the [CI History Report](reports.md#ci-history-report) to compare completed
+Use the [CI history report](../../../scripts/reports/ci-history-report.ts) to compare completed
 check timings, runner consumption, and reliability. Record comparable sample
 sizes and date windows before claiming an improvement.
 
 ## Dependency Updates
 
 [Dependabot](../../../.github/dependabot.yml) opens weekly updates targeting
-`develop` for root, backend, and frontend npm packages, GitHub Actions, and
+`develop` for root, backend, frontend, and docs npm packages, GitHub Actions, and
 Docker images. Dependency Review and CodeQL workflows are not configured;
 any future scans should remain outside the production deployment path.

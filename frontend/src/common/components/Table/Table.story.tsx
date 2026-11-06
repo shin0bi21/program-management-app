@@ -3,7 +3,7 @@ import useInfiniteListQuery from '../../../query/hooks/useInfiniteListQuery';
 import { useCallback, useRef, useState } from 'react';
 import type { ColumnSizingState } from '@tanstack/react-table';
 import Table from './Table';
-import '../PageBody/PageBody.css';
+import '../PageContainer/PageContainer.css';
 import type { TableColumnDef } from './Table.types';
 
 interface StoryRow {
@@ -13,23 +13,25 @@ interface StoryRow {
   notes: string;
 }
 
-function makeRows(start: number, count: number): StoryRow[] {
-  return Array.from({ length: count }, (_, index) => {
-    const number = start + index;
-    return { id: String(number), name: `Person ${number}`, status: number % 2 ? 'Active' : 'Pending', notes: `Notes for row ${number}` };
-  });
-}
-
 const columns: TableColumnDef<StoryRow>[] = [
   { id: 'name', header: 'Name', size: 300, cell: ({ row: { original: row } }) => row.name, enableResizing: true },
   { id: 'status', header: 'Status', size: 260, cell: ({ row: { original: row } }) => row.status, enableResizing: true },
   { id: 'notes', header: 'Notes', size: 520, cell: ({ row: { original: row } }) => row.notes, enableResizing: true },
 ];
 
+/**
+ * Displays 30 people and adds another 30 when the table requests its next page.
+ * @example Scrolling to the bottom increases the displayed load count and reveals Person 60.
+ */
 export function InfiniteScroll() {
   const [rows, setRows] = useState(() => makeRows(1, 30));
   const [loadCount, setLoadCount] = useState(0);
   const [widths, setWidths] = useState<ColumnSizingState>({});
+
+  /**
+   * Appends the second page once and counts every pagination request.
+   * @example The first call grows 30 rows to 60; later calls retain those 60.
+   */
   const loadNextPage = useCallback(() => {
     setLoadCount(current => current + 1);
     setRows(current => current.length >= 60 ? current : [...current, ...makeRows(current.length + 1, 30)]);
@@ -54,12 +56,20 @@ export function InfiniteScroll() {
   );
 }
 
-
+/**
+ * Displays a table whose second page fails twice before Retry can recover it.
+ * @example Failed pagination leaves the first 30 people visible.
+ */
 export function NextPageFailure() {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   return <QueryClientProvider client={client}><FailingCollection /></QueryClientProvider>;
 }
 
+/**
+ * Supplies the failed-page story with 30 initial rows and a recoverable next-page request.
+ * Requires its isolated QueryClientProvider.
+ * @example The third second-page attempt succeeds and adds people 31–60.
+ */
 function FailingCollection() {
   const attempts = useRef(0);
   const query = useInfiniteListQuery<StoryRow>({
@@ -84,15 +94,17 @@ function FailingCollection() {
   </div>;
 }
 
+/**
+ * Shows initial table loading in a fixed-height area, then replaces it with two people.
+ * @example Finish loading removes the spinner without changing the table area's height.
+ */
 export function InitialLoading() {
   const [loaded, setLoaded] = useState(false);
   return <div style={{ height: 480, display: 'flex', flexDirection: 'column' }}>
     <button onClick={() => setLoaded(true)}>Finish loading</button>
-    <div className="page-body">
-      <div className="page-table" role="region" aria-label="Loading table area">
-        <Table ariaLabel="Loading example" columns={columns.slice(0, 1)}
-          data={loaded ? makeRows(1, 2) : []} loading={!loaded} keyExtractor={row => row.id} />
-      </div>
+    <div className="page-table" role="region" aria-label="Loading table area">
+      <Table ariaLabel="Loading example" columns={columns.slice(0, 1)}
+        data={loaded ? makeRows(1, 2) : []} loading={!loaded} keyExtractor={row => row.id} />
     </div>
   </div>;
 }
@@ -105,6 +117,10 @@ const resizeColumns: TableColumnDef<StoryRow>[] = [
 ];
 const resizeRows = makeRows(1, 100);
 
+/**
+ * Displays a resizable table with controls for narrowing its area and hiding Notes.
+ * @example A completed resize increments the commit count once and displays the saved widths.
+ */
 export function ResizePreview() {
   const [widths, setWidths] = useState<ColumnSizingState>({ notes: 280 });
   const [commits, setCommits] = useState(0);
@@ -125,4 +141,23 @@ export function ResizePreview() {
     <output data-testid="resize-commits">{commits}</output>
     <output data-testid="saved-widths">{JSON.stringify(widths)}</output>
   </div>;
+}
+
+/**
+ * Creates consecutive people with alternating Active/Pending statuses and numbered notes.
+ * @param start - Positive whole number used for the first person's ID and name.
+ * @param count - Non-negative whole number of people to create.
+ * @example makeRows(1, 2) creates Person 1 (Active) and Person 2 (Pending).
+ */
+function makeRows(start: number, count: number): StoryRow[] {
+  return Array.from({ length: count }, (_, index) => {
+    const number = start + index;
+
+    return {
+      id: String(number),
+      name: `Person ${number}`,
+      status: number % 2 ? 'Active' : 'Pending',
+      notes: `Notes for row ${number}`,
+    };
+  });
 }

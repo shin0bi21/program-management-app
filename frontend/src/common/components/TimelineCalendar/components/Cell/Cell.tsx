@@ -11,6 +11,12 @@ interface CellProps<TRow, TItemData> {
   getCellActions?: (context: CalendarCellContext<TRow, TItemData>) => readonly CalendarCellAction[];
 }
 
+/**
+ * Displays a resource/period cell with pointer and Enter/Space activation when actions are available.
+ * A nonempty action list opens a menu instead of invoking onCellClick.
+ * @param props.context - The resource, period, and items occupying that period.
+ * @example With Add task and Log hours actions, Enter opens a menu offering both choices.
+ */
 export default function Cell<TRow, TItemData>({
   className,
   context,

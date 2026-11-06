@@ -10,6 +10,11 @@ interface PageHeaderProps {
   columns?: ReactNode;
 }
 
+/**
+ * Displays a page heading with adjacent actions, followed by columns, view, filters, and search controls.
+ * At widths up to 768px, search occupies a full row below the other controls.
+ * @example <PageHeader title="Tasks" actions={<button>Add task</button>} />
+ */
 export default function PageHeader({ title, actions, filters, search, view, columns }: PageHeaderProps) {
   return (
     <header className="page-header">

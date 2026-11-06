@@ -1,3 +1,10 @@
+/**
+ * Builds Starlight pages from canonical guides, updating the generated content directory.
+ * Flow:
+ * 1. Discover sources and prepare pages, rejecting missing titles and path collisions.
+ * 2. Publish the source manifest before writing changed pages for live loaders.
+ * 3. Remove obsolete generated pages and return the manifest.
+ */
 import { readdir, readFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,22 +15,29 @@ export const documentationDirectories = ['docs/backend', 'docs/frontend', 'docs/
 export const DEFAULT_REPOSITORY_SLUG = 'shin0bi21/be-original';
 
 interface GenerateContentOptions {
+  /** Repository containing README.md and the five published documentation areas. */
   repoRoot?: string;
+  /** Generated-content directory; defaults to docs/src/content/docs under repoRoot. */
   outputDir?: string;
+  /** GitHub branch, tag, or commit used by page edit links. */
   gitRef?: string;
+  /** GitHub owner/repository used by page edit links. */
   repositorySlug?: string;
+  /** Synchronous notification before filesystem writes; throwing aborts generation. */
   onPrepared?: (manifest: ContentManifest) => void;
 }
 
 export interface ContentManifest {
+  /** Repository-relative source paths mapped to root-relative website routes. */
   routes: Record<string, string>;
+  /** Absolute generated page paths mapped to repository-relative source paths. */
   sources: Record<string, string>;
 }
 
 /**
  * Converts canonical guides into Starlight content, preserving source directories.
- * Writes only inside outputDir, removes obsolete pages, and rejects collisions.
- * Publishes onPrepared before writing so live Markdown loaders can resolve new sources.
+ * Rejects path collisions before writing; onPrepared lets live loaders resolve sources before pages change.
+ * @returns The source/route manifest after changed pages are written and obsolete pages removed; filesystem errors reject the promise.
  * @example await generateContent({ outputDir: "/tmp/docs-preview", gitRef: "develop" });
  */
 export async function generateContent({ repoRoot = repositoryRoot, outputDir, gitRef = 'main', repositorySlug = DEFAULT_REPOSITORY_SLUG, onPrepared }: GenerateContentOptions = {}) {
@@ -53,8 +67,9 @@ export async function generateContent({ repoRoot = repositoryRoot, outputDir, gi
     const editUrl = `https://github.com/${repositorySlug}/edit/${encodeURIComponent(gitRef)}/${sourcePath}`;
     const sidebarOrder = /(?:^|\/)README\.md$/i.test(sourcePath) ? 'sidebar:\n  order: -1\n' : '';
     const document = `---\ntitle: ${yamlString(title)}\neditUrl: ${yamlString(editUrl)}\n${sidebarOrder}---\n\n${body.trimStart()}\n`;
-    generated.push({ destination, document, sourcePath, route: routeForSource(sourcePath) });
-    routes[sourcePath] = routeForSource(sourcePath);
+    const route = routeForSource(sourcePath);
+    generated.push({ destination, document, sourcePath, route });
+    routes[sourcePath] = route;
   }
 
   const manifest: ContentManifest = {
@@ -88,7 +103,8 @@ export async function generateContent({ repoRoot = repositoryRoot, outputDir, gi
 
 /**
  * Lists the repository overview and published documentation, sorted by source path.
- * @example collectSources(repoRoot) includes README.md and docs/frontend/README.md.
+ * @param root - Repository directory containing all published documentation areas.
+ * @example await collectSources(repoRoot) includes "README.md" and "docs/frontend/README.md".
  */
 async function collectSources(root: string) {
   const candidates = ['README.md'];
@@ -101,7 +117,9 @@ async function collectSources(root: string) {
 
 /**
  * Appends Markdown and Mermaid file paths recursively without following symlink directories.
- * @example collectMarkdownFiles(root, "docs/frontend", files) collects frontend guides.
+ * @param directory - Directory relative to root; an empty string scans root itself.
+ * @param candidates - Accumulator receiving root-relative paths; existing entries remain.
+ * @example await collectMarkdownFiles(root, "docs/frontend", files) appends "docs/frontend/README.md".
  */
 async function collectMarkdownFiles(root: string, directory: string, candidates: string[]) {
   const absolute = path.join(root, directory);
@@ -116,6 +134,7 @@ async function collectMarkdownFiles(root: string, directory: string, candidates:
 
 /**
  * Maps a published source to its generated Markdown path, treating READMEs as indexes.
+ * @param sourcePath - Repository-relative published path: README.md or a file under docs/.
  * @example generatedPath("docs/frontend/README.md") returns "frontend/index.md".
  */
 function generatedPath(sourcePath: string) {
@@ -129,7 +148,8 @@ function generatedPath(sourcePath: string) {
 
 /**
  * Maps a published source to its website route while preserving directory nesting.
- * @example routeForSource("docs/frontend/components/navigation.md") returns "/frontend/components/navigation/".
+ * @param sourcePath - Repository-relative published path: README.md or a file under docs/.
+ * @example routeForSource("docs/frontend/architecture/ownership.md") returns "/frontend/architecture/ownership/".
  */
 function routeForSource(sourcePath: string) {
   if (sourcePath === 'README.md') return '/';
@@ -141,7 +161,8 @@ function routeForSource(sourcePath: string) {
 }
 
 /**
- * Reads the first Markdown H1 outside code fences; throws when the title is missing.
+ * Reads the first Markdown H1 outside backtick fences; throws when the title is missing.
+ * @param sourcePath - Repository-relative filename included in missing-title errors.
  * @example titleFromMarkdown("guide.md", "# App Navigation") returns "App Navigation".
  */
 function titleFromMarkdown(sourcePath: string, markdown: string) {
@@ -161,11 +182,14 @@ function titleFromMermaidPath(sourcePath: string, content: string) {
   const titleComment = content.match(/^%%\s+(.+?)(?::\s*.*)?$/m)?.[1];
   if (titleComment) return titleComment.trim();
 
-  return path.posix.basename(sourcePath, '.mmd').replace(/[-_]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+  const filename = path.posix.basename(sourcePath, '.mmd');
+  const words = filename.replace(/[-_]+/g, ' ');
+  return words.replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
 /**
- * Removes the authored H1 and its following blank line from generated page content.
+ * Keeps the content after the first H1, skipping one following blank line.
+ * Returns the original Markdown when no H1 exists; any preamble before a heading is omitted.
  * @example stripFirstH1("# Guide\n\nBody") returns "Body".
  */
 function stripFirstH1(markdown: string) {
@@ -179,7 +203,7 @@ function stripFirstH1(markdown: string) {
 }
 
 /**
- * Finds the first H1 outside fenced code, returning -1 when none exists.
+ * Finds the zero-based line of the first H1 outside backtick fences, or -1 when absent.
  * @example firstH1Line("Intro\n# Guide") returns 1.
  */
 function firstH1Line(markdown: string) {
@@ -197,7 +221,7 @@ function firstH1Line(markdown: string) {
 
 /**
  * Quotes a frontmatter string using JSON escaping, which is valid YAML syntax.
- * @example yamlString("Guide") returns a double-quoted Guide value.
+ * @example yamlString("Guide") // '"Guide"'
  */
 function yamlString(value: string) {
   return JSON.stringify(value);
@@ -205,6 +229,8 @@ function yamlString(value: string) {
 
 /**
  * Rejects paths outside a parent directory before generated content is written.
+ * @param parent - Absolute output directory containing the absolute child path.
+ * @param message - Error text identifying the rejected generated path.
  * @example assertInside("/tmp/docs", "/tmp/other", "Outside output") throws.
  */
 function assertInside(parent: string, child: string, message: string) {

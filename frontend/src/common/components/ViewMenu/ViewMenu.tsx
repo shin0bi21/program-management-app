@@ -18,6 +18,12 @@ interface ViewMenuProps<T extends string> {
   label?: string;
 }
 
+/**
+ * Lets the user choose a view and closes the popup after selection.
+ * Selection is controlled: onChange requests a view, and the caller updates value.
+ * @param props.options - Available views, such as Table and Calendar.
+ * @example Choosing Calendar calls onChange('calendar') and closes the view menu.
+ */
 export default function ViewMenu<T extends string>({
   options,
   value,

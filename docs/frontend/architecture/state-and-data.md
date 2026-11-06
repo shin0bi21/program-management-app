@@ -9,16 +9,18 @@ See [Ownership](ownership.md) for file and hook placement, and
 
 | Value | Owner | Examples |
 |---|---|---|
-| Backend data | Focused TanStack Query hook | rows, records, options, totals |
+| Backend data | Focused TanStack Query hook or calendar buffer | rows, records, options, totals |
 | A temporary choice shared by page children | Route page or focused page hook | selected row, open modal target |
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
 
 ## Separate Page Controls from View Data
 
-See [route assembly](../components/page-container.md#assemble-the-route),
-[Tables](../components/tables.md), and [Calendars](../components/calendars.md)
-for page and view data contracts.
+The route builds one stable applied-filter object and supplies it to every table
+and calendar. A view adds its own pagination, sorting, or visible range. Page-wide
+reference data stays with the page; collection queries stay with the consuming view.
+Use the [page scaffold](scaffolding.md) for assembly order and the
+[source map](../README.md#find-a-component) for view contracts.
 
 Shared filter and selector lookups belong to `common/features/referenceData`, with
 one projection, API adapter, query key, and option conversion per shared lookup.
@@ -29,13 +31,29 @@ for permissions, scope-specific cache keys, mutation reconciliation, and failure
 
 ## Fetch Remote Data
 
-Backend data follows one visible path:
+Query-backed data follows one visible path:
 
 ```text
 component → focused query hook → typed feature API → centralized HTTP client
 ```
 
 The query hook owns loading, failure and cached server data. Include every filter, search, sort, selection and date value sent to the backend in the query key. Forward cancellation from the query hook through the API adapter to the HTTP client.
+
+Cursor tables use a list-only query-key prefix, with lookups, direct records, calendars,
+and aggregates on sibling keys. Fetch through
+[useInfiniteListQuery](../../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`;
+the server filters and sorts before pagination. Create operations invalidate only the
+list prefix unless insertion membership and position are provable in every cached variant.
+Supply the active server-compatible `ordering` and display `refreshNotice` through
+[tableRefreshMessage](../../../frontend/src/common/components/Table/tableRefreshMessage.ts)
+so edited rows that no longer fit can request a fresh first page.
+
+Page calendars load filtered ranges through
+[useDataBuffer](../../../frontend/src/common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer.ts),
+which owns those reads, retries, and cancellation. Forward its signal through the API
+adapter; do not duplicate the same ranges in an imperative query cache. Key the calendar
+by its applied filters so a filter change starts a fresh buffer. Keep browser-local
+scroll position separate through `positionStorageKey`.
 
 Keep request cancellation and timeouts active until the response body has been consumed,
 including JSON, errors, and file downloads. A caller leaving a shared re-login workflow
@@ -85,7 +103,10 @@ Use the record returned by the backend after a mutation. Do not rebuild it from 
 
 When loads or mutations can overlap, define how stale responses are ignored or reconciled. Check out-of-order completion, repeated edits to one item, rollback order, reset during loading, and deletion followed by a late response. Use cancellation, serialization, or revisions as the owner requires so stale work cannot replace newer state.
 
-The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
+The owning action hook updates the affected list row, selection, calendar or dashboard.
+Do not refresh an entire page to avoid identifying the changed owner. Use the
+[cursor-list cache helpers](../../../frontend/src/query/infiniteListCache.ts) for
+authoritative row replacements and confirmed deletes; reconcile aggregates separately.
 
 ## Keep Application Selection with Its Domain
 

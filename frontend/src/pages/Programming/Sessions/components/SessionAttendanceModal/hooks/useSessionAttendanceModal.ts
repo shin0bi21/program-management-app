@@ -22,6 +22,18 @@ interface UseSessionAttendanceModalOptions {
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
+/**
+ * Edits attendance for one session, with a fresh draft when the session changes.
+ * Open sessions check youth in as present; enrolled sessions edit each roster member's status.
+ * Initial roster loading/failure and open-session youth loading/failure block editing and saving.
+ * Open-session saves replace attendance with checked youth and preserve their saved notes.
+ * @param options.session - Session whose attendance is being edited; null disables roster loading.
+ * Keep the target unchanged while submitting; a target change resets the draft but does not cancel a write.
+ * @param options.onSaved - Receives saved attendance before success is shown; a callback failure
+ * reports that the save succeeded but page refresh failed.
+ * @returns Draft values, request feedback, editing guards, and actions for the modal.
+ * @example Checking one new youth enables Save without modifying the loaded roster or youth records.
+ */
 export default function useSessionAttendanceModal({
   session,
   onSaved,
@@ -94,6 +106,11 @@ export default function useSessionAttendanceModal({
   const emptyEnrolledRoster = !isOpenRoster && roster.length === 0;
   const submitDisabled = controlsDisabled || noOpenAttendanceChanges || emptyEnrolledRoster;
 
+  /**
+   * Checks or unchecks an available youth in an editable open-session draft.
+   * @param youthId - ID from the available youth list, including saved attendees.
+   * @example Toggling a saved attendee off removes their ID from the next replacement.
+   */
   const toggleOpenAttendee = (youthId: string) => {
     if (!isOpenRoster || controlsDisabled) return;
 
@@ -105,6 +122,12 @@ export default function useSessionAttendanceModal({
       : [...current, youthId]);
   };
 
+  /**
+   * Changes a roster member's draft status while editing is available.
+   * @param youthId - ID of the enrolled roster member being edited.
+   * @param status - Attendance choice; an empty choice omits the member from the saved records.
+   * @example Setting a member to 'absent' leaves the loaded roster record untouched.
+   */
   const updateAttendanceStatus = (youthId: string, status: AttendanceStatus | '') => {
     if (controlsDisabled) return;
 
@@ -112,6 +135,12 @@ export default function useSessionAttendanceModal({
     setSelections(current => ({ ...current, [youthId]: status }));
   };
 
+  /**
+   * Saves an eligible draft once, then awaits page reconciliation before showing success.
+   * Failed writes unlock for retry; unchanged open rosters cannot submit.
+   * @returns Resolves after saving and page reconciliation, or after recording a write failure.
+   * @example An unchecked open roster saves [] only when it differs from saved attendance.
+   */
   const submit = async () => {
     if (!session || submitDisabled || !tryLock()) return;
 

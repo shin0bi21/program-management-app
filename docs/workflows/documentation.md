@@ -14,10 +14,24 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 
 ## Source Documentation
 
-- Place purpose, contract, and illustrative examples immediately above the function.
+- Place function documentation immediately above the function: purpose first,
+  then `@param` for meaningful inputs, `@returns` when needed, and `@example`.
 - Express types in TypeScript; document parameter meanings and additional constraints in JSDoc.
+- State what the function displays, supplies, or changes in plain terms. Explain
+  the result before its mechanism; keep the purpose to one or two sentences.
+- Explain what meaningful inputs represent, rather than repeating their types.
+  Filter `categories` are groups such as Status or Staff with available choices;
+  `values` are selected choices in each group, e.g. `{ status: ['active'] }`.
+- Include quantities and units that explain behavior, such as "42 extra periods
+  on each side"; verify them against the code.
+- Use concrete examples that make the result clear. Do not turn the contract into
+  an implementation checklist or seven comment sections matching the recipe steps.
 - Distinguish caller preconditions from validation and errors the function implements.
 - Document relevant mutation, asynchronous completion, permissions, and resource ownership.
+- Keep implementation explanations beside the code they explain. Include lifecycle
+  and integration constraints in the public contract only when callers need them
+  to use the function correctly. Keep component contracts in source, not a second
+  Markdown description of the same behavior.
 - Replace the design template with completed code; do not retain unfinished skeletons.
 - Use equivalent comments in other languages.
 
@@ -30,7 +44,7 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 
 ```ts
 /**
- * Converts durationMinutes to seconds.
+ * Converts a duration in minutes to seconds.
  * @param durationMinutes - A non-negative finite duration in minutes.
  * @returns The equivalent duration in seconds.
  * @example minutesToSeconds(1.5) // 90
@@ -48,7 +62,7 @@ function minutesToSeconds(durationMinutes: number): number {
 
 ```ts
 /**
- * Calculates billable hours from workedMinutes after deducting includedMinutes.
+ * Calculates billable hours after deducting the included allowance.
  * Any partial billable hour counts as a whole hour.
  *
  * @param workedMinutes - Non-negative safe integer counting minutes worked.

@@ -14,6 +14,15 @@ interface ChecklistItemsOptions {
 
 const BATCH_SIZE = 25;
 
+/**
+ * Supplies matching checklist choices, optionally revealing 25 at a time.
+ * Attach itemsRef and handleScroll to the choices' scroll container; query or dynamic-mode changes reset its scroll and batch.
+ * @param options.options - Available choices, such as youth names or statuses.
+ * @param options.dynamicItems - Whether scrolling/focus reveals another batch of choices.
+ * @param options.searchEnabled - Whether search text filters choices by their label.
+ * @returns Displayed choices, search controls, and handlers for revealing more choices.
+ * @example With dynamicItems enabled, searching 100 choices for 30 matches reveals 25; loadMoreItems reveals the last five.
+ */
 export function useChecklistItems({ options, dynamicItems, searchEnabled }: ChecklistItemsOptions) {
   const itemsRef = useRef<HTMLDivElement>(null);
   const { search, setSearch, query, matches } = useOptionSearch(options, searchEnabled);
@@ -28,12 +37,20 @@ export function useChecklistItems({ options, dynamicItems, searchEnabled }: Chec
     if (itemsRef.current) itemsRef.current.scrollTop = 0;
   }, [query, dynamicItems]);
 
+  /**
+   * Reveals one bounded batch when dynamic choices remain.
+   * @example With 30 matches and 25 visible, the next batch reveals all 30.
+   */
   const loadMoreItems = () => {
     if (!dynamicItems || !hasMoreItems) return;
 
     setVisibleCount(current => Math.min(current + BATCH_SIZE, matches.length));
   };
 
+  /**
+   * Requests another batch within 32px of a measurable scrollport's bottom.
+   * @example A hidden zero-height container does not eagerly reveal all choices.
+   */
   const handleScroll = () => {
     const container = itemsRef.current;
     if (!container || container.clientHeight === 0) return;

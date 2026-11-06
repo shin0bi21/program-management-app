@@ -9,6 +9,13 @@ interface ProtectedRouteProps {
   requiredPermission?: Permission;
 }
 
+/**
+ * Shows loading until authentication settles, then renders the route or replaces
+ * it with `/login` for missing authentication or `/` for a missing required permission.
+ * Requires auth/router providers; omitting the permission requires only authentication,
+ * and allowed visits remember the pathname and query for the stored user.
+ * @example <ProtectedRoute requiredPermission="read:tasks"><Tasks /></ProtectedRoute>
+ */
 export default function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
   const { isAuthenticated, permissions, loading } = useAuth();
   const location = useLocation();

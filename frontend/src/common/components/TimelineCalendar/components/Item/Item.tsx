@@ -47,6 +47,13 @@ interface ItemProps<TRow, TItemData> {
   onDelete?: () => void;
 }
 
+/**
+ * Displays one calendar item with hover/focus details and optional actions, moving, and resizing.
+ * @param props.calendar - Position and interaction data from buildItem; omit for a standalone preview.
+ * @param props.ariaLabel - Complete item meaning, including type/status conveyed by color; dense layouts hide the visible summary.
+ * @param props.details - Label/value pairs shown on hover or keyboard focus.
+ * @example A three-day task shows one title across its date columns and its full schedule on hover.
+ */
 export default function Item<TRow, TItemData>({
   // Timeline placement and interactions
   calendar,
@@ -80,6 +87,10 @@ export default function Item<TRow, TItemData>({
   const move = useItemMove(calendar, itemDetails.hideDetails);
   const resize = useItemResize(calendar, itemDetails.hideDetails);
 
+  /**
+   * Ignores the click left by a drag; ordinary clicks select the item's row before activation.
+   * @example A completed drag cannot also select or open the underlying item.
+   */
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!calendar) return;
 
@@ -92,6 +103,10 @@ export default function Item<TRow, TItemData>({
     calendar.onSelect();
   };
 
+  /**
+   * Reports activation only for a timeline-mounted item.
+   * @example Clicking a standalone content preview does not activate a calendar record.
+   */
   const handleActivate = () => calendar?.onActivate();
   const content = (
     <>
@@ -216,7 +231,11 @@ export default function Item<TRow, TItemData>({
   );
 }
 
-/** Produces visual and interaction modifiers for the positioned item wrapper. */
+/**
+ * Produces wrapper modifiers from row-calculated clipping, density, and capabilities.
+ * @returns Space-separated CSS classes for placement, clipping, and enabled interactions.
+ * @example A compact item clipped at its start includes "compact continues-before".
+ */
 function getPositionedItemClassName<TRow, TItemData>({ layout, movable, resizable }: ItemCalendarProps<TRow, TItemData>) {
   return [
     'item', 'positioned-item', layout.density,

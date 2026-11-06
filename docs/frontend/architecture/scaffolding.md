@@ -1,25 +1,33 @@
 # Frontend Scaffolding
 
-Run `npm run scaffold:frontend` from the repository root. The generator and its
+Run the preset commands below from the repository root. The generator and its
 tests live under `scripts/scaffold/frontend/`.
-The `page` preset follows the [PageContainer contract](../components/page-container.md)
+The `page` preset follows [PageContainer](../../../frontend/src/common/components/PageContainer/PageContainer.tsx)
 for authenticated collection routes.
 
 ## Maintain the Pattern
 
-Templates implement the contracts in the focused owner guides. When a contract
-changes, update its template and generated examples together. Follow
+Templates follow the source owners' contracts. When a contract changes, update
+its source documentation, template, and generated examples together. Follow
 [Ownership](ownership.md) for source placement.
 
 ## Choose a Preset
 
-| Preset | Generated files |
+| Command after `npm run scaffold:frontend --` | Generated files |
 |---|---|
-| `page` | Route component, page-data hook, and their tests |
-| `table` | Table component, collection-data hook, and their tests |
-| `modal` | Form component, workflow hook, and their tests |
-| `calendar` | Calendar component and its test |
-| `dashboard` | Dashboard component and its test |
+| `page <PagePath>` | Route component, page-data hook, and their tests |
+| `table <owner-path> <NameTable>` | Table component, collection-data hook, and their tests |
+| `modal <owner-path> <NameModal>` | Form component, workflow hook, and their tests |
+| `calendar <owner-path> <NameCalendar>` | Calendar component and its test |
+| `dashboard <owner-path> <NameDashboard>` | Dashboard component and its test |
+
+Page paths contain a PascalCase page name, optionally preceded by one PascalCase
+route family. Component names use PascalCase with a domain prefix and the suffix
+shown above. Owner paths are relative to the repository root:
+
+- Tables, calendars, and dashboards use a root or route-family page's `components/` directory.
+- Modals also accept nested component owners, a route family's `common/components/`,
+  `frontend/src/common/features`, or a feature's `components/` directory and its nested component owners.
 
 Optional presentation hooks, row/action components, and browser stories are added
 beside their real owners when needed; presets do not invent them for every page.
@@ -48,8 +56,8 @@ pages/Youth/Placements/
 Connect the generated calendar to the page when implementing the feature; the
 component preset does not edit its parent or register a route.
 
-The calendar preset supplies ordered implementation prompts matching the
-[page calendar standard](../components/calendars.md#order-the-page-calendar-owner).
+The calendar preset supplies ordered implementation prompts for range loading,
+buffer setup, error reporting, cache synchronization, display data, and interactions.
 It remains a skeleton rather than inventing domain APIs, permission rules, or
 record types.
 Replace applicable prompts with real code and remove phases the owner does not need.
@@ -61,8 +69,9 @@ when the new page needs those owners.
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
 inapplicable cases and delete the test file when the owner adds no behavior.
-See each [frontend owner guide](../README.md#find-the-right-guide) for
-the supported source layout and preset commands.
+Document implemented functions with their actual parameter meanings and examples,
+following the [design recipe](../../workflows/documentation.md). Keep shared component
+behavior with its [source owner](../README.md#find-a-component).
 
 ## Scaffold a Page
 
@@ -77,4 +86,4 @@ Remove `--dry-run` to generate the files.
 
 The page preset calls its data hook during the page-data phase. Replace the data
 placeholders with real reference queries; omit the hook and its test when the page
-needs no page-wide remote data.
+needs no page-wide reference data.

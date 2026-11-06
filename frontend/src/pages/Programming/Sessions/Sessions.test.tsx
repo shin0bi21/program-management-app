@@ -9,14 +9,9 @@ import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import Sessions from './Sessions';
 import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
 import { makeProgramSession } from '../../../tests/factories/session';
-
-const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="location">{location.pathname}{location.search}</span>;
-}
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 
 const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
@@ -342,7 +337,6 @@ describe('Sessions', () => {
   });
 
   // Selection and coordination.
-
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
     render(
@@ -353,7 +347,7 @@ describe('Sessions', () => {
     );
     await screen.findByText('Communication');
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent(
+    expect(screen.getByRole('main', { name: 'Programming sessions and overview' })).toHaveTextContent(
       'No attendance.',
     );
     const initialRequestCount = getSessions.mock.calls.length;
@@ -394,7 +388,7 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');
+    expect(screen.getByRole('main', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');
     expect(await screen.findByText('No attachments.')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
@@ -424,7 +418,6 @@ describe('Sessions', () => {
 
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
   });
-
 
   it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
@@ -471,5 +464,15 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
   });
-
 });
+
+/**
+ * Displays the router path and query string so tests can observe selection-link changes.
+ * Must render inside a router.
+ * @example At /programming/sessions?session=session-1, displays that path and query string.
+ */
+function LocationProbe() {
+  const location = useLocation();
+
+  return <span data-testid="location">{location.pathname}{location.search}</span>;
+}

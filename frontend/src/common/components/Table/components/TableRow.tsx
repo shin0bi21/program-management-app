@@ -9,9 +9,17 @@ interface TableRowProps<T> {
   tabbable: boolean;
   rowIndex: number;
   onSelect?: (item: T) => void;
-  onNavigate: (rowIndex: number, id: TableNavigationKey) => void;
+  onNavigate: (rowIndex: number, key: TableNavigationKey) => void;
 }
 
+/**
+ * Displays one record's visible cells and supports selecting or navigating its row.
+ * @param props.row - Table row containing the original record.
+ * @param props.cells - Cells for columns that are currently visible.
+ * @param props.rowIndex - Zero-based position in the displayed records, used by the navigation callback.
+ * @param props.onNavigate - Handles focus and optional selection after a row navigation key is pressed.
+ * @example Pressing Enter on the row selects its record; Enter on its Edit button does not.
+ */
 function TableRowComponent<T>({
   row,
   cells,
@@ -22,15 +30,26 @@ function TableRowComponent<T>({
   onNavigate,
 }: TableRowProps<T>) {
   const item = row.original;
-  const select = () => onSelect?.(item);
-  const isInteractiveTarget = (target: HTMLElement) => Boolean(
-    target.closest('button, a, input, select, textarea, [role="menuitem"]'),
-  );
 
+  /**
+   * Reports the original typed record when application selection is enabled.
+   * @example Selecting row task-1 passes that Task object to onSelect.
+   */
+  const select = () => onSelect?.(item);
+
+  /**
+   * Selects row clicks outside nested native controls and menu items.
+   * @example Clicking a cell label selects; clicking an input leaves selection unchanged.
+   */
   const handleClick = (event: MouseEvent<HTMLTableRowElement>) => {
     if (!isInteractiveTarget(event.target as HTMLElement)) select();
   };
 
+  /**
+   * Selects on Enter or Space, or delegates arrow/Home/End navigation, after preventing the default action.
+   * Keys from nested native controls and menu items are left untouched.
+   * @example ArrowDown requests navigation from this rowIndex to the next row.
+   */
   const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (isInteractiveTarget(event.target as HTMLElement)) return;
 
@@ -73,3 +92,12 @@ function TableRowComponent<T>({
 const TableRow = memo(TableRowComponent) as typeof TableRowComponent;
 
 export default TableRow;
+
+/**
+ * Detects whether an event target is inside a native button, link, form control, or menu item.
+ * @param target - Originating element, which may be a child of the control itself.
+ * @example A span inside a button is interactive; plain cell text is not.
+ */
+function isInteractiveTarget(target: HTMLElement) {
+  return Boolean(target.closest('button, a, input, select, textarea, [role="menuitem"]'));
+}
