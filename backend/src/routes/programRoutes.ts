@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleCreateSession, handleGenerateSessions } from '../controllers/sessionController';
+import { handleCreateSession } from '../controllers/sessionController';
 import { handleSetProgramCycles, handleCreateProgram, handleGetPrograms, handleGetProgramList, handleUpdateProgram } from '../controllers/programController';
 import { handleGetProgramCycles, handleGetProgramRosterYouth, handleGetProgramCycleYouthReport, handleGetProgramCycleYouthReportPdf } from '../controllers/programCycleController';
 import { handleEnrollYouth, handleWithdrawYouth } from '../controllers/enrollmentController';
@@ -7,7 +7,7 @@ import { authenticateToken, requirePermission } from '../middleware/authMiddlewa
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { setProgramCyclesSchema, createProgramSchema, programQuerySchema, programListQuerySchema, updateProgramSchema } from '../validation/programSchemas';
-import { createSessionSchema, generateSessionsSchema, programCycleQuerySchema, programRosterSchema, programCycleYouthReportSchema, enrollYouthSchema, withdrawYouthSchema } from '../validation/programmingSchemas';
+import { createSessionSchema, programCycleQuerySchema, programRosterSchema, programCycleYouthReportSchema, enrollYouthSchema, withdrawYouthSchema } from '../validation/programmingSchemas';
 
 const router = Router();
 
@@ -25,6 +25,5 @@ router.get('/:programId/cycles/:cycleId/reports/youth', authenticateToken, requi
 router.get('/:programId/cycles/:cycleId/reports/youth.pdf', authenticateToken, requirePermission('read:programs', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(programCycleYouthReportSchema), asyncHandler(handleGetProgramCycleYouthReportPdf));
 
 router.post('/:programId/cycles/:cycleId/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createSessionSchema), asyncHandler(handleCreateSession));
-router.post('/:programId/cycles/:cycleId/sessions/generate', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(generateSessionsSchema), asyncHandler(handleGenerateSessions));
 
 export default router;

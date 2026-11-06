@@ -51,11 +51,19 @@ server-owned fields from drafts or cached input. See the frontend
 
 Order a main service so it is easy to scan:
 
-1. Put primary reads first.
-2. Follow with `set` and focused commands.
+1. Put primary reads (`get...`) first.
+2. Follow with `set...` and focused mutations such as invite, activate, or revoke.
 3. Put delete operations next.
 4. Add secondary public operations after the main write lifecycle.
 5. Finish with private helpers.
+
+Group by behavior; keep descriptive command names rather than renaming every mutation
+to `set`. Omit groups the service does not need.
+
+Within each operation, use numbered `// 1. ...` comments in source order to label
+query and mutation steps, including locks, audits, and external work. Restart numbering
+for each function and keep each comment to one short line describing its purpose,
+for example `// 2. Lock the user while changing account credentials.`
 
 When the same full-record form adds and edits a record, expose one `set<Domain>` operation with an optional ID. Share validation, permissions, transaction work, and response mapping. Keep the insert and locked update SQL in small private branches instead of hiding the difference in an upsert.
 
