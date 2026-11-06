@@ -53,7 +53,10 @@ For each affected responsibility, record a compact comparison:
 |---|---|---|---|
 | Canonical guide and specific constraint | Exact owner inspected | Closest established implementation or scaffold, when applicable | Aligned, concrete mismatch, or unverified, with a reason |
 
-Read complete affected functions and the relevant contracts/callers. Compare one
+Review every changed file in full as required by [AGENTS.md](../../../AGENTS.md#canonical-documentation),
+including unchanged functions, helpers, and test sections. Report standards gaps
+throughout those files; hand authorized fixes to implementation before re-review.
+Inspect relevant contracts/callers. Compare one
 strong matching implementation; use a second only when the pattern is ambiguous.
 For a new workflow with no implementation analogue, state that and compare its
 canonical contract and adjacent handoffs. Do not manufacture a reference.
