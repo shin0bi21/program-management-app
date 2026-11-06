@@ -2,28 +2,23 @@
 
 Give each value one owner. Choose that owner by how long the value lives and who changes it.
 
-Use the [ownership guide](ownership.md) for placement and promotion. This guide defines
-state lifetimes and data flow; the component that composes a child does not automatically
-own that child's queries.
+See [Ownership](ownership.md) for file and hook placement, and
+[Preferences](preferences.md) for persisted controls.
 
 ## Choose the State Owner
 
 | Value | Owner | Examples |
 |---|---|---|
 | Backend data | Focused TanStack Query hook | rows, records, options, totals |
-| A restored account preference | Shared preference state through a page hook | view, sorting, filters |
-| Browser-local table layout | Shared layout state through a page hook | column widths, hidden columns |
 | A temporary choice shared by page children | Route page or focused page hook | selected row, open modal target |
 | An unfinished form value | Modal or form workflow | fields, validation, submission state |
 | A live value that should not trigger rendering | Ref inside the behaviour that uses it | drag session, pending request identifier |
 
-Start with state in the component that owns it. Extract a focused hook when the behaviour needs restoration, derived values, effects, subscriptions, asynchronous coordination or stable callbacks.
-
 ## Separate Page Controls from View Data
 
-Use [route assembly](../components/page-container.md#assemble-the-route) for
-page-wide references and applied filters, and [Preferences](preferences.md)
-for durable controls. Table and calendar collections stay with their view owners.
+See [route assembly](../components/page-container.md#assemble-the-route),
+[Tables](../components/tables.md), and [Calendars](../components/calendars.md)
+for page and view data contracts.
 
 Shared filter and selector lookups belong to `common/features/referenceData`, with
 one projection, API adapter, query key, and option conversion per shared lookup.
@@ -31,16 +26,6 @@ Page data hooks compose them with feature-owned choices such as Task statuses.
 Full records needed by a workflow stay with that feature rather than expanding
 the shared label projection. Follow the [reference-data contract](../../backend/reference-data.md)
 for permissions, scope-specific cache keys, mutation reconciliation, and failures.
-
-Keep view-local interaction state with the view. Calendar navigation, visible periods,
-scroll position and pointer sessions belong to the calendar and its shared primitives.
-A page-specific position storage key identifies the saved position; it does not make
-the page responsible for scrolling or restoration. Add calendar controls to a page hook
-only when the page actually coordinates or persists those choices, not to mirror the
-table group.
-
-Follow [Tables](../components/tables.md) for collection ownership and
-[Calendars](../components/calendars.md) for range loading and interaction state.
 
 ## Fetch Remote Data
 
@@ -67,6 +52,24 @@ For a missing previously selected record, the message pattern is `This <record
 name> is no longer available.` An existing record with no children instead shows
 its normal empty state. Do not replace a rejected request with empty data or
 render internal diagnostics as user-facing copy.
+
+## Validate Uncertain Inputs
+
+Validate and normalize where uncertainty enters:
+
+- Validate API responses.
+- Normalize legacy data; use [Preferences](preferences.md#recover-invalid-values) for persisted preference recovery.
+- Validate user input.
+- Treat permissions and authentication state as boundary inputs.
+- Validate browser APIs and asynchronous failures at their boundary.
+
+Inside a typed owner, do not:
+
+- Manufacture required values with placeholders.
+- Cast arbitrary strings into finite unions.
+- Preserve compatibility branches for impossible states.
+
+Correct the boundary instead.
 
 ## Write Async Workflows
 

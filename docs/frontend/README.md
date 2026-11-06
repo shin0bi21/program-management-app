@@ -1,38 +1,8 @@
 # Frontend
 
-The frontend uses React, TypeScript, and Vite. Start with the guide for the part of the interface you are changing.
-
-## Develop a Frontend Change
-
-1. Choose the page, component or architectural owner.
-2. Read the narrowest guide for each changed surface.
-3. Inspect the owner's types, API adapter, hooks, component and tests.
-4. Keep route, permission, API, state, rendering and test contracts aligned.
-
-## Understand the Source Structure
-
-```text
-frontend/src/
-  app/                    route composition, application navigation and root failure handling
-  auth/                   authentication state and durable session storage
-  http/                   API URL, authenticated transport and typed errors
-  query/                  QueryClient and generic cache and list adapters
-  common/
-    features/             business capabilities used across route families
-    components/           product-agnostic interface primitives
-    hooks/                small product-agnostic hooks
-    utils/                pure shared helpers
-    styles/               shared layout and brand foundations
-  pages/                  route families and page-private capabilities
-```
-
-Preserve the dependency direction `pages → common/features → common/components`. Root infrastructure remains below those layers. The [ownership guide](architecture/ownership.md) explains route-family `common/` code and when to promote an owner.
+The frontend uses React, TypeScript, and Vite.
 
 ## Find the Right Guide
-
-Choose by the responsibility you are changing. Small primitives share UI guidance;
-composed surfaces have focused contracts. Keep component guides flat unless an area
-needs a substantial multi-file set.
 
 | What are you changing? | Guide |
 |---|---|

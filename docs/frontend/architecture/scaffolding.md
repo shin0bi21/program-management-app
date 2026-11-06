@@ -1,8 +1,7 @@
 # Frontend Scaffolding
 
-`npm run scaffold:frontend` generates colocated test outlines alongside each
-implementation owner automatically; no separate test command or flag is needed.
-The generator and its tests live under `scripts/scaffold/frontend/`.
+Run `npm run scaffold:frontend` from the repository root. The generator and its
+tests live under `scripts/scaffold/frontend/`.
 The `page` preset follows the [PageContainer contract](../components/page-container.md)
 for authenticated collection routes.
 
@@ -57,7 +56,7 @@ Replace applicable prompts with real code and remove phases the owner does not n
 
 Append `--dry-run` to preview either command without writing files. Every preset
 refuses to overwrite existing files. Add table, dashboard, or modal presets only
-when the new page needs those owners; each includes its own test outlines.
+when the new page needs those owners.
 
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
@@ -76,10 +75,6 @@ npm run scaffold:frontend -- page Staff/Schedules --dry-run
 
 Remove `--dry-run` to generate the files.
 
-The page preset generates the route and its test plus `hooks/data/use<Page>Data.ts` and
-its test, and calls the data hook during the page-data phase. Replace the data placeholders
-with real reference queries; omit the hook and its test when the page needs no page-wide
-remote data.
-
-Follow [Frontend Ownership](ownership.md) for source placement and
-[PageContainer](../components/page-container.md#assemble-the-route) for route assembly.
+The page preset calls its data hook during the page-data phase. Replace the data
+placeholders with real reference queries; omit the hook and its test when the page
+needs no page-wide remote data.
