@@ -1,29 +1,19 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { filterRuns, loadHistory, parseArgs, renderReport } from './ci-history-report.ts';
+import { collectHistory, filterRuns, parseArgs, renderReport } from './ci-history-report.ts';
 
-type History = ReturnType<typeof loadHistory>;
-type Run = History['runs'][number];
+type Run = Awaited<ReturnType<typeof collectHistory>>[number];
 
 /** Creates a development attempt; run({ conclusion: 'failure' }) overrides its successful default. */
 function run(overrides: Partial<Run> = {}): Run {
   return {
     runId: 1, branch: 'dev', group: 'CI', attempt: 1, conclusion: 'success',
-    startedAt: '2026-09-15T12:00:00Z', durationSeconds: 30,
+    createdAt: '2026-09-15T12:00:00Z', durationSeconds: 30,
     queueSeconds: 2, runnerSeconds: 60, ...overrides,
   };
-}
-
-/** Wraps attempts with complete coverage; history([run()]) creates one successful attempt. */
-function history(runs: Run[]): History {
-  const coverage = { start: '2026-09-01T00:00:00Z', end: '2026-09-30T23:59:59Z', completeOutcomes: true };
-  return { capturedAt: '2026-10-01T00:00:00Z', coverage: { dev: { ...coverage }, main: { ...coverage } }, runs };
 }
 
 test('requires a real start date, defaults end to now, and rejects ambiguous filters', () => {
@@ -45,7 +35,7 @@ test('requires a real start date, defaults end to now, and rejects ambiguous fil
 });
 
 test('filters inclusive UTC dates, outcomes, and exact deployment component dependencies', () => {
-  const dev = run({ startedAt: '2026-09-30T23:30:00-04:00' });
+  const dev = run({ createdAt: '2026-09-30T23:30:00-04:00' });
   const frontend = run({ runId: 2, branch: 'main', group: 'frontend-only',
     flags: { frontend: true, backend: false, migrations: false, infrastructure: false } });
   const migrated = run({ runId: 3, branch: 'main', group: 'backend+migrations',
@@ -70,51 +60,102 @@ test('counts failed and cancelled attempts without polluting successful first-at
     run({ runId: 3, attempt: 2, durationSeconds: 900 }),
   ];
   const options = parseArgs(['--start', '2026-09-01', '--dev', '--all']);
-  const report = renderReport(history(records), options);
+  const report = renderReport(records, options);
 
   assert.match(report, /5 attempts; 3 successful; 1 reruns/);
   assert.match(report, /1 failed; 1 cancelled; success rate: 75.0%/);
   assert.match(report, /CI\s+\| 2\s+\| 25s\s+\| 25s\s+\| 10s–40s/);
-  const successes = renderReport(history(records), { ...options, outcome: 'success' });
+  const successes = renderReport(records, { ...options, outcome: 'success' });
   assert.match(successes, /3 attempts; 3 successful/);
   assert.doesNotMatch(successes, /success rate|failed|cancelled/);
-  const failures = renderReport(history(records), { ...options, outcome: 'failures' });
+  const failures = renderReport(records, { ...options, outcome: 'failures' });
   assert.match(failures, /1 attempts; 0 successful/);
   assert.match(failures, /Failed attempt timings \(may end early\):/);
   assert.match(failures, /CI\s+\| 1\s+\| 1s\s+\| 1s/);
   assert.doesNotMatch(failures, /Successful first-attempt timings|success rate|900s/);
 });
 
-test('shows saved coverage and does not invent a production success rate or missing timings', () => {
-  const saved = history([run({ branch: 'main', group: 'frontend-only', queueSeconds: null, runnerSeconds: null,
-    flags: { frontend: true, backend: false, migrations: false, infrastructure: false } })]);
-  saved.coverage.main.completeOutcomes = false;
-  const report = renderReport(saved, parseArgs(['--start', '2026-09-01', '--main', '--all']));
+test('collects paginated development jobs and attempts without including release PRs', async () => {
+  const workflow = { id: 1, created_at: '2026-09-15T12:00:00Z', run_started_at: '2026-09-15T12:00:10Z',
+    run_attempt: 2, conclusion: 'success', head_branch: 'feature', pull_requests: [] };
+  const request = (endpoint: string): string => {
+    if (endpoint.includes('/workflows/ci.yml/runs?')) return JSON.stringify([{ total_count: 2, workflow_runs: [
+      workflow, { ...workflow, id: 2, head_branch: 'develop' },
+    ] }]);
+    if (endpoint.includes('/pulls?')) return JSON.stringify([[{
+      number: 10, created_at: '2026-09-01T00:00:00Z', closed_at: '2026-09-20T00:00:00Z', head: { ref: 'feature' },
+    }]]);
+    if (endpoint.endsWith('/attempts/1')) return JSON.stringify({ ...workflow, conclusion: 'failure' });
+    if (endpoint.endsWith('/attempts/1/jobs?per_page=100')) return JSON.stringify([{ jobs: [{
+      id: 10, name: 'Tests', conclusion: 'failure', started_at: '2026-09-15T12:00:10Z', completed_at: '2026-09-15T12:00:20Z',
+    }] }]);
+    if (endpoint.endsWith('/attempts/2/jobs?per_page=100')) return JSON.stringify([
+      { jobs: [{ id: 20, name: 'Backend', conclusion: 'success', started_at: '2026-09-15T12:00:30Z', completed_at: '2026-09-15T12:01:00Z' }] },
+      { jobs: [{ id: 21, name: 'Frontend', conclusion: 'success', started_at: '2026-09-15T12:00:40Z', completed_at: '2026-09-15T12:01:10Z' }] },
+    ]);
+    throw new Error(`Unexpected request: ${endpoint}`);
+  };
+  const records = await collectHistory('example/project', parseArgs(['--start', '2026-09-01', '--dev', '--all']), request);
 
-  assert.match(report, /Available: 2026-09-01T00:00:00Z → 2026-09-30T23:59:59Z/);
-  assert.match(report, /success rate: unavailable \(saved successes only\)/);
-  assert.doesNotMatch(report, /Queue median|Runner median|100.0%/);
-  assert.match(renderReport(saved, parseArgs(['--start', '2026-10-01', '--main'])), /No saved attempts match/);
+  assert.deepEqual(records.map(run => [run.runId, run.attempt, run.conclusion, run.durationSeconds, run.runnerSeconds]), [
+    [1, 1, 'failure', 10, 10], [1, 2, 'success', 40, 60],
+  ]);
+  assert.equal(records[0].queueSeconds, 10);
+  assert.equal(records[1].queueSeconds, null);
 });
 
-test('CLI reads local history without external commands and rejects malformed or duplicate attempts', context => {
-  const root = mkdtempSync(join(tmpdir(), 'ci-history-'));
-  context.after(() => rmSync(root, { recursive: true, force: true }));
-  const file = join(root, 'history.json');
-  const script = fileURLToPath(new URL('./ci-history-report.ts', import.meta.url));
-  writeFileSync(file, JSON.stringify(history([run()])));
+/** Returns API fixtures with a completed deployment job; logs may be unavailable before selection. */
+function productionRequest(endpoint: string): string {
+  if (endpoint.includes('/actions/runs?')) return JSON.stringify([{ total_count: 1, workflow_runs: [{
+    id: 1, created_at: '2026-09-15T12:00:00Z', run_started_at: '2026-09-15T12:00:00Z',
+    run_attempt: 1, conclusion: 'failure', head_branch: 'main', pull_requests: [],
+  }] }]);
+  if (endpoint.includes('/jobs?')) return JSON.stringify([{ jobs: [
+    { id: 10, name: 'Other CI job', conclusion: 'failure', started_at: '2026-09-15T12:00:00Z', completed_at: '2026-09-15T12:05:00Z' },
+    { id: 11, name: 'Deploy to Lightsail', conclusion: 'success', started_at: '2026-09-15T12:00:10Z', completed_at: '2026-09-15T12:00:40Z' },
+  ] }]);
+  if (endpoint.endsWith('/logs')) return 'Frontend: true\nBackend: false\nMigrations: false\nInfrastructure: false';
+  throw new Error(`Unexpected request: ${endpoint}`);
+}
 
-  const result = spawnSync(process.execPath, [script, '--file', file, '--start', '2026-09-01', '--dev'], {
-    env: { ...process.env, PATH: '' }, encoding: 'utf8',
+test('production uses the deployment job outcome and duration, with components from its log', async () => {
+  const options = parseArgs(['--start', '2026-09-01', '--main']);
+  const records = await collectHistory('example/project', options, productionRequest);
+
+  assert.equal(records[0].conclusion, 'success');
+  assert.equal(records[0].durationSeconds, 30);
+  assert.equal(records[0].group, 'frontend-only');
+  assert.equal(records[0].runnerSeconds, undefined);
+  assert.deepEqual(filterRuns(records, { ...options, types: ['frontend'], exclusive: true }), records);
+});
+
+test('missing deployment logs retain timings while authentication and query-limit failures stop the report', async () => {
+  const options = parseArgs(['--start', '2026-09-01', '--main']);
+  const records = await collectHistory('example/project', options, endpoint => {
+    if (endpoint.endsWith('/logs')) throw new Error('Logs unavailable (HTTP 410)');
+    return productionRequest(endpoint);
   });
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Development PR checks/);
-  for (const saved of [null, {}, history([run({ durationSeconds: -1 })]),
-    history([run({ startedAt: '2026-02-30T00:00:00Z' })]), history([run(), run()])]) {
-    writeFileSync(file, JSON.stringify(saved));
-    assert.throws(() => loadHistory(file), /Invalid|Duplicate/);
-  }
-  const missing = spawnSync(process.execPath, [script, '--start', '2026-09-01', '--file', join(root, 'missing')], { encoding: 'utf8' });
-  assert.equal(missing.status, 1);
-  assert.match(missing.stderr, /ENOENT/);
+
+  assert.equal(records[0].group, 'Unclassified');
+  assert.equal(records[0].durationSeconds, 30);
+  const filtered = renderReport(records, { ...options, types: ['frontend'] });
+  assert.match(filtered, /1 attempts lack component details/);
+  assert.match(filtered, /No completed attempts match/);
+  await assert.rejects(collectHistory('example/project', options, () => {
+    throw new Error('Authentication failed (HTTP 403)');
+  }), /HTTP 403/);
+  await assert.rejects(collectHistory('example/project', options, () => JSON.stringify([
+    { total_count: 1001, workflow_runs: [] },
+  ])), /narrower date range/);
+});
+
+test('help and invalid arguments finish before attempting GitHub access', () => {
+  const script = fileURLToPath(new URL('./ci-history-report.ts', import.meta.url));
+  const help = spawnSync(process.execPath, [script, '--help'], { env: { ...process.env, PATH: '' }, encoding: 'utf8' });
+  const invalid = spawnSync(process.execPath, [script, '--file', 'unused'], { env: { ...process.env, PATH: '' }, encoding: 'utf8' });
+
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /Usage:/);
+  assert.equal(invalid.status, 1);
+  assert.match(invalid.stderr, /Unknown option: --file/);
 });
