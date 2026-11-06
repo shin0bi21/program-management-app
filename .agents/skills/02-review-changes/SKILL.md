@@ -80,7 +80,10 @@ Use the affected owner guides for mutation scope, permissions, concurrency, and
 other domain-specific cases. Trace the changed behavior across its actual
 callers and contracts; do not introduce a second generic policy checklist here.
 
-Assess tests at their authoritative owner and consumer coordination boundaries.
+Review test scope and value against [Test Ownership](../../../docs/workflows/delivery/testing.md#test-ownership),
+including existing tests in changed files. For each case, identify the owned
+behavior and meaningful regression it detects; report misplaced, redundant, or
+implementation-coupled coverage as findings, even when the suite passes.
 Reuse exact-diff test evidence and run missing focused verification where feasible.
 Record commands, tested revision/fingerprint, and gaps. Passing diagnostics do
 not replace the pattern comparison or behavioral trace.
