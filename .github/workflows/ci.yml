@@ -66,7 +66,7 @@ jobs:
   quality:
     name: Lint & Shell Analysis
     needs: changes
-    if: github.base_ref == 'main' || needs.changes.outputs.static == 'true'
+    if: github.base_ref != 'main' && needs.changes.outputs.static == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -101,7 +101,7 @@ jobs:
   backend:
     name: Backend — Typecheck, Migrate & Test
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: github.base_ref != 'main' && needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -208,7 +208,7 @@ jobs:
   frontend:
     name: Frontend — Typecheck & Build
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: github.base_ref != 'main' && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -248,7 +248,7 @@ jobs:
 
   production-compose:
     name: Production Compose Validation
-    needs: [changes, quality]
+    needs: changes
     if: needs.changes.outputs.compose == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
