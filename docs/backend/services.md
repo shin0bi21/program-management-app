@@ -64,6 +64,8 @@ Within each operation, use numbered `// 1. ...` comments in source order to labe
 query and mutation steps, including locks, audits, and external work. Restart numbering
 for each function and keep each comment to one short line describing its purpose,
 for example `// 2. Lock the user while changing account credentials.`
+Separate each new step from preceding statements with a blank line.
+Place a conditional step's comment before its `if`, so it introduces the whole block.
 
 When the same full-record form adds and edits a record, expose one `set<Domain>` operation with an optional ID. Share validation, permissions, transaction work, and response mapping. Keep the insert and locked update SQL in small private branches instead of hiding the difference in an upsert.
 

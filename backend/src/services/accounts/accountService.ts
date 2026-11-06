@@ -48,6 +48,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
     await sql.begin(async (tx) => {
       const trx = asTransactionSql(tx);
+
       // 3. Lock the existing user while updating the account.
       await lockAccountUser(trx, id);
 
@@ -108,10 +109,12 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         const rawToken = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
         const expiresAt = new Date(Date.now() + INVITE_EXPIRY_MS);
+
         // 9. Invalidate unused links when the invitation address changes.
         await trx`
           DELETE FROM user_password_reset_tokens WHERE user_id = ${id} AND used_at IS NULL
         `;
+
         // 10. Save the replacement invitation token.
         await trx`
           INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
@@ -162,6 +165,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       `;
       if (!newUsers[0]) throw new InternalServerError('Account creation returned no user');
       userId = newUsers[0].id;
+
       // 16. Audit the employee creation.
       await audit(trx, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
 
@@ -217,6 +221,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
 
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
+
     // 2. Lock the user until commit so competing account writes wait.
     await lockAccountUser(trx, userId);
 
@@ -244,11 +249,13 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
       INSERT INTO user_credentials (user_id, email, password_hash, status)
       VALUES (${userId}, ${email}, ${unusableHash}, 'invited')
     `;
+
     // 6. Save the invitation token.
     await trx`
       INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
       VALUES (${userId}, ${tokenHash}, ${expiresAt})
     `;
+
     // 7. Audit the credential creation.
     await audit(trx, actorId, transactionId, 'user_credentials', userId, 'INSERT', null, {
       userId,
@@ -349,6 +356,7 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
+
     // 2. Lock the user so activation and revocation cannot overlap.
     await lockAccountUser(trx, userId);
 
@@ -369,6 +377,7 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
     }
 
     const existing = existingUsers[0];
+
     // 5. Audit the invitation removal.
     await audit(
       trx, actorId, transactionId, 'users', userId, 'DELETE',
@@ -379,11 +388,10 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
     // 6. Invalidate every invitation and password-reset link.
     await trx`DELETE FROM user_password_reset_tokens WHERE user_id = ${userId}`;
 
+    // 7. Remove youth credentials or the employee user created for the invitation.
     if (targetRole === 'youth') {
-      // 7. Remove youth credentials while preserving the profile.
       await trx`DELETE FROM user_credentials WHERE user_id = ${userId}`;
     } else {
-      // 7. Remove the employee user created for the invitation.
       await trx`DELETE FROM users WHERE id = ${userId}`;
     }
   });

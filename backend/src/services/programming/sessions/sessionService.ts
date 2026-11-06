@@ -51,12 +51,14 @@ export async function createProgramSession(programId: string, data: CreateSessio
   await assertCanAccessProgram(actor, programId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // 2. Lock the program before resolving cycle assignments.
     await lockAssignmentProgram(trx, programId, actor);
 
     // 3. Load program defaults and resolve the session date.
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
+
     // 4. Lock assigned cycles covering the session date.
     const assignments = await trx<ProgramCycleKey[]>`
       SELECT assignment.program_id, assignment.cycle_id
@@ -93,8 +95,10 @@ export async function createSession(programId: string, cycleId: string, data: Cr
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // 2. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, programId, cycleId, actor);
+
     // 3. Load the cycle date bounds.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
       SELECT cycle.starts_on::text, cycle.ends_on::text
@@ -103,6 +107,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
     `;
 
     if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
+
     // 4. Resolve the session date from program defaults.
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
@@ -127,9 +132,11 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // 2. Find the session assignment.
     const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!session) throw new NotFoundError('Session not found');
+
     // 3. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, session.programId, session.cycleId, actor);
 
@@ -144,9 +151,12 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
       RETURNING id
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
+
     // 5. Load the complete saved session for the response.
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
+
+    // 6. Load affected cycle rows and return them with the updated session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [saved]) };
   }).catch(rethrowSessionConflict);
 }
@@ -163,17 +173,20 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // 2. Find the session program.
     const [lookup] = await trx<{ programId: string }[]>`
       SELECT session.program_id FROM program_sessions session
       WHERE session.id = ${id}
     `;
     if (!lookup) throw new NotFoundError('Session not found');
+
     // 3. Lock the program before resolving the destination cycle.
     await lockAssignmentProgram(trx, lookup.programId, actor);
 
     // 4. Load the program schedule and timezone.
     const schedule = await getProgramSchedule(trx, lookup.programId);
+
     // 5. Lock the session and derive its destination local times.
     const [session] = await trx<{
       cycleId: string; movable: boolean; startLocal: string; endLocal: string; endDate: string;
@@ -203,8 +216,8 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
     if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
 
+    // 7. Reject a cycle change when the session has recorded data.
     if (assignments[0].cycleId !== session.cycleId) {
-      // 7. Reject a cycle change when the session has recorded data.
       const [records] = await trx<{ recorded: boolean }[]>`
         SELECT EXISTS (SELECT 1 FROM attendance_records WHERE session_id = ${id})
           OR EXISTS (SELECT 1 FROM session_notes WHERE session_id = ${id})
@@ -226,9 +239,12 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       WHERE id = ${id}
       RETURNING id, program_id, cycle_id, starts_at, ends_at
     `;
+
     // 10. Load the complete moved session for the response.
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
+
+    // 11. Load affected cycle rows and return them with the moved session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved]) };
   }).catch(rethrowSessionConflict);
 }
@@ -244,11 +260,14 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // 2. Find the session assignment.
     const [lookup] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!lookup) throw new NotFoundError('Session not found');
+
     // 3. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, actor);
+
     // 4. Lock the session before checking deletion dependencies.
     const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id} FOR UPDATE`;
     if (!session) throw new NotFoundError('Session not found');
@@ -258,11 +277,13 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
     if (attendance.length) {
       throw new ConflictError('Session cannot be deleted because attendance has been recorded');
     }
+
     // 6. Reject sessions with recorded notes.
     const notes = await trx`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
     if (notes.length) {
       throw new ConflictError('Session cannot be deleted because session notes have been recorded');
     }
+
     // 7. Reject sessions with attachments.
     const attachments = await trx`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
     if (attachments.length) {
@@ -271,6 +292,8 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
 
     // 8. Delete the session after the dependency checks.
     await trx`DELETE FROM program_sessions WHERE id = ${id}`;
+
+    // 9. Load affected cycle rows and return them with the deleted session ID.
     return { id, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [session]) };
   });
 }
@@ -299,8 +322,10 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
 async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, actor: AccessTokenPayload) {
   // 1. Authorize and lock the program.
   await lockAssignmentProgram(trx, programId, actor);
+
   // 2. Lock the required cycle.
   await trx`SELECT id FROM program_cycles WHERE id = ${cycleId} FOR UPDATE`;
+
   // 3. Lock and require the program-cycle assignment.
   const assignments = await trx`
     SELECT program_id FROM program_cycle_assignments
