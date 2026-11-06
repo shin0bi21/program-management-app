@@ -21,6 +21,14 @@ interface ActionsMenuProps {
   ariaLabel?: string;
 }
 
+/**
+ * Displays a popup of actions and requests dismissal before invoking the chosen action.
+ * Action callbacks handle their own asynchronous work and failures.
+ * @param props.items - Available actions, such as Edit or Delete; omit actions the user cannot perform.
+ * @param props.triggerLabel - Visible button text; omitting it shows the three-dot icon.
+ * @param props.ariaLabel - Button name for assistive technology, needed with an icon-only trigger.
+ * @example <ActionsMenu ariaLabel="Task actions" items={allowedActions} />
+ */
 export default function ActionsMenu({ items, disabled = false, triggerLabel, ariaLabel }: ActionsMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -30,6 +38,11 @@ export default function ActionsMenu({ items, disabled = false, triggerLabel, ari
     { heightEstimate: 200 },
   );
 
+  /**
+   * Requests dismissal, then invokes the selected action without awaiting it.
+   * @param item - The selected action and its caller-provided callback.
+   * @example Selecting Edit requests dismissal and invokes the Edit callback once.
+   */
   const handleActionClick = useCallback(
     (item: ActionItem) => {
       close();

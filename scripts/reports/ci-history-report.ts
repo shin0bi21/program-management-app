@@ -2,8 +2,16 @@
 
 /**
  * Summarize completed GitHub development checks and production deployments in the CLI.
- * Flow: validate options → query completed runs and jobs → filter attempts → print timings.
- * Read-only. Usage: npm run report:ci-history -- --start 2026-08-09 --main --success
+ *
+ * Flow (see collectHistory() and renderReport()):
+ *   1. Validate date, outcome, and component filters
+ *   2. Identify the GitHub repository
+ *   3. Collect completed workflow attempts and job timings
+ *   4. Filter attempts and summarize successful and failed timings separately
+ *   5. Print the report
+ *
+ * Read-only.
+ * See usage() for parameter details and examples.
  */
 
 import { execFile } from 'node:child_process';
@@ -41,31 +49,44 @@ interface Options {
 const COMPONENTS: Component[] = ['frontend', 'backend', 'migrations', 'infrastructure'];
 const execute = promisify(execFile);
 
-const HELP = `Usage: npm run report:ci-history -- --start YYYY-MM-DD [options]
+// 2. CLI usage, argument parsing, and validation
+
+/**
+ * Returns the CLI reference printed by --help.
+ * @example usage().includes('--start YYYY-MM-DD') // true
+ */
+function usage(): string {
+  return `Usage: npm run report:ci-history -- --start 2026-09-01
+       npm run report:ci-history -- --start 2026-09-01 --dev
+       npm run report:ci-history -- --start 2026-09-01 --end 2026-09-30 --main --type frontend --exclusive
 
   --start YYYY-MM-DD  Required inclusive start date (UTC).
   --end YYYY-MM-DD    Inclusive end date; defaults to now.
   --dev              Development PR checks only.
   --main             Production deployments only; default shows both views.
-  --success          Successful attempts only (default).
+  --success          Successful attempts only; timings use first attempts (default).
   --failures         Failed attempts only; excludes cancellations.
   --all              All outcomes, including cancellations.
-  --type COMPONENT   Deployment component; repeat to require multiple components.
+  --type COMPONENT   Deployment component; repeat to require multiple components. Requires --main.
   --exclusive        Require exactly the selected component combination.
   --help             Show this help.
 
-Components: frontend, backend, migrations, infrastructure. Component filters require --main.`;
+Components: frontend, backend, migrations, infrastructure.
+Migrations include backend; infrastructure includes all four components when matching --exclusive.
+Deployments without component logs remain Unclassified and are excluded by component filters.
 
-// 2. Argument and history validation
-
-/** Recognizes real UTC calendar dates; for example, 2024-02-29 is valid. */
-function validDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
-    && Number.isFinite(Date.parse(value))
-    && new Date(value).toISOString().slice(0, 10) === value;
+Requires authenticated GitHub CLI access (gh auth login). Dates select workflow creation time.
+If GitHub's 1,000-run query limit is reached, narrow the date range.
+--all shows success rate excluding cancellations. Outcome flags are mutually exclusive.
+No matches exits successfully.`;
 }
 
-/** Parses options such as --start 2026-09-01 --dev; missing --start throws except with --help. */
+/**
+ * Parses CLI filters, expanding dates to inclusive UTC boundaries and defaulting the end to now.
+ * Throws for missing or conflicting filters; --help returns before remaining validation.
+ * @param argv - Arguments after the script path, with separate flag and value tokens.
+ * @example parseArgs(['--start', '2026-09-01', '--dev']).start // '2026-09-01T00:00:00Z'
+ */
 export function parseArgs(argv: string[]): Options {
   const options: Options = {
     branch: null, start: '', end: new Date().toISOString(), outcome: 'success',
@@ -98,7 +119,8 @@ export function parseArgs(argv: string[]): Options {
     if (!['--start', '--end', '--type'].includes(argument)) {
       throw new Error(`Unknown option: ${argument}`);
     }
-    const value = argv[++index];
+    index += 1;
+    const value = argv[index];
     if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value`);
     if (argument === '--start' || argument === '--end') {
       if (!validDate(value)) throw new Error(`${argument} must use a valid YYYY-MM-DD date`);
@@ -115,7 +137,21 @@ export function parseArgs(argv: string[]): Options {
   if (Date.parse(options.start) > Date.parse(options.end)) throw new Error('--start must not be after --end');
   if (options.types.length && options.branch !== 'main') throw new Error('--type requires --main');
   if (options.exclusive && !options.types.length) throw new Error('--exclusive requires --type');
+
   return options;
+}
+
+/**
+ * Checks whether a date names a real UTC calendar day.
+ * @param value - A proposed YYYY-MM-DD date, without a time or offset.
+ * @todo Standardize date-only validation: https://github.com/shin0bi21/be-original/issues/1262
+ * @example validDate('2024-02-29') // true
+ * @example validDate('2026-02-30') // false
+ */
+function validDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value))
+    && new Date(value).toISOString().slice(0, 10) === value;
 }
 
 // 3. Read-only GitHub collection
@@ -147,25 +183,15 @@ interface PullRequest {
 
 type Request = (endpoint: string, paginate?: boolean) => string | Promise<string>;
 
-/** Reads GitHub via authenticated gh; e.g. paginated /actions/runs, without saving files. */
-async function github(endpoint: string, paginate = false): Promise<string> {
-  const flags = paginate ? ['--paginate', '--slurp'] : ['--allow-escape-sequences'];
-  const { stdout } = await execute('gh', ['api', ...flags, endpoint], { maxBuffer: 128 * 1024 * 1024 });
-  return stdout;
-}
-
-/** Reads the printed component flags; a job failing before selection returns no flags. */
-function deploymentFlags(log: string): Run['flags'] {
-  const flags = {} as Record<Component, boolean>;
-  for (const component of COMPONENTS) {
-    const matches = [...log.matchAll(new RegExp(String.raw`\b${component}:\s*(true|false)\b`, 'gi'))];
-    if (!matches.length) return undefined;
-    flags[component] = matches.at(-1)![1].toLowerCase() === 'true';
-  }
-  return flags;
-}
-
-/** Queries completed workflows in the date range; e.g. --main reads deployment jobs, not PR checks. */
+/**
+ * Collects completed development PR checks and production deployment attempts with job timings.
+ * Rejects on API or JSON failures and queries over 1,000 runs; unavailable deployment logs retain timings.
+ * @param repository - GitHub owner/repository name accessible to the request client.
+ * @param options - Validated date and outcome filters from parseArgs; component filtering occurs in filterRuns.
+ * @param request - Read-only API client returning raw text, or JSON page arrays for paginated requests.
+ * @returns Matching attempt records; production durations and outcomes describe the deployment job.
+ * @example await collectHistory('example/project', parseArgs(['--start', '2026-09-01', '--main']))
+ */
 export async function collectHistory(repository: string, options: Options, request: Request = github): Promise<Run[]> {
   const base = `repos/${repository}`;
   const range = encodeURIComponent(`${options.start}..${options.end}`);
@@ -188,12 +214,22 @@ export async function collectHistory(repository: string, options: Options, reque
       const prs = pages.flat();
       const numbers = new Set(prs.map(pr => pr.number));
       // GitHub can omit PR associations after merging; match the branch within its PR lifetime.
-      workflows = workflows.filter(run => run.pull_requests.some(pr => numbers.has(pr.number))
-        || prs.some(pr => pr.head.ref === run.head_branch && pr.created_at <= run.created_at
-          && (!pr.closed_at || run.created_at <= pr.closed_at)));
+      workflows = workflows.filter(run => {
+        const hasPullRequest = run.pull_requests.some(pr => numbers.has(pr.number));
+        const matchesPullRequestLifetime = prs.some(pr => pr.head.ref === run.head_branch
+          && pr.created_at <= run.created_at && (!pr.closed_at || run.created_at <= pr.closed_at));
+        return hasPullRequest || matchesPullRequestLifetime;
+      });
     }
 
-    /** Collects one attempt's job times; expired logs retain timing with an unclassified deployment. */
+    /**
+     * Collects one workflow attempt's timings and deployment flags in the current branch view.
+     * Missing logs (HTTP 404/410) leave deployments unclassified; other API failures reject.
+     * @param workflow - Completed run carrying the latest attempt number and original creation time.
+     * @param attempt - One-based attempt number, no greater than workflow.run_attempt.
+     * @returns An attempt record, or null for an excluded outcome or absent deployment job.
+     * @example await collectAttempt(workflow, 1) // First attempt, even when the latest run is a rerun.
+     */
     async function collectAttempt(workflow: Workflow, attempt: number): Promise<Run | null> {
       const endpoint = `${base}/actions/runs/${workflow.id}/attempts/${attempt}`;
       const details: Workflow = attempt === workflow.run_attempt
@@ -203,20 +239,28 @@ export async function collectHistory(repository: string, options: Options, reque
       const deployment = jobs.find(job => job.name === 'Deploy to Lightsail');
       if (branch === 'main' && !deployment) return null;
       const measured = branch === 'main' ? [deployment!] : jobs;
+
       const starts = measured.flatMap(job => job.started_at ? [Date.parse(job.started_at)] : []);
       const ends = measured.flatMap(job => job.completed_at ? [Date.parse(job.completed_at)] : []);
       const start = starts.length ? Math.min(...starts) : Date.parse(details.run_started_at);
       const end = ends.length ? Math.max(...ends) : start;
+
+      const conclusion = branch === 'main' ? deployment!.conclusion ?? details.conclusion : details.conclusion;
       const record: Run = {
         runId: workflow.id, branch, group: branch === 'dev' ? 'CI' : 'Unclassified', attempt,
-        conclusion: branch === 'main' ? deployment!.conclusion ?? details.conclusion : details.conclusion,
+        conclusion,
         createdAt: workflow.created_at, durationSeconds: Math.max(0, (end - start) / 1000),
       };
       if (branch === 'dev') {
         record.queueSeconds = attempt === 1 ? Math.max(0, (start - Date.parse(workflow.created_at)) / 1000) : null;
-        record.runnerSeconds = jobs.reduce((total, job) => total + (job.started_at && job.completed_at
-          ? Math.max(0, (Date.parse(job.completed_at) - Date.parse(job.started_at)) / 1000) : 0), 0);
+        record.runnerSeconds = jobs.reduce((total, job) => {
+          if (!job.started_at || !job.completed_at) return total;
+
+          const elapsedSeconds = (Date.parse(job.completed_at) - Date.parse(job.started_at)) / 1000;
+          return total + Math.max(0, elapsedSeconds);
+        }, 0);
       }
+
       // Outcome filtering avoids downloading logs for attempts outside the requested view.
       if (!filterRuns([record], { ...options, types: [], exclusive: false }).length) return null;
       if (branch === 'main' && deployment) {
@@ -227,26 +271,69 @@ export async function collectHistory(repository: string, options: Options, reque
         }
         if (record.flags) {
           const selected = COMPONENTS.filter(component => component !== 'infrastructure' && record.flags![component]);
-          record.group = record.flags.infrastructure ? 'full' : selected.join('+') || 'no-production-change';
+          const componentGroup = selected.join('+') || 'no-production-change';
+          record.group = record.flags.infrastructure ? 'full' : componentGroup;
           if (selected.length === 1 && !record.flags.infrastructure) record.group += '-only';
         }
       }
+
       return record;
     }
 
-    const attempts = workflows.flatMap(workflow => Array.from({ length: workflow.run_attempt }, (_, index) => ({ workflow, attempt: index + 1 })));
+    const attempts = workflows.flatMap(workflow => Array.from(
+      { length: workflow.run_attempt },
+      (_, index) => ({ workflow, attempt: index + 1 }),
+    ));
     // Bound concurrent API requests without storing a cache or snapshot.
     for (let offset = 0; offset < attempts.length; offset += 6) {
-      const batch = await Promise.all(attempts.slice(offset, offset + 6).map(({ workflow, attempt }) => collectAttempt(workflow, attempt)));
+      const batch = await Promise.all(attempts.slice(offset, offset + 6).map(
+        ({ workflow, attempt }) => collectAttempt(workflow, attempt),
+      ));
       records.push(...batch.filter((run): run is Run => run !== null));
     }
   }
+
   return records;
 }
 
-// 4. Shared filtering and duration summaries
+/**
+ * Reads GitHub through the authenticated gh CLI without saving files; command failures reject.
+ * @param endpoint - GitHub API path, including any query parameters.
+ * @param paginate - Whether to collect every page into a JSON array of page responses.
+ * @returns Raw response text, or slurped JSON pages when pagination is enabled.
+ * @example await github('repos/example/project/actions/runs?per_page=100', true) // JSON pages
+ */
+async function github(endpoint: string, paginate = false): Promise<string> {
+  const flags = paginate ? ['--paginate', '--slurp'] : ['--allow-escape-sequences'];
+  const { stdout } = await execute('gh', ['api', ...flags, endpoint], { maxBuffer: 128 * 1024 * 1024 });
+  return stdout;
+}
 
-/** Filters attempts; for example, exclusive migrations also require their backend. */
+/**
+ * Reads the last printed value for each deployment component, ignoring letter case.
+ * @param log - Deployment job output containing component: true/false lines.
+ * @returns All four flags, or undefined if any component has no printed value.
+ * @example deploymentFlags('Frontend: true') // undefined: three components are missing
+ */
+function deploymentFlags(log: string): Run['flags'] {
+  const flags = {} as Record<Component, boolean>;
+  for (const component of COMPONENTS) {
+    const matches = [...log.matchAll(new RegExp(String.raw`\b${component}:\s*(true|false)\b`, 'gi'))];
+    if (!matches.length) return undefined;
+    flags[component] = matches.at(-1)![1].toLowerCase() === 'true';
+  }
+  return flags;
+}
+
+// 4. Shared attempt filtering
+
+/**
+ * Selects attempts by inclusive creation date, branch, outcome, and deployment components without mutation.
+ * Exclusive matching includes backend for migrations and all components for infrastructure.
+ * @param runs - Collected attempts with component flags when available.
+ * @param options - Validated filters; attempts without flags cannot match component filters.
+ * @example filterRuns([], parseArgs(['--start', '2026-09-01'])) // []
+ */
 export function filterRuns(runs: Run[], options: Options): Run[] {
   const selected = new Set(options.types);
   const expected: Record<Component, boolean> = {
@@ -257,6 +344,7 @@ export function filterRuns(runs: Run[], options: Options): Run[] {
   };
   const start = Date.parse(options.start);
   const end = Date.parse(options.end);
+
   return runs.filter(run => {
     const started = Date.parse(run.createdAt);
     if (started < start || started > end) return false;
@@ -269,25 +357,15 @@ export function filterRuns(runs: Run[], options: Options): Run[] {
   });
 }
 
-/** Computes a median of nonempty values without mutation; [10, 40] produces 25. */
-function median(values: number[]): number {
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-}
-
-/** Formats seconds for the table; 65 becomes 1m 05s, missing values become an em dash. */
-function duration(seconds: number | null): string {
-  if (seconds === null) return '—';
-  const rounded = Math.round(seconds);
-  if (rounded < 60) return `${rounded}s`;
-  const remaining = rounded % 60;
-  return `${Math.floor(rounded / 60)}m${remaining ? ` ${String(remaining).padStart(2, '0')}s` : ''}`;
-}
-
 // 5. Outcome counts and separate success/failure timing tables
 
-/** Renders completed history; for example, --all shows failure timings separately from successful runs. */
+/**
+ * Builds the filtered text report with separate successful first-attempt and failed-attempt timings.
+ * @param history - Collected attempts; successful reruns count toward outcomes but not timing summaries.
+ * @param options - Validated report filters; --all includes a success rate excluding cancellations.
+ * @returns Display text, including a no-match message for each empty branch view.
+ * @example renderReport([], parseArgs(['--start', '2026-09-01', '--dev'])).includes('No completed attempts match.') // true
+ */
 export function renderReport(history: Run[], options: Options): string {
   const runs = filterRuns(history, options);
   const lines = [`CI history: ${options.start} → ${options.end}`];
@@ -319,12 +397,14 @@ export function renderReport(history: Run[], options: Options): string {
       if (!timed.length) continue;
       lines.push(label);
       const metrics = (['queueSeconds', 'runnerSeconds'] as const).filter(key => timed.some(run => run[key] != null));
-      const rows = [['Group', 'Runs', 'Mean', 'Median', 'Range', ...metrics.map(key => key === 'queueSeconds' ? 'Queue median' : 'Runner median')]];
+      const metricHeaders = metrics.map(key => key === 'queueSeconds' ? 'Queue median' : 'Runner median');
+      const rows = [['Group', 'Runs', 'Mean', 'Median', 'Range', ...metricHeaders]];
       for (const group of [...new Set(timed.map(run => run.group))].sort()) {
         const matching = timed.filter(run => run.group === group);
         const values = matching.map(run => run.durationSeconds);
-        rows.push([group, String(values.length), duration(values.reduce((sum, value) => sum + value, 0) / values.length),
-          duration(median(values)), `${duration(Math.min(...values))}–${duration(Math.max(...values))}`,
+        const meanSeconds = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const range = `${duration(Math.min(...values))}–${duration(Math.max(...values))}`;
+        rows.push([group, String(values.length), duration(meanSeconds), duration(median(values)), range,
           ...metrics.map(key => {
             const recorded = matching.map(run => run[key]).filter((value): value is number => value != null);
             return duration(recorded.length === matching.length ? median(recorded) : null);
@@ -334,7 +414,34 @@ export function renderReport(history: Run[], options: Options): string {
       for (const row of rows) lines.push(row.map((cell, index) => cell.padEnd(widths[index])).join(' | ').trimEnd());
     }
   }
+
   return lines.join('\n');
+}
+
+/**
+ * Computes the median without changing the supplied values.
+ * @param values - Nonempty collection of finite timing values in the same units.
+ * @example median([10, 40]) // 25
+ */
+function median(values: number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * Formats a duration rounded to whole seconds, omitting zero seconds after whole minutes.
+ * @param seconds - Non-negative finite duration, or null when the metric is unavailable.
+ * @example duration(65) // '1m 05s'
+ * @example duration(null) // '—'
+ */
+function duration(seconds: number | null): string {
+  if (seconds === null) return '—';
+
+  const rounded = Math.round(seconds);
+  if (rounded < 60) return `${rounded}s`;
+  const remaining = rounded % 60;
+  return `${Math.floor(rounded / 60)}m${remaining ? ` ${String(remaining).padStart(2, '0')}s` : ''}`;
 }
 
 // 6. Read-only CLI
@@ -342,7 +449,7 @@ export function renderReport(history: Run[], options: Options): string {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (options.help) console.log(HELP);
+    if (options.help) console.log(usage());
     else {
       const { stdout } = await execute('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
       console.log(renderReport(await collectHistory(stdout.trim(), options), options));

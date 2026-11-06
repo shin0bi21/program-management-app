@@ -9,6 +9,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
 }
 
+/**
+ * Renders a styled native button and forwards its ref and native attributes.
+ * Defaults to type="button"; form submission requires type="submit".
+ * @param props - Content, visual variant, size, optional full width, and native button attributes.
+ * @param ref - Receives the underlying button for focus or other DOM access.
+ * @example <Button type="submit" variant="primary" disabled={pending}>Save</Button>
+ */
 const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(function Button(
   {
     children,

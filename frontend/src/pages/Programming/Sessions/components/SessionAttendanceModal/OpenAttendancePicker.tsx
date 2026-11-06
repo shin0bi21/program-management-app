@@ -10,6 +10,13 @@ interface OpenAttendancePickerProps {
   onToggle: (youthId: string) => void;
 }
 
+/**
+ * Shows an open session's youth choices with search and incremental checkbox rendering.
+ * @param props.youth - Complete choices with unique youth IDs, including any saved attendees.
+ * @param props.selectedYouthIds - Youth marked present in the attendance draft.
+ * @param props.onToggle - Receives the activated youth ID; the caller updates selectedYouthIds.
+ * @example Searching "Person 60" finds that youth beyond the initial 25 choices without clearing other selections.
+ */
 export default function OpenAttendancePicker({
   youth,
   selectedYouthIds,

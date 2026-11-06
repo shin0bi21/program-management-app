@@ -10,10 +10,7 @@
  *   4. Read branch context and select checks with the shared CI policy
  *   5. Fingerprint content, classify paths, and inventory stashes
  *   6. Print a human-readable or JSON report; checks are not executed
- *
- * Usage:
- *   node scripts/reports/file-changes-report.ts
- *   node scripts/reports/file-changes-report.ts --json --base origin/develop
+ * See usage() for parameter details and examples.
  */
 
 // ============================================================================
@@ -81,17 +78,23 @@ interface Snapshot {
 }
 
 // ============================================================================
-// 3. CLI arguments
+// 3. CLI arguments — see usage() for commands, options, and defaults.
 // ============================================================================
 
+/**
+ * Supplies commands, options, and base-selection defaults for terminal help.
+ * @example usage().includes('--json') // true
+ */
 function usage(): string {
-  return `Usage: node scripts/reports/file-changes-report.ts [--json] [--base BASE_REF]
-
-Create a read-only snapshot of branch and working-tree changes.
+  return `Usage: npm run report:changes
+       npm run report:changes -- --json --base origin/develop
 
   --json           Print the complete machine-readable snapshot.
   --base BASE_REF  Compare against this revision instead of the default base.
-  -h, --help       Show this help.`;
+  -h, --help       Show this help.
+
+Base selection: --base, then INSPECT_CHANGES_BASE_REF, origin/develop, the remote default
+branch, then HEAD.`;
 }
 
 interface CliOptions {
@@ -100,6 +103,11 @@ interface CliOptions {
   help?: boolean;
 }
 
+/**
+ * Reads CLI tokens, rejecting unknown options and missing base revisions.
+ * @param args - Tokens after the executable and script path.
+ * @example parseArgs(['--json', '--base', 'HEAD']) // { json: true, baseRef: 'HEAD' }
+ */
 function parseArgs(args: string[]): CliOptions {
   const options: CliOptions = { json: false };
 
@@ -141,6 +149,14 @@ function parseArgs(args: string[]): CliOptions {
 // 4. Git access and comparison base
 // ============================================================================
 
+/**
+ * Runs Git synchronously in the requested repository; failed commands throw.
+ * @param repoRoot - Repository directory passed to Git's -C option.
+ * @param args - Git subcommand and arguments, passed without a shell.
+ * @param encoding - Text decoding, or 'buffer' to preserve binary output.
+ * @returns Captured stdout without trimming.
+ * @example git('/repo', ['branch', '--show-current']) // 'develop\n' on develop
+ */
 function git(repoRoot: string, args: string[], encoding: BufferEncoding | 'buffer' = 'utf8'): string | Buffer {
   return execFileSync('git', ['-C', repoRoot, ...args], {
     encoding: encoding === 'buffer' ? null : encoding,
@@ -148,10 +164,22 @@ function git(repoRoot: string, args: string[], encoding: BufferEncoding | 'buffe
   });
 }
 
+/**
+ * Reads trimmed Git output for metadata whose boundary whitespace is insignificant.
+ * @param repoRoot - Repository in which to run the command.
+ * @param args - Git subcommand and arguments; command failures propagate.
+ * @example gitText('/repo', ['branch', '--show-current']) // 'develop' on develop
+ */
 function gitText(repoRoot: string, args: string[]): string {
   return String(git(repoRoot, args)).trim();
 }
 
+/**
+ * Chooses the environment override, origin/develop, origin's default branch, or HEAD.
+ * @param repoRoot - Repository whose available remote references are inspected.
+ * @returns A revision name; the caller must validate the environment override.
+ * @example resolveDefaultBase('/repo') // 'HEAD' with no override or origin refs
+ */
 function resolveDefaultBase(repoRoot: string): string {
   if (process.env.INSPECT_CHANGES_BASE_REF) return process.env.INSPECT_CHANGES_BASE_REF;
 
@@ -169,6 +197,12 @@ function resolveDefaultBase(repoRoot: string): string {
   }
 }
 
+/**
+ * Rejects a comparison revision that cannot resolve to a commit.
+ * @param repoRoot - Repository containing the comparison history.
+ * @param baseRef - Git revision to validate; an invalid revision throws a descriptive error.
+ * @example assertBaseRef('/repo', 'HEAD') // returns normally in a repository with commits
+ */
 function assertBaseRef(repoRoot: string, baseRef: string): void {
   try {
     git(repoRoot, ['rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`]);
@@ -181,9 +215,13 @@ function assertBaseRef(repoRoot: string, baseRef: string): void {
 // 5. Changed-file parsing
 // ============================================================================
 
-// `git diff --name-status -z` emits status\0path\0; renames/copies emit
-// status\0originalPath\0path\0. NUL delimiters preserve spaces and newlines in names.
+/**
+ * Decodes changed paths and rename/copy sources without trimming filenames.
+ * @param output - Complete NUL-terminated output from git diff --name-status -z.
+ * @example parseDiffNameStatus('M\0docs/guide.md\0') // [{ path: 'docs/guide.md', status: 'M' }]
+ */
 function parseDiffNameStatus(output: string): BaseChange[] {
+  // Records are status\0path\0, or status\0originalPath\0path\0 for renames/copies.
   const fields = output.split('\0');
   const changes: BaseChange[] = [];
 
@@ -208,9 +246,13 @@ function parseDiffNameStatus(output: string): BaseChange[] {
   return changes;
 }
 
-// `git status --porcelain=v1 -z` emits "XY path\0": X is the staged
-// status, Y is the unstaged status, and "??" marks an untracked file.
+/**
+ * Decodes staged, unstaged, and untracked paths, retaining rename/copy sources.
+ * @param output - Complete NUL-terminated porcelain=v1 -z status output.
+ * @example parseWorkingTreeStatus('?? new.txt\0') // [{ path: 'new.txt', indexStatus: '?', worktreeStatus: '?' }]
+ */
 function parseWorkingTreeStatus(output: string): WorkingTreeChange[] {
+  // Records start with "XY path\0": X is staged, Y is unstaged, and ?? is untracked.
   const fields = output.split('\0');
   const changes: WorkingTreeChange[] = [];
 
@@ -245,6 +287,12 @@ function parseWorkingTreeStatus(output: string): WorkingTreeChange[] {
 // 6. Branch context
 // ============================================================================
 
+/**
+ * Reads the configured upstream and commit divergence from HEAD.
+ * @param repoRoot - Repository whose current branch is inspected.
+ * @returns Upstream name and commit counts, or three nulls when no upstream resolves.
+ * @example upstreamState('/repo') // { upstream: null, ahead: null, behind: null } without tracking
+ */
 function upstreamState(repoRoot: string): Pick<Snapshot['git'], 'upstream' | 'ahead' | 'behind'> {
   let upstream: string;
   try {
@@ -263,6 +311,15 @@ function upstreamState(repoRoot: string): Pick<Snapshot['git'], 'upstream' | 'ah
 // 7. Content fingerprint, path classifications, and stashes
 // ============================================================================
 
+/**
+ * Hashes tracked changes plus untracked contents, modes, link text, and affected paths.
+ * @param repoRoot - Repository containing the files; symlink targets are never read.
+ * @param baseCommit - Merge-base commit for the tracked binary diff.
+ * @param paths - Sorted affected paths, including rename sources.
+ * @param workingTreeChanges - Status records identifying untracked files to hash separately.
+ * @returns A sha256: digest; Git/read failures, escaping paths, and unsupported file types throw.
+ * @example fingerprint('/repo', 'HEAD', [], []) // stable sha256: digest for an unchanged workspace
+ */
 function fingerprint(
   repoRoot: string,
   baseCommit: string,
@@ -315,25 +372,47 @@ function fingerprint(
   return `sha256:${hash.digest('hex')}`;
 }
 
+/**
+ * Groups affected paths by their first matching repository area.
+ * @param paths - Repository-relative paths; their order is preserved within each group.
+ * @returns All category keys, including empty groups; database scripts belong to backend.
+ * @example classifyPaths(['frontend/src/App.tsx']).frontend // ['frontend/src/App.tsx']
+ */
 function classifyPaths(paths: string[]): Record<string, string[]> {
   const categories: Record<string, string[]> = {
     frontend: [], backend: [], migrations: [], skills: [], ci: [], documentation: [], tooling: [], other: [],
   };
 
   for (const path of paths) {
-    if (path.startsWith('backend/db/') && !path.startsWith('backend/db/scripts/')) categories.migrations.push(path);
-    else if (path.startsWith('frontend/')) categories.frontend.push(path);
-    else if (path.startsWith('backend/')) categories.backend.push(path);
-    else if (path.startsWith('.agents/skills/')) categories.skills.push(path);
-    else if (path.startsWith('.github/workflows/')) categories.ci.push(path);
-    else if (path.endsWith('.md')) categories.documentation.push(path);
-    else if (path.startsWith('scripts/')) categories.tooling.push(path);
-    else categories.other.push(path);
+    const isMigrationPath = path.startsWith('backend/db/') && !path.startsWith('backend/db/scripts/');
+
+    if (isMigrationPath) {
+      categories.migrations.push(path);
+    } else if (path.startsWith('frontend/')) {
+      categories.frontend.push(path);
+    } else if (path.startsWith('backend/')) {
+      categories.backend.push(path);
+    } else if (path.startsWith('.agents/skills/')) {
+      categories.skills.push(path);
+    } else if (path.startsWith('.github/workflows/')) {
+      categories.ci.push(path);
+    } else if (path.endsWith('.md')) {
+      categories.documentation.push(path);
+    } else if (path.startsWith('scripts/')) {
+      categories.tooling.push(path);
+    } else {
+      categories.other.push(path);
+    }
   }
 
   return categories;
 }
 
+/**
+ * Lists local stash references and descriptions without changing any stash.
+ * @param repoRoot - Repository whose stash reflog is inspected; Git failures propagate.
+ * @example stashInventory('/repo') // [] when no stashes exist
+ */
 function stashInventory(repoRoot: string): StashEntry[] {
   const output = gitText(repoRoot, ['stash', 'list', '--format=%gd%x09%gs']);
   if (!output) return [];
@@ -348,6 +427,13 @@ function stashInventory(repoRoot: string): StashEntry[] {
 // 8. Snapshot workflow
 // ============================================================================
 
+/**
+ * Collects branch and workspace changes, fingerprints, and suggested checks without running them.
+ * Requires an existing HEAD and a comparison base with a common ancestor; Git and file errors propagate.
+ * @param options - repoRoot selects the repository (default: this checkout); baseRef overrides default base selection.
+ * @returns A read-only inventory of paths, branch context, check selection, and stashes.
+ * @example inspectChanges({ repoRoot: '/repo', baseRef: 'HEAD' }).changes.paths // [] in a clean checkout
+ */
 export function inspectChanges({
   repoRoot = DEFAULT_REPO_ROOT,
   baseRef,
@@ -414,6 +500,11 @@ export function inspectChanges({
 // 9. Report output and CLI workflow
 // ============================================================================
 
+/**
+ * Formats a snapshot as terminal lines with paths, selected commands, and stash count.
+ * @param snapshot - Completed inspection result; stash descriptions remain available in JSON only.
+ * @example formatHuman(snapshot).includes('Changed paths: 0') // true for a clean snapshot
+ */
 function formatHuman(snapshot: Snapshot): string {
   const lines = [
     `Branch: ${snapshot.git.branch ?? '(detached HEAD)'}`,
@@ -433,6 +524,10 @@ function formatHuman(snapshot: Snapshot): string {
   return lines.join('\n');
 }
 
+/**
+ * Prints help or an inspection report using process arguments; errors reach the entrypoint.
+ * @example main() // with --help, prints usage without inspecting Git
+ */
 function main(): void {
   // Step 1. Validate CLI arguments and handle help.
   const options = parseArgs(process.argv.slice(2));

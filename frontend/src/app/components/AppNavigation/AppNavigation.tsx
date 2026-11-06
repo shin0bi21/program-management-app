@@ -7,6 +7,11 @@ import FloatingMenuPanel from '../../../common/components/FloatingMenu/FloatingM
 import { useAppNavigation } from './useAppNavigation';
 import './AppNavigation.css';
 
+/**
+ * Displays the sidebar and mobile menu with destinations allowed by the user's read permissions.
+ * Requires auth and router providers. The logo opens the public homepage; Login/Logout appear in the footer.
+ * @example A user with read:sessions sees Programming → Sessions on desktop and mobile.
+ */
 export default function AppNavigation() {
   const navigation = useAppNavigation();
   const {
@@ -43,7 +48,7 @@ export default function AppNavigation() {
           className="mobile-topbar-toggle"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen(o => !o)}
+          onClick={() => setMobileOpen(open => !open)}
         >
           <FontAwesomeIcon icon={mobileOpen ? faChevronLeft : faBars} />
         </button>
@@ -188,16 +193,58 @@ export default function AppNavigation() {
       )}
 
       {canViewStaff && menus.staff.position && (
-        <FloatingMenuPanel menuRef={menus.staff.menuRef} position={menus.staff.position} onClose={menus.staff.close} className="settings-flyout">
-          {canViewHours && <button role="menuitem" onClick={() => go('/staff/hours')} className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}>Hours</button>}
-          {canViewTasks && <button role="menuitem" onClick={() => go('/staff/tasks')} className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}>Tasks</button>}
+        <FloatingMenuPanel
+          menuRef={menus.staff.menuRef}
+          position={menus.staff.position}
+          onClose={menus.staff.close}
+          className="settings-flyout"
+        >
+          {canViewHours && (
+            <button
+              role="menuitem"
+              onClick={() => go('/staff/hours')}
+              className={`settings-flyout-item${isActive('/staff/hours') ? ' active' : ''}`}
+            >
+              Hours
+            </button>
+          )}
+          {canViewTasks && (
+            <button
+              role="menuitem"
+              onClick={() => go('/staff/tasks')}
+              className={`settings-flyout-item${isActive('/staff/tasks') ? ' active' : ''}`}
+            >
+              Tasks
+            </button>
+          )}
         </FloatingMenuPanel>
       )}
 
       {canViewProgramming && menus.programming.position && (
-        <FloatingMenuPanel menuRef={menus.programming.menuRef} position={menus.programming.position} onClose={menus.programming.close} className="settings-flyout">
-          {canViewPrograms && <button role="menuitem" onClick={() => go('/programming/programs')} className={`settings-flyout-item${isActive('/programming/programs') ? ' active' : ''}`}>Programs</button>}
-          {canViewSessions && <button role="menuitem" onClick={() => go('/programming/sessions')} className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}>Sessions</button>}
+        <FloatingMenuPanel
+          menuRef={menus.programming.menuRef}
+          position={menus.programming.position}
+          onClose={menus.programming.close}
+          className="settings-flyout"
+        >
+          {canViewPrograms && (
+            <button
+              role="menuitem"
+              onClick={() => go('/programming/programs')}
+              className={`settings-flyout-item${isActive('/programming/programs') ? ' active' : ''}`}
+            >
+              Programs
+            </button>
+          )}
+          {canViewSessions && (
+            <button
+              role="menuitem"
+              onClick={() => go('/programming/sessions')}
+              className={`settings-flyout-item${isActive('/programming/sessions') ? ' active' : ''}`}
+            >
+              Sessions
+            </button>
+          )}
         </FloatingMenuPanel>
       )}
 

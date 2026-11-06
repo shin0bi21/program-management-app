@@ -26,11 +26,12 @@ The [email transport](../../../backend/src/utils/emailService.ts) uses Gmail wit
 Read any terminal error, then run this on Lightsail with Node 24 available:
 
 ```bash
-node scripts/reports/log-report.ts --docker backend --since 5m --context 0
+node scripts/reports/log-report.ts --docker --production backend --since 5m --context 0
 ```
 
 Use the SMTP error and request ID to check the sending account and credentials
-before retrying. See [Log Report](../../workflows/delivery/reports.md#log-report) for more options.
+before retrying. See the [log report usage](../../../scripts/reports/log-report.ts)
+or run `node scripts/reports/log-report.ts --help` for more options.
 
 If health checks pass but email still fails, investigate the SMTP error rather
 than repeatedly recreating containers. Restore a previous credential only if it

@@ -70,6 +70,13 @@ type RowComponent = <TRow, TItemData>(
   props: RowProps<TRow, TItemData>,
 ) => ReactNode;
 
+/**
+ * Displays one resource's date cells and items, stacking overlapping items in separate lanes.
+ * @param props.row - Resource being displayed, such as one staff member.
+ * @param props.periods - Visible date columns ordered by keys comparable with the inclusive item range keys.
+ * @param props.items - Records assigned to this resource, including their complete date ranges.
+ * @example A two-day item renders once across two columns and appears in both cell contexts.
+ */
 const Row = memo(function Row<TRow, TItemData>(props: RowProps<TRow, TItemData>) {
   const {
     // Row layout
@@ -84,6 +91,11 @@ const Row = memo(function Row<TRow, TItemData>(props: RowProps<TRow, TItemData>)
     // Cell actions
     onCellClick, getCellActions,
   } = props;
+
+  /**
+   * Selects this resource when an item in an unselected row is clicked.
+   * @example Clicking an item in another staff row emits onRowSelect(row, 'item').
+   */
   const selectRow = () => {
     if (!selected) onRowSelect?.(row, 'item');
   };
@@ -138,9 +150,9 @@ const Row = memo(function Row<TRow, TItemData>(props: RowProps<TRow, TItemData>)
 export default Row;
 
 /**
- * Produces one context per visible period, including every item covering that period.
- * Requires: positioned-item indices refer to the supplied visible periods.
- * Example: an item spanning Aug 19–20 appears in both the Aug 19 and Aug 20 cell contexts.
+ * Supplies each visible date cell with its resource and the items occupying that date.
+ * positionedItems must use indices from the supplied periods.
+ * @example An Aug 19–20 task appears in the item lists for both date cells.
  */
 function buildCellContexts<TRow, TItemData>(
   row: TRow,
@@ -159,10 +171,9 @@ function buildCellContexts<TRow, TItemData>(
 }
 
 /**
- * Produces item contexts containing row-calculated layout and callbacks to the calendar.
- * Requires: positioned-item indices refer to the supplied visible periods.
- * Example: an item starting before the visible periods keeps its original start
- * and reports startsInWindow=false, so Item omits its start resize handle.
+ * Supplies each visible item with its position, permitted interactions, and original record.
+ * positionedItems must use indices from the supplied periods.
+ * @example A task starting offscreen keeps its actual start date but has no visible start handle.
  */
 function buildRowItems<TRow, TItemData>(
   positionedItems: readonly PositionedItem<TItemData>[],
@@ -226,9 +237,10 @@ function buildRowItems<TRow, TItemData>(
 }
 
 /**
- * Produces grid placement and lane spacing within the fixed row height.
- * Requires: laneCount > 0 and 0 <= lane < laneCount.
- * Example: normal density, lane 0, and startIndex = endIndex = 0 produce
+ * Calculates an item's date columns, vertical offset, and height within its overlap lane.
+ * laneCount must be positive and lane must identify one of those lanes.
+ * @param rowHeight - Row height in pixels, used to divide compact and dense lanes.
+ * @example Normal density, lane 0, and startIndex = endIndex = 0 produce
  * gridColumn "3 / 4", top 8, and height 26.
  */
 function getItemStyle<TItemData>(

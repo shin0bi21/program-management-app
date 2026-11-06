@@ -25,9 +25,24 @@ interface UseDataBufferOptions<TItem> {
 }
 
 /**
- * Connects a range-backed calendar buffer to React state and mutation callbacks.
- * Requires `getItemId` to return a stable ID; call `initialize` with the rendered periods.
- * Example: `const { items, initialize } = useDataBuffer({ load, getItemId });`.
+ * Supplies calendar items for the rendered range, initially loading 42 extra periods
+ * on each side. Loads 21 more when the remaining margin falls to 21 periods.
+ * Call initialize with ordered, contiguous rendered periods. Loading callbacks return
+ * immediately; failures become error/retry state, and unmount aborts pending loads.
+ * @param options.load - Latest committed loader for authoritative inclusive ranges,
+ * grouped by row and period; omitted items are removed from the requested range.
+ * Forward its signal to the request and treat supplied snapshots as immutable.
+ * @param options.errorMessage - Fallback when a failure supplies no message.
+ * @param options.getItemId - Stable, globally unique identity across loads and edits, e.g. task.id.
+ * @param options.getItemRange - Ordered first and last period keys occupied by an item,
+ * both included. Keep its presence and range semantics unchanged while mounted.
+ * @param options.initialData - Seed snapshot read once for this mount; loading still runs.
+ * @param options.adapter - How periods are counted and shifted; defaults to calendar days.
+ * @param options.maxRetainedPeriods - Limit on periods kept in memory (250 by default).
+ * Must fit the initial rendered range plus its 84 extra periods.
+ * @returns Immutable buffered data by row/period, ID-deduplicated items by row,
+ * the first outstanding failure message (or null), and loading/retry/update/delete callbacks.
+ * @example A 10-day rendered range initially requests 94 days of data.
  */
 export function useDataBuffer<TItem>({
   initialData = {},
@@ -59,6 +74,10 @@ export function useDataBuffer<TItem>({
   const getItemIdRef = useRef(getItemId);
   const getItemRangeRef = useRef(getItemRange);
 
+  /**
+   * Makes future buffer calls use callbacks and fallback text from the committed render.
+   * @example After a filter change commits, the next reset uses the new loader.
+   */
   useLayoutEffect(function updateCallbacks() {
     errorMessageRef.current = errorMessage;
     loadRef.current = load;
@@ -66,6 +85,11 @@ export function useDataBuffer<TItem>({
     getItemRangeRef.current = getItemRange;
   }, [load, getItemId, getItemRange, errorMessage]);
 
+  /**
+   * Creates the calendar's data cache on first use, then reuses it until lifecycle cleanup.
+   * @returns The live buffer using mount-time configuration and committed callbacks.
+   * @example The first initialize call creates a buffer; later edge loads reuse it.
+   */
   const getBuffer = useCallback(() => {
     // Create the buffer on first use.
     if (!bufferRef.current) {
@@ -81,7 +105,13 @@ export function useDataBuffer<TItem>({
     return bufferRef.current;
   }, []);
 
-  /** Runs a buffer load, ignores stale results, and preserves errors from other loads. */
+  /**
+   * Runs a load and records its failure unless its error state was superseded or the calendar closed.
+   * @param key - Independent failure/retry slot for initialization, an edge, or reset.
+   * @param loadPeriods - Operation to run now and retain for retry if it fails.
+   * @returns Completion after handling any operation rejection; only current loads update error state.
+   * @example A successful right-edge load does not hide an outstanding left-edge failure.
+   */
   const loadBuffer = useCallback(async function loadBuffer(
     key: BufferLoadKey,
     loadPeriods: () => Promise<void>,
@@ -129,18 +159,34 @@ export function useDataBuffer<TItem>({
   }, []);
 
   // Calendar events request the initial range, additional periods, or a replacement window.
-  /** Loads the initial window while sharing any in-flight initialization. */
+  /**
+   * Starts loading around the calendar's first rendered dates, reusing an already pending initial load.
+   * @param periods - Ordered contiguous rendered periods; empty input performs no load.
+   * @example Replaying mount effects restarts an interrupted initialization of these periods.
+   */
   const initialize = useCallback((periods: readonly CalendarPeriod[]) => {
     initialPeriodsRef.current = periods;
     void loadBuffer('initial', () => getBuffer().initialize(periods));
   }, [getBuffer, loadBuffer]);
 
+  /**
+   * Loads more calendar items as scrolling exposes new dates on either side.
+   * @param periods - Ordered contiguous new periods at the indicated edge; empty input is ignored.
+   * @param direction - Edge whose rendered boundary changed.
+   * @example Scrolling right near the last loaded date fetches more future items.
+   */
   const onPeriodsBuilt = useCallback((periods: readonly CalendarPeriod[], direction: 'left' | 'right') => {
     if (!periods.length) return;
 
     void loadBuffer(direction, () => getBuffer().periodsBuilt(periods, direction));
   }, [getBuffer, loadBuffer]);
 
+  /**
+   * Starts loading around a new displayed range and discards earlier range failure state.
+   * Existing data remains visible until replacement loading publishes a snapshot.
+   * @param periods - Ordered contiguous replacement window; empty input is ignored.
+   * @example Jumping to a distant date discards previous edge failures before loading its window.
+   */
   const reset = useCallback((periods: readonly CalendarPeriod[]) => {
     if (!periods.length) return;
 
@@ -153,7 +199,11 @@ export function useDataBuffer<TItem>({
     void loadBuffer('reset', () => getBuffer().reset(periods));
   }, [getBuffer, loadBuffer]);
 
-  /** Retries every failed edge so one successful load cannot hide another failed range. */
+  /**
+   * Retries every failed range load, including failures on both sides of the calendar.
+   * Starts each retained operation without awaiting it; error clears as failures recover.
+   * @example Failed left and right loads are both retried by one page Retry action.
+   */
   const retry = useCallback(() => {
     for (const [key, failure] of failuresRef.current) {
       void loadBuffer(key, failure.loadPeriods);
@@ -161,13 +211,24 @@ export function useDataBuffer<TItem>({
   }, [loadBuffer]);
 
   // Reconcile saved changes with cached data so pending reads cannot undo them.
+  /**
+   * Adds or replaces a saved item immediately and records an override for pending range reads.
+   * @param rowId - Destination resource, e.g. a staff ID.
+   * @param periodKey - Destination period bucket in the adapter's key format.
+   * @param item - Complete saved backend record with the same stable ID as any previous placement.
+   * @example Moving task-1 updates its destination row while a previous range read is pending.
+   */
   const upsertItem = useCallback((rowId: string, periodKey: string, item: TItem) => {
     if (!activeRef.current) return;
 
     getBuffer().upsertItem(rowId, periodKey, item);
   }, [getBuffer]);
 
-  /** Retains a delete override until later loads acknowledge it. */
+  /**
+   * Removes a deleted item immediately and records a delete override for range reconciliation.
+   * @param itemId - Stable ID of the confirmed deleted record, including one absent from the cache.
+   * @example A late response containing deleted task-1 cannot restore it to the calendar.
+   */
   const removeItem = useCallback((itemId: string) => {
     if (!activeRef.current) return;
 
@@ -175,6 +236,11 @@ export function useDataBuffer<TItem>({
   }, [getBuffer]);
 
   // Own cancellation and cleanup independently of the calendar event handlers.
+  /**
+   * Keeps one active buffer per effect lifetime and restarts remembered initialization on replay.
+   * @returns Cleanup that invalidates error completions, aborts loads, and discards the buffer.
+   * @example StrictMode cleanup aborts the first load; effect replay starts a fresh buffer.
+   */
   useLayoutEffect(function manageBufferLifecycle() {
     const failures = failuresRef.current;
     const loadRevisions = loadRevisionsRef.current;
@@ -211,7 +277,13 @@ export function useDataBuffer<TItem>({
   };
 }
 
-/** Flatten each row's buffered periods into ID-deduplicated items. */
+/**
+ * Flattens each row's buffered periods by stable ID; later occurrences win within a row.
+ * @param data - Immutable row/period buckets; empty rows are retained.
+ * @param getItemId - Stable record identity used to collapse repeated period placements.
+ * @returns One array per row, ordered by first ID encounter, with each ID's last encountered record.
+ * @example A row with [{ id: 'a', value: 1 }] then [{ id: 'a', value: 2 }] yields [{ id: 'a', value: 2 }].
+ */
 function getItems<TItem>(
   data: RowPeriodData<TItem>,
   getItemId: (item: TItem) => string,

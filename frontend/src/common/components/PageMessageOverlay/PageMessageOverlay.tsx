@@ -19,6 +19,15 @@ interface PageMessageOverlayProps {
   messages: readonly PageMessageValue[];
 }
 
+/**
+ * Displays page errors and warnings with optional actions such as Retry or Refresh.
+ * @param props.messages - Message text, detailed messages, or groups from different page areas.
+ * Empty entries are ignored; the first item for each text/severity pair wins. The group
+ * announces as an alert if any error is present, otherwise as status. Dismissal tracks
+ * severity, text, details, and action labels; clearing all messages resets it. Callers
+ * supply user-facing copy and handle action requests, failures, and pending state.
+ * @example <PageMessageOverlay messages={[loadError, { message: 'Order changed', severity: 'warning', action: refreshAction }]} />
+ */
 export default function PageMessageOverlay({ messages }: PageMessageOverlayProps) {
   const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
   const visibleMessages = useMemo(() => {
@@ -26,9 +35,15 @@ export default function PageMessageOverlay({ messages }: PageMessageOverlayProps
     for (const value of messages) {
       if (!value) continue;
 
-      const group: readonly PageMessageItem[] = typeof value === 'string'
-        ? [{ message: value }]
-        : 'message' in value ? [value] : value;
+      let group: readonly PageMessageItem[];
+      if (typeof value === 'string') {
+        group = [{ message: value }];
+      } else if ('message' in value) {
+        group = [value];
+      } else {
+        group = value;
+      }
+
       for (const item of group) {
         if (!item.message) continue;
         const severity = item.severity ?? 'error';
@@ -37,6 +52,7 @@ export default function PageMessageOverlay({ messages }: PageMessageOverlayProps
         }
       }
     }
+
     return items;
   }, [messages]);
   const signature = visibleMessages.length ? JSON.stringify(visibleMessages.map(item => [
@@ -65,6 +81,11 @@ export default function PageMessageOverlay({ messages }: PageMessageOverlayProps
   </div>;
 }
 
+/**
+ * Renders one message's text, optional expandable details, and controlled action.
+ * @param item - A message whose action callback and disabled state are controlled by the caller.
+ * @example An item with action { label: 'Retry', onClick: retry } displays a Retry button.
+ */
 function MessageContent({ item }: { item: PageMessageItem }) {
   return <div className={`page-message-overlay__content page-message-overlay__content--${item.severity ?? 'error'}`}>
     <div>

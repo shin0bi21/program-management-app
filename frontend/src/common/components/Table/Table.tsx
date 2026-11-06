@@ -16,6 +16,13 @@ import './Table.css';
 const EMPTY_KEYS: string[] = [];
 const EMPTY_WIDTHS: Record<string, number> = {};
 
+/**
+ * Displays records in columns with optional row selection, sorting controls, and column resizing.
+ * Sorting and pagination callbacks request data changes; this component does not fetch or sort records.
+ * @param props.columns - Flat columns with stable IDs and string headers; grouped columns are rejected.
+ * @param props.keyExtractor - Supplies unique, stable record keys for selection and row identity.
+ * @example Two task records and Name/Status columns produce two rows with each task's name and status.
+ */
 export default function Table<T>({
   ariaLabel,
   columns,
@@ -42,17 +49,25 @@ export default function Table<T>({
   onColumnWidthsChange,
   hiddenColumnKeys = EMPTY_KEYS,
 }: TableProps<T>) {
+  /**
+   * Commits visible widths together with retained, resizable hidden-column widths.
+   * @param nextWidths - Replacement visible-column widths in CSS pixels; omitted visible widths reset.
+   * @example Resizing Name while Notes is hidden preserves the saved Notes width.
+   */
   const updateVisibleColumnWidths = useCallback((nextWidths: Record<string, number>) => {
     if (!onColumnWidthsChange) return;
 
     const hiddenWidths = Object.fromEntries(columns.flatMap((column) => {
       const key = getTableColumnId(column);
       if (column.enableResizing === false || !hiddenColumnKeys.includes(key)) return [];
+
       const width = columnWidths[key];
       return Number.isFinite(width) ? [[key, clampColumnWidth(width)]] : [];
     }));
+
     onColumnWidthsChange({ ...hiddenWidths, ...nextWidths });
   }, [columnWidths, columns, hiddenColumnKeys, onColumnWidthsChange]);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
   useLayoutEffect(() => {
@@ -94,8 +109,15 @@ export default function Table<T>({
     columnWidths,
     onColumnWidthsChange: onColumnWidthsChange ? updateVisibleColumnWidths : undefined,
   });
+  /**
+   * Captures fractional rendered widths at gesture start without persisting them yet.
+   * @returns Resizable-column widths in CSS pixels, retaining hidden preferences; undefined
+   * without a controlled width callback or mounted table wrapper.
+   * @example A 180.5px header remains 180.5px in the captured resize baseline.
+   */
   const lockRenderedColumnWidths = useCallback(() => {
     if (!onColumnWidthsChange) return undefined;
+
     const headerCells = wrapperRef.current?.querySelectorAll<HTMLTableCellElement>('thead th');
     if (!headerCells) return undefined;
 

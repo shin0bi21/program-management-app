@@ -27,8 +27,19 @@ type CalendarInteractionState<TRow, TItemData> = ItemInteractionState<TRow, TIte
   & { periods: readonly CalendarPeriod[] };
 
 /**
- * Composes virtual rows/periods, shared pointer coordination, and controlled calendar callbacks.
- * Example: an Item reports a move through Row; the page applies it and supplies updated records.
+ * Displays items across date columns and resource rows, rendering only the nearby rows/columns.
+ * Initial position is read once on mount; callers own item updates and handle rejected save requests.
+ * @param props.rows - Resources shown down the calendar, such as staff members or programs.
+ * @param props.items - Calendar records grouped by resource row ID, such as each staff member's tasks.
+ * @param props.getItemRange - First and last periods occupied by a record, both included.
+ * @param props.buildItem - Renders a record; pass its calendar argument to the shared Item component.
+ * @param props.dateRange - Earliest/latest dates the user may navigate to; both included.
+ * @param props.periodDefinition - Builds a nonempty chronological window containing the restored or initial anchor; dateRange always builds days.
+ * @param props.positionStorageKey - Browser storage key for remembering scroll position.
+ * @param props.onRowSelect - Reports the selected resource and whether a row header or item selected it.
+ * @param props.onItemMove - Saves an item's new date range and destination resource.
+ * @param props.onItemResize - Saves an item's changed start or end date.
+ * @example With staff rows and task items, a May 1–3 task spans three day columns in its assignee's row.
  */
 export default function TimelineCalendar<TRow, TItemData>({
   // Grid layout and accessibility
@@ -135,18 +146,30 @@ export default function TimelineCalendar<TRow, TItemData>({
     isClickSuppressed: pointer.isClickSuppressed,
   };
 
-  /** Relays a completed move using the latest committed page callback. */
+  /**
+   * Sends a completed move to the latest committed save callback without awaiting completion.
+   * @param context - Original item and range, destination row, and requested inclusive range; the callback handles failures.
+   * @example A session surviving Item unmount still invokes the current page move action.
+   */
   function reportItemMove(context: ItemMoveContext<TRow, TItemData>): void {
     void interactionState.current.onItemMove?.(context);
   }
 
-  /** Relays a completed resize using the latest committed page callback. */
+  /**
+   * Sends a completed resize to the latest committed save callback without awaiting completion.
+   * @param context - Original item and range, changed edge, and requested inclusive range; the callback handles failures.
+   * @example Resizing a task reports its changed range to the latest task action owner.
+   */
   function reportItemResize(context: ItemResizeContext<TRow, TItemData>): void {
     void interactionState.current.onItemResize?.(context);
   }
 
   const navigationHandler = navigateDate ?? periodDefinition.navigate;
-  /** Advances the navigation anchor and scrolls to the resulting date. */
+  /**
+   * Advances and clamps the navigation anchor before scrolling; no handler means no action.
+   * @param direction - Whether to request the preceding or following date from the configured navigation handler.
+   * @example Navigating beyond an applied May 1–3 range stops at May 3.
+   */
   function navigateCalendar(direction: 'previous' | 'next'): void {
     if (!navigationHandler) return;
 
@@ -158,7 +181,10 @@ export default function TimelineCalendar<TRow, TItemData>({
     goToDate(nextAnchor);
   }
 
-  /** Navigates with a fresh current date when the user invokes Today. */
+  /**
+   * Refreshes the clock and navigates only when today belongs to the built period range.
+   * @example Today outside the selected cycle bounds leaves the viewport unchanged.
+   */
   function goToToday(): void {
     const today = refreshDate();
     if (today < allPeriods[0].start || today >= allPeriods[allPeriods.length - 1].end) return;
@@ -226,9 +252,11 @@ export default function TimelineCalendar<TRow, TItemData>({
 }
 
 /**
- * Clamps a navigation date to an applied inclusive date range.
- * Requires: dateRange, when supplied, contains valid ordered calendar dates.
- * Example: May 4 within a May 1–3 range becomes local midnight on May 3.
+ * Keeps a requested navigation date within the calendar's allowed dates.
+ * @param date - Date the user is trying to navigate to.
+ * @param dateRange - Valid ordered earliest/latest dates, both included; omit to leave date unchanged.
+ * @returns The original date when no bounds apply, or a new date clamped between local-midnight boundaries.
+ * @example Navigating to May 4 with May 1–3 bounds returns local midnight on May 3.
  */
 function getBoundedDate(date: Date, dateRange?: DateRange): Date {
   if (!dateRange) return date;

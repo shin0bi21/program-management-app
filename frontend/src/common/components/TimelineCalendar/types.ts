@@ -3,14 +3,18 @@ import type { CSSProperties, MutableRefObject, ReactNode, RefObject } from 'reac
 import type { StartPointerSession } from './hooks/usePointerSession/usePointerSession';
 
 // Periods and item ranges
+/** Chronologically sortable key shared by periods and item ranges, e.g. '2026-08-19'. */
 export type PeriodKey = string;
 
+/** One column's half-open time interval: start is included, end is excluded. */
 export interface CalendarPeriod {
   key: PeriodKey;
   start: Date;
+  /** Exclusive timestamp boundary; item range keys below instead have inclusive ends. */
   end: Date;
 }
 
+/** Ordered inclusive period keys: a one-period item has identical start and end keys. */
 export interface ItemRange {
   start: PeriodKey;
   end: PeriodKey;
@@ -20,6 +24,7 @@ export interface ItemRange {
 export type ItemDensity = 'normal' | 'compact' | 'dense';
 export type ResizeEdge = 'start' | 'end';
 
+/** Original item endpoints plus placement clipped to the rendered period window. */
 export interface ItemLayout {
   // Identity and original range
   id: string;
@@ -66,6 +71,10 @@ export interface ItemCapabilityContext<TRow, TItemData> {
 
 export type ItemActivateContext<TRow, TItemData> = ItemCapabilityContext<TRow, TItemData>;
 
+/**
+ * Per-item opt-ins, disabled when omitted; the corresponding save callback must also exist.
+ * Moving additionally requires both endpoints in the rendered window; resizing exposes only visible endpoints.
+ */
 export interface ItemCapabilities {
   draggable?: boolean;
   resizable?: boolean;
@@ -83,8 +92,10 @@ export interface ItemInteractionState<TRow, TItemData> {
   readonly canItemMove?: (context: ItemMoveContext<TRow, TItemData>) => boolean;
 }
 
+/** Calendar-owned committed state read at completion, even if the initiating Item has unmounted. */
 export type ItemStateRef<TRow, TItemData> = Readonly<MutableRefObject<ItemInteractionState<TRow, TItemData>>>;
 
+/** Placement and bound interaction callbacks forwarded unchanged from buildItem to the shared Item shell. */
 export interface ItemCalendarProps<TRow = unknown, TItemData = unknown> {
   // Placement and source record
   layout: ItemLayout;
@@ -106,12 +117,17 @@ export interface ItemCalendarProps<TRow = unknown, TItemData = unknown> {
 export interface ItemEnvironment {
   // Viewport geometry
   viewportRef: RefObject<HTMLElement | null>;
+  /** Complete chronological period window, including columns outside the rendered slice. */
   getPeriods: () => readonly CalendarPeriod[];
+  /** Column width in CSS pixels. */
   periodWidth: number;
+  /** Sticky row-header width in CSS pixels, excluded from timeline hit testing. */
   coveredLeftWidth: number;
 
   // Autoscroll
+  /** Edge-zone depth in CSS pixels; must be positive. */
   dragEdgeSize: number;
+  /** Maximum CSS pixels scrolled per animation frame; must be at least 2. */
   dragScrollSpeed: number;
 
   // Shared pointer coordination
@@ -121,6 +137,10 @@ export interface ItemEnvironment {
 }
 
 // Period construction
+/**
+ * Builds a nonempty chronological window with unique, sortable keys containing the requested anchor.
+ * count is a number of columns; start/end dates locate each column for navigation and hit testing.
+ */
 export interface PeriodDefinition {
   navigate?: (anchor: Date, direction: 'previous' | 'next') => Date;
   buildInitial: (anchor: Date, count: number) => CalendarPeriod[];
@@ -128,9 +148,15 @@ export interface PeriodDefinition {
 }
 
 // Row data and rendering contexts
+/** Row ID → period key → buffered records; repeated records are deduplicated by item ID within each row. */
 export type RowPeriodData<TItemData> = Record<string, Record<PeriodKey, readonly TItemData[]>>;
+/** Row ID → source records; an absent row entry renders as empty. */
 export type RowItemData<TItemData> = Record<string, readonly TItemData[] | undefined>;
 
+/**
+ * Supplies an original record and inclusive range with its first/last rendered columns.
+ * For an Aug 18–20 item in an Aug 19–21 window, range starts Aug 18 and visibleStart is Aug 19.
+ */
 export interface BuildItemContext<TRow, TItemData> {
   // Source record
   row: TRow;
@@ -140,6 +166,7 @@ export interface BuildItemContext<TRow, TItemData> {
   // Visible placement and interactions
   visibleStart: CalendarPeriod;
   visibleEnd: CalendarPeriod;
+  /** Forward to the domain item's shared Item shell; this is data/callbacks, not an instance API. */
   calendar: ItemCalendarProps<TRow, TItemData>;
 }
 
@@ -163,9 +190,14 @@ export interface CalendarCellAction {
 }
 
 // Public calendar props
+/**
+ * Resource rows and their source records; callers own persisted changes and controlled row selection.
+ * Move/resize promises are not awaited: callbacks must handle save failures and reconcile items themselves.
+ */
 export interface TimelineCalendarProps<TRow, TItemData> {
   // Grid layout and accessibility
   ariaLabel?: string;
+  /** Fixed row height in CSS pixels. */
   rowHeight?: number;
   overscanRows?: number;
 
@@ -202,10 +234,13 @@ export interface TimelineCalendarProps<TRow, TItemData> {
 
   // Item interactions
   onItemActivate?: (context: ItemActivateContext<TRow, TItemData>) => void;
+  /** Final drop check against the current destination row; false discards the move without saving. */
   canItemMove?: (context: ItemMoveContext<TRow, TItemData>) => boolean;
   onItemMove?: (context: ItemMoveContext<TRow, TItemData>) => void | Promise<void>;
   onItemResize?: (context: ItemResizeContext<TRow, TItemData>) => void | Promise<void>;
+  /** Positive edge-zone depth in CSS pixels. */
   dragEdgeSize?: number;
+  /** Maximum CSS pixels scrolled per animation frame, at least 2. */
   dragScrollSpeed?: number;
 
   // Cell actions

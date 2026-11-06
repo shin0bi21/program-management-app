@@ -11,6 +11,15 @@ interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
   onClear: () => void;
 }
 
+/**
+ * Displays a controlled search field with Clear and an optional Search button.
+ * The caller owns draft and applied text; Clear invokes onClear and then focuses the input.
+ * @param props.value - Text currently being edited.
+ * @param props.appliedValue - Search currently used by results, which may differ from the edited text.
+ * @param props.onApply - Applies the text on Search/Enter; omit for search-as-you-type controls.
+ * @param props.onClear - Resets the caller's draft and applied search values.
+ * @example With value="" and appliedValue="Maya", Clear stays enabled to remove the applied search.
+ */
 export default function SearchInput({
   label,
   appliedValue,
@@ -25,6 +34,10 @@ export default function SearchInput({
 }: SearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Runs the caller's key handler before applying Enter without submitting a parent form.
+   * @example A prevented Enter skips onApply; an unhandled Enter invokes it when supplied.
+   */
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     onKeyDown?.(event);
     if (event.defaultPrevented) return;

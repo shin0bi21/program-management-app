@@ -12,6 +12,7 @@ export interface PageSearchControls {
 }
 
 interface PageControlGroups {
+  /** Whether saved page inputs have finished restoring; false keeps controls and data views unmounted. */
   ready: boolean;
   search?: PageSearchControls;
   filters?: {

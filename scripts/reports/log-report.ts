@@ -2,9 +2,15 @@
 
 /**
  * LOG REPORT — isolate and group problems from Docker, files, or pasted logs.
- * Flow: validate options → read logs → select entries → group and report context.
+ *
+ * Flow (see main()):
+ *   1. Validate arguments and select the log source
+ *   2. Read Docker logs, files, or stdin
+ *   3. Classify entries and apply text/category filters
+ *   4. Group matching failures and print their details and context
+ *
  * Read-only: Docker input reads the selected Compose stack without changing it.
- * Usage: npm run report:logs -- --docker backend --since 5m --match TypeError
+ * See usage() for parameter details and examples.
  */
 
 // 1. Imports and report contracts
@@ -18,6 +24,7 @@ const REPO_ROOT = resolve(import.meta.dirname, '../..');
 const CATEGORIES = ['HTTP failures', 'Errors', 'Warnings', 'Application frames', 'Matches'] as const;
 type Category = typeof CATEGORIES[number];
 
+/** One complete capture; name labels locations and supplies the source outside Compose logs. */
 interface LogInput {
   name: string;
   text: string;
@@ -26,10 +33,12 @@ interface LogInput {
 export interface ReportOptions {
   docker: boolean;
   stack: 'development' | 'production' | null;
+  /** Compose service names with docker enabled; otherwise file paths relative to the caller. */
   sources: string[];
   since: string | null;
   match: string | null;
   type: 'error' | 'warning' | 'http' | 'frame' | null;
+  /** Non-negative safe integer counting neighboring capture lines on each side. */
   context: number;
   help: boolean;
 }
@@ -65,34 +74,33 @@ interface LogEvent extends ClassifiedEntry {
 
 // 2. CLI arguments
 
-/** Returns CLI usage and examples without reading logs. @example usage().includes("--docker") // true */
+/** Supplies CLI options and examples. @example usage().includes("--help") // true */
 function usage(): string {
-  return `Usage: npm run report:logs -- [options] [LOG_FILE ...]
-       npm run report:logs -- --docker [SERVICE ...] [options]
+  return `Usage: npm run report:logs -- --docker backend --since 5m --match TypeError
+       npm run report:logs -- --docker --since 1h --type error
+       npm run report:logs -- console.txt --match "Failed to fetch" --context 4
+       pbpaste | npm run report:logs
 
-  Options:
-    --docker           Read Compose logs; detect the stack from container labels.
-    --development      Select docker-compose.yml explicitly; requires --docker.
-    --production       Select docker-compose.prod.yml explicitly; requires --docker.
-    --since <time>     Docker time window, such as 5m or 1h (default: 5m).
-    --match <text>     Match literal text, ignoring case (for example TypeError).
-    --type <category>  Select error, warning, http, or frame entries.
-    --context <lines>  Lines around each group's first occurrence (default: 2).
-    --help             Show this help.
+  --docker           Read Compose logs for named services, or all services when omitted.
+  --development      Select docker-compose.yml explicitly; requires --docker.
+  --production       Select docker-compose.prod.yml explicitly; requires --docker.
+  --since <time>     Docker time window or timestamp (default: 5m).
+  --match <text>     Match literal captured text and attached details, ignoring case.
+  --type <category>  Select error (includes 5xx), warning (includes 4xx), http, or frame.
+  --context <lines>  Lines around the first occurrence per group (default: 2; 0 hides context).
+  -h, --help         Show this help.
 
-  Without files or --docker, reads stdin. Without filters, groups recognized problems.
-  Reports retain services, request IDs, timestamps, and backend error details.
-  Source locations refer to lines in the captured input. Context shows proximity,
-  not proof that adjacent messages have the same cause.
-
-  Examples:
-    npm run report:logs -- --docker backend --since 5m --match TypeError
-    npm run report:logs -- --docker --since 1h --type error
-    npm run report:logs -- console.txt --match "Failed to fetch" --context 4
-    pbpaste | npm run report:logs`;
+Without files or --docker, reads stdin. Docker input requires Compose and detects the stack.
+Text and category filters both apply; no matches exits successfully.
+Locations are capture line numbers; neighboring context may include unrelated messages.`;
 }
 
-/** Parses CLI tokens and rejects incompatible options. @example parseArgs(["--docker"]).docker // true */
+/**
+ * Parses CLI tokens, throwing for missing values, unknown flags, or incompatible options.
+ * @param argv - Arguments after the executable and script; tokens after -- are sources.
+ * @returns Validated options; defaults include two context lines and no filters.
+ * @example parseArgs(['--docker', 'backend', '--context', '0']).sources // ['backend']
+ */
 export function parseArgs(argv: string[]): ReportOptions {
   const options: ReportOptions = {
     docker: false,
@@ -195,7 +203,12 @@ export function parseArgs(argv: string[]): ReportOptions {
 
 // 3. Log acquisition
 
-/** Selects an explicit or uniquely detected repository stack. @example selectComposeFile("production").endsWith("docker-compose.prod.yml") // true */
+/**
+ * Selects a repository Compose file, inspecting container labels when no stack is supplied.
+ * Throws if Docker discovery fails or does not identify exactly one recognized configuration.
+ * @param stack - Explicit stack, or null to inspect this checkout's stopped and running containers.
+ * @example selectComposeFile('production').endsWith('docker-compose.prod.yml') // true
+ */
 function selectComposeFile(stack: ReportOptions['stack']): string {
   const developmentFile = resolve(REPO_ROOT, 'docker-compose.yml');
   const productionFile = resolve(REPO_ROOT, 'docker-compose.prod.yml');
@@ -228,7 +241,13 @@ function selectComposeFile(stack: ReportOptions['stack']): string {
   return composeFile;
 }
 
-/** Reads a finite Docker capture, files, or stdin without changing services. @example loadLogs(options)[0].name // "docker:all" for all services */
+/**
+ * Reads a finite Docker capture, files, or stdin without changing services.
+ * Throws on acquisition failures or interactive stdin; Docker commands time out after 30 seconds.
+ * @param options - Validated source selection from parseArgs; Docker defaults to the last five minutes.
+ * @returns One capture per file, or a single combined Docker/stdin capture.
+ * @example loadLogs(parseArgs(['console.txt']))[0].name // 'console.txt', if the file exists
+ */
 export function loadLogs(options: ReportOptions): LogInput[] {
   if (options.docker) {
     const composeFile = selectComposeFile(options.stack);
@@ -282,7 +301,8 @@ function parseLine(text: string, input: string, lineNumber: number): ParsedLine 
 }
 
 /**
- * Removes HTTP hosts and query values while retaining the requested path.
+ * Removes HTTP hosts and replaces the entire query string with a marker.
+ * @param url - Request target from a recognized HTTP failure, such as /api/users?page=2.
  * @example requestPath('https://example.test/api/users?token=secret') // '/api/users?…'
  */
 function requestPath(url: string): string {
@@ -291,7 +311,8 @@ function requestPath(url: string): string {
 
 /**
  * Recognizes backend request summaries, HTTP failures, and generic problem lines.
- * @returns Existing backend fields separately from the display summary, or null.
+ * @param line - Message after removing any Compose prefix and leading timestamp.
+ * @returns A category and display summary, plus backend request fields when present; null for unrecognized text.
  * @example classify('[rid] GET /api/tasks 500 InternalServerError: failed')?.request?.requestId // 'rid'
  */
 function classify(line: string): ClassifiedEntry | null {
@@ -352,8 +373,11 @@ function classify(line: string): ClassifiedEntry | null {
 }
 
 /**
- * Captures problem events and their first-occurrence context from each input.
- * Only indented continuations from the same service join a backend error event.
+ * Captures problem events, attached backend details, and neighboring lines from each input.
+ * Indented lines and closing braces/brackets attach until the next ordinary line in that service.
+ * @param inputs - Complete captures, kept separate even when service names match.
+ * @param contextSize - Non-negative safe integer counting raw lines on each side of each event.
+ * @param match - Optional literal text allowing otherwise unrecognized lines to become Matches events.
  * @example collectEvents([{ name: 'stdin', text: 'Error: failed' }], 0).length // 1
  */
 function collectEvents(inputs: LogInput[], contextSize: number, match?: string | null): LogEvent[] {
@@ -403,8 +427,12 @@ function collectEvents(inputs: LogInput[], contextSize: number, match?: string |
 
 /**
  * Applies text and category filters to complete events, including their details.
- * HTTP failures remain selectable by both HTTP and their backend severity.
- * @example matchesEvent(event, { match: null, type: 'error', context: 0 }) // true for a 500
+ * HTTP failures remain selectable by HTTP or status severity: 5xx errors and 4xx warnings.
+ * @param event - Classified event with its original line and attached backend continuations.
+ * @param options - Literal case-insensitive text and category filters; context does not affect matching.
+ * @example
+ * const event = collectEvents([{ name: 'stdin', text: 'GET /api/tasks 500' }], 0)[0];
+ * matchesEvent(event, { match: null, type: 'error', context: 0 }) // true
  */
 function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 'type' | 'context'>): boolean {
   if (options.match) {
@@ -432,6 +460,9 @@ function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 't
 /**
  * Groups repeated events by source and diagnostic fields while retaining every occurrence.
  * Different stack/cause details remain separate groups; request IDs do not prevent grouping.
+ * @param inputs - Named complete captures; locations use one-based lines within each capture.
+ * @param options - Combined literal text/category filters and non-negative context lines per side.
+ * @returns Category-ordered groups with all occurrence locations and only the first occurrence's context.
  * @example renderLogReport([], { match: null, type: null, context: 0 }).startsWith('No recognized') // true
  */
 export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions, 'match' | 'type' | 'context'>): string {
@@ -486,7 +517,11 @@ export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions,
 
 // 5. Main workflow and entrypoint
 
-/** Parses options, reads logs, and prints the report; throws acquisition failures. @example // node scripts/reports/log-report.ts --help */
+/**
+ * Reads process arguments and prints help or an acquired log report to stdout.
+ * Argument and acquisition failures reach the entrypoint, which reports them with exit status 1.
+ * @example // npm run report:logs -- --help prints usage without reading logs.
+ */
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
 

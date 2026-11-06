@@ -3,14 +3,20 @@
 /**
  * LOC REPORT — count repository lines by file type, separating TS/TSX tests.
  *
- * Flow: validate options → discover files → count lines → print the report.
- * Blank lines and comments are excluded by default, using line prefixes and block endings,
- * without parsing strings, templates, or Markdown code fences. No files are changed.
+ * Flow (see main()):
+ *   1. Validate arguments and select file types
+ *   2. Discover tracked and nonignored untracked files
+ *   3. Count lines, separating TS/TSX source and tests
+ *   4. Print the category totals
  *
- * Usage:
- *   npm run report:loc
- *   npm run report:loc -- all --include-comments
- *   npm run report:loc -- ts tsx sql
+ * Requires Git. Scans tracked and nonignored untracked regular files, excluding
+ * dependency/build directories and symlinks. TS/TSX .test and .spec files have
+ * separate rows. No files are changed.
+ *
+ * Blank lines are always excluded. Comments are excluded by default using line
+ * prefixes and block endings, without parsing strings, templates, or Markdown
+ * code fences; a comment block's closing line is excluded even if code follows.
+ * See usage() for parameter details and examples.
  */
 
 // ============================================================================
@@ -51,18 +57,23 @@ interface ReportRow {
 // ============================================================================
 
 /**
- * Returns CLI usage text describing modes, flags, and defaults.
- * @returns A multiline help message without printing it.
- * @example usage().startsWith('Usage: npm run report:loc') // true
+ * Supplies commands and options for the CLI help output.
+ * @returns Help text without printing it or scanning repository files.
+ * @example usage().includes('--include-comments') // true
  */
 function usage(): string {
-  return `Usage: npm run report:loc -- [app | all | EXTENSION...] [--include-comments]
+  return `Usage: npm run report:loc
+       npm run report:loc -- all
+       npm run report:loc -- ts tsx sql
+       npm run report:loc -- all --include-comments
 
   app                Count TS and TSX files (default).
   all                Count TS, TSX, CSS, SQL, and Markdown files.
-  EXTENSION...       Count the requested file extensions.
+  EXTENSION...       Count exact, case-sensitive extensions without dots.
   --include-comments Count comments as well as code.
-  -h, --help         Show this help.`;
+  -h, --help         Show this help.
+
+Do not combine app or all with other extensions.`;
 }
 
 /**
@@ -269,13 +280,6 @@ function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
     ? 'Excludes blank lines and lines starting or continuing comments.'
     : 'Excludes blank lines; includes comments.';
 
-  /**
-   * Pads label and value into the table's two columns without truncating either.
-   * @returns A label padded to at least 20 characters, a space, and a value padded to at least 6.
-   * @example formatRow('', '').length // 27
-   */
-  const formatRow = (label: string, value: string | number) => `${label.padEnd(20)} ${String(value).padStart(6)}`;
-
   const divider = formatRow('--------------------', '------');
   const total = rows.reduce((sum, row) => sum + row.lines, 0);
 
@@ -285,6 +289,15 @@ function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
     ...rows.map(row => formatRow(row.label, row.lines)),
     divider, formatRow('TOTAL', total), '',
   ].join('\n');
+}
+
+/**
+ * Pads label and value into the table's two columns without truncating either.
+ * @returns A label padded to at least 20 characters, a space, and a value padded to at least 6.
+ * @example formatRow('', '').length // 27
+ */
+function formatRow(label: string, value: string | number): string {
+  return `${label.padEnd(20)} ${String(value).padStart(6)}`;
 }
 
 // ============================================================================
