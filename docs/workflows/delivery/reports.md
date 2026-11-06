@@ -68,7 +68,7 @@ when `--base` is absent.
 
 ## CI History Report
 
-Read saved development checks and production deployment history without GitHub access:
+Query completed GitHub development checks and production deployments:
 
 ```bash
 npm run report:ci-history -- --start 2026-08-09
@@ -77,17 +77,14 @@ npm run report:ci-history -- --start 2026-08-09 --main --success
 npm run report:ci-history -- --start 2026-09-01 --end 2026-09-30 --main --type frontend --exclusive
 ```
 
-`--start` is required. `--end` defaults to now; explicit dates include the entire
-UTC day. Filtering uses each attempt's UTC start time. `--dev` selects CI workflow
-attempts on PRs targeting `develop`; `--main` selects production deployments,
-not release PR checks. Without either flag, the report shows both views separately.
+`--start` is required; `--end` defaults to now. Dates are inclusive and use UTC.
+`--dev` shows development PR checks; `--main` shows production deployments.
+Omit both flags to show the views separately.
 
-The sole data source is `data/reports/ci-history.json`. The report displays its
-capture time and each view's coverage; requesting later dates does not fetch
-new data. Development history contains completed attempts, including failures,
-cancellations, and reruns. The retained production snapshot contains only
-successful first attempts, so its success rate is unavailable. Update the saved
-data explicitly when newer history is needed; this command never refreshes it.
+Requires authenticated GitHub CLI access (`gh auth login`). The command queries
+completed runs for the requested creation dates and prints the report directly;
+it does not save a dataset. If GitHub's 1,000-run query limit is reached, narrow
+the date range.
 
 Successful attempts are shown by default; `--success` selects that view explicitly.
 Use `--failures` for failed attempts or `--all` for every outcome, including
@@ -102,8 +99,9 @@ when recorded.
 Production timings remain grouped by deployment path. Repeat `--type` to require
 multiple components; `--exclusive` requires exactly that combination. Migrations
 include their required backend; infrastructure includes all four components.
-Component filters require `--main`. `--file` accepts another saved history file,
-validated before filtering. No matches produces a clear message and successful exit.
+Component filters require `--main`. Deployments with missing component logs remain
+`Unclassified`; component filters exclude them. No matches produces a clear message
+and successful exit.
 
 ## LOC Report
 
