@@ -167,9 +167,9 @@ Before changing CI:
 5. Inspect the first GitHub run at job level; local checks cannot fully verify triggers, services, permissions, caches, or rulesets.
 6. Update this guide when workflow ownership, routing, gates, or operation changes.
 
-Use the [CI Report](reports.md#ci-report) to measure performance. Compare queue
-time, required-job wall time, runner consumption, and reliability separately;
-record comparable sample sizes before claiming an improvement.
+Use the [CI History Report](reports.md#ci-history-report) to compare saved
+check timings, runner consumption, and reliability. Record comparable sample
+sizes and date windows before claiming an improvement.
 
 ## Dependency Updates
 

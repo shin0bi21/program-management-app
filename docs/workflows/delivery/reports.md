@@ -67,47 +67,47 @@ fingerprint, and checks selected by the shared CI policy. It does not run checks
 or save a backup. `INSPECT_CHANGES_BASE_REF` overrides the default comparison base
 when `--base` is absent.
 
-## CI Report
+<a id="ci-report"></a>
+<a id="deployment-history-report"></a>
 
-Use the CI report to measure recent merge-gate performance from GitHub pull requests and Actions runs:
+## CI History Report
 
-```bash
-npm run report:ci
-npm run report:ci -- --branch develop --last 20
-npm run report:ci -- --since 2026-07-01 --until 2026-07-31
-npm run report:ci -- --since 2026-07-01 --json
-```
-
-The default report examines the five most recent pull requests merged to `develop` or `main`. It reports queue time, merge-gate wall time, summed runner time, success rate, and reruns. CI-changing pull requests become timeline boundaries so comparisons do not blend different pipeline shapes. Successful first attempts drive timing summaries; cancelled runs are excluded and reruns remain visible.
-
-The command requires authenticated GitHub CLI access. Run `gh auth status` if it cannot retrieve repository or Actions data. See [Continuous Integration](ci.md) for workflow behavior and failure reproduction.
-
-## Deployment History Report
-
-Render the deployment-path timing table from the committed per-run JSON:
+Read saved development checks and production deployment history without GitHub access:
 
 ```bash
-npm run report:deployments
-npm run report:deployments -- --type frontend
-npm run report:deployments -- --type frontend --exclusive
-npm run report:deployments -- --type frontend --type backend
-npm run report:deployments -- --since 2026-09-01 --until 2026-09-30
+npm run report:ci-history -- --start 2026-08-09
+npm run report:ci-history -- --start 2026-08-09 --dev
+npm run report:ci-history -- --start 2026-08-09 --main --success
+npm run report:ci-history -- --start 2026-09-01 --end 2026-09-30 --main --type frontend --exclusive
 ```
 
-The command calculates every displayed aggregate from
-`data/reports/deployment-history.json`. The JSON remains the sole source of
-deployment timing data; the report does not query GitHub or maintain a second
-copy of the measurements. A type filter normally includes every deployment in
-which that component participated; add `--exclusive` to require exactly the
-selected component combination. Repeat `--type` to select combinations such as
-frontend plus backend. Exclusive migration selection includes its required backend;
-exclusive infrastructure selection includes all four components. Date bounds are inclusive and use each deployment job's
-UTC start date. Impossible calendar dates are rejected.
+`--start` is required. `--end` defaults to now; explicit dates include the entire
+UTC day. Filtering uses each attempt's UTC start time. `--dev` selects CI workflow
+attempts on PRs targeting `develop`; `--main` selects production deployments,
+not release PR checks. Without either flag, the report shows both views separately.
 
-With no filters, the table shows frontend-only, full, frontend-plus-backend, and
-frontend-plus-backend-plus-migrations deployments. Component or date filters
-allow every matching deployment path to appear. Custom history supplied with
-`--file` is validated before filtering and aggregation.
+The sole data source is `data/reports/ci-history.json`. The report displays its
+capture time and each view's coverage; requesting later dates does not fetch
+new data. Development history contains completed attempts, including failures,
+cancellations, and reruns. The retained production snapshot contains only
+successful first attempts, so its success rate is unavailable. Update the saved
+data explicitly when newer history is needed; this command never refreshes it.
+
+Successful attempts are shown by default; `--success` selects that view explicitly.
+Use `--failures` for failed attempts or `--all` for every outcome, including
+cancellations. These three flags are mutually exclusive. Success rate appears
+with `--all` and excludes cancellations.
+
+Successful-run mean, median, and range use first attempts only. Failed attempts
+have a separate timing table, labeled as potentially ending early; their durations
+never enter successful-run summaries. Queue and summed runner time medians appear
+when recorded.
+
+Production timings remain grouped by deployment path. Repeat `--type` to require
+multiple components; `--exclusive` requires exactly that combination. Migrations
+include their required backend; infrastructure includes all four components.
+Component filters require `--main`. `--file` accepts another saved history file,
+validated before filtering. No matches produces a clear message and successful exit.
 
 ## LOC Report
 
