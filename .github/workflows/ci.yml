@@ -60,7 +60,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git diff --name-only --diff-filter=ACDMR "$BASE_SHA"...HEAD \
+          git diff --no-renames --name-only --diff-filter=ACDMR "$BASE_SHA"...HEAD \
             | node scripts/ci/select-tests.ts --github-output "$GITHUB_OUTPUT" --base-ref "$BASE_REF"
 
   quality:
