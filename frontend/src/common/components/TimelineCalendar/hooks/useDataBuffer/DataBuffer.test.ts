@@ -41,6 +41,29 @@ describe('DataBuffer', () => {
     }), expect.any(AbortSignal));
   });
 
+  it.each(['initialize', 'reset'] as const)('recovers through %s after rejecting an oversized initial window', async recovery => {
+    const load = vi.fn().mockResolvedValue({ staff: { '2026-08-09': [{ id: 'recovered' }] } });
+    const onData = vi.fn();
+    const buffer = new DataBuffer({ load, onData, maxRetainedPeriods: 86 });
+
+    try {
+      await expect(buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3)))
+        .rejects.toThrow('maxRetainedPeriods must be at least 87');
+      expect(load).not.toHaveBeenCalled();
+
+      await buffer[recovery](buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+
+      expect(load).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        start: expect.objectContaining({ key: '2026-06-28' }),
+        end: expect.objectContaining({ key: '2026-09-20' }),
+        direction: 'initial',
+      }), expect.any(AbortSignal));
+      expect(onData).toHaveBeenLastCalledWith({ staff: { '2026-08-09': [{ id: 'recovered' }] } });
+    } finally {
+      buffer.dispose();
+    }
+  });
+
   it('replenishes three weeks when the right runway reaches three weeks', async () => {
     const load = vi.fn().mockResolvedValue({});
     const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
@@ -230,6 +253,45 @@ describe('DataBuffer', () => {
     expect(onData).toHaveBeenLastCalledWith({ staff: {} });
   });
 
+  it('loads and displays the latest window when resets are requested concurrently', async () => {
+    type Item = { id: string };
+    let resolveEarlier: ((data: RowPeriodData<Item>) => void) | undefined;
+    const load = vi.fn(({ start }: PeriodRange): Promise<RowPeriodData<Item>> => {
+      if (start.key === '2026-08-07') {
+        return new Promise(resolve => { resolveEarlier = resolve; });
+      }
+      if (start.key === '2027-01-08') {
+        return Promise.resolve({ staff: { '2027-01-10': [{ id: 'latest' }] } });
+      }
+      return Promise.resolve({});
+    });
+    const onData = vi.fn();
+    const buffer = new DataBuffer<Item>({ load, onData, targetSize: 2 });
+    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 5, 9), 1));
+
+    const earlier = buffer.reset(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const latest = buffer.reset(buildInitialDayPeriods(new Date(2027, 0, 10), 1));
+    const settled = Promise.allSettled([earlier, latest]);
+
+    try {
+      await vi.waitFor(() => expect(load.mock.calls.length).toBeGreaterThan(1));
+      resolveEarlier?.({ staff: { '2026-08-09': [{ id: 'earlier' }] } });
+      const results = await settled;
+
+      expect(results[1]).toEqual({ status: 'fulfilled', value: undefined });
+      expect(load).toHaveBeenCalledWith(expect.objectContaining({
+        start: expect.objectContaining({ key: '2027-01-08' }),
+        end: expect.objectContaining({ key: '2027-01-12' }),
+        direction: 'initial',
+      }), expect.any(AbortSignal));
+      expect(onData).toHaveBeenLastCalledWith({ staff: { '2027-01-10': [{ id: 'latest' }] } });
+    } finally {
+      buffer.dispose();
+      resolveEarlier?.({});
+      await settled;
+    }
+  });
+
   it('evicts data beyond a configurable retained-period limit', async () => {
     const snapshots: Array<Record<string, Record<string, readonly unknown[]>>> = [];
     const load = vi.fn(async ({ start, end }) => {
@@ -387,6 +449,58 @@ describe('DataBuffer', () => {
     expect(onData).toHaveBeenLastCalledWith(expect.objectContaining({
       staff: expect.objectContaining({ '2026-06-20': [{ id: 'entry-1', hours: 2 }] }),
     }));
+  });
+
+  it('keeps a ranged deletion after a newer opposite-edge load finishes before an older response', async () => {
+    type Task = { id: string; start: string; end: string };
+    const task = { id: 'deleted', start: '2026-08-01', end: '2026-08-20' };
+    let resolveLeft: ((data: RowPeriodData<Task>) => void) | undefined;
+    let resolveRight: ((data: RowPeriodData<Task>) => void) | undefined;
+    const load = vi.fn(({ direction }: PeriodRange): Promise<RowPeriodData<Task>> => {
+      if (direction === 'initial') return Promise.resolve({ staff: { '2026-08-07': [task] } });
+      if (direction === 'left') return new Promise(resolve => { resolveLeft = resolve; });
+      return new Promise(resolve => { resolveRight = resolve; });
+    });
+    const onData = vi.fn();
+    const buffer = new DataBuffer<Task>({
+      load, onData, getItemId: item => item.id, getItemRange: item => item,
+      targetSize: 2, threshold: 0, replenishSize: 2,
+    });
+    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const pending: Promise<void>[] = [];
+
+    try {
+      const left = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 7), 1), 'left');
+      pending.push(left);
+      await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.objectContaining({
+        start: expect.objectContaining({ key: '2026-08-05' }),
+        end: expect.objectContaining({ key: '2026-08-06' }),
+        direction: 'left',
+      }), expect.any(AbortSignal)));
+
+      buffer.removeItem(task.id);
+      const right = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 11), 1), 'right');
+      pending.push(right);
+      await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.objectContaining({
+        start: expect.objectContaining({ key: '2026-08-12' }),
+        end: expect.objectContaining({ key: '2026-08-13' }),
+        direction: 'right',
+      }), expect.any(AbortSignal)));
+
+      resolveRight?.({});
+      await right;
+      resolveLeft?.({ staff: { '2026-08-05': [task] } });
+      await left;
+
+      const finalData: RowPeriodData<Task> = onData.mock.lastCall?.[0];
+      const remainingItems = Object.values(finalData).flatMap(periods => Object.values(periods).flat());
+      expect(remainingItems).toEqual([]);
+    } finally {
+      buffer.dispose();
+      resolveLeft?.({});
+      resolveRight?.({});
+      await Promise.allSettled(pending);
+    }
   });
 
   it('preserves unaffected row and period references during an item upsert', () => {
