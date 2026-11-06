@@ -1,10 +1,21 @@
-// ============================================================================
-// 1. RESPONSE CONTRACT
-// ============================================================================
+import createError from 'http-errors';
+
+export {
+  BadRequest as BadRequestError,
+  Conflict as ConflictError,
+  Forbidden as ForbiddenError,
+  InternalServerError,
+  Locked as LockedError,
+  NotFound as NotFoundError,
+  PayloadTooLarge as PayloadTooLargeError,
+  ServiceUnavailable as ServiceUnavailableError,
+  TooManyRequests as TooManyRequestsError,
+  Unauthorized as UnauthorizedError,
+} from 'http-errors';
 
 /** A single field-level validation failure, returned in `ErrorResponse.details`. */
 export interface ValidationDetail {
-  /** The request body field that failed (dot-notation for nested, e.g. `address.city`). */
+  /** The request field that failed (dot-notation for nested fields, e.g. `body.address.city`). */
   field: string;
   /** Human-readable description of why the field failed validation. */
   message: string;
@@ -14,221 +25,88 @@ export interface ValidationDetail {
 export interface ErrorResponse {
   /** Top-level human-readable error string. */
   error: string;
-  /** Present only on 400 validation errors — one entry per failing field. */
+  /** Field-level validation failures, when supplied by the error. */
   details?: ValidationDetail[];
-  /** Echoed from `X-Request-ID`; present on every response once `requestId` middleware is registered. */
+  /** Incoming `X-Request-ID` or a generated identifier; included when request middleware supplied one. */
   requestId?: string;
 }
 
-// ============================================================================
-// 2. BASE CLASS
-// ============================================================================
-
-const UNEXPECTED_ERROR_MESSAGE = 'An unexpected error occurred';
-
-/** Abstract base for all API errors. Never instantiate directly — subclass it. See `docs/backend/errors.md`. */
-export abstract class AppError extends Error {
-  /** Field-level validation failures. Set only on {@link ValidationError}. */
-  public details?: ValidationDetail[];
-  /**
-   * Production-safe user-facing message for 5xx errors.
-   * Defaults to the generic failure message; subclasses can provide
-   * a more specific safe message.
-   */
-  public clientMessage = UNEXPECTED_ERROR_MESSAGE;
-  /**
-   * @param message   - Internal error description (logged; redacted for 5xx in production).
-   * @param statusCode - HTTP status code (only 400–599 honoured by `handleError`).
-   * @param cause     - Original low-level error forwarded as native `Error.cause`.
-   */
-  constructor(message: string, public readonly statusCode: number, cause?: unknown) {
-    super(message, { cause });
-    this.name = 'AppError';
-  }
+/** Standard HTTP errors may carry field-level validation details. */
+export interface ApplicationError extends createError.HttpError {
+  details?: ValidationDetail[];
 }
 
-// ============================================================================
-// 3. 4xx CLIENT ERRORS — caller's fault, message returned as-is
-// ============================================================================
-// 4xx errors always return the actual message to the client (no redaction)
-// since the message describes what the caller did wrong. Logged at warn level.
+export const UNEXPECTED_ERROR_MESSAGE = 'An unexpected error occurred';
 
-/**
- * 400 — Invalid request input. Use ConflictError for commands blocked by current state.
- * Throw from: services, controllers, JSON parser classification.
- */
-export class BadRequestError extends AppError {
-  constructor(message = 'Invalid request') {
-    super(message, 400);
-    this.name = 'BadRequestError';
-  }
+const POSTGRES_CONNECTION_CODES = new Set([
+  '57P03', '08000', '08001', '08003', '08004', '08006', '53300',
+]);
+
+/** Standard Error plus metadata supplied by the database and HTTP parsers. */
+interface ErrorWithMetadata extends Error {
+  code?: string;
+  type?: string;
+  status?: number;
 }
 
 /**
- * 400 — The JSON parser rejected the request body.
- * @example throw new InvalidJsonError();
+ * Converts parser and database failures to HTTP errors, preserving existing HTTP errors.
+ * Parser failures discard submitted data; other wrapped failures retain their cause.
+ *
+ * @param err - An Error instance, optionally carrying parser type/status or a database code.
+ * @returns A safe parser error, the existing HTTP error, a database fallback, or an
+ * unexpected-error 500 retaining the original message (with a fallback when empty).
+ * @example classifyError(new Error('Unexpected')).statusCode // 500
+ * @example classifyError(Object.assign(new Error('duplicate'), { code: '23505' })).statusCode // 409
  */
-export class InvalidJsonError extends BadRequestError {
-  constructor() {
-    super('Invalid JSON request body');
-    this.name = 'InvalidJsonError';
+export function classifyError(err: ErrorWithMetadata): ApplicationError {
+  const { code, type, status } = err;
+
+  // Parser errors can contain submitted data. Discard their raw message and body.
+  if (type === 'entity.parse.failed' && status === 400) {
+    return new createError.BadRequest('Invalid JSON request body');
   }
+  if (type === 'entity.too.large' && status === 413) {
+    return new createError.PayloadTooLarge('Request body is too large');
+  }
+
+  if (createError.isHttpError(err)) return err;
+
+  const connectionRefused = code === 'ECONNREFUSED';
+  const postgresUnavailable = code !== undefined && POSTGRES_CONNECTION_CODES.has(code);
+  if (connectionRefused || postgresUnavailable) {
+    return createError(503, 'Database connection failed', { cause: err });
+  }
+  if (code === '23505') {
+    return createError(409, 'A record with that value already exists', { cause: err });
+  }
+
+  return createError(500, err.message || UNEXPECTED_ERROR_MESSAGE, { cause: err });
 }
 
 /**
- * 400 — Zod schema validation failed. Carries field-level errors in `details`.
- * Throw from: validateRequest middleware (only).
+ * Creates a standard 400 error carrying safe field-level validation failures.
+ * @param details - Request field paths and client-safe explanations from validation.
+ * @returns A library BadRequest error with details serialized by the global handler.
+ * @example createValidationError([{ field: 'body.email', message: 'Invalid email' }]).message // 'Validation failed'
  */
-export class ValidationError extends AppError {
-  /**
-   * @param message - Top-level error string (e.g. `'Validation failed'`).
-   * @param details - One entry per failing field, mapped from the Zod error.
-   */
-  constructor(message: string, details: ValidationDetail[]) {
-    super(message, 400);
-    this.name = 'ValidationError';
-    this.details = details;
-  }
-}
-
-/**
- * 401 — Missing, malformed, expired, or revoked auth token.
- * Throw from: authenticateToken middleware, authService (login failures).
- */
-export class UnauthorizedError extends AppError {
-  constructor(message: string) {
-    super(message, 401);
-    this.name = 'UnauthorizedError';
-  }
-}
-
-/**
- * 403 — Authenticated but not allowed. Wrong token type, refresh-token
- * reuse, or insufficient permissions.
- * Throw from: authenticateToken, requirePermission, authService (refresh reuse).
- */
-export class ForbiddenError extends AppError {
-  constructor(message: string) {
-    super(message, 403);
-    this.name = 'ForbiddenError';
-  }
-}
-
-/**
- * 404 — Resource doesn't exist (or caller can't see it — services may
- * return 404 instead of 403 to avoid leaking existence).
- * Throw from: services, controllers.
- */
-export class NotFoundError extends AppError {
-  constructor(message: string) {
-    super(message, 404);
-    this.name = 'NotFoundError';
-  }
-}
-
-/**
- * 409 — Unique constraint violation. Auto-thrown by classifyError from Postgres 23505,
- * or throw directly from a service for semantic conflicts.
- */
-export class ConflictError extends AppError {
-  constructor(message = 'A record with that value already exists', cause?: unknown) {
-    super(message, 409, cause);
-    this.name = 'ConflictError';
-  }
-}
-
-/**
- * 413 — The JSON body or uploaded file exceeds its configured parser limit.
- * @example throw new PayloadTooLargeError();
- */
-export class PayloadTooLargeError extends AppError {
-  constructor(message = 'Request body is too large') {
-    super(message, 413);
-    this.name = 'PayloadTooLargeError';
-  }
-}
-
-/**
- * 423 — Account locked out after too many failed login attempts.
- * Throw from: authService.
- */
-export class LockedError extends AppError {
-  constructor(message: string) {
-    super(message, 423);
-    this.name = 'LockedError';
-  }
-}
-
-/**
- * 429 — Rate limit exceeded.
- * Throw from: rateLimiter middleware (only — express-rate-limit forwards
- * via next(err) when the limit is hit).
- */
-export class TooManyRequestsError extends AppError {
-  constructor(message: string) {
-    super(message, 429);
-    this.name = 'TooManyRequestsError';
-  }
-}
-
-// ============================================================================
-// 4. 5xx SERVER ERRORS — our fault, message redacted in production
-// ============================================================================
-// In production, handleError replaces the message with a generic string so
-// internal details never leak. Logged at error level with safe diagnostics.
-
-const UNAVAILABLE_MESSAGE = 'The server is temporarily unavailable. Please try again shortly.';
-
-/**
- * 500 — Unexpected application error with no more specific type.
- * Throw from: anywhere an unrecoverable invariant is violated.
- */
-export class InternalServerError extends AppError {
-  constructor(message = UNEXPECTED_ERROR_MESSAGE, cause?: unknown) {
-    super(message, 500, cause);
-    this.name = 'InternalServerError';
-  }
-}
-
-/**
- * 503 — Database unreachable (ECONNREFUSED, 57P03, pool exhaustion).
- * Normalized by: middleware/errorMiddleware.ts connection fallback.
- */
-export class DbConnectionError extends AppError {
-  constructor(message = 'Database connection failed', cause?: unknown) {
-    super(message, 503, cause);
-    this.name = 'DbConnectionError';
-    this.clientMessage = UNAVAILABLE_MESSAGE;
-  }
-}
-
-/**
- * 503 — An upstream service (cache, queue, third-party API) is unavailable.
- * Throw from: service integrations, job queue adapters.
- */
-export class ServiceUnavailableError extends AppError {
-  constructor(message = 'Service unavailable', cause?: unknown) {
-    super(message, 503, cause);
-    this.name = 'ServiceUnavailableError';
-    this.clientMessage = UNAVAILABLE_MESSAGE;
-  }
+export function createValidationError(details: ValidationDetail[]): ApplicationError {
+  return createError(400, 'Validation failed', { details });
 }
 
 /**
  * Recognizes a specific PostgreSQL unique constraint without matching its message.
- * Other database errors and existing application errors are left to their owner.
- * @example isUniqueViolation(error, 'user_credentials_email_key') // true for a duplicate email
+ * @param error - Caught failure to check; HTTP errors and values other than Error instances never match.
+ * @param constraintName - Exact PostgreSQL constraint identifier expected by the operation.
+ * @returns Whether the raw error has both the unique-violation code and the named constraint.
+ * @example isUniqueViolation(Object.assign(new Error('duplicate'), { code: '23505', constraint_name: 'schools_name_key' }), 'schools_name_key') // true
  */
 export function isUniqueViolation(error: unknown, constraintName: string): boolean {
-  if (!(error instanceof Error) || error instanceof AppError) return false;
+  if (!(error instanceof Error) || createError.isHttpError(error)) return false;
 
   const databaseError = error as Error & { code?: unknown; constraint_name?: unknown };
   return databaseError.code === '23505' && databaseError.constraint_name === constraintName;
 }
-
-// ============================================================================
-// 5. LOG DIAGNOSTICS
-// ============================================================================
 
 interface DiagnosticMetadata extends Error {
   code?: unknown;
@@ -255,22 +133,25 @@ const MAX_LOG_CAUSE_DEPTH = 4;
 const MAX_LOG_LOCATIONS = 20;
 
 /**
- * Formats bounded diagnostic metadata without inspecting raw errors or messages.
- * Omits bodies, query values, provider objects, validation details, and arbitrary
- * cause values. Callers supply only safe operation descriptions beside this output.
- * The original Error is never modified.
- * @example console.error('[Database] Error checking connection', errorForLog(error));
+ * Formats bounded diagnostic metadata for logs without including error messages or submitted data.
+ * The original error is unchanged; callers must keep any accompanying log description safe.
+ * @param error - Failure whose primitive identifiers, source locations, and Error causes should be logged.
+ * @returns Indented JSON preceded by a newline, with at most four cause links and twenty locations per error.
+ * @example JSON.parse(errorForLog(Object.assign(new Error('private'), { code: '23505' }))).code // '23505'
  */
 export function errorForLog(error: Error): string {
   const diagnostic = errorDiagnostic(error, 0);
   const lines = JSON.stringify(diagnostic, null, 2).split('\n');
+
   return `\n${lines.map(line => `  ${line}`).join('\n')}`;
 }
 
 /**
- * Selects only primitive diagnostic identifiers and Error causes, never object dumps.
- * Metadata varies across libraries; unrecognized fields and object values are omitted.
- * @example errorDiagnostic(error, 0).code // '23505' for a PostgreSQL duplicate
+ * Collects recognized diagnostic identifiers and source locations, omitting messages and arbitrary fields.
+ * @param error - Failure to inspect without modifying it; only Error instances in its cause chain are followed.
+ * @param depth - Number of cause links already traversed, starting at zero; traversal stops at four.
+ * @returns Selected metadata with a bounded nested cause, when present.
+ * @example errorDiagnostic(Object.assign(new Error('duplicate'), { code: '23505' }), 0).code // '23505'
  */
 function errorDiagnostic(error: DiagnosticMetadata, depth: number): ErrorDiagnostic {
   const diagnostic: ErrorDiagnostic = {
@@ -288,21 +169,36 @@ function errorDiagnostic(error: DiagnosticMetadata, depth: number): ErrorDiagnos
   if (depth < MAX_LOG_CAUSE_DEPTH && error.cause instanceof Error) {
     diagnostic.cause = errorDiagnostic(error.cause, depth + 1);
   }
+
   return diagnostic;
 }
 
 /**
- * Keeps source locations from native stack frames, excluding the complete message
- * heading (including injected newlines), function arguments, and URL query values.
- * @example errorLocations(error) // ['/app/src/services/example.ts:12:4']
+ * Extracts source locations from native stack frames while excluding messages, arguments, and URL queries.
+ * @param error - Failure whose stack must begin with its complete name/message heading to be accepted.
+ * @returns Up to twenty recognized absolute, file-URL, or Node locations; no locations for an unrecognized heading.
+ * @example errorLocations(Object.assign(new Error('failed'), { stack: 'Error: failed\n    at /app/src/index.ts:12:4' })) // ['/app/src/index.ts:12:4']
  */
 function errorLocations(error: Error): string[] {
   const heading = error.message ? `${error.name}: ${error.message}` : error.name;
-  if (!error.stack?.startsWith(heading)) return [];
+  const stack = error.stack;
+  if (!stack?.startsWith(heading)) return [];
 
-  return error.stack.slice(heading.length).split('\n').flatMap(frame => {
-    if (!/^\s+at\s/.test(frame)) return [];
-    const location = frame.match(/(?:\(|\s)((?:\/|file:\/\/|node:)[\w./:@\\-]+:\d+:\d+)\)?$/)?.[1];
-    return location ? [location] : [];
-  }).slice(0, MAX_LOG_LOCATIONS);
+  // Accept only a source path ending in :line:column, optionally wrapped in parentheses.
+  const sourceLocationPattern = /(?:\(|\s)((?:\/|file:\/\/|node:)[\w./:@\\-]+:\d+:\d+)\)?$/;
+  const frames = stack.slice(heading.length).split('\n');
+  const locations: string[] = [];
+
+  for (const frame of frames) {
+    const isStackFrame = /^\s+at\s/.test(frame);
+    if (!isStackFrame) continue;
+
+    const match = frame.match(sourceLocationPattern);
+    if (!match) continue;
+
+    locations.push(match[1]);
+    if (locations.length === MAX_LOG_LOCATIONS) break;
+  }
+
+  return locations;
 }

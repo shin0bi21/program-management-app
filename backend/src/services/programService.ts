@@ -4,9 +4,15 @@ import { programAccessPredicate } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput, UpdateProgramInput } from '../validation/programSchemas';
 import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRecordQuery';
-import { getYouthRowsByIds } from './youth/youthRecordQuery';
+import { getYouthRowsByIds, type YouthRecordRow } from './youth/youthRecordQuery';
 import { programRecordColumns, type ProgramRow } from './programming/programs/programRecordQuery';
 
+/**
+ * Lists all program lookup rows by name, optionally restricted to the actor's program scope.
+ * @param actor - Actor whose program scope applies when assignedOnly is true.
+ * @param assignedOnly - Whether to limit results to programs the actor can access.
+ * @example await getPrograms(assignedStaff, true) // Only programs assigned to this staff member.
+ */
 export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
   return sql<ProgramRow[]>`
     SELECT ${programRecordColumns}
@@ -16,6 +22,12 @@ export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
   `;
 }
 
+/**
+ * Creates a program and returns its row with empty assignment changes; duplicate names are 409.
+ * The caller must authorize program creation before calling.
+ * @param data - Validated program settings; the name is trimmed before storage.
+ * @example await createProgram({ ...validatedSettings, name: ' Leadership ' }) // program.name is 'Leadership'.
+ */
 export async function createProgram(data: CreateProgramInput) {
   const name = data.name.trim();
   const existing = await sql<{ id: string }[]>`
@@ -39,6 +51,15 @@ export async function createProgram(data: CreateProgramInput) {
   return { program: rows[0], updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] };
 }
 
+/**
+ * Replaces program settings and reads affected program-cycle and youth rows in one transaction.
+ * The caller must authorize the write; missing programs are 404 and duplicate names are 409.
+ * @param id - Program to lock and update.
+ * @param data - Validated replacement settings.
+ * @param actor - Actor whose permissions determine related response rows.
+ * @returns The saved program and related rows gated by the actor's read permissions.
+ * @example await updateProgram(programId, { ...validatedSettings, name: 'Leadership' }, writeOnlyActor) // Related row arrays are empty.
+ */
 export async function updateProgram(id: string, data: UpdateProgramInput, actor: AccessTokenPayload) {
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
@@ -70,8 +91,11 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
     const keys = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_cycle_assignments WHERE program_id = ${id} ORDER BY cycle_id`;
     const updatedProgramCycles = actor.permissions.includes('read:programs')
       ? await getProgramCycleRowsByKeys(trx, actor, keys) : [];
-    const updatedYouth = actor.permissions.includes('read:youth_profiles')
-      ? await getYouthRowsByIds(trx, await getProgramCycleYouthIds(trx, keys)) : [];
+    let updatedYouth: YouthRecordRow[] = [];
+    if (actor.permissions.includes('read:youth_profiles')) {
+      const youthIds = await getProgramCycleYouthIds(trx, keys);
+      updatedYouth = await getYouthRowsByIds(trx, youthIds);
+    }
 
     return { program, updatedProgramCycles, removedProgramCycles: [], createdProgramCycles: [], updatedYouth };
   }).catch(rethrowProgramConflict);
@@ -79,11 +103,12 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
 
 /**
  * Adds domain context only for the program-name constraint; other failures propagate.
- * @example rethrowProgramConflict(error) // duplicate name becomes a contextual 409
+ * @param error - Database or transaction failure to rethrow, retaining the original cause for duplicates.
+ * @example rethrowProgramConflict(Object.assign(new Error('duplicate'), { code: '23505', constraint_name: 'programs_name_key' })) // Throws a contextual 409.
  */
 function rethrowProgramConflict(error: unknown): never {
   if (isUniqueViolation(error, 'programs_name_key')) {
-    throw new ConflictError('A program with this name already exists', error);
+    throw Object.assign(new ConflictError('A program with this name already exists'), { cause: error });
   }
   throw error;
 }

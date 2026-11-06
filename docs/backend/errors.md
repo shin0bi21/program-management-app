@@ -54,9 +54,9 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 
 | File | What lives there |
 |---|---|
-| `src/errors.ts` | Error classes, response/detail types, specific unique-constraint recognition |
-| `src/middleware/errorMiddleware.ts` | `classifyError`, `handleError`, `sendError` |
-| `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → `ValidationError`) |
+| `src/errors.ts` | Standard HTTP constructors, classification, validation-error creation, response/detail types, constraint recognition, safe diagnostics |
+| `src/middleware/errorMiddleware.ts` | `handleError`, `sendError` |
+| `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → 400 with field details) |
 | `src/types/` | TypeScript shape declarations only — no runtime logic |
 
 <a id="1-error-classes"></a>
@@ -65,9 +65,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 
 | Error | Status | Use |
 |---|---|---|
-| `BadRequestError` | 400 | Invalid operation input |
-| `InvalidJsonError` | 400 | Malformed JSON request body |
-| `ValidationError` | 400 | Field validation, with `details` |
+| `BadRequestError` | 400 | Invalid input, malformed JSON, or field validation with `details` |
 | `UnauthorizedError` | 401 | Missing or invalid authentication |
 | `ForbiddenError` | 403 | Denied capability or access |
 | `NotFoundError` | 404 | Missing record or policy-required concealment |
@@ -75,21 +73,35 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 | `PayloadTooLargeError` | 413 | JSON body or uploaded file exceeds its parser limit |
 | `LockedError` | 423 | Locked account or resource |
 | `TooManyRequestsError` | 429 | Rate limit |
-| `DbConnectionError` | 503 | Database unavailable |
-| `ServiceUnavailableError` | 503 | Upstream dependency unavailable |
+| `ServiceUnavailableError` | 503 | Database or upstream dependency unavailable |
 | `InternalServerError` | 500 | Unexpected failure |
 
-Types live in [errors.ts](../../backend/src/errors.ts). A new error type extends `AppError` and sets its status and name. Raw PostgreSQL unique violations (`23505`) become `ConflictError`; connection failures become `DbConnectionError`. Unknown failures become `InternalServerError`. Classification preserves the original cause; logging selects safe diagnostic fields.
+[errors.ts](../../backend/src/errors.ts) re-exports standard `http-errors`
+constructors under the existing application names. Use those constructors for
+ordinary HTTP failures. Attach an original cause to a fresh library error with
+`Object.assign` when adding service context. Do not add custom subclasses for
+messages or metadata.
+
+The same module owns `classifyError` for parser/database normalization and
+`createValidationError` for standard 400 errors carrying field details. Middleware
+calls these owners rather than constructing fallback or validation errors itself.
+
+Raw PostgreSQL unique violations (`23505`) become standard 409 errors; connection
+failures become standard 503 errors. Unknown failures become standard 500 errors.
+Classification preserves the original cause; logging selects safe diagnostic fields.
+Existing HTTP errors recognized by `http-errors.isHttpError` pass through unchanged
+after parser normalization.
 
 JSON parser failures `entity.parse.failed` (400) and `entity.too.large` (413)
 are normalized to safe application messages without retaining the parser's raw
 message or submitted body. Unrecognized errors with a `status` property still
 follow normal classification.
 
-Standard fallback messages belong to the error classes. Services can override
-messages for their operation. Unexpected errors become `InternalServerError`;
-an empty Error message uses its default, while the original Error remains its cause.
-Throw `Error` instances or their application subclasses. Middleware expects that
+Library constructors provide standard HTTP fallback messages. Application-specific
+fallbacks belong to classification in `errors.ts`. Services supply
+contextual messages for their operation. Unexpected errors become `InternalServerError`;
+an empty Error message uses `An unexpected error occurred`, while the original Error remains its cause.
+Throw `Error` instances or standard HTTP errors. Middleware expects that
 contract; it does not convert strings, null, or arbitrary objects into errors.
 
 ### Add Service Context Selectively
@@ -98,12 +110,10 @@ Throw typed errors where the operation knows what failed. Catch a database error
 only when a recognized constraint needs a useful contextual response, or cleanup
 is required; otherwise let it propagate. Use `isUniqueViolation(error, constraintName)`
 to match the unique-violation code and the specific constraint, then throw a
-`ConflictError` with a safe message and the original cause. Do not match database
+standard 409 error with a safe message and the original cause. Do not match database
 message text or classify every constraint in every service.
 
-Middleware preserves all existing `AppError`s. Its classifier converts a small
-set of raw parser/database failures and supplies the unknown-error 500 fallback;
-it is not a registry of every domain failure. Keep its generic unique-conflict
+`classifyError` is not a registry of every domain failure. Keep its generic unique-conflict
 and database-connection fallbacks for failures a service has not translated.
 Classification uses structured codes and parser metadata, never message-text
 matching. If an adapter loses that structure, fix the adapter rather than adding
@@ -128,7 +138,7 @@ Every error response has an `error` message and the request ID assigned by middl
 }
 ```
 
-For production 5xx responses, the handler sends `clientMessage` when explicitly supplied, otherwise `An unexpected error occurred`. Development/test responses and 4xx responses expose the actual message, so keep those messages safe for clients.
+For production 503 responses, the handler sends `The server is temporarily unavailable. Please try again shortly.` Other production 5xx responses use `An unexpected error occurred`. The library's `expose` flag does not override this application policy. Development/test responses and 4xx responses expose the actual message, so keep those messages safe for clients.
 
 The `/health` probe has its own status contract: `{ status: 'ok'|'degraded', db: 'connected'|'unavailable' }`, with 200 or 503.
 
@@ -136,14 +146,21 @@ The `/health` probe has its own status contract: `{ status: 'ok'|'degraded', db:
 
 Wrap every Express 4 async controller or middleware in `asyncHandler` so rejected promises reach the global handler. Controllers normally need no catch block.
 
-Follow [middleware ordering](middleware.md#request-ordering), with `handleError` last. The [HTTP Flow](http.mmd) shows the complete request path; [errorMiddleware.ts](../../backend/src/middleware/errorMiddleware.ts) owns classification and serialization.
+Follow [middleware ordering](middleware.md#request-ordering), with `handleError` last.
+The [HTTP Flow](http.mmd) shows the complete request path.
+[errors.ts](../../backend/src/errors.ts) classifies failures;
+[errorMiddleware.ts](../../backend/src/middleware/errorMiddleware.ts) logs them and
+serializes the response.
 
 ## Trace Failures
 
 The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`, including request ID, method, path, status, error class, message, and safe diagnostic fields from the classified error and its causes. Raw unexpected
 messages use the generic application message in logs. If headers were already sent, it logs without attempting another response.
 
-`requestId` runs first, accepts an incoming `X-Request-ID` or generates a UUID, and returns it in the response header and error body. Use that ID to correlate a client report with server logs.
+`requestId` runs first and reuses an incoming `X-Request-ID` containing 1–128 ASCII
+letters, digits, hyphens, or underscores; otherwise it generates a UUID. It returns
+the ID in the response header and error body. Use that ID to correlate a client
+report with server logs.
 
 Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/debugging.md).
 
@@ -156,7 +173,7 @@ The global handler is the single owner of request-error severity, stack output,
 redaction, response shape, and request-ID correlation.
 
 Code that runs outside the request error flow, such as process handlers,
-background cleanup, or fire-and-forget logging, must log once with:
+background cleanup, or fire-and-forget logging, must log once:
 
 - Include a stable subsystem or operation prefix.
 - Include the non-sensitive identifiers needed to locate the operation.

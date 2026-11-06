@@ -7,7 +7,10 @@ export { getSchoolReferenceData as getSchools } from '../referenceData/schoolRef
 /**
  * Creates a school or updates the required target, returning its stored row.
  * Missing targets are 404; duplicate names are 409, including concurrent writes.
- * @example setSchool({ id: schoolId, name: 'Central School' }, actorId)
+ * @param data - Validated school name and optional ID; omit the ID to create a school.
+ * @param actorId - Existing user recorded as the creator or latest editor.
+ * @returns The saved school's ID and name after the write completes.
+ * @example await setSchool({ name: 'Central School' }, actorId) // { id: newId, name: 'Central School' }
  */
 export async function setSchool(data: SetSchoolInput, actorId: string) {
   const { id, name } = data;
@@ -21,6 +24,7 @@ export async function setSchool(data: SetSchoolInput, actorId: string) {
         RETURNING id, name
       `;
       if (!school) throw new NotFoundError('School not found');
+
       return school;
     }
 
@@ -30,10 +34,11 @@ export async function setSchool(data: SetSchoolInput, actorId: string) {
       RETURNING id, name
     `;
     if (!school) throw new InternalServerError('School creation returned no record');
+
     return school;
   } catch (error) {
     if (isUniqueViolation(error, 'schools_name_key')) {
-      throw new ConflictError('A school with this name already exists', error);
+      throw Object.assign(new ConflictError('A school with this name already exists'), { cause: error });
     }
     throw error;
   }
@@ -41,7 +46,10 @@ export async function setSchool(data: SetSchoolInput, actorId: string) {
 
 /**
  * Deletes a required school; the database clears linked school references.
- * @example deleteSchool(schoolId) // rejects with 404 if the school is unavailable
+ * Rejects with 404 when the school does not exist.
+ * @param id - School to remove, including its links from youth profiles.
+ * @returns Resolves after deletion and reference cleanup complete.
+ * @example await deleteSchool('00000000-0000-0000-0000-000000000000') // 404 for a missing school
  */
 export async function deleteSchool(id: string) {
   const deleted = await sql`DELETE FROM schools WHERE id = ${id} RETURNING id`;
