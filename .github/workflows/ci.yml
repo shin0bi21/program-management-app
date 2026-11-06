@@ -178,6 +178,7 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/myapp_test
           JWT_SECRET: ci-test-secret
           REFRESH_SECRET: ci-test-refresh-secret
+          FRONTEND_URL: http://localhost:5173
           EMAIL_USER: test@example.com
           EMAIL_PASS: test
           EMAIL_FROM: test@example.com

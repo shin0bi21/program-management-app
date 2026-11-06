@@ -5,17 +5,20 @@ import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
+/**
+ * Shifts an ISO calendar date by the requested number of days.
+ * @example addDays('2027-01-31', 1) // '2027-02-01'
+ */
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T12:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
 
-function weekdayFor(date: string) {
-  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-  return weekdays[new Date(`${date}T12:00:00.000Z`).getUTCDay()];
-}
-
+/**
+ * Builds a valid general note with scenario-specific replacements.
+ * @example sessionNoteInput({ details: 'Follow-up' }) // general note with no youth links
+ */
 function sessionNoteInput(
   overrides: Partial<{
     category: 'general' | 'attendance' | 'behaviour' | 'achievement';
@@ -226,22 +229,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('requires a weekday for weekly and biweekly schedules', async () => {
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        name: 'Missing Weekday',
-        frequency: 'weekly',
-        startsOn: addDays(today, 1),
-        endsOn: addDays(today, 15),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
-
-    expect(response.status).toBe(400);
-  });
-
   it('lists the available session types', async () => {
     const response = await request(app)
       .get('/api/session-types')
@@ -255,27 +242,20 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('generates weekly sessions from form input without persisting a schedule', async () => {
+  it('creates individual sessions with explicit dates and type', async () => {
     const firstSessionDate = addDays(today, 1);
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        sessionTypeId: guestSpeakerTypeId,
-        theme: 'Communication',
-        frequency: 'weekly',
-        dayOfWeek: weekdayFor(firstSessionDate),
-        startsOn: firstSessionDate,
-        endsOn: addDays(today, 15),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
+    const sessionDates = [firstSessionDate, addDays(firstSessionDate, 7), addDays(firstSessionDate, 14)];
+    for (const date of sessionDates) {
+      const response = await request(app)
+        .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Communication', date, startTime: '17:00', endTime: '19:30' });
 
-    expect(response.status).toBe(201);
-    expect(response.body.sessions).toHaveLength(3);
-    expect(response.body.sessions[0].theme).toBe('Communication');
-    expect(response.body.sessions[0].sessionTypeName).toBe('Guest Speaker');
-    sessionId = response.body.sessions[0].id;
+      expect(response.status).toBe(201);
+      expect(response.body.theme).toBe('Communication');
+      expect(response.body.sessionTypeName).toBe('Guest Speaker');
+      if (date === firstSessionDate) sessionId = response.body.id;
+    }
 
     const dates = await sql<{ localDate: string }[]>`
       SELECT (starts_at AT TIME ZONE 'America/Toronto')::date::text AS local_date
@@ -292,11 +272,11 @@ describe('Program cycle sessions and attendance API', () => {
 
   it('rejects a session without a title or theme', async () => {
     const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        frequency: 'once',
-        startsOn: addDays(today, 2),
+        sessionTypeId: guestSpeakerTypeId,
+        date: addDays(today, 2),
         startTime: '13:00',
         endTime: '14:00',
       });
@@ -586,45 +566,21 @@ describe('Program cycle sessions and attendance API', () => {
     expect(assignmentResponse.status).toBe(409);
   });
 
-  it('generates monthly sessions on the selected day of month', async () => {
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        theme: 'Monthly Workshop',
-        frequency: 'monthly',
-        dayOfMonth: 15,
-        startsOn: addDays(today, 1),
-        endsOn: addDays(today, 60),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
-
-    expect(response.status).toBe(201);
-    expect(response.body.sessions.length).toBeGreaterThan(0);
-    const dates = await sql<{ dayOfMonth: number }[]>`
-      SELECT EXTRACT(DAY FROM starts_at AT TIME ZONE 'America/Toronto')::int AS day_of_month
-      FROM program_sessions
-      WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND theme = 'Monthly Workshop'
-    `;
-    expect(dates.every(session => session.dayOfMonth === 15)).toBe(true);
-  });
-
   it('creates an open Drop In session with no enrollment roster', async () => {
     await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${openProgramId}, ${mainCycleId})`;
 
-    const generated = await request(app)
-      .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions/generate`)
+    const created = await request(app)
+      .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         theme: 'Friday Drop In',
-        frequency: 'once',
-        startsOn: addDays(today, 1),
+        sessionTypeId: guestSpeakerTypeId,
+        date: addDays(today, 1),
         startTime: '17:00',
         endTime: '20:00',
       });
-    expect(generated.status).toBe(201);
-    openSessionId = generated.body.sessions[0].id;
+    expect(created.status).toBe(201);
+    openSessionId = created.body.id;
 
     const roster = await request(app)
       .get(`/api/sessions/${openSessionId}/roster`)
@@ -1030,12 +986,12 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('edits and deletes sessions while retaining enrollment history', async () => {
-    const generated = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
+    const created = await request(app)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ theme: 'Disposable Session', frequency: 'once', startsOn: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
-    expect(generated.status).toBe(201);
-    const disposableSessionId = generated.body.sessions[0].id;
+      .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Disposable Session', date: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
+    expect(created.status).toBe(201);
+    const disposableSessionId = created.body.id;
 
     const updated = await request(app).put(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)

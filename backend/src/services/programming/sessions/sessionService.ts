@@ -7,14 +7,8 @@ import { getProgramCycleRowsByKeys, type ProgramCycleKey } from '../programCycle
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionInput,
-  GenerateSessionsInput,
   UpdateSessionInput,
 } from '../../../validation/programmingSchemas';
-
-const intervalFor = {
-  weekly: '1 week',
-  biweekly: '2 weeks',
-} as const;
 
 const weekdayIndex = {
   sunday: 0,
@@ -36,6 +30,15 @@ interface ProgramSchedule {
 }
 
 /**
+ * Lists session type IDs and names alphabetically.
+ * @example await getSessionTypes() // [{ id: regularTypeId, name: 'Regular' }] when Regular is the only type
+ */
+export function getSessionTypes() {
+  // 1. Load session types in name order.
+  return sql`SELECT id, name FROM session_types ORDER BY name`;
+}
+
+/**
  * Creates a scheduled session in the one cycle covering its date; ambiguous assignments are 409.
  * @param programId - Program the actor must be allowed to access.
  * @param data - Validated session settings, with optional schedule defaults.
@@ -44,13 +47,19 @@ interface ProgramSchedule {
  * @example await createProgramSession(programId, { sessionTypeId, theme: 'Cooking', date: '2027-01-15' }, actor) // session in the cycle covering January 15
  */
 export async function createProgramSession(programId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
+  // 1. Check access to the program.
   await assertCanAccessProgram(actor, programId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Lock the program before resolving cycle assignments.
     await lockAssignmentProgram(trx, programId, actor);
 
+    // 3. Load program defaults and resolve the session date.
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
+
+    // 4. Lock assigned cycles covering the session date.
     const assignments = await trx<ProgramCycleKey[]>`
       SELECT assignment.program_id, assignment.cycle_id
       FROM program_cycle_assignments assignment
@@ -67,6 +76,7 @@ export async function createProgramSession(programId: string, data: CreateSessio
       throw new ConflictError('Multiple assigned cycles cover this session date. Adjust the overlapping cycle dates in Programming settings.');
     }
 
+    // 5. Save the session and return affected cycle rows.
     return createScheduledSession(trx, programId, assignments[0].cycleId, data, actor, schedule, date);
   }).catch(rethrowSessionConflict);
 }
@@ -81,10 +91,15 @@ export async function createProgramSession(programId: string, data: CreateSessio
  * @example await createSession(programId, cycleId, { sessionTypeId, theme: 'Cooking', date: '2027-01-15' }, actor) // January 15 session using program default times
  */
 export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
+  // 1. Check access to the assigned program and cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, programId, cycleId, actor);
+
+    // 3. Load the cycle date bounds.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
       SELECT cycle.starts_on::text, cycle.ends_on::text
       FROM program_cycles cycle
@@ -92,125 +107,16 @@ export async function createSession(programId: string, cycleId: string, data: Cr
     `;
 
     if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
+
+    // 4. Resolve the session date from program defaults.
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
     if (date < cycle.startsOn || date > cycle.endsOn) {
       throw new ConflictError('Sessions must fall within the cycle date range');
     }
 
+    // 5. Save the session within the validated cycle.
     return createScheduledSession(trx, programId, cycleId, data, actor, schedule, date);
-  }).catch(rethrowSessionConflict);
-}
-
-/**
- * Creates sessions for a validated recurrence and returns affected cycle rows atomically.
- * @param programId - Program owning the generated sessions.
- * @param cycleId - Required assigned cycle containing the recurrence dates.
- * @param data - Validated recurrence, date bounds, and local session times.
- * @param actor - Actor used for authorization and write metadata.
- * @example A weekly Monday schedule from 2027-01-01 through 2027-01-15 creates sessions on January 4 and 11.
- */
-export async function generateSessions(programId: string, cycleId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
-  return sql.begin(async (tx) => {
-    const trx = asTransactionSql(tx);
-    await lockSessionAssignment(trx, programId, cycleId, actor);
-    const theme = data.theme;
-    const cycles = await trx<{ startsOn: string; endsOn: string; timezone: string }[]>`
-      SELECT cycle.starts_on::text AS starts_on, cycle.ends_on::text AS ends_on, program.timezone
-      FROM program_cycles cycle
-      CROSS JOIN programs program
-      WHERE cycle.id = ${cycleId} AND program.id = ${programId}
-    `;
-
-    const cycle = cycles[0];
-    if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
-    const lastDate = data.frequency === 'once' ? data.startsOn : data.endsOn!;
-    if (data.startsOn < cycle.startsOn || lastDate > cycle.endsOn) {
-      throw new ConflictError('Sessions must fall within the cycle date range');
-    }
-
-    if (data.frequency === 'once') {
-      await trx`
-        INSERT INTO program_sessions (
-          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
-        )
-        VALUES (
-          ${programId}, ${cycleId},
-          ${data.sessionTypeId},
-          ${theme},
-          (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
-          (${data.startsOn}::date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
-          ${actor.userId},
-          ${actor.userId}
-        )
-      `;
-    } else if (data.frequency === 'weekly' || data.frequency === 'biweekly') {
-      const firstSessionDate = firstWeekdayOnOrAfter(data.startsOn, data.dayOfWeek!);
-      if (firstSessionDate > data.endsOn!) {
-        throw new ConflictError('No session dates match the selected weekday and date range');
-      }
-      await trx`
-        INSERT INTO program_sessions (
-          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
-        )
-        SELECT
-          ${programId}, ${cycleId},
-          ${data.sessionTypeId},
-          ${theme},
-          (session_date::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
-          (session_date::date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
-          ${actor.userId},
-          ${actor.userId}
-        FROM generate_series(
-          ${firstSessionDate}::date,
-          ${data.endsOn!}::date,
-          ${intervalFor[data.frequency]}::interval
-        ) AS session_date
-      `;
-    } else {
-      await trx`
-        INSERT INTO program_sessions (
-          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
-        )
-        SELECT
-          ${programId}, ${cycleId},
-          ${data.sessionTypeId},
-          ${theme},
-          (candidate.session_date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone},
-          (candidate.session_date + ${data.endTime}::time) AT TIME ZONE ${cycle.timezone},
-          ${actor.userId},
-          ${actor.userId}
-        FROM generate_series(
-          date_trunc('month', ${data.startsOn}::date),
-          date_trunc('month', ${data.endsOn!}::date),
-          '1 month'::interval
-        ) AS month_start
-        CROSS JOIN LATERAL (
-          SELECT month_start::date + ${data.dayOfMonth! - 1}::int AS session_date
-        ) AS candidate
-        WHERE candidate.session_date BETWEEN ${data.startsOn}::date AND ${data.endsOn!}::date
-          AND EXTRACT(MONTH FROM candidate.session_date) = EXTRACT(MONTH FROM month_start)
-      `;
-    }
-
-    const sessions = await trx`
-      SELECT cs.id, cs.program_id, cs.cycle_id, cs.session_type_id, st.name AS session_type_name,
-        cs.theme, cs.starts_at, cs.ends_at, cs.cancelled_at, cs.description
-      FROM program_sessions cs
-      INNER JOIN session_types st ON st.id = cs.session_type_id
-      WHERE cs.program_id = ${programId} AND cs.cycle_id = ${cycleId}
-        AND cs.session_type_id = ${data.sessionTypeId}
-        AND cs.theme = ${theme}
-        AND cs.starts_at >= (${data.startsOn}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone}
-        AND cs.starts_at <= (${lastDate}::date + ${data.startTime}::time) AT TIME ZONE ${cycle.timezone}
-      ORDER BY cs.starts_at
-    `;
-    if (!sessions.length) {
-      throw new ConflictError('No session dates match the selected schedule and date range');
-    }
-
-    return { sessions, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
   }).catch(rethrowSessionConflict);
 }
 
@@ -222,13 +128,19 @@ export async function generateSessions(programId: string, cycleId: string, data:
  * @example await updateSession(sessionId, { theme: 'Cooking', startsAt: '2027-01-15T22:00:00Z', endsAt: '2027-01-15T23:00:00Z' }, actor) // returns the saved session with its existing type and cleared description
  */
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
+  // 1. Check access to the session.
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Find the session assignment.
     const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!session) throw new NotFoundError('Session not found');
+
+    // 3. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, session.programId, session.cycleId, actor);
 
+    // 4. Save the replacement session details.
     const rows = await trx`
       UPDATE program_sessions
       SET session_type_id = COALESCE(${data.sessionTypeId ?? null}, session_type_id),
@@ -239,8 +151,12 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
       RETURNING id
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
+
+    // 5. Load the complete saved session for the response.
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
+
+    // 6. Load affected cycle rows and return them with the updated session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [saved]) };
   }).catch(rethrowSessionConflict);
 }
@@ -253,17 +169,25 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
  * @example await moveSessionDate(sessionId, '2030-03-10', actor) // a Toronto 17:30 session keeps 17:30 local time across the move
  */
 export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
+  // 1. Check access to the session.
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Find the session program.
     const [lookup] = await trx<{ programId: string }[]>`
       SELECT session.program_id FROM program_sessions session
       WHERE session.id = ${id}
     `;
     if (!lookup) throw new NotFoundError('Session not found');
+
+    // 3. Lock the program before resolving the destination cycle.
     await lockAssignmentProgram(trx, lookup.programId, actor);
 
+    // 4. Load the program schedule and timezone.
     const schedule = await getProgramSchedule(trx, lookup.programId);
+
+    // 5. Lock the session and derive its destination local times.
     const [session] = await trx<{
       cycleId: string; movable: boolean; startLocal: string; endLocal: string; endDate: string;
     }[]>`
@@ -279,6 +203,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!session) throw new NotFoundError('Session not found');
     if (!session.movable) throw new ConflictError('Only future, non-cancelled sessions can be moved');
 
+    // 6. Lock assigned cycles covering the destination dates.
     const assignments = await trx<ProgramCycleKey[]>`
       SELECT assignment.program_id, assignment.cycle_id
       FROM program_cycle_assignments assignment
@@ -291,6 +216,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
     if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
 
+    // 7. Reject a cycle change when the session has recorded data.
     if (assignments[0].cycleId !== session.cycleId) {
       const [records] = await trx<{ recorded: boolean }[]>`
         SELECT EXISTS (SELECT 1 FROM attendance_records WHERE session_id = ${id})
@@ -301,9 +227,11 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
     }
 
+    // 8. Validate the destination times in the program timezone.
     const timing = await sessionTiming(trx, session.startLocal, session.endLocal, schedule.timezone);
     if (!timing.future) throw new ConflictError('Session destination must be in the future');
 
+    // 9. Save the destination cycle and timestamps.
     await trx`
       UPDATE program_sessions SET cycle_id = ${assignments[0].cycleId},
         starts_at = ${timing.startsAt}, ends_at = ${timing.endsAt},
@@ -311,8 +239,12 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       WHERE id = ${id}
       RETURNING id, program_id, cycle_id, starts_at, ends_at
     `;
+
+    // 10. Load the complete moved session for the response.
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
+
+    // 11. Load affected cycle rows and return them with the moved session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved]) };
   }).catch(rethrowSessionConflict);
 }
@@ -324,39 +256,46 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
  * @example await deleteSession(sessionId, actor) // removes an unrecorded session and returns { id: sessionId, updatedProgramCycles }
  */
 export async function deleteSession(id: string, actor: AccessTokenPayload) {
+  // 1. Check access to the session.
   await assertCanAccessSession(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Find the session assignment.
     const [lookup] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
     if (!lookup) throw new NotFoundError('Session not found');
+
+    // 3. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, actor);
+
+    // 4. Lock the session before checking deletion dependencies.
     const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id} FOR UPDATE`;
     if (!session) throw new NotFoundError('Session not found');
 
+    // 5. Reject sessions with recorded attendance.
     const attendance = await trx`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
     if (attendance.length) {
       throw new ConflictError('Session cannot be deleted because attendance has been recorded');
     }
+
+    // 6. Reject sessions with recorded notes.
     const notes = await trx`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
     if (notes.length) {
       throw new ConflictError('Session cannot be deleted because session notes have been recorded');
     }
+
+    // 7. Reject sessions with attachments.
     const attachments = await trx`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
     if (attachments.length) {
       throw new ConflictError('Session cannot be deleted because attachments have been added');
     }
 
+    // 8. Delete the session after the dependency checks.
     await trx`DELETE FROM program_sessions WHERE id = ${id}`;
+
+    // 9. Load affected cycle rows and return them with the deleted session ID.
     return { id, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [session]) };
   });
-}
-
-/**
- * Lists session type IDs and names alphabetically.
- * @example await getSessionTypes() // [{ id: regularTypeId, name: 'Regular' }] when Regular is the only type
- */
-export function getSessionTypes() {
-  return sql`SELECT id, name FROM session_types ORDER BY name`;
 }
 
 /**
@@ -381,8 +320,13 @@ function firstWeekdayOnOrAfter(date: string, weekday: keyof typeof weekdayIndex)
  * @example await lockSessionAssignment(trx, programId, cycleId, actor) // an absent assignment throws 404; locks last until the transaction ends
  */
 async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, actor: AccessTokenPayload) {
+  // 1. Authorize and lock the program.
   await lockAssignmentProgram(trx, programId, actor);
+
+  // 2. Lock the required cycle.
   await trx`SELECT id FROM program_cycles WHERE id = ${cycleId} FOR UPDATE`;
+
+  // 3. Lock and require the program-cycle assignment.
   const assignments = await trx`
     SELECT program_id FROM program_cycle_assignments
     WHERE program_id = ${programId} AND cycle_id = ${cycleId} FOR UPDATE
@@ -397,6 +341,7 @@ async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId
  * @example await getProgramSchedule(trx, programId) // includes defaultStartTime: '17:30' for a program starting at 17:30
  */
 async function getProgramSchedule(trx: typeof sql, programId: string): Promise<ProgramSchedule> {
+  // 1. Load schedule defaults and the current local date and time.
   const [schedule] = await trx<ProgramSchedule[]>`
     SELECT default_day_of_week,
       to_char(default_start_time, 'HH24:MI') AS default_start_time,
@@ -451,8 +396,10 @@ async function createScheduledSession(
   const endTime = data.endTime ?? schedule.defaultEndTime;
   if (endTime <= startTime) throw new ConflictError('End time must be after start time');
 
+  // 1. Validate local times and convert them to UTC.
   const timing = await sessionTiming(trx, `${date}T${startTime}`, `${date}T${endTime}`, schedule.timezone);
 
+  // 2. Insert the session using the resolved schedule.
   const [session] = await trx`
     INSERT INTO program_sessions (
       program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description, created_by, updated_by
@@ -464,8 +411,12 @@ async function createScheduledSession(
     RETURNING id, program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description
   `;
   if (!session) throw new InternalServerError('Session creation returned no record');
+
+  // 3. Load the complete created session for the response.
   const [saved] = await getSessionRowsByIds(trx, actor, [session.id]);
   if (!saved) throw new InternalServerError('Saved session record is unavailable');
+
+  // 4. Load affected cycle rows and return them with the created session.
   return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
 }
 
@@ -477,6 +428,7 @@ async function createScheduledSession(
  * @example getUpdatedProgramCycles(trx, sessionOnlyWriter, [{ programId, cycleId }]) // undefined without read:programs
  */
 function getUpdatedProgramCycles(trx: typeof sql, actor: AccessTokenPayload, keys: ProgramCycleKey[]) {
+  // 1. Load affected cycle rows only when the actor can read programs.
   return actor.permissions.includes('read:programs')
     ? getProgramCycleRowsByKeys(trx, actor, keys)
     : undefined;
@@ -492,7 +444,7 @@ function getUpdatedProgramCycles(trx: typeof sql, actor: AccessTokenPayload, key
  * @example await sessionTiming(trx, '2027-01-15T17:30', '2027-01-15T19:30', 'America/Toronto') // startsAt is 2027-01-15T22:30:00Z
  */
 async function sessionTiming(trx: typeof sql, startLocal: string, endLocal: string, timezone: string) {
-  // Reject skipped or repeated wall-clock times instead of implicitly choosing a daylight-saving offset.
+  // 1. Convert local times and detect skipped or repeated clock times.
   const [timing] = await trx<{ valid: boolean; startsAt: Date; endsAt: Date; future: boolean }[]>`
     WITH times AS (
       SELECT ${startLocal}::timestamp AT TIME ZONE ${timezone} AS starts_at,

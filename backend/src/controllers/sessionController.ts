@@ -1,15 +1,19 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 
-import { createProgramSession, createSession, moveSessionDate, deleteSession, generateSessions, getSessionTypes, updateSession } from '../services/programming/sessions/sessionService';
+import { createProgramSession, createSession, moveSessionDate, deleteSession, getSessionTypes, updateSession } from '../services/programming/sessions/sessionService';
 import { getSessionReferenceData } from '../services/programming/sessions/sessionReferenceDataService';
 import { listSessions } from '../services/programming/sessions/sessionListService';
 import { getSessionRoster, setSessionAttendance } from '../services/programming/sessions/sessionAttendanceService';
 import { createSessionNote, deleteSessionNote, getSessionNotes, unlinkYouthFromSessionNote, updateSessionNote } from '../services/programming/sessions/sessionNoteService';
 import { createSessionAttachment, deleteSessionAttachment, getSessionAttachmentFile, getSessionAttachments, updateSessionAttachment } from '../services/programming/sessions/sessionAttachmentService';
-import type { CreateProgramSessionInput, CreateSessionInput, CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, GenerateSessionsInput, SetAttendanceInput, UpdateSessionNoteInput, UpdateSessionInput } from '../validation/programmingSchemas';
+import type { CreateProgramSessionInput, CreateSessionInput, CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, SetAttendanceInput, UpdateSessionNoteInput, UpdateSessionInput } from '../validation/programmingSchemas';
 import type { SessionListQuery } from '../validation/programmingSchemas';
 
+/**
+ * Reads the actor attached by authentication middleware.
+ * @example actor(authenticatedRequest) // the authenticated user's access-token claims
+ */
 const actor = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetSessionList = async (req: Request, res: Response) => {
@@ -35,14 +39,6 @@ export const handleCreateSession = async (req: Request, res: Response) => {
 
 export const handleMoveSessionDate = async (req: Request, res: Response) => {
   res.json(await moveSessionDate(req.params.sessionId, req.body.date as string, actor(req)));
-};
-
-export const handleGenerateSessions = async (req: Request, res: Response) => {
-  res.status(201).json(await generateSessions(
-    req.params.programId, req.params.cycleId,
-    req.body as GenerateSessionsInput,
-    actor(req),
-  ));
 };
 
 export const handleGetSessionRoster = async (req: Request, res: Response) => {
