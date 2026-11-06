@@ -1,13 +1,14 @@
 # Preferences
 
 Keep page-specific fields, defaults, allowed values, role rules, and option sources
-in the page's preference or control hook. [State and Data](state-and-data.md)
-owns the broader state-lifetime rules.
+in the page's preference or control hook.
+
+| Value | Owner | Lifetime |
+|---|---|---|
+| Account filters, search, sorting, and view | `usePreferences` through a page hook | Across navigation and devices |
+| Table column widths and visibility | `useTableLayout` through a page hook | Browser-local, isolated by user and table |
 
 ## Data Preferences
-
-Use `usePreferences` for filters, search, sorting, and view choice saved to the
-account across navigation and devices.
 
 ### Declare Fields
 
@@ -58,9 +59,8 @@ page-owned column keys as the account controls. Compose its width and visibility
 values and setters into `controls.table` alongside account-wide sorting. Do not
 send layout fields to the preference API or implement page-owned storage effects.
 
-Layout is isolated by user and table within each browser profile. It survives
-reloads and logout; clearing site data resets it. Storage failures leave edits
-usable in memory.
+Layout survives reloads and logout; clearing site data resets it. Storage
+failures leave edits usable in memory.
 
 When renaming a persisted column ID, migrate account sorting with a forward database
 migration and pass a stable page-owned `columnKeyAliases` map to `useTableLayout`
