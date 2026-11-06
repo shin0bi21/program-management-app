@@ -1,5 +1,5 @@
 import { asTransactionSql, sql } from '../../../db/client';
-import { ConflictError, NotFoundError } from '../../../errors';
+import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertCanAccessProgramCycle, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
 import { lockAssignmentProgram } from '../programCycles/assignmentService';
 import { getSessionRowsByIds } from './sessionRecordQuery';
@@ -60,7 +60,7 @@ export async function createProgramSession(programId: string, data: CreateSessio
     }
 
     return createScheduledSession(trx, programId, assignments[0].cycleId, data, actor, schedule, date);
-  });
+  }).catch(rethrowSessionConflict);
 }
 
 export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
@@ -74,6 +74,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
       WHERE cycle.id = ${cycleId}
     `;
 
+    if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
     const schedule = await getProgramSchedule(trx, programId);
     const date = resolveSessionDate(data.date, schedule);
     if (date < cycle.startsOn || date > cycle.endsOn) {
@@ -81,7 +82,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
     }
 
     return createScheduledSession(trx, programId, cycleId, data, actor, schedule, date);
-  });
+  }).catch(rethrowSessionConflict);
 }
 
 export async function generateSessions(programId: string, cycleId: string, data: GenerateSessionsInput, actor: AccessTokenPayload) {
@@ -98,6 +99,7 @@ export async function generateSessions(programId: string, cycleId: string, data:
     `;
 
     const cycle = cycles[0];
+    if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
     const lastDate = data.frequency === 'once' ? data.startsOn : data.endsOn!;
     if (data.startsOn < cycle.startsOn || lastDate > cycle.endsOn) {
       throw new ConflictError('Sessions must fall within the cycle date range');
@@ -184,7 +186,7 @@ export async function generateSessions(programId: string, cycleId: string, data:
     }
 
     return { sessions, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
-  });
+  }).catch(rethrowSessionConflict);
 }
 
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
@@ -206,9 +208,9 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
-    if (!saved) throw new NotFoundError('Session not found');
+    if (!saved) throw new InternalServerError('Saved session record is unavailable');
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [saved]) };
-  });
+  }).catch(rethrowSessionConflict);
 }
 
 export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
@@ -271,9 +273,9 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       RETURNING id, program_id, cycle_id, starts_at, ends_at
     `;
     const [saved] = await getSessionRowsByIds(trx, actor, [id]);
-    if (!saved) throw new NotFoundError('Session not found');
+    if (!saved) throw new InternalServerError('Saved session record is unavailable');
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved]) };
-  });
+  }).catch(rethrowSessionConflict);
 }
 
 export async function deleteSession(id: string, actor: AccessTokenPayload) {
@@ -334,6 +336,7 @@ async function getProgramSchedule(trx: typeof sql, programId: string): Promise<P
       to_char(CURRENT_TIMESTAMP AT TIME ZONE timezone::text, 'HH24:MI:SS') AS local_time
     FROM programs WHERE id = ${programId}
   `;
+  if (!schedule) throw new InternalServerError('Required program schedule is unavailable');
   return schedule;
 }
 
@@ -373,8 +376,9 @@ async function createScheduledSession(
     )
     RETURNING id, program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description
   `;
+  if (!session) throw new InternalServerError('Session creation returned no record');
   const [saved] = await getSessionRowsByIds(trx, actor, [session.id]);
-  if (!saved) throw new NotFoundError('Session not found');
+  if (!saved) throw new InternalServerError('Saved session record is unavailable');
   return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [{ programId, cycleId }]) };
 }
 
@@ -411,4 +415,14 @@ async function sessionTiming(trx: typeof sql, startLocal: string, endLocal: stri
   if (!timing.valid) throw new ConflictError('Session times are invalid in the program timezone');
 
   return timing;
+}
+
+/** Adds context to duplicate session schedules without changing other failures.
+ * @example rethrowSessionConflict(error) // duplicate program/cycle/theme/start becomes 409
+ */
+function rethrowSessionConflict(error: unknown): never {
+  if (isUniqueViolation(error, 'uq_program_sessions_program_cycle_theme_start')) {
+    throw new ConflictError('A session with this theme and start time already exists in this program cycle', error);
+  }
+  throw error;
 }

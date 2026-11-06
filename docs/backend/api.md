@@ -45,16 +45,13 @@ Task-linked hours mutations include `updatedTasks` when the actor has
 `read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
 create/update/placement responses also return their canonical `tableRow`; deletion
 returns the affected task rows. Projections are read inside the write transaction,
-so callers reconcile totals and completion without a second list request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts) and
-[Hours integration tests](../../backend/tests/hours/hours.test.ts).
+so callers reconcile totals and completion without a second list request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts).
 
 Table and calendar filters must agree without widening policy scope. Hours use
 inclusive work dates; Tasks use overlap of their inclusive start/due interval.
 Date filters apply before pagination, paired bounds are required, and multi-year
 ranges are supported. Hours collection `cycleIds` match selected membership;
 an empty selection is unrestricted, while its dashboard uses a single `cycleId`.
-The [Hours](../../backend/tests/hours/hours.test.ts) and
-[Tasks](../../backend/tests/tasks/tasks.test.ts) suites own the boundary cases.
 
 ## Youth Profiles and Lead Signup
 
@@ -70,9 +67,8 @@ profile remains editable as a person ages.
 Lead signup copies the stored or corrected DOB into the Youth profile and saves
 any correction on the Lead in one audited transaction. A legacy Lead with unknown
 DOB must supply it. Signup controls the `signed_up` status; follow-up notes and
-other allowed status changes are independent. The [Lead service](../../backend/src/services/outreach/leads/leadService.ts),
-[Lead tests](../../backend/tests/leads/), and [Youth write tests](../../backend/tests/youth/youthWrites.test.ts)
-own these contracts. Preserve [historical audit interpretation](database.md#historical-snapshots)
+other allowed status changes are independent. The [Lead service](../../backend/src/services/outreach/leads/leadService.ts)
+owns signup. Preserve [historical audit interpretation](database.md#historical-snapshots)
 when changing retired fields.
 
 The focused contacts endpoint preserves unrelated profile data, including a
@@ -81,12 +77,11 @@ serve as emergency contacts; relationship types belong to the
 [Youth schema](../../backend/src/validation/youthSchemas.ts). Submitted contact
 IDs must belong to active contacts on that profile; duplicates or unavailable IDs
 reject the entire save. See [focused profile writes](../../backend/src/services/youth/youthService.ts)
-and [focused write tests](../../backend/tests/youth/youthWrites.test.ts).
+for the implementation.
 
 Program and cycle filters must match the same nonwithdrawn enrollment or
 open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthFilters.ts)
-and [Youth list tests](../../backend/tests/youth/youth.test.ts) preserve that
-cross-domain selection contract.
+preserves that cross-domain selection contract.
 
 ## Programming
 
@@ -114,8 +109,7 @@ own the shared lock order: programs, cycles, then program-cycle relationships. C
 editing locks current programs in ID order before its cycle. Child foreign keys
 coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before program-cycle
 and session rows, serializing them with session moves. Keep this ordering aligned with
-session scheduling; [assignment tests](../../backend/tests/programs/assignments.test.ts)
-cover atomic replacement and concurrency.
+session scheduling.
 
 ### Session Creation and Ranges
 
@@ -130,15 +124,12 @@ Program-based creation resolves exactly one allowed cycle from the local date
 inside the assignment-locking transaction; missing or overlapping matches conflict.
 Direct pair creation validates the session dates against the selected program/cycle
 combination. See
-[session service](../../backend/src/services/programming/sessions/sessionService.ts)
-and [session-default tests](../../backend/tests/sessions/sessionDefaults.test.ts).
+[session service](../../backend/src/services/programming/sessions/sessionService.ts).
 
 Session queries combine cycle, program, type, status, search, and date
 filters while preserving program access. Paired timestamps use an exclusive end;
 multi-year ranges and real calendar dates in years 0001–9999 are supported.
-[Date-range tests](../../backend/tests/sessions/dateRangeValidation.test.ts) and
-[session list service](../../backend/src/services/programming/sessions/sessionListService.ts)
-own range validation and filtering.
+See the [session list service](../../backend/src/services/programming/sessions/sessionListService.ts).
 
 #### Move a Future Session Date
 
@@ -149,8 +140,7 @@ complete moved session. Recorded attendance, notes, attachments, or session-link
 hours prevent moving to another cycle. Ambiguous DST times conflict; unrelated
 session fields remain unchanged. Its authoritative response supplies the new
 placement for cache reconciliation. See the strict request in
-[programmingSchemas](../../backend/src/validation/programmingSchemas.ts) and the
-[session-move tests](../../backend/tests/sessions/sessionMove.test.ts).
+[programmingSchemas](../../backend/src/validation/programmingSchemas.ts).
 
 ### Roster Eligibility
 
@@ -159,9 +149,8 @@ pagination, plus existing enrollments even after aging out so they can be
 withdrawn. Ages use today's Toronto date and inclusive program bounds; unknown
 DOB is eligible only without age bounds. Open-attendance programs do not use this
 roster. Enrollment writes recheck eligibility inside the transaction and reject
-an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts),
-[enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts),
-and [roster tests](../../backend/tests/programs/roster.test.ts).
+an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts) and
+[enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts).
 
 ## Outreach and Public Homepage
 
@@ -169,6 +158,4 @@ Public program content comes from program records and includes upcoming sessions
 even when a program's session list is empty. Public intake accepts valid lead
 submissions with request validation and strict rate limiting. The signup form is
 always available; it has no runtime availability setting.
-The [homepage tests](../../backend/tests/homepage/homepage.test.ts) and
-[public intake tests](../../backend/tests/public/public.test.ts) cover projections,
-permissions, and public lead submission. Leads own follow-up and conversion.
+Leads own follow-up and conversion.

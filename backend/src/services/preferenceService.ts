@@ -1,4 +1,5 @@
 import { sql } from '../db/client';
+import { InternalServerError } from '../errors';
 import type { PreferenceKey, PreferenceValue } from '../validation/preferenceSchemas';
 
 export async function getPreference(userId: string, preferenceKey: PreferenceKey) {
@@ -22,5 +23,6 @@ export async function setPreference(
     SET value = EXCLUDED.value, updated_at = NOW()
     RETURNING value
   `;
+  if (!rows[0]) throw new InternalServerError('Preference save returned no record');
   return rows[0].value;
 }

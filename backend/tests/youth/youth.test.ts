@@ -672,12 +672,12 @@ describe('Youth API', () => {
       }
     });
 
-    it('should return null for nonexistent id (200)', async () => {
+    it('should reject a nonexistent required profile (404)', async () => {
       const res = await request(app)
         .get('/api/youth?id=00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${adminToken}`);
-      expect(res.status).toBe(200);
-      expect(res.body).toBeNull();
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Youth profile not found');
     });
   });
 
@@ -1029,7 +1029,7 @@ describe('Youth API', () => {
       expect(response.status).toBe(403);
     });
 
-    it('validates identifiers, reports missing youth, and hides unavailable program cycles', async () => {
+    it('validates identifiers and reports missing youth or authorized program cycles', async () => {
       const invalid = await request(app)
         .get(`/api/youth/not-a-uuid/programs/${softSkillsProgramId}/cycles/${softSkillsCycleId}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
@@ -1043,7 +1043,7 @@ describe('Youth API', () => {
       const missingCohort = await request(app)
         .get(`/api/youth/${youthId}/programs/${softSkillsProgramId}/cycles/00000000-0000-4000-8000-000000000000/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
-      expect(missingCohort.status).toBe(403);
+      expect(missingCohort.status).toBe(404);
     });
 
     it('lists every eligible program session with this youth attendance only', async () => {

@@ -129,9 +129,9 @@ describe('Program cycle roster eligibility', () => {
     expect((await loadRoster(boundedPair, unassignedToken)).status).toBe(403);
   });
 
-  it('validates identifiers and conceals unavailable pairs', async () => {
+  it('validates identifiers and reports missing pairs after program authorization', async () => {
     expect((await loadRoster({ ...boundedPair, cycleId: 'invalid' })).status).toBe(400);
-    expect((await loadRoster({ ...boundedPair, cycleId: '00000000-0000-4000-8000-000000000000' })).status).toBe(403);
+    expect((await loadRoster({ ...boundedPair, cycleId: '00000000-0000-4000-8000-000000000000' })).status).toBe(404);
   });
 
   it('rejects enrollment roster lookup for open attendance programs', async () => {

@@ -16,9 +16,9 @@ import preferenceRoutes from './routes/preferenceRoutes';
 import hoursRoutes from './routes/hoursRoutes';
 import taskRoutes from './routes/taskRoutes';
 import referenceDataRoutes from './routes/referenceDataRoutes';
-import { requestId } from './middleware/routeMiddleware';
+import { asyncHandler, requestId } from './middleware/routeMiddleware';
 import { handleError } from './middleware/errorMiddleware';
-import { NotFoundError } from './errors';
+import { errorForLog, NotFoundError } from './errors';
 import { checkConnection } from './db/client';
 
 const app = express();
@@ -52,14 +52,14 @@ app.use(express.json({ limit: '20kb', type: 'application/json' }));
 app.use(cookieParser());
 
 // Health check endpoint — returns DB connectivity status for monitoring/diagnostics
-app.get('/health', async (req, res) => {
+app.get('/health', asyncHandler(async (_req, res) => {
   const dbOk = await checkConnection();
   const status = dbOk ? 200 : 503;
   res.status(status).json({
     status: dbOk ? 'ok' : 'degraded',
     db: dbOk ? 'connected' : 'unavailable',
   });
-});
+}));
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
@@ -89,17 +89,15 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
-// Catch synchronous crashes and unhandled rejections that escape Express entirely.
-// These should never happen in normal flow — log and exit so the process manager restarts cleanly.
-// Guarded from test environments: process.exit(1) would terminate the Jest runner mid-run.
+// Fatal runtime failures terminate the process so the process manager can restart it.
 if (process.env.NODE_ENV !== 'test') {
-  process.on('uncaughtException', (err) => {
-    console.error('[uncaughtException]', err);
+  process.on('uncaughtException', (error: Error) => {
+    console.error('[uncaughtException] Error terminating process', errorForLog(error));
     process.exit(1);
   });
 
-  process.on('unhandledRejection', (reason) => {
-    console.error('[unhandledRejection]', reason);
+  process.on('unhandledRejection', (error: Error) => {
+    console.error('[unhandledRejection] Error terminating process', errorForLog(error));
     process.exit(1);
   });
 }

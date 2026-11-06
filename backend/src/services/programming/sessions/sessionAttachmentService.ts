@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { asTransactionSql, sql } from '../../../db/client';
-import { BadRequestError, ConflictError, NotFoundError } from '../../../errors';
+import { BadRequestError, ConflictError, InternalServerError, NotFoundError } from '../../../errors';
 import { assertCanAccessSession } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
@@ -89,6 +89,7 @@ export async function createSessionAttachment(
           ${file.originalname}, ${file.mimetype}, ${file.size}, ${actor.userId}, ${actor.userId}
         ) RETURNING id
       `;
+      if (!rows[0]) throw new InternalServerError('Attachment creation returned no record');
       attachmentId = rows[0].id;
       if (data.youthIds.length) {
         await trx`
@@ -103,7 +104,9 @@ export async function createSessionAttachment(
     throw error;
   }
   const attachments = await getSessionAttachments(sessionId, actor);
-  return attachments.find(attachment => attachment.id === attachmentId)!;
+  const attachment = attachments.find(candidate => candidate.id === attachmentId);
+  if (!attachment) throw new NotFoundError('Session attachment not found');
+  return attachment;
 }
 
 export async function updateSessionAttachment(

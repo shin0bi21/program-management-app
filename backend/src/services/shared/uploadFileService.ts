@@ -1,6 +1,7 @@
 import { mkdir, rename, unlink } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { errorForLog } from '../../errors';
 
 /** A file moved aside until its owning database mutation commits or rolls back. */
 export interface QuarantinedUpload {
@@ -32,7 +33,7 @@ export async function finalizeQuarantinedUpload(file: QuarantinedUpload | null) 
     await unlink(file.quarantinePath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      console.error('[UploadCleanup]', error);
+      console.error('[UploadCleanup] Error removing quarantined file', errorForLog(error as Error));
     }
   }
 }

@@ -7,7 +7,7 @@ import type { DbRow } from '../../types/db';
 import type { AccessTokenPayload, UserRole } from '../../types/auth';
 import type { SetAccountInput } from '../../validation/accountSchemas';
 import { sendStaffInvite, sendYouthInvite, sendInviteEmailChanged, sendEmailChangedOldAddress, sendEmailChangedNewAddress } from '../../utils/emailService';
-import { ConflictError, NotFoundError, BadRequestError } from '../../errors';
+import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../errors';
 import { assertCanCreateAccount, assertCanManageAccount } from '../../policies/accountPolicy';
 import { accountRecordColumns, accountRecordFrom, type AccountRow } from './accountRecordQuery';
 
@@ -53,6 +53,12 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
       email,
       status: 'invited',
     });
+  }).catch(error => {
+    if (isUniqueViolation(error, 'user_credentials_email_key')
+      || isUniqueViolation(error, 'user_credentials_user_id_key')) {
+      throw new ConflictError('This youth or email already has an account', error);
+    }
+    throw error;
   });
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -71,7 +77,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
   // Get role ID
   const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
-  if (!roles.length) throw new ConflictError(`Role '${role}' not found`);
+  if (!roles.length) throw new InternalServerError(`Required role '${role}' is not configured`);
   const roleId = roles[0].id;
 
   let userId!: string;
@@ -114,6 +120,8 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         WHERE id = ${id}
         RETURNING *
       `;
+
+      if (!updatedUsers[0]) throw new NotFoundError('Staff user not found');
       userId = updatedUsers[0].id;
 
       await audit(
@@ -153,7 +161,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       if (programIds !== undefined) {
         await replaceUserProgramAssignments(trx, userId, programIds, actorId);
       }
-    });
+    }).catch(rethrowAccountEmailConflict);
 
     // Post-transaction: send emails based on what changed
     if (email !== oldEmail) {
@@ -188,6 +196,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
         VALUES (${firstName}, ${lastName}, ${roleId})
         RETURNING *
       `;
+      if (!newUsers[0]) throw new InternalServerError('Account creation returned no user');
       userId = newUsers[0].id;
       await audit(trx, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
 
@@ -202,7 +211,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       `;
 
       await replaceUserProgramAssignments(trx, userId, programIds ?? [], actorId);
-    });
+    }).catch(rethrowAccountEmailConflict);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const inviteUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
@@ -216,6 +225,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
     WHERE u.id = ${userId}
   `;
 
+  if (!staff[0]) throw new NotFoundError('Account not found');
   return staff[0];
 }
 
@@ -243,7 +253,7 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 
     // Block toggling a pending invite — those must be revoked via DELETE
     if (existing.status === 'invited') {
-      throw new BadRequestError('Cannot deactivate a pending invite — use revoke invite instead');
+      throw new ConflictError('Cannot deactivate a pending invite — use revoke invite instead');
     }
 
     const newStatus = existing.status === 'active' ? 'inactive' : 'active';
@@ -264,6 +274,7 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
       ${accountRecordFrom}
       WHERE u.id = ${userId}
     `;
+    if (!rows[0]) throw new InternalServerError('Updated account record is unavailable');
     result = rows[0];
   });
 
@@ -291,7 +302,7 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 
     // Only allow hard delete for pending invites
     if (existingUsers[0].status !== 'invited') {
-      throw new BadRequestError('This user has already activated their account — use deactivate instead');
+      throw new ConflictError('This user has already activated their account — use deactivate instead');
     }
 
     const existing = existingUsers[0];
@@ -346,4 +357,14 @@ async function replaceUserProgramAssignments(
     SELECT ${staffId}, selected.program_id, ${actorId}
     FROM UNNEST(${sql.array(programIds)}::uuid[]) AS selected(program_id)
   `;
+}
+
+/** Preserves contextual errors and translates only the account email constraint.
+ * @example rethrowAccountEmailConflict(error) // a duplicate email becomes a specific 409
+ */
+function rethrowAccountEmailConflict(error: unknown): never {
+  if (isUniqueViolation(error, 'user_credentials_email_key')) {
+    throw new ConflictError('A user with this email already exists', error);
+  }
+  throw error;
 }

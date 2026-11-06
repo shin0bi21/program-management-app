@@ -1,3 +1,4 @@
+import { errorForLog } from '../../errors';
 import { sql } from '../../db/client';
 
 // ============================================================================
@@ -55,7 +56,7 @@ async function refreshBlacklistCache(): Promise<void> {
     blacklisted.forEach(row => blacklistCache.add(row.jti));
     lastCacheUpdate = Date.now();
   } catch (error) {
-    console.error('Failed to refresh blacklist cache:', error);
+    console.error('[TokenRevocation] Error refreshing blacklist cache', errorForLog(error as Error));
   }
 }
 
