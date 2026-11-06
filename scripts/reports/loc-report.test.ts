@@ -19,6 +19,7 @@ test('counts nonblank lines and optionally excludes comment-start lines', () => 
 
 test('skips block comments through their closing line and resumes afterward', () => {
   const text = '/** heading\n * details\n\n */ const ignored = 1;\nconst counted = 2;\n/* unfinished\nmore comments';
+
   assert.equal(countLines(text, 'ts'), 1);
   assert.equal(countLines('{/* JSX\ncomment */}\n<div />\n', 'tsx'), 1);
   assert.equal(countLines('/* CSS\ncomment */\na { color: red; }', 'css'), 1);
@@ -37,12 +38,20 @@ test('uses line prefixes without parsing templates, fences, or inline block star
 test('aggregates source and tests while excluding ignored files, dependencies, and deletions', (context) => {
   const root = mkdtempSync(join(tmpdir(), 'loc-report-'));
   context.after(() => rmSync(root, { recursive: true, force: true }));
+
   execFileSync('git', ['init', '--quiet'], { cwd: root });
 
+  /**
+   * Writes text to a fixture path relative to the temporary repository root.
+   * @returns Nothing; creates or replaces the file, propagating filesystem errors.
+   * @example write('app.ts', 'const x = 1;\n') // writes one code line to app.ts
+   */
   const write = (path: string, text: string) => writeFileSync(join(root, path), text);
+
   write('deleted.ts', 'deleted\n');
   execFileSync('git', ['add', 'deleted.ts'], { cwd: root });
   rmSync(join(root, 'deleted.ts'));
+
   write('.gitignore', 'ignored.ts\n');
   write('.codexignore', 'private.ts\n');
   write('.openaiignore', 'hidden.ts\n');
@@ -70,8 +79,10 @@ test('aggregates source and tests while excluding ignored files, dependencies, a
 
 test('CLI supports default, all, custom extensions, help, and invalid arguments', () => {
   const script = fileURLToPath(new URL('./loc-report.ts', import.meta.url));
-  for (const args of [[], ['all', '--ignore-comments'], ['ts', 'sql']]) {
+
+  for (const args of [[], ['all'], ['ts', 'sql']]) {
     const result = spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
+
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /^TOTAL\s+[1-9]\d*$/m);
     if (args[0] === 'all') assert.match(result.stdout, /Docs \(\.md\)/);
@@ -87,4 +98,19 @@ test('CLI supports default, all, custom extensions, help, and invalid arguments'
 
   assert.equal(invalid.status, 1);
   assert.match(invalid.stderr, /Unknown argument/);
+});
+
+test('CLI excludes comments by default and includes them only when requested', () => {
+  const script = fileURLToPath(new URL('./loc-report.ts', import.meta.url));
+
+  const defaultReport = execFileSync(process.execPath, [script], { encoding: 'utf8' });
+  const includedReport = execFileSync(process.execPath, [script, '--include-comments'], { encoding: 'utf8' });
+
+  assert.match(defaultReport, /Excludes blank lines and lines starting or continuing comments/);
+  assert.match(includedReport, /Excludes blank lines; includes comments/);
+
+  const defaultTotal = Number(defaultReport.match(/^TOTAL\s+(\d+)$/m)?.[1]);
+  const includedTotal = Number(includedReport.match(/^TOTAL\s+(\d+)$/m)?.[1]);
+
+  assert.ok(includedTotal > defaultTotal);
 });
