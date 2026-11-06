@@ -8,9 +8,6 @@ The frontend uses React, TypeScript, and Vite. Start with the guide for the part
 2. Read the narrowest guide for each changed surface.
 3. Inspect the owner's types, API adapter, hooks, component and tests.
 4. Keep route, permission, API, state, rendering and test contracts aligned.
-5. Follow the [testing guide](../workflows/delivery/testing.md) for focused verification and required checks.
-
-Browser-sensitive interactions use Playwright stories under `frontend/playwright/gallery/` and specs under `frontend/playwright/tests/`.
 
 ## Understand the Source Structure
 
@@ -41,7 +38,7 @@ needs a substantial multi-file set.
 |---|---|
 | Where code should live | [Ownership](architecture/ownership.md) |
 | State, API calls, queries, or mutations | [State and Data](architecture/state-and-data.md) |
-| Saved preferences, field rules, and browser-local table layout | [Preferences](features/preferences.md) |
+| Data preferences, table layout preferences, and field rules | [Preferences](architecture/preferences.md) |
 | Generate implementation and colocated test outlines | [Scaffolding](architecture/scaffolding.md) |
 | Test ownership and suite organization | [Testing](../workflows/delivery/testing.md#test-ownership) |
 | Shared components, type labels, and status labels | [UI Basics](components/README.md) |

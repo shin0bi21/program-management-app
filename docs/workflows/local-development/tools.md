@@ -1,31 +1,26 @@
 # Install the Tools
 
-This section covers the programs required for local application development.
-Please review and download each one before moving on to the next step.
+Install these tools in order.
 
 ## Docker Desktop
 
-Your local development environment will run in Docker. Docker keeps the
-application and its database in containers, which provide the software they
-need to run. This means you can start the project without installing and
-configuring each part separately on your computer.
+The application runs with Docker, which starts the app and its database together
+so you don't have to set them up separately.
 
-[Download Docker Desktop](https://www.docker.com/products/docker-desktop/).
-Open it after installation and complete its first-time setup. Leave it running
-while you work on the project. On Windows, follow the installer's instructions
-for its Linux-container environment, including WSL 2 when requested.
+[Download Docker Desktop](https://www.docker.com/products/docker-desktop/),
+install it, and open it. Complete the setup instructions, then leave Docker
+Desktop running while you work on the project. On Windows, install any
+additional components the installer requests, including WSL 2.
 
 ## DBeaver Community
 
-This application uses a PostgreSQL database to store application data. You will
-use DBeaver to view and manage that data in your local environment. It provides
-a graphical user interface, or GUI, so you can browse tables and run queries
-from an application window.
+The application stores its data in a PostgreSQL database. You can use DBeaver
+to view this data in tables and make changes through an application window.
 
-Use **DBeaver Community**, the free, open-source edition with PostgreSQL support.
-[Download DBeaver Community](https://dbeaver.io/download/). You will connect it
-to the local database after starting the application in Docker. DBeaver is useful
-for inspecting data; the application can also run without the GUI open.
+[Download DBeaver Community](https://dbeaver.io/download/), the free edition,
+and install it. You'll connect it to the database in a later step, after
+starting the application with Docker. You only need to open DBeaver when you
+want to view or manage the data.
 
 ## Visual Studio Code
 
@@ -46,3 +41,14 @@ this guide on Windows. Restart VS Code after installing Git so it can find it.
 
 Docker provides Node.js and PostgreSQL for this project. You do not need to
 install them separately on your computer.
+
+## Check Your Installations
+
+You can check your installations using the following commands in a terminal:
+
+```bash
+git --version
+docker --version
+```
+
+Both commands should show a version number.

@@ -26,7 +26,7 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 - Require **purpose, contract, and at least one illustrative example**, including small helpers.
 - Waterloo encourages the full recipe for helpers but does not require it.
 - Exercise private helpers through their public owner when appropriate; do not export them solely for tests.
-- An `@example` documents behavior; executable tests verify it. Follow [Test Ownership](delivery/testing.md#test-ownership).
+- An `@example` documents behavior; executable tests verify it.
 
 ```ts
 /**

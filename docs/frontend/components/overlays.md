@@ -37,10 +37,3 @@ Applying or clearing filters keeps the popup and current category open, includin
 when refreshed table or calendar results change their scroll position. The user
 can continue adjusting filters or dismiss the popup with its trigger, Escape,
 or an outside click.
-
-## Testing
-
-Test target, open-state and callback wiring at the trigger. Shared overlay tests own
-positioning, dismissal, keyboard behavior and focus return. Use browser tests when correctness
-depends on portal placement, clipping or real pointer and focus behavior. See
-[Testing](../../workflows/delivery/testing.md).

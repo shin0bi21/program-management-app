@@ -48,8 +48,7 @@ The [calendar guide](../components/calendars.md) shows this split for virtualize
 - Endpoint-only request, filter, pagination, and payload types stay in the API adapter.
 - Component-, hook-, and page-only types stay beside that owner. A page-root `types.ts` is reserved for contracts genuinely consumed by sibling page units; do not centralize types merely to group them by domain.
 
-See [Components](../components/README.md) for extraction and rendering patterns, and
-[Testing](../../workflows/delivery/testing.md#frontend-test-ownership) for test boundaries.
+See [Components](../components/README.md) for extraction and rendering patterns.
 
 ## Validate Uncertain Inputs
 

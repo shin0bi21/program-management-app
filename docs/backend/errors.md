@@ -107,7 +107,7 @@ The handler logs 4xx failures with `console.warn` and 5xx failures with `console
 
 `requestId` runs first, accepts an incoming `X-Request-ID` or generates a UUID, and returns it in the response header and error body. Use that ID to correlate a client report with server logs.
 
-Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/local-development/debugging.md).
+Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/debugging.md).
 
 ## Logging Rules
 

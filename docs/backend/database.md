@@ -5,12 +5,28 @@
 1. Add structural SQL under `backend/db/schema/migrations/` or seed/backfill SQL under `backend/db/data/migrations/`, named `YYYY-MM-DD_#_description.sql`. Use the date written, an integer starting at 1 for that date, and a short snake_case description. Filenames must be unique across both folders; all files run in one lexicographic order. Existing `backend/db/migrations/` history remains supported until the first explicit collapse.
 2. Encode the persistence contract and use the base-table pattern below for new data tables.
 3. Update seeds and fixtures for required fields and relationships.
-4. Apply the migration and regenerate database types using the [local migration commands](../workflows/local-development/README.md#migrations-and-database-types).
+4. Apply the migration and regenerate database types using the [migration commands below](#apply-local-migrations).
 5. Verify status and checksums, exercise the migration on a fresh test database, and query important constraints or migrated values directly.
 
-`db:migrate` regenerates `backend/src/types/database.ts`. If generation fails after migration succeeds, retry `db:types` using the local development workflow.
+## Apply Local Migrations
 
-### Keep Migration History Immutable
+For automatic startup migration behavior, see [Run in Docker](../workflows/local-development/setup.md#start-the-application).
+To apply pending migrations to a running local database, run from the project root:
+
+```bash
+docker compose exec backend npm run db:migrate
+```
+
+`db:migrate` regenerates `backend/src/types/database.ts`. If generation fails
+after migration succeeds, run `docker compose exec backend npm run db:types`.
+
+Check migration state with:
+
+```bash
+docker compose exec backend npm run db:migrate -- --dry-run
+```
+
+## Keep Migration History Immutable
 
 Once a migration is committed or applied to a shared environment, never edit or rename it. Add a forward migration instead. The explicit [database collapse workflow](../workflows/delivery/collapse-database.md) is the sole exception for retiring history: it exports the current PostgreSQL state, verifies a replacement database with the same data, and replaces the ledger and covered files only after a successful switch. Uncommitted migrations used only in confirmed-disposable local databases may be folded before shipping; reset every affected database to match the final checksums. Keep independently shippable concerns in separate migrations.
 

@@ -18,7 +18,7 @@ coordinate them.
 ## PageHeader and Controls
 
 Pass `title` and optional `actions`. Pass the page hook's grouped result as
-`controls`; [Preferences](../features/preferences.md#expose-page-controls) owns
+`controls`; [Preferences](../architecture/preferences.md#expose-page-controls) owns
 that contract and filter declarations. The container connects those groups to
 `SearchInput`, `FilterCard`, `ViewMenu`, and `ColumnVisibilityMenu` once.
 
@@ -101,12 +101,10 @@ Define one named, stable filter object after data and preferences. Pass it to ev
 table or calendar, even when there is only one view. A child may add inputs it
 owns, such as pagination, sorting, or the visible calendar range, but does not
 rebuild page filters from separate props. Use the applied search value from the
-[preference controls](../features/preferences.md#expose-page-controls).
+[preference controls](../architecture/preferences.md#expose-page-controls).
 
 Keep selection, actions, and dialog targets in the route when they coordinate
 multiple views or children. Single-owner behavior stays with that child.
 See [Tasks](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
-The [scaffold](../architecture/scaffolding.md) generates this assembly order;
-[test ownership](../../workflows/delivery/testing.md#test-ownership) determines
-which behavior to verify at each boundary.
+The [scaffold](../architecture/scaffolding.md) generates this assembly order.

@@ -94,13 +94,6 @@ or group spacing. Grouped fields do not inherit the single-input styling.
 
 One owner controls each mutation. A page-private modal may call its typed API and return the authoritative saved record through `onSaved`; the page action owner then reconciles its children. A shared contextual modal receives an async callback when its consumer must coordinate several views or caches. Table results follow the [row-operation contract](table-rows.md).
 
-## Testing
-
-Cover field and status wiring in the component. The workflow tests cover initialization,
-dependent fields, contextual locks, command payloads, duplicate-submit guards and failure
-recovery. Shared `Modal` tests own dialog mechanics; route tests cover entry context and
-success callbacks. See [Testing](../../workflows/delivery/testing.md).
-
 ## Scaffolding
 
 Form modals use this workflow-specific file layout:
@@ -123,4 +116,4 @@ components/
 
 A modal that is itself the shared capability uses the direct form `common/features/ExampleModal/`. A modal belonging to a broader shared domain uses `common/features/ExampleDomain/components/ExampleModal/`. Choose between those forms from actual ownership; the scaffold supports both.
 
-The modal component and test are required. Add the workflow hook and its test when the modal owns non-trivial state or asynchronous coordination; keep a simple focused dialog in its component instead of generating a pass-through hook.
+Add the workflow hook when the modal owns non-trivial state or asynchronous coordination; keep a simple focused dialog in its component instead of generating a pass-through hook.

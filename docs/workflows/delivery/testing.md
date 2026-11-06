@@ -73,6 +73,31 @@ boundaries. Use pattern `--all` only for an intentional repository-wide scrub.
 Follow [Test Ownership](#test-ownership) and the focused
 [frontend guide](../../frontend/README.md#find-the-right-guide).
 
+## Test Data Boundaries
+
+- API adapters: verify HTTP methods, paths, serialized inputs, cancellation,
+  response shaping, and boundary normalization with a mocked centralized client.
+- Domain query hooks: verify query keys, enabled conditions, adapter inputs,
+  cursors, and domain shaping at the shared-query boundary. Invoke captured request
+  callbacks directly when that exercises the contract; use an isolated QueryClient
+  when coordination needs a real query lifecycle.
+- Shared query owners: verify accumulation, deduplication, ordering, stale-response
+  protection, mapped errors, refresh, and retry mechanics once. Consumers verify
+  their own decisions and wiring.
+- Pure policy: cover representative inputs, invalid values, and meaningful
+  boundaries. Cover every finite permission or capability case whose omission
+  changes access, available actions, or persisted values.
+- Concurrent workflows: exercise out-of-order completion, repeated edits,
+  rollback, reset during loading, and deletion followed by a late response when
+  those transitions can occur.
+
+Use the real shared preference hook with an isolated QueryClient and mocked API
+for page-specific field rules. Seed browser-local layout separately from account
+preference fixtures.
+
+Performance claims require targeted render-count or browser evidence at the
+largest supported viewport; functional assertions alone do not establish them.
+
 ## Organize Tests for Reading
 
 - Colocate suites with their owner. Each test arranges its own state and passes
@@ -152,5 +177,6 @@ behavior; do not duplicate a shared matrix at each consumer.
 - `scripts/dev/` wrappers use syntax checks, ShellCheck, and manual verification,
   without TypeScript mock-command suites. Database behavior belongs to worker tests.
 
-See [Local Development](../local-development/README.md) for container and database
-operation, and [CI](ci.md) for pattern-check ownership.
+See [Run in Docker](../local-development/setup.md) for container operation,
+[Database](../../backend/database.md#apply-local-migrations) for migrations, and
+[CI](ci.md) for pattern-check ownership.

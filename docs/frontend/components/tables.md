@@ -126,11 +126,13 @@ management session opens, and keep presentation visibility separate from its lif
 
 ## Connect Page Controls
 
-The page owns live search, applied filters, sorting preferences, browser-local column layout and view choice. Compose widths and hidden columns through `useTableLayout`; sorting remains an account preference. Restore saved preferences and required option data before enabling the list query.
+The page owns live search, applied filters, sorting preferences, browser-local column layout and view choice. Restore saved preferences and required option data before enabling the list query.
 
-Consume the [grouped page-control contract](../features/preferences.md#expose-page-controls).
+Consume the [grouped page-control contract](../architecture/preferences.md#expose-page-controls).
 Use the page's applied filters consistently in the query key, API inputs, and filtered-empty
-message; the table does not implement draft search or preference persistence.
+message. Pass sorting, widths, visibility, and change callbacks through props; the
+table owns rendering and interaction. See [Table Layout Preferences](../architecture/preferences.md#table-layout-preferences)
+for layout persistence.
 
 Row identity, rendering, actions, cache updates, creates, and deletes are owned only by [Table Rows](table-rows.md).
 
@@ -164,32 +166,7 @@ vertical borders alongside the existing horizontal rules.
 
 The colgroup owns column widths; headers and body cells inherit their track sizes.
 Memoized rows receive their visible cells, so column visibility updates render while
-width changes and drag-only updates skip cell rendering; the shared component regression
-measures zero cell renders over ten movements with 150 loaded rows. Browser tests
-own preview/release geometry, touch release, scrolling, fixed columns, and the grid.
-
-## Test the Table
-
-Shared `Table` tests cover rendering, controlled selection, sort controls,
-keyboard navigation, resizing, and scroll behavior. Its public interface can
-exercise internal components such as `TableRow`. Internal hook suites cover their
-policy and lifecycle cases. Browser tests cover table geometry.
-
-Page-owned table tests cover domain-specific formatting, permission-aware actions,
-conditional input adaptation, and selection reconciliation. Exercise the decision
-that owner makes, such as choosing recovery for a page message or resolving a
-selected record from loaded results. Use a typed stub when observing the decision's
-output is sufficient.
-
-Domain data-hook tests cover query keys, enabled gates, API inputs, cursor and
-cancellation forwarding, and domain row shaping. Exercise the shared-query
-boundary directly for these contracts; use a real query lifecycle when the case
-requires domain coordination. Pure policy suites cover domain eligibility and
-canonical sort values. Shared ordering and query suites cover comparisons, ties,
-accumulation, refresh, and retry mechanics.
-
-Follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
-for route coordination.
+width changes and drag-only updates skip cell rendering.
 
 ## Scaffolding
 

@@ -22,7 +22,7 @@ Start with state in the component that owns it. Extract a focused hook when the 
 ## Separate Page Controls from View Data
 
 Use [route assembly](../components/page-container.md#assemble-the-route) for
-page-wide references and applied filters, and [Preferences](../features/preferences.md)
+page-wide references and applied filters, and [Preferences](preferences.md)
 for durable controls. Table and calendar collections stay with their view owners.
 
 Shared filter and selector lookups belong to `common/features/referenceData`, with
@@ -68,12 +68,6 @@ name> is no longer available.` An existing record with no children instead shows
 its normal empty state. Do not replace a rejected request with empty data or
 render internal diagnostics as user-facing copy.
 
-## Test Adapters and Pure Policy
-
-API-adapter tests own the exact method, path, query or body serialization, cancellation forwarding, typed response shaping, and boundary normalization. Mock the centralized HTTP client rather than exercising these contracts through browser UI or a query hook.
-
-Pure utilities and finite policy or capability rules use representative inputs, contract boundaries, and invalid values that the owner handles. Cover every finite case when omission would change permissions, available actions, or persisted values. Use Vitest's Node environment when the owner does not need browser globals.
-
 ## Write Async Workflows
 
 Prefer `async`/`await` with `try`/`catch` for sequential loading and mutation workflows.
@@ -86,30 +80,10 @@ async workflow should use `void` to make the intentional lack of awaiting explic
 
 Use the record returned by the backend after a mutation. Do not rebuild it from form values.
 
-When loads or mutations can overlap, define how stale responses are ignored or reconciled. Check out-of-order completion, repeated edits to one item, rollback order, reset during loading, and deletion followed by a late response. Use cancellation, serialization, or revisions as the owner requires, and test that stale work cannot replace newer state.
+When loads or mutations can overlap, define how stale responses are ignored or reconciled. Check out-of-order completion, repeated edits to one item, rollback order, reset during loading, and deletion followed by a late response. Use cancellation, serialization, or revisions as the owner requires so stale work cannot replace newer state.
 
 The owning action hook updates the affected list row, selection, calendar or dashboard. Do not refresh an entire page to avoid identifying the changed owner. Table mutations follow the [table-row contract](../components/table-rows.md).
 
 ## Keep Application Selection with Its Domain
 
 A controlled shared component receives the selected key and emits a selection event. When selection must survive filters or pagination, span table and calendar views, follow a resource, or reconcile after mutation and deletion, keep it in the route page or a focused domain selection hook. Do not add application selection state to a shared rendering component.
-
-## Test State and Data
-
-| Owner | Cover |
-|---|---|
-| API adapter | Method, path, serialized inputs, cancellation and response normalization; mock the HTTP client |
-| Domain query hook | Query key, enabled condition, adapter inputs, cursors and domain shaping at the shared-query boundary |
-| Shared query wrapper | Repository behavior such as accumulation, deduplication, mapped errors and retry policy |
-| Stateful hook | The effects or coordination it adds, including cleanup where applicable |
-| Pure utility or finite policy | Representative inputs, invalid values and meaningful boundaries; every permission or capability case |
-
-For example, a domain hook proves that `pageParam: 'next'` becomes `cursor: 'next'`;
-`useInfiniteListQuery` proves that pages accumulate without duplicate rows. Capture
-the domain hook's shared-query options and invoke its request callback directly
-when that fully exercises its contract. Use an isolated `QueryClient` for domain
-coordination that needs a real query lifecycle; do not repeat shared accumulation,
-refresh, retry or ordering matrices in each consumer. Simple state wiring stays
-in its component test.
-
-Use the helpers and isolation rules in [Test Ownership](../../workflows/delivery/testing.md#test-ownership). Table-specific query boundaries are in [Tables](../components/tables.md#render-the-table).

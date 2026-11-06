@@ -8,9 +8,12 @@ Deploy, verify, and troubleshoot the live application. Run server commands from
 Use [Deploy to Production](deployment.md) for automatic or manual deployment,
 verification, and recovery.
 
-## Common Issues
+## Server Settings
 
-Listed below are common production issues that have arisen. Use as required.
+Use [Update Server Environment](environment.md) to add or change backend secrets
+and load the updated settings on the server.
+
+## Common Issues
 
 | Issue or task | Guide |
 |---|---|
