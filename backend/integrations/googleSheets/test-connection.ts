@@ -18,6 +18,7 @@
  */
 
 import 'dotenv/config';
+import { errorForLog } from '../../src/errors';
 import { getSheetsClient } from './client';
 
 const spreadsheetId = process.argv[2] ?? process.env.SPREADSHEET_ID;
@@ -47,7 +48,7 @@ async function main() {
   console.log('');
 }
 
-main().catch((err: unknown) => {
-  console.error('Connection failed:', err instanceof Error ? err.message : err);
+main().catch((error: Error) => {
+  console.error('[GoogleSheets] Error checking connection', errorForLog(error));
   process.exit(1);
 });

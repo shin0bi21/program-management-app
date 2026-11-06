@@ -1,11 +1,12 @@
 import postgres from 'postgres';
+import { errorForLog } from '../errors';
+import { requireEnv } from '../utils/env';
 
 /**
  * PostgreSQL connection using postgres.js
  * 
  * Features:
  * - Connection pooling (max 10 connections)
- * - Automatic reconnection with exponential backoff
  * - Tagged template literals for safe queries
  * - Connection health checks
  * 
@@ -14,11 +15,7 @@ import postgres from 'postgres';
  *   const users = await sql`SELECT * FROM users`;
  */
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
+const DATABASE_URL = requireEnv('DATABASE_URL');
 
 export const sql = postgres(DATABASE_URL, {
   max: 10,                // Maximum number of concurrent DB connections
@@ -26,7 +23,6 @@ export const sql = postgres(DATABASE_URL, {
   connect_timeout: 10,    // Fail if a connection can't be established within 10s
   max_lifetime: 60 * 30,  // Recycle connections after 30 minutes
   
-  // Connection retry with exponential backoff
   onnotice: () => {},     // Suppress notices in production
   transform: postgres.camel, // Transform snake_case to camelCase (optional)
   
@@ -51,7 +47,7 @@ export async function checkConnection(): Promise<boolean> {
     await sql`SELECT 1`;
     return true;
   } catch (error) {
-    console.error('Database connection check failed:', error);
+    console.error('[Database] Error checking connection', errorForLog(error as Error));
     return false;
   }
 }

@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import multer from 'multer';
-import { BadRequestError } from '../errors';
+import { BadRequestError, PayloadTooLargeError } from '../errors';
 
 const maxFileSize = 15 * 1024 * 1024;
 
@@ -12,11 +12,11 @@ const singleFile = multer({
 export const uploadFile: RequestHandler = (req, res, next) => {
   singleFile(req, res, error => {
     if (error instanceof multer.MulterError) {
-      next(new BadRequestError(
-        error.code === 'LIMIT_FILE_SIZE'
-          ? 'File must be 15 MB or smaller'
-          : 'Unable to process file upload',
-      ));
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        next(new PayloadTooLargeError('File must be 15 MB or smaller'));
+      } else {
+        next(new BadRequestError('Unable to process file upload'));
+      }
       return;
     }
 

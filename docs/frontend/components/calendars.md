@@ -97,12 +97,6 @@ Every item has one inclusive `{ start, end }` range. A one-period record uses th
 
 Ranged records match overlap and appear once as complete records. Never duplicate an item into every covered day. Preserve date-only values and calendar arithmetic across daylight-saving changes, leap days, months and years.
 
-The calendar test owns forwarding the complete filters and range, response shaping and
-mutation-adapter wiring. The route test owns replacing the buffer when applied filters change.
-When a shaping hook exists, its test owns that shaping and reference preservation.
-`useDataBuffer` tests own generic range loading, accumulation, stale-result protection,
-mutation overrides and cleanup.
-
 ## Bound the Timeline by Cycle Dates
 
 Programming, Tasks, and Hours derive `dateRange={{ start, end }}` from their page's
@@ -112,7 +106,7 @@ earliest selected start through latest selected end, or the full span of all cyc
 when nothing is selected. There is no one-year maximum. Build
 the bounded set of period descriptors once; virtualization renders only visible columns
 and rows, while buffered requests load data as needed. Cycle selection and persistence
-follow [page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles).
+follow [page preferences](../architecture/preferences.md#derive-timeline-bounds-from-cycles).
 
 A range change replaces the page calendar's buffer through its applied-filter key.
 Clamp stored positions and navigation targets to those bounds; Today is disabled when
@@ -139,7 +133,7 @@ Pass one page filter object to both table and calendar and filter on the server 
 pagination. Tasks use cycle dates as a time window rather than task membership. Cycle
 metadata uses the shared reference endpoint under the consuming page's read permission.
 Persist selected IDs according to
-[page preferences](../features/preferences.md#derive-timeline-bounds-from-cycles), without a
+[page preferences](../architecture/preferences.md#derive-timeline-bounds-from-cycles), without a
 separate date-range control.
 
 ## Assign Calendar and Item Ownership
@@ -184,16 +178,10 @@ Consumers may use the source to distinguish explicitly opening a resource dashbo
 from synchronizing the owning row during item activation. Clicking an already selected
 row header still reports that explicit intent.
 
-Keep focus, pointer, drag, resize, cancellation, cleanup, and portal behavior with the narrowest component that owns the interaction. Use Playwright when correctness depends on real browser focus, geometry, pointer capture, scrolling, virtualization, or portals.
-
-The page-calendar test owns capability mapping, selection, item construction, forwarding the calendar prop, and exact callback-to-action wiring. Row tests own record/layout binding; Item tests own its positioned wrapper, selection/activation ordering, and click suppression; its move/resize hook tests own event routing and visible handle selection. Shared `TimelineCalendar` tests own composition, date/index mapping, range clipping, density, virtualization contracts and unit-testable interaction cleanup. Playwright owns real scrolling, sticky positioning, focus, menus, pointer thresholds, drag/drop, resize, clipping, autoscroll, cancellation and mobile geometry.
-
 Keep domain timezone conversion at the adapter boundary. A timestamp range with an
 exclusive midnight end must map to the preceding calendar day. Use calendar arithmetic
 across DST rather than adding fixed millisecond durations. The Sessions calendar currently
-loads and places ranges in America/Toronto, while item details use the program timezone;
-its [date-boundary tests](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/sessionCalendarDates.test.ts)
-own that conversion contract.
+loads and places ranges in America/Toronto, while item details use the program timezone.
 
 ## Present Item Details
 
@@ -204,14 +192,13 @@ labels retain the complete information needed when the visual summary is clipped
 
 For example, Programming uses programs as rows and session themes as summaries. Its
 [SessionItem](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionItem/SessionItem.tsx)
-and [tests](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionItem/SessionItem.test.tsx)
-own label order, program-local date/time formatting, and cross-midnight labels. Hours
+owns label order, program-local date/time formatting, and cross-midnight labels. Hours
 item details omit a redundant cycle label; other Hours surfaces keep their cycle context.
 
 ## Find Domain Behavior
 
 A shared calendar guide does not own form defaults, table labels, dashboard cohort selection,
-or server assignment policy. Follow their implementations and colocated tests:
+or server assignment policy. Follow their implementations:
 
 | Concern | Owner |
 |---|---|
@@ -219,7 +206,7 @@ or server assignment policy. Follow their implementations and colocated tests:
 | Sessions table columns and labels | [Table configuration](../../../frontend/src/pages/Programming/Sessions/components/SessionTable/hooks/useSessionTable.tsx) |
 | Current-cohort dashboard selection | [Program overview card](../../../frontend/src/pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard.tsx) |
 | Session movement capabilities and buffer reconciliation | [Session calendar](../../../frontend/src/pages/Programming/Sessions/components/SessionCalendar/SessionCalendar.tsx) |
-| Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) and [move regression tests](../../../backend/tests/sessions/sessionMove.test.ts) |
+| Cycle assignment and moves with recorded data | [Session service](../../../backend/src/services/programming/sessions/sessionService.ts) |
 
 ## Save and Reconcile Changes
 
@@ -228,13 +215,6 @@ Send add, move, resize, status, and delete events through narrow APIs. Move and 
 After success, reconcile the visible calendar buffer, selection and affected dashboard. If the same record appears in a table, follow [table row operations](table-rows.md). Preserve local calendar mutation overrides until confirmed server data arrives so stale loads cannot resurrect deletes or revert moves.
 
 Persist durable filters with page preferences. Keep browser-local calendar position separate through a page-specific `positionStorageKey`.
-
-## Testing
-
-Cover range shaping, filters, item capabilities, selection and callback-to-action wiring.
-Mutation tests cover buffer, selection and dashboard reconciliation. Shared calendar and
-buffer tests own their mechanics; use browser tests for drag, resize, clipping and scrolling.
-See [Testing](../../workflows/delivery/testing.md).
 
 ## Scaffolding
 
@@ -260,4 +240,4 @@ components/
       ExampleItem.story.tsx          when browser interaction matters
 ```
 
-The calendar component and test are required. Add `useScheduleCalendarData` only when loaded records need page-owned adaptation, and add `ExampleItem` only when an item has meaningful domain presentation. A browser story is optional even when the item owner exists.
+Add `useScheduleCalendarData` only when loaded records need page-owned adaptation, and add `ExampleItem` only when an item has meaningful domain presentation. A browser story is optional even when the item owner exists.

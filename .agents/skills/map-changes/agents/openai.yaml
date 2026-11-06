@@ -1,4 +1,0 @@
-interface:
-  display_name: "Map Changes"
-  short_description: "Map changes into reviewable concern groups"
-  default_prompt: "Use $map-changes to map the current working tree into one or more independently reviewable and shippable concerns."

@@ -30,7 +30,7 @@ test('documentation-only changes do not select paid application jobs', () => {
 });
 
 test('scaffolding and repository reports select static verification', () => {
-  for (const file of ['scripts/scaffold/frontend/index.ts', 'scripts/reports/file-changes-report.ts']) {
+  for (const file of ['scripts/scaffold/frontend/index.ts', 'scripts/reports/file-changes-report.ts', 'data/reports/ci-history.json']) {
     assertPlan([file], { commands: [['static', '']] });
   }
 });

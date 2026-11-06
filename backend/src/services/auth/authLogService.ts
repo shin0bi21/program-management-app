@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { errorForLog } from '../../errors';
 import { sql } from '../../db/client';
 import { requireEnv } from '../../utils/env';
 
@@ -34,28 +35,38 @@ interface AuthLogParams {
   metadata?: Record<string, unknown>;
 }
 
+const EVENTS_WITH_RESOLVED_EMAIL = new Set<AuthEvent>(['2fa_failed', 'password_reset_completed']);
+
 /**
  * Write an auth security event to auth_log.
  *
- * Fire-and-forget — failures are isolated so they never degrade the primary
- * auth flow (OWASP Logging Cheat Sheet — "Availability"). Errors are emitted
- * as structured logs so an aggregator can alert on sustained write failures.
+ * Best effort: email enrichment and persistence failures never fail the primary
+ * auth operation. Transactional business audits have a separate required owner.
+ * @example authLog({ event: 'logout', userId })
  */
 export async function authLog(params: AuthLogParams): Promise<void> {
   try {
+    let email = params.email;
+    if (!email && params.userId && EVENTS_WITH_RESOLVED_EMAIL.has(params.event)) {
+      const [credentials] = await sql<{ email: string }[]>`
+        SELECT email FROM user_credentials WHERE user_id = ${params.userId} LIMIT 1
+      `;
+      email = credentials?.email;
+    }
+
     await sql`
       INSERT INTO auth_log (event, user_id, email, ip_hash, device_fingerprint_hash, metadata)
       VALUES (
         ${params.event},
         ${params.userId ?? null},
-        ${params.email ?? null},
+        ${email ?? null},
         ${params.ipAddress ? hashIpSubnet(params.ipAddress) : null},
         ${params.deviceFingerprintHash ?? null},
         ${params.metadata ? JSON.stringify(params.metadata) : null}::jsonb
       )
     `;
   } catch (err) {
-    console.error('[auth_log] write failed', { event: params.event, userId: params.userId, err });
+    console.error(`[auth_log] Error writing ${params.event} for user ${params.userId ?? '-'}`, errorForLog(err as Error));
   }
 }
 

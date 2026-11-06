@@ -18,7 +18,7 @@ Express request path.
 4. Share the spreadsheet with the service account email. Grant Viewer for reads or Editor
    for writes. Keep the key and `.env` out of Git.
 5. Recreate the local backend container after changing `.env`, following
-   [Local Development](../../workflows/local-development/README.md#which-command-to-use).
+   [Run in Docker](../../local-development/04-setup.md#which-command-to-use).
 
 `GOOGLE_SERVICE_ACCOUNT_JSON` is required only when running Sheets scripts. Normal server
 operation does not need it.
@@ -62,6 +62,7 @@ Place Sheets scripts under `backend/integrations/googleSheets/`. For example,
 ```ts
 import 'dotenv/config';
 import { readSheet } from './index';
+import { errorForLog } from '../../src/errors';
 
 async function main() {
   const spreadsheetId = process.argv[2];
@@ -71,8 +72,8 @@ async function main() {
   console.log(`Read ${rows.length} rows`);
 }
 
-main().catch(error => {
-  console.error(error);
+main().catch((error: Error) => {
+  console.error('[GoogleSheets] Error reading roster', errorForLog(error));
   process.exitCode = 1;
 });
 ```

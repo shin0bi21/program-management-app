@@ -17,14 +17,14 @@ error classification and separation of diagnostic information from user-facing
 messages across 4xx and 5xx responses. We retain this application's JSON response
 shape rather than adopting Google's full error schema.
 
-Return the appropriate non-2xx status when an operation fails. A missing requested
-record or required parent returns `404`; an existing collection with no matching
+Return the appropriate non-2xx status when an operation fails. After authorization,
+a missing requested record or required parent returns `404`; an existing collection with no matching
 items returns `200` with an empty collection. Apply the existing permission and
 record-concealment policies before exposing resource existence; see
 [Authorization](authorization.md).
 
-Keep stacks, database details, and cause chains in backend logs, correlated by
-request ID. Backend 4xx messages must be safe to expose; unexpected production
+Keep safe source locations, error codes, and cause context in backend logs,
+correlated by request ID. Backend 4xx messages must be safe to expose; unexpected production
 5xx responses use a safe message as described below. The frontend owns contextual,
 user-friendly wording and an appropriate recovery action. Never turn a failed
 request into successful empty data or display internal diagnostics to users.
@@ -54,7 +54,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 
 | File | What lives there |
 |---|---|
-| `src/errors.ts` | All error classes, `ErrorResponse` type, `ValidationDetail` type |
+| `src/errors.ts` | Error classes, response/detail types, specific unique-constraint recognition |
 | `src/middleware/errorMiddleware.ts` | `classifyError`, `handleError`, `sendError` |
 | `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → `ValidationError`) |
 | `src/types/` | TypeScript shape declarations only — no runtime logic |
@@ -66,18 +66,55 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 | Error | Status | Use |
 |---|---|---|
 | `BadRequestError` | 400 | Invalid operation input |
+| `InvalidJsonError` | 400 | Malformed JSON request body |
 | `ValidationError` | 400 | Field validation, with `details` |
 | `UnauthorizedError` | 401 | Missing or invalid authentication |
 | `ForbiddenError` | 403 | Denied capability or access |
 | `NotFoundError` | 404 | Missing record or policy-required concealment |
 | `ConflictError` | 409 | Conflicting state or unique constraint |
+| `PayloadTooLargeError` | 413 | JSON body or uploaded file exceeds its parser limit |
 | `LockedError` | 423 | Locked account or resource |
 | `TooManyRequestsError` | 429 | Rate limit |
 | `DbConnectionError` | 503 | Database unavailable |
 | `ServiceUnavailableError` | 503 | Upstream dependency unavailable |
 | `InternalServerError` | 500 | Unexpected failure |
 
-Types live in [errors.ts](../../backend/src/errors.ts). A new error type extends `AppError` and sets its status and name. Raw PostgreSQL unique violations (`23505`) become `ConflictError`; connection failures become `DbConnectionError`. Unknown failures become `InternalServerError`. Classification preserves the original cause for server logs.
+Types live in [errors.ts](../../backend/src/errors.ts). A new error type extends `AppError` and sets its status and name. Raw PostgreSQL unique violations (`23505`) become `ConflictError`; connection failures become `DbConnectionError`. Unknown failures become `InternalServerError`. Classification preserves the original cause; logging selects safe diagnostic fields.
+
+JSON parser failures `entity.parse.failed` (400) and `entity.too.large` (413)
+are normalized to safe application messages without retaining the parser's raw
+message or submitted body. Unrecognized errors with a `status` property still
+follow normal classification.
+
+Standard fallback messages belong to the error classes. Services can override
+messages for their operation. Unexpected errors become `InternalServerError`;
+an empty Error message uses its default, while the original Error remains its cause.
+Throw `Error` instances or their application subclasses. Middleware expects that
+contract; it does not convert strings, null, or arbitrary objects into errors.
+
+### Add Service Context Selectively
+
+Throw typed errors where the operation knows what failed. Catch a database error
+only when a recognized constraint needs a useful contextual response, or cleanup
+is required; otherwise let it propagate. Use `isUniqueViolation(error, constraintName)`
+to match the unique-violation code and the specific constraint, then throw a
+`ConflictError` with a safe message and the original cause. Do not match database
+message text or classify every constraint in every service.
+
+Middleware preserves all existing `AppError`s. Its classifier converts a small
+set of raw parser/database failures and supplies the unknown-error 500 fallback;
+it is not a registry of every domain failure. Keep its generic unique-conflict
+and database-connection fallbacks for failures a service has not translated.
+Classification uses structured codes and parser metadata, never message-text
+matching. If an adapter loses that structure, fix the adapter rather than adding
+message guesses to middleware. Wrappers retain the original cause for diagnostics;
+they must emit an appropriate typed error when changing the error contract.
+
+Check required mutation results explicitly. A missing input target is 404; an
+impossible absent result after a verified, locked write is an internal error.
+Post-commit reads can race with deletion and still legitimately return 404.
+Required persistence failures must propagate. Optional values, empty collections,
+and explicitly best-effort secondary work retain their successful contracts.
 
 ## Response Contract
 
@@ -103,11 +140,12 @@ Follow [middleware ordering](middleware.md#request-ordering), with `handleError`
 
 ## Trace Failures
 
-The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`, including request ID, method, path, status, error class, message, and the classified error with its stack and cause. If headers were already sent, it logs without attempting another response.
+The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`, including request ID, method, path, status, error class, message, and safe diagnostic fields from the classified error and its causes. Raw unexpected
+messages use the generic application message in logs. If headers were already sent, it logs without attempting another response.
 
 `requestId` runs first, accepts an incoming `X-Request-ID` or generates a UUID, and returns it in the response header and error body. Use that ID to correlate a client report with server logs.
 
-Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/local-development/debugging.md).
+Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/debugging.md).
 
 ## Logging Rules
 
@@ -122,7 +160,12 @@ background cleanup, or fire-and-forget logging, must log once with:
 
 - Include a stable subsystem or operation prefix.
 - Include the non-sensitive identifiers needed to locate the operation.
-- Include the original `Error` or rejection value so its stack remains available.
+- Format the error with `errorForLog` from `src/errors.ts`; never dump the raw object.
+
+`errorForLog` retains error classes, codes, constraint identifiers, and source
+locations. It omits raw library messages, request bodies, query parameters,
+validation details, and arbitrary error properties. Application error messages
+must be safe at their source; do not interpolate secrets into them.
 
 Never log tokens, cookies, passwords, authorization headers, raw secrets, or
 unnecessarily complete request bodies. Do not add temporary success-path

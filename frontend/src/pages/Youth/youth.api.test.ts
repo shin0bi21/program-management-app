@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+// @vitest-environment node
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../http/client';
 import type { YouthProfile } from './types';
@@ -28,13 +29,12 @@ describe('youth API', () => {
     );
   });
 
-  it('returns one nullable profile when an id is supplied', async () => {
+  it('returns the required profile when an id is supplied', async () => {
     const profile = { id: 'youth-1' } as YouthProfile;
     vi.mocked(apiClient.get).mockResolvedValue(profile);
 
     const result = await getYouth('youth-1');
 
-    expectTypeOf(result).toEqualTypeOf<YouthProfile | null>();
     expect(result).toBe(profile);
     expect(apiClient.get).toHaveBeenCalledWith('/youth?id=youth-1');
   });
@@ -49,7 +49,7 @@ describe('youth API', () => {
     expect(apiClient.post).not.toHaveBeenCalled();
   });
 
-  it('creates and updates profiles through the youth upsert endpoint', () => {
+  it('creates and updates profiles through the youth set endpoint', () => {
     setYouth({ firstName: 'Maya', lastName: 'Thompson', dateOfBirth: '2012-08-19' });
     setYouth({ id: 'youth-1', firstName: 'Maya', lastName: 'Lee', dateOfBirth: '2012-08-19' });
 
@@ -67,5 +67,3 @@ describe('youth API', () => {
     expect(apiClient.put).not.toHaveBeenCalled();
   });
 });
-
-// @vitest-environment node

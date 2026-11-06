@@ -36,6 +36,31 @@ Do not infer one decision from another. In particular, shared program membership
 - Do not infer mutation authority from read visibility, role names in a consumer, response order, or record metadata.
 - Keep administrator breadth and staff self-scope explicit in policy code.
 
+## Authorization Failure Status
+
+The default follows [Google AIP-211](https://google.aip.dev/211):
+
+- Check the requested operation's authorization before exposing resource existence.
+- Return 403 when authorization fails, whether the requested record exists or not.
+- Return 404 when the caller is authorized but the requested record is missing.
+- When a missing record prevents its authorization check, check the applicable
+  parent or collection permission before returning 404.
+
+Use the existing route and domain policies to establish authority; this does not
+require a separate unrestricted existence query. Preserve explicitly established
+concealment contracts until the owning feature's policy is deliberately changed.
+
+For program and session operations, administrators and project managers have global
+program scope; other actors need a program assignment. Known program IDs are
+authorized from that scope before the program or cycle assignment is loaded.
+A missing program-cycle assignment therefore returns 404 to assigned staff.
+
+A direct session URL carries no parent program ID. Its scoped lookup grants access
+only to authorized sessions. When no session matches, global program actors get
+404; scoped actors get 403 because authority over a missing session's parent
+cannot be established. Do not probe an inaccessible session to distinguish it
+from a missing one. Route capability checks still run first in every case.
+
 ## Add or Change a Permission
 
 Roles group permissions. Route checks use the access token's permission set;

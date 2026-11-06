@@ -178,7 +178,6 @@ export default function Sessions() {
         search={{
           label: 'Search sessions',
           placeholder: 'Search titles, themes, descriptions, or program cycles',
-          availableWhileLoading: true,
         }}
         columns={columns}
         messages={[

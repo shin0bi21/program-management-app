@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { asTransactionSql, sql } from '../../db/client';
-import { NotFoundError } from '../../errors';
+import { InternalServerError, NotFoundError } from '../../errors';
 import type { Users, YouthProfiles } from '../../types/database';
 import type { DbRow } from '../../types/db';
 import { audit } from '../shared/auditService';
@@ -13,7 +13,10 @@ import { youthRecordColumns, youthRecordFrom, type YouthRecordRow } from './yout
 // QUERIES
 // ============================================================================
 
-export async function getYouthProfile(id: string): Promise<YouthRecordRow | null> {
+/** Loads a required youth profile; an unavailable ID rejects with 404.
+ * @example getYouthProfile(youthId) // returns the profile or throws NotFoundError
+ */
+export async function getYouthProfile(id: string): Promise<YouthRecordRow> {
   const youth = await sql<YouthRecordRow[]>`
     SELECT
       ${youthRecordColumns}
@@ -22,7 +25,8 @@ export async function getYouthProfile(id: string): Promise<YouthRecordRow | null
       AND u.id = ${id}
     LIMIT 1
   `;
-  return youth[0] || null;
+  if (!youth[0]) throw new NotFoundError('Youth profile not found');
+  return youth[0];
 }
 
 export interface SetYouthInput {
@@ -36,6 +40,10 @@ export interface SetYouthInput {
   contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
+/** Creates a youth or edits an existing youth, including its audit and supplied children.
+ * An ID selects a required, locked youth target; it never creates a replacement.
+ * @example setYouthProfile({ id: youthId, firstName: 'Sam', lastName: 'Lee' }, actorId)
+ */
 export async function setYouthProfile(data: SetYouthInput, actorId: string) {
   const { id, firstName, lastName, dateOfBirth, schoolId, addresses, contacts } = data;
   const transactionId = crypto.randomUUID();
@@ -47,10 +55,12 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
 
     if (id) {
       const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>>[]>`
-        SELECT id, first_name, last_name
-        FROM users
-        WHERE id = ${id}
+        SELECT u.id, u.first_name, u.last_name
+        FROM users u
+        INNER JOIN user_roles role ON role.id = u.role_id
+        WHERE u.id = ${id} AND role.name = 'youth'
         LIMIT 1
+        FOR UPDATE OF u
       `;
       const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id'>>[]>`
         SELECT user_id, date_of_birth, school_id
@@ -60,28 +70,23 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
         FOR UPDATE
       `;
 
+      if (!existingUsers.length || !existingProfiles.length) {
+        throw new NotFoundError('Youth profile not found');
+      }
+
       // An omitted DOB preserves the saved value; explicit null represents an unknown DOB.
       const nextDateOfBirth = dateOfBirth === undefined
-        ? existingProfiles[0]?.dateOfBirth ?? null
+        ? existingProfiles[0].dateOfBirth
         : dateOfBirth;
 
       const users = await trx<DbRow<Users>[]>`
-        INSERT INTO users (id, first_name, last_name, role_id, created_at, updated_at)
-        VALUES (
-          ${id},
-          ${firstName},
-          ${lastName},
-          (SELECT id FROM user_roles WHERE name = 'youth'),
-          COALESCE((SELECT created_at FROM users WHERE id = ${id}), NOW()),
-          NOW()
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          first_name = EXCLUDED.first_name,
-          last_name = EXCLUDED.last_name,
-          updated_at = EXCLUDED.updated_at
+        UPDATE users
+        SET first_name = ${firstName}, last_name = ${lastName}, updated_at = NOW()
+        WHERE id = ${id}
         RETURNING *
       `;
 
+      if (!users[0]) throw new InternalServerError('Youth update returned no user');
       persistedUserId = users[0].id;
       await audit(
         trx,
@@ -89,26 +94,15 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
         transactionId,
         'users',
         persistedUserId,
-        existingUsers.length > 0 ? 'UPDATE' : 'INSERT',
-        existingUsers[0]
-          ? { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName }
-          : null,
+        'UPDATE',
+        { id: existingUsers[0].id, firstName: existingUsers[0].firstName, lastName: existingUsers[0].lastName },
         { id: users[0].id, firstName: users[0].firstName, lastName: users[0].lastName },
       );
 
       await trx`
-        INSERT INTO youth_profiles (user_id, date_of_birth, school_id, created_at, updated_at)
-        VALUES (
-          ${persistedUserId},
-          ${nextDateOfBirth},
-          ${schoolId || null},
-          COALESCE((SELECT created_at FROM youth_profiles WHERE user_id = ${persistedUserId}), NOW()),
-          NOW()
-        )
-        ON CONFLICT (user_id) DO UPDATE SET
-          date_of_birth = EXCLUDED.date_of_birth,
-          school_id = EXCLUDED.school_id,
-          updated_at = EXCLUDED.updated_at
+        UPDATE youth_profiles
+        SET date_of_birth = ${nextDateOfBirth}, school_id = ${schoolId || null}, updated_at = NOW()
+        WHERE user_id = ${persistedUserId}
       `;
       await audit(
         trx,
@@ -116,14 +110,12 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
         transactionId,
         'youth_profiles',
         persistedUserId,
-        existingProfiles.length > 0 ? 'UPDATE' : 'INSERT',
-        existingProfiles[0]
-          ? {
-              userId: existingProfiles[0].userId,
-              dateOfBirth: existingProfiles[0].dateOfBirth,
-              schoolId: existingProfiles[0].schoolId,
-            }
-          : null,
+        'UPDATE',
+        {
+          userId: existingProfiles[0].userId,
+          dateOfBirth: existingProfiles[0].dateOfBirth,
+          schoolId: existingProfiles[0].schoolId,
+        },
         { userId: persistedUserId, dateOfBirth: nextDateOfBirth, schoolId: schoolId || null },
       );
     } else {
@@ -133,6 +125,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
         RETURNING *
       `;
 
+      if (!newUsers[0]) throw new InternalServerError('Youth creation returned no user');
       persistedUserId = newUsers[0].id;
       await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
@@ -154,9 +147,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
     return persistedUserId;
   });
 
-  const savedYouth = await getYouthProfile(userId);
-  if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
-  return savedYouth;
+  return getYouthProfile(userId);
 }
 
 
@@ -193,7 +184,5 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
     await setContacts(id, contacts, actorId, transactionId, trx);
   });
 
-  const savedYouth = await getYouthProfile(id);
-  if (!savedYouth) throw new NotFoundError('Saved youth profile not found');
-  return savedYouth;
+  return getYouthProfile(id);
 }

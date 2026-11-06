@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ship Changes"
-  short_description: "Ship approved changes through tested pull requests"
-  default_prompt: "Use $ship-changes to ship the approved working-tree changes through issue-scoped branches, tests, pull requests, and merges."

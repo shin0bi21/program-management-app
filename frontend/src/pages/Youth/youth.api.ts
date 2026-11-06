@@ -31,7 +31,7 @@ export function getYouth(
   opts: RequestOptions | undefined,
   pagination: CursorRequest<YouthSortKey>,
 ): Promise<CursorPage<YouthProfile>>;
-export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile | null>;
+export function getYouth(id: string, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile>;
 export function getYouth(id?: undefined, filters?: YouthFilters, opts?: RequestOptions): Promise<YouthProfile[]>;
 export function getYouth(
   id?: string,
@@ -57,8 +57,8 @@ export function getYouth(
   }
   if (id) {
     return opts
-      ? apiClient.get<YouthProfile | null>(path, opts)
-      : apiClient.get<YouthProfile | null>(path);
+      ? apiClient.get<YouthProfile>(path, opts)
+      : apiClient.get<YouthProfile>(path);
   }
   return opts
     ? apiClient.get<YouthProfile[]>(path, opts)

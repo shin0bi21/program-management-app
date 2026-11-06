@@ -1,5 +1,5 @@
 import { sql } from '../../db/client';
-import { NotFoundError } from '../../errors';
+import { InternalServerError, NotFoundError } from '../../errors';
 import type { SetYouthProfileNoteInput } from '../../validation/youthProfileNoteSchemas';
 
 export async function getYouthProfileNotes(youthId: string) {
@@ -31,7 +31,10 @@ async function insertYouthProfileNote(youthId: string, data: SetYouthProfileNote
     INSERT INTO youth_profile_notes (youth_id, category, details, created_by, updated_by)
     VALUES (${youthId}, ${data.category}, ${data.details}, ${actorId}, ${actorId}) RETURNING id
   `;
-  return (await getYouthProfileNotes(youthId)).find(note => note.id === rows[0].id)!;
+  if (!rows[0]) throw new InternalServerError('Profile note creation returned no record');
+  const note = (await getYouthProfileNotes(youthId)).find(note => note.id === rows[0].id);
+  if (!note) throw new NotFoundError('Profile note not found');
+  return note;
 }
 async function updateYouthProfileNoteRecord(youthId: string, noteId: string, data: SetYouthProfileNoteInput, actorId: string) {
   const rows = await sql`
@@ -40,7 +43,9 @@ async function updateYouthProfileNoteRecord(youthId: string, noteId: string, dat
     WHERE id = ${noteId} AND youth_id = ${youthId} RETURNING id
   `;
   if (!rows.length) throw new NotFoundError('Profile note not found');
-  return (await getYouthProfileNotes(youthId)).find(note => note.id === noteId)!;
+  const note = (await getYouthProfileNotes(youthId)).find(note => note.id === noteId);
+  if (!note) throw new NotFoundError('Profile note not found');
+  return note;
 }
 
 async function assertYouthExists(youthId: string) {

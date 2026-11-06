@@ -18,13 +18,13 @@ coordinate them.
 ## PageHeader and Controls
 
 Pass `title` and optional `actions`. Pass the page hook's grouped result as
-`controls`; [Preferences](../features/preferences.md#expose-page-controls) owns
+`controls`; [Preferences](../architecture/preferences.md#expose-page-controls) owns
 that contract and filter declarations. The container connects those groups to
 `SearchInput`, `FilterCard`, `ViewMenu`, and `ColumnVisibilityMenu` once.
 
 Keep presentation inputs at the route:
 
-- `search`: `label`, optional `placeholder`, and optional `availableWhileLoading`.
+- `search`: `label` and optional `placeholder`.
 - `columns`: the actual table column definitions; visibility comes from `controls.table`.
 - Optional `dashboard`, `table`, and optional `calendar`: page-owned content.
   Declare these content props in that order so source order matches the layout.
@@ -59,8 +59,8 @@ retry actions, and dismissal.
 The container reads `controls.ready` to gate controls and prevent dashboard/view
 mounts before saved inputs are restored. An early preference edit can replace a
 pending read with defaults and overwrite saved sibling fields. Actions and
-messages remain available during restoration; only explicitly local,
-non-persisted search may use `availableWhileLoading: true`.
+messages remain available during restoration; search waits for readiness along
+with the other controls.
 
 `loadingLabel` customizes the pending status, and `loadingSpinner` adds the
 standard spinner presentation. Once ready, the body uses `ariaLabel` for its
@@ -101,12 +101,10 @@ Define one named, stable filter object after data and preferences. Pass it to ev
 table or calendar, even when there is only one view. A child may add inputs it
 owns, such as pagination, sorting, or the visible calendar range, but does not
 rebuild page filters from separate props. Use the applied search value from the
-[preference controls](../features/preferences.md#expose-page-controls).
+[preference controls](../architecture/preferences.md#expose-page-controls).
 
 Keep selection, actions, and dialog targets in the route when they coordinate
 multiple views or children. Single-owner behavior stays with that child.
 See [Tasks](../../../frontend/src/pages/Staff/Tasks/Tasks.tsx) and
 [Hours](../../../frontend/src/pages/Staff/Hours/Hours.tsx) for complete examples.
-The [scaffold](../architecture/scaffolding.md) generates this assembly order;
-[test ownership](../../workflows/delivery/testing.md#test-ownership) determines
-which behavior to verify at each boundary.
+The [scaffold](../architecture/scaffolding.md) generates this assembly order.

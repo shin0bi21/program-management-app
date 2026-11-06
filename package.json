@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "report:ci": "node scripts/reports/ci-report.ts",
-    "report:deployments": "node scripts/reports/deployment-history-report.ts",
+    "report:ci-history": "node scripts/reports/ci-history-report.ts",
     "report:logs": "node scripts/reports/log-report.ts",
     "report:loc": "node scripts/reports/loc-report.ts",
     "scaffold:frontend": "node scripts/scaffold/frontend/index.ts",

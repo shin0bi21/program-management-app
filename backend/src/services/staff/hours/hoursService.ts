@@ -89,6 +89,7 @@ export async function setHours(
       ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
       : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
     saved = await getHoursRecord(savedId, trx);
+    if (!saved) throw new InternalServerError('Saved hours record is unavailable');
     const completeTask = !id && input.source === 'task' && input.completeTask;
     await completeTaskFromHours(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
     await audit(
@@ -132,6 +133,7 @@ export async function updateHoursPlacement(
       WHERE id = ${id}
     `;
     updated = await getHoursRecord(id, trx);
+    if (!updated) throw new InternalServerError('Updated hours record is unavailable');
     await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
     updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
   });
@@ -304,6 +306,7 @@ async function insertHoursRecord(
     )
     RETURNING id
   `;
+  if (!created) throw new InternalServerError('Hours creation returned no record');
   return created.id;
 }
 
@@ -331,6 +334,7 @@ async function updateHoursRecord(
     WHERE id = ${id}
     RETURNING id
   `;
+  if (!updated) throw new InternalServerError('Locked hours update returned no record');
   return updated.id;
 }
 

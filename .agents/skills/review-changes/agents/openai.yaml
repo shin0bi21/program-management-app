@@ -1,4 +1,0 @@
-interface:
-  display_name: "Review Changes"
-  short_description: "Review working changes against repository patterns"
-  default_prompt: "Use $review-changes to review the current working-tree changes against established repository patterns."

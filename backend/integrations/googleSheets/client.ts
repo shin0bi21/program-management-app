@@ -8,8 +8,11 @@ let sheetsClient: sheets_v4.Sheets | null = null;
  *
  * Lazy-initialised — the client is created on first call and reused.
  * Throws if GOOGLE_SERVICE_ACCOUNT_JSON is not set in the environment.
+ * Throws when outbound integrations are disabled locally or credentials cannot be decoded.
  *
  * Used by backend/integrations/googleSheets tooling; not part of the live API server.
+ * @returns The cached client, creating it from the environment on first use.
+ * @example const sheets = getSheetsClient();
  */
 export function getSheetsClient(): sheets_v4.Sheets {
   if (process.env.NODE_ENV !== 'production' && process.env.DISABLE_OUTBOUND === 'true') {
@@ -21,7 +24,7 @@ export function getSheetsClient(): sheets_v4.Sheets {
   if (!encoded) {
     throw new Error(
       'GOOGLE_SERVICE_ACCOUNT_JSON is not set. ' +
-      'See backend/.env.example for setup instructions.'
+      'See docs/backend/integrations/google-sheets.md for setup instructions.'
     );
   }
 
@@ -44,7 +47,11 @@ export function getSheetsClient(): sheets_v4.Sheets {
   return sheetsClient;
 }
 
-/** Reset the cached client — useful in tests or when credentials change. */
+/**
+ * Clears the cached client so the next call reads credentials from the environment.
+ * @returns Nothing; subsequent calls to getSheetsClient create a new client.
+ * @example resetSheetsClient();
+ */
 export function resetSheetsClient(): void {
   sheetsClient = null;
 }

@@ -2,7 +2,7 @@
 
 Components own rendered interfaces and user interactions. Use [PageContainer](page-container.md) when a route coordinates collection components. Use this guide when changing a rendered surface or deciding whether to extract one.
 
-## Keep Component and Test Contracts Focused
+## Keep Component Contracts Focused
 
 A component owns its rendering, accessibility and presentation-level interactions. A focused hook owns stateful policy, asynchronous transitions or coordinated callbacks. Keep one-off props and simple local state in the component.
 
@@ -13,16 +13,9 @@ Keep a multi-step interaction workflow together in its owning hook, including ev
 Follow the [ownership guide](../architecture/ownership.md) for where each hook lives.
 
 Comments explain constraints, ordering, or effects that the types cannot express.
-Keep executable examples and relevant boundary cases in colocated tests; component-private
-helpers can be verified through their owner's behavior. Place helpers below the component
-in the order their callers use them.
+Place helpers below the component in the order their callers use them.
 
-Follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
-for component, hook, and consumer coverage, and the
-[frontend environment table](../../workflows/delivery/testing.md#frontend-test-ownership)
-for Vitest and Playwright boundaries.
-
-For render-sensitive surfaces, trace which components rerender during scrolling, pointer movement, filtering, selection, and mutations. Keep transient values that do not affect the visible UI in refs. Preserve references for unaffected rows and cells; use memoization only when stable inputs prevent meaningful work. Check virtualization at the largest supported viewport and use targeted render-count or browser evidence when performance is part of the contract. Functional tests alone do not establish render performance.
+For render-sensitive surfaces, trace which components rerender during scrolling, pointer movement, filtering, selection, and mutations. Keep transient values that do not affect the visible UI in refs. Preserve references for unaffected rows and cells; use memoization only when stable inputs prevent meaningful work.
 
 For listeners, observers, timers, subscriptions, and external instances, identify the component that owns each lifecycle. Setup and cleanup must be symmetric across completion, cancellation, dependency changes, and unmount. Keep instance-specific behavior with its instance; coordinate global registrations at the narrowest shared owner when multiple instances can mount.
 

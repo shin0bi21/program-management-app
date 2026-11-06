@@ -77,15 +77,17 @@ describe('Users', () => {
     );
   });
 
-  it('keeps a pending account search when saved filters finish restoring', async () => {
+  it('combines account search with restored filters', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
     let restore!: (value: { statuses: string[] }) => void;
     preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
     renderPage();
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     await act(async () => restore({ statuses: ['invited'] }));
+
+    const search = await screen.findByRole('textbox', { name: 'Search accounts' });
+    fireEvent.change(search, { target: { value: 'Yara' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await waitFor(() => expect(mockUseUserTableData).toHaveBeenLastCalledWith(
       ['accounts', 'table'],

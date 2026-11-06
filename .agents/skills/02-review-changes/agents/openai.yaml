@@ -1,0 +1,4 @@
+interface:
+  display_name: "02 Review Changes"
+  short_description: "Review working changes against repository patterns"
+  default_prompt: "Use $02-review-changes to review one restored concern on its selected branch against its recorded base. Follow owner guides and the embedded structural pass; report pattern evidence, findings, and verification without changing branches or code."

@@ -1,7 +1,7 @@
 import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 import { getProgramCycleRowsByKeys } from '../programCycles/programCycleRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
-import { ConflictError, NotFoundError } from '../../../errors';
+import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
 import { getSessionRowsByIds } from './sessionRecordQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
@@ -150,7 +150,7 @@ export async function setSessionAttendance(
     }
 
     const [session] = await getSessionRowsByIds(trx, actor, [sessionId]);
-    if (!session) throw new NotFoundError('Session not found');
+    if (!session) throw new InternalServerError('Saved attendance session is unavailable');
     const roster = await readSessionRoster(trx, sessionId);
     const updatedYouth = actor.permissions.includes('read:youth_profiles')
       ? await getYouthRowsByIds(trx, affectedYouthIds)

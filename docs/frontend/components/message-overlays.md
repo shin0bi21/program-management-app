@@ -41,6 +41,3 @@ does not clear the underlying failure or retry the request.
 Keep form-specific validation and submission feedback with
 [Modals and Forms](modals-and-forms.md). For dialogs, floating
 menus, and tooltips, follow [Overlays](overlays.md).
-
-Follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
-for shared interactions and route coordination.

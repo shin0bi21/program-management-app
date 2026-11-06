@@ -89,14 +89,6 @@ program. Shared tables and calendars report selection events without owning thes
 - Page-wide actions stay in `PageHeader`; record-specific actions may live in the relevant card.
 - A mutation reconciles or invalidates the overview query separately from table row reconciliation.
 
-Verify a delayed response and a target change preserve the same card DOM shell, titles,
-labels, and disabled action slots without showing another target’s data. Cover empty
-and failed results separately. Browser tests own fixed height and internal overflow
-on desktop and mobile; consumer tests cover loading wiring rather than repeating
-shared geometry checks.
-
-Dashboard tests own selection-driven composition and card wiring. Card tests own loading/error/empty presentation, query-state wiring, focused actions and accessible content. Colocate query-hook tests with the hook. Route tests only prove that the selected record reaches the dashboard and cross-owner callbacks are connected.
-
 ## Scaffolding
 
 Preview a page-owned dashboard with the dashboard preset:
@@ -120,4 +112,4 @@ components/
         useExampleOverviewData.test.ts
 ```
 
-The dashboard component and test are required. Add a data hook at its smallest consumer only when remote data is needed, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.
+Add a data hook at its smallest consumer only when remote data is needed, and add a card owner only for a meaningful card with its own rendering or actions. Do not create either as an empty pass-through.

@@ -1,6 +1,6 @@
 import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
 import { asTransactionSql, sql } from '../../../db/client';
-import { ConflictError, NotFoundError } from '../../../errors';
+import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertAssignmentUnused } from '../programCycles/assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramCycleInput } from '../../../validation/programmingSchemas';
@@ -24,6 +24,8 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
       VALUES (${data.name}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
       RETURNING id
     `;
+    if (!cycle) throw new InternalServerError('Cycle creation returned no record');
+
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
       SELECT program_id, ${cycle.id}, ${actor.userId}, ${actor.userId}
@@ -31,14 +33,14 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
       RETURNING program_id, cycle_id
     `;
     return {
-      cycle: await getCycleRow(trx, cycle.id),
+      cycle: await requireCycleRow(trx, cycle.id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
         ? await getProgramCycleRowsByKeys(trx, actor, created) : [],
       createdProgramCycles: created,
       removedProgramCycles: [] as ProgramCycleKey[],
       updatedYouth: [],
     };
-  });
+  }).catch(rethrowCycleConflict);
 }
 
 export async function deleteProgramCycle(id: string) {
@@ -107,7 +109,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     `;
     const retained = current.filter(programCycle => data.programIds.includes(programCycle.programId));
     return {
-      cycle: await getCycleRow(trx, id),
+      cycle: await requireCycleRow(trx, id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
         ? await getProgramCycleRowsByKeys(trx, actor, [...retained, ...created]) : [],
       createdProgramCycles: created,
@@ -115,5 +117,24 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
       updatedYouth: actor.permissions.includes('read:youth_profiles')
         ? await getYouthRowsByIds(trx, await getProgramCycleYouthIds(trx, [...retained, ...created])) : [],
     };
-  });
+  }).catch(rethrowCycleConflict);
+}
+
+/** Returns the required response for a cycle written in this transaction.
+ * @example requireCycleRow(trx, cycleId) // a missing stored result is an internal failure
+ */
+async function requireCycleRow(trx: typeof sql, id: string) {
+  const cycle = await getCycleRow(trx, id);
+  if (!cycle) throw new InternalServerError('Saved cycle record is unavailable');
+  return cycle;
+}
+
+/** Adds context to cycle-name duplicates and preserves unrelated errors.
+ * @example rethrowCycleConflict(error) // duplicate name becomes a contextual 409
+ */
+function rethrowCycleConflict(error: unknown): never {
+  if (isUniqueViolation(error, 'program_cycles_name_key')) {
+    throw new ConflictError('A cycle with this name already exists', error);
+  }
+  throw error;
 }
