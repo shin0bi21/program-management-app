@@ -1,44 +1,56 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import {
   AppError,
+  errorForLog,
+  InvalidJsonError,
   DbConnectionError,
   ConflictError,
   InternalServerError,
+  PayloadTooLargeError,
   type ValidationDetail,
   type ErrorResponse,
 } from '../errors';
 
 const POSTGRES_CONNECTION_CODES = new Set([
-  '57P03', '08000', '08001', '08003', '08004', '08006', '53300', '53400',
+  '57P03', '08000', '08001', '08003', '08004', '08006', '53300',
 ]);
+
+/** Standard Error plus metadata supplied by the database and HTTP parsers. */
+interface MiddlewareError extends Error {
+  code?: string;
+  type?: string;
+  status?: number;
+}
 
 // ============================================================================
 // CLASSIFY
 // ============================================================================
 
 /**
- * Classifies any thrown value into a typed `AppError`.
+ * Classifies an Error into a typed `AppError`. Callers must provide Error instances.
  *
  * - If `err` is already an `AppError`, it's returned as-is.
+ * - Known JSON parser failures → safe 400/413 application errors.
  * - Postgres connection failures → `DbConnectionError` (503).
  * - Postgres unique-constraint violations (`23505`) → `ConflictError` (409).
  * - Everything else → `InternalServerError` (500) preserving the original message.
+ * @example classifyError(new Error('Unexpected')).statusCode // 500
  */
-export function classifyError(err: unknown): AppError {
+export function classifyError(err: MiddlewareError): AppError {
   if (err instanceof AppError) return err;
 
-  if (err instanceof Error) {
-    const code = (err as { code?: unknown }).code;
-    const isConnError =
-      err.message.includes('ECONNREFUSED') ||
-      code === 'ECONNREFUSED' ||
-      (typeof code === 'string' && POSTGRES_CONNECTION_CODES.has(code));
-    if (isConnError) return new DbConnectionError('Database connection failed', err);
-    if (code === '23505') return new ConflictError('A record with that value already exists', err);
-  }
+  const { code, type, status } = err;
 
-  const message = err instanceof Error ? err.message : String(err);
-  return new InternalServerError(message, err);
+  // Parser errors can contain submitted data. Discard their raw message and body.
+  if (type === 'entity.parse.failed' && status === 400) return new InvalidJsonError();
+  if (type === 'entity.too.large' && status === 413) return new PayloadTooLargeError();
+
+  const connectionRefused = code === 'ECONNREFUSED';
+  const postgresUnavailable = code !== undefined && POSTGRES_CONNECTION_CODES.has(code);
+  if (connectionRefused || postgresUnavailable) return new DbConnectionError(undefined, err);
+  if (code === '23505') return new ConflictError(undefined, err);
+
+  return new InternalServerError(err.message || undefined, err);
 }
 
 // ============================================================================
@@ -51,43 +63,45 @@ export function classifyError(err: unknown): AppError {
  * Flow: classifyError → handle (status + logging) → sendError.
  *
  * - Resolves HTTP status from `AppError.statusCode` (clamped 400–599, else 500).
- * - Logs 5xx at `error` level with full stack; 4xx at `warn` level with message only.
- * - In production, redacts 5xx messages; uses `AppError.clientMessage` when set.
+ * - Logs the classified error at `error` for 5xx and `warn` for 4xx.
+ * - In production, redacts 5xx messages; uses the class-owned `AppError.clientMessage`.
  * - Always responds with JSON — never forwards to Express's default HTML handler.
  *
  * @param _next - Required by Express to recognise this as a 4-argument error handler.
+ * @example app.use(handleError); // Register after all routes.
  */
 export function handleError(
-  err: unknown,
+  err: Error,
   req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
   if (res.headersSent) {
     const rid = res.locals.requestId as string | undefined;
-    console.error(`[${rid ?? '-'}] handleError called after headers sent (discarded):`, err);
+    console.error(`[${rid ?? '-'}] Error after response headers were sent:`, errorForLog(err));
     return;
   }
 
   const rid = (res.locals.requestId as string | undefined) ?? '-';
 
-  // 1. Classify — promote any thrown value into a typed AppError
   const appErr = classifyError(err);
 
-  // 2. Handle — resolve status and log
   const rawStatus = appErr.statusCode;
   const status = rawStatus >= 400 && rawStatus <= 599 ? rawStatus : 500;
   const isServerError = status >= 500;
 
-  const summary = `[${rid}] ${req.method} ${req.path} ${status} ${appErr.name}: ${appErr.message}`;
-  if (isServerError) console.error(summary, appErr);
-  else console.warn(summary, appErr);
+  let logMessage = appErr.message;
+  if (appErr instanceof InternalServerError && !(err instanceof AppError)) {
+    logMessage = appErr.clientMessage;
+  }
+  const summary = `[${rid}] ${req.method} ${req.path} ${status} ${appErr.name}: ${logMessage}`;
+  if (isServerError) console.error(summary, errorForLog(appErr));
+  else console.warn(summary, errorForLog(appErr));
 
-  // 3. Send — redact 5xx messages in production
   const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
   const message =
     isServerError && !isDev
-      ? (appErr.clientMessage ?? 'An unexpected error occurred')
+      ? appErr.clientMessage
       : appErr.message;
 
   sendError(res, status, message, appErr.details ? { details: appErr.details } : undefined);
@@ -102,6 +116,7 @@ export function handleError(
  *
  * @internal The only function in this module that calls `res.json()` for errors.
  * All error responses flow through `handleError`, which calls this.
+ * @example sendError(res, 400, 'Invalid JSON request body');
  */
 function sendError(
   res: Response,

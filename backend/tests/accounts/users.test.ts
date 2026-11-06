@@ -630,7 +630,7 @@ describe('Accounts API', () => {
         .delete(`/api/accounts/${activeUser.userId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       expect(res.body.error).toMatch(/activated/i);
 
       await deleteTestUser(activeUser.userId);
@@ -714,7 +714,7 @@ describe('Accounts API', () => {
         .patch(`/api/accounts/${staffId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       expect(res.body.error).toMatch(/pending invite/i);
 
       // Clean up

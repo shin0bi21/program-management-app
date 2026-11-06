@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { sql, asTransactionSql } from '../../../db/client';
 import { audit } from '../../shared/auditService';
-import { ConflictError, NotFoundError } from '../../../errors';
+import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
 import { assertCanAssignTaskTo, taskReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
@@ -64,6 +64,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
         (SELECT name FROM programs WHERE id = tasks.program_id) AS program_name,
         status, start_date::text, due_date::text, completed_at::text, 0::float AS hours_logged
     `;
+    if (!rows[0]) throw new InternalServerError('Task creation returned no record');
     created = rows[0];
     await audit(trx, actor.userId, transactionId, 'tasks', created.id, 'INSERT', null, { ...created, staffId: input.staffId });
   });
@@ -116,6 +117,7 @@ export async function updateTaskPlacement(
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
+    if (!rows[0]) throw new InternalServerError('Task update returned no record');
     updated = rows[0];
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', {
       ...existing,
@@ -168,6 +170,7 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
+    if (!rows[0]) throw new InternalServerError('Task update returned no record');
     updated = rows[0];
     const staffId = existingRows[0].staffId;
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE',
@@ -245,6 +248,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
         status, start_date::text, due_date::text, completed_at::text,
         (SELECT COALESCE(SUM(entry.hours), 0)::float FROM time_entries entry WHERE entry.task_id = tasks.id) AS hours_logged
     `;
+    if (!rows[0]) throw new InternalServerError('Task update returned no record');
     updated = rows[0];
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', {
       ...existingRows[0], staffId: oldStaffId,

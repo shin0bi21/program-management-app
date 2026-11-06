@@ -160,6 +160,18 @@ describe('Schools API', () => {
       expect(second.status).toBe(409);
     });
 
+    it('returns a contextual conflict when concurrent creates use the same name', async () => {
+      const name = `Concurrent School ${Date.now()}`;
+      const results = await Promise.all([1, 2].map(() => request(app)
+        .post('/api/schools').set('Authorization', `Bearer ${adminToken}`).send({ name })));
+      for (const result of results) if (result.status === 200) createdIds.push(result.body.id);
+
+      expect(results.map(result => result.status).sort()).toEqual([200, 409]);
+      const rejected = results.find(result => result.status === 409)!;
+      expect(rejected.body.error).toBe('A school with this name already exists');
+      expect(rejected.body.requestId).toEqual(expect.any(String));
+    });
+
     it('should reject youth user (403)', async () => {
       const youth = await seedTestUser({ email: `schools-youth-create-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youth.userId, 'youth', youth.email);

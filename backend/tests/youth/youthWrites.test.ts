@@ -54,6 +54,22 @@ describe('Youth birth date writes and focused contacts', () => {
     await deleteTestUser(adminId);
   });
 
+  it('rejects missing and non-youth update targets without creating or changing users', async () => {
+    const missingId = '00000000-0000-4000-8000-000000000000';
+    const [before] = await sql`SELECT first_name, last_name FROM users WHERE id = ${adminId}`;
+
+    for (const id of [missingId, adminId]) {
+      const response = await saveProfile({ ...profile, id });
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Youth profile not found');
+    }
+
+    expect(await sql`SELECT 1 FROM users WHERE id = ${missingId}`).toHaveLength(0);
+    const [after] = await sql`SELECT first_name, last_name FROM users WHERE id = ${adminId}`;
+    expect(after).toEqual(before);
+    expect(await sql`SELECT 1 FROM youth_profiles WHERE user_id = ${adminId}`).toHaveLength(0);
+  });
+
   describe.each(['create', 'edit'])('full profile %s', operation => {
     it.each(['', '15-06-2012', '2012-02-30', '0000-01-01'])('rejects an invalid supplied birth date %p', async dateOfBirth => {
       const response = await saveProfile({ ...profile, ...(operation === 'edit' ? { id: youthId } : {}), dateOfBirth });

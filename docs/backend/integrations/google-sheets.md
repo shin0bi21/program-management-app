@@ -62,6 +62,7 @@ Place Sheets scripts under `backend/integrations/googleSheets/`. For example,
 ```ts
 import 'dotenv/config';
 import { readSheet } from './index';
+import { errorForLog } from '../../src/errors';
 
 async function main() {
   const spreadsheetId = process.argv[2];
@@ -71,8 +72,8 @@ async function main() {
   console.log(`Read ${rows.length} rows`);
 }
 
-main().catch(error => {
-  console.error(error);
+main().catch((error: Error) => {
+  console.error('[GoogleSheets] Error reading roster', errorForLog(error));
   process.exitCode = 1;
 });
 ```

@@ -44,10 +44,9 @@ export const handleLogout = async (req: Request, res: Response) => {
   const accessToken = authHeader?.split(' ')[1];
   try {
     await logoutUser(refreshToken, accessToken, req.ip);
-  } catch {
-    // Swallow — clear cookie regardless
+  } finally {
+    res.clearCookie('refreshToken');
   }
-  res.clearCookie('refreshToken');
   res.json({ message: 'Logged out successfully' });
 };
 

@@ -6,7 +6,7 @@ import { sql, asTransactionSql } from '../../db/client';
 import { sendEmail, send2FACode } from '../../utils/emailService';
 import { hashDeviceFingerprint } from '../../utils/deviceUtils';
 import { revokeAccessToken } from './tokenRevocationService';
-import { authLog } from './authLogService';
+import { authLog as logAuthEvent } from './authLogService';
 import type {
   UserCredentials,
   Users,
@@ -68,8 +68,6 @@ export interface VerifyResult {
   tokens: TokenPair;
   user: UserInfo;
 }
-
-type AuthLogInput = Parameters<typeof authLog>[0];
 
 export async function loginUser(
   email: string,
@@ -387,8 +385,11 @@ export async function rotateRefreshToken(
   let decoded: RefreshTokenPayload;
   try {
     decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
-  } catch {
-    throw new ForbiddenError('Invalid refresh token');
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.NotBeforeError) {
+      throw new ForbiddenError('Invalid refresh token');
+    }
+    throw error;
   }
 
   if (!decoded.jti) {
@@ -497,30 +498,26 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
   let logUserId: string | undefined;
   let logEmail: string | undefined;
 
-  if (rawRefreshToken) {
-    try {
-      const decoded = jwt.verify(rawRefreshToken, REFRESH_SECRET) as RefreshTokenPayload;
-      logUserId = decoded.userId;
-      logEmail = decoded.email;
-      await sql`
-        UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ${decoded.jti}
-      `;
-    } catch {
-      // Token already expired or invalid — still proceed with access token cleanup
-    }
+  const refresh = rawRefreshToken
+    ? verifyLogoutToken<RefreshTokenPayload>(rawRefreshToken, REFRESH_SECRET)
+    : undefined;
+  if (refresh) {
+    logUserId = refresh.userId;
+    logEmail = refresh.email;
+    await sql`
+      UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ${refresh.jti}
+    `;
   }
 
-  if (rawAccessToken) {
-    try {
-      const decoded = jwt.verify(rawAccessToken, JWT_SECRET) as AccessTokenPayload;
-      logUserId ??= decoded.userId;
-      logEmail ??= decoded.email;
-      const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
-      const expiresAt = new Date(decoded.exp * 1000);
-      await revokeAccessToken(decoded.jti, decoded.userId, tokenHash, expiresAt);
-    } catch {
-      // Token already expired or invalid — nothing to blacklist
-    }
+  const access = rawAccessToken
+    ? verifyLogoutToken<AccessTokenPayload>(rawAccessToken, JWT_SECRET)
+    : undefined;
+  if (access && rawAccessToken) {
+    logUserId ??= access.userId;
+    logEmail ??= access.email;
+    const tokenHash = crypto.createHash('sha256').update(rawAccessToken).digest('hex');
+    const expiresAt = new Date(access.exp * 1000);
+    await revokeAccessToken(access.jti, access.userId, tokenHash, expiresAt);
   }
 
   await logAuthEvent({ event: 'logout', userId: logUserId, email: logEmail, ipAddress });
@@ -630,31 +627,6 @@ function signRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp' | 'to
   return jwt.sign({ ...payload, tokenType: 'refresh' }, REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
 }
 
-const AUTH_LOG_EVENTS_WITH_RESOLVED_EMAIL = new Set<AuthLogInput['event']>([
-  '2fa_failed',
-  'password_reset_completed',
-]);
-
-async function getAuthLogEmail(userId: string): Promise<string | undefined> {
-  const credentials = await sql<DbRow<Pick<UserCredentials, 'email'>>[]>`
-    SELECT email
-    FROM user_credentials
-    WHERE user_id = ${userId}
-    LIMIT 1
-  `;
-
-  return credentials[0]?.email;
-}
-
-async function logAuthEvent(params: AuthLogInput): Promise<void> {
-  if (!params.email && params.userId && AUTH_LOG_EVENTS_WITH_RESOLVED_EMAIL.has(params.event)) {
-    await authLog({ ...params, email: await getAuthLogEmail(params.userId) });
-    return;
-  }
-
-  await authLog(params);
-}
-
 /**
  * Signs a new access + refresh token pair and persists the refresh token.
  * Used in: loginUser (trusted device), verify2FACode, rotateRefreshToken.
@@ -728,6 +700,16 @@ async function completeLogin(
   };
 }
 
-// ============================================================================
-// SERVICE FUNCTIONS
-// ============================================================================
+/**
+ * Verifies a logout token, tolerating only expected invalid or expired tokens.
+ * Persistence stays outside this helper so failures cannot become logout success.
+ * @example verifyLogoutToken<AccessTokenPayload>('expired-token', JWT_SECRET) // undefined
+ */
+function verifyLogoutToken<T extends AccessTokenPayload | RefreshTokenPayload>(rawToken: string, secret: string): T | undefined {
+  try {
+    return jwt.verify(rawToken, secret) as T;
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.NotBeforeError) return undefined;
+    throw error;
+  }
+}

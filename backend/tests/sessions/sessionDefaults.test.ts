@@ -107,7 +107,7 @@ describe('Single session scheduling defaults', () => {
         .post(`/api/programs/${programId}/cycles/${unassigned.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
         .send({ sessionTypeId: regularType, theme: 'Unassigned pair', date: '2027-01-15' });
-      expect(direct.status).toBe(403);
+      expect(direct.status).toBe(404);
       expect(await sql`SELECT 1 FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${unassigned.id}`).toHaveLength(0);
     } finally {
       await sql`DELETE FROM program_cycles WHERE id = ${unassigned.id}`;

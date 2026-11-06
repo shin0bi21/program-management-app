@@ -4,6 +4,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import test, { type TestContext } from 'node:test';
+import { format } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import { parseArgs, renderLogReport } from './log-report.ts';
@@ -35,13 +36,16 @@ test('rejects incomplete, incompatible, and invalid options', () => {
   }
 });
 
-test('groups repeated Docker failures across timestamps and files with source locations', () => {
+test('groups repeated Docker failures per source with captured locations', () => {
   const report = renderLogReport([
     { name: 'backend', text: 'backend-1 | 2026-11-04T10:00:00.123Z TypeError: broken\nbackend-1 | 2026-11-04T10:00:01Z TypeError: broken\n' },
     { name: 'saved.log', text: 'TypeError: broken\r\nWarning: deprecated API\r\n' },
   ], defaults);
-  assert.match(report, /Errors\n {2}3x TypeError: broken/);
-  assert.match(report, /Locations: backend:1, backend:2, saved.log:1/);
+  assert.match(report, /Errors\n {2}2x TypeError: broken/);
+  assert.match(report, /Source: backend-1/);
+  assert.match(report, /backend:1 \| time=2026-11-04T10:00:00.123Z/);
+  assert.match(report, /backend:2 \| time=2026-11-04T10:00:01Z/);
+  assert.match(report, /1x TypeError: broken\n {4}Source: saved.log/);
   assert.match(report, /Warnings\n {2}1x Warning: deprecated API/);
 });
 
@@ -68,7 +72,8 @@ test('matches literal text ignoring case and isolates first-occurrence context p
     'unrelated', 'ERROR: failed [request]', 'after',
   ].join('\n') }], { match: 'FAILED [request]', type: 'error', context: 1 });
   assert.match(report, /2x ERROR: failed \[request\]/);
-  assert.match(report, /Locations: console:2, console:5/);
+  assert.match(report, /console:2/);
+  assert.match(report, /console:5/);
   assert.match(report, /> console:2 ERROR:/);
   assert.match(report, /console:1 before/);
   assert.match(report, /console:3 at save/);
@@ -91,7 +96,7 @@ test('CLI reads stdin and files, and propagates read failures', (context) => {
 
   const stdin = spawnSync(process.execPath, [script, '--context', '0'], { input: 'Warning: stdin\n', encoding: 'utf8' });
   assert.equal(stdin.status, 0, stdin.stderr);
-  assert.match(stdin.stdout, /Locations: stdin:1/);
+  assert.match(stdin.stdout, /stdin:1/);
   const fromFile = spawnSync(process.execPath, [script, file], { encoding: 'utf8' });
   assert.equal(fromFile.status, 0, fromFile.stderr);
   assert.match(fromFile.stdout, /ERROR: file failure/);
@@ -100,6 +105,10 @@ test('CLI reads stdin and files, and propagates read failures', (context) => {
   assert.equal(missing.stdout, '');
 });
 
+/**
+ * Provides an isolated Docker executable and records acquisition arguments.
+ * @example const { env, readCalls } = createDockerFixture(context);
+ */
 function createDockerFixture(context: TestContext) {
   const root = mkdtempSync(join(tmpdir(), 'log-report-docker-'));
   context.after(() => rmSync(root, { recursive: true, force: true }));
@@ -196,4 +205,77 @@ test('CLI reports Docker acquisition failures without an empty success report', 
   assert.equal(result.status, 1);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /Docker unavailable/);
+});
+
+test('preserves backend request metadata and keeps services, messages, and causes distinct', () => {
+  const report = renderLogReport([{ name: 'docker:all', text: [
+    'backend | 2026-11-05T12:00:00Z [request-1] POST /api/example 400 ValidationError: Invalid fields',
+    'backend | 2026-11-05T12:00:01Z [request-2] POST /api/example 400 ValidationError: Invalid fields',
+    'backend | 2026-11-05T12:00:02Z [request-3] POST /api/example 400 BadRequestError: Invalid range',
+    'frontend | 2026-11-05T12:00:03Z [request-4] POST /api/example 400 ValidationError: Invalid fields',
+    'backend | 2026-11-05T12:00:04Z [request-5] GET /api/data 500 InternalServerError: Failed',
+    'backend | 2026-11-05T12:00:04Z     at load (/app/src/data.ts:10:2)',
+    'backend | 2026-11-05T12:00:04Z   [cause]: Error: first cause',
+    'backend | 2026-11-05T12:00:05Z [request-6] GET /api/data 500 InternalServerError: Failed',
+    'backend | 2026-11-05T12:00:05Z     at load (/app/src/data.ts:10:2)',
+    'backend | 2026-11-05T12:00:05Z   [cause]: Error: second cause',
+  ].join('\n') }], defaults);
+
+  assert.match(report, /2x POST \/api\/example -> 400\n {4}Source: backend\n {4}Error: ValidationError: Invalid fields/);
+  assert.match(report, /docker:all:1 \| time=2026-11-05T12:00:00Z \| request=request-1/);
+  assert.match(report, /docker:all:2 \| time=2026-11-05T12:00:01Z \| request=request-2/);
+  assert.match(report, /Error: BadRequestError: Invalid range/);
+  assert.match(report, /1x POST \/api\/example -> 400\n {4}Source: frontend/);
+  assert.equal(report.match(/1x GET \/api\/data -> 500/g)?.length, 2);
+  assert.match(report, /first cause/);
+  assert.match(report, /second cause/);
+});
+
+test('retains complete backend error details when services interleave and context is disabled', () => {
+  const report = renderLogReport([{ name: 'docker:all', text: [
+    'backend | 2026-11-05T12:00:00Z [request-1] GET /api/data 500 InternalServerError: Failed',
+    'frontend | 2026-11-05T12:00:00Z Warning: separate service',
+    'backend | 2026-11-05T12:00:00Z     at load (/app/src/data.ts:10:2)',
+    'backend | 2026-11-05T12:00:00Z   [cause]: Error: connection closed',
+    'backend | 2026-11-05T12:00:00Z   details: [{ field: "body.id", message: "Invalid" }]',
+    'backend | 2026-11-05T12:00:00Z }',
+    'backend | 2026-11-05T12:00:01Z INFO: unrelated request finished',
+  ].join('\n') }], { match: 'connection closed', type: 'error', context: 0 });
+
+  assert.match(report, /GET \/api\/data -> 500/);
+  assert.match(report, /request=request-1/);
+  assert.match(report, /Details:[\s\S]*at load[\s\S]*connection closed[\s\S]*body.id/);
+  assert.doesNotMatch(report, /separate service|unrelated request|Application frames/);
+});
+
+test('recognizes nginx failures and filters HTTP summaries by status severity', () => {
+  const input = [{ name: 'docker:all', text: [
+    'nginx | 2026-11-05T12:00:00Z 127.0.0.1 - - [05/Nov/2026:12:00:00 +0000] "GET /api/tasks?token=private HTTP/1.1" 502 157 "-" "Review"',
+    'backend | 2026-11-05T12:00:00Z [request-1] POST /api/example 400 BadRequestError: Invalid request',
+  ].join('\n') }];
+  const errors = renderLogReport(input, { ...defaults, type: 'error' });
+  assert.match(errors, /GET \/api\/tasks\?… -> 502/);
+  assert.match(errors, /Source: nginx/);
+  assert.doesNotMatch(errors, /token=private|Invalid request/);
+
+  const warnings = renderLogReport(input, { ...defaults, type: 'warning' });
+  assert.match(warnings, /Error: BadRequestError: Invalid request/);
+  assert.doesNotMatch(warnings, /502/);
+  const http = renderLogReport(input, { ...defaults, type: 'http' });
+  assert.match(http, /502/);
+  assert.match(http, /400/);
+});
+
+test('parses actual Node error inspection without repeating the error heading', () => {
+  const error = new Error('Invalid fields');
+  error.name = 'ValidationError';
+  const text = format('[request-1] POST /api/example 400 ValidationError: Invalid fields', error)
+    .split('\n').map(line => `backend | 2026-11-05T12:00:00Z ${line}`).join('\n');
+
+  const report = renderLogReport([{ name: 'docker:all', text }], defaults);
+
+  assert.match(report, /Error: ValidationError: Invalid fields\n/);
+  assert.doesNotMatch(report, /Invalid fields ValidationError/);
+  assert.match(report, /Details:[\s\S]*at /);
+  assert.match(renderLogReport([{ name: 'docker:all', text }], { ...defaults, match: 'backend |' }), /request=request-1/);
 });

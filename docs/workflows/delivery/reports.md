@@ -13,41 +13,29 @@ npm run report:logs -- browser-console.txt --match "Failed to fetch" --context 4
 pbpaste | npm run report:logs
 ```
 
-Docker input identifies the stack from Compose labels on this checkout's containers,
-including stopped services. With one recognized configuration, it automatically
-selects `docker-compose.yml` or `docker-compose.prod.yml`. Supply service names or
-omit them to read all services. `--since` accepts Docker time values such as `5m`,
-`1h`, or an absolute timestamp and defaults to `5m`.
-
-If no stack can be identified, both stacks are present, or containers use custom
-Compose overrides, the report stops. Select a repository stack explicitly with
-`--development` or `--production` when needed; both flags require `--docker`.
-The command captures existing output without following logs, restarting containers,
-or altering data.
+Omit service names to read all services. `--since` defaults to `5m` and accepts
+Docker time values or an absolute timestamp. If stack detection fails, add
+`--development` or `--production` with `--docker`.
 
 On Lightsail, run from `/home/ubuntu/my-webapp` with Node 24 and Docker Compose
-available on the host. The report uses only Node built-ins and needs no `npm install`:
+available on the host. Run:
 
 ```bash
 node scripts/reports/log-report.ts --docker nginx backend --since 5m --context 4
 ```
 
-This reads the selected stack through the host's Docker CLI. It does not run
-inside the application containers or require an application image rebuild.
+The output groups failures by source and message. Backend request summaries retain
+error class/message, request IDs, timestamps, and associated stack/cause details.
+Each occurrence includes its captured line location. Different services and
+stack/cause details remain separate groups.
 
-Without filters, the report groups recognized HTTP failures, errors, warnings,
-and application frames. `--match` selects literal text ignoring case, including
-messages the classifier does not recognize. `--type` selects `error`, `warning`,
-`http`, or `frame`; both filters must match when combined. Grouping removes Compose
-prefixes and ISO timestamps; HTTP summaries omit hosts and query values.
+`--match` searches messages and attached details, ignoring case. `--type http`
+selects HTTP failures, `error` includes HTTP 5xx, and `warning` includes HTTP 4xx;
+`frame` selects standalone application frames. Combined filters must both match.
+Use `--context 0` to omit neighboring lines; attached error details remain.
+The default context is two lines.
 
-Each group includes its count, source line locations, and surrounding lines from
-its first occurrence. Context defaults to two lines on each side; use `--context 0`
-for counts and locations only. Docker line numbers refer to the captured output,
-not a persistent server file. Nearby frames and requests provide context without
-establishing a shared cause. Raw context retains the supplied log contents.
-No matches produces an explanatory message and a successful exit; input and
-Docker failures exit nonzero.
+No matches exits successfully. Input or Docker failures exit nonzero.
 
 ## Changes Report
 
