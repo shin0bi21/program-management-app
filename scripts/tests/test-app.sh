@@ -91,9 +91,9 @@ collect_changed_files() {
 
   merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || git rev-parse HEAD)"
   {
-    git diff --name-only --diff-filter=ACDMR "$merge_base"...HEAD
-    git diff --name-only --diff-filter=ACDMR
-    git diff --cached --name-only --diff-filter=ACDMR
+    git diff --no-renames --name-only --diff-filter=ACDMR "$merge_base"...HEAD
+    git diff --no-renames --name-only --diff-filter=ACDMR
+    git diff --cached --no-renames --name-only --diff-filter=ACDMR
     git ls-files --others --exclude-standard
   } | awk 'NF && !seen[$0]++'
 }
