@@ -21,7 +21,7 @@
 - Start application work at the routing overview in `README.md`.
 - Read `docs/frontend/README.md` before changing frontend ownership, component, hook, query, or test structure, then follow the narrowest focused guide under `docs/frontend/`.
 - Read `docs/backend/README.md` before changing backend behavior, then follow the narrowest focused guide under `docs/backend/` for middleware, authentication, authorization, services, policies, database, errors, testing, API, or integrations.
-- Choose the workflow category from `README.md`; read `docs/workflows/local-development/README.md` for local Docker, dependency, migration, and restart procedures.
+- Choose the workflow category from `README.md`; use `docs/workflows/local-development/setup.md` for Docker, dependency, and restart procedures; use `docs/backend/database.md` for migrations and `docs/workflows/debugging.md` for diagnostics.
 - Read `docs/workflows/delivery/ci.md` for GitHub Actions, test-runner composition, required checks, sharding, caching, CI architecture, and workflow-speed investigations.
 
 ## Stable invariants

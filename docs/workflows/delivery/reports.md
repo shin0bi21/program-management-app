@@ -1,9 +1,6 @@
 # Reports
 
-Repository reports summarize existing state; they do not change application code, CI configuration, containers, or production.
-
-Report scripts use a `-report.ts` suffix, colocated tests use `-report.test.ts`,
-and npm commands use the `report:<subject>` prefix.
+Run commands from the repository root.
 
 ## Log Report
 
@@ -61,8 +58,7 @@ npm run report:changes
 npm run report:changes -- --json --base origin/develop
 ```
 
-The command lives in `scripts/reports/file-changes-report.ts`. It reports branch and
-upstream state, changed paths, ownership categories, existing stashes, a content
+The report includes branch/upstream state, changed paths, ownership categories, existing stashes, a content
 fingerprint, and checks selected by the shared CI policy. It does not run checks
 or save a backup. `INSPECT_CHANGES_BASE_REF` overrides the default comparison base
 when `--base` is absent.
@@ -111,10 +107,7 @@ validated before filtering. No matches produces a clear message and successful e
 
 ## LOC Report
 
-Use the LOC report for a repository-size breakdown. The single TypeScript command
-`scripts/reports/loc-report.ts` discovers Git-tracked and nonignored untracked
-files, excludes `.git`, `node_modules`, `dist`, and `build`, and separates
-TypeScript and React source from their tests:
+Count repository lines by file type, separating TypeScript/React source and tests:
 
 ```bash
 npm run report:loc
@@ -127,10 +120,5 @@ npm run report:loc -- ts tsx sql
 
 Blank lines and comment lines are excluded by default. Use `--include-comments`
 only when requested.
-Comment filtering trims each line before checking its prefix:
-`//` for TS/TSX, `--` for SQL, `/*` for TS/TSX/CSS/SQL, `{/*` for TSX, and
-`<!--` for Markdown. A block excludes every line through its first closing
-marker, including any code on that closing line. Inline comments on code lines
-do not change their count. This deliberately uses line rules rather than parsing
-strings, templates, Markdown fences, or nested block comments. Other extensions
-use nonblank line counts.
+Counts include tracked and nonignored untracked files, excluding dependency and
+build directories. Comment filtering uses line prefixes rather than a parser.

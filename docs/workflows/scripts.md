@@ -73,15 +73,8 @@ These are readability decisions, not a requirement to use a particular loop or
 switch statement. Avoid wrappers and tiny helpers that only relocate a single
 obvious statement.
 
-## Keep Execution and Test Owners Aligned
+## Keep Execution Owners Aligned
 
 The command coordinates its workflow; reusable workers own their domain behavior.
 Extract them only when there is a distinct contract or real reuse. Keep CLI-only
 types and formatting beside the command instead of promoting them globally.
-
-Follow [Test Ownership](delivery/testing.md#test-ownership). Repository-tool tests
-live beside their scripts; database behavior belongs to the database worker's
-tests. Cover observable behavior, including meaningful parsing and failure cases,
-without testing private functions or statement order merely to mirror the source.
-Shell maintenance wrappers retain the syntax, ShellCheck, and manual-verification
-contract in that guide.

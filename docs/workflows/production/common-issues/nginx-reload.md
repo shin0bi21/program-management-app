@@ -25,10 +25,6 @@ then run this on Lightsail with Node 24 available:
 node scripts/reports/log-report.ts --docker nginx backend --since 5m --context 0
 ```
 
-This summarizes recent server logs. Repeated messages appear once, with a count.
-Use it alongside the terminal error to decide what to check next. See
-[Log Report](../../delivery/reports.md#log-report) for more options.
-
 ## After Reloading
 
 Check that the public homepage and affected feature work. Reloading nginx loads

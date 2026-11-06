@@ -46,18 +46,9 @@ git status --short
 ./scripts/deploy/main.sh --preview
 ```
 
-Preview fetches the latest remote `main` into a temporary Git repository and
-compares it with the recorded component revisions using the current checkout's
-deployment tooling. It does not update the checkout, index, refs, deployment
-logs/lock, revision markers, images, services, or database, and does not load
-`.env`. Temporary Git data is removed on success or failure. Repository transport
-settings still apply; a fetch failure stops preview without starting deployment.
-
-Local edits are excluded and produce a notice; actual deployment still rejects
-a dirty checkout. Missing revision markers select the full flow without creating
-the state directory. Preview is advisory: another deployment or a new `main`
-commit can change the later result. It does not execute fetched deployment scripts.
-The former `--plan` flag is no longer accepted.
+Preview prints the latest remote `main` target and selected work without changing
+services, data, or the checkout. Local edits are excluded; deployment requires a
+clean checkout. Resolve any local edits and check the printed target before continuing.
 
 Once the preview target and selected work match the authorized release:
 
@@ -87,10 +78,7 @@ work. If a check fails, use [Identify the Failing Boundary](#identify-the-failin
 
 ## Monitoring and Rerunning a Deployment
 
-Record the failed job/step and target commit before retrying. The workflow checks
-required secret names before SSH, rejects an uncommitted server working tree,
-fetches `origin/main`, synchronizes the checkout, and runs the deployment script.
-It then requests the public health endpoint and homepage with bounded retries.
+Record the failed job/step and target commit before retrying.
 
 For credential or service failures, use the [common issue guides](README.md#common-issues).
 For a dirty server checkout, preserve the edits and resolve their ownership before
@@ -155,13 +143,5 @@ and infrastructure revisions in `.deploy-state/`:
 | Production infrastructure or shared TypeScript policy | Conservative full flow |
 | Recognized documentation, local-test, data-refresh, or report tooling paths only | No production container rebuild |
 
-Unknown paths (including scaffold and pattern tooling) and missing revision markers
-select the full flow. Docker layer caching is separate:
-a selected build can reuse unchanged layers. A full deployment is not a
-`--no-cache` build; dependency installation occurs during image building, not
-each container start.
-
-The executable owners are [the deployment workflow](../../../.github/workflows/deploy.yml)
-and [the script entry point](../../../scripts/deploy/main.sh), with numbered steps
-beside it for synchronization, selection, migration safeguards, replacement, and
-cleanup. [CI](../delivery/ci.md) owns pull-request validation and required checks.
+Unknown paths and missing revision markers select the full flow. A selected build
+can reuse Docker layers; a full flow does not mean a `--no-cache` build.

@@ -1,29 +1,14 @@
 # Running the Script
 
 Run these commands from the repository root. Production data is unchanged.
-
-## Before You Start
-
-- Start Docker Desktop and the local database: `docker compose up -d db`.
-- Have the local backend image ready; see [Local Development](../local-development/tools.md).
-- Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your local `.env` for signing in after import.
-- Have SSH access to the production server with the key used below.
-- The source backend must include `dist/db/scripts/snapshot-data.js`. Downloads
-  use `myapp_backend` by default; pass `--container` to select another backend.
-  Allow temporary archive space there. The shared snapshot helper removes the
-  server archive after transfer or failure; failed exports retain private
-  diagnostics and print their container path.
-
-Both commands use `scripts/dev/helpers/snapshot-data.sh` to export, transfer, and
-clean up the server snapshot. Import applies the copy locally and deletes its
-temporary local files on exit. Download keeps the local archive, manifest, and
-checksum in your chosen directory.
+Use your server address and SSH key path in `--host` and `--identity`.
 
 ## Refresh Local Data
 
 Replace your local development data with a fresh production copy:
 
 ```bash
+docker compose up -d db
 bash scripts/dev/import-data.sh \
   --host ubuntu@18.216.104.46 \
   --identity "$HOME/.ssh/be-original-key.pem" \
@@ -31,16 +16,21 @@ bash scripts/dev/import-data.sh \
 ```
 
 When finished, reload <http://localhost:5173> and sign in with your local
-`ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+`ADMIN_EMAIL` and `ADMIN_PASSWORD`. Check a few known records before removing
+the printed `local_snapshot_backup_*` backup. If the command fails, use
+[Recover a Data Refresh](refresh-data/recovery.md).
 
 ## Validate Without Replacing Local Data
 
 ```bash
+docker compose up -d db
 bash scripts/dev/import-data.sh \
   --host ubuntu@18.216.104.46 \
   --identity "$HOME/.ssh/be-original-key.pem" \
   --validate-only
 ```
+
+Validation should finish without replacing the current local database or backend.
 
 ## Download Only
 
@@ -53,4 +43,28 @@ bash scripts/dev/download-data.sh \
   --host ubuntu@18.216.104.46 \
   --identity "$HOME/.ssh/be-original-key.pem" \
   --destination "$HOME/Desktop/my-webapp-snapshots"
+```
+
+## Verify a Downloaded Archive
+
+Replace the filename below with the `.sha256` file printed by the download:
+
+```bash
+cd "$HOME/Desktop/my-webapp-snapshots"
+shasum -a 256 -c production-YYYYMMDDTHHMMSSZ-SUFFIX.dump.sha256
+```
+
+The archive should report `OK`. Return to the project root before running
+another project command.
+
+## Export a Local Snapshot
+
+From the project root, with the local database running, mount a private host directory into a
+one-off container so the archive survives its removal:
+
+```bash
+snapshot_directory="$(mktemp -d /tmp/my-webapp-snapshots.XXXXXX)"
+docker compose run -T --rm --no-deps --user "$(id -u):$(id -g)" \
+  -v "$snapshot_directory:/snapshots" backend \
+  npm exec -- tsx db/scripts/snapshot-data.ts --output /snapshots/current.dump
 ```

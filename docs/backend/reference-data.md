@@ -70,12 +70,3 @@ cycle bounds before querying either their table or calendar; a failed source,
 including an error with cached rows, must not trigger an unbounded collection
 request. An empty cycle selection means all available cycles, while a successful
 empty cycle lookup means no calendar range is available.
-
-## Verification Ownership
-
-`backend/tests/referenceData/` covers route permissions, strict projections,
-assignment/resource scope, and feature-specific staff capabilities. Feature tests
-cover their local choices and composition. Frontend adapter tests verify paths,
-scope serialization, and cancellation; shared hook tests verify cache keys and
-scope separation. Page tests cover permission-specific wiring, reference failures,
-and query gating rather than repeating generic query-cache mechanics.

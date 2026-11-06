@@ -18,7 +18,7 @@ Express request path.
 4. Share the spreadsheet with the service account email. Grant Viewer for reads or Editor
    for writes. Keep the key and `.env` out of Git.
 5. Recreate the local backend container after changing `.env`, following
-   [Local Development](../../workflows/local-development/README.md#which-command-to-use).
+   [Run in Docker](../../workflows/local-development/setup.md#which-command-to-use).
 
 `GOOGLE_SERVICE_ACCOUNT_JSON` is required only when running Sheets scripts. Normal server
 operation does not need it.

@@ -9,9 +9,8 @@ for authenticated collection routes.
 ## Maintain the Pattern
 
 Templates implement the contracts in the focused owner guides. When a contract
-changes, update its template and scaffold tests together. Scaffold tests verify
-the generated files; follow [Test Ownership](../../workflows/delivery/testing.md#test-ownership)
-for application coverage and [Ownership](ownership.md) for source placement.
+changes, update its template and generated examples together. Follow
+[Ownership](ownership.md) for source placement.
 
 ## Choose a Preset
 
@@ -63,8 +62,6 @@ when the new page needs those owners; each includes its own test outlines.
 Generated `it.todo` cases are ownership prompts, not completed coverage. Replace
 the relevant prompts with scenario fixtures and observable assertions; remove
 inapplicable cases and delete the test file when the owner adds no behavior.
-Follow the [testing guide](../../workflows/delivery/testing.md) for ownership,
-fixtures, suite organization, and runner selection.
 See each [frontend owner guide](../README.md#find-the-right-guide) for
 the supported source layout and preset commands.
 

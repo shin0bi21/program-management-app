@@ -10,14 +10,14 @@ type SidebarEntry =
 export const navigation: NavigationEntry[] = [
   { label: 'Overview', source: 'README.md' },
   {
-    label: 'Local Development',
+    label: 'Setup Guide',
     items: [
       { label: '1. Install the Tools', source: 'docs/workflows/local-development/tools.md' },
       { label: '2. Open the Project', source: 'docs/workflows/local-development/repository.md' },
-      { label: '3. Run in Docker', source: 'docs/workflows/local-development/setup.md' },
-      { label: '4. Connect to the Database', source: 'docs/workflows/local-development/database.md' },
-      { label: 'Daily Development', source: 'docs/workflows/local-development/README.md' },
-      { label: 'Debug Locally', source: 'docs/workflows/local-development/debugging.md' },
+      { label: '3. Set Up the Environment File', source: 'docs/workflows/local-development/environment.md' },
+      { label: '4. Run in Docker', source: 'docs/workflows/local-development/setup.md' },
+      { label: '5. Connect to the Database', source: 'docs/workflows/local-development/database.md' },
+      { label: 'Troubleshoot Initial Setup', source: 'docs/workflows/local-development/troubleshooting.md' },
     ],
   },
   {
@@ -40,16 +40,11 @@ export const navigation: NavigationEntry[] = [
       },
       { label: 'App Navigation', source: 'docs/frontend/components/navigation.md' },
       {
-        label: 'Features',
-        items: [
-          { label: 'Preferences', source: 'docs/frontend/features/preferences.md' },
-        ],
-      },
-      {
         label: 'Architecture',
         items: [
           { label: 'Ownership', source: 'docs/frontend/architecture/ownership.md' },
           { label: 'State and Data', source: 'docs/frontend/architecture/state-and-data.md' },
+          { label: 'Preferences', source: 'docs/frontend/architecture/preferences.md' },
           { label: 'Scaffolding', source: 'docs/frontend/architecture/scaffolding.md' },
         ],
       },
@@ -76,11 +71,12 @@ export const navigation: NavigationEntry[] = [
     label: 'Workflows',
     items: [
       { label: 'Overview', source: 'docs/workflows/delivery/README.md' },
+      { label: 'Debugging', source: 'docs/workflows/debugging.md' },
       {
         label: 'Refresh Local Data',
         items: [
           { label: 'Running the Script', source: 'docs/workflows/delivery/refresh-data.md' },
-          { label: 'Script Details', source: 'docs/workflows/delivery/refresh-data/script-walkthrough.md' },
+          { label: 'Recovery', source: 'docs/workflows/delivery/refresh-data/recovery.md' },
         ],
       },
       { label: 'Collapse Database History', source: 'docs/workflows/delivery/collapse-database.md' },
@@ -97,6 +93,7 @@ export const navigation: NavigationEntry[] = [
     items: [
       { label: 'Overview', source: 'docs/workflows/production/README.md' },
       { label: 'Deploy to Production', source: 'docs/workflows/production/deployment.md' },
+      { label: 'Update Server Environment', source: 'docs/workflows/production/environment.md' },
       {
         label: 'Common Issues',
         items: [
@@ -116,6 +113,7 @@ export const navigation: NavigationEntry[] = [
   },
 ];
 
+/** Builds navigation and rejects missing/duplicate sources; e.g. buildSidebar(manifest.routes). */
 export function buildSidebar(routes: Record<string, string>, entries: NavigationEntry[] = navigation) {
   const listed = new Set<string>();
 

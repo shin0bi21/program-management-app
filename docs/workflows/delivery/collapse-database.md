@@ -23,13 +23,6 @@ sessions, and clones the frozen database for export. Other database clients will
 be disconnected. Do not run deployments, migrations, or other database maintenance
 concurrently. A repository lock prevents two collapse commands from overlapping.
 
-The host wrapper uses the backend-owned `collapse-database.ts` worker for all
-database and file changes. Its `prepare` phase keeps the replacement read-only;
-only after a successful service health check does `commit` publish the baseline
-and enable writes. `rollback` restores the original state before commit, and
-`cleanup` removes only disposable databases. After commit, a failed final startup
-retains the new database and original backup so newly accepted writes are preserved.
-
 The command exports the complete current schema, a full recovery archive, and a
 data-only snapshot excluding the old `public.schema_migrations` rows. It creates:
 
@@ -44,11 +37,6 @@ backend/db/
     migrations/
 ```
 
-The schema init includes PostgreSQL-managed definitions such as foreign keys,
-indexes, functions, procedures, and triggers. Database-server roles, ownership,
-and grants are environment configuration; exports omit object ownership and ACLs.
-The workflow targets the repository's existing PostgreSQL 18 Docker services.
-
 `baseline.json.seedTables` identifies tables whose current rows become the
 fresh-install data init: roles, permissions, role-permission mappings, and session
 types. This is the single configuration list used by subsequent collapses;
@@ -56,22 +44,9 @@ review changes to it. The worker validates this baseline before changing the
 database. Business records and credentials belong only in the private snapshot.
 Admin creation remains `npm run seed:admin`.
 
-A replacement database loads the new schema and the complete data snapshot.
-It does not replay the seed init over existing data. Restoration temporarily
-suppresses row triggers, then recreates validated foreign keys to check the
-restored relationships. Table counts and sorted row hashes, sequence states,
-and normalized schema dumps must match. A second empty database exercises the
-schema and seed init together.
-
-The replacement ledger records only `schema/init.sql` and `data/init.sql` with
-their checksums. No forward migration clearing history is necessary: the old
-ledger stays in the original database and is excluded from the data import.
-
-The backend worker switches databases; the host wrapper checks health while
-the replacement has a read-only transaction default. Only after successful verification does it
-publish the new files and retire covered migration SQL. It then restarts the
-backend with writes enabled. Health checks cover startup; check important app
-flows afterward. The script does not commit, ship, or deploy these files.
+After success, review the generated files and check important application flows.
+The command prints a retained backup database and recovery directory; it does
+not commit or deploy the generated files.
 
 ## Failures and Recovery
 
@@ -93,11 +68,6 @@ SQL, `state.json` with database names and phase, and previous migration files.
 It contains sensitive data; keep it outside Git and remove it deliberately after verification.
 Temporary directories may be cleared by the operating system, so copy the archive
 to an approved private backup destination if longer retention is needed.
-
-The script runs the worker with the calling user's UID and GID. Recovery files
-remain private to that user; publishing or restoring repository SQL preserves
-existing checkout permissions. Newly generated paths use the checkout's directory
-and baseline-file permissions.
 
 The retained original database has connections disabled. The temporary capture
 and test databases are removed after normal completion or successful rollback.
@@ -137,11 +107,7 @@ bash scripts/dev/collapse-database.sh --environment production --reuse-baseline 
 
 Run this on the server checkout at `/home/ubuntu/my-webapp`, with Docker available. It explicitly uses `docker-compose.prod.yml`; there is no SSH
 or production mutation from the local command.
-The source ledger must exactly match `baseline.json.replaces`. Both the captured
-source schema and reviewed schema are restored into disposable databases and exported with the same PostgreSQL tools before comparing them.
-This passes historical catalog expressions through the current parser on both sides. This accepts equivalent SQL
-formatting while rejecting schema and constraint drift. Both conditions are checked
-before loading business data or cutting over.
+The source ledger must exactly match `baseline.json.replaces`. The command rejects schema or constraint drift before switching databases.
 Local reuse uses `--environment local --reuse-baseline --apply`.
 
 Reuse preserves that environment's complete data, including its own seed IDs and
@@ -157,16 +123,7 @@ server working-tree changes before deployment.
 
 ## Subsequent Changes
 
-Place structural SQL under `schema/migrations/` and data seeds/backfills under
-`data/migrations/`. Keep `YYYY-MM-DD_#_description.sql` filenames unique across
-both folders. The runner applies init schema, init data, then all incremental SQL
-in one shared filename order. A table addition, data backfill, and final constraint
-can therefore alternate across folders. Each migration and ledger insert remains
-one transaction, with checksum and missing-file validation enforced.
-
-Collapse both streams together again when needed. `baseline.json.replaces`
-records the exact ledger at the source boundary; checksummed replacement artifacts
-allow the pattern guard to recognize intentional retirement. Retire tests that
-only execute covered historical migrations as part of the reviewed collapse diff;
-do not archive those SQL files as test fixtures. Keep coverage of the current
-schema, API contracts, fresh initialization, and baseline replacement workflow.
+Add new [schema or data migrations](../../backend/database.md#create-a-migration).
+For a later collapse, repeat this process with both streams together. Include
+retirement of tests that execute only covered historical migrations in the
+reviewed change; do not retain retired SQL as test fixtures.

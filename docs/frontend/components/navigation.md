@@ -20,8 +20,6 @@ Desktop and mobile navigation expose one destination contract. Selecting a desti
 1. Mount the lazy route in `frontend/src/app/App.tsx` and protect it with the backend-aligned required permission.
 2. Derive its destination visibility and any parent-group capability in `useAppNavigation`.
 3. Render the exact canonical URL under the correct group and order in `AppNavigation`.
-4. Update navigation-owner tests for capability, visibility, active state, ordering, and navigation.
-5. Keep the route-page test focused on the page workflow rather than sidebar behavior.
 
 Programming contains Programs (`/programming/programs`, `read:programs`) and Sessions
 (`/programming/sessions`, `read:sessions`). Its group is visible with either capability.
@@ -38,12 +36,3 @@ requires `write:homepage`. The former `/homepage/manage` URL redirects to Images
 The image workflow belongs to `pages/Homepage/Images/`.
 
 Use `useFloatingMenu` and `FloatingMenuPanel` for flyouts. Those shared owners provide positioning, focus, keyboard navigation, outside/Escape dismissal, and focus return. App navigation owns only which menu is open, its domain destinations, and the callbacks and anchor refs passed to the shared primitives.
-
-## Testing
-
-`useAppNavigation.test.tsx` covers permission-derived groups, active routes and menu cleanup.
-`AppNavigation.test.tsx` covers destination labels and order, visibility, exact URLs,
-authentication actions and mobile controls. Keep sidebar assertions here rather than in
-route-page tests. Shared floating-menu tests own their mechanics; use browser tests for
-responsive layout, clipping and focus geometry. See
-[Testing](../../workflows/delivery/testing.md#frontend-test-ownership).

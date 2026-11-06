@@ -86,7 +86,9 @@ instructions are not copied into the site.
 ## Write and Maintain a Guide
 
 - Keep each guide focused on its assigned responsibility and place in the sequence.
+- Process guides contain actions, exact commands, expected results, and necessary recovery. Omit repeated setup prerequisites, ownership reminders, and narration of script internals.
 - Link to other owners for their rules; do not repeat their content or expand into their tasks.
+- Keep testing boundaries and framework guidance in the testing guides. Component and file guides describe implementation contracts, not suite inventories or coverage assignments. Do not add routine reminders to consult Testing; keep its discovery links in documentation navigation.
 - Prefer short rules, numbered actions, and concrete examples. Use paragraphs only when explanation is necessary.
 - Choose clarity over brevity, but remove repetition, obvious instructions, filler, and unnecessary introductions.
 - Speak directly to the reader. Explain unfamiliar terms when needed.

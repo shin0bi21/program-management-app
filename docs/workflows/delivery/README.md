@@ -5,6 +5,7 @@ Production release is a separate, explicitly authorized workflow.
 
 | Task | Guide |
 |---|---|
+| Trace local failures, inspect logs, or attach the debugger | [Debugging](../debugging.md) |
 | Populate the local stack with production records | [Refresh Local Data](refresh-data.md) |
 | Replace migration history with a current PostgreSQL init | [Collapse Database History](collapse-database.md) |
 | Choose focused tests and understand suite ownership | [Testing](testing.md) |
@@ -16,5 +17,5 @@ Production release is a separate, explicitly authorized workflow.
 | Understand required checks, diagnose CI, or change automation | [Continuous Integration](ci.md) |
 | Measure CI, deployment history, or repository size | [Repository Reports](reports.md) |
 
-For environment preparation, use [Local Development](../local-development/tools.md).
+For environment preparation, use [Setup Guide](../local-development/tools.md).
 For credential or service failures, use the [production runbooks](../production/README.md).
