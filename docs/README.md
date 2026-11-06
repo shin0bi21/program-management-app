@@ -41,45 +41,52 @@ running development site as well as the static build.
 
 `site/` contains the modules used by `astro.config.ts`:
 
-- `sidebar.ts` defines sidebar groups, labels, and guide order.
 - `generate-content.ts` converts canonical guides into Starlight pages.
 - `convert-markdown-links.ts` translates guide links into website routes or GitHub links.
 
 These modules support the documentation website during development and builds.
 The docs package has no separate test suite or post-build checker; `npm run build`
-builds the website and its search index. Content generation still rejects missing
-sidebar entries and invalid repository links.
+builds the website and its search index. Content generation rejects colliding
+page paths and invalid repository links.
 
 ## Content Ownership
 
-Edit the existing files in `backend/`, `frontend/`, and `workflows/`. The repository
-root README provides the site's overview; this file owns maintenance instructions.
+Edit guides in `backend/`, `frontend/`, `local-development/`, `production/`, and
+`workflows/`. The repository root README provides the site's overview; this file
+owns maintenance instructions.
 Build tooling derives Starlight content in ignored `src/content/docs/`, adding
 titles and translating repository links into website routes. Never edit or commit
 those generated copies. Page titles preserve the authored heading, including casing.
 
-The [sidebar configuration](site/sidebar.ts) groups guides by reader task. Workflow
-folders separate local development, delivery, and production recovery; each has
-a short entry page. For onboarding, give each substantial stage its own page,
+Starlight automatically generates the sidebar from the published source directories,
+using guide headings as page labels and directory names as group labels.
+`src/route-data.ts` formats folder labels in title case, replacing hyphens with
+spaces and preserving the GitHub product name. Each folder's README appears first;
+other entries follow Starlight's alphabetical order.
+A guide sharing a folder's name becomes that group's landing page.
+Adding, moving, or renaming a guide updates navigation without a separate map.
+
+Local development and production sit beside the frontend, backend, and workflow
+guides. Number setup filenames in execution order so the sidebar preserves the
+onboarding sequence. Development delivery procedures remain under `workflows/`.
+For onboarding, give each substantial stage its own page,
 explain prerequisites and expected results, and link to the next step. Keep
-day-to-day operations separate from first-time setup. Add every published guide to
-that map exactly once; generation rejects missing, duplicate, and unknown entries.
-Use title case for page titles, section headings, and sidebar labels; preserve
+day-to-day operations separate from first-time setup.
+Use title case for page titles and section headings; preserve
 acronyms, product names, and inline code. Keep labels brief. Add an index for an independently useful
 area, not for every navigation subgroup or procedural step.
 
 When merging or moving a guide, update repository links and skill references in the
-same change. Add its former website route to `redirects` in
-[the site configuration](astro.config.ts), pointing to the relevant section where
-appropriate. Preserve linked section IDs or update their callers; a page redirect
-alone does not repair a renamed heading. Run the repository link check and the docs build after changing links or routes.
+same change. The current source structure defines website URLs; do not add legacy
+redirects. Preserve linked section IDs or update their callers. Run the repository
+link check and docs build after changing links or routes.
 
 The website preserves code blocks and tables. Mermaid diagrams are currently
 shown as source code. Source-file links open the private GitHub repository and
 require repository access. `DOCS_GIT_REF` controls the GitHub ref used for those
 links; it defaults to `main`.
 
-Only the repository root README and the three documentation areas are included.
+Only the repository root README and the five documentation areas are included.
 Environment files, application source, dependencies, and agent
 instructions are not copied into the site.
 

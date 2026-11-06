@@ -10,7 +10,7 @@ credential rejection while sending the two-factor sign-in code. This identifies
 a server email credential failure, not an incorrect application-user password. Trace the
 request ID and underlying cause before replacing credentials.
 
-The [email transport](../../../../backend/src/utils/emailService.ts) uses Gmail with
+The [email transport](../../../backend/src/utils/emailService.ts) uses Gmail with
 `EMAIL_USER` and `EMAIL_PASS`. For the sending account's App Password setup:
 
 1. Sign into that Google account and generate a replacement
@@ -30,7 +30,7 @@ node scripts/reports/log-report.ts --docker backend --since 5m --context 0
 ```
 
 Use the SMTP error and request ID to check the sending account and credentials
-before retrying. See [Log Report](../../delivery/reports.md#log-report) for more options.
+before retrying. See [Log Report](../../workflows/delivery/reports.md#log-report) for more options.
 
 If health checks pass but email still fails, investigate the SMTP error rather
 than repeatedly recreating containers. Restore a previous credential only if it

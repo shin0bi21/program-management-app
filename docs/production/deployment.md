@@ -16,10 +16,10 @@ file starts development services.
    passed, and migration or operational prerequisites are understood. Resolve
    outstanding production-access failures before merging the release.
    A release retiring migration history must complete the
-   [collapse bootstrap and baseline reuse](../delivery/collapse-database.md#reuse-the-reviewed-baseline-on-another-environment)
+   [collapse bootstrap and baseline reuse](../workflows/delivery/collapse-database.md#reuse-the-reviewed-baseline-on-another-environment)
    before ordinary deployment runs migration validation.
 2. Open a release pull request from `develop` to `main`. Review its complete diff
-   and wait for the [required checks](../delivery/ci.md#required-checks), including production
+   and wait for the [required checks](../workflows/delivery/ci.md#required-checks), including production
    image and Compose validation.
 3. Merge with a regular merge commit so `develop` remains in production history.
    Do not squash or rebase the release. Record the resulting `main` commit.

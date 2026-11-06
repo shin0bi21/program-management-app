@@ -1,4 +1,4 @@
-# Install the Tools
+# 1. Install the Tools
 
 Install these tools in order.
 

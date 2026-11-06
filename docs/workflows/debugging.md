@@ -68,7 +68,7 @@ For large captured logs or filtered Docker output, use the
 
 ## Production Login Fails While Sending a Verification Email
 
-Use [Restore Verification Email](production/common-issues/email-recovery.md#restore-verification-email) for
+Use [Restore Verification Email](../production/common-issues/email-recovery.md#restore-verification-email) for
 production SMTP credential failures. Local debugging commands in this guide use the
 development Compose configuration and must not be copied into production.
 
@@ -82,7 +82,7 @@ reconnection after backend restarts.
 
 Set breakpoints in backend TypeScript, reproduce the request in the browser,
 and use the request ID to ensure the paused execution matches the failing
-request. After changing backend source, follow [Run in Docker](local-development/setup.md#which-command-to-use)
+request. After changing backend source, follow [Run in Docker](../local-development/04-setup.md#which-command-to-use)
 to restart the backend before reproducing.
 
 ## Destructive Reset

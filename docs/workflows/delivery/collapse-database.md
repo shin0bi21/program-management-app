@@ -118,7 +118,7 @@ Coordinate this as a release prerequisite: an existing database must be rebuilt
 with `--reuse-baseline` before the ordinary runner sees the retired history.
 The normal runner deliberately rejects missing applied files; a normal deployment
 never adopts or resets migration history automatically. Follow the separately
-authorized [deployment workflow](../production/deployment.md) for the release and resolve any
+authorized [deployment workflow](../../production/deployment.md) for the release and resolve any
 server working-tree changes before deployment.
 
 ## Subsequent Changes

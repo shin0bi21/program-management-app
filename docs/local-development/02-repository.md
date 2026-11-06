@@ -1,4 +1,4 @@
-# Open the Project in VS Code
+# 2. Open the Project in VS Code
 
 ## Check Your GitHub Access
 

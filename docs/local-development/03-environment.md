@@ -1,4 +1,4 @@
-# Set Up Your Environment File
+# 3. Set Up Your Environment File
 
 In the VS Code terminal, create `.env` in the project root by copying the example:
 

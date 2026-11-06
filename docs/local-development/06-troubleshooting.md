@@ -1,4 +1,4 @@
-# Troubleshoot Initial Setup
+# 6. Troubleshoot Initial Setup
 
 This page covers common issues that may arise during setup.
 
@@ -32,7 +32,7 @@ the services to start. Your terminal is outside the downloaded project folder.
 
    It should print `docker-compose.yml`. If it says `No such file or directory`,
    repeat step 1 and select the project folder itself.
-4. Return to [Start the Application](setup.md#start-the-application) and run
+4. Return to [Start the Application](04-setup.md#start-the-application) and run
    `docker compose up -d --build` again.
 
 ## Cannot Connect to the Docker Daemon
@@ -56,7 +56,7 @@ containers.
 
    It should display a **Server** section without a connection error. If it
    still fails, quit and reopen Docker Desktop, then retry `docker info`.
-4. Once it succeeds, return to [Start the Application](setup.md#start-the-application).
+4. Once it succeeds, return to [Start the Application](04-setup.md#start-the-application).
 
 ## Port Is Already Allocated
 
@@ -123,7 +123,7 @@ Docker documents these errors under
 3. Apply any matching settings change:
 
    - **Database `5432` → `5434`:** use `5434` as the port when you
-     [connect DBeaver](database.md). Leave `.env` and `DATABASE_URL` unchanged;
+     [connect DBeaver](05-database.md). Leave `.env` and `DATABASE_URL` unchanged;
      the backend still connects to `db:5432` inside Docker.
    - **Frontend `5173` → `5174`:** in the root `.env`, change
      `FRONTEND_URL=http://localhost:5173` to `FRONTEND_URL=http://localhost:5174`.
@@ -147,8 +147,8 @@ Docker documents these errors under
    The port error should be gone. In `docker compose ps`, the affected service
    should show your replacement port, for example `0.0.0.0:5434->5432/tcp`.
 5. Wait for startup to finish as described in
-   [Start the Application](setup.md#start-the-application), then continue with
-   [Open the Application](setup.md#open-the-application), using any updated URLs
+   [Start the Application](04-setup.md#start-the-application), then continue with
+   [Open the Application](04-setup.md#open-the-application), using any updated URLs
    from step 3. Keep these port edits local to your machine.
 
 ## Browser Cannot Connect
@@ -168,7 +168,7 @@ If your browser shows `ERR_CONNECTION_REFUSED` or says it cannot connect:
 3. If a container has exited, read its last log messages. Use the matching fix
    on this page; database and account failures are covered below.
 4. Once the frontend and backend are running, retry
-   [Open the Application](setup.md#open-the-application). Use your replacement
+   [Open the Application](04-setup.md#open-the-application). Use your replacement
    URLs if you changed a port.
 
 ## Migration or Administrator Setup Fails
@@ -182,7 +182,7 @@ If the backend exits during `db:migrate` or `seed:admin`:
    ```
 
 2. For a missing setting or invalid administrator value, open the root `.env`
-   and correct the named value using [Set Up Your Environment File](environment.md).
+   and correct the named value using [Set Up Your Environment File](03-environment.md).
    Existing database passwords are not changed by editing `.env`; if the logs
    report a database authentication failure, restore the credentials used when
    that database was created.
@@ -194,10 +194,10 @@ If the backend exits during `db:migrate` or `seed:admin`:
    ```
 
 4. Once migrations and account setup succeed, continue with
-   [Open the Application](setup.md#open-the-application). Startup preserves
+   [Open the Application](04-setup.md#open-the-application). Startup preserves
    existing administrator passwords; changing `ADMIN_PASSWORD` in `.env` does
    not reset an account that already exists.
 
-If the same failure remains, use [Logs and Diagnostics](../debugging.md#logs-and-diagnostics)
+If the same failure remains, use [Logs and Diagnostics](../workflows/debugging.md#logs-and-diagnostics)
 to investigate the failing service. Do not reset database volumes to fix a
 startup error if they contain work you need.

@@ -7,7 +7,7 @@ choose the local equivalent of a failed check.
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
 pull requests to `main` are rejected. See [Shipping](../../../.agents/skills/03-update-repo/SKILL.md) and
-[Deployment](../production/deployment.md) for those procedures.
+[Deployment](../../production/deployment.md) for those procedures.
 
 ## Workflow Topology
 
@@ -69,7 +69,7 @@ all architecture conventions or require test files.
 1. Open the failed job and step in **Checks** or **Actions**.
 2. Run its [repository test runner](testing.md#choose-a-runner). For migration,
    generated-type, build, image, Compose, or nginx failures, use the exact
-   command in the failed workflow step. [Run in Docker](../local-development/setup.md)
+   command in the failed workflow step. [Run in Docker](../../local-development/04-setup.md)
    covers containers and dependencies; [Database](../../backend/database.md#apply-local-migrations)
    owns migration commands.
 3. Push a fix for a reproducible failure. Use **Re-run failed jobs** for an
@@ -78,7 +78,7 @@ all architecture conventions or require test files.
 
 Changed pattern checks run in the quality job alongside static analysis.
 Scheduled Playwright retains failure traces. Deployment failures and
-reruns belong to the [deployment guide](../production/deployment.md#monitoring-and-rerunning-a-deployment).
+reruns belong to the [deployment guide](../../production/deployment.md#monitoring-and-rerunning-a-deployment).
 
 ## Required Checks
 

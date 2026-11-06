@@ -10,7 +10,7 @@
 
 ## Apply Local Migrations
 
-For automatic startup migration behavior, see [Run in Docker](../workflows/local-development/setup.md#start-the-application).
+For automatic startup migration behavior, see [Run in Docker](../local-development/04-setup.md#start-the-application).
 To apply pending migrations to a running local database, run from the project root:
 
 ```bash

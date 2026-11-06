@@ -1,4 +1,4 @@
-# Run the Application in Docker
+# 4. Run the Application in Docker
 
 Start the application, create its database tables, and set up your local login.
 
@@ -9,7 +9,7 @@ Start the application, create its database tables, and set up your local login.
 <a id="3-frontend-environment"></a>
 <a id="environment-file-ownership"></a>
 
-Complete [Set Up Your Environment File](environment.md) before starting the application.
+Complete [Set Up Your Environment File](03-environment.md) before starting the application.
 
 <a id="4-start-the-stack"></a>
 
@@ -55,7 +55,7 @@ from the live site. An empty local database will not contain production records.
 
 ## Troubleshooting Initial Setup
 
-If startup fails, follow [Troubleshoot Initial Setup](troubleshooting.md) for
+If startup fails, follow [Troubleshoot Initial Setup](06-troubleshooting.md) for
 error messages, commands, and the setup step to return to after each fix.
 
 ## Stop the Application
