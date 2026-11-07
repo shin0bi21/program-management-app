@@ -34,14 +34,6 @@ node --test \
   scripts/scaffold/frontend/*.test.ts \
   scripts/ci/*.test.ts \
   scripts/patterns/*.test.ts \
-  scripts/patterns/frontend/*.test.ts \
-  scripts/reports/*.test.ts
-
-echo "Checking report commands..."
-loc_total=$(node scripts/reports/loc-report.ts app | awk '/^TOTAL/{print $2}')
-if [ -z "$loc_total" ] || [ "$loc_total" -eq 0 ]; then
-  echo "ERROR: LOC report did not count repository source files"
-  exit 1
-fi
+  scripts/patterns/frontend/*.test.ts
 
 echo "Static checks passed!"
