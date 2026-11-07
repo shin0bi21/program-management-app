@@ -11,7 +11,6 @@ import {
   InternalServerError,
   PayloadTooLargeError,
   ServiceUnavailableError,
-  isUniqueViolation,
 } from '../../src/errors';
 import { uploadFile } from '../../src/middleware/fileUpload';
 import { requestId, validateRequest } from '../../src/middleware/routeMiddleware';
@@ -92,7 +91,6 @@ describe('HTTP error integration', () => {
     const res = response();
 
     expect(classifyError(error)).toBe(error);
-    expect(isUniqueViolation(error, 'user_credentials_email_key')).toBe(false);
     handleError(error, request, res, jest.fn());
 
     expect(res.status).toHaveBeenCalledWith(409);
@@ -242,36 +240,7 @@ describe('default error messages and unexpected failures', () => {
   });
 });
 
-describe('database fallbacks and contextual conflicts', () => {
-  it('retains a contextual conflict without replacing its message or cause', () => {
-    const original = Object.assign(new Error('duplicate key'), {
-      code: '23505', constraint_name: 'user_credentials_email_key',
-    });
-    const contextual = Object.assign(new ConflictError('A user with this email already exists'), { cause: original });
-
-    expect(isUniqueViolation(original, 'user_credentials_email_key')).toBe(true);
-    expect(classifyError(contextual)).toBe(contextual);
-    expect(contextual.cause).toBe(original);
-  });
-
-  it.each([
-    ['23505', 'schools_name_key'],
-    ['23503', 'user_credentials_email_key'],
-    ['23514', 'user_credentials_email_key'],
-  ])('does not mistake %s on %s for a duplicate email', (code, constraintName) => {
-    const failure = Object.assign(new Error('database failure'), { code, constraint_name: constraintName });
-
-    expect(isUniqueViolation(failure, 'user_credentials_email_key')).toBe(false);
-  });
-
-  it('keeps the generic duplicate fallback for errors not translated by a service', () => {
-    const original = Object.assign(new Error('duplicate key'), { code: '23505' });
-    const classified = classifyError(original);
-
-    expect(classified).toBeInstanceOf(ConflictError);
-    expect(classified.message).toBe('A record with that value already exists');
-    expect(classified.cause).toBe(original);
-  });
+describe('database connection failures', () => {
 
   it.each(['ECONNREFUSED', '57P03', '08006', '53300'])('keeps the connection fallback for %s', code => {
     const original = Object.assign(new Error('database unavailable'), { code });

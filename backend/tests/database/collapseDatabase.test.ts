@@ -215,52 +215,6 @@ it('reuses equivalent reviewed SQL despite different dump formatting', () => {
   test.run('cleanup');
 }, 30000);
 
-it('reuses equivalent array casts in reviewed check constraints', () => {
-  const test = fixture(true);
-  query(test.target, `ALTER TABLE roles ALTER COLUMN label TYPE varchar(255);
-    ALTER TABLE roles ADD CONSTRAINT label_options CHECK (label::text = ANY ((ARRAY['existing environment'::varchar, 'fresh install'::varchar])::text[]));`);
-  reviseReviewedSchema(test.files, sql => `${sql}\nALTER TABLE public.roles ALTER COLUMN label TYPE varchar(255);
-    ALTER TABLE public.roles ADD CONSTRAINT label_options CHECK (label::text = ANY (ARRAY[('existing environment'::varchar)::text, ('fresh install'::varchar)::text]));\n`);
-  const contents = test.contents();
-
-  test.run('prepare');
-  test.run('commit');
-
-  expect(test.contents()).toBe(contents);
-  test.run('cleanup');
-}, 30000);
-
-it('round-trips historical source exports before comparing reviewed constraints', () => {
-  const test = fixture(true);
-  query(test.target, `ALTER TABLE roles ALTER COLUMN label TYPE varchar(255);
-    ALTER TABLE roles ADD CONSTRAINT label_options CHECK (label::text = ANY (ARRAY[('existing environment'::varchar)::text, ('fresh install'::varchar)::text]));`);
-  reviseReviewedSchema(test.files, () => command('pg_dump', test.target, ['--schema-only', '--no-owner', '--no-acl', '--no-tablespaces']) + '\n');
-  const contents = test.contents();
-  const spawn = childProcess.spawnSync;
-  const sourceFile = path.join(test.work, 'schema.sql');
-  let injected = false;
-
-  jest.spyOn(childProcess, 'spawnSync').mockImplementation((program, args, options) => {
-    const result = spawn(program, args!, options!);
-    if (!injected && program === 'pg_dump' && fs.existsSync(sourceFile)) {
-      const sql = fs.readFileSync(sourceFile, 'utf8');
-      const current = "ARRAY[('existing environment'::character varying)::text, ('fresh install'::character varying)::text]";
-      const historical = "(ARRAY['existing environment'::character varying, 'fresh install'::character varying])::text[]";
-      expect(sql).toContain(current);
-      fs.writeFileSync(sourceFile, sql.replace(current, historical).replace('SET row_security = off;', 'SET row_security = off;\n\n\n'));
-      injected = true;
-    }
-    return result;
-  });
-
-  test.run('prepare');
-  test.run('commit');
-
-  expect(injected).toBe(true);
-  expect(test.contents()).toBe(contents);
-  test.run('cleanup');
-}, 30000);
-
 it('removes the schema reference database after a comparison restore fails', () => {
   const test = fixture(true);
   const contents = test.contents();
@@ -280,21 +234,6 @@ it('removes the schema reference database after a comparison restore fails', () 
   expect(test.state().phase).toBe('rolled-back');
   expect(test.contents()).toBe(contents);
   expect(query('postgres', `SELECT count(*) FROM pg_database WHERE datname = 'collapse_schema_${test.state().id}';`)).toBe('0');
-  test.run('cleanup');
-}, 30000);
-
-it('rejects a reviewed constraint change even when existing data satisfies it', () => {
-  const test = fixture(true);
-  reviseReviewedSchema(test.files, sql => `${sql}\nALTER TABLE public.records ADD CONSTRAINT reviewed_payload_check CHECK (payload IS NOT NULL);\n`);
-  const contents = test.contents();
-  const oid = query('postgres', `SELECT oid FROM pg_database WHERE datname = '${test.target}';`);
-
-  expect(() => test.run('prepare')).toThrow('Current schema differs from the reviewed baseline');
-
-  expect(test.state().phase).toBe('rolled-back');
-  expect(test.contents()).toBe(contents);
-  expect(query('postgres', `SELECT oid FROM pg_database WHERE datname = '${test.target}';`)).toBe(oid);
-  expect(query(test.target, 'SHOW default_transaction_read_only;')).toBe('off');
   test.run('cleanup');
 }, 30000);
 

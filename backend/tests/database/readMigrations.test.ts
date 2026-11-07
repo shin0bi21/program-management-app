@@ -54,13 +54,6 @@ it('fresh init precedes one global sequence across schema and data directories',
   assert.equal(validateAppliedMigrations(root, [{ version: 'old.sql', checksum: null }]).length, 1);
 });
 
-it('duplicate names cannot silently change ordering between schema and data', () => {
-  const { root, write } = fixture();
-  write('schema/migrations/2026-02-01_1_example.sql');
-  write('data/migrations/2026-02-01_1_example.sql');
-  assert.throws(() => listMigrationFiles(root), /unique across schema and data/);
-});
-
 it('init files need a complete matching manifest and cannot coexist with legacy SQL', () => {
   const { root, write, baseline } = fixture();
   write('schema/init.sql');

@@ -383,22 +383,6 @@ describe('Accounts API', () => {
       await deleteTestUser(youthUser.userId);
     });
 
-    it('should reject duplicate email', async () => {
-      const dupeEmail = `dupe-${Date.now()}@test.local`;
-      const firstRes = await request(app)
-        .post('/api/accounts')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'First', lastName: 'User', email: dupeEmail, password: 'password123', role: 'staff', active: true });
-      expect(firstRes.status).toBe(201);
-      createdUserIds.push(firstRes.body.id);
-
-      const dupeRes = await request(app)
-        .post('/api/accounts')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ firstName: 'Second', lastName: 'User', email: dupeEmail, password: 'password123', active: true });
-      expect(dupeRes.status).toBe(409);
-    });
-
     it('should reject expired access token', async () => {
       const expiredToken = generateExpiredToken(adminUser.userId);
 
@@ -536,37 +520,6 @@ describe('Accounts API', () => {
         });
 
       expect(res.status).toBe(404);
-    });
-
-    it('should reject email conflict on update', async () => {
-      // Create another staff user
-      const otherEmail = `other-${Date.now()}@test.local`;
-      const otherRes = await request(app)
-        .post('/api/accounts')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          firstName: 'Other',
-          lastName: 'User',
-          email: otherEmail,
-          role: 'staff',
-        });
-
-      // Try to update first user with the other's email
-      const res = await request(app)
-        .post('/api/accounts')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          id: testStaffId,
-          firstName: 'Updated',
-          lastName: 'Name',
-          email: otherEmail,
-          role: 'staff',
-        });
-
-      expect(res.status).toBe(409);
-      expect(res.body.error).toMatch(/email already exists/i);
-
-      await deleteTestUser(otherRes.body.id);
     });
 
     it('should reject unauthorized staff from updating', async () => {

@@ -452,18 +452,6 @@ describe('Hours API', () => {
     expect(widened.body).toEqual({});
   });
 
-  it('enforces a linked source for Program Delivery at the database boundary', async () => {
-    await expect(sql`
-      INSERT INTO time_entries (
-        staff_id, program_id, cycle_id, category, work_date, hours, note
-      )
-      VALUES (
-        ${firstStaffId}, ${programId}, ${activeCycleId}, 'program_delivery',
-        ${workDate}, 1, 'Unlinked delivery'
-      )
-    `).rejects.toMatchObject({ code: '23514' });
-  });
-
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
     const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT

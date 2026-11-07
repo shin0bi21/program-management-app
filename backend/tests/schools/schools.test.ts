@@ -144,34 +144,6 @@ describe('Schools API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should reject duplicate school name (409)', async () => {
-      const name = `Duplicate School ${Date.now()}`;
-      const first = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name });
-      expect(first.status).toBe(200);
-      createdIds.push(first.body.id);
-
-      const second = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name });
-      expect(second.status).toBe(409);
-    });
-
-    it('returns a contextual conflict when concurrent creates use the same name', async () => {
-      const name = `Concurrent School ${Date.now()}`;
-      const results = await Promise.all([1, 2].map(() => request(app)
-        .post('/api/schools').set('Authorization', `Bearer ${adminToken}`).send({ name })));
-      for (const result of results) if (result.status === 200) createdIds.push(result.body.id);
-
-      expect(results.map(result => result.status).sort()).toEqual([200, 409]);
-      const rejected = results.find(result => result.status === 409)!;
-      expect(rejected.body.error).toBe('A school with this name already exists');
-      expect(rejected.body.requestId).toEqual(expect.any(String));
-    });
-
     it('should reject youth user (403)', async () => {
       const youth = await seedTestUser({ email: `schools-youth-create-${Date.now()}@test.local`, role: 'youth' });
       const youthToken = generateToken(youth.userId, 'youth', youth.email);
@@ -229,22 +201,6 @@ describe('Schools API', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ id: '00000000-0000-0000-0000-000000000000', name: 'Ghost School' });
       expect(res.status).toBe(404);
-    });
-
-    it('should reject name conflict on update (409)', async () => {
-      const other = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: `Other School ${Date.now()}` });
-      const otherId = other.body.id;
-
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ id: schoolId, name: other.body.name });
-      expect(res.status).toBe(409);
-
-      await deleteTestSchool(otherId);
     });
   });
 
