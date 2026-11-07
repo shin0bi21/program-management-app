@@ -12,9 +12,11 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
  * // Plans ScheduleCalendar/ScheduleCalendar.tsx and ScheduleCalendar/ScheduleCalendar.test.tsx.
  */
 export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
+  // 1. Validate the requested owner and derive destination names.
   const owner = context.pageComponentsOwner(ownerPath, 'Calendar');
   const directory = context.componentOwner(owner, name, 'Calendar', 'Calendar');
   const title = name.replace(/Calendar$/, '');
+  // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
@@ -56,6 +58,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
     }
     `,
   );
+  // 3. Format the companion sources and colocated test outlines.
   const test = context.sourceFile(
     join(directory, `${name}.test.tsx`),
     `
@@ -70,6 +73,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
     `,
   );
 
+  // 4. Return all sources together for conflict validation and publication.
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],

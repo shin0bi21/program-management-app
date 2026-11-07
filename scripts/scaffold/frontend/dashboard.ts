@@ -11,9 +11,11 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
  * @example dashboardPlan(context, 'frontend/src/pages/Staff/Schedules/components', 'ScheduleDashboard') // Plans ScheduleDashboard.tsx and ScheduleDashboard.test.tsx.
  */
 export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
+  // 1. Validate the requested owner and derive destination names.
   const owner = context.pageComponentsOwner(ownerPath, 'Dashboard');
   const directory = context.componentOwner(owner, name, 'Dashboard', 'Dashboard');
   const title = name.replace(/Dashboard$/, '');
+  // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
@@ -31,6 +33,7 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
     }
     `,
   );
+  // 3. Format the companion sources and colocated test outlines.
   const test = context.sourceFile(
     join(directory, `${name}.test.tsx`),
     `
@@ -43,6 +46,7 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
     `,
   );
 
+  // 4. Return all sources together for conflict validation and publication.
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],

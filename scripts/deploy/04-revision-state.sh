@@ -7,6 +7,7 @@ load_environment() {
 }
 
 read_revision() {
+  # 1. Read the selected component marker without requiring one to exist.
   local component="$1"
   local marker="$STATE_DIR/${component}-revision"
   local revision=""
@@ -15,6 +16,7 @@ read_revision() {
     revision="$(tr -d '[:space:]' < "$marker")"
   fi
 
+  # 2. Accept only revisions that still resolve to a commit.
   if [ -n "$revision" ] && git cat-file -e "${revision}^{commit}" 2>/dev/null; then
     printf '%s' "$revision"
   fi
@@ -25,8 +27,10 @@ write_revision() {
   local revision="$2"
   local temp_marker
 
+  # 1. Write a complete revision marker to a same-directory temporary file.
   temp_marker="$(mktemp "$STATE_DIR/.${component}-revision.XXXXXX")"
   printf '%s\n' "$revision" > "$temp_marker"
+  # 2. Publish the marker atomically after the component succeeds.
   mv "$temp_marker" "$STATE_DIR/${component}-revision"
 }
 

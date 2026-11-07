@@ -85,9 +85,11 @@ Do not combine app or all with other extensions.`;
  * @example parseArgs(['all', '--include-comments']).ignoreComments // false
  */
 function parseArgs(args: string[]): ReportOptions {
+  // 1. Default to source counting and gather requested types separately from flags.
   const options: ReportOptions = { extensions: [], ignoreComments: true, help: false };
   const requestedTypes: string[] = [];
 
+  // 2. Apply flags and reject malformed extension tokens.
   for (const argument of args) {
     switch (argument) {
       case '--include-comments':
@@ -108,6 +110,7 @@ function parseArgs(args: string[]): ReportOptions {
     }
   }
 
+  // 3. Resolve a standalone preset or deduplicate explicit extensions.
   const mode = requestedTypes[0] ?? 'app';
 
   if (mode === 'app' || mode === 'all') {
@@ -135,6 +138,7 @@ function parseArgs(args: string[]): ReportOptions {
  * @example repositoryFiles(repoRoot).includes('node_modules/pkg/index.ts') // false
  */
 function repositoryFiles(repoRoot: string): string[] {
+  // 1. Discover tracked and untracked paths using the repository ignore files.
   const args = ['ls-files', '--cached', '--others', '--exclude-standard', '-z'];
 
   for (const ignoreFile of ['.codexignore', '.openaiignore']) {
@@ -148,6 +152,7 @@ function repositoryFiles(repoRoot: string): string[] {
   // Git's NUL separators preserve filenames containing spaces or newlines.
   const paths = [...new Set(output.split('\0').filter(Boolean))];
 
+  // 2. Exclude dependencies, build outputs, missing files, and symlinks.
   return paths.filter(path => {
     const isExcluded = path.split('/').some(part => EXCLUDED_DIRECTORIES.has(part));
 
@@ -173,11 +178,13 @@ function repositoryFiles(repoRoot: string): string[] {
  * @example countLines('// heading\nconst x = 1;\n', 'ts', false) // 2
  */
 export function countLines(text: string, extension: string, ignoreComments = true): number {
+  // 1. Select comment syntax and retain block state across lines.
   const supportsSlashComments = extension === 'ts' || extension === 'tsx';
   const supportsBlockComments = supportsSlashComments || extension === 'css' || extension === 'sql';
   let blockCommentEnd: string | null = null;
   let total = 0;
 
+  // 2. Skip blanks and apply the requested comment policy to each line.
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
 
@@ -218,6 +225,7 @@ export function countLines(text: string, extension: string, ignoreComments = tru
       continue;
     }
 
+    // 3. Count only lines that survive blank and comment filtering.
     total += 1;
   }
 
@@ -237,8 +245,10 @@ export function countLines(text: string, extension: string, ignoreComments = tru
  * @example collectRows(repoRoot, { extensions: [], ignoreComments: true, help: false }) // []
  */
 export function collectRows(repoRoot: string, options: ReportOptions): ReportRow[] {
+  // 1. Allocate source and test totals for each selected extension.
   const counts = new Map(options.extensions.map(extension => [extension, { source: 0, tests: 0 }]));
 
+  // 2. Count each matching file under its source or test owner.
   for (const path of repositoryFiles(repoRoot)) {
     const extension = extname(path).slice(1);
     const count = counts.get(extension);
@@ -256,6 +266,7 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
     }
   }
 
+  // 3. Preserve extension order, placing TS/TSX test totals after source totals.
   const rows: ReportRow[] = [];
 
   for (const [extension, count] of counts) {
@@ -276,6 +287,7 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
  * @example formatReport([], true).includes('TOTAL                     0') // true
  */
 function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
+  // 1. Describe the counting policy and compute the combined total.
   const note = ignoreComments
     ? 'Excludes blank lines and lines starting or continuing comments.'
     : 'Excludes blank lines; includes comments.';
@@ -283,6 +295,7 @@ function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
   const divider = formatRow('--------------------', '------');
   const total = rows.reduce((sum, row) => sum + row.lines, 0);
 
+  // 2. Align category rows and the total using the same column format.
   return [
     '', note,
     formatRow('Type', 'Lines'), divider,

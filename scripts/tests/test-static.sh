@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.." || exit
 
+# 1. Discover shell scripts and reject an empty inventory.
 shell_files=()
 while IFS= read -r -d '' file; do
   shell_files+=("$file")
@@ -12,6 +13,7 @@ if [ "${#shell_files[@]}" -eq 0 ]; then
   exit 1
 fi
 
+# 2. Validate shell syntax and require ShellCheck before linting.
 echo "Checking shell syntax..."
 bash -n "${shell_files[@]}"
 
@@ -23,12 +25,14 @@ fi
 echo "Running ShellCheck..."
 shellcheck "${shell_files[@]}"
 
+# 3. Lint application and script sources, then typecheck repository tools.
 echo "Running ESLint..."
 npm run lint
 
 echo "Type-checking repository scripts..."
 npm run typecheck
 
+# 4. Execute scaffold, check-planning, and pattern-check suites before reporting success.
 echo "Running script tests..."
 node --test \
   scripts/scaffold/frontend/*.test.ts \

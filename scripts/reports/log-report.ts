@@ -102,6 +102,7 @@ Locations are capture line numbers; neighboring context may include unrelated me
  * @example parseArgs(['--docker', 'backend', '--context', '0']).sources // ['backend']
  */
 export function parseArgs(argv: string[]): ReportOptions {
+  // 1. Establish defaults before applying caller-supplied options.
   const options: ReportOptions = {
     docker: false,
     stack: null,
@@ -113,6 +114,7 @@ export function parseArgs(argv: string[]): ReportOptions {
     help: false,
   };
 
+  // 2. Consume flags and sources in order; value flags advance past their value.
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
 
@@ -122,13 +124,11 @@ export function parseArgs(argv: string[]): ReportOptions {
       break;
     }
 
-    // Select the usage-help path.
     if (argument === '--help' || argument === '-h') {
       options.help = true;
       continue;
     }
 
-    // Select Docker Compose logs as the input source.
     if (argument === '--docker') {
       options.docker = true;
       continue;
@@ -186,6 +186,7 @@ export function parseArgs(argv: string[]): ReportOptions {
     }
   }
 
+  // 3. Reject incompatible input selections and invalid Compose service names.
   if (options.stack && !options.docker) {
     throw new Error('--development and --production require --docker');
   }
@@ -210,12 +211,13 @@ export function parseArgs(argv: string[]): ReportOptions {
  * @example selectComposeFile('production').endsWith('docker-compose.prod.yml') // true
  */
 function selectComposeFile(stack: ReportOptions['stack']): string {
+  // 1. Honor an explicit stack without requiring container discovery.
   const developmentFile = resolve(REPO_ROOT, 'docker-compose.yml');
   const productionFile = resolve(REPO_ROOT, 'docker-compose.prod.yml');
 
   if (stack) return stack === 'production' ? productionFile : developmentFile;
 
-  // Include stopped services so failures remain inspectable after a container exits.
+  // 2. Include stopped services so failures remain inspectable after a container exits.
   const output = execFileSync('docker', [
     'ps', '--all',
     '--filter', `label=com.docker.compose.project.working_dir=${REPO_ROOT}`,
@@ -228,6 +230,7 @@ function selectComposeFile(stack: ReportOptions['stack']): string {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  // 3. Accept discovery only when it identifies one recognized repository stack.
   const configurations = [...new Set(output.split(/\r?\n/).map(line => line.trim()).filter(Boolean))];
   if (configurations.length !== 1) {
     throw new Error('Cannot identify one Compose stack for this checkout. Choose --development or --production.');
@@ -249,6 +252,7 @@ function selectComposeFile(stack: ReportOptions['stack']): string {
  * @example loadLogs(parseArgs(['console.txt']))[0].name // 'console.txt', if the file exists
  */
 export function loadLogs(options: ReportOptions): LogInput[] {
+  // 1. Capture a finite Compose time window when Docker input is selected.
   if (options.docker) {
     const composeFile = selectComposeFile(options.stack);
 
@@ -265,10 +269,12 @@ export function loadLogs(options: ReportOptions): LogInput[] {
     return [{ name: `docker:${options.sources.join(',') || 'all'}`, text }];
   }
 
+  // 2. Keep each supplied file as a separate capture with its own line numbers.
   if (options.sources.length) {
     return options.sources.map(name => ({ name, text: readFileSync(name, 'utf8') }));
   }
 
+  // 3. Fall back to piped stdin; interactive input would wait without a finite capture.
   if (process.stdin.isTTY) {
     throw new Error('Supply log files, pipe logs through stdin, or use --docker');
   }
@@ -286,11 +292,15 @@ export function loadLogs(options: ReportOptions): LogInput[] {
  * @example parseLine('backend | Error: failed', 'stdin', 1).source // 'backend'
  */
 function parseLine(text: string, input: string, lineNumber: number): ParsedLine {
+  // 1. Separate the optional Compose service prefix from the message.
   const envelope = text.match(/^([a-zA-Z0-9_.-]+)\s+\| ?(.*)$/);
   let message = envelope?.[2] ?? text;
+
+  // 2. Remove a leading timestamp while retaining it for occurrence details.
   const timestamp = message.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:\d{2})) /);
   if (timestamp) message = message.slice(timestamp[0].length);
 
+  // 3. Preserve the raw line and capture location alongside the parsed fields.
   return {
     text,
     message,
@@ -316,11 +326,13 @@ function requestPath(url: string): string {
  * @example classify('[rid] GET /api/tasks 500 InternalServerError: failed')?.request?.requestId // 'rid'
  */
 function classify(line: string): ClassifiedEntry | null {
+  // 1. Prefer backend summaries because they retain request and error metadata.
   const message = line.trim();
   const backend = message.match(/^\[([\w-]+)\] (GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD) (\S+) ([45]\d{2}) ([\w.]+): (.*)$/);
   if (backend) {
     const [, requestId, method, url, status, errorClass, rawMessage] = backend;
     let errorMessage = rawMessage;
+
     // Node inspection may repeat either a subclass name or Error [customName].
     const repeatedHeadings = [` ${errorClass}: `, ` Error [${errorClass}]: `];
     for (const heading of repeatedHeadings) {
@@ -343,7 +355,7 @@ function classify(line: string): ClassifiedEntry | null {
     };
   }
 
-  // nginx access logs include a protocol inside the quoted request.
+  // 2. Recognize other HTTP failures, including nginx's quoted request protocol.
   const http = message.match(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(https?:\/\/\S+|\/\S*)\s+(?:HTTP\/\d(?:\.\d)?"\s+)?([45]\d{2})\b/);
   if (http) {
     const [, method, url, status] = http;
@@ -356,6 +368,7 @@ function classify(line: string): ClassifiedEntry | null {
     };
   }
 
+  // 3. Check warnings and errors before treating source locations as application frames.
   if (/react-router-dom.*(?:logDeprecation|warnOnce)|logV6DeprecationWarnings/.test(message)) {
     return { category: 'Warnings', message: 'React Router deprecation warning' };
   }
@@ -381,15 +394,18 @@ function classify(line: string): ClassifiedEntry | null {
  * @example collectEvents([{ name: 'stdin', text: 'Error: failed' }], 0).length // 1
  */
 function collectEvents(inputs: LogInput[], contextSize: number, match?: string | null): LogEvent[] {
+  // 1. Prepare case-insensitive matching and an ordered collection across captures.
   const needle = match?.toLowerCase();
   const events: LogEvent[] = [];
 
   for (const input of inputs) {
+    // 2. Keep continuation state within each capture; a trailing newline adds no log line.
     const lines = input.text.split(/\r?\n/);
     if (lines.at(-1) === '') lines.pop();
     const pending = new Map<string, LogEvent>();
 
     for (const [index, text] of lines.entries()) {
+      // 3. Attach backend continuations only to the pending event from the same service.
       const line = parseLine(text, input.name, index + 1);
       const previous = pending.get(line.source);
       const continuation = /^(?:\s+\S|[}\]])/.test(line.message);
@@ -399,9 +415,11 @@ function collectEvents(inputs: LogInput[], contextSize: number, match?: string |
       }
       pending.delete(line.source);
 
+      // 4. Retain recognized problems or literal matches that can be filtered later.
       const entry = classify(line.message);
       if (!entry && (!needle || !text.toLowerCase().includes(needle))) continue;
 
+      // 5. Bound neighboring context to this capture and mark the event's own line.
       const start = Math.max(0, index - contextSize);
       const end = Math.min(lines.length, index + contextSize + 1);
       const context = contextSize === 0 ? [] : lines.slice(start, end).map((value, offset) => {
@@ -409,6 +427,7 @@ function collectEvents(inputs: LogInput[], contextSize: number, match?: string |
         const marker = number === index + 1 ? '>' : ' ';
         return `    ${marker} ${input.name}:${number} ${value}`;
       });
+      // 6. Record the occurrence; only backend error summaries accept attached details.
       const event: LogEvent = {
         category: entry?.category ?? 'Matches',
         message: entry?.message ?? line.message.trim(),
@@ -435,6 +454,7 @@ function collectEvents(inputs: LogInput[], contextSize: number, match?: string |
  * matchesEvent(event, { match: null, type: 'error', context: 0 }) // true
  */
 function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 'type' | 'context'>): boolean {
+  // 1. Apply literal matching to the original line and attached details, excluding context.
   if (options.match) {
     const needle = options.match.toLowerCase();
     const text = [event.line.text, ...event.details.map(line => line.text)].join('\n');
@@ -443,6 +463,7 @@ function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 't
     return false;
   }
 
+  // 2. Select HTTP events by request category or status severity when a type is supplied.
   if (!options.type) return true;
   if (event.request) {
     if (options.type === 'http') return true;
@@ -451,6 +472,7 @@ function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 't
     return false;
   }
 
+  // 3. Compare non-request events with the selected diagnostic category.
   const selectedCategory = {
     error: 'Errors', warning: 'Warnings', http: 'HTTP failures', frame: 'Application frames',
   };
@@ -466,6 +488,7 @@ function matchesEvent(event: LogEvent, options: Pick<ReportOptions, 'match' | 't
  * @example renderLogReport([], { match: null, type: null, context: 0 }).startsWith('No recognized') // true
  */
 export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions, 'match' | 'type' | 'context'>): string {
+  // 1. Collect and filter complete events before grouping diagnostic equivalents.
   const groups = new Map<string, LogEvent[]>();
   for (const event of collectEvents(inputs, options.context, options.match)) {
     if (!matchesEvent(event, options)) continue;
@@ -479,12 +502,14 @@ export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions,
     else groups.set(key, [event]);
   }
 
+  // 2. Explain an empty result according to whether filters were requested.
   if (!groups.size) {
     return options.match || options.type
       ? 'No log entries match the selected filters.'
       : 'No recognized errors, warnings, HTTP failures, or application frames.';
   }
 
+  // 3. Render groups in a stable category order, omitting empty categories.
   const output: string[] = [];
   for (const category of CATEGORIES) {
     const entries = [...groups.values()].filter(events => events[0].category === category);
@@ -493,6 +518,7 @@ export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions,
     output.push(category);
 
     for (const events of entries) {
+      // 4. Show the shared diagnosis once and retain every occurrence's metadata.
       const first = events[0];
       output.push(`  ${events.length}x ${first.message}`, `    Source: ${first.line.source}`);
       if (first.request?.errorClass) {
@@ -505,6 +531,7 @@ export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions,
         if (event.request?.requestId) fields.push(`request=${event.request.requestId}`);
         output.push(`      ${fields.join(' | ')}`);
       }
+      // 5. Use the first occurrence for shared details and neighboring context.
       if (first.details.length) {
         output.push('    Details:', ...first.details.map(line => `      ${line.message}`));
       }
@@ -523,6 +550,7 @@ export function renderLogReport(inputs: LogInput[], options: Pick<ReportOptions,
  * @example // npm run report:logs -- --help prints usage without reading logs.
  */
 function main(): void {
+  // 1. Validate arguments and handle help before acquiring any logs.
   const options = parseArgs(process.argv.slice(2));
 
   if (options.help) {
@@ -530,7 +558,10 @@ function main(): void {
     return;
   }
 
+  // 2. Read the selected Docker, file, or stdin captures.
   const inputs = loadLogs(options);
+
+  // 3. Classify, filter, and group the captures, then print the report.
   console.log(renderLogReport(inputs, options));
 }
 

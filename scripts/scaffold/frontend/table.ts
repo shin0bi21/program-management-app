@@ -12,10 +12,12 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
  * // Plans ScheduleTable.tsx, hooks/useScheduleTableData.ts, and their tests.
  */
 export function tablePlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
+  // 1. Validate the requested owner and derive destination names.
   const owner = context.pageComponentsOwner(ownerPath, 'Table');
   const directory = context.componentOwner(owner, name, 'Table', 'Table');
   const hookName = `use${name}Data`;
   const title = name.replace(/Table$/, '');
+  // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
@@ -36,6 +38,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     }
     `,
   );
+  // 3. Format the companion sources and colocated test outlines.
   const hook = context.sourceFile(
     join(directory, `hooks/${hookName}.ts`),
     `
@@ -88,6 +91,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     `,
   );
 
+  // 4. Return all sources together for conflict validation and publication.
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],

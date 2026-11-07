@@ -11,6 +11,7 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
  * @example modalPlan(context, 'frontend/src/common/features', 'NoteModal') // Plans NoteModal and useNoteModal with tests.
  */
 export function modalPlan(context: ScaffoldContext, ownerPath: string, name: string): ScaffoldPlan {
+  // 1. Validate the requested owner and derive destination names.
   const owner = context.modalOwner(ownerPath);
   const directory = context.componentOwner(owner, name, 'Modal', 'Modal');
   const modalImport = context.relativeImport(
@@ -18,6 +19,7 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     join(context.frontendRoot, 'common/components/Modal/Modal'),
   );
   const hookName = `use${name}`;
+  // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
@@ -51,6 +53,7 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     }
     `,
   );
+  // 3. Format the companion sources and colocated test outlines.
   const hook = context.sourceFile(
     join(directory, `hooks/${hookName}.ts`),
     `
@@ -98,6 +101,7 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     `,
   );
 
+  // 4. Return all sources together for conflict validation and publication.
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],

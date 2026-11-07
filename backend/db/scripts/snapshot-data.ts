@@ -11,10 +11,12 @@ import { snapshotData } from './helpers/snapshot-data';
 
 if (require.main === module) {
   try {
+    // 1. Require an explicit output path before reading database configuration.
     const args = process.argv.slice(2);
     if (args.length !== 2 || args[0] !== '--output' || !args[1] || args[1].startsWith('--')) {
       throw new Error('Usage: snapshot-data.ts --output FILE');
     }
+    // 2. Export and verify the archive before reporting success.
     snapshotData({ databaseUrl: requireEnv('DATABASE_URL'), outputFile: args[1] });
     console.log('Database snapshot exported and verified.');
   } catch (error) {
