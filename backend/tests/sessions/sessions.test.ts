@@ -985,6 +985,36 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.status).toBe(400);
   });
 
+  it('preserves a session and its logged hours when hours are the only deletion dependency', async () => {
+    const created = await request(app)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
+    expect(created.status).toBe(201);
+    const recordedSessionId = created.body.id;
+    let entryId: string | undefined;
+
+    try {
+      const hours = await request(app).post('/api/hours')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ source: 'session', staffId, sessionId: recordedSessionId, hours: 1, note: 'Delivered session' });
+      expect(hours.status).toBe(201);
+      entryId = hours.body.id as string;
+
+      const response = await request(app).delete(`/api/sessions/${recordedSessionId}`)
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe('Session cannot be deleted because hours have been logged');
+      expect(await sql`SELECT id FROM program_sessions WHERE id = ${recordedSessionId}`).toHaveLength(1);
+      expect(await sql`SELECT id FROM time_entries WHERE id = ${entryId} AND session_id = ${recordedSessionId}`).toHaveLength(1);
+    } finally {
+      await sql`DELETE FROM time_entries WHERE session_id = ${recordedSessionId}`;
+      if (entryId) await sql`DELETE FROM audit_log WHERE table_name = 'time_entries' AND record_id = ${entryId}`;
+      await sql`DELETE FROM program_sessions WHERE id = ${recordedSessionId}`;
+    }
+  });
+
   it('edits and deletes sessions while retaining enrollment history', async () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)

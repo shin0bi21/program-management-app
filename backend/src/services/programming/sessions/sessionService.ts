@@ -250,7 +250,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
 }
 
 /**
- * Deletes an accessible session without attendance, notes, or attachments; dependencies are 409.
+ * Deletes an accessible session without attendance, notes, attachments, or logged hours; dependencies are 409.
  * @param id - Required session to delete.
  * @param actor - Actor whose session access and response scope are enforced.
  * @example await deleteSession(sessionId, actor) // removes an unrecorded session and returns { id: sessionId, updatedProgramCycles }
@@ -290,10 +290,16 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
       throw new ConflictError('Session cannot be deleted because attachments have been added');
     }
 
-    // 8. Delete the session after the dependency checks.
+    // 8. Reject sessions with logged hours.
+    const hours = await trx`SELECT 1 FROM time_entries WHERE session_id = ${id} LIMIT 1`;
+    if (hours.length) {
+      throw new ConflictError('Session cannot be deleted because hours have been logged');
+    }
+
+    // 9. Delete the session after the dependency checks.
     await trx`DELETE FROM program_sessions WHERE id = ${id}`;
 
-    // 9. Load affected cycle rows and return them with the deleted session ID.
+    // 10. Load affected cycle rows and return them with the deleted session ID.
     return { id, updatedProgramCycles: await getUpdatedProgramCycles(trx, actor, [session]) };
   });
 }
