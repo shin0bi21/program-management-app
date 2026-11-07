@@ -28,6 +28,7 @@ export default function Sessions() {
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
+  const canReadAttendance = permissions.includes('read:attendance');
   const canWriteAttendance = permissions.includes('write:attendance');
   const canWriteSessions = permissions.includes('write:sessions');
 
@@ -45,17 +46,17 @@ export default function Sessions() {
     tableKeys: SESSION_TABLE_KEYS,
   });
   const { search, filters, table: tableControls, view } = controls;
-  const { programIds: selectedProgramIds, cycleIds, sessionTypeIds: selectedSessionTypeIds, statuses: statusFilters } = filters.values;
+  const { programIds: selectedProgramIds, cycleIds, sessionTypes: selectedSessionTypes, statuses: statusFilters } = filters.values;
 
   // Filter configuration.
   const sessionFilters = useMemo<SessionListFilters>(() => ({
     dateRange: filters.dateRange,
     programIds: selectedProgramIds,
     cycleIds,
-    sessionTypeIds: selectedSessionTypeIds,
+    sessionTypes: selectedSessionTypes,
     statuses: statusFilters,
     search: search.appliedValue || undefined,
-  }), [filters.dateRange, search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypeIds, statusFilters]);
+  }), [filters.dateRange, search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypes, statusFilters]);
 
   // Selection and actions.
   const selection = useSessionSelection();
@@ -112,6 +113,7 @@ export default function Sessions() {
   const dashboard = <SessionDashboard
     sessionQueryKey={SESSION_QUERY_KEY}
     session={selectedSession}
+    canReadAttendance={canReadAttendance}
     canWriteAttendance={canWriteAttendance}
     canWriteSessions={canWriteSessions}
     onAddAttendance={setAttendanceTarget}

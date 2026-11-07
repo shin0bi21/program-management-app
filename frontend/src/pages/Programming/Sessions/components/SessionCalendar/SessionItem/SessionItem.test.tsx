@@ -6,7 +6,7 @@ import SessionItem from './SessionItem';
 describe('SessionItem', () => {
   it('shows only the theme on the bar and gives type, Toronto times, cycle, status and description in its details', async () => {
     const session = makeProgramSession({
-      sessionTypeName: 'Guest Speaker', state: 'cancelled',
+      sessionType: 'Guest Speaker', state: 'cancelled',
       cancelledAt: '2026-08-09T12:00:00Z', description: 'Meet a local employer.',
     });
     render(<SessionItem session={session} selected />);

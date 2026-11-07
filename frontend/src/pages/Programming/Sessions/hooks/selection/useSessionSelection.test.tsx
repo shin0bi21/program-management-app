@@ -27,7 +27,7 @@ describe('useSessionSelection', () => {
 
   it('replaces selected records from an authoritative mutation without changing selection', () => {
     const session = makeProgramSession();
-    const saved = makeProgramSession({ theme: 'Updated theme', attendedCount: 3 });
+    const saved = makeProgramSession({ theme: 'Updated theme' });
     const { result } = renderHook(useSessionSelection, { wrapper: Router });
     act(() => {
       result.current.setSelectedTableSession(session);

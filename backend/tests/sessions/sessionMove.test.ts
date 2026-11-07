@@ -4,7 +4,7 @@ import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
-const regularType = '00000000-0000-4000-8000-000000000001';
+const regularType = 'Regular';
 
 describe('Future session date moves', () => {
   let userId: string;
@@ -35,7 +35,7 @@ describe('Future session date moves', () => {
 
   beforeEach(async () => {
     const [session] = await sql<{ id: string }[]>`INSERT INTO program_sessions
-      (program_id, cycle_id, session_type_id, theme, starts_at, ends_at, description)
+      (program_id, cycle_id, session_type, theme, starts_at, ends_at, description)
       VALUES (${programId}, ${cycleId}, ${regularType}, 'Keep my theme', '2030-03-03T22:30:00Z', '2030-03-04T00:30:00Z', 'Keep my description') RETURNING id`;
     sessionId = session.id;
   });
@@ -58,8 +58,8 @@ describe('Future session date moves', () => {
     expect(response.status).toBe(200);
     expect(response.body.session).toMatchObject({ id: sessionId, programId, cycleId,
       startsAt: '2030-03-10T21:30:00.000Z', endsAt: '2030-03-10T23:30:00.000Z' });
-    const [session] = await sql`SELECT theme, description, session_type_id FROM program_sessions WHERE id = ${sessionId}`;
-    expect(session).toMatchObject({ theme: 'Keep my theme', description: 'Keep my description', sessionTypeId: regularType });
+    const [session] = await sql`SELECT theme, description, session_type FROM program_sessions WHERE id = ${sessionId}`;
+    expect(session).toMatchObject({ theme: 'Keep my theme', description: 'Keep my description', sessionType: regularType });
   });
 
   it('returns the canonical session row with fields changed after an earlier client read', async () => {
@@ -70,21 +70,21 @@ describe('Future session date moves', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.session).toMatchObject({
-      id: sessionId, programId, cycleId, sessionTypeId: regularType,
+      id: sessionId, programId, cycleId, sessionType: regularType,
       theme: 'Latest authoritative theme', description: 'Latest description',
-      enrollmentRequired: true, attendanceMarkedCount: 0, attendedCount: 0, attendanceRate: null, state: 'upcoming',
+      enrollmentRequired: true, state: 'upcoming',
     });
     expect(response.body.session.programName).toEqual(expect.any(String));
-    expect(response.body.session.sessionTypeName).toEqual(expect.any(String));
+    expect(response.body.session.sessionType).toEqual(expect.any(String));
   });
 
   it('returns canonical rows after full edits and deletion without stale next-session metadata', async () => {
     const edited = await request(app).put(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ sessionTypeId: regularType, theme: 'Edited theme', startsAt: '2030-03-03T22:30:00Z', endsAt: '2030-03-04T00:30:00Z', description: 'Edited description' });
+      .send({ sessionType: regularType, theme: 'Edited theme', startsAt: '2030-03-03T22:30:00Z', endsAt: '2030-03-04T00:30:00Z', description: 'Edited description' });
 
     expect(edited.status).toBe(200);
-    expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId, attendanceMarkedCount: 0 });
+    expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId });
     expect(edited.body.updatedProgramCycles).toEqual([expect.objectContaining({ programId, cycleId, nextSessionId: sessionId })]);
 
     const list = await request(app).get(`/api/sessions?programIds=${programId}&cycleIds=${cycleId}`)

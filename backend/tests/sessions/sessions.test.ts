@@ -48,7 +48,7 @@ describe('Program cycle sessions and attendance API', () => {
   let unassignedProgramId: string;
   let mainCycleId: string;
   let today: string;
-  const guestSpeakerTypeId = '00000000-0000-4000-8000-000000000002';
+  const guestSpeakerType = 'Guest Speaker';
 
   beforeAll(async () => {
     const staff = await seedTestUser({ role: 'staff' });
@@ -236,9 +236,9 @@ describe('Program cycle sessions and attendance API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(expect.arrayContaining([
-      { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },
-      { id: guestSpeakerTypeId, name: 'Guest Speaker' },
-      { id: '00000000-0000-4000-8000-000000000003', name: 'Field Trip' },
+      { id: 'Regular', name: 'Regular' },
+      { id: guestSpeakerType, name: 'Guest Speaker' },
+      { id: 'Field Trip', name: 'Field Trip' },
     ]));
   });
 
@@ -249,11 +249,11 @@ describe('Program cycle sessions and attendance API', () => {
       const response = await request(app)
         .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
         .set('Authorization', `Bearer ${staffToken}`)
-        .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Communication', date, startTime: '17:00', endTime: '19:30' });
+        .send({ sessionType: guestSpeakerType, theme: 'Communication', date, startTime: '17:00', endTime: '19:30' });
 
       expect(response.status).toBe(201);
       expect(response.body.theme).toBe('Communication');
-      expect(response.body.sessionTypeName).toBe('Guest Speaker');
+      expect(response.body.sessionType).toBe('Guest Speaker');
       if (date === firstSessionDate) sessionId = response.body.id;
     }
 
@@ -275,7 +275,7 @@ describe('Program cycle sessions and attendance API', () => {
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        sessionTypeId: guestSpeakerTypeId,
+        sessionType: guestSpeakerType,
         date: addDays(today, 2),
         startTime: '13:00',
         endTime: '14:00',
@@ -574,7 +574,7 @@ describe('Program cycle sessions and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         theme: 'Friday Drop In',
-        sessionTypeId: guestSpeakerTypeId,
+        sessionType: guestSpeakerType,
         date: addDays(today, 1),
         startTime: '17:00',
         endTime: '20:00',
@@ -721,7 +721,7 @@ describe('Program cycle sessions and attendance API', () => {
       });
 
     expect(saved.status).toBe(200);
-    expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId, attendanceMarkedCount: 2 });
+    expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId });
     expect(saved.body.session.cycleName).toEqual(expect.any(String));
     expect(saved.body.updatedProgramCycle).toMatchObject({ programId, cycleId: mainCycleId, averageAttendance: 100 });
     expect(saved.body.updatedYouth).toEqual(expect.arrayContaining([
@@ -766,7 +766,7 @@ describe('Program cycle sessions and attendance API', () => {
     const response = await request(app)
       .get(
         `/api/sessions?programIds=${programId}&cycleIds=${mainCycleId}`
-        + `&sessionTypeIds=${guestSpeakerTypeId}&statuses=upcoming&search=Communication`,
+        + `&sessionTypes=${encodeURIComponent(guestSpeakerType)}&statuses=upcoming&search=Communication`,
       )
       .set('Authorization', `Bearer ${staffToken}`);
 
@@ -776,10 +776,8 @@ describe('Program cycle sessions and attendance API', () => {
         id: sessionId,
         programId, cycleId: mainCycleId,
         theme: 'Communication',
-        sessionTypeId: guestSpeakerTypeId,
-        sessionTypeName: 'Guest Speaker',
-        attendanceMarkedCount: 2,
-        attendanceRate: 100,
+
+        sessionType: 'Guest Speaker',
       }),
     ]));
   });
@@ -920,9 +918,6 @@ describe('Program cycle sessions and attendance API', () => {
       expect.objectContaining({
         id: openSessionId,
         programId: openProgramId, cycleId: mainCycleId,
-        attendanceMarkedCount: 1,
-        attendedCount: 1,
-        attendanceRate: 100,
         state: 'upcoming',
       }),
     ]);
@@ -957,7 +952,7 @@ describe('Program cycle sessions and attendance API', () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
+      .send({ sessionType: guestSpeakerType, theme: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
     expect(created.status).toBe(201);
     const recordedSessionId = created.body.id;
     let entryId: string | undefined;
@@ -987,7 +982,7 @@ describe('Program cycle sessions and attendance API', () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ sessionTypeId: guestSpeakerTypeId, theme: 'Disposable Session', date: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
+      .send({ sessionType: guestSpeakerType, theme: 'Disposable Session', date: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
     expect(created.status).toBe(201);
     const disposableSessionId = created.body.id;
 
@@ -1045,7 +1040,7 @@ describe('Program cycle sessions and attendance API', () => {
             attendedCount: 1, countedCount: 1, attendanceRate: 100,
           },
         },
-        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
+        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
       }),
       expect.objectContaining({
         id: secondYouthId,
@@ -1065,7 +1060,7 @@ describe('Program cycle sessions and attendance API', () => {
           expect.objectContaining({ category: 'behaviour', details: 'Updated details.' }),
         ]),
         timeline: expect.arrayContaining([
-          expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
+          expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
         ]),
       }),
     ]));

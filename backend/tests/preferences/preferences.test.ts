@@ -64,7 +64,7 @@ describe('User preferences API', () => {
       view: 'list',
       programIds: [],
       cycleIds: [],
-      sessionTypeIds: [],
+      sessionTypes: [],
       statuses: ['upcoming'],
     };
 

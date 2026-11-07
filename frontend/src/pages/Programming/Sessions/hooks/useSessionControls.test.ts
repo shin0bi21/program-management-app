@@ -16,7 +16,7 @@ const cycles: ProgramCycle[] = [
   { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
   { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
 ];
-const sessionTypes: SessionType[] = [{ id: 'type-1', name: 'Regular' }];
+const sessionTypes: SessionType[] = [{ id: 'Regular', name: 'Regular' }];
 const tableKeys = ['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'] as const;
 
 describe('useSessionControls', () => {
@@ -34,7 +34,7 @@ describe('useSessionControls', () => {
       columnWidths: { theme: 240 }, hiddenColumns: ['status'],
     }));
     preferenceApi.getPreference.mockResolvedValue({
-      view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'],
+      view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'],
       sorting: { key: 'theme', direction: 'asc' },
     });
     const { result } = renderHook(() => useSessionControls({
@@ -44,7 +44,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
       view: 'table',
-      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: ['type-1'], statuses: ['completed'] } },
+      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'] } },
       table: { sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'] },
     });
   });
@@ -102,7 +102,7 @@ describe('useSessionControls', () => {
       view: 'list',
       programIds: ['program-1'],
       cycleIds: ['cycle-1'],
-      sessionTypeIds: ['removed-type'],
+      sessionTypes: ['removed-type'],
       statuses: 'completed',
       sorting: { key: 'removedColumn', direction: 'asc' },
     });
@@ -115,7 +115,7 @@ describe('useSessionControls', () => {
 
     expect(result.current).toMatchObject({
       view: 'calendar',
-      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypeIds: [], statuses: [] } },
+      filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: [], statuses: [] } },
       table: { sorting: { key: 'date', direction: 'desc' }, columnWidths: {} },
     });
   });
@@ -147,7 +147,7 @@ describe('useSessionControls', () => {
 
   it('repairs each recovered option field without discarding a recent view edit', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypes: ['saved-type'],
     });
     const { result, rerender } = renderHook(({ unavailable }) => useSessionControls({
       role: 'admin', programs: [], programsLoading: false, programsError: unavailable ? 'offline' : null,
@@ -158,17 +158,17 @@ describe('useSessionControls', () => {
     }), { wrapper: wrapper(), initialProps: { unavailable: true } });
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.values).toMatchObject({
-      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypeIds: ['saved-type'],
+      programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypes: ['saved-type'],
     });
 
     act(() => result.current.setView('table'));
     rerender({ unavailable: false });
 
     await waitFor(() => expect(result.current).toMatchObject({
-      view: 'table', filters: { values: { programIds: [], cycleIds: [], sessionTypeIds: [] } },
+      view: 'table', filters: { values: { programIds: [], cycleIds: [], sessionTypes: [] } },
     }));
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
-      view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [],
+      view: 'table', programIds: [], cycleIds: [], sessionTypes: [],
     })));
   });
   it('derives full cycle bounds and discards obsolete date preferences', async () => {

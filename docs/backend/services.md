@@ -47,6 +47,16 @@ areas returns an endpoint-specific envelope of those rows; clients must not reco
 server-owned fields from drafts or cached input. See the frontend
 [row reconciliation owner](../../frontend/src/query/infiniteListCache.ts).
 
+## Organize SQL Projections
+
+Group selected columns by source table: the primary table first, followed by
+joined tables in join order. Within each group, keep the selected stored columns
+in their table definition order, skipping columns the query does not need.
+Use the schema definition or database column order; generated TypeScript
+interfaces may sort columns alphabetically. Separate table groups with a blank
+line and put derived fields and aggregates in a final separate group. Follow the
+same organization in explicit `RETURNING` projections and row interfaces.
+
 ## Write the Public Operations First
 
 Order a main service so it is easy to scan:
@@ -73,6 +83,12 @@ Name a command after the record it changes. Session attendance belongs to `sessi
 
 ## Keep Writes Safe
 
+- Use `sql` for the shared client and `trx` for an existing transaction. Reusable
+  reads accept a final `query = sql` parameter so TypeScript infers the client
+  type. Pass `trx` explicitly when a read belongs to a transaction; use `query`
+  for its SQL tags and array helpers. Do not add `SqlExecutor` aliases. Helpers
+  that require transaction-owned locks or writes keep a required `trx: typeof sql`
+  parameter rather than defaulting to the shared client.
 - Use parameterized `sql` templates.
 - Open one transaction for a multi-write or audited command. Pass `trx` to nested helpers instead of opening another transaction.
 - Lock the current row with `FOR UPDATE` when permissions, state, assignments, or delete rules must stay valid during the write.

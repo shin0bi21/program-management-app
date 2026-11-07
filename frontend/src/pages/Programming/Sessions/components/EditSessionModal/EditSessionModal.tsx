@@ -17,7 +17,7 @@ interface EditSessionModalProps {
 
 export default function EditSessionModal({ session, onClose, onUpdated, timezone = 'America/Toronto' }: EditSessionModalProps) {
   const {
-    status, statusMessage, submissionComplete, sessionTypeId, setSessionTypeId, sessionTypes, submit,
+    status, statusMessage, submissionComplete, sessionType, setSessionType, sessionTypes, submit,
   } = useEditSessionModal(session, onUpdated, timezone);
 
   return (
@@ -31,7 +31,7 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
         <ModalFormFooter
           formId="edit-session-form"
           submitStatus={status}
-          submitDisabled={!sessionTypeId}
+          submitDisabled={!sessionType}
           onClose={onClose}
         />
       )}
@@ -41,8 +41,8 @@ export default function EditSessionModal({ session, onClose, onUpdated, timezone
           <FormField id="edit-session-type" label="Type">
             <FloatingSelect
               id="edit-session-type"
-              value={sessionTypeId}
-              onChange={setSessionTypeId}
+              value={sessionType}
+              onChange={setSessionType}
               options={toFilterOptions(sessionTypes)}
               disabled={submissionComplete}
             />

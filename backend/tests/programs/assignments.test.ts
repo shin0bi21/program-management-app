@@ -141,7 +141,7 @@ describe('Program cycle assignments', () => {
 
     const session = await request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ programId, sessionTypeId: '00000000-0000-4000-8000-000000000001', theme: 'Manager session', date: `${futureYear}-10-01` });
+      .send({ programId, sessionType: 'Regular', theme: 'Manager session', date: `${futureYear}-10-01` });
     expect(session.status).toBe(201);
     expect((await request(app).put(`/api/sessions/${session.body.id}/date`)
       .set('Authorization', `Bearer ${managerToken}`).send({ date: `${futureYear}-10-02` })).status).toBe(200);

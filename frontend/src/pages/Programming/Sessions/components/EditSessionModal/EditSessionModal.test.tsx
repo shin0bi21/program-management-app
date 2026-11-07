@@ -18,8 +18,8 @@ describe('EditSessionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getSessionTypes).mockResolvedValue([
-      { id: 'type-1', name: 'Regular' },
-      { id: 'type-2', name: 'Guest Speaker' },
+      { id: 'Regular', name: 'Regular' },
+      { id: 'Guest Speaker', name: 'Guest Speaker' },
     ]);
   });
 
@@ -73,7 +73,7 @@ describe('EditSessionModal', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
     view.rerender(<EditSessionModal session={null} {...props} />);
     view.rerender(<EditSessionModal
-      session={{ ...session, id: 'session-2', sessionTypeId: 'type-2', theme: 'Career Stories' }}
+      session={{ ...session, id: 'session-2', sessionType: 'Guest Speaker', theme: 'Career Stories' }}
       {...props}
     />);
 

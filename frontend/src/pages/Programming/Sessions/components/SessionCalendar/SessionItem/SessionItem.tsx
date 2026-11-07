@@ -39,12 +39,12 @@ export default function SessionItem<TRow, TItemData>({
     calendar={calendar}
     id={session.id}
     selected={selected}
-    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionTypeName}, ${startsAt} to ${endsAt}, ${status}`}
+    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionType}, ${startsAt} to ${endsAt}, ${status}`}
     summary={session.theme}
     detailTitle={<span className="session-item__detail-title">
       <span>{session.theme}</span>
       <span className="session-item__detail-badges">
-        <SessionTypeLabel name={session.sessionTypeName} appearance="calendar" />
+        <SessionTypeLabel name={session.sessionType} appearance="calendar" />
         <StatusLabel status={session.state} label={status} />
       </span>
     </span>}

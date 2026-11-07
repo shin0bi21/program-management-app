@@ -58,6 +58,7 @@ describe('SessionDashboard', () => {
       <SessionDashboard
         sessionQueryKey={queryKey}
         session={session}
+        canReadAttendance
         canWriteAttendance
         canWriteSessions={false}
         onAddAttendance={onAddAttendance}
@@ -69,6 +70,7 @@ describe('SessionDashboard', () => {
       session,
       canWrite: true,
       onManage: onAddAttendance,
+      onMessageChange: expect.any(Function),
     });
     expect(childCardProps.notes).toHaveBeenCalledWith(expect.objectContaining({
       queryKey,
@@ -92,5 +94,18 @@ describe('SessionDashboard', () => {
     await waitFor(() => expect(onErrorsChange).toHaveBeenCalledWith([
       { message: 'Could not load notes' },
     ]));
+  });
+
+  it('does not mount the attendance reader without attendance-read permission', () => {
+    render(<SessionDashboard
+      sessionQueryKey={['sessions']}
+      session={makeProgramSession()}
+      canReadAttendance={false}
+      canWriteAttendance={false}
+      canWriteSessions={false}
+      onAddAttendance={vi.fn()}
+    />);
+
+    expect(childCardProps.attendance).not.toHaveBeenCalled();
   });
 });

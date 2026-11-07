@@ -12,7 +12,7 @@ beforeEach(() => vi.clearAllMocks());
 it('keys every session control and forwards cancellation, page size, and cursor', async () => {
   const queryKey = ['sessions', 'table'];
   const filters = {
-    programIds: ['program-1'], cycleIds: ['cycle-1', 'cycle-2'], sessionTypeIds: ['type-1'],
+    programIds: ['program-1'], cycleIds: ['cycle-1', 'cycle-2'], sessionTypes: ['Regular'],
     statuses: ['upcoming' as const], search: 'communication',
     dateRange: { start: '2026-01-01', end: '2026-12-31' },
   };
