@@ -1,7 +1,7 @@
 import type { PendingQuery } from 'postgres';
 import { sql } from '../../../db/client';
 import type { SessionListQuery } from '../../../validation/programmingSchemas';
-import type { ProgramSessionRow } from './sessionRowQuery';
+import type { SessionRow } from './sessionRowQuery';
 
 interface SessionRowFilters extends Partial<Pick<SessionListQuery,
   'start' | 'end' | 'programIds' | 'cycleIds' | 'sessionTypes' | 'statuses' | 'search'
@@ -10,46 +10,68 @@ interface SessionRowFilters extends Partial<Pick<SessionListQuery,
 }
 
 /**
- * Applies session IDs, dates, programs, cycles, types, statuses, and search to canonical rows.
- * Omitted filters add no restriction; an explicit empty ID list matches no rows.
+ * Builds filters for table and calendar items.
  * @param rowsQuery - Unexecuted, access-scoped session rows.
- * @param filters - Validated session filters; date bounds must be supplied together.
+ * @param filterValues - Validated session filters; date bounds must be supplied together.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @returns A composable filtered query without ordering or pagination.
- * @example filterSessionRows(getSessionRows(actor), { ids: [sessionId] }) // only that accessible session
+ * @example buildSessionFilters(getSessionRows(actor), { ids: [sessionId] }) // only that accessible session
  */
-export function filterSessionRows(
-  rowsQuery: PendingQuery<ProgramSessionRow[]>,
-  filters: SessionRowFilters,
+export function buildSessionFilters(
+  rowsQuery: PendingQuery<SessionRow[]>,
+  filterValues: SessionRowFilters,
   query = sql,
 ) {
-  const search = filters.search ? `%${filters.search}%` : null;
-  const completedOnly = filters.statuses?.length === 1 && filters.statuses[0] === 'completed';
-
-  // 1. Apply caller filters without changing the row projection or access scope.
-  const dateFilter = filters.start && filters.end
-    ? query`session.starts_at < ${filters.end}::timestamptz AND session.ends_at > ${filters.start}::timestamptz`
-    : query`TRUE`;
-  let statusFilter = query`TRUE`;
-  if (filters.statuses?.length === 1) {
-    statusFilter = completedOnly ? query`session.ends_at < NOW()` : query`session.ends_at >= NOW()`;
+  // 1. Collect restrictions without changing the source rows or access scope.
+  const filters = [];
+  if (filterValues.ids !== undefined) {
+    filters.push(query`session.id = ANY(${query.array([...filterValues.ids])}::uuid[])`);
+  }
+  if (filterValues.start && filterValues.end) {
+    filters.push(query`
+      session.starts_at < ${filterValues.end}::timestamptz
+      AND session.ends_at > ${filterValues.start}::timestamptz
+    `);
+  }
+  if (filterValues.programIds?.length) {
+    filters.push(query`session.program_id = ANY(${query.array(filterValues.programIds)}::uuid[])`);
+  }
+  if (filterValues.cycleIds?.length) {
+    filters.push(query`session.cycle_id = ANY(${query.array(filterValues.cycleIds)}::uuid[])`);
+  }
+  if (filterValues.sessionTypes?.length) {
+    filters.push(query`session.session_type = ANY(${query.array(filterValues.sessionTypes)}::session_type[])`);
+  }
+  if (filterValues.statuses?.length === 1) {
+    if (filterValues.statuses[0] === 'completed') {
+      filters.push(query`session.ends_at < NOW()`);
+    } else {
+      filters.push(query`session.ends_at >= NOW()`);
+    }
+  }
+  if (filterValues.search) {
+    const search = `%${filterValues.search}%`;
+    filters.push(query`(
+      COALESCE(session.theme, '') ILIKE ${search}
+      OR COALESCE(session.description, '') ILIKE ${search}
+      OR session.cycle_name ILIKE ${search}
+      OR session.program_name ILIKE ${search}
+      OR session.session_type::text ILIKE ${search}
+    )`);
   }
 
-  return query<ProgramSessionRow[]>`
+  // 2. Combine selected filters and return the composable query.
+  let appliedFilters = query`TRUE`;
+  for (const filter of filters) {
+    appliedFilters = query`
+      ${appliedFilters}
+      AND ${filter}
+    `;
+  }
+
+  return query<SessionRow[]>`
     SELECT session.*
     FROM (${rowsQuery}) session
-    WHERE ${filters.ids ? query`session.id = ANY(${query.array([...filters.ids])}::uuid[])` : query`TRUE`}
-      AND ${dateFilter}
-      AND ${filters.programIds?.length ? query`session.program_id = ANY(${query.array(filters.programIds)}::uuid[])` : query`TRUE`}
-      AND ${filters.cycleIds?.length ? query`session.cycle_id = ANY(${query.array(filters.cycleIds)}::uuid[])` : query`TRUE`}
-      AND ${filters.sessionTypes?.length ? query`session.session_type = ANY(${query.array(filters.sessionTypes)}::session_type[])` : query`TRUE`}
-      AND ${statusFilter}
-      AND ${search ? query`(
-        COALESCE(session.theme, '') ILIKE ${search}
-        OR COALESCE(session.description, '') ILIKE ${search}
-        OR session.cycle_name ILIKE ${search}
-        OR session.program_name ILIKE ${search}
-        OR session.session_type::text ILIKE ${search}
-      )` : query`TRUE`}
+    WHERE ${appliedFilters}
   `;
 }

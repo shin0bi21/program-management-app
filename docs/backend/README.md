@@ -49,9 +49,9 @@ backend/
 ├── src/policies/examplePolicy.ts
 ├── src/services/<product-area>/<capability>/
 │   ├── exampleListService.ts
-│   ├── exampleRecordQuery.ts
+│   ├── exampleRowQuery.ts
 │   ├── exampleService.ts
-│   └── exampleFilters.ts                 # only when filters need a separate owner
+│   └── exampleRowFilters.ts                 # domain collection filters
 ├── src/validation/exampleSchemas.ts
 ├── src/controllers/exampleController.ts
 ├── src/routes/exampleRoutes.ts

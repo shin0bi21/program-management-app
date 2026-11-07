@@ -1,10 +1,10 @@
-import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
-import { getProgramCycleRowsByKeys } from '../programCycles/programCycleRecordQuery';
+import { getYouthRowsByIds } from '../../youth/youthRowQuery';
+import { getProgramCycleRowsByKeys } from '../programCycles/programCycleRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
 import { getSessionRows } from './sessionRowQuery';
-import { filterSessionRows } from './sessionRowFilters';
+import { buildSessionFilters } from './sessionRowFilters';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetAttendanceInput } from '../../../validation/programmingSchemas';
 
@@ -15,6 +15,7 @@ import type { SetAttendanceInput } from '../../../validation/programmingSchemas'
  * @example getSessionRoster(sessionId, actor) // includes saved attendees after a date move
  */
 export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
+  // 1. Check access to the session.
   await assertCanAccessSession(actor, sessionId);
   return readSessionRoster(sessionId);
 }
@@ -26,6 +27,7 @@ export async function getSessionRoster(sessionId: string, actor: AccessTokenPayl
  * @example readSessionRoster(sessionId, trx) // includes recorded youth outside the current enrollment window
  */
 async function readSessionRoster(sessionId: string, query = sql) {
+  // 1. Check how this session records attendance.
   const sessions = await query<{ enrollmentRequired: boolean }[]>`
     SELECT p.enrollment_required
     FROM program_sessions cs
@@ -34,8 +36,10 @@ async function readSessionRoster(sessionId: string, query = sql) {
   `;
   if (!sessions.length) throw new NotFoundError('Session not found');
 
+  // 2. Load the saved roster for open sessions.
   if (!sessions[0].enrollmentRequired) {
-    return query`
+    // 3. Include eligible youth and previously recorded attendees.
+  return query`
       SELECT
         u.id AS youth_id,
         u.first_name,
@@ -49,6 +53,7 @@ async function readSessionRoster(sessionId: string, query = sql) {
     `;
   }
 
+  // 3. Include eligible youth and previously recorded attendees.
   return query`
       SELECT
         u.id AS youth_id,
@@ -67,7 +72,9 @@ async function readSessionRoster(sessionId: string, query = sql) {
             OR enrollment.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
           )
         UNION
-        SELECT recorded.youth_id FROM attendance_records recorded WHERE recorded.session_id = cs.id
+        SELECT recorded.youth_id
+        FROM attendance_records recorded
+        WHERE recorded.session_id = cs.id
       ) roster ON TRUE
       INNER JOIN users u ON u.id = roster.youth_id
       LEFT JOIN attendance_records ar
@@ -78,14 +85,24 @@ async function readSessionRoster(sessionId: string, query = sql) {
     `;
 }
 
+/**
+ * Saves a session roster and returns affected records.
+ * @param sessionId - Session to lock and update.
+ * @param data - Validated replacement attendance.
+ * @param actor - User whose session access is checked.
+ * @example setSessionAttendance(sessionId, data, actor)
+ */
 export async function setSessionAttendance(
   sessionId: string,
   data: SetAttendanceInput,
   actor: AccessTokenPayload,
 ) {
+  // 1. Check access to the session.
   await assertCanAccessSession(actor, sessionId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Lock the session.
     const sessions = await trx<{ id: string; programId: string; cycleId: string; enrollmentRequired: boolean }[]>`
       SELECT cs.id, cs.program_id, cs.cycle_id, p.enrollment_required
       FROM program_sessions cs
@@ -96,13 +113,17 @@ export async function setSessionAttendance(
     `;
     if (!sessions.length) throw new NotFoundError('Session not found');
 
+    // 3. Check the submitted roster and remove omitted attendance.
     const submittedIds = data.records.map(record => record.youthId);
     const previousAttendance = await trx<{ youthId: string }[]>`
-      SELECT youth_id FROM attendance_records WHERE session_id = ${sessionId}
+      SELECT youth_id
+      FROM attendance_records
+      WHERE session_id = ${sessionId}
     `;
     const affectedYouthIds = [...new Set([...submittedIds, ...previousAttendance.map(record => record.youthId)])];
 
-    if (!sessions[0].enrollmentRequired) {
+    // 2. Load the saved roster for open sessions.
+  if (!sessions[0].enrollmentRequired) {
       if (data.records.some(record => record.status !== 'present')) {
         throw new ConflictError('Open sessions only record whether a youth attended');
       }
@@ -119,7 +140,8 @@ export async function setSessionAttendance(
       }
 
       await trx`
-        DELETE FROM attendance_records
+        DELETE
+        FROM attendance_records
         WHERE session_id = ${sessionId}
           AND NOT (youth_id = ANY(${sql.array(submittedIds)}::uuid[]))
       `;
@@ -135,13 +157,15 @@ export async function setSessionAttendance(
       }
 
       await trx`
-        DELETE FROM attendance_records
+        DELETE
+        FROM attendance_records
         WHERE session_id = ${sessionId}
           AND youth_id = ANY(${sql.array([...eligibleIds])}::uuid[])
           AND NOT (youth_id = ANY(${sql.array(submittedIds)}::uuid[]))
       `;
     }
 
+    // 4. Save the submitted attendance.
     for (const record of data.records) {
       await trx`
         INSERT INTO attendance_records (
@@ -159,7 +183,8 @@ export async function setSessionAttendance(
       `;
     }
 
-    const [session] = await filterSessionRows(getSessionRows(actor, trx), { ids: [sessionId] }, trx);
+    // 5. Return the saved roster and affected rows.
+    const [session] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [sessionId] }, trx);
     if (!session) throw new InternalServerError('Saved attendance session is unavailable');
     const roster = await readSessionRoster(sessionId, trx);
     const updatedYouth = actor.permissions.includes('read:youth_profiles')

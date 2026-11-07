@@ -48,7 +48,6 @@ describe('shared cursor pagination', () => {
 
     for (const expectedId of expectedIds) {
       const page = await paginateQuery(rowsQuery, { ...options, cursor });
-      if (Array.isArray(page)) throw new Error('Expected a cursor page');
 
       expect(page.rows).toEqual([{ id: expectedId, name: expectedId === thirdId ? 'beta' : 'alpha' }]);
       visibleIds.push(...page.rows.map(row => row.id));
@@ -59,16 +58,16 @@ describe('shared cursor pagination', () => {
     expect(visibleIds).toEqual(expectedIds);
   });
 
-  it('returns ordered unpaged rows without internal cursor values', async () => {
-    const rows = await paginateQuery(paginationRows(), {
-      sortValue: sql`page_row.name`, direction: 'asc',
+  it('bounds rows and strips internal cursor values', async () => {
+    const page = await paginateQuery(paginationRows(), {
+      sortValue: sql`page_row.name`, direction: 'asc', limit: 2,
     });
 
-    expect(rows).toEqual([
+    expect(page.rows).toEqual([
       { id: firstId, name: 'alpha' },
       { id: secondId, name: 'alpha' },
-      { id: thirdId, name: 'beta' },
     ]);
+    expect(decodeCursor(page.nextCursor!)).toEqual({ value: 'alpha', id: secondId });
   });
 
   it('returns an empty terminal page when the filtered query has no rows', async () => {

@@ -9,7 +9,7 @@ import type { SetAccountInput } from '../../validation/accountSchemas';
 import { sendStaffInvite, sendYouthInvite, sendInviteEmailChanged, sendEmailChangedOldAddress, sendEmailChangedNewAddress } from '../../utils/emailService';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../errors';
 import { assertCanCreateAccount, assertCanManageAccount } from '../../policies/accountPolicy';
-import { accountRecordColumns, accountRecordFrom, type AccountRow } from './accountRecordQuery';
+import { getAccountRows, type AccountRow } from './accountRowQuery';
 import { requireEnv } from '../../utils/env';
 
 const FRONTEND_URL = requireEnv('FRONTEND_URL');
@@ -35,7 +35,11 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   const actorId = actor.userId;
 
   // 2. Resolve the requested role.
-  const roles = await sql<{ id: string }[]>`SELECT id FROM user_roles WHERE name = ${role}`;
+  const roles = await sql<{ id: string }[]>`
+    SELECT id
+    FROM user_roles
+    WHERE name = ${role}
+  `;
   if (!roles.length) throw new InternalServerError(`Required role '${role}' is not configured`);
   const roleId = roles[0].id;
 
@@ -67,7 +71,10 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
       // 5. Reject an email belonging to another account.
       const emailConflict = await trx<{ id: string }[]>`
-        SELECT user_id AS id FROM user_credentials WHERE email = ${email} AND user_id != ${id} LIMIT 1
+        SELECT user_id AS id
+        FROM user_credentials
+        WHERE email = ${email} AND user_id != ${id}
+        LIMIT 1
       `;
       if (emailConflict.length) throw new ConflictError('A user with this email already exists');
 
@@ -112,7 +119,9 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
         // 9. Invalidate unused links when the invitation address changes.
         await trx`
-          DELETE FROM user_password_reset_tokens WHERE user_id = ${id} AND used_at IS NULL
+          DELETE
+          FROM user_password_reset_tokens
+          WHERE user_id = ${id} AND used_at IS NULL
         `;
 
         // 10. Save the replacement invitation token.
@@ -143,7 +152,10 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   } else {
     // 13. Reject an email already used by another account.
     const existing = await sql<{ id: string }[]>`
-      SELECT user_id AS id FROM user_credentials WHERE email = ${email} LIMIT 1
+      SELECT user_id AS id
+      FROM user_credentials
+      WHERE email = ${email}
+      LIMIT 1
     `;
     if (existing.length) throw new ConflictError('A user with this email already exists');
 
@@ -191,11 +203,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   }
 
   // 21. Return the complete saved account.
-  const staff = await sql<AccountRow[]>`
-    SELECT ${accountRecordColumns}
-    ${accountRecordFrom}
-    WHERE u.id = ${userId}
-  `;
+  const staff = await getAccountRows(sql`u.id = ${userId}`);
 
   if (!staff[0]) throw new NotFoundError('Account not found');
   return staff[0];
@@ -238,7 +246,8 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
 
     // 4. Reject an existing account for this youth or email address.
     const existingAccount = await trx<{ userId: string }[]>`
-      SELECT user_id FROM user_credentials
+      SELECT user_id
+      FROM user_credentials
       WHERE user_id = ${userId} OR email = ${email}
       LIMIT 1
     `;
@@ -316,7 +325,8 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 
     // 4. Switch between active and inactive.
     await trx`
-      UPDATE user_credentials SET status = ${newStatus}, updated_at = NOW()
+      UPDATE user_credentials
+      SET status = ${newStatus}, updated_at = NOW()
       WHERE user_id = ${userId}
     `;
 
@@ -328,11 +338,7 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
     );
 
     // 6. Load the complete updated account.
-    const rows = await trx<AccountRow[]>`
-      SELECT ${accountRecordColumns}
-      ${accountRecordFrom}
-      WHERE u.id = ${userId}
-    `;
+    const rows = await getAccountRows(trx`u.id = ${userId}`, trx);
     if (!rows[0]) throw new InternalServerError('Updated account record is unavailable');
     result = rows[0];
   });
@@ -386,13 +392,25 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
     );
 
     // 6. Invalidate every invitation and password-reset link.
-    await trx`DELETE FROM user_password_reset_tokens WHERE user_id = ${userId}`;
+    await trx`
+      DELETE
+      FROM user_password_reset_tokens
+      WHERE user_id = ${userId}
+    `;
 
     // 7. Remove youth credentials or the employee user created for the invitation.
     if (targetRole === 'youth') {
-      await trx`DELETE FROM user_credentials WHERE user_id = ${userId}`;
+      await trx`
+        DELETE
+        FROM user_credentials
+        WHERE user_id = ${userId}
+      `;
     } else {
-      await trx`DELETE FROM users WHERE id = ${userId}`;
+      await trx`
+        DELETE
+        FROM users
+        WHERE id = ${userId}
+      `;
     }
   });
 }
@@ -408,7 +426,10 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 export async function lockAccountUser(transaction: typeof sql, userId: string): Promise<boolean> {
   // 1. Hold the user row lock until the caller's transaction ends.
   const users = await transaction<{ id: string }[]>`
-    SELECT id FROM users WHERE id = ${userId} FOR UPDATE
+    SELECT id
+    FROM users
+    WHERE id = ${userId}
+    FOR UPDATE
   `;
   return users.length > 0;
 }
@@ -447,7 +468,11 @@ async function replaceUserProgramAssignments(
   actorId: string,
 ) {
   // 1. Clear the previous program assignments.
-  await trx`DELETE FROM user_program_assignments WHERE user_id = ${staffId}`;
+  await trx`
+    DELETE
+    FROM user_program_assignments
+    WHERE user_id = ${staffId}
+  `;
   if (!programIds.length) return;
 
   // 2. Require every selected program to exist.

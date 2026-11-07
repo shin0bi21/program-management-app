@@ -1,8 +1,8 @@
 import { lockAssignmentProgram } from '../programming/programCycles/assignmentService';
-import { getYouthRowsByIds } from './youthRecordQuery';
-import { getSessionRows, type ProgramSessionRow } from '../programming/sessions/sessionRowQuery';
-import { filterSessionRows } from '../programming/sessions/sessionRowFilters';
-import { getProgramCycleRowsByKeys } from '../programming/programCycles/programCycleRecordQuery';
+import { getYouthRowsByIds } from './youthRowQuery';
+import { getSessionRows, type SessionRow } from '../programming/sessions/sessionRowQuery';
+import { buildSessionFilters } from '../programming/sessions/sessionRowFilters';
+import { getProgramCycleRowsByKeys } from '../programming/programCycles/programCycleRowQuery';
 import { programAccessPredicate } from '../../policies/programAccessPolicy';
 import { asTransactionSql, sql } from '../../db/client';
 import { ConflictError, NotFoundError } from '../../errors';
@@ -30,18 +30,31 @@ interface YouthAttendanceSession {
   notes: string | null;
 }
 
+/**
+ * Loads a youth's attendance and notes for a program cycle.
+ * @param youthId - Youth whose attendance is needed.
+ * @param programId - Program to read.
+ * @param cycleId - Cycle to read.
+ * @param actor - User whose program access is checked.
+ * @example getYouthProgramCycleAttendance(youthId, programId, cycleId, actor)
+ */
 export async function getYouthProgramCycleAttendance(
   youthId: string,
   programId: string,
   cycleId: string,
   actor: AccessTokenPayload,
 ) {
+  // 1. Check access to the program cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
+
+  // 2. Load attendance and session notes.
   const programCycle = await getYouthProgramCycleContext(youthId, programId, cycleId);
   const [sessions, sessionNotes] = await Promise.all([
     getYouthAttendanceSessions(youthId, programId, cycleId),
     listSessionNotesForYouth(youthId, actor, { programId, cycleId }),
   ]);
+
+  // 3. Include notes with their sessions.
   const notesBySession = new Map<string, Array<(typeof sessionNotes)[number]>>();
   for (const note of sessionNotes) {
     const sessionId = note.sessionId as string;
@@ -56,6 +69,15 @@ export async function getYouthProgramCycleAttendance(
   };
 }
 
+/**
+ * Saves one youth's attendance across a program cycle.
+ * @param youthId - Youth whose attendance changes.
+ * @param programId - Program to update.
+ * @param cycleId - Cycle to update.
+ * @param data - Validated complete session attendance.
+ * @param actor - User whose program access is checked.
+ * @example setYouthProgramCycleAttendance(youthId, programId, cycleId, data, actor)
+ */
 export async function setYouthProgramCycleAttendance(
   youthId: string,
   programId: string,
@@ -63,20 +85,24 @@ export async function setYouthProgramCycleAttendance(
   data: SetYouthProgramCycleAttendanceInput,
   actor: AccessTokenPayload,
 ) {
+  // 1. Check access to the program cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
 
   const updatedRows = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    // Match assignment changes and session moves: lock the program before the pair and sessions.
+
+    // 2. Lock the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
     const locked = await trx`
-      SELECT pc.program_id, pc.cycle_id FROM program_cycle_assignments pc
+      SELECT pc.program_id, pc.cycle_id
+      FROM program_cycle_assignments pc
       WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
         AND ${programAccessPredicate(actor, sql`pc.program_id`)}
       FOR UPDATE OF pc
     `;
     if (!locked.length) throw new NotFoundError('Program cycle not found');
 
+    // 3. Check the submitted sessions and attendance.
     const programCycle = await getYouthProgramCycleContext(youthId, programId, cycleId, trx);
     const sessions = await getYouthAttendanceSessions(youthId, programId, cycleId, true, trx);
     const sessionIds = new Set(sessions.map(session => session.id));
@@ -94,9 +120,11 @@ export async function setYouthProgramCycleAttendance(
       throw new ConflictError('Open sessions only record whether a youth attended');
     }
 
+    // 4. Replace attendance for the submitted sessions.
     if (sessionIds.size) {
       await trx`
-        DELETE FROM attendance_records
+        DELETE
+        FROM attendance_records
         WHERE youth_id = ${youthId}
           AND session_id = ANY(${sql.array([...sessionIds])}::uuid[])
       `;
@@ -118,12 +146,14 @@ export async function setYouthProgramCycleAttendance(
         )
       `;
     }
+
+    // 5. Return the affected rows.
     const [youth] = await getYouthRowsByIds(trx, [youthId]);
     if (!youth) throw new NotFoundError('Youth profile not found');
     const updatedSessions = actor.permissions.includes('read:sessions')
-      ? await trx<ProgramSessionRow[]>`
+      ? await trx<SessionRow[]>`
           SELECT session.*
-          FROM (${filterSessionRows(getSessionRows(actor, trx), { ids: [...sessionIds] }, trx)}) session
+          FROM (${buildSessionFilters(getSessionRows(actor, trx), { ids: [...sessionIds] }, trx)}) session
           ORDER BY session.id
         `
       : undefined;
@@ -136,15 +166,30 @@ export async function setYouthProgramCycleAttendance(
   return { ...await getYouthProgramCycleAttendance(youthId, programId, cycleId, actor), ...updatedRows };
 }
 
+/**
+ * Requires the youth, program cycle, and applicable enrollment.
+ * @param youthId - Youth to check.
+ * @param programId - Program to load.
+ * @param cycleId - Cycle to load.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getYouthProgramCycleContext(youthId, programId, cycleId, trx)
+ */
 async function getYouthProgramCycleContext(
   youthId: string,
   programId: string,
   cycleId: string,
   query = sql,
 ) {
-  const youth = await query`SELECT 1 FROM youth_profiles WHERE user_id = ${youthId} LIMIT 1`;
+  // 1. Require the youth profile.
+  const youth = await query`
+    SELECT 1
+    FROM youth_profiles
+    WHERE user_id = ${youthId}
+    LIMIT 1
+  `;
   if (!youth.length) throw new NotFoundError('Youth profile not found');
 
+  // 2. Load the program cycle and check enrollment.
   const programCycles = await query<YouthProgramCycleContext[]>`
     SELECT pc.program_id, pc.cycle_id, cycle.name AS cycle_name, p.name AS program_name, p.enrollment_required
     FROM program_cycle_assignments pc
@@ -172,6 +217,15 @@ async function getYouthProgramCycleContext(
   return programCycle;
 }
 
+/**
+ * Loads eligible sessions and saved attendance for a youth.
+ * @param youthId - Youth whose attendance is needed.
+ * @param programId - Program to read.
+ * @param cycleId - Cycle to read.
+ * @param lock - Whether the caller requires session locks.
+ * @param query - Database client; pass trx when locking.
+ * @example getYouthAttendanceSessions(youthId, programId, cycleId, true, trx)
+ */
 function getYouthAttendanceSessions(
   youthId: string,
   programId: string,

@@ -2,42 +2,54 @@ import { sql } from '../../../db/client';
 import { taskReadScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
-import { cursorPage, decodeCursor, DEFAULT_BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
 import {
   attachTaskDetails,
   loadTaskLoggedHours,
-  taskRecordColumns,
-  taskRecordFrom,
-  type TaskRow,
-} from './taskRecordQuery';
-import { buildTaskFilters, resolveTaskDateRange } from './taskFilters';
+  getTaskRows,
+} from './taskRowQuery';
+import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
 
-export async function getTaskList(actor: AccessTokenPayload, query: TaskListQuery) {
-  const cursor = decodeCursor(query.cursor);
-  const direction = query.direction;
-  const range = await resolveTaskDateRange(query);
-  if (!range) return { rows: [], nextCursor: null };
+/**
+ * Lists matching tasks.
+ * @param actor - Actor whose staff scope controls reads and per-row write capabilities.
+ * @param filterValues - Validated task filters, derived-status sorting, and cursor inputs.
+ * @returns A bounded page with logged-hour details; unavailable or disjoint date bounds return an empty page.
+ * @example getTaskList(actor, filterValues) // { rows, nextCursor }
+ */
+export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskListQuery) {
+  // 1. Load the matching tasks.
+  const range = await resolveTaskDateRange(filterValues);
+  const { status, appliedFilters } = buildTaskFilters(filterValues);
+  const dateFilter = range
+    ? sql`task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date`
+    : sql`FALSE`;
+  const rowsQuery = getTaskRows(sql`
+    ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+    AND ${appliedFilters}
+    AND ${dateFilter}
+  `);
 
-  const { status, predicate } = buildTaskFilters(query);
+  // 2. Choose the order and load the page.
   const sortValue = {
-    firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, title: sql`LOWER(task.title)`,
-    category: sql`task.category::text`, program: sql`LOWER(COALESCE(program.name, ''))`,
-    startDate: sql`task.start_date::text`, dueDate: sql`task.due_date::text`, status,
-  }[query.sort]!;
-  const rows = await sql<Array<TaskRow & { cursorValue: string }>>`
-    SELECT * FROM (SELECT ${taskRecordColumns},
-      ${sortValue} AS cursor_value
-    ${taskRecordFrom}
-    WHERE ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-      AND ${predicate}
-      AND task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date
-    ) listed
-    WHERE ${cursor ? (direction === 'asc'
-      ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
-      : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
-    ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
-    LIMIT ${(query.limit ?? DEFAULT_BATCH_SIZE) + 1}
-  `;
-  const detailed = attachTaskDetails(rows, await loadTaskLoggedHours(rows.map(row => row.id)), actor);
-  return cursorPage(detailed, query.limit ?? DEFAULT_BATCH_SIZE);
+    firstName: sql`LOWER(page_row.staff_first_name)`,
+    lastName: sql`LOWER(page_row.staff_last_name)`,
+    title: sql`LOWER(page_row.title)`,
+    category: sql`page_row.category::text`,
+    program: sql`LOWER(COALESCE(page_row.program_name, ''))`,
+    startDate: sql`page_row.start_date`,
+    dueDate: sql`page_row.due_date`,
+    status,
+  }[filterValues.sort]!;
+  const page = await paginateQuery(rowsQuery, {
+    sortValue,
+    direction: filterValues.direction,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit ?? BATCH_SIZE,
+  });
+
+  // 3. Add details for the visible tasks.
+  const rows = page.rows;
+  const loggedHours = await loadTaskLoggedHours(rows.map(row => row.id));
+  return { ...page, rows: attachTaskDetails(rows, loggedHours, actor) };
 }

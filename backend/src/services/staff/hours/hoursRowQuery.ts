@@ -25,7 +25,7 @@ export interface HoursRow {
 }
 
 /** Canonical hours fields shared by collection and direct-record reads. */
-export const hoursRecordColumns = sql`
+export const hoursRowColumns = sql`
   entry.id,
   entry.staff_id,
   staff.first_name AS staff_first_name,
@@ -48,7 +48,7 @@ export const hoursRecordColumns = sql`
 `;
 
 /** Canonical hours relationships shared by collection and direct-record reads. */
-export const hoursRecordFrom = sql`
+export const hoursRowFrom = sql`
   FROM time_entries entry
   INNER JOIN users staff ON staff.id = entry.staff_id
   LEFT JOIN programs program ON program.id = entry.program_id
@@ -70,6 +70,25 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
   entry.work_date::text
 )`;
 
+/**
+ * Builds rows for table and calendar items.
+ * @param appliedFilters - SQL filters supplied by the service.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getHoursRows(appliedFilters, trx)
+ */
+export function getHoursRows(appliedFilters = sql`TRUE`, query = sql) {
+  return query<HoursRow[]>`
+    SELECT ${hoursRowColumns}
+    ${hoursRowFrom}
+    WHERE ${appliedFilters}
+  `;
+}
+
+/**
+ * Shapes an hours row for the existing entry response.
+ * @param row - Loaded hours row.
+ * @example hoursRowToEntry(row) // numeric hours
+ */
 export function hoursRowToEntry(row: HoursRow) {
   return {
     id: row.id, staffId: row.staffId, workDate: row.workDate,
@@ -83,6 +102,11 @@ export function hoursRowToEntry(row: HoursRow) {
   };
 }
 
+/**
+ * Shapes an hours row for the existing table response.
+ * @param row - Loaded hours row.
+ * @example hoursRowToTableRow(row) // staff details and item
+ */
 export function hoursRowToTableRow(row: HoursRow) {
   const { staffId, workDate, ...item } = hoursRowToEntry(row);
   return {
@@ -98,11 +122,13 @@ export function hoursRowToTableRow(row: HoursRow) {
 
 export type HoursTableRow = ReturnType<typeof hoursRowToTableRow>;
 
-export async function getHoursRecord(id: string, trx: typeof sql) {
-  const [row] = await trx<HoursRow[]>`
-    SELECT ${hoursRecordColumns}
-    ${hoursRecordFrom}
-    WHERE entry.id = ${id}
-  `;
+/**
+ * Loads one hours row.
+ * @param id - Hours entry to load.
+ * @param trx - Transaction for the read.
+ * @example getHoursRow(id, trx)
+ */
+export async function getHoursRow(id: string, trx: typeof sql) {
+  const [row] = await getHoursRows(trx`entry.id = ${id}`, trx);
   return row;
 }

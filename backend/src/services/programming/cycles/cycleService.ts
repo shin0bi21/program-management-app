@@ -1,34 +1,39 @@
-import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
+import { getYouthRowsByIds } from '../../youth/youthRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertAssignmentUnused } from '../programCycles/assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramCycleInput } from '../../../validation/programmingSchemas';
-import { getCycleRow } from './cycleRecordQuery';
-import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from '../programCycles/programCycleRecordQuery';
+import { getCycleRow } from './cycleRowQuery';
+import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from '../programCycles/programCycleRowQuery';
 
 export { getCycleReferenceData as getProgramCycles } from '../../referenceData/cycleReferenceData';
 
 /**
  * Saves cycle metadata and replaces its program assignments in one transaction.
- * Missing targets are 404; duplicate names, used assignment removals, and dates excluding sessions are 409.
  * @param data - Validated date range, name, and complete set of unique program IDs.
  * @param actor - Actor recorded on writes and used to scope response rows.
  * @param id - Existing cycle to update; omitted when creating.
- * @returns The saved cycle, assignment changes, and readable rows for cache reconciliation after commit.
- * @example await setProgramCycle({ name: 'Winter 2026', startsOn: '2026-01-01', endsOn: '2026-03-31', programIds: [] }, actor) // creates an unassigned cycle
+ * @returns The saved cycle and affected rows.
+ * @example setProgramCycle(data, actor, cycleId) // update an existing cycle
  */
 export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessTokenPayload, id?: string) {
+  // 1. Update the cycle when an ID is supplied.
   if (id) return updateProgramCycleRecord(id, data, actor);
 
+  // 2. Check the selected programs.
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const programs = await trx<{ id: string }[]>`
-      SELECT id FROM programs WHERE id = ANY(${sql.array(data.programIds)}::uuid[])
-      ORDER BY id FOR UPDATE
+      SELECT id
+      FROM programs
+      WHERE id = ANY(${sql.array(data.programIds)}::uuid[])
+      ORDER BY id
+      FOR UPDATE
     `;
     if (programs.length !== data.programIds.length) throw new NotFoundError('One or more programs were not found');
 
+    // 3. Save the cycle.
     const [cycle] = await trx<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on, created_by, updated_by)
       VALUES (${data.name}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
@@ -36,12 +41,15 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
     `;
     if (!cycle) throw new InternalServerError('Cycle creation returned no record');
 
+    // 4. Assign the selected programs.
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
       SELECT program_id, ${cycle.id}, ${actor.userId}, ${actor.userId}
       FROM UNNEST(${sql.array(data.programIds)}::uuid[]) AS selected(program_id)
       RETURNING program_id, cycle_id
     `;
+
+    // 5. Return the saved cycle and affected rows.
     return {
       cycle: await requireCycleRow(trx, cycle.id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
@@ -59,55 +67,95 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
  * @example await deleteProgramCycle(cycleId) // deletes an unassigned cycle with no logged hours
  */
 export async function deleteProgramCycle(id: string) {
+  // 1. Find and lock the cycle.
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const cycles = await trx`SELECT id FROM program_cycles WHERE id = ${id} FOR UPDATE`;
+    const cycles = await trx`
+      SELECT id
+      FROM program_cycles
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
     if (!cycles.length) throw new NotFoundError('Cycle not found');
 
+    // 2. Check whether the cycle is still in use.
     const dependencies = await trx`
       SELECT
-        EXISTS (SELECT 1 FROM program_cycle_assignments WHERE cycle_id = ${id})
-        OR EXISTS (SELECT 1 FROM time_entries WHERE cycle_id = ${id})
+        EXISTS (
+          SELECT 1
+          FROM program_cycle_assignments
+          WHERE cycle_id = ${id}
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM time_entries
+          WHERE cycle_id = ${id}
+        )
         AS in_use
     `;
     if (dependencies[0].inUse) {
       throw new ConflictError('Cycle cannot be deleted because it is still in use');
     }
 
-    await trx`DELETE FROM program_cycles WHERE id = ${id}`;
+    // 3. Delete the unused cycle.
+    await trx`
+      DELETE
+      FROM program_cycles
+      WHERE id = ${id}
+    `;
   });
 }
 
 /**
- * Reconciles an existing cycle under locks, rejecting used assignment removals and dates excluding sessions.
+ * Updates a cycle without removing used assignments or excluding existing sessions.
  * @param id - Required cycle to update.
  * @param data - Validated replacement dates, name, and assignments.
  * @param actor - Actor recorded on writes and used to scope response rows.
  * @returns The saved cycle, assignment changes, and permission-gated program-cycle and youth rows.
- * @example await updateProgramCycleRecord(cycleId, { name: 'Winter 2026', startsOn: '2026-01-01', endsOn: '2026-03-31', programIds: [] }, actor) // removes only unused assignments
+ * @example updateProgramCycleRecord(cycleId, data, actor) // update dates and assignments
  */
 async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, actor: AccessTokenPayload) {
+  // 1. Check the selected programs.
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
     // Both directions of assignment editing acquire programs before cycles and assignments.
-    const programs = await trx<{ id: string }[]>`SELECT id FROM programs ORDER BY id FOR UPDATE`;
+    const programs = await trx<{ id: string }[]>`
+      SELECT id
+      FROM programs
+      ORDER BY id
+      FOR UPDATE
+    `;
     if (data.programIds.some(programId => !programs.some(program => program.id === programId))) {
       throw new NotFoundError('One or more programs were not found');
     }
 
-    const cycle = await trx`SELECT id FROM program_cycles WHERE id = ${id} FOR UPDATE`;
+    // 2. Find and lock the cycle.
+    const cycle = await trx`
+      SELECT id
+      FROM program_cycles
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
     if (!cycle.length) throw new NotFoundError('Cycle not found');
 
+    // 3. Check the assignments being removed.
     const current = await trx<ProgramCycleKey[]>`
-      SELECT program_id, cycle_id FROM program_cycle_assignments WHERE cycle_id = ${id} ORDER BY program_id FOR UPDATE
+      SELECT program_id, cycle_id
+      FROM program_cycle_assignments
+      WHERE cycle_id = ${id}
+      ORDER BY program_id
+      FOR UPDATE
     `;
     const removed = current.filter(programCycle => !data.programIds.includes(programCycle.programId));
     for (const programCycle of removed) {
       await assertAssignmentUnused(trx, programCycle.programId, programCycle.cycleId);
     }
 
+    // 4. Check that the dates still include existing sessions.
     const sessionsOutsideDates = await trx`
-      SELECT 1 FROM program_sessions session
+      SELECT 1
+      FROM program_sessions session
       JOIN programs program ON program.id = session.program_id
       WHERE session.cycle_id = ${id}
         AND ((session.starts_at AT TIME ZONE program.timezone::text)::date < ${data.startsOn}::date
@@ -116,13 +164,23 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     `;
     if (sessionsOutsideDates.length) throw new ConflictError('Cycle dates must contain all existing sessions');
 
+    // 5. Save the cycle and its program assignments.
     await trx`
       UPDATE program_cycles
-      SET name = ${data.name}, starts_on = ${data.startsOn}, ends_on = ${data.endsOn}, updated_at = NOW(), updated_by = ${actor.userId}
+      SET name = ${data.name},
+        starts_on = ${data.startsOn},
+        ends_on = ${data.endsOn},
+        updated_at = NOW(),
+        updated_by = ${actor.userId}
       WHERE id = ${id}
     `;
     for (const programCycle of removed) {
-      await trx`DELETE FROM program_cycle_assignments WHERE program_id = ${programCycle.programId} AND cycle_id = ${programCycle.cycleId}`;
+      await trx`
+        DELETE
+        FROM program_cycle_assignments
+        WHERE program_id = ${programCycle.programId}
+          AND cycle_id = ${programCycle.cycleId}
+      `;
     }
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
@@ -134,6 +192,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     const retained = current.filter(programCycle => data.programIds.includes(programCycle.programId));
     const affectedProgramCycles = [...retained, ...created];
 
+    // 6. Return the saved cycle and affected rows.
     return {
       cycle: await requireCycleRow(trx, id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
@@ -153,7 +212,8 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
  * @example await requireCycleRow(trx, cycleId) // returns the saved cycle with its computed state
  */
 async function requireCycleRow(trx: typeof sql, id: string) {
-  const cycle = await getCycleRow(trx, id);
+  // 1. Load the saved cycle.
+  const cycle = await getCycleRow(id, trx);
   if (!cycle) throw new InternalServerError('Saved cycle record is unavailable');
   return cycle;
 }
@@ -163,6 +223,7 @@ async function requireCycleRow(trx: typeof sql, id: string) {
  * @example rethrowCycleConflict(new Error('Disconnected')) // throws the same Error instance
  */
 function rethrowCycleConflict(error: unknown): never {
+  // 1. Report duplicate cycle names.
   if (isUniqueViolation(error, 'program_cycles_name_key')) {
     throw Object.assign(new ConflictError('A cycle with this name already exists'), { cause: error });
   }

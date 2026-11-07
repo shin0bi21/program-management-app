@@ -2,8 +2,9 @@ import { BadRequestError } from '../../errors';
 import { sql } from '../../db/client';
 import type { PendingQuery, Row } from 'postgres';
 
-export const DEFAULT_BATCH_SIZE = 50;
-export const MAX_BATCH_SIZE = 50;
+export const BATCH_SIZE = 50;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ListCursor {
   value: string;
@@ -15,8 +16,13 @@ interface QueryPagination {
   sortValue: PendingQuery<Row[]>;
   direction: 'asc' | 'desc';
   cursor?: string;
-  /** Validated positive page size; omit for an unpaged array response. */
-  limit?: number;
+  /** Validated positive page size, at most BATCH_SIZE. */
+  limit: number;
+}
+
+interface QueryPage<T> {
+  rows: Omit<T, 'cursorValue'>[];
+  nextCursor: string | null;
 }
 
 /**
@@ -26,14 +32,14 @@ interface QueryPagination {
  * @param rowsQuery - Unexecuted canonical rows with domain access and filters already applied.
  * @param pagination - Trusted sort expression, direction, optional cursor, and validated limit.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
- * @returns A cursor page when limited, otherwise an ordered array, without internal cursor values.
+ * @returns A bounded cursor page without internal cursor values.
  * @example paginateQuery(rows, { sortValue: sql`LOWER(page_row.name)`, direction: 'asc', limit: 50 })
  */
 export async function paginateQuery<T extends { id: string }>(
   rowsQuery: PendingQuery<T[]>,
   pagination: QueryPagination,
   query = sql,
-) {
+): Promise<QueryPage<T>> {
   // 1. Match the cursor boundary to the selected sort and UUID tie-breaker.
   const cursor = decodeCursor(pagination.cursor);
   const { sortValue, direction, limit } = pagination;
@@ -51,12 +57,11 @@ export async function paginateQuery<T extends { id: string }>(
     FROM (${rowsQuery}) page_row
     WHERE ${cursorFilter}
     ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
-    ${limit ? query`LIMIT ${limit + 1}` : query``}
+    LIMIT ${limit + 1}
   `;
 
-  // 3. Return the collection contract requested by the caller.
-  if (limit) return cursorPage(rows, limit);
-  return rows.map(({ cursorValue: _cursorValue, ...row }) => row);
+  // 3. Remove the extra row and derive the next cursor.
+  return cursorPage(rows, limit);
 }
 
 /**
@@ -75,14 +80,28 @@ export function encodeCursor(cursor: ListCursor) {
  */
 export function decodeCursor(cursor?: string): ListCursor | null {
   if (!cursor) return null;
+
   try {
-    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as unknown;
-    if (!parsed || typeof parsed !== 'object') throw new Error('Invalid cursor');
-    const { value, id } = parsed as Partial<ListCursor>;
-    if (typeof value !== 'string' || typeof id !== 'string'
-      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    const cursorJson = Buffer.from(cursor, 'base64url').toString('utf8');
+    const parsed: unknown = JSON.parse(cursorJson);
+
+    if (parsed === null || typeof parsed !== 'object') {
       throw new Error('Invalid cursor');
     }
+
+    const { value, id } = parsed as Partial<ListCursor>;
+    if (typeof value !== 'string') {
+      throw new Error('Invalid cursor');
+    }
+
+    if (typeof id !== 'string') {
+      throw new Error('Invalid cursor');
+    }
+
+    if (!UUID_PATTERN.test(id)) {
+      throw new Error('Invalid cursor');
+    }
+
     return { value, id };
   } catch {
     throw new BadRequestError('Invalid pagination cursor');
@@ -98,9 +117,13 @@ export function decodeCursor(cursor?: string): ListCursor | null {
 export function cursorPage<T extends { id: string; cursorValue: string }>(rows: T[], limit: number) {
   const hasMore = rows.length > limit;
   const visible = hasMore ? rows.slice(0, limit) : rows;
+  const pageRows = visible.map(({ cursorValue: _cursorValue, ...row }) => row);
+
   const last = visible.at(-1);
-  return {
-    rows: visible.map(({ cursorValue: _cursorValue, ...row }) => row),
-    nextCursor: hasMore && last ? encodeCursor({ value: last.cursorValue, id: last.id }) : null,
-  };
+  let nextCursor: string | null = null;
+  if (hasMore && last) {
+    nextCursor = encodeCursor({ value: last.cursorValue, id: last.id });
+  }
+
+  return { rows: pageRows, nextCursor };
 }
