@@ -25,7 +25,7 @@ import { HOURS_TABLE_KEYS, type HoursItem, type HoursFilters } from './types';
 import './Hours.css';
 
 type HoursAddTarget = {
-  resourceId?: string;
+  staffId?: string;
   date?: string;
   source?: 'regular' | 'task' | 'session';
 };
@@ -240,9 +240,9 @@ export default function Hours() {
       loadTasks={getTaskDashboardData}
       onClose={closeHoursModal}
       onAdd={submitHours}
-      initialResourceId={hoursModalState?.mode === 'edit'
+      initialStaffId={hoursModalState?.mode === 'edit'
         ? editedItem?.staffId
-        : hoursModalState?.initialValues.resourceId ?? currentUserId}
+        : hoursModalState?.initialValues.staffId ?? currentUserId}
       initialDate={hoursModalState?.mode === 'edit'
         ? editedItem?.date
         : hoursModalState?.initialValues.date}
@@ -251,7 +251,7 @@ export default function Hours() {
         : undefined}
       canCompleteTask={canCompleteTask}
       staffLocked={hoursModalState?.mode === 'edit'
-        || Boolean(hoursModalState?.initialValues.resourceId)}
+        || Boolean(hoursModalState?.initialValues.staffId)}
       initialItem={hoursModalState?.mode === 'edit' ? editedItem : undefined}
     />
 

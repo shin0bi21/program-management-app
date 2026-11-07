@@ -39,7 +39,7 @@ interface HoursCalendarProps {
   onStaffSelect: (staffId: string) => void;
   onEdit: (target: HoursItem) => void;
   onDelete: (target: HoursItem) => void;
-  onAdd: (target: { resourceId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
+  onAdd: (target: { staffId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
   onMove: (move: HoursItemMove) => Promise<void>;
   onMessageChange?: PageMessageChangeHandler;
 }
@@ -188,7 +188,7 @@ export default function HoursCalendar({
   function getCellActions({ row, period }: CalendarCellContext<StaffResource, HoursItem>) {
     if (!row.writable) return [];
 
-    const target = { resourceId: row.id, date: period.key };
+    const target = { staffId: row.id, date: period.key };
 
     return [
       { id: 'session', label: 'Session Hours', onSelect: () => onAdd({ ...target, source: 'session' }) },

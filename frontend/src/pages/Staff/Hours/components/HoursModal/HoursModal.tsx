@@ -21,7 +21,7 @@ export default function HoursModal({
   loadTasks,
   onClose,
   onAdd,
-  initialResourceId,
+  initialStaffId,
   initialDate,
   initialSource = 'regular',
   staffLocked = false,
@@ -36,7 +36,7 @@ export default function HoursModal({
     programs,
     loadTasks,
     onAdd,
-    initialResourceId,
+    initialStaffId,
     initialDate,
     initialSource,
     initialTask,
@@ -87,9 +87,9 @@ export default function HoursModal({
           <FormField id="hours-staff" label="Staff member">
             <FloatingSelect
               id="hours-staff"
-              value={draft.resourceId}
+              value={draft.staffId}
               options={toFilterOptions(resources)}
-              onChange={workflow.selectResource}
+              onChange={workflow.selectStaff}
               placeholder="Select staff member"
               ariaLabel="Staff member"
               disabled={submissionComplete

@@ -10,15 +10,13 @@ import type {
   HoursSessionQuery,
   UpdateHoursPlacementInput,
 } from '../../../validation/hoursSchemas';
-import { assertCanSetHours, hoursReadScopePredicate } from '../../../policies/hoursPolicy';
+import { assertCanSetHours } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import {
   getHoursRow,
   toHoursItem,
   getHoursRows,
-  hoursRowColumns,
-  hoursRowFrom,
   type HoursRow,
 } from './hoursRowQuery';
 import {
@@ -36,12 +34,11 @@ import { buildHoursFilters } from './hoursRowFilters';
 export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
   // 1. Load hours matching the calendar filters.
   const rows = await sql<HoursRow[]>`
-    ${getHoursRows(sql`
+    ${getHoursRows(actor, sql`
       ${query.start && query.end
         ? sql`entry.date BETWEEN ${query.start}::date AND ${query.end}::date`
         : sql`TRUE`}
-      ${buildHoursFilters(query)}
-      AND ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
+      AND ${buildHoursFilters(query)}
     `)}
     ORDER BY entry.date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
@@ -125,7 +122,7 @@ export async function setHours(
     const savedId = id
       ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
       : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
-    saved = await getHoursRow(savedId, trx);
+    saved = await getHoursRow(actor, savedId, trx);
     if (!saved) throw new InternalServerError('Saved hours record is unavailable');
 
     // 4. Complete the task if requested and record the change.
@@ -185,7 +182,7 @@ export async function updateHoursPlacement(
         updated_at = NOW()
       WHERE id = ${id}
     `;
-    updated = await getHoursRow(id, trx);
+    updated = await getHoursRow(actor, id, trx);
     if (!updated) throw new InternalServerError('Updated hours record is unavailable');
 
     // 3. Record the change and load affected tasks.
@@ -466,16 +463,19 @@ async function resolveCycleForDate(date: string, programId: string | null, query
  */
 async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayload) {
   // 1. Load the entry and check access.
-  const rows = await trx<HoursRow[]>`
-    SELECT ${hoursRowColumns}
-    ${hoursRowFrom}
-    WHERE entry.id = ${id}
-    LIMIT 1
-    FOR UPDATE OF entry
+  const [entry] = await trx<Array<{ staffId: string }>>`
+    SELECT staff_id
+    FROM time_entries
+    WHERE id = ${id}
+    FOR UPDATE
   `;
-  if (!rows.length) throw new NotFoundError('Logged hours not found');
-  assertCanSetHours(actor, rows[0].staffId);
-  return rows[0];
+  if (!entry) throw new NotFoundError('Logged hours not found');
+  assertCanSetHours(actor, entry.staffId);
+
+  // Authorize the locked owner before loading the full scoped record, preserving 403 for forbidden writes.
+  const row = await getHoursRow(actor, id, trx);
+  if (!row) throw new InternalServerError('Locked hours record is unavailable');
+  return row;
 }
 
 /**

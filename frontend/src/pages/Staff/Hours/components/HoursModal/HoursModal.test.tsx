@@ -50,7 +50,7 @@ describe('HoursModal', () => {
   });
 
   it('renders only options valid for regular time', () => {
-    renderModal({ initialDate: '2026-08-18', initialResourceId: 'staff-1', staffLocked: true });
+    renderModal({ initialDate: '2026-08-18', initialStaffId: 'staff-1', staffLocked: true });
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Program' }));
@@ -115,7 +115,7 @@ describe('HoursModal', () => {
       date: '2026-08-18',
       startsAt: '2026-08-18T14:00:00.000Z',
     }]);
-    renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialResourceId: 'staff-2' });
+    renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialStaffId: 'staff-2' });
 
     await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
       'staff-2', '2026-08-18', expect.any(AbortSignal),
@@ -136,7 +136,7 @@ describe('HoursModal', () => {
   it('renders initialized edit values', () => {
     renderModal({
       initialDate: '2026-08-18',
-      initialResourceId: 'staff-1',
+      initialStaffId: 'staff-1',
       initialItem: makeHoursItem({
         id: 'entry-1',
         category: 'meeting',
