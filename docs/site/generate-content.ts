@@ -149,7 +149,7 @@ function generatedPath(sourcePath: string) {
 /**
  * Maps a published source to its website route while preserving directory nesting.
  * @param sourcePath - Repository-relative published path: README.md or a file under docs/.
- * @example routeForSource("docs/frontend/architecture/ownership.md") returns "/frontend/architecture/ownership/".
+ * @example routeForSource("docs/frontend/01-ownership.md") returns "/frontend/01-ownership/".
  */
 function routeForSource(sourcePath: string) {
   if (sourcePath === 'README.md') return '/';
