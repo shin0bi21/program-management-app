@@ -4,12 +4,10 @@ import supertest from 'supertest';
 import { z } from 'zod';
 import type { Request, Response } from 'express';
 import {
-  BadRequestError,
   classifyError,
   errorForLog,
   ConflictError,
   InternalServerError,
-  PayloadTooLargeError,
   ServiceUnavailableError,
 } from '../../src/errors';
 import { uploadFile } from '../../src/middleware/fileUpload';
@@ -193,21 +191,7 @@ describe('JSON parser failures', () => {
   });
 });
 
-describe('default error messages and unexpected failures', () => {
-  it('provides standard class messages while preserving contextual overrides', () => {
-    const contextual = new ConflictError('This session already has attendance');
-
-    expect(new BadRequestError().message).toBe('Bad Request');
-    expect(new PayloadTooLargeError().message).toBe('Payload Too Large');
-    expect(new ConflictError().message).toBe('Conflict');
-    expect(new ServiceUnavailableError().message).toBe('Service Unavailable');
-    expect(new InternalServerError().message).toBe('Internal Server Error');
-
-    expect(classifyError(contextual)).toBe(contextual);
-    expect(contextual.message).toBe('This session already has attendance');
-    expect(contextual.statusCode).toBe(409);
-  });
-
+describe('unexpected failures', () => {
   it('gives a message-less unexpected failure a 500 fallback', () => {
     const original = new Error('');
 

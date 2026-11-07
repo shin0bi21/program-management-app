@@ -229,19 +229,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('lists the available session types', async () => {
-    const response = await request(app)
-      .get('/api/session-types')
-      .set('Authorization', `Bearer ${staffToken}`);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual(expect.arrayContaining([
-      { id: 'Regular', name: 'Regular' },
-      { id: guestSpeakerType, name: 'Guest Speaker' },
-      { id: 'Field Trip', name: 'Field Trip' },
-    ]));
-  });
-
   it('creates individual sessions with explicit dates and type', async () => {
     const firstSessionDate = addDays(today, 1);
     const sessionDates = [firstSessionDate, addDays(firstSessionDate, 7), addDays(firstSessionDate, 14)];

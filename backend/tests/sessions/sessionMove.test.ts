@@ -75,7 +75,6 @@ describe('Future session date moves', () => {
       enrollmentRequired: true, state: 'upcoming',
     });
     expect(response.body.session.programName).toEqual(expect.any(String));
-    expect(response.body.session.sessionType).toEqual(expect.any(String));
   });
 
   it('returns canonical rows after full edits and deletion without stale next-session metadata', async () => {

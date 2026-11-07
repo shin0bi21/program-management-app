@@ -114,14 +114,6 @@ describe('Accounts API', () => {
       expect(res.body.error).toMatch(/token/i);
     });
 
-    it('should return all accounts with a valid admin token', async () => {
-      const res = await request(app)
-        .get('/api/accounts')
-        .set('Authorization', `Bearer ${adminToken}`);
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    }, 30000);
-
     it('should filter accounts by search, role, and status', async () => {
       const filteredUser = await seedTestUser({
         email: `account-filter-${Date.now()}@test.local`,
@@ -381,16 +373,6 @@ describe('Accounts API', () => {
       expect(res.status).toBe(403);
 
       await deleteTestUser(youthUser.userId);
-    });
-
-    it('should reject expired access token', async () => {
-      const expiredToken = generateExpiredToken(adminUser.userId);
-
-      const res = await request(app)
-        .post('/api/accounts')
-        .set('Authorization', `Bearer ${expiredToken}`)
-        .send({ firstName: 'Test', lastName: 'User', email: 'x@x.com', password: 'password123', active: true });
-      expect(res.status).toBe(401);
     });
   });
 

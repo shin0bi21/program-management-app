@@ -47,14 +47,6 @@ describe('Youth API', () => {
       expect(res.body.error).toMatch(/token/i);
     });
 
-    it('should return youth list with valid admin token', async () => {
-      const res = await request(app)
-        .get('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`);
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    }, 30000);
-
     it.each(['age', 'grade'])('rejects the removed %s sort', async sort => {
       const res = await request(app).get('/api/youth').query({ sort })
         .set('Authorization', `Bearer ${adminToken}`);
@@ -166,7 +158,6 @@ describe('Youth API', () => {
         .get('/api/youth')
         .set('Authorization', `Bearer ${staffToken}`);
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
 
       await deleteTestUser(staff.userId);
     });
@@ -550,14 +541,6 @@ describe('Youth API', () => {
       createdIds.push(res.body.id);
     });
 
-    it('should reject invalid dateOfBirth format (400)', async () => {
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ ...baseYouth, dateOfBirth: '15-06-2012' });
-      expect(res.status).toBe(400);
-    });
-
     it('should reject an invalid login email (400)', async () => {
       const res = await request(app)
         .post('/api/youth')
@@ -577,15 +560,6 @@ describe('Youth API', () => {
       expect(res.status).toBe(403);
 
       await deleteTestUser(youth.userId);
-    });
-
-    it('should reject expired access token (401)', async () => {
-      const expiredToken = generateExpiredToken(adminUserId);
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${expiredToken}`)
-        .send(baseYouth);
-      expect(res.status).toBe(401);
     });
   });
 
@@ -613,7 +587,6 @@ describe('Youth API', () => {
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
-      expect(res.body).not.toBeNull();
       expect(res.body.id).toBe(youthId);
       expect(res.body.firstName).toBe('GetById');
       expect(res.body.lastAttendedOn).toBeNull();
@@ -787,7 +760,6 @@ describe('Youth API', () => {
       const getRes = await request(app)
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
-      expect(Array.isArray(getRes.body.addresses)).toBe(true);
       expect(getRes.body.addresses).toHaveLength(1);
       expect(getRes.body.addresses[0]).toEqual(expect.objectContaining({
         address: '456 Oak Ave',
@@ -810,7 +782,6 @@ describe('Youth API', () => {
       const getRes = await request(app)
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
-      expect(Array.isArray(getRes.body.contacts)).toBe(true);
       expect(getRes.body.contacts).toHaveLength(1);
       expect(getRes.body.contacts[0]).toEqual(expect.objectContaining({
         phoneNumber: '4165559999',

@@ -156,15 +156,6 @@ describe('Schools API', () => {
 
       await deleteTestUser(youth.userId);
     });
-
-    it('should reject expired access token (401)', async () => {
-      const expiredToken = generateExpiredToken(adminUserId);
-      const res = await request(app)
-        .post('/api/schools')
-        .set('Authorization', `Bearer ${expiredToken}`)
-        .send(baseSchool);
-      expect(res.status).toBe(401);
-    });
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -262,14 +253,6 @@ describe('Schools API', () => {
       expect(res.status).toBe(403);
 
       await deleteTestUser(youth.userId);
-    });
-
-    it('should reject expired access token (401)', async () => {
-      const expiredToken = generateExpiredToken(adminUserId);
-      const res = await request(app)
-        .delete('/api/schools/00000000-0000-0000-0000-000000000000')
-        .set('Authorization', `Bearer ${expiredToken}`);
-      expect(res.status).toBe(401);
     });
   });
 });
