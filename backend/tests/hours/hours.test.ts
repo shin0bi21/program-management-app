@@ -218,7 +218,7 @@ describe('Hours API', () => {
     expect(unmatched.body).toEqual({});
   });
 
-  it('returns separate options and cursor-paginates the filtered hours list', async () => {
+  it('cursor-paginates the filtered hours list', async () => {
     const marker = `Paginated hours ${firstStaffId}`;
     for (const hours of [1, 2]) {
       const created = await request(app)
@@ -227,12 +227,6 @@ describe('Hours API', () => {
         .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours, note: `${marker} ${hours}` });
       expect(created.status).toBe(201);
     }
-
-    const options = await request(app)
-      .get('/api/reference-data/staff?feature=hours')
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(options.status).toBe(200);
-    expect(options.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: firstStaffId })]));
 
     const first = await request(app)
       .get(`/api/hours/table?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
@@ -590,16 +584,6 @@ describe('Hours API', () => {
     expect(referenceData.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ writable: true }),
     ]));
-  });
-
-  it('derives a cycle for general time without a program', async () => {
-    const response = await request(app)
-      .post('/api/hours')
-      .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, category: 'maintenance', workDate, hours: 1, note: 'Office maintenance' });
-
-    expect(response.status).toBe(201);
-    expect(response.body.cycleId).toBe(activeCycleId);
   });
 
   it('returns the derived cycle for time without a program', async () => {

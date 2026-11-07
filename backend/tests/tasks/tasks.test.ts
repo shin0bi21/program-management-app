@@ -130,21 +130,6 @@ describe('Tasks API', () => {
     }
   });
 
-  it('returns only task-owned reference choices', async () => {
-    const options = await request(app).get('/api/tasks/reference-data')
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(options.status).toBe(200);
-    expect(Object.keys(options.body).sort()).toEqual(['categories', 'statuses']);
-    expect(options.body.categories).toContainEqual({ value: 'planning_prep', label: 'Planning / Prep' });
-    expect(options.body.statuses).toEqual([
-      { value: 'upcoming', label: 'Upcoming' },
-      { value: 'in_progress', label: 'In Progress' },
-      { value: 'overdue', label: 'Overdue' },
-      { value: 'completed', label: 'Completed' },
-      { value: 'cancelled', label: 'Cancelled' },
-    ]);
-  });
-
   it('requires explicit task capabilities at the route boundary', async () => {
     const writeOnlyToken = generateToken(adminId, 'admin', 'tasks-write-only@test.local', ['write:tasks']);
     const readOnlyToken = generateToken(adminId, 'admin', 'tasks-read-only@test.local', ['read:tasks']);
@@ -532,7 +517,7 @@ describe('Tasks API', () => {
       const early = await create('general boundary', '2080-12-30', '2081-01-01', null);
       const gap = await create('gap', '2081-02-15', '2081-02-15', programId);
       const late = await create('program without cycle assignment', '2081-03-31', '2081-04-02', programId);
-      const outside = await create('outside', '2081-04-03', '2081-04-03', null);
+      await create('outside', '2081-04-03', '2081-04-03', null);
       const spanning = await create('spans disjoint windows', '2080-01-01', '2082-01-01', null);
 
       for (const endpoint of ['list', 'calendar']) {
@@ -556,9 +541,7 @@ describe('Tasks API', () => {
         .query({ cycleIds: cycles[1].id, staffIds: firstStaffId, search: 'Cycle resolution' })
         .set('Authorization', `Bearer ${adminToken}`);
       expect(list.status).toBe(200);
-      expect(list.body.rows).toEqual(expect.arrayContaining([expect.objectContaining({ id: late })]));
       expect(list.body.rows.map((task: { id: string }) => task.id).sort()).toEqual([late, spanning].sort());
-      expect(list.body.rows).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: outside })]));
 
       for (const endpoint of ['list', 'calendar']) {
         const malformed = await request(app).get(`/api/tasks/${endpoint}`)

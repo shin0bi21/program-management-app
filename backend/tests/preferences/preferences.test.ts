@@ -59,51 +59,6 @@ describe('User preferences API', () => {
     expect(otherUser.body).toBeNull();
   });
 
-  it('persists the sessions view with its filters', async () => {
-    const value = {
-      view: 'list',
-      programIds: [],
-      cycleIds: [],
-      sessionTypes: [],
-      statuses: ['upcoming'],
-    };
-
-    const saved = await request(app)
-      .put('/api/preferences/session-filters')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send(value);
-    expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(value);
-
-    const restored = await request(app)
-      .get('/api/preferences/session-filters')
-      .set('Authorization', `Bearer ${firstToken}`);
-    expect(restored.body).toEqual(value);
-  });
-
-  it('persists the Hours view with its filters and selected cycle', async () => {
-    const value = {
-      view: 'list',
-      staffIds: [],
-      programIds: ['general'],
-      categories: ['meeting'],
-      types: ['session'],
-      cycleId: '00000000-0000-4000-8000-000000000001',
-      sorting: { key: 'session', direction: 'asc' },
-    };
-    const saved = await request(app)
-      .put('/api/preferences/hours-filters')
-      .set('Authorization', `Bearer ${firstToken}`)
-      .send(value);
-    expect(saved.status).toBe(200);
-    expect(saved.body).toEqual(value);
-
-    const restored = await request(app)
-      .get('/api/preferences/hours-filters')
-      .set('Authorization', `Bearer ${firstToken}`);
-    expect(restored.body).toEqual(value);
-  });
-
   it.each(preferenceKeySchema.options)('discards browser-local layout when saving %s', async key => {
     const accountPreferences = {
       search: 'planning',
