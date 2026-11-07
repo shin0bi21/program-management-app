@@ -1,5 +1,4 @@
 import { sql } from '../../../db/client';
-import { taskReadScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskCalendarQuery } from '../../../validation/taskSchemas';
 import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
@@ -27,10 +26,9 @@ export async function getTasksCalendarData(
   // 2. Load matching tasks.
   const { appliedFilters } = buildTaskFilters(query);
   const rows = await sql<TaskRow[]>`
-    ${getTaskRows(sql`
+    ${getTaskRows(actor, sql`
       task.start_date <= ${range.end}::date
       AND task.due_date >= ${range.start}::date
-      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
       AND ${appliedFilters}
     `)}
     ORDER BY task.start_date, task.due_date, task.title, task.id

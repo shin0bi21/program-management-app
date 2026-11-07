@@ -2,6 +2,8 @@ import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
+import { getTaskRows } from '../../src/services/staff/tasks/taskRowQuery';
+import type { AccessTokenPayload } from '../../src/types/auth';
 
 const app = createApp();
 
@@ -128,6 +130,31 @@ describe('Tasks API', () => {
       }
       await deleteTestUser(manager.userId);
     }
+  });
+
+  it('keeps resource scope inside the canonical query without caller-supplied permission filters', async () => {
+    const createdIds: string[] = [];
+    for (const staffId of [firstStaffId, secondStaffId, unrelatedStaffId]) {
+      const created = rememberTask(await request(app).post('/api/tasks')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ title: 'Canonical scope check', category: 'outreach', startDate: taskDate, dueDate: taskDate, staffId }));
+      expect(created.status).toBe(201);
+      createdIds.push(created.body.id);
+    }
+    const actor: AccessTokenPayload = {
+      userId: firstStaffId, email: 'scope-check@test.local', role: 'staff',
+      permissions: ['read:tasks'], tokenType: 'access', jti: 'scope-check', iat: 0, exp: 1,
+    };
+
+    const ownAndShared = await getTaskRows(actor);
+    expect(ownAndShared.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
+      .toEqual(createdIds.slice(0, 2).sort());
+    expect(await getTaskRows(actor, sql`task.id = ${createdIds[2]}`)).toEqual([]);
+    const broadFilter = await getTaskRows(actor, sql`TRUE OR task.id = ${createdIds[2]}`);
+    expect(broadFilter.some(row => row.id === createdIds[2])).toBe(false);
+    const adminRows = await getTaskRows({ ...actor, userId: adminId, role: 'admin' });
+    expect(adminRows.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
+      .toEqual([...createdIds].sort());
   });
 
   it('requires explicit task capabilities at the route boundary', async () => {

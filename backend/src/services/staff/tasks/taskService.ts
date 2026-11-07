@@ -4,13 +4,11 @@ import { audit } from '../../shared/auditService';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
-import { assertCanAssignTaskTo, taskReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
+import { assertCanAssignTaskTo, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import {
   attachTaskDetails,
   loadTaskLoggedHours,
   getTaskRows,
-  taskRowColumns,
-  taskRowFrom,
   type TaskRow,
 } from './taskRowQuery';
 import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
@@ -24,12 +22,7 @@ import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData'
  */
 export async function getTask(id: string, actor: AccessTokenPayload, query = sql) {
   // 1. Load the accessible task.
-  const rows = await query<TaskRow[]>`
-    SELECT ${taskRowColumns}
-    ${taskRowFrom}
-    WHERE task.id = ${id}
-      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-  `;
+  const rows = await getTaskRows(actor, query`task.id = ${id}`, query);
   if (!rows.length) throw new NotFoundError('Task not found');
 
   // 2. Include logged hours and access.
@@ -45,11 +38,10 @@ export async function getTask(id: string, actor: AccessTokenPayload, query = sql
 export async function getOpenTasks(actor: AccessTokenPayload, query: OpenTaskQuery) {
   // 1. Load accessible open tasks.
   const rows = await sql<TaskRow[]>`
-    SELECT ${taskRowColumns}
-    ${taskRowFrom}
-    WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
-      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
+    ${getTaskRows(actor, sql`
+      ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
       AND task.state = 'open'
+    `)}
     ORDER BY task.start_date, task.due_date, task.title, task.id
   `;
 
@@ -89,7 +81,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
       RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task creation returned no record');
-    const [created] = await getTaskRows(trx`task.id = ${rows[0].id}`, trx);
+    const [created] = await getTaskRows(actor, trx`task.id = ${rows[0].id}`, trx);
     if (!created) throw new InternalServerError('Saved task record is unavailable');
 
     // 4. Record the change.
@@ -121,10 +113,10 @@ export async function updateTaskPlacement(
 
     // 2. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -152,7 +144,7 @@ export async function updateTaskPlacement(
       RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    const [updated] = await getTaskRows(trx`task.id = ${id}`, trx);
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 5. Record the change.
@@ -178,10 +170,10 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
 
     // 1. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -213,7 +205,7 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
       RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    const [updated] = await getTaskRows(trx`task.id = ${id}`, trx);
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 4. Record the change.
@@ -239,10 +231,10 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
 
     // 1. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -297,10 +289,10 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
 
     // 3. Lock the task and check whether it can be edited.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -324,7 +316,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
       RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    const [updated] = await getTaskRows(trx`task.id = ${id}`, trx);
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 5. Record the change.
