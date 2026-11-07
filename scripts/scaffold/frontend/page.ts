@@ -41,7 +41,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // TODO: Pass loaded options to preferences and page children.
 
       // TODO: Saved preferences, when this page has durable controls.
-      // Use a page hook backed by usePreferences; follow docs/frontend/architecture/preferences.md.
+      // Use a page hook backed by usePreferences; follow docs/frontend/03-preferences.md.
       // Return grouped search, filters, and table controls, with ready/error at the top level.
       // Build filters with createPreferenceFilters; definition IDs match filters.values keys.
       // Pass the hook result as controls={controls} to PageContainer; it gates controls and content.

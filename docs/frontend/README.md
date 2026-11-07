@@ -1,22 +1,23 @@
-# Frontend
+# Introduction
 
-The frontend uses React, TypeScript, and Vite.
+The frontend uses React, TypeScript, and Vite. Read the guides in the order below
+for a new feature, or go directly to the guide matching your task.
 
 ## Find the Right Guide
 
 | What are you changing? | Guide |
 |---|---|
-| Where code should live | [Ownership](architecture/ownership.md) |
-| State, API calls, queries, or mutations | [State and Data](architecture/state-and-data.md) |
-| Data preferences, table layout preferences, and field rules | [Preferences](architecture/preferences.md) |
-| Generate implementation and colocated test outlines | [Scaffolding](architecture/scaffolding.md) |
+| File placement, component boundaries, hooks, and lifecycles | [Ownership](01-ownership.md) |
+| Temporary state, queries, APIs, mutations, and render performance | [State and Data](02-state-and-data.md) |
+| Saved controls, field rules, restoration, and table layout | [Preferences](03-preferences.md) |
+| Generate implementation and colocated test outlines | [Scaffolding](04-scaffolding.md) |
 | Test ownership and suite organization | [Testing](../workflows/delivery/testing.md#test-ownership) |
 
 ## Find a Component
 
-Read the component's types, function documentation, and colocated tests for its
-inputs and behavior. Keep those contracts with their source owners; use the
-[design recipe](../workflows/documentation.md) when changing them.
+1. Find the source owner below.
+2. Read its types, function documentation, and colocated tests for inputs and behavior.
+3. Update contracts at that source owner using the [design recipe](../workflows/documentation.md).
 
 | Surface | Source owner |
 |---|---|

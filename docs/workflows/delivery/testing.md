@@ -112,7 +112,7 @@ largest supported viewport; functional assertions alone do not establish them.
 
 ## Scaffold Implementation and Tests Together
 
-Use [Frontend Scaffolding](../../frontend/architecture/scaffolding.md) for commands
+Use [Frontend Scaffolding](../../frontend/04-scaffolding.md) for commands
 and test outlines.
 
 ## Browser Component Tests
