@@ -326,6 +326,7 @@ export interface TimeEntries {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
+  date: Timestamp;
   hours: Numeric;
   id: Generated<string>;
   note: string;
@@ -335,7 +336,6 @@ export interface TimeEntries {
   task_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
-  work_date: Timestamp;
 }
 
 export interface UserAuthCodes {

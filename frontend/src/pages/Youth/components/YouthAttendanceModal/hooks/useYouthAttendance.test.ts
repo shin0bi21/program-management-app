@@ -13,7 +13,7 @@ vi.mock('../youthAttendance.api', () => ({
 }));
 
 const attendance: YouthProgramCycleAttendance = {
-  programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycleName: 'ProgramCycle', programName: 'Program', enrollmentRequired: true },
+  programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycle: 'ProgramCycle', program: 'Program', enrollmentRequired: true },
   sessions: [{
     id: 'session-1',
     sessionType: 'Regular',

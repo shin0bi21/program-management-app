@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { sessionStore } from './sessionStore';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
@@ -74,39 +76,42 @@ vi.mock('../../../common/features/Preferences/preferences.api', () => ({
 }));
 
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
-  default: ({
+  default: function SessionCalendarStub({
     onSessionSelect,
-    onSessionsLoaded,
     onSessionMove,
     selectedProgramId,
     onAddSession,
     programs,
     onProgramSelect,
     filters,
-  }: ComponentProps<typeof SessionCalendar>) => (
-    <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
-      <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
-      <button type="button" onClick={() => onSessionsLoaded?.([])}>Evict buffered sessions</button>
-      <button type="button" onClick={() => onProgramSelect?.(programs[0], 'item')}>Item owning row</button>
-      {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
-      <button
-        type="button"
-        onClick={() =>
-          onSessionSelect(makeProgramSession({
-            sessionType: 'Regular',
-            theme: 'Communication',
-            programId: 'program-1',
-            programName: 'Soft Skills',
-            startsAt: '2026-07-28T21:00:00.000Z',
-            endsAt: '2026-07-28T23:30:00.000Z',
-            description: 'Planned communication exercise',
-          }))
-        }
-      >
-        Calendar session
-      </button>
-    </div>
-  ),
+  }: ComponentProps<typeof SessionCalendar>) {
+    const client = useQueryClient();
+    return (
+      <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
+        <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
+        <button type="button" onClick={() => onProgramSelect?.(programs[0], 'item')}>Item owning row</button>
+        {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
+        <button
+          type="button"
+          onClick={() => {
+            const session = makeProgramSession({
+              sessionType: 'Regular',
+              theme: 'Communication',
+              programId: 'program-1',
+              program: 'Soft Skills',
+              startsAt: '2026-07-28T21:00:00.000Z',
+              endsAt: '2026-07-28T23:30:00.000Z',
+              description: 'Planned communication exercise',
+            });
+            sessionStore.write(client, session);
+            onSessionSelect(session);
+          }}
+        >
+          Calendar session
+        </button>
+      </div>
+    );
+  },
 }));
 
 describe('Sessions', () => {
@@ -143,9 +148,9 @@ describe('Sessions', () => {
     getProgramCycleAssignments.mockResolvedValue([
       {
         cycleId: 'cycle-1',
-        cycleName: 'Summer 2026',
+        cycle: 'Summer 2026',
         programId: 'program-1',
-        programName: 'Soft Skills',
+        program: 'Soft Skills',
 
         enrollmentRequired: true,
         startsOn: '2020-01-01',
@@ -164,7 +169,7 @@ describe('Sessions', () => {
       sessionType: 'Regular',
       theme: 'Communication',
       programId: 'program-1',
-      programName: 'Soft Skills',
+      program: 'Soft Skills',
       startsAt: '2026-07-28T21:00:00.000Z',
       endsAt: '2026-07-28T23:30:00.000Z',
       description: 'Planned communication exercise',
@@ -236,7 +241,7 @@ describe('Sessions', () => {
       sessionType: 'Field Trip',
       theme: 'Friday Drop In',
       programId: 'drop-in',
-      programName: 'Drop In',
+      program: 'Drop In',
       enrollmentRequired: false,
       startsAt: '2026-07-31T21:00:00.000Z',
       endsAt: '2026-07-31T23:00:00.000Z',
@@ -337,9 +342,9 @@ describe('Sessions', () => {
   });
 
   // Selection and coordination.
-  it('removes a selected session and clears its dashboard without refetching the table', async () => {
+  it('keeps selected-row actions open during shared record refresh and clears the dashboard after deletion', async () => {
     const user = userEvent.setup();
-    render(
+    const { queryClient } = render(
       <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
         <Sessions />
         <LocationProbe />
@@ -351,6 +356,10 @@ describe('Sessions', () => {
     const initialRequestCount = getSessions.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
+    act(() => sessionStore.write(queryClient, {
+      ...sessionStore.get(queryClient, 'session-1')!, program: 'Refreshed program',
+    }));
+    await screen.findByRole('cell', { name: 'Refreshed program' });
     await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
@@ -420,7 +429,7 @@ describe('Sessions', () => {
   it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     getProgramCycleAssignments.mockResolvedValue([{
-      programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
+      programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
       state: 'completed', enrollmentRequired: true, enrolledCount: 0, averageAttendance: null,
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
@@ -443,7 +452,7 @@ describe('Sessions', () => {
     expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
   });
 
-  it('keeps the Session dashboard after buffer eviction and program row selection', async () => {
+  it('preserves item selection through its owning row and clears it on direct program selection', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
@@ -451,12 +460,6 @@ describe('Sessions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Item owning row' }));
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Evict buffered sessions' }));
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getAllByText('No session selected.')).toHaveLength(3);
-    expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();

@@ -51,7 +51,7 @@ export default function useLeadTable({
       accessorFn: (lead: Lead) => title(lead.submittedByRole),
     }] : []),
     { id: 'school', header: 'School', accessorFn: lead => lead.school },
-    { id: 'program', header: 'Eligible Program', accessorFn: lead => lead.recommendedProgramName ?? '—' },
+    { id: 'program', header: 'Eligible Program', accessorFn: lead => lead.recommendedProgram ?? '—' },
     {
       id: 'status',
       header: 'Status',

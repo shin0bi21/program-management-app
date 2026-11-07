@@ -1,5 +1,4 @@
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
-import { useEffect } from 'react';
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
@@ -23,18 +22,19 @@ interface SessionTableProps {
   onSessionSelect: (session: ProgramSession) => void;
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onSelectedSessionResolved: (session: ProgramSession | null) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays paginated shared session records and reports view failures.
+ * @example <SessionTable filters={filters} {...viewProps} />
+ */
 export default function SessionTable({
   queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths, selectedSessionId,
-  onSessionSelect, onSortingChange, onColumnWidthsChange, onSelectedSessionResolved, onMessageChange,
+  onSessionSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: SessionTableProps) {
   const query = useSessionTableData(queryKey, filters, sorting, true);
-  const selectedSession = query.sessions.find(session => session.id === selectedSessionId) ?? null;
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
-  useEffect(() => onSelectedSessionResolved(selectedSession), [onSelectedSessionResolved, selectedSession]);
   const hasFilters = Boolean(filters.search)
     || Boolean(filters.cycleIds?.length)
     || Boolean(filters.programIds?.length)

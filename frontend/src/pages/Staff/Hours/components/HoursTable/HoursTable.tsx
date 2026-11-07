@@ -2,25 +2,29 @@ import tableRefreshMessage from '../../../../../common/components/Table/tableRef
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { HoursFilters, HoursTableRow } from '../../types';
+import type { HoursFilters, HoursItem } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { HOURS_TABLE_KEYS, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';
 
 interface HoursTableProps {
   queryKey: readonly unknown[];
-  columns: TableColumnDef<HoursTableRow>[];
+  columns: TableColumnDef<HoursItem>[];
   hiddenColumnKeys: string[];
   filters: HoursFilters;
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   selectedRowId: string | null;
-  onRowSelect: (row: HoursTableRow) => void;
+  onRowSelect: (row: HoursItem) => void;
   onSortingChange: (sorting: ListSort<HoursSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays filtered Hours records resolved from their shared owner.
+ * @example <HoursTable filters={filters} {...tableProps} />
+ */
 export default function HoursTable({
   queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,

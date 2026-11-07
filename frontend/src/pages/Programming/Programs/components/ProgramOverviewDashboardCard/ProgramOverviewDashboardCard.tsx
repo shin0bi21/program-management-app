@@ -29,9 +29,9 @@ export default function ProgramOverviewDashboardCard({
 
   const assignment = program && !error && !loading ? currentAssignment : undefined;
   const enrolled = (assignment?.enrollmentRequired ?? program?.enrollmentRequired) !== false;
-  const cycleName = assignment?.cycleName;
+  const cycle = assignment?.cycle;
   const title = program
-    ? `${program.name}${cycleName ? ` - ${cycleName}` : ''} Overview`
+    ? `${program.name}${cycle ? ` - ${cycle}` : ''} Overview`
     : 'Program Overview';
   const metricsLoading = Boolean(program) && loading;
 
@@ -49,7 +49,7 @@ export default function ProgramOverviewDashboardCard({
       >Attendance Report</Button>}
     </div>}
   >
-    <section aria-label={assignment ? assignment.cycleName : 'Program metrics'} className="program-dashboard__cohort">
+    <section aria-label={assignment ? assignment.cycle : 'Program metrics'} className="program-dashboard__cohort">
       <dl className="program-dashboard__metrics" aria-busy={metricsLoading}>
         <div><dt>{enrolled ? 'Enrollment' : 'Youth attended'}</dt><dd>{metricsLoading
           ? <DashboardCardLoading label="Loading program rosters…" />

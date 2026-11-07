@@ -62,13 +62,13 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     : null,
 }));
 vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
-  default: ({ programCycle }: { programCycle: { cycleName: string } | null }) => programCycle
-    ? <div data-testid="youth-attendance-modal">{programCycle.cycleName}</div>
+  default: ({ programCycle }: { programCycle: { cycle: string } | null }) => programCycle
+    ? <div data-testid="youth-attendance-modal">{programCycle.cycle}</div>
     : null,
 }));
 vi.mock('../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ programCycle, youthId }: { programCycle: { cycleName: string }; youthId?: string }) => (
-    <div data-testid="youth-report-modal">{programCycle.cycleName} · {youthId}</div>
+  default: ({ programCycle, youthId }: { programCycle: { cycle: string }; youthId?: string }) => (
+    <div data-testid="youth-report-modal">{programCycle.cycle} · {youthId}</div>
   ),
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
@@ -178,9 +178,9 @@ describe('Youth', () => {
         lastAttendedOn: '2026-07-21',
         programCycles: [{
           cycleId: 'cycle-1',
-          cycleName: 'Summer 2026',
+          cycle: 'Summer 2026',
           programId: 'program-1',
-          programName: 'Soft Skills',
+          program: 'Soft Skills',
           enrollmentRequired: true,
           startsOn: '2026-06-30',
           endsOn: '2999-12-31',
@@ -246,7 +246,7 @@ describe('Youth', () => {
   it('opens the programCycle attendance report filtered to the selected youth', async () => {
     const profile = makeYouthProfile({
       programCycles: [{
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',
@@ -286,7 +286,7 @@ describe('Youth', () => {
   it('opens youth-centric attendance management from a programCycle summary', async () => {
     const profile = makeYouthProfile({
       programCycles: [{
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills',
+        cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills',
         enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
         enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 2, lateCount: 0,
         absentCount: 0, lastAttendedOn: '2026-07-21',

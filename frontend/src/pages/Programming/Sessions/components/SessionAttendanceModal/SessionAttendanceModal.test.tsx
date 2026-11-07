@@ -63,7 +63,7 @@ describe('SessionAttendanceModal', () => {
     api.setSessionAttendance.mockReturnValue(new Promise(resolve => {
       finishSave = resolve;
     }));
-    const openSession = { ...session, enrollmentRequired: false, programName: 'Drop In' };
+    const openSession = { ...session, enrollmentRequired: false, program: 'Drop In' };
     const onSaved = vi.fn();
 
     render(

@@ -115,9 +115,9 @@ describe('Programs API', () => {
       expect(programCycles.status).toBe(200);
       expect(youthRows.status).toBe(200);
       expect(saved.body.updatedProgramCycles).toEqual(programCycles.body);
-      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, cycleId, programName: name, minAge: 13, maxAge: 18 });
+      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, cycleId, program: name, minAge: 13, maxAge: 18 });
       expect(saved.body.updatedYouth).toEqual(youthRows.body.rows);
-      expect(saved.body.updatedYouth[0].programCycles).toEqual(expect.arrayContaining([expect.objectContaining({ programId: program.id, cycleId, programName: name })]));
+      expect(saved.body.updatedYouth[0].programCycles).toEqual(expect.arrayContaining([expect.objectContaining({ programId: program.id, cycleId, program: name })]));
       expect(saved.body.removedProgramCycles).toEqual([]);
       expect(saved.body.createdProgramCycles).toEqual([]);
 

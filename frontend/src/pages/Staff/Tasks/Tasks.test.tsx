@@ -165,7 +165,7 @@ describe('Tasks', () => {
       id: 'task-2',
       title: 'Complete administration',
       programId: null,
-      programName: null,
+      program: null,
       assignee: { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' },
       writable: false,
     };
@@ -319,8 +319,10 @@ describe('Tasks', () => {
     renderTasks();
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = new Date('2026-08-10T12:00:00');
-    const end = new Date('2026-08-12T12:00:00');
+    const start = new Date(`${today}T12:00:00`);
+    const end = new Date(`${today}T12:00:00`);
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(start, 3)));
+    await waitFor(() => expect(calendarTestState.props!.items['staff-1']).toEqual([task]));
     const row: TaskResource = {
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
     };
@@ -425,11 +427,11 @@ describe('Tasks', () => {
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
-    const input = { source: 'task' as const, staffId: task.assignee.id, taskId: task.id, workDate: today, hours: 1, note: 'Done', completeTask: true };
+    const input = { source: 'task' as const, staffId: task.assignee.id, taskId: task.id, date: today, hours: 1, note: 'Done', completeTask: true };
     await act(async () => hoursModal.props!.onAdd(input));
 
     expect(setHours).toHaveBeenCalledWith(input);
-    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument());
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
     expect(hoursModal.props!.initialTask).toEqual(completedTask);
 

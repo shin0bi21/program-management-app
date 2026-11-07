@@ -128,25 +128,25 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('reserves global cycle management for admins', async () => {
-    const cycleName = `Admin Cycle ${Date.now()}`;
+    const cycle = `Admin Cycle ${Date.now()}`;
     const denied = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: cycleName, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycle, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
     expect(denied.status).toBe(403);
 
     const created = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: cycleName, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycle, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
     expect(created.status).toBe(201);
 
     const updated = await request(app)
       .put(`/api/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: `${cycleName} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
+      .send({ name: `${cycle} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
     expect(updated.status).toBe(200);
-    expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycleName} Updated` }));
+    expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycle} Updated` }));
 
     const deniedDelete = await request(app)
       .delete(`/api/cycles/${created.body.cycle.id}`)
@@ -481,7 +481,7 @@ describe('Program cycle sessions and attendance API', () => {
         details: 'Updated details.',
         sessionId,
         programId, cycleId: mainCycleId,
-        programName: 'Soft Skills',
+        program: 'Soft Skills',
         youth: [expect.objectContaining({ youthId: secondYouthId })],
       }),
     ]);
@@ -679,7 +679,7 @@ describe('Program cycle sessions and attendance API', () => {
     expect(profile.body.programCycles).toEqual(expect.arrayContaining([
       expect.objectContaining({
         programId: openProgramId, cycleId: mainCycleId,
-        programName: 'Drop In',
+        program: 'Drop In',
         enrollmentRequired: false,
         enrolledOn: null,
         presentCount: 1,
@@ -709,7 +709,7 @@ describe('Program cycle sessions and attendance API', () => {
 
     expect(saved.status).toBe(200);
     expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId });
-    expect(saved.body.session.cycleName).toEqual(expect.any(String));
+    expect(saved.body.session.cycle).toEqual(expect.any(String));
     expect(saved.body.updatedProgramCycle).toMatchObject({ programId, cycleId: mainCycleId, averageAttendance: 100 });
     expect(saved.body.updatedYouth).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: youthId }), expect.objectContaining({ id: secondYouthId }),
@@ -1009,7 +1009,7 @@ describe('Program cycle sessions and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body.programCycle).toEqual(expect.objectContaining({ programId, cycleId: mainCycleId, cycleName: expect.any(String) }));
+    expect(response.body.programCycle).toEqual(expect.objectContaining({ programId, cycleId: mainCycleId, cycle: expect.any(String) }));
     expect(response.body.youth).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: youthId,

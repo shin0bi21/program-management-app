@@ -37,13 +37,13 @@ export function buildHoursFilters(filterValues: Pick<HoursTableQuery, 'staffIds'
     filters.push(programFilter);
   }
 
-  // 3. Filter by the entry's task, session, or other source.
+  // 3. Filter by the entry's task, session, or regular source.
   if (filterValues.types.length) {
     const entryType = sql`
       CASE
         WHEN entry.task_id IS NOT NULL THEN 'task'
         WHEN entry.session_id IS NOT NULL THEN 'session'
-        ELSE 'other'
+        ELSE 'regular'
       END
     `;
     filters.push(sql`${entryType} = ANY(${sql.array(filterValues.types)}::text[])`);

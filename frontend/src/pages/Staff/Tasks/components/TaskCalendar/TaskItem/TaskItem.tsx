@@ -23,7 +23,7 @@ export default function TaskItem<TRow, TItemData>({ calendar, task, selected = f
       </span>
     )}
     details={[
-      { label: 'Program', value: task.programName ?? '—' },
+      { label: 'Program', value: task.program ?? '—' },
       { label: 'Category', value: task.categoryLabel },
       { label: 'Start', value: task.startDate, sectionStart: true },
       { label: 'End', value: task.dueDate },

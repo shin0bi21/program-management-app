@@ -10,10 +10,10 @@ export const HOURS_CATEGORY_OPTIONS = [
   { value: 'other', label: 'Other' },
 ] as const satisfies ReadonlyArray<{ value: HoursCategory; label: string }>;
 
-export const HOURS_ENTRY_TYPE_OPTIONS = [
+export const HOURS_ITEM_TYPE_OPTIONS = [
   { value: 'task', label: 'Task' },
   { value: 'session', label: 'Session' },
-  { value: 'other', label: 'Regular' },
+  { value: 'regular', label: 'Regular' },
 ] as const;
 
 const categoryLabels = new Map<HoursCategory, string>(

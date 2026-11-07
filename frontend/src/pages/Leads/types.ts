@@ -16,7 +16,7 @@ export interface Lead {
   age: number | null;
   school: string;
   recommendedProgramId: string | null;
-  recommendedProgramName: string | null;
+  recommendedProgram: string | null;
   contactPhoneNumber: string;
   contactRelationship: LeadRelationship;
   discoverySource: DiscoverySource;

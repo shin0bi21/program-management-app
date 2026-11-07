@@ -17,8 +17,8 @@ export interface YouthProgramCycleAttendance {
   programCycle: {
     programId: string;
     cycleId: string;
-    cycleName: string;
-    programName: string;
+    cycle: string;
+    program: string;
     enrollmentRequired: boolean;
   };
   sessions: YouthAttendanceSession[];

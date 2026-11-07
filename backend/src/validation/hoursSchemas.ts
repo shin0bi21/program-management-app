@@ -26,7 +26,7 @@ const hoursFilterFields = {
   staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
   categories: commaSeparated(hoursCategorySchema),
   programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
-  types: commaSeparated(z.enum(['task', 'session', 'other'])),
+  types: commaSeparated(z.enum(['task', 'session', 'regular'])),
   cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
   search: z.string().trim().max(120).optional().default(''),
 };
@@ -63,7 +63,7 @@ export const hoursTableQuerySchema = z.object({
 export const hoursSessionQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
-    workDate: dateSchema,
+    date: dateSchema,
   }),
 });
 
@@ -80,7 +80,7 @@ const sharedHoursFields = {
   note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
 };
 
-const datedHoursFields = { ...sharedHoursFields, workDate: dateSchema };
+const datedHoursFields = { ...sharedHoursFields, date: dateSchema };
 
 export const setHoursSchema = z.object({
   body: z.discriminatedUnion('source', [
@@ -105,7 +105,7 @@ export const setHoursSchema = z.object({
 });
 
 export const updateHoursPlacementSchema = z.object({
-  body: z.object({ workDate: dateSchema }),
+  body: z.object({ date: dateSchema }),
 });
 
 export type HoursCalendarQuery = z.infer<typeof hoursCalendarQuerySchema.shape.query>;

@@ -10,7 +10,7 @@ beforeEach(() => vi.clearAllMocks());
 const row: Lead = {
   id: 'lead-1', origin: 'internal', submittedByRole: 'staff', convertedYouthId: null,
   youthFirstName: 'Avery', youthLastName: 'Youth', dateOfBirth: null, age: null, school: 'Central',
-  recommendedProgramId: 'program-1', recommendedProgramName: 'Skills', contactPhoneNumber: '4165550100',
+  recommendedProgramId: 'program-1', recommendedProgram: 'Skills', contactPhoneNumber: '4165550100',
   contactRelationship: 'guardian', discoverySource: 'school', notes: null, status: 'new',
   statusUpdatedAt: '2026-01-01', createdAt: '2026-01-01',
 };
@@ -19,7 +19,7 @@ const sortValues: Array<[LeadSortKey, Partial<Lead>, string | Date]> = [
   ['firstName', { youthFirstName: 'Other' }, 'other'],
   ['lastName', { youthLastName: 'Other' }, 'other'],
   ['school', { school: 'Other' }, 'other'],
-  ['program', { recommendedProgramName: 'Other' }, 'other'],
+  ['program', { recommendedProgram: 'Other' }, 'other'],
   ['status', { status: 'closed' }, 'closed'],
   ['created', { createdAt: '2027-01-01' }, new Date('2027-01-01')],
 ];

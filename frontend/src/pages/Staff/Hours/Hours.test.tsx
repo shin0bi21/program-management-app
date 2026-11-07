@@ -16,7 +16,7 @@ import Hours from './Hours';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 import { getUser } from '../../../auth/storage';
-import type { HoursTableRow } from './types';
+import type { HoursItem } from './types';
 import { makeHoursItem } from '../../../tests/factories/hours';
 
 const preferenceHook: { preference: StoredHoursPreferences | null } = { preference: null };
@@ -51,7 +51,7 @@ const auth: AuthContextValue = {
 
 const hoursReferenceChoices = {
   categories: [{ value: 'meeting' as const, label: 'Meeting' }],
-  types: [{ value: 'other' as const, label: 'Regular' }],
+  types: [{ value: 'regular' as const, label: 'Regular' }],
 };
 
 function renderHours(authValue: AuthContextValue = auth) {
@@ -60,16 +60,11 @@ function renderHours(authValue: AuthContextValue = auth) {
   );
 }
 
-function tableRow(
-  itemOverrides: Partial<HoursTableRow['item']> = {},
-  rowOverrides: Partial<Omit<HoursTableRow, 'id' | 'item'>> = {},
-): HoursTableRow {
-  const item = makeHoursItem({ id: 'entry-1', ...itemOverrides });
-
-  return {
-    id: item.id, resourceId: 'staff-1', date: '2026-08-09', item,
-    staffFirstName: 'Zoe', staffLastName: 'Wilson', staffName: 'Zoe Wilson', ...rowOverrides,
-  };
+function hoursItem(
+  overrides: Partial<HoursItem> = {},
+  placement: Partial<HoursItem> = {},
+): HoursItem {
+  return makeHoursItem({ id: 'entry-1', date: '2026-08-09', ...overrides, ...placement });
 }
 
 function dashboardOverview(totalHours: number, label = 'Meeting') {
@@ -83,15 +78,18 @@ function dashboardOverview(totalHours: number, label = 'Meeting') {
 }
 
 function mockWritableTableEntry() {
-    preferenceHook.preference = {
-      view: 'table',
-      staffIds: [],
-      programIds: [],
-      categories: [],
-      cycleIds: ['cycle-1'],
-    };
-    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [tableRow({ hours: 2, note: 'Planning meeting' })], nextCursor: null });
-  }
+  preferenceHook.preference = {
+    view: 'table',
+    staffIds: [],
+    programIds: [],
+    categories: [],
+    cycleIds: ['cycle-1'],
+  };
+  vi.mocked(getHoursTableData).mockResolvedValue({
+    rows: [hoursItem({ hours: 2, note: 'Planning meeting' })],
+    nextCursor: null,
+  });
+}
 
 describe('Hours', () => {
   beforeEach(() => {
@@ -133,7 +131,7 @@ describe('Hours', () => {
         if (options?.top !== undefined) this.scrollTop = options.top;
       },
     });
-    vi.mocked(getHoursCalendarData).mockResolvedValue({});
+    vi.mocked(getHoursCalendarData).mockResolvedValue([]);
     vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
     vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
@@ -185,12 +183,12 @@ describe('Hours', () => {
   it('shows a readable coworker row without exposing hours write controls', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-1'] };
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [
-      tableRow({ id: 'entry-own', note: 'Own meeting' }),
-      tableRow({
+      hoursItem({ id: 'entry-own', note: 'Own meeting' }),
+      hoursItem({
         id: 'entry-coworker', category: 'administration', categoryLabel: 'Administration',
         hours: 4, note: 'Coworker administration',
       }, {
-        resourceId: 'staff-2', staffFirstName: 'Alex', staffLastName: 'Morgan', staffName: 'Alex Morgan',
+        staffId: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getStaffReferences).mockResolvedValue([
@@ -234,14 +232,13 @@ describe('Hours', () => {
 
   // Controls and views.
   it('retains the staff overview across view changes and filtered table results', async () => {
-    vi.mocked(getHoursCalendarData).mockResolvedValue({ 'staff-1': { '2026-08-09': [{
-        id: 'entry-list', programId: 'program-1', programName: 'Soft Skills',
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
+    vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ date: '2026-08-09',
+        id: 'entry-list', programId: 'program-1', program: 'Soft Skills',
+        cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
         categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
-      }] },
-    });
-    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [tableRow({
-      id: 'entry-list', programId: 'program-1', programName: 'Soft Skills', category: 'program_delivery',
+      })]);
+    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
+      id: 'entry-list', programId: 'program-1', program: 'Soft Skills', category: 'program_delivery',
       categoryLabel: 'Program Delivery', hours: 2, note: 'Youth workshop',
     })], nextCursor: null });
     vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
@@ -327,8 +324,8 @@ describe('Hours', () => {
   // Selection and coordination.
   it('renders both dashboard cards from the selected staff and cycle overview', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
-    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [tableRow({
-      id: 'fall-entry', cycleId: 'cycle-fall', cycleName: 'Fall 2026', category: 'outreach',
+    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
+      id: 'fall-entry', cycleId: 'cycle-fall', cycle: 'Fall 2026', category: 'outreach',
       categoryLabel: 'Outreach', hours: 4, note: 'Fall cycle work',
     }, { date: '2026-09-03' })], nextCursor: null });
     vi.mocked(getHoursDashboardData).mockResolvedValue({
@@ -360,27 +357,24 @@ describe('Hours', () => {
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
     auth.role = 'admin';
-    const workDate = dayKey(new Date());
-    vi.mocked(getHoursCalendarData).mockResolvedValue({
-        'staff-1': { [workDate]: [{
-          id: 'entry-zoe', programId: 'program-1', programName: 'Soft Skills',
-          cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'program_delivery',
+    const date = dayKey(new Date());
+    vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ staffId: 'staff-1', date: date,
+          id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
+          cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Zoe workshop',
-        }] },
-        'staff-2': { [workDate]: [{
-          id: 'entry-alex', programId: null, programName: null,
-          cycleId: 'cycle-1', cycleName: 'Summer 2026', category: 'meeting',
+        }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+          id: 'entry-alex', programId: null, program: null,
+          cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'meeting',
           categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 7, note: 'Alex planning meeting',
-        }] },
-    });
+        })]);
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [
-      tableRow({
-        id: 'entry-zoe', programId: 'program-1', programName: 'Soft Skills',
+      hoursItem({
+        id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
         category: 'program_delivery', categoryLabel: 'Program Delivery', hours: 2, note: 'Zoe workshop',
-      }, { date: workDate }),
-      tableRow({ id: 'entry-alex', hours: 7, note: 'Alex planning meeting' }, {
-        date: workDate, resourceId: 'staff-2',
-        staffFirstName: 'Alex', staffLastName: 'Morgan', staffName: 'Alex Morgan',
+      }, { date: date }),
+      hoursItem({ id: 'entry-alex', hours: 7, note: 'Alex planning meeting' }, {
+        date: date, staffId: 'staff-2',
+        firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
@@ -441,12 +435,12 @@ describe('Hours', () => {
     await screen.findAllByLabelText('Zoe Wilson');
 
     const cell = container.querySelector<HTMLElement>('[data-row-id="staff-1"][data-period]')!;
-    const workDate = cell.dataset.period;
+    const date = cell.dataset.period;
     fireEvent.click(cell);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-    expect(screen.getByLabelText('Date')).toHaveValue(workDate);
+    expect(screen.getByLabelText('Date')).toHaveValue(date);
   });
 
   it('keeps table Edit available when a background preference repair completes', async () => {

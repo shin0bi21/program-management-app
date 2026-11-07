@@ -60,14 +60,14 @@ export default function YouthAttendanceDashboardCard({
           {visibleProgramCycles.map(programCycle => (
             <div className="attendance-card__cohort" key={`${programCycle.programId}:${programCycle.cycleId}`}>
               <div className="attendance-card__cohort-header">
-                <strong>{programCycle.programName} · {programCycle.cycleName}</strong>
+                <strong>{programCycle.program} · {programCycle.cycle}</strong>
                 <div className="attendance-card__actions">
                   {canViewReport && onViewReport && (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="attendance-card__view"
-                      aria-label={`View attendance report for ${programCycle.programName} · ${programCycle.cycleName}`}
+                      aria-label={`View attendance report for ${programCycle.program} · ${programCycle.cycle}`}
                       disabled={!programCycle.enrollmentRequired}
                       title={!programCycle.enrollmentRequired ? undefined : 'View attendance report'}
                       onClick={() => onViewReport(programCycle)}
@@ -80,7 +80,7 @@ export default function YouthAttendanceDashboardCard({
                       size="sm"
                       variant="ghost"
                       className="attendance-card__manage"
-                      aria-label={`Manage attendance for ${programCycle.programName} · ${programCycle.cycleName}`}
+                      aria-label={`Manage attendance for ${programCycle.program} · ${programCycle.cycle}`}
                       title="Manage attendance"
                       onClick={() => onManage(programCycle)}
                     >

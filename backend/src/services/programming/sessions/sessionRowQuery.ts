@@ -14,10 +14,10 @@ export interface SessionRow {
   cycleId: string;
   sessionType: SessionType;
 
-  cycleName: string;
+  cycle: string;
 
   programId: string;
-  programName: string;
+  program: string;
   enrollmentRequired: boolean;
 
   state: 'upcoming' | 'completed' | 'cancelled';
@@ -44,10 +44,10 @@ export function getSessionRows(
       session.cycle_id,
       session.session_type,
 
-      cycle.name AS cycle_name,
+      cycle.name AS cycle,
 
       program.id AS program_id,
-      program.name AS program_name,
+      program.name AS program,
       program.enrollment_required,
 
       CASE

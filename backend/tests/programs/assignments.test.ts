@@ -230,7 +230,7 @@ describe('Program cycle assignments', () => {
       .send({ name: 'Updated canonical cycle', startsOn: '2026-01-02', endsOn: '2026-12-30', programIds: [programId] });
     expect(updated.status).toBe(200);
     expect(updated.body.updatedProgramCycles).toEqual([expect.objectContaining({
-      programId, cycleId: cycleIds[0], cycleName: 'Updated canonical cycle', startsOn: '2026-01-02',
+      programId, cycleId: cycleIds[0], cycle: 'Updated canonical cycle', startsOn: '2026-01-02',
     })]);
     expect(updated.body.updatedProgramCycles[0]).not.toHaveProperty('id');
     const youth = await request(app).get('/api/youth').query({ id: youthId })
@@ -244,7 +244,7 @@ describe('Program cycle assignments', () => {
       await sql`INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
         VALUES (${programId}, ${cycleIds[0]}, 'History', '2026-10-01T17:00:00Z', '2026-10-01T19:00:00Z')`;
     } else if (dependency === 'hours') {
-      await sql`INSERT INTO time_entries (staff_id, program_id, cycle_id, category, work_date, hours, note)
+      await sql`INSERT INTO time_entries (staff_id, program_id, cycle_id, category, date, hours, note)
         VALUES (${staffId}, ${programId}, ${cycleIds[0]}, 'planning_prep', '2026-10-01', 1, 'Assignment history')`;
     } else {
       await sql`INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on, withdrawn_on)

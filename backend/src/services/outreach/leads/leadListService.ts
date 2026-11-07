@@ -20,7 +20,7 @@ export function getLeads(filterValues: LeadQuery) {
     firstName: sql`LOWER("row".youth_first_name)`,
     lastName: sql`LOWER("row".youth_last_name)`,
     school: sql`LOWER("row".school)`,
-    program: sql`LOWER(COALESCE("row".recommended_program_name, ''))`,
+    program: sql`LOWER(COALESCE("row".recommended_program, ''))`,
     status: sql`"row".status::text`,
     created: sql`"row".created_at::text`,
   }[filterValues.sort]!;

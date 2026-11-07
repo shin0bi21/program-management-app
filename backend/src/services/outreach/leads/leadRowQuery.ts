@@ -8,7 +8,7 @@ export type LeadRow = DbRow<Omit<Leads,
   dateOfBirth: string | null;
   age: number | null;
   recommendedProgramId: string | null;
-  recommendedProgramName: string | null;
+  recommendedProgram: string | null;
 };
 
 const leadAge = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
@@ -22,7 +22,7 @@ export const recommendedProgramId = sql`(
   LIMIT 1
 )`;
 
-const recommendedProgramName = sql`(
+const recommendedProgram = sql`(
   SELECT program.name
   FROM programs program
   WHERE program.enrollment_required = TRUE
@@ -53,7 +53,7 @@ export const leadRowColumns = sql`
 
   ${leadAge} AS age,
   ${recommendedProgramId} AS recommended_program_id,
-  ${recommendedProgramName} AS recommended_program_name
+  ${recommendedProgram} AS recommended_program
 `;
 
 /**

@@ -26,7 +26,7 @@ const baseProps = {
     staffIds: ['staff-1'],
     categories: ['meeting' as const],
     programIds: ['program-1'],
-    types: ['other' as const],
+    types: ['regular' as const],
     cycleIds: ['cycle-1'],
     search: '',
   },

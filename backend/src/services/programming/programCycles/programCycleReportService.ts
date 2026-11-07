@@ -25,8 +25,8 @@ const emptyCounts = () => ({ present: 0, late: 0, absent: 0, excused: 0, unmarke
 
 export async function getProgramCycleYouthReport(programId: string, cycleId: string, actor: AccessTokenPayload, youthId?: string) {
   await assertCanAccessProgramCycle(actor, programId, cycleId);
-  const programCycles = await sql<{ programId: string; cycleId: string; cycleName: string; programName: string; enrollmentRequired: boolean }[]>`
-    SELECT programCycle.program_id, programCycle.cycle_id, cycle.name AS cycle_name, program.name AS program_name, program.enrollment_required
+  const programCycles = await sql<{ programId: string; cycleId: string; cycle: string; program: string; enrollmentRequired: boolean }[]>`
+    SELECT programCycle.program_id, programCycle.cycle_id, cycle.name AS cycle, program.name AS program, program.enrollment_required
     FROM program_cycle_assignments programCycle
     INNER JOIN program_cycles cycle ON cycle.id = programCycle.cycle_id
     INNER JOIN programs program ON program.id = programCycle.program_id

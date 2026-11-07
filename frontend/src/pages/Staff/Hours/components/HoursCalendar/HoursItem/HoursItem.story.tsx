@@ -1,8 +1,8 @@
+import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { useState } from 'react';
 import TimelineCalendar from '../../../../../../common/components/TimelineCalendar/TimelineCalendar';
-import type { RowItemData } from '../../../../../../common/components/TimelineCalendar/types';
-import type { HoursItem as HoursEntry } from '../../../types';
-import HoursItem from './HoursItem';
+import type { HoursItem } from '../../../types';
+import HoursCalendarItem from './HoursItem';
 
 interface StoryResource {
   id: string;
@@ -13,20 +13,20 @@ const resources: StoryResource[] = [
   { id: 'staff-1', name: 'Zoe Wilson' },
   { id: 'staff-2', name: 'Alex Morgan' },
 ];
-const firstItem: HoursEntry = {
+const firstItem: HoursItem = makeHoursItem({
   id: 'entry-1',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  program: 'Soft Skills',
   cycleId: 'cycle-1',
-  cycleName: 'Summer 2026',
+  cycle: 'Summer 2026',
   category: 'program_delivery',
   categoryLabel: 'Program Delivery',
   taskId: null,
   taskTitle: null, sessionId: null, sessionLabel: null,
   hours: 2,
   note: 'Workshop delivery',
-};
-const secondItem: HoursEntry = {
+});
+const secondItem: HoursItem = {
   ...firstItem,
   id: 'entry-2',
   category: 'meeting',
@@ -34,24 +34,20 @@ const secondItem: HoursEntry = {
   hours: 1,
   note: 'Planning meeting',
 };
-interface StoryHoursItem { date: string; item: HoursEntry }
-const items: RowItemData<StoryHoursItem> = {
-  'staff-1': [
-    { date: '2026-08-09', item: firstItem },
-    { date: '2026-08-10', item: secondItem },
-  ],
-  'staff-2': [{
+const items: HoursItem[] = [
+  { ...firstItem, date: '2026-08-09' },
+  { ...secondItem, date: '2026-08-10' },
+  {
+    ...firstItem,
+    id: 'entry-3',
+    staffId: 'staff-2',
     date: '2026-08-09',
-    item: {
-      ...firstItem,
-      id: 'entry-3',
-      category: 'administration',
-      categoryLabel: 'Administrative',
-      hours: 1.5,
-      note: 'Operations follow-up',
-    },
-  }],
-};
+    category: 'administration',
+    categoryLabel: 'Administrative',
+    hours: 1.5,
+    note: 'Operations follow-up',
+  },
+];
 
 export function InteractiveHoursItems() {
   const [actionRecord, setActionRecord] = useState('');
@@ -59,14 +55,17 @@ export function InteractiveHoursItems() {
   const [selectionCount, setSelectionCount] = useState(0);
   return (
     <div style={{ height: '420px', padding: '16px' }}>
-      <TimelineCalendar<StoryResource, StoryHoursItem>
+      <TimelineCalendar<StoryResource, HoursItem>
         rows={resources}
-        items={items}
+        items={{
+          'staff-1': items.filter(item => item.staffId === 'staff-1'),
+          'staff-2': items.filter(item => item.staffId === 'staff-2'),
+        }}
         getItemRange={data => ({ start: data.date, end: data.date })}
         initialDate={new Date(2026, 7, 9)}
         ariaLabel="Browser-tested hours calendar"
         getRowId={row => row.id}
-        getItemId={data => data.item.id}
+        getItemId={data => data.id}
         renderRow={({ row }) => row.name}
         selectedRowId={selectedResourceId}
         onRowSelect={row => {
@@ -74,11 +73,11 @@ export function InteractiveHoursItems() {
           setSelectionCount(count => count + 1);
         }}
         buildItem={({ data, calendar }) => (
-          <HoursItem
+          <HoursCalendarItem
             calendar={calendar}
-            item={data.item}
-            onEdit={() => setActionRecord(`edit:${data.item.id}`)}
-            onDelete={() => setActionRecord(`delete:${data.item.id}`)}
+            item={data}
+            onEdit={() => setActionRecord(`edit:${data.id}`)}
+            onDelete={() => setActionRecord(`delete:${data.id}`)}
           />
         )}
         getItemCapabilities={() => ({ draggable: true })}

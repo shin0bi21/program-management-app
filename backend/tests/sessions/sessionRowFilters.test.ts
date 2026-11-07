@@ -43,10 +43,10 @@ function sessionRows() {
       '00000000-0000-4000-8000-000000000001'::uuid AS cycle_id,
       fixture.session_type,
 
-      'Cycle'::text AS cycle_name,
+      'Cycle'::text AS cycle,
 
       '00000000-0000-4000-8000-000000000002'::uuid AS program_id,
-      'Program'::text AS program_name,
+      'Program'::text AS program,
       TRUE AS enrollment_required,
 
       'upcoming'::text AS state

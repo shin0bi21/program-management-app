@@ -19,8 +19,8 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
 
   // 2. Choose the session sort and delegate cursor execution and response shaping.
   const sortValue = {
-    program: sql`LOWER("row".program_name)`,
-    cycle: sql`LOWER("row".cycle_name)`,
+    program: sql`LOWER("row".program)`,
+    cycle: sql`LOWER("row".cycle)`,
     theme: sql`LOWER(COALESCE("row".theme, ''))`,
     date: sql`"row".starts_at::text`,
     time: sql`"row".starts_at::text`,

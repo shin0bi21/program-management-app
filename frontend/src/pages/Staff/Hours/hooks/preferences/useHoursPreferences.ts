@@ -15,7 +15,7 @@ import {
 import type {
   StaffResource,
   HoursCategory,
-  HoursEntryType,
+  HoursItemType,
   HoursProgram,
   HoursSortKey,
 } from '../../types';
@@ -30,7 +30,7 @@ interface HoursPreferences {
   staffIds: string[];
   programIds: string[];
   categories: HoursCategory[];
-  types: HoursEntryType[];
+  types: HoursItemType[];
   cycleIds: string[];
   sorting: ListSort<HoursSortKey>;
 }
@@ -56,7 +56,7 @@ export default function useHoursPreferences({
   programs: readonly HoursProgram[];
   cycles: readonly CycleReference[];
   categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
-  types: ReadonlyArray<{ value: HoursEntryType; label: string }>;
+  types: ReadonlyArray<{ value: HoursItemType; label: string }>;
   loadingDependencies: boolean;
   optionsError: boolean;
   resourcesError?: boolean;
@@ -81,8 +81,8 @@ export default function useHoursPreferences({
         [],
         canVerifyOptions ? categories.map(category => category.value) : null,
       ),
-      types: preferenceOptions<HoursEntryType>(
-        ['task', 'session', 'other'],
+      types: preferenceOptions<HoursItemType>(
+        ['task', 'session', 'regular'],
         [],
         canVerifyOptions ? types.map(type => type.value) : null,
       ),

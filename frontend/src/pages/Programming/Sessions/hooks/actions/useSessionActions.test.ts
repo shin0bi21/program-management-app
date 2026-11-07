@@ -1,3 +1,5 @@
+import { sessionStore, getSessionSortValue } from '../../sessionStore';
+import type { RecordListIndex } from '../../../../../query/createRecordStore';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,18 +8,19 @@ import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import type { ProgramCycleAssignment } from '../../../Programs/types';
 import { makeProgramSession } from '../../../../../tests/factories/session';
 import type { UpdatedSessionResult } from '../../sessions.api';
-import type { ProgramSession } from '../../types';
 import useSessionActions from './useSessionActions';
 
 const api = vi.hoisted(() => ({ deleteSession: vi.fn(), moveSessionDate: vi.fn() }));
 vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, moveSessionDate: api.moveSessionDate }));
 
-const tableKey = ['sessions', 'table', {}];
+const tableKey = ['sessions', 'table', {}, { key: 'date', direction: 'asc' }];
 
 function renderActions(session = makeProgramSession()) {
   const client = createTestQueryClient();
   const other = makeProgramSession({ id: 'other-session' });
-  client.setQueryData(tableKey, { pages: [{ rows: [session, other], nextCursor: 'next' }], pageParams: [null] });
+  sessionStore.write(client, session);
+  sessionStore.write(client, other);
+  client.setQueryData(tableKey, { pages: [{ rows: [session, other].map(session => ({ id: session.id, sortValue: getSessionSortValue(session, 'date') })), nextCursor: 'next' }], pageParams: [null] });
   const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
   const onSessionSynced = vi.fn();
   const onSessionRemoved = vi.fn();
@@ -35,7 +38,7 @@ describe('useSessionActions', () => {
   it('uses the complete move response, locks duplicate drops, and preserves unrelated rows and cursor state', async () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
-      ...session, theme: 'Changed after the client read', cycleName: 'Winter', cycleId: 'cycle-2',
+      ...session, theme: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
       startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z',
     });
     const { result, client, invalidate, calendar, other, onSessionSynced } = renderActions(session);
@@ -52,9 +55,10 @@ describe('useSessionActions', () => {
 
     await act(async () => { finish({ session: saved }); await first; });
 
-    const page = client.getQueryData<{ pages: { rows: ProgramSession[]; nextCursor: string }[] }>(tableKey)!.pages[0];
-    expect(page.rows[0]).toEqual(saved);
-    expect(page.rows[1]).toBe(other);
+    const page = client.getQueryData<{ pages: { rows: RecordListIndex[]; nextCursor: string }[] }>(tableKey)!.pages[0];
+    expect(sessionStore.get(client, saved.id)).toEqual(saved);
+    expect(page.rows[0]).toEqual({ id: saved.id, sortValue: getSessionSortValue(saved, 'date') });
+    expect(page.rows[1]).toEqual({ id: other.id, sortValue: getSessionSortValue(other, 'date') });
     expect(page.nextCursor).toBe('next');
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
@@ -85,7 +89,7 @@ describe('useSessionActions', () => {
     act(() => result.current.requestDelete(session));
     await act(() => result.current.confirmAction!.onConfirm());
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [other], nextCursor: 'next' }] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [{ id: other.id, sortValue: getSessionSortValue(other, 'date') }], nextCursor: 'next' }] });
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['programs', 'cycle-assignments'] });
@@ -97,8 +101,8 @@ describe('useSessionActions', () => {
     const session = makeProgramSession({ theme: 'Saved attendance session' });
     const youth = makeYouthProfile({ lastAttendedOn: '2026-08-10' });
     const cycle: ProgramCycleAssignment = {
-      programId: 'program-1', programName: 'Future Ready', enrollmentRequired: true,
-      minAge: null, maxAge: null, cycleId: 'cycle-1', cycleName: 'Fall',
+      programId: 'program-1', program: 'Future Ready', enrollmentRequired: true,
+      minAge: null, maxAge: null, cycleId: 'cycle-1', cycle: 'Fall',
       startsOn: '2026-08-01', endsOn: '2026-12-31', enrolledCount: 3, nextSessionAt: null,
       nextSessionId: null, averageAttendance: 66.7, attendanceAttendedCount: 2,
       attendanceRecordedCount: 3, uniqueAttendeeCount: 2, state: 'active',
@@ -109,7 +113,7 @@ describe('useSessionActions', () => {
 
     act(() => result.current.syncAttendance({ session, roster, updatedYouth: [youth], updatedProgramCycle: cycle }));
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, expect.anything()] }] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [{ id: session.id, sortValue: getSessionSortValue(session, 'date') }, expect.anything()] }] });
     expect(client.getQueryData(['sessions', session.id, 'roster'])).toBe(roster);
     expect(client.getQueryData(['youth', 'table', {}])).toMatchObject({ pages: [{ rows: [youth] }] });
     expect(client.getQueryData(['programs', 'cycle-assignments', {}])).toEqual([cycle]);
@@ -133,7 +137,7 @@ describe('useSessionActions', () => {
     api.deleteSession.mockRejectedValueOnce(new Error('Delete failed'));
 
     act(() => result.current.requestDelete(makeProgramSession()));
-    await expect(result.current.confirmAction!.onConfirm()).rejects.toThrow('Delete failed');
+    await act(async () => { await expect(result.current.confirmAction!.onConfirm()).rejects.toThrow('Delete failed'); });
 
     expect(onSessionRemoved).not.toHaveBeenCalled();
     expect(calendar.remove).not.toHaveBeenCalled();

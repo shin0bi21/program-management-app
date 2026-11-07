@@ -43,12 +43,15 @@ belong to the `task-preferences` key.
 
 Task-linked hours mutations include `updatedTasks` when the actor has
 `read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
-create/update/placement responses also return their canonical `tableRow`; deletion
-returns the affected task rows. Projections are read inside the write transaction,
+table, calendar, and create/update/placement responses share one complete entry
+shape; deletion returns the affected task rows. Calendar grouping belongs to the
+frontend. Projections are read inside the write transaction,
 so callers reconcile totals and completion without a second list request. See [setHours](../../backend/src/services/staff/hours/hoursService.ts).
 
 Table and calendar filters must agree without widening policy scope. Hours use
-inclusive work dates; Tasks use overlap of their inclusive start/due interval.
+inclusive dates stored in `time_entries.date`. Hours write commands, session
+options, and returned entries use the same `date` field; session-linked creation
+derives it from the session. Tasks use overlap of their inclusive start/due interval.
 Date filters apply before pagination, paired bounds are required, and multi-year
 ranges are supported. Hours collection `cycleIds` match selected membership;
 an empty selection is unrestricted, while its dashboard uses a single `cycleId`.

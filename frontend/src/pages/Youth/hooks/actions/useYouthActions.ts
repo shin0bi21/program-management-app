@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { YouthProfile } from '../../types';
 import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 
+import { sessionStore } from '../../../Programming/Sessions/sessionStore';
 import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
 
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
@@ -12,8 +13,13 @@ interface UseYouthActionsOptions {
   onYouthReconciled: (youth: YouthProfile) => void;
 }
 
+/**
+ * Reconciles saved youth and attendance projections with their feature-owned records.
+ * @example actions.reconcileAttendance(saved) // updates youth, shared sessions, and summaries
+ */
 export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
   const queryClient = useQueryClient();
+  const sessionScope = sessionStore.getScope(queryClient);
 
   const reconcileCreatedYouth = useCallback((_savedYouth: YouthProfile) => {
     void queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY });
@@ -25,17 +31,17 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
   }, [onYouthReconciled, queryClient]);
 
   const reconcileAttendance = useCallback((saved: YouthAttendanceResult) => {
+    if (!sessionStore.isScope(queryClient, sessionScope)) return;
     reconcileSavedYouth(saved.youth);
     for (const session of saved.updatedSessions ?? []) {
-      replaceInfiniteListRow(queryClient, ['sessions', 'table'], session);
+      sessionStore.write(queryClient, session);
       void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
     }
     if (saved.updatedProgramCycle) {
       updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
-    void queryClient.invalidateQueries({ queryKey: ['sessions', 'calendar'] });
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
-  }, [queryClient, reconcileSavedYouth]);
+  }, [queryClient, reconcileSavedYouth, sessionScope]);
 
   return { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance };
 }

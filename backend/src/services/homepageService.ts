@@ -30,7 +30,7 @@ type HomepageImageVariant = 'original' | 'thumbnail' | 'mobile' | 'display';
 
 interface HomepageProgramRow {
   programId: string;
-  programName: string;
+  program: string;
   programDescription: string | null;
   enrollmentRequired: boolean;
   minAge: number | null;
@@ -289,7 +289,7 @@ async function homepagePrograms() {
     )
     SELECT
       p.id AS program_id,
-      p.name AS program_name,
+      p.name AS program,
       p.description AS program_description,
       p.enrollment_required,
       p.min_age,
@@ -323,7 +323,7 @@ async function homepagePrograms() {
     if (!program) {
       program = {
         id: row.programId,
-        name: row.programName,
+        name: row.program,
         description: row.programDescription,
         enrollmentRequired: row.enrollmentRequired,
         minAge: row.minAge,

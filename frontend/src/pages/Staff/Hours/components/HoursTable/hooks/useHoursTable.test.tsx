@@ -4,21 +4,17 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { HoursTableRow } from '../../../types';
+import type { HoursItem } from '../../../types';
 import useHoursTable from './useHoursTable';
 
 const writable = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 };
-const row: HoursTableRow = {
-  id: 'entry-1', resourceId: 'staff-1', date: '2026-08-19',
-  staffFirstName: 'Zoe', staffLastName: 'Wilson', staffName: 'Zoe Wilson',
-  item: makeHoursItem({ id: 'entry-1', taskId: 'task-1', taskTitle: 'Prepare workshop' }),
-};
+const row = makeHoursItem({ id: 'entry-1', taskId: 'task-1', taskTitle: 'Prepare workshop' });
 
-function renderCell(column: ColumnDef<HoursTableRow>, item: HoursTableRow) {
+function renderCell(column: ColumnDef<HoursItem>, item: HoursItem) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: item } } as CellContext<HoursTableRow, unknown>);
+  return column.cell({ row: { original: item } } as CellContext<HoursItem, unknown>);
 }
 
 describe('useHoursTable', () => {
@@ -26,7 +22,7 @@ describe('useHoursTable', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: false,
       resourcesById: new Map(),
-      isEntryPending: () => false,
+      isItemPending: () => false,
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -40,7 +36,7 @@ describe('useHoursTable', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
       resourcesById: new Map([[writable.id, writable]]),
-      isEntryPending: () => false,
+      isItemPending: () => false,
       onEdit,
       onDelete,
     }));
@@ -60,7 +56,7 @@ describe('useHoursTable', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
       resourcesById: new Map([['staff-1', { ...writable, writable: false }]]),
-      isEntryPending: () => false,
+      isItemPending: () => false,
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));

@@ -140,7 +140,7 @@ export default function useSessionAttendanceModal({
   const submit = async () => {
     if (!session || submitDisabled || !tryLock()) return;
 
-    const sessionName = session.theme || `${session.programName} session`;
+    const sessionName = session.theme || `${session.program} session`;
     const attendance: SessionAttendanceRecord[] = [];
     if (isOpenRoster) {
       for (const youthId of selectedYouthIds) {

@@ -63,7 +63,7 @@ export async function getHoursDashboardData(actor: AccessTokenPayload, query: Ho
       FROM time_entries entry, current_period period
       WHERE entry.staff_id = ${query.staffId}
         AND (
-          entry.work_date BETWEEN period.period_start AND period.period_end
+          entry.date BETWEEN period.period_start AND period.period_end
           OR entry.cycle_id = (
             SELECT id
             FROM selected_cycle
@@ -80,7 +80,7 @@ export async function getHoursDashboardData(actor: AccessTokenPayload, query: Ho
         FROM time_entries entry
         WHERE entry.staff_id = ${query.staffId}
           AND entry.category = category.category
-          AND entry.work_date BETWEEN period.period_start AND period.period_end
+          AND entry.date BETWEEN period.period_start AND period.period_end
       ), 0)::text AS period_hours,
       COALESCE((
         SELECT SUM(entry.hours)

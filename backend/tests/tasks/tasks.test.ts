@@ -7,7 +7,7 @@ const app = createApp();
 
 describe('Tasks API', () => {
   let taskDate: string;
-  let loggedWorkDate: string;
+  let loggedDate: string;
   let adminId: string;
   let adminToken: string;
   let firstStaffId: string;
@@ -33,12 +33,12 @@ describe('Tasks API', () => {
 
   beforeAll(async () => {
     const stamp = Date.now();
-    const [dates] = await sql<Array<{ taskDate: string; loggedWorkDate: string }>>`
+    const [dates] = await sql<Array<{ taskDate: string; loggedDate: string }>>`
       SELECT
         (NOW() AT TIME ZONE 'America/Toronto')::date::text AS task_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS logged_work_date
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS logged_date
     `;
-    ({ taskDate, loggedWorkDate } = dates);
+    ({ taskDate, loggedDate } = dates);
     const admin = await seedTestUser({ email: `tasks-admin-${stamp}@test.local`, role: 'admin' });
     const firstStaff = await seedTestUser({
       email: `tasks-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
@@ -218,7 +218,7 @@ describe('Tasks API', () => {
         .set('Authorization', `Bearer ${firstStaffToken}`)
         .send({
           source: 'task', staffId: firstStaffId, taskId: created.body.id, completeTask: true,
-          workDate: taskDate, hours: 2, note: 'Finished task',
+          date: taskDate, hours: 2, note: 'Finished task',
         });
       expect(hours.status).toBe(201);
 
@@ -715,7 +715,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id,
-        workDate: loggedWorkDate, hours: 2, note: 'Worked outside the planned task dates',
+        date: loggedDate, hours: 2, note: 'Worked outside the planned task dates',
       });
     expect(linkedTime.status).toBe(201);
 
@@ -725,7 +725,7 @@ describe('Tasks API', () => {
     expect(taskWithHours.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: task.body.id, state: 'open', hoursLogged: 2,
-        loggedHoursByDate: [{ date: loggedWorkDate, hours: 2 }],
+        loggedHoursByDate: [{ date: loggedDate, hours: 2 }],
       }),
     ]));
 
@@ -785,7 +785,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: completedTask.body.id, completeTask: true,
-        workDate: taskDate, hours: 1, note: 'Completed locked task',
+        date: taskDate, hours: 1, note: 'Completed locked task',
       });
     expect(completedEntry.status).toBe(201);
 
@@ -870,7 +870,7 @@ describe('Tasks API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
-        workDate: taskDate, hours: 1, note: 'Completed audited task',
+        date: taskDate, hours: 1, note: 'Completed audited task',
       });
     expect(completedEntry.status).toBe(201);
     const completedTasks = await request(app)

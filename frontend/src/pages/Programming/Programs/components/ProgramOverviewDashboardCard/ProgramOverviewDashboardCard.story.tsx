@@ -11,9 +11,9 @@ export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
     program={program}
     loading={loading}
     assignments={[{
-      programId: program.id, programName: program.name,
+      programId: program.id, program: program.name,
       enrollmentRequired: true, minAge: null, maxAge: null,
-      cycleId: 'cycle-1', cycleName: 'Current Cycle', startsOn: '2020-01-01', endsOn: '2099-12-31', state: 'active',
+      cycleId: 'cycle-1', cycle: 'Current Cycle', startsOn: '2020-01-01', endsOn: '2099-12-31', state: 'active',
       enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
       averageAttendance: 75, attendanceAttendedCount: 9, attendanceRecordedCount: 12, uniqueAttendeeCount: 10,
     }]}
