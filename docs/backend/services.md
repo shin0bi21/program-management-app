@@ -1,119 +1,89 @@
 # Backend Services
 
-Services own database access and business behavior. Group related files by product area and capability, such as `services/programming/sessions/` or `services/staff/hours/`.
+Services own database access and business behavior. Group them by product area and
+capability, such as `services/staff/hours/`. Keep controllers thin.
 
 ## Choose the File
 
-- `<domain>Service.ts` loads, sets, and deletes one record. It also owns focused commands such as status or placement changes.
-- `<domain>ListService.ts` owns collection search, filters, sorting, and cursor pagination.
-- `<domain>RecordQuery.ts` holds the shared row type, columns, joins, and mapping when list and direct-record endpoints return the same core record.
-- `<domain>Filters.ts` is optional. Keep small filters in the list service and extract this file only when the filter code becomes large or reusable.
+| File | Owns |
+|---|---|
+| `<domain>RowQuery.ts` | Shared row type, columns, joins, and mapping |
+| `<domain>RowFilters.ts` | Domain filters shared by collection queries |
+| `<domain>ListService.ts` | Row query → filters → sorting and pagination |
+| `<domain>DashboardService.ts` | Authorized dashboard summaries and aggregates |
+| `<domain>Service.ts` | Record reads, saves, focused commands, and deletion |
+| `<purpose>Utils.ts` | Pure calculations and transforms within the domain |
 
-Keep list-only totals and direct-record-only relationships with the endpoint that needs them. Do not turn the record query into one universal query.
+Each row-query file exports `<Domain>Row` and `get<Domain>Rows(...)`, containing
+its complete `SELECT` and joins. Keep the purpose plain: “Builds rows for table
+and calendar items.” Shared columns may also support writes and locked reads.
 
-Keep product behavior with its capability even when several pages use it. Use `services/shared/` only for technical mechanisms such as audit writing, cursor encoding, or file uploads.
+Extract existing row queries and domain filters into their owners. Reuse them for
+tables, calendars, direct reads, and mutation responses where their contracts match.
+Keep endpoint-specific totals and relationships with their endpoint. A collection
+with no domain filters needs no empty filter file.
 
-Keep reusable cycle date resolution in `services/programming/cycles/`; collection
-services import that domain owner when a query uses cycles as date windows. Calendar
-viewport intersection belongs to the consuming query, while the browser may derive
-bounds separately for timeline presentation. Cycle membership remains a separate
-filter contract.
+Name builders `build<Domain>Filters`. Use `filterValues` for incoming selections,
+`filters` for the SQL filter array, and `appliedFilters` for the combined SQL.
+Add selected filters with plain `if` statements rather than nested SQL ternaries.
 
-See the [API source map](api.md#find-an-api-owner) for domain owners and
-[program-cycle assignments](api.md#program-cycle-assignments) for a transaction
-that spans several related services.
+Keep domain work with its capability and technical helpers in `services/shared/`.
+See the [API source map](api.md#find-an-api-owner) for feature ownership.
 
-## Serve Table Collections
+## Compose Collection Reads
 
-A table collection returns `{ rows, nextCursor }`, using the shared
-[cursor schema](../../backend/src/validation/listQuerySchemas.ts) and
-[pagination helpers](../../backend/src/services/shared/cursorPagination.ts). Default to
-50 rows, accept at most 50, and fetch one extra row to determine whether another page
-exists. Apply permission scope, search, and filters before the cursor and limit.
+Follow **row query → filters → sorting and pagination**. The row-query owner
+defines the record, the filter owner restricts the collection, and the list
+service coordinates the read. Apply access scope before returning records.
 
-Order by the selected server sort value plus a durable ID tie-breaker. Use the same
-values and direction in the cursor predicate; names that compare equally must not
-skip or duplicate rows across pages. Reject malformed cursors and unsupported sort
-keys at the request boundary.
+Delegate pagination to the shared
+[pagination owner](../../backend/src/services/shared/cursorPagination.ts).
+Request schemas own accepted inputs; source contracts own limits, cursor behavior,
+and response shapes. Keep those details with their implementation.
 
-Keep full-record selector lookups and small reference projections separate from table
-collections. Existing combined endpoints may retain array lookups, but table adapters
-must request the bounded cursor contract explicitly. A small current row count is not
-an exception to table pagination. Share the canonical row projection with mutation
-responses. Commands updating existing table records return their complete canonical
-rows, including joined names, capabilities, and server-derived fields. List and command
-services share that projection and mapping. A command changing rows across application
-areas returns an endpoint-specific envelope of those rows; clients must not reconstruct
-server-owned fields from drafts or cached input. See the frontend
-[row reconciliation owner](../../frontend/src/query/infiniteListCache.ts).
+Keep complete selector and calendar reads explicit. Mutation responses return the
+same canonical rows as their lists, including server-derived fields. Cross-domain
+commands return the affected rows in an endpoint-specific envelope.
 
 ## Organize SQL Projections
 
-Group selected columns by source table: the primary table first, followed by
-joined tables in join order. Within each group, keep the selected stored columns
-in their table definition order, skipping columns the query does not need.
-Use the schema definition or database column order; generated TypeScript
-interfaces may sort columns alphabetically. Separate table groups with a blank
-line and put derived fields and aggregates in a final separate group. Follow the
-same organization in explicit `RETURNING` projections and row interfaces.
+Write SQL across lines: `SELECT`, `FROM`, `WHERE`, joins, ordering, limits, and locks
+each start on their own line. Expand `CASE` branches. Short column or value
+expressions may stay inline.
+
+Group columns by source table in join order, using stored column order. Separate
+table groups with a blank line and put derived fields last. Apply the same order
+to row types and `RETURNING` projections.
 
 ## Write the Public Operations First
 
-Order a main service so it is easy to scan:
+Order public operations **get → set and focused changes → delete**, followed by
+private helpers. Keep descriptive command names such as `invite` or `revoke`.
+When one form creates and edits a full record, use one `set<Domain>` operation with
+an optional ID and small insert/update helpers.
 
-1. Put primary reads (`get...`) first.
-2. Follow with `set...` and focused mutations such as invite, activate, or revoke.
-3. Put delete operations next.
-4. Add secondary public operations after the main write lifecycle.
-5. Finish with private helpers.
+Use short numbered comments for meaningful steps, restarting at 1 in each
+operation. Describe what happens in plain language: `// 1. Check the selected
+programs.` or `// 2. Save the cycle.` Group related actions into one step, put the
+comment before its conditional block, and leave a blank line between steps.
+Do not number every statement or explain SQL mechanics in the step label.
 
-Group by behavior; keep descriptive command names rather than renaming every mutation
-to `set`. Omit groups the service does not need.
-
-Within each operation, use numbered `// 1. ...` comments in source order to label
-query and mutation steps, including locks, audits, and external work. Restart numbering
-for each function and keep each comment to one short line describing its purpose,
-for example `// 2. Lock the user while changing account credentials.`
-Separate each new step from preceding statements with a blank line.
-Place a conditional step's comment before its `if`, so it introduces the whole block.
-
-When the same full-record form adds and edits a record, expose one `set<Domain>` operation with an optional ID. Share validation, permissions, transaction work, and response mapping. Keep the insert and locked update SQL in small private branches instead of hiding the difference in an upsert.
-
-Name a command after the record it changes. Session attendance belongs to `sessionAttendanceService.ts`; the Youth workflow that changes one youth across sessions belongs to `youthAttendanceService.ts`.
+Keep function contracts brief; explain important constraints and include one
+small example. Follow [Code Documentation](../workflows/documentation.md).
 
 ## Keep Writes Safe
 
-- Use `sql` for the shared client and `trx` for an existing transaction. Reusable
-  reads accept a final `query = sql` parameter so TypeScript infers the client
-  type. Pass `trx` explicitly when a read belongs to a transaction; use `query`
-  for its SQL tags and array helpers. Do not add `SqlExecutor` aliases. Helpers
-  that require transaction-owned locks or writes keep a required `trx: typeof sql`
-  parameter rather than defaulting to the shared client.
-- Use parameterized `sql` templates.
-- Open one transaction for a multi-write or audited command. Pass `trx` to nested helpers instead of opening another transaction.
-- Lock the current row with `FOR UPDATE` when permissions, state, assignments, or delete rules must stay valid during the write.
-- Apply policy checks, related-record validation, the write, and its audit inside the same transaction when they must succeed together.
-- Keep focused commands narrow. A status, placement, reorder, or assignment command updates only the fields it owns.
-- Validate replacement-list identifiers and reject duplicates before removing omitted
-  children. A stale or foreign identifier must fail the whole command rather than
-  silently dropping submitted records.
-- Preserve unchanged data and deterministic response ordering.
+- Use parameterized SQL and the repository's [typed errors](errors.md#choose-an-error).
+- Use `sql` for the shared client and `trx` for a transaction. Reusable reads accept
+  `query = sql` and use `query` for SQL tags and array helpers. Pass `trx` into
+  nested operations; do not open nested transactions or add executor aliases.
+- The mutation service owns permission checks, validation, transaction boundaries,
+  locking, and audits. Nested helpers participate in that operation.
+- Keep focused commands limited to their named fields. Preserve unrelated data.
+- Keep persistence and audit rules with the [database owner](database.md).
+- Keep network calls and file rendering outside database transactions. Define
+  recovery when an external operation can fail after a database change.
 
-Use the [repository errors](errors.md#choose-an-error) for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
-
-## Handle Audits and External Work
-
-- Write the audit snapshot in the same transaction as the database change.
-- Include the relationship IDs needed to understand the change.
-- Do not keep a database transaction open while sending email, calling a provider, or writing a file unless that integration explicitly requires it.
-- Decide what happens when the database succeeds but the external operation fails, including retry and duplicate handling.
-
-## Render Reports
-
-Keep report data and file rendering in separate owners.
-
-- A service under `src/services/<product-area>/` checks access, queries data, and calculates the report result. Its result can serve JSON and file endpoints.
-- A renderer under `src/reports/<product-area>/` accepts that result and produces a file. Renderers do not query the database, check permissions, or depend on Express requests and responses.
-- The controller obtains the authorized report result, passes it to the renderer, and sends the file with the appropriate HTTP headers.
-
-For program-cycle youth reports, [getProgramCycleYouthReport](../../backend/src/services/programming/programCycles/programCycleReportService.ts) supplies the data and [renderProgramCycleYouthPdf](../../backend/src/reports/programming/programCycles/programCycleYouthPdf.ts) renders the PDF. Keep format-specific layout and filename generation with the renderer.
+Report services load authorized data; renderers under `src/reports/` only format
+that data. Controllers connect the two. Domain-specific contracts belong in the
+[API guide](api.md), including cycle dates, assignments, and enrollment.

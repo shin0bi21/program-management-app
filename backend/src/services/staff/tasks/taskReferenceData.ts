@@ -1,4 +1,4 @@
-import type { TaskRow } from './taskRecordQuery';
+import type { TaskRow } from './taskRowQuery';
 
 export const TASK_CATEGORY_OPTIONS = [
   { value: 'program_delivery', label: 'Program Delivery' },
@@ -28,10 +28,21 @@ const statusLabels = new Map<TaskStatus, string>(
   TASK_STATUS_OPTIONS.map(option => [option.value, option.label]),
 );
 
+/**
+ * Returns the display label for a task category.
+ * @param category - Stored task category.
+ * @example getTaskCategoryLabel('meeting') // 'Meeting'
+ */
 export function getTaskCategoryLabel(category: TaskCategory) {
   return categoryLabels.get(category)!;
 }
 
+/**
+ * Returns a task's displayed status using its dates and lifecycle state.
+ * @param task - Stored task state and inclusive dates.
+ * @param today - Calendar date; defaults to today in Toronto.
+ * @example getTaskStatus(openTask, '2026-08-10') // date-derived status
+ */
 export function getTaskStatus(
   task: Pick<TaskRow, 'status' | 'startDate' | 'dueDate'>,
   today = getCurrentTorontoDate(),
@@ -42,10 +53,19 @@ export function getTaskStatus(
   return 'in_progress';
 }
 
+/**
+ * Returns the display label for a task status.
+ * @param status - Displayed task status.
+ * @example getTaskStatusLabel('in_progress') // 'In Progress'
+ */
 export function getTaskStatusLabel(status: TaskStatus) {
   return statusLabels.get(status)!;
 }
 
+/**
+ * Returns today's calendar date in Toronto.
+ * @example getCurrentTorontoDate() // YYYY-MM-DD
+ */
 function getCurrentTorontoDate() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Toronto',

@@ -2,56 +2,58 @@ import { sql } from '../../../db/client';
 import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursTableQuery } from '../../../validation/hoursSchemas';
-import { cursorPage, decodeCursor, DEFAULT_BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { buildHoursFilters } from './hoursRowFilters';
 import {
-  hoursRecordColumns,
-  hoursRecordFrom,
-  hoursSearchValue,
+  getHoursRows,
   hoursRowToTableRow,
-  type HoursRow,
-} from './hoursRecordQuery';
+} from './hoursRowQuery';
 
-export async function getHoursList(actor: AccessTokenPayload, query: HoursTableQuery) {
-  const cursor = decodeCursor(query.cursor);
-  const direction = query.direction;
-  const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
-  const sortValue = {
-    firstName: sql`LOWER(staff.first_name)`, lastName: sql`LOWER(staff.last_name)`, date: sql`entry.work_date::text`,
-    program: sql`LOWER(COALESCE(program.name, ''))`, cycle: sql`LOWER(cycle.name)`, category: sql`entry.category::text`,
-    hours: sql`TO_CHAR(entry.hours, 'FM0000000000.0000')`,
-    note: sql`LOWER(entry.note)`, type: entryType,
-  }[query.sort]!;
-  const rows = await sql<Array<HoursRow & { cursorValue: string }>>`
-    SELECT * FROM (SELECT ${hoursRecordColumns},
-      ${sortValue} AS cursor_value
-    ${hoursRecordFrom}
-    WHERE ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
-      ${hoursFilterPredicate(query)}
-      AND ${query.start && query.end
-        ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
+/**
+ * Lists matching hours entries.
+ * @param actor - Actor whose staff scope constrains the hours collection.
+ * @param filterValues - Validated domain/date filters, sorting, and cursor inputs.
+ * @returns A bounded page with numeric hours and canonical entry details.
+ * @example getHoursList(actor, filterValues) // { rows, nextCursor }
+ */
+export async function getHoursList(actor: AccessTokenPayload, filterValues: HoursTableQuery) {
+  // 1. Apply staff scope, domain filters, and inclusive dates to canonical hours rows.
+  const appliedFilters = sql`
+    ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
+      ${buildHoursFilters(filterValues)}
+      AND ${filterValues.start && filterValues.end
+        ? sql`entry.work_date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date`
         : sql`TRUE`}
-    ) listed
-    WHERE TRUE
-      AND ${cursor ? (direction === 'asc'
-      ? sql`(listed.cursor_value > ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id > ${cursor.id}::uuid))`
-      : sql`(listed.cursor_value < ${cursor.value} OR (listed.cursor_value = ${cursor.value} AND listed.id < ${cursor.id}::uuid))`) : sql`TRUE`}
-    ORDER BY listed.cursor_value ${direction === 'asc' ? sql`ASC` : sql`DESC`}, listed.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
-    LIMIT ${(query.limit ?? DEFAULT_BATCH_SIZE) + 1}
   `;
-  const mapped = rows.map(row => ({ ...hoursRowToTableRow(row), cursorValue: row.cursorValue }));
-  return cursorPage(mapped, query.limit ?? DEFAULT_BATCH_SIZE);
-}
+  const rowsQuery = getHoursRows(appliedFilters);
 
-export function hoursFilterPredicate(query: Pick<HoursTableQuery, 'staffIds' | 'categories' | 'programIds' | 'types' | 'cycleIds' | 'search'>) {
-  const entryType = sql`CASE WHEN entry.task_id IS NOT NULL THEN 'task' WHEN entry.session_id IS NOT NULL THEN 'session' ELSE 'other' END`;
-  const search = query.search ? `%${query.search}%` : null;
-  return sql`
-    ${query.staffIds.length ? sql`AND entry.staff_id = ANY(${sql.array(query.staffIds)}::uuid[])` : sql``}
-    ${query.categories.length ? sql`AND entry.category::text = ANY(${sql.array(query.categories)}::text[])` : sql``}
-    ${query.programIds.length ? sql`AND (${query.programIds.includes('general') ? sql`entry.program_id IS NULL OR` : sql``}
-      entry.program_id = ANY(${sql.array(query.programIds.filter(id => id !== 'general'))}::uuid[]))` : sql``}
-    ${query.types.length ? sql`AND ${entryType} = ANY(${sql.array(query.types)}::text[])` : sql``}
-    ${query.cycleIds.length ? sql`AND entry.cycle_id = ANY(${sql.array(query.cycleIds)}::uuid[])` : sql``}
-    ${search ? sql`AND ${hoursSearchValue} ILIKE ${search}` : sql``}
+  // 2. Keep numeric hours order encoded as text for existing cursor compatibility.
+  const entryType = sql`
+    CASE
+      WHEN page_row.task_id IS NOT NULL THEN 'task'
+      WHEN page_row.session_id IS NOT NULL THEN 'session'
+      ELSE 'other'
+    END
   `;
+
+  const sortValue = {
+    firstName: sql`LOWER(page_row.staff_first_name)`,
+    lastName: sql`LOWER(page_row.staff_last_name)`,
+    date: sql`page_row.work_date`,
+    program: sql`LOWER(COALESCE(page_row.program_name, ''))`,
+    cycle: sql`LOWER(page_row.cycle_name)`,
+    category: sql`page_row.category::text`,
+    hours: sql`TO_CHAR(page_row.hours::numeric, 'FM0000000000.0000')`,
+    note: sql`LOWER(page_row.note)`,
+    type: entryType,
+  }[filterValues.sort]!;
+  const page = await paginateQuery(rowsQuery, {
+    sortValue,
+    direction: filterValues.direction,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit ?? BATCH_SIZE,
+  });
+
+  // 3. Shape visible entries without changing the SQL-derived continuation cursor.
+  return { ...page, rows: page.rows.map(hoursRowToTableRow) };
 }

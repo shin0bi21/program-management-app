@@ -1,82 +1,37 @@
 import crypto from 'crypto';
 import type { AccessTokenPayload } from '../../../types/auth';
-import { getProgramCycleRowsByKeys } from '../../programming/programCycles/programCycleRecordQuery';
+import { getProgramCycleRowsByKeys } from '../../programming/programCycles/programCycleRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
+import type { CreateLeadInput, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
 import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
-import { cursorPage, decodeCursor } from '../../shared/cursorPagination';
+import { leadRowColumns } from './leadRowQuery';
 
-const leadAge = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
-
-const recommendedProgramId = sql`(
-  SELECT program.id
-  FROM programs program
-  WHERE program.enrollment_required = TRUE
-    AND ${leadAge} BETWEEN program.min_age AND program.max_age
-  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
-  LIMIT 1
-)`;
-
-const recommendedProgramName = sql`(
-  SELECT program.name
-  FROM programs program
-  WHERE program.enrollment_required = TRUE
-    AND ${leadAge} BETWEEN program.min_age AND program.max_age
-  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
-  LIMIT 1
-)`;
-
-const leadColumns = sql`
-  id,
-  origin,
-  submitted_by_role,
-  converted_youth_id,
-  youth_first_name,
-  youth_last_name,
-  date_of_birth::text AS date_of_birth,
-  ${leadAge} AS age,
-  school,
-  ${recommendedProgramId} AS recommended_program_id,
-  ${recommendedProgramName} AS recommended_program_name,
-  contact_phone_number,
-  contact_relationship,
-  discovery_source,
-  notes,
-  status,
-  status_updated_at,
-  created_at,
-  updated_at,
-  created_by,
-  updated_by
-`;
-
-export async function getLeads(filters: LeadQuery) {
-  const where = applyLeadFilters(filters);
-  const cursor = decodeCursor(filters.cursor);
-  const sortValue = {
-    firstName: sql`LOWER(youth_first_name)`,
-    lastName: sql`LOWER(youth_last_name)`,
-    school: sql`LOWER(school)`,
-    program: sql`LOWER(COALESCE(${recommendedProgramName}, ''))`,
-    status: sql`status::text`,
-    created: sql`created_at::text`,
-  }[filters.sort]!;
-  const rows = await sql<Array<{ id: string; cursorValue: string }>>`
-    SELECT ${leadColumns}, ${sortValue} AS cursor_value
+/**
+ * Loads one canonical lead, including its current age and recommended program.
+ * @param id - Lead ID; a missing record throws 404.
+ * @example await getLead(id) // complete intake row
+ */
+export async function getLead(id: string) {
+  // 1. Load the lead.
+  const rows = await sql`
+    SELECT ${leadRowColumns}
     FROM leads
-    WHERE ${where}
-      AND ${cursor ? (filters.direction === 'asc'
-        ? sql`(${sortValue}, id) > (${cursor.value}, ${cursor.id}::uuid)`
-        : sql`(${sortValue}, id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
-    ORDER BY ${sortValue} ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}, id ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}
-    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
+    WHERE id = ${id}
   `;
-  return filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row);
+  if (!rows.length) throw new NotFoundError('Lead not found');
+  return rows[0];
 }
 
+/**
+ * Creates one internal staff-submitted lead and returns its canonical intake row.
+ * @param data - Validated intake fields; optional notes are stored as null when omitted.
+ * @param actorId - Staff user recorded as the creator and last editor.
+ * @example await createLead(data, actorId) // saved lead with age and recommended program
+ */
 export async function createLead(data: CreateLeadInput, actorId: string) {
+  // 1. Store the internal intake and return its canonical projection.
   const rows = await sql`
     INSERT INTO leads (
       origin,
@@ -105,16 +60,24 @@ export async function createLead(data: CreateLeadInput, actorId: string) {
       ${actorId},
       ${actorId}
     )
-    RETURNING ${leadColumns}
+    RETURNING ${leadRowColumns}
   `;
   return rows[0];
 }
 
+/**
+ * Creates an external intake lead inside the caller's transaction.
+ * @param data - Validated intake fields supplied by the public form.
+ * @param submittedByRole - Public submitter's relationship to the youth.
+ * @param trx - Existing transaction owning the public intake workflow.
+ * @example await createExternalLead(data, 'parent', trx) // saved external lead
+ */
 export async function createExternalLead(
   data: CreateLeadInput,
   submittedByRole: 'youth' | 'parent' | 'guardian',
   trx: typeof sql,
 ) {
+  // 1. Store the external intake inside the existing transaction.
   const rows = await trx`
     INSERT INTO leads (
       origin,
@@ -139,12 +102,20 @@ export async function createExternalLead(
       ${data.discoverySource},
       ${data.notes ?? null}
     )
-    RETURNING ${leadColumns}
+    RETURNING ${leadRowColumns}
   `;
   return rows[0];
 }
 
+/**
+ * Updates editable intake details and returns the canonical saved lead.
+ * @param id - Existing lead ID; missing leads are 404 and converted leads are 409.
+ * @param data - Validated replacement intake fields.
+ * @param actorId - Staff user recorded as the last editor.
+ * @example await updateLead(id, data, actorId) // current age and recommended program included
+ */
 export async function updateLead(id: string, data: UpdateLeadInput, actorId: string) {
+  // 1. Replace intake fields only while the lead remains unconverted.
   const rows = await sql`
     UPDATE leads
     SET youth_first_name = ${data.youthFirstName},
@@ -160,8 +131,10 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
     WHERE id = ${id}
       AND status != 'signed_up'
       AND converted_youth_id IS NULL
-    RETURNING ${leadColumns}
+    RETURNING ${leadRowColumns}
   `;
+
+  // 2. Distinguish missing records from converted, read-only intake.
   if (!rows.length) {
     const existing = await sql<{ status: string; convertedYouthId: string | null }[]>`
       SELECT status, converted_youth_id
@@ -175,19 +148,23 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
   return rows[0];
 }
 
-export async function getLead(id: string) {
-  const rows = await sql`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
-  if (!rows.length) throw new NotFoundError('Lead not found');
-  return rows[0];
-}
-
+/**
+ * Updates an unconverted lead's status and audits the change in one transaction.
+ * @param id - Lead ID; missing records are 404 and converted records are 409.
+ * @param data - Validated destination status.
+ * @param actorId - Staff user recorded on the update and audit.
+ * @example await updateLeadStatus(id, data, actorId) // canonical saved lead
+ */
 export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, actorId: string) {
+  // 1. Assign one audit transaction to the status change.
   const transactionId = crypto.randomUUID();
 
   await sql.begin(async rawTx => {
-    const tx = asTransactionSql(rawTx);
-    const leads = await tx<Record<string, unknown>[]>`
-      SELECT ${leadColumns}
+    const trx = asTransactionSql(rawTx);
+
+    // 2. Lock the intake row before checking its conversion state.
+    const leads = await trx<Record<string, unknown>[]>`
+      SELECT ${leadRowColumns}
       FROM leads
       WHERE id = ${id}
       FOR UPDATE
@@ -195,67 +172,65 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
     if (!leads.length) throw new NotFoundError('Lead not found');
 
     const lead = leads[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+
+    // 3. Reject status changes after conversion.
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
       throw new ConflictError('Signed-up lead status cannot be changed');
     }
 
-    const updatedLeads = await tx<Record<string, unknown>[]>`
+    // 4. Save the requested status and retain its timestamp when unchanged.
+    const updatedLeads = await trx<Record<string, unknown>[]>`
       UPDATE leads
       SET status = ${data.status},
-          status_updated_at = CASE WHEN status = ${data.status} THEN status_updated_at ELSE NOW() END,
+          status_updated_at = CASE
+            WHEN status = ${data.status} THEN status_updated_at
+            ELSE NOW()
+          END,
           updated_at = NOW(),
           updated_by = ${actorId}
       WHERE id = ${id}
-      RETURNING ${leadColumns}
+      RETURNING ${leadRowColumns}
     `;
-    await audit(tx, actorId, transactionId, 'leads', id, 'UPDATE', lead, updatedLeads[0]);
+
+    // 5. Audit the status transition in the same transaction.
+    await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE', lead, updatedLeads[0]);
   });
 
+  // 6. Return the canonical saved intake.
   return getLead(id);
 }
 
-export async function deleteLead(id: string, actorId: string) {
-  const transactionId = crypto.randomUUID();
-  return sql.begin(async rawTx => {
-    const tx = asTransactionSql(rawTx);
-    const rows = await tx<Record<string, unknown>[]>`
-      SELECT ${leadColumns} FROM leads
-      WHERE id = ${id}
-      FOR UPDATE
-    `;
-    if (!rows.length) throw new NotFoundError('Lead not found');
-    const lead = rows[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
-    if (lead.status === 'signed_up' || lead.convertedYouthId) {
-      throw new ConflictError('Signed-up leads cannot be deleted');
-    }
-    await tx`DELETE FROM leads WHERE id = ${id}`;
-    await audit(tx, actorId, transactionId, 'leads', id, 'DELETE', lead, null);
-    return { id };
-  });
-}
-
+/**
+ * Converts an unconverted intake into a youth profile and optional program enrollment atomically.
+ * @param id - Lead ID, locked until conversion completes; missing leads are 404 and invalid states are 409.
+ * @param data - Validated birthdate override, optional program/cycle, and note category.
+ * @param actor - Staff actor for audit ownership and permission-gated assignment response data.
+ * @returns The converted lead and, when readable, its updated program-cycle row.
+ * @example await signUpLead(id, data, actor) // { lead, updatedProgramCycle? }
+ */
 export async function signUpLead(id: string, data: SignUpLeadInput, actor: AccessTokenPayload) {
+  // 1. Start the lead signup.
   const actorId = actor.userId;
   const transactionId = crypto.randomUUID();
 
-  return sql.begin(async tx => {
-    const trx = asTransactionSql(tx);
+  return sql.begin(async rawTx => {
+    const trx = asTransactionSql(rawTx);
+
+    // 2. Find and lock the lead.
     const leads = await trx<{
       id: string;
-      convertedYouthId: string | null;
       youthFirstName: string;
       youthLastName: string;
-      dateOfBirth: string | null;
       school: string;
       contactPhoneNumber: string;
       contactRelationship: string;
       notes: string | null;
       status: string;
+      convertedYouthId: string | null;
+      dateOfBirth: string | null;
     }[]>`
-      SELECT id, converted_youth_id,
-             youth_first_name, youth_last_name, date_of_birth::text AS date_of_birth, school,
-             contact_phone_number,
-             contact_relationship, notes, status
+      SELECT id, youth_first_name, youth_last_name, school, contact_phone_number,
+        contact_relationship, notes, status, converted_youth_id, date_of_birth::text AS date_of_birth
       FROM leads
       WHERE id = ${id}
       FOR UPDATE
@@ -263,6 +238,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     if (!leads.length) throw new NotFoundError('Lead not found');
 
     const lead = leads[0];
+
+    // 3. Require an unconverted lead and an available birthdate.
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
       throw new ConflictError('Lead has already been signed up');
     }
@@ -271,9 +248,15 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       throw new ConflictError('Date of birth is required before signing up this lead');
     }
 
+    // 4. Lock and validate the optional destination enrollment.
     if (data.programId && data.cycleId) {
       // Lead conversion may enroll in an eligible program outside the actor’s assigned programs.
-      await trx`SELECT id FROM programs WHERE id = ${data.programId} FOR UPDATE`;
+      await trx`
+        SELECT id
+        FROM programs
+        WHERE id = ${data.programId}
+        FOR UPDATE
+      `;
 
       const [programCycle] = await trx<{
         enrollmentRequired: boolean;
@@ -301,29 +284,41 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       }
     }
 
+    // 5. Create the youth identity.
     const users = await trx<{ id: string }[]>`
       INSERT INTO users (first_name, last_name, role_id, created_by, updated_by)
       VALUES (
         ${lead.youthFirstName},
         ${lead.youthLastName},
-        (SELECT id FROM user_roles WHERE name = 'youth'),
+        (
+          SELECT id
+          FROM user_roles
+          WHERE name = 'youth'
+        ),
         ${actorId},
         ${actorId}
       )
       RETURNING id
     `;
     const youthId = users[0].id;
+
+    // 6. Record the new youth account.
     await audit(trx, actorId, transactionId, 'users', youthId, 'INSERT', null, {
       id: youthId,
       firstName: lead.youthFirstName,
       lastName: lead.youthLastName,
     });
 
+    // 7. Resolve a matching school without creating a new lookup.
     const schools = await trx<{ id: string }[]>`
-      SELECT id FROM schools WHERE LOWER(name) = LOWER(${lead.school}) LIMIT 1
+      SELECT id
+      FROM schools
+      WHERE LOWER(name) = LOWER(${lead.school})
+      LIMIT 1
     `;
     const schoolId = schools[0]?.id ?? null;
 
+    // 8. Create and audit the youth profile.
     await trx`
       INSERT INTO youth_profiles (user_id, date_of_birth, school_id, created_by, updated_by)
       VALUES (${youthId}, ${dateOfBirth}, ${schoolId}, ${actorId}, ${actorId})
@@ -333,6 +328,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       dateOfBirth,
       schoolId,
     });
+
+    // 9. Preserve intake notes on the youth profile.
     if (lead.notes?.trim()) {
       await trx`
         INSERT INTO youth_profile_notes (youth_id, category, details, created_by, updated_by)
@@ -340,6 +337,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       `;
     }
 
+    // 10. Create and audit the optional program enrollment.
     if (data.programId && data.cycleId) {
       const enrollments = await trx<{ id: string; enrolledOn: string }[]>`
         INSERT INTO program_enrollments (
@@ -357,11 +355,13 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       });
     }
 
+    // 11. Save the lead contact.
     await setContacts(youthId, [{
       phoneNumber: lead.contactPhoneNumber,
       type: lead.contactRelationship,
     }], actorId, transactionId, trx);
 
+    // 12. Mark the intake converted and audit its new youth link.
     await trx`
       UPDATE leads
       SET status = 'signed_up',
@@ -376,7 +376,12 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       { status: lead.status, convertedYouthId: null, dateOfBirth: lead.dateOfBirth },
       { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
-    const [leadRecord] = await trx`SELECT ${leadColumns} FROM leads WHERE id = ${id}`;
+    // 13. Return the lead and affected rows.
+    const [leadRecord] = await trx`
+      SELECT ${leadRowColumns}
+      FROM leads
+      WHERE id = ${id}
+    `;
     const [updatedProgramCycle] = data.programId && data.cycleId && actor.permissions.includes('read:programs')
       ? await getProgramCycleRowsByKeys(trx, actor, [{ programId: data.programId, cycleId: data.cycleId }])
       : [];
@@ -384,25 +389,41 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
   });
 }
 
-function applyLeadFilters(filters: LeadQuery) {
-  const statusFilter = filters.statuses.length
-    ? sql`status = ANY(${sql.array(filters.statuses)}::lead_status[])`
-    : sql`TRUE`;
-  const searchFilter = filters.search
-    ? sql`CONCAT_WS(' ', youth_first_name, youth_last_name, school) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'`
-    : sql`TRUE`;
-  const programFilter = filters.programIds.length
-    ? sql`${recommendedProgramId} = ANY(${sql.array(filters.programIds)}::uuid[])`
-    : sql`TRUE`;
-  const originFilter = filters.origins.length
-    ? sql`origin = ANY(${sql.array(filters.origins)}::lead_origin[])`
-    : sql`TRUE`;
-  const submitterRoleFilter = filters.submitterRoles.length
-    ? sql`submitted_by_role = ANY(${sql.array(filters.submitterRoles)}::lead_submitter_role[])`
-    : sql`TRUE`;
-  return sql`${statusFilter} AND ${programFilter} AND ${originFilter} AND ${submitterRoleFilter} AND ${searchFilter}`;
-}
+/**
+ * Deletes an unconverted lead and audits its previous row in one transaction.
+ * @param id - Lead ID; missing records are 404 and converted records are 409.
+ * @param actorId - Staff user recorded as the audit actor.
+ * @example await deleteLead(id, actorId) // { id }
+ */
+export async function deleteLead(id: string, actorId: string) {
+  // 1. Assign one audit transaction to the deletion.
+  const transactionId = crypto.randomUUID();
 
-function escapeLikePattern(value: string) {
-  return value.replace(/[\\%_]/g, character => `\\${character}`);
+  return sql.begin(async rawTx => {
+    const trx = asTransactionSql(rawTx);
+
+    // 2. Lock the intake before checking deletion eligibility.
+    const rows = await trx<Record<string, unknown>[]>`
+      SELECT ${leadRowColumns}
+      FROM leads
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new NotFoundError('Lead not found');
+    const lead = rows[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+
+    // 3. Preserve converted intake history.
+    if (lead.status === 'signed_up' || lead.convertedYouthId) {
+      throw new ConflictError('Signed-up leads cannot be deleted');
+    }
+
+    // 4. Delete and audit the unconverted intake atomically.
+    await trx`
+      DELETE
+      FROM leads
+      WHERE id = ${id}
+    `;
+    await audit(trx, actorId, transactionId, 'leads', id, 'DELETE', lead, null);
+    return { id };
+  });
 }

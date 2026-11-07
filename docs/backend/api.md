@@ -20,7 +20,7 @@ owning separate capabilities.
 | Assigned tasks `/tasks` | [taskRoutes](../../backend/src/routes/taskRoutes.ts) | [taskSchemas](../../backend/src/validation/taskSchemas.ts) | [Tasks](../../backend/src/services/staff/tasks/) |
 | Youth profiles `/youth` | [youthRoutes](../../backend/src/routes/youthRoutes.ts) | [youthSchemas](../../backend/src/validation/youthSchemas.ts) | [Youth](../../backend/src/services/youth/) |
 | Programs `/programs` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programSchemas](../../backend/src/validation/programSchemas.ts) | [Program service](../../backend/src/services/programService.ts) |
-| Cycles `/cycles` | [cycleRoutes](../../backend/src/routes/cycleRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Cycle service](../../backend/src/services/programming/cycles/programCycleService.ts) |
+| Cycles `/cycles` | [cycleRoutes](../../backend/src/routes/cycleRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Cycle service](../../backend/src/services/programming/cycles/cycleService.ts) |
 | Program-cycle summaries and rosters `/programs` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Program cycles](../../backend/src/services/programming/programCycles/) |
 | Sessions and attendance `/sessions` | [sessionRoutes](../../backend/src/routes/sessionRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Sessions](../../backend/src/services/programming/sessions/) |
 | Enrollment `/programs/:programId/cycles/:cycleId` | [programRoutes](../../backend/src/routes/programRoutes.ts) | [programmingSchemas](../../backend/src/validation/programmingSchemas.ts) | [Enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts) |
@@ -80,7 +80,7 @@ reject the entire save. See [focused profile writes](../../backend/src/services/
 for the implementation.
 
 Program and cycle filters must match the same nonwithdrawn enrollment or
-open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthFilters.ts)
+open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthRowFilters.ts)
 preserves that cross-domain selection contract.
 
 ## Programming
@@ -104,7 +104,7 @@ logged hours rejects the entire request. Deleting a referenced cycle also fails.
 Program defaults affect future session creation, not existing timestamps.
 
 [Assignment service](../../backend/src/services/programming/programCycles/assignmentService.ts)
-and [cycle service](../../backend/src/services/programming/cycles/programCycleService.ts)
+and [cycle service](../../backend/src/services/programming/cycles/cycleService.ts)
 own the shared lock order: programs, cycles, then program-cycle relationships. Cycle
 editing locks current programs in ID order before its cycle. Child foreign keys
 coordinate dependent inserts with removal. Youth attendance writers also acquire the program-assignment lock before program-cycle

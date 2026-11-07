@@ -28,6 +28,10 @@ interface AdminSeedConfiguration extends AdminConfiguration {
   databaseUrl: string;
 }
 
+/**
+ * Reads required database and administrator environment values; missing configuration throws before any database connection.
+ * @example adminSeedConfiguration().firstName // configured ADMIN_FIRST_NAME
+ */
 export function adminSeedConfiguration(): AdminSeedConfiguration {
   return {
     databaseUrl: requireEnv('DATABASE_URL'),
@@ -38,14 +42,20 @@ export function adminSeedConfiguration(): AdminSeedConfiguration {
   };
 }
 
-/** Requires the caller's active transaction; existing accounts are preserved unless resetExisting is enabled. */
+/**
+ * Seeds an administrator within the caller's active transaction using configured identity and credentials.
+ * Existing accounts are preserved unless resetExisting is enabled; missing admin roles throw.
+ * @example await seedAdmin(transaction, configuration) // { created: false, userId } for an existing account
+ */
 export async function seedAdmin(
   transaction: Sql,
   configuration: AdminConfiguration,
   options: AdminSeedOptions = {},
 ): Promise<AdminSeedResult> {
+  // 1. Choose whether an existing administrator may be reset.
   const { resetExisting = false } = options;
 
+  // 2. Lock and look up the same normalized identity within the caller transaction.
   // Normalize the lock key and lookup together so case variants cannot race.
   const email = configuration.email.trim();
   await transaction`SELECT pg_advisory_xact_lock(hashtextextended(${email.toLowerCase()}, 0))`;
@@ -55,10 +65,12 @@ export async function seedAdmin(
   `;
   if (existing && !resetExisting) return { created: false, userId: existing.user_id };
 
+  // 3. Require the admin role and hash credentials only when a write is needed.
   const [role] = await transaction<{ id: string }[]>`SELECT id FROM user_roles WHERE name = 'admin'`;
   if (!role) throw new Error('Admin role not found. Apply the database init before seeding an administrator.');
 
   const passwordHash = await bcrypt.hash(configuration.password, 10);
+  // 4. Reset the selected account only when the caller enabled that mode.
   if (existing) {
     await transaction`UPDATE users SET role_id = ${role.id}, updated_at = NOW() WHERE id = ${existing.user_id}`;
     await transaction`UPDATE user_credentials SET password_hash = ${passwordHash}, status = 'active',
@@ -66,6 +78,7 @@ export async function seedAdmin(
     return { created: false, userId: existing.user_id };
   }
 
+  // 5. Create the user and credentials together in the caller transaction.
   const userId = crypto.randomUUID();
   await transaction`INSERT INTO users (id, first_name, last_name, role_id)
     VALUES (${userId}, ${configuration.firstName}, ${configuration.lastName}, ${role.id})`;

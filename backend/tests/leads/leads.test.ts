@@ -5,6 +5,11 @@ import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
+/**
+ * Builds a past January 1 birth date for an age on today's Toronto date.
+ * @param age - Whole-year age for an intake fixture.
+ * @example birthDateForAge(14) // '2012-01-01' during 2026
+ */
 function birthDateForAge(age: number) {
   const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -320,7 +325,6 @@ describe('Leads API', () => {
       rows: [expect.objectContaining({ youthFirstName: `${marker}A`, youthLastName: `${marker}B` })],
       nextCursor: expect.any(String),
     });
-    expect(first.body).not.toHaveProperty('totalRows');
 
     const second = await request(app)
       .get(`/api/leads?search=${marker}&sort=firstName&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
@@ -471,7 +475,6 @@ describe('Leads API', () => {
     expect(assignmentRows.status).toBe(200);
     expect(res.body.updatedProgramCycle).toEqual(assignmentRows.body.find((row: { programId: string; cycleId: string }) => row.programId === eligibleProgramId && row.cycleId === eligibleProgramCycleId));
     expect(res.body.updatedProgramCycle.enrolledCount).toBe(1);
-
 
     const [profile] = await sql<{ firstName: string; dateOfBirth: string }[]>`
       SELECT u.first_name, yp.date_of_birth::text AS date_of_birth

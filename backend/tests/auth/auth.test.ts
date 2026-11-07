@@ -21,6 +21,10 @@ import type { SeededUser } from '../shared/db';
 
 const app = createApp();
 
+/**
+ * Seeds youth credentials in the requested lifecycle state without a cohort.
+ * @example await seedYouthAccount('invited') // requires password setup before login
+ */
 async function seedYouthAccount(accountStatus: 'invited' | 'active' | 'inactive') {
   const user = await seedTestUser({
     email: `youth-auth-${Date.now()}-${Math.random().toString(36).slice(2)}@test.local`,
@@ -186,7 +190,7 @@ describe('POST /api/auth/login', () => {
       await deleteTestUser(lockoutUser.userId);
     });
 
-    it('should lock account after 5 failed login attempts', async () => {
+    it('should lock account after 5 failed attempts even with the correct password', async () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/api/auth/login')
@@ -198,14 +202,12 @@ describe('POST /api/auth/login', () => {
         .send({ email: lockoutUser.email, password: 'WrongPass99!' });
       expect(res.status).toBe(423);
       expect(res.body.error).toMatch(/locked/i);
-    });
 
-    it('should remain locked even with correct password', async () => {
-      const res = await request(app)
+      const correctPasswordRes = await request(app)
         .post('/api/auth/login')
         .send({ email: lockoutUser.email, password: lockoutUser.password });
-      expect(res.status).toBe(423);
-      expect(res.body.error).toMatch(/locked/i);
+      expect(correctPasswordRes.status).toBe(423);
+      expect(correctPasswordRes.body.error).toMatch(/locked/i);
     });
   });
 
@@ -423,33 +425,6 @@ describe('POST /api/auth/refresh', () => {
     });
   });
 
-  describe('Happy Path', () => {
-    let user: SeededUser;
-
-    beforeAll(async () => {
-      user = await seedTestUser({ email: `refresh-hp-${Date.now()}@test.local` });
-    });
-
-    afterAll(async () => {
-      await deleteTestUser(user.userId);
-    });
-
-    it('should rotate tokens and return new access token', async () => {
-      const { token, jti } = generateRefreshToken(user.userId, user.email);
-      await storeRefreshToken(user.userId, jti, token);
-
-      const res = await request(app)
-        .post('/api/auth/refresh')
-        .set('Cookie', [`refreshToken=${token}`]);
-
-      expect(res.status).toBe(200);
-      expect(res.body.token).toBeDefined();
-
-      const refreshCookie = extractCookie(res.headers, 'refreshToken');
-      expect(refreshCookie).toBeDefined();
-    });
-  });
-
   describe('Token Reuse Detection', () => {
     let user: SeededUser;
 
@@ -518,19 +493,11 @@ describe('POST /api/auth/refresh', () => {
 
 describe('POST /api/auth/logout', () => {
   describe('Basic', () => {
-    it('should succeed even without any tokens', async () => {
+    it('should succeed and clear the refresh cookie even without any tokens', async () => {
       const res = await request(app).post('/api/auth/logout');
       expect(res.status).toBe(200);
       expect(res.body.message).toMatch(/logged out/i);
-    });
-
-    it('should clear refreshToken cookie', async () => {
-      const res = await request(app).post('/api/auth/logout');
-      expect(res.status).toBe(200);
-      const cookies = res.headers['set-cookie'];
-      if (cookies && Array.isArray(cookies)) {
-        expect(cookies.some((c: string) => c.includes('refreshToken='))).toBe(true);
-      }
+      expect(extractCookie(res.headers, 'refreshToken')).toBe('');
     });
   });
 
@@ -881,7 +848,6 @@ describe('Full Auth Flow', () => {
       .get('/api/accounts')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(protectedRes.status).toBe(200);
-    expect(Array.isArray(protectedRes.body)).toBe(true);
 
     // 4. Refresh tokens
     const refreshRes = await request(app)

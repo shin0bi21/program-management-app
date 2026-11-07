@@ -1,11 +1,11 @@
 import { sql } from '../../db/client';
-import type { Schools, Users, YouthProfiles } from '../../types/database';
+import type { Users, YouthProfiles } from '../../types/database';
 import type { DbRow } from '../../types/db';
 
-export type YouthRecordRow =
+export type YouthRow =
   DbRow<Pick<Users, 'id' | 'first_name' | 'last_name' | 'created_at'>> &
-  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id'>> &
-  DbRow<Pick<Schools, 'name'>> & {
+  DbRow<Pick<YouthProfiles, 'date_of_birth' | 'school_id'>> & {
+    schoolName: string | null;
     status: 'active' | 'inactive';
     programCycles: Array<{
       cycleId: string;
@@ -28,16 +28,22 @@ export type YouthRecordRow =
     contacts: Array<{ id: string; phoneNumber: string; type: string }> | null;
   };
 
-export const youthActiveStatus = sql`CASE WHEN EXISTS (
-  SELECT 1 FROM program_enrollments current_enrollment
+export const youthActiveStatus = sql`
+  CASE
+    WHEN EXISTS (
+  SELECT 1
+  FROM program_enrollments current_enrollment
   INNER JOIN program_cycles current_cycle ON current_cycle.id = current_enrollment.cycle_id
   WHERE current_enrollment.youth_id = u.id
     AND current_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
     AND (current_enrollment.withdrawn_on IS NULL OR current_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
     AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN current_cycle.starts_on AND current_cycle.ends_on
-) THEN 'active' ELSE 'inactive' END`;
+) THEN 'active'
+    ELSE 'inactive'
+  END
+`;
 
-export const youthRecordColumns = sql`
+export const youthRowColumns = sql`
   u.id,
   u.first_name,
   u.last_name,
@@ -45,10 +51,13 @@ export const youthRecordColumns = sql`
   yp.date_of_birth,
   yp.school_id,
   s.name AS school_name,
-  CASE WHEN uc.user_id IS NULL THEN NULL ELSE json_build_object(
+  CASE
+    WHEN uc.user_id IS NULL THEN NULL
+    ELSE json_build_object(
     'email', uc.email,
     'status', uc.status
-  ) END AS account,
+    )
+  END AS account,
   (
     SELECT (MAX(cs.starts_at) AT TIME ZONE 'America/Toronto')::date::text
     FROM attendance_records ar
@@ -149,7 +158,7 @@ export const youthRecordColumns = sql`
   ) AS contacts
 `;
 
-export const youthRecordFrom = sql`
+export const youthRowFrom = sql`
   FROM youth_profiles yp
   INNER JOIN users u ON u.id = yp.user_id
   INNER JOIN user_roles ur ON ur.id = u.role_id
@@ -157,11 +166,29 @@ export const youthRecordFrom = sql`
   LEFT JOIN user_credentials uc ON uc.user_id = u.id
 `;
 
+/**
+ * Builds rows for table and calendar items.
+ * @param appliedFilters - SQL filters supplied by the service.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getYouthRows(appliedFilters, trx)
+ */
+export function getYouthRows(appliedFilters = sql`TRUE`, query = sql) {
+  return query<YouthRow[]>`
+    SELECT ${youthRowColumns}
+    ${youthRowFrom}
+    WHERE ur.name = 'youth' AND ${appliedFilters}
+  `;
+}
+
+/**
+ * Loads the selected youth rows.
+ * @param database - Database client for the read.
+ * @param ids - Youth IDs to load.
+ * @example getYouthRowsByIds(trx, [youthId])
+ */
 export function getYouthRowsByIds(database: typeof sql, ids: readonly string[]) {
-  return database<YouthRecordRow[]>`
-    SELECT ${youthRecordColumns}
-    ${youthRecordFrom}
-    WHERE ur.name = 'youth' AND u.id = ANY(${sql.array([...ids])}::uuid[])
+  return database<YouthRow[]>`
+    ${getYouthRows(database`u.id = ANY(${database.array([...ids])}::uuid[])`, database)}
     ORDER BY u.id
   `;
 }

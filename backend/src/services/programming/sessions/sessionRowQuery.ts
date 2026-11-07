@@ -4,7 +4,7 @@ import { programAccessPredicate } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 
 /** Session details shared by table, calendar, and mutation responses. */
-export interface ProgramSessionRow {
+export interface SessionRow {
   id: string;
   theme: string;
   startsAt: Date;
@@ -24,20 +24,16 @@ export interface ProgramSessionRow {
 }
 
 /**
- * Builds complete, accessible session rows for composition or direct execution.
- * Missing and out-of-scope sessions are omitted; route permissions belong to callers.
- * @param actor - Actor whose program access scopes the returned sessions.
- * @param query - Defaults to the shared client; pass trx to join an existing transaction.
- * @returns A composable query; awaiting it loads rows using the client's camelCase transformation.
- * @example getSessionRows(actor, trx) // composable rows using the existing transaction
- * @example sql`SELECT * FROM (${getSessionRows(actor)}) session WHERE session.theme ILIKE ${search}`
+ * Builds rows for table and calendar items.
+ * @param actor - User requesting the rows.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getSessionRows(actor, trx)
  */
 export function getSessionRows(
   actor: AccessTokenPayload,
   query = sql,
 ) {
-  // 1. Build complete session rows within the actor's program scope.
-  return query<ProgramSessionRow[]>`
+  return query<SessionRow[]>`
     SELECT
       session.id,
       session.theme,

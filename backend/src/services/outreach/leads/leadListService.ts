@@ -1,0 +1,44 @@
+import { sql } from '../../../db/client';
+import type { LeadQuery } from '../../../validation/leadSchemas';
+import { paginateQuery } from '../../shared/cursorPagination';
+import { getLeadRows, type LeadRow } from './leadRowQuery';
+import { buildLeadFilters } from './leadRowFilters';
+
+/**
+ * Lists matching leads.
+ * @param filterValues - Validated origin, submitter, status, program, search, and optional cursor inputs.
+ * @returns A cursor page when limited, otherwise all matching canonical lead rows.
+ * @example getLeads(filterValues) // { rows, nextCursor } when filterValues.limit is set
+ */
+export function getLeads(filterValues: LeadQuery) {
+  // 1. Find matching leads.
+  const appliedFilters = buildLeadFilters(filterValues);
+  const rowsQuery = getLeadRows(appliedFilters);
+
+  // 2. Choose the lead order.
+  const sortValue = {
+    firstName: sql`LOWER(page_row.youth_first_name)`,
+    lastName: sql`LOWER(page_row.youth_last_name)`,
+    school: sql`LOWER(page_row.school)`,
+    program: sql`LOWER(COALESCE(page_row.recommended_program_name, ''))`,
+    status: sql`page_row.status::text`,
+    created: sql`page_row.created_at::text`,
+  }[filterValues.sort]!;
+
+  // 3. Return the requested list or page.
+  if (filterValues.limit === undefined) {
+    const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
+    return sql<LeadRow[]>`
+      SELECT page_row.*
+      FROM (${rowsQuery}) page_row
+      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+    `;
+  }
+
+  return paginateQuery(rowsQuery, {
+    sortValue,
+    direction: filterValues.direction,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit,
+  });
+}

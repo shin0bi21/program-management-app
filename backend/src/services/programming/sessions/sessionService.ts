@@ -4,8 +4,8 @@ import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } 
 import { assertCanAccessProgramCycle, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
 import { lockAssignmentProgram } from '../programCycles/assignmentService';
 import { getSessionRows } from './sessionRowQuery';
-import { filterSessionRows } from './sessionRowFilters';
-import { getProgramCycleRowsByKeys, type ProgramCycleKey } from '../programCycles/programCycleRecordQuery';
+import { buildSessionFilters } from './sessionRowFilters';
+import { getProgramCycleRowsByKeys, type ProgramCycleKey } from '../programCycles/programCycleRowQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionInput,
@@ -137,7 +137,11 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     const trx = asTransactionSql(tx);
 
     // 2. Find the session assignment.
-    const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
+    const [session] = await trx<ProgramCycleKey[]>`
+      SELECT program_id, cycle_id
+      FROM program_sessions
+      WHERE id = ${id}
+    `;
     if (!session) throw new NotFoundError('Session not found');
 
     // 3. Lock the program, cycle, and assignment.
@@ -156,7 +160,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     if (!rows.length) throw new NotFoundError('Session not found');
 
     // 5. Load the complete saved session for the response.
-    const [saved] = await filterSessionRows(getSessionRows(actor, trx), { ids: [id] }, trx);
+    const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
     // 6. Load affected cycle rows and return them with the updated session.
@@ -180,7 +184,8 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
 
     // 2. Find the session program.
     const [lookup] = await trx<{ programId: string }[]>`
-      SELECT session.program_id FROM program_sessions session
+      SELECT session.program_id
+      FROM program_sessions session
       WHERE session.id = ${id}
     `;
     if (!lookup) throw new NotFoundError('Session not found');
@@ -202,7 +207,9 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
           + (ends_at AT TIME ZONE ${schedule.timezone})::time)::text AS end_local,
         (${date}::date + ((ends_at AT TIME ZONE ${schedule.timezone})::date
           - (starts_at AT TIME ZONE ${schedule.timezone})::date))::text AS end_date
-      FROM program_sessions WHERE id = ${id} FOR UPDATE
+      FROM program_sessions
+      WHERE id = ${id}
+      FOR UPDATE
     `;
     if (!session) throw new NotFoundError('Session not found');
     if (!session.movable) throw new ConflictError('Only future, non-cancelled sessions can be moved');
@@ -215,7 +222,8 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       WHERE assignment.program_id = ${lookup.programId}
         AND ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
         AND ${session.endDate}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      ORDER BY cycle.id FOR UPDATE OF cycle, assignment
+      ORDER BY cycle.id
+      FOR UPDATE OF cycle, assignment
     `;
     if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
     if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
@@ -223,10 +231,24 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     // 7. Reject a cycle change when the session has recorded data.
     if (assignments[0].cycleId !== session.cycleId) {
       const [records] = await trx<{ recorded: boolean }[]>`
-        SELECT EXISTS (SELECT 1 FROM attendance_records WHERE session_id = ${id})
-          OR EXISTS (SELECT 1 FROM session_notes WHERE session_id = ${id})
-          OR EXISTS (SELECT 1 FROM session_attachments WHERE session_id = ${id})
-          OR EXISTS (SELECT 1 FROM time_entries WHERE session_id = ${id}) AS recorded
+        SELECT EXISTS (SELECT 1
+        FROM attendance_records
+        WHERE session_id = ${id})
+          OR EXISTS (
+            SELECT 1
+            FROM session_notes
+            WHERE session_id = ${id}
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM session_attachments
+            WHERE session_id = ${id}
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM time_entries
+            WHERE session_id = ${id}
+          ) AS recorded
       `;
       if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
     }
@@ -237,7 +259,8 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
 
     // 9. Save the destination cycle and timestamps.
     await trx`
-      UPDATE program_sessions SET cycle_id = ${assignments[0].cycleId},
+      UPDATE program_sessions
+      SET cycle_id = ${assignments[0].cycleId},
         starts_at = ${timing.startsAt}, ends_at = ${timing.endsAt},
         updated_at = NOW(), updated_by = ${actor.userId}
       WHERE id = ${id}
@@ -245,7 +268,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     `;
 
     // 10. Load the complete moved session for the response.
-    const [saved] = await filterSessionRows(getSessionRows(actor, trx), { ids: [id] }, trx);
+    const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
     // 11. Load affected cycle rows and return them with the moved session.
@@ -266,42 +289,75 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
     const trx = asTransactionSql(tx);
 
     // 2. Find the session assignment.
-    const [lookup] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id}`;
+    const [lookup] = await trx<ProgramCycleKey[]>`
+      SELECT program_id, cycle_id
+      FROM program_sessions
+      WHERE id = ${id}
+    `;
     if (!lookup) throw new NotFoundError('Session not found');
 
     // 3. Lock the program, cycle, and assignment.
     await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, actor);
 
     // 4. Lock the session before checking deletion dependencies.
-    const [session] = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_sessions WHERE id = ${id} FOR UPDATE`;
+    const [session] = await trx<ProgramCycleKey[]>`
+      SELECT program_id, cycle_id
+      FROM program_sessions
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
     if (!session) throw new NotFoundError('Session not found');
 
     // 5. Reject sessions with recorded attendance.
-    const attendance = await trx`SELECT 1 FROM attendance_records WHERE session_id = ${id} LIMIT 1`;
+    const attendance = await trx`
+      SELECT 1
+      FROM attendance_records
+      WHERE session_id = ${id}
+      LIMIT 1
+    `;
     if (attendance.length) {
       throw new ConflictError('Session cannot be deleted because attendance has been recorded');
     }
 
     // 6. Reject sessions with recorded notes.
-    const notes = await trx`SELECT 1 FROM session_notes WHERE session_id = ${id} LIMIT 1`;
+    const notes = await trx`
+      SELECT 1
+      FROM session_notes
+      WHERE session_id = ${id}
+      LIMIT 1
+    `;
     if (notes.length) {
       throw new ConflictError('Session cannot be deleted because session notes have been recorded');
     }
 
     // 7. Reject sessions with attachments.
-    const attachments = await trx`SELECT 1 FROM session_attachments WHERE session_id = ${id} LIMIT 1`;
+    const attachments = await trx`
+      SELECT 1
+      FROM session_attachments
+      WHERE session_id = ${id}
+      LIMIT 1
+    `;
     if (attachments.length) {
       throw new ConflictError('Session cannot be deleted because attachments have been added');
     }
 
     // 8. Reject sessions with logged hours.
-    const hours = await trx`SELECT 1 FROM time_entries WHERE session_id = ${id} LIMIT 1`;
+    const hours = await trx`
+      SELECT 1
+      FROM time_entries
+      WHERE session_id = ${id}
+      LIMIT 1
+    `;
     if (hours.length) {
       throw new ConflictError('Session cannot be deleted because hours have been logged');
     }
 
     // 9. Delete the session after the dependency checks.
-    await trx`DELETE FROM program_sessions WHERE id = ${id}`;
+    await trx`
+      DELETE
+      FROM program_sessions
+      WHERE id = ${id}
+    `;
 
     // 10. Load affected cycle rows and return them with the deleted session ID.
     return { id, updatedProgramCycles: await getUpdatedProgramCycles(actor, [session], trx) };
@@ -334,12 +390,19 @@ async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId
   await lockAssignmentProgram(trx, programId, actor);
 
   // 2. Lock the required cycle.
-  await trx`SELECT id FROM program_cycles WHERE id = ${cycleId} FOR UPDATE`;
+  await trx`
+    SELECT id
+    FROM program_cycles
+    WHERE id = ${cycleId}
+    FOR UPDATE
+  `;
 
   // 3. Lock and require the program-cycle assignment.
   const assignments = await trx`
-    SELECT program_id FROM program_cycle_assignments
-    WHERE program_id = ${programId} AND cycle_id = ${cycleId} FOR UPDATE
+    SELECT program_id
+    FROM program_cycle_assignments
+    WHERE program_id = ${programId} AND cycle_id = ${cycleId}
+    FOR UPDATE
   `;
   if (!assignments.length) throw new NotFoundError('Program cycle not found');
 }
@@ -358,7 +421,8 @@ async function getProgramSchedule(programId: string, query = sql): Promise<Progr
       to_char(default_end_time, 'HH24:MI') AS default_end_time, timezone,
       (CURRENT_TIMESTAMP AT TIME ZONE timezone::text)::date::text AS today,
       to_char(CURRENT_TIMESTAMP AT TIME ZONE timezone::text, 'HH24:MI:SS') AS local_time
-    FROM programs WHERE id = ${programId}
+    FROM programs
+    WHERE id = ${programId}
   `;
   if (!schedule) throw new InternalServerError('Required program schedule is unavailable');
   return schedule;
@@ -423,7 +487,7 @@ async function createScheduledSession(
   if (!session) throw new InternalServerError('Session creation returned no record');
 
   // 3. Load the complete created session for the response.
-  const [saved] = await filterSessionRows(getSessionRows(actor, trx), { ids: [session.id] }, trx);
+  const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [session.id] }, trx);
   if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
   // 4. Load affected cycle rows and return them with the created session.

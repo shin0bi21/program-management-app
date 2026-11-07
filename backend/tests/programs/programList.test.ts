@@ -83,7 +83,6 @@ describe('Programs table list', () => {
     const rows = [...first.body.rows, ...second.body.rows] as ListedProgram[];
     const expected = direction === 'asc' ? assigned : [...assigned].reverse();
     expect(rows.map(row => row.id)).toEqual(expected.map(row => row.id));
-    expect(new Set(rows.map(row => row.id)).size).toBe(60);
     expect(rows[0]).not.toHaveProperty('cursorValue');
   });
 

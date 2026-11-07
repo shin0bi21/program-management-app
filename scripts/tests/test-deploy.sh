@@ -13,16 +13,20 @@ git -C "$TEST_REPO" config user.name "Deploy Test"
 git -C "$TEST_REPO" config user.email "deploy-test@example.invalid"
 
 write_test_file() {
+  # 1. Resolve a fixture path inside the disposable test checkout.
   local path="$1"
   local content="$2"
+  # 2. Create its parent directory and write the requested fixture contents.
   mkdir -p "$(dirname "$TEST_REPO/$path")"
   printf '%s\n' "$content" > "$TEST_REPO/$path"
 }
 
 commit_test_state() {
+  # 1. Commit the complete fixture state under the supplied test label.
   local message="$1"
   git -C "$TEST_REPO" add .
   git -C "$TEST_REPO" commit -q -m "$message"
+  # 2. Return the committed revision for classifier comparisons.
   git -C "$TEST_REPO" rev-parse HEAD
 }
 
@@ -78,6 +82,7 @@ done
 }
 
 assert_plan() {
+  # 1. Read the scenario revisions and expected component selections.
   local label="$1"
   local target="$2"
   local frontend_revision="$3"
@@ -88,6 +93,7 @@ assert_plan() {
   local expected_migrations="$8"
   local expected_infrastructure="$9"
 
+  # 2. Reset classifier state and run against the requested revisions.
   # These globals are consumed by functions sourced from deploy/main.sh.
   # shellcheck disable=SC2034
   TARGET_SHA="$target"
@@ -103,6 +109,7 @@ assert_plan() {
   INFRASTRUCTURE_CHANGED=false
   classify_changes
 
+  # 3. Compare every component flag with the scenario expectations.
   [ "$FRONTEND_CHANGED" = "$expected_frontend" ] || { echo "FAIL: $label frontend"; exit 1; }
   [ "$BACKEND_CHANGED" = "$expected_backend" ] || { echo "FAIL: $label backend"; exit 1; }
   [ "$MIGRATIONS_CHANGED" = "$expected_migrations" ] || { echo "FAIL: $label migrations"; exit 1; }
@@ -210,8 +217,10 @@ run_preview() {
 }
 
 assert_preview_unchanged() {
+  # 1. Compare checkout contents before and after preview.
   snapshot_checkout > "$TEST_ROOT/after"
   cmp "$TEST_ROOT/before" "$TEST_ROOT/after" || { echo "FAIL: preview changed checkout or deployment state"; exit 1; }
+  # 2. Verify the lock, hooks, and temporary directory also remain unchanged.
   [ "$(cat "$TEST_ROOT/deploy.lock")" = 'existing lock' ] || { echo "FAIL: preview changed deploy lock"; exit 1; }
   [ ! -e "$TEST_ROOT/hook-called" ] || { echo "FAIL: preview ran a Git hook"; exit 1; }
   [ -z "$(ls -A "$TEST_ROOT/temporary")" ] || { echo "FAIL: preview left temporary files"; exit 1; }

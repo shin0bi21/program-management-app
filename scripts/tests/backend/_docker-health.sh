@@ -14,6 +14,7 @@ set -euo pipefail
 MAX_RETRIES=30
 RETRY_INTERVAL=2
 
+# 1. Record existing container ownership before preparing the test environment.
 # Remember whether containers were already up before we touched anything
 _CONTAINERS_WERE_RUNNING=false
 if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
@@ -21,6 +22,7 @@ if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q 
 fi
 
 cleanup() {
+  # 1. Preserve the test exit status and report failures before cleaning up.
   local exit_code=$?
   echo ""
   if [ $exit_code -ne 0 ]; then
@@ -28,6 +30,7 @@ cleanup() {
     echo "Tests Failed! (exit code: $exit_code)"
     echo "=========================================="
   fi
+  # 2. Preserve existing development containers; stop only a stack started for tests.
   if [ "$_CONTAINERS_WERE_RUNNING" = "true" ]; then
     echo ""
     echo "Dev containers left running (they were already up before tests)."
@@ -43,8 +46,10 @@ trap cleanup EXIT INT TERM
 echo "=========================================="
 echo "Starting backend test services..."
 echo "=========================================="
+# 2. Start backend and test database services.
 docker compose up -d backend db_test
 
+# 3. Wait for the development database within the configured retry bound.
 # Wait for database
 echo ""
 echo "Waiting for database..."
@@ -61,6 +66,7 @@ done
 echo ""
 echo "Database is ready (after ~$((retries * RETRY_INTERVAL))s)"
 
+# 4. Wait for the temporary test database before applying migrations.
 # Wait for test database (tmpfs — empty on every container start)
 echo ""
 echo "Waiting for test database..."
@@ -77,6 +83,7 @@ done
 echo ""
 echo "Test database is ready (after ~$((retries * RETRY_INTERVAL))s)"
 
+# 5. Wait for the backend listener, printing logs if readiness fails.
 # Wait for backend
 echo ""
 echo "Waiting for backend..."
@@ -96,6 +103,7 @@ done
 echo ""
 echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
 
+# 6. Apply test migrations before handing control to the suite runner.
 # Apply migrations against the test DB (idempotent — safe to run every time)
 echo ""
 echo "Migrating test database..."

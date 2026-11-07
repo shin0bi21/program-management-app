@@ -29,7 +29,12 @@ interface LocalImportConfiguration {
   adminLastName: string;
 }
 
+/**
+ * Validates development isolation, a local staging URL, and administrator credentials from the supplied environment; invalid settings throw.
+ * @example localImportConfiguration(env).adminFirstName // 'Local' when ADMIN_FIRST_NAME is omitted
+ */
 export function localImportConfiguration(env: NodeJS.ProcessEnv): LocalImportConfiguration {
+  // 1. Require development mode and outbound isolation before accepting a target.
   if (env.NODE_ENV !== 'development') {
     throw new Error('Import preparation requires NODE_ENV=development');
   }
@@ -38,6 +43,7 @@ export function localImportConfiguration(env: NodeJS.ProcessEnv): LocalImportCon
   }
   if (!env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 
+  // 2. Restrict the target to the local staging database on the db service.
   const databaseUrl = new URL(env.DATABASE_URL);
 
   if (
@@ -51,6 +57,7 @@ export function localImportConfiguration(env: NodeJS.ProcessEnv): LocalImportCon
     throw new Error('Import preparation only accepts a staging database named local_snapshot_* on db:5432');
   }
 
+  // 3. Require local credentials before returning administrator configuration.
   if (!env.ADMIN_EMAIL?.trim() || !env.ADMIN_PASSWORD) {
     throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be configured for the local administrator');
   }
@@ -68,20 +75,28 @@ export function localImportConfiguration(env: NodeJS.ProcessEnv): LocalImportCon
 // 3. Authentication replacement and connection cleanup
 // ============================================================================
 
+/**
+ * Replaces copied authentication and resets the local administrator in one transaction on a validated staging configuration; always closes its connection.
+ * @example await prepareLocalImport(configuration) // copied logins disabled, configured local admin enabled
+ */
 export async function prepareLocalImport(configuration: LocalImportConfiguration) {
+  // 1. Open a single owned connection for the validated staging database.
   const sql = postgres(configuration.databaseUrl, { max: 1 });
 
   try {
+    // 2. Replace copied authentication and seed the local administrator in one transaction.
     await sql.begin(async tx => {
       // Match the application transaction adapter for the postgres.js callable-typing issue.
       const trx = tx as unknown as typeof sql;
 
+      // 2.1. Disable copied tokens and passwords while preserving business records.
       // Discard all copied authentication material while preserving business records and account state.
       await trx`TRUNCATE user_refresh_tokens, user_auth_codes, user_password_reset_tokens,
         user_trusted_devices, system_revoked_tokens`;
       await trx`UPDATE user_credentials SET password_hash = '!local-snapshot-disabled',
         failed_login_attempts = 0, locked_until = NULL, last_login = NULL, updated_at = NOW()`;
 
+      // 2.2. Create or reset the configured local administrator in the same transaction.
       await seedAdmin(trx, {
         email: configuration.adminEmail,
         password: configuration.adminPassword,
@@ -90,6 +105,7 @@ export async function prepareLocalImport(configuration: LocalImportConfiguration
       }, { resetExisting: true });
     });
   } finally {
+    // 3. Close the owned connection even when preparation fails.
     await sql.end({ timeout: 5 });
   }
 }

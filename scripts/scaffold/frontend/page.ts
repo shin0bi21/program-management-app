@@ -10,6 +10,7 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
  * @example pagePlan(context, 'Staff/Schedules') // Plans Schedules.tsx, useSchedulesData.ts, and their tests.
  */
 export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPlan {
+  // 1. Validate the requested owner and derive destination names.
   const parts = pagePath.split('/');
   if (parts.length < 1 || parts.length > 2) {
     throw new Error('Page path must contain a page name with at most one route family.');
@@ -24,6 +25,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     directory,
     join(context.frontendRoot, 'common/components/PageContainer/PageContainer'),
   );
+  // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
@@ -76,6 +78,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     }
     `,
   );
+  // 3. Format the companion sources and colocated test outlines.
   const test = context.sourceFile(
     join(directory, `${name}.test.tsx`),
     `
@@ -129,6 +132,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     `,
   );
 
+  // 4. Return all sources together for conflict validation and publication.
   return {
     files: new Map([
       [join(directory, `${name}.tsx`), component],

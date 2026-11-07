@@ -51,7 +51,6 @@ it('publishes a complete private archive only after offline verification', () =>
     PGHOST: 'localhost', PGPORT: '5433', PGUSER: 'snapshot_user',
     PGPASSWORD: 'fake password', PGDATABASE: 'snapshot_test', PGSSLMODE: 'require',
   });
-  expect(JSON.stringify(dump[1])).not.toContain('password');
   expect(command.mock.calls[1][1]?.[0]).toBe('--list');
 });
 

@@ -1,47 +1,45 @@
 import { sql } from '../../db/client';
-import { accountAccessPredicate } from '../../policies/accountPolicy';
 import type { AccessTokenPayload } from '../../types/auth';
 import type { AccountQuery } from '../../validation/accountSchemas';
-import { cursorPage, decodeCursor } from '../shared/cursorPagination';
-import { accountRecordColumns, accountRecordFrom, type AccountRow } from './accountRecordQuery';
+import { paginateQuery } from '../shared/cursorPagination';
+import { buildAccountFilters } from './accountRowFilters';
+import { getAccountRows, type AccountRow } from './accountRowQuery';
 
-export async function listAccounts(actor: AccessTokenPayload, filters: AccountQuery) {
-  const where = applyAccountFilters(actor, filters);
-  const cursor = decodeCursor(filters.cursor);
+/**
+ * Lists matching accounts.
+ * @param actor - Actor whose role determines account visibility; callers enforce route permissions.
+ * @param filterValues - Validated role/status/search, sorting, and optional cursor-page inputs.
+ * @returns A cursor page when limited, otherwise all matching rows in the requested order.
+ * @example listAccounts(actor, filterValues) // { rows, nextCursor } when filterValues.limit is set
+ */
+export function listAccounts(actor: AccessTokenPayload, filterValues: AccountQuery) {
+  // 1. Load the matching accounts.
+  const appliedFilters = buildAccountFilters(actor, filterValues);
+  const rowsQuery = getAccountRows(appliedFilters);
+
+  // 2. Choose the account order.
   const sortValue = {
-    name: sql`LOWER(u.first_name || ' ' || u.last_name)`, email: sql`LOWER(uc.email)`,
-    role: sql`ur.name::text`, status: sql`uc.status::text`, createdAt: sql`u.created_at::text`,
-  }[filters.sort]!;
-  const rows = await sql<Array<AccountRow & { cursorValue: string }>>`
-    SELECT
-      ${accountRecordColumns},
-      ${sortValue} AS cursor_value
-    ${accountRecordFrom}
-    WHERE ${where}
-      AND ${cursor ? (filters.direction === 'asc'
-        ? sql`(${sortValue}, u.id) > (${cursor.value}, ${cursor.id}::uuid)`
-        : sql`(${sortValue}, u.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
-    ORDER BY ${sortValue} ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}, u.id ${filters.direction === 'asc' ? sql`ASC` : sql`DESC`}
-    ${filters.limit ? sql`LIMIT ${filters.limit + 1}` : sql``}
-  `;
-  return filters.limit ? cursorPage(rows, filters.limit) : rows.map(({ cursorValue: _cursorValue, ...row }) => row);
-}
+    name: sql`LOWER(page_row.first_name || ' ' || page_row.last_name)`,
+    email: sql`LOWER(page_row.email)`,
+    role: sql`page_row.role::text`,
+    status: sql`page_row.status::text`,
+    createdAt: sql`page_row.created_at::text`,
+  }[filterValues.sort]!;
 
-function applyAccountFilters(actor: AccessTokenPayload, filters: AccountQuery) {
-  const accessScope = accountAccessPredicate(actor, sql`ur.name`);
-  const roleFilter = filters.roles.length
-    ? sql`ur.name = ANY(${sql.array(filters.roles)}::text[])`
-    : sql`TRUE`;
-  const statusFilter = filters.statuses.length
-    ? sql`uc.status = ANY(${sql.array(filters.statuses)}::account_status[])`
-    : sql`TRUE`;
-  const searchFilter = filters.search
-    ? sql`CONCAT_WS(' ', u.first_name, u.last_name, uc.email) ILIKE ${`%${escapeLikePattern(filters.search)}%`} ESCAPE '\\'`
-    : sql`TRUE`;
+  // 3. Return the requested list or page.
+  if (filterValues.limit === undefined) {
+    const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
+    return sql<AccountRow[]>`
+      SELECT page_row.*
+      FROM (${rowsQuery}) page_row
+      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+    `;
+  }
 
-  return sql`${accessScope} AND ${roleFilter} AND ${statusFilter} AND ${searchFilter}`;
-}
-
-function escapeLikePattern(value: string) {
-  return value.replace(/[\\%_]/g, character => `\\${character}`);
+  return paginateQuery(rowsQuery, {
+    sortValue,
+    direction: filterValues.direction,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit,
+  });
 }

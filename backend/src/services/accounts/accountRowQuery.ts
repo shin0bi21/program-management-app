@@ -10,7 +10,7 @@ export type AccountRow =
     programIds: string[];
   };
 
-export const accountRecordColumns = sql`
+export const accountRowColumns = sql`
   u.id,
   u.first_name,
   u.last_name,
@@ -26,8 +26,22 @@ export const accountRecordColumns = sql`
   ) AS program_ids
 `;
 
-export const accountRecordFrom = sql`
+export const accountRowFrom = sql`
   FROM users u
   INNER JOIN user_credentials uc ON uc.user_id = u.id
   INNER JOIN user_roles ur ON ur.id = u.role_id
 `;
+
+/**
+ * Builds rows for table and calendar items.
+ * @param appliedFilters - SQL filters supplied by the service.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getAccountRows(appliedFilters, trx)
+ */
+export function getAccountRows(appliedFilters = sql`TRUE`, query = sql) {
+  return query<AccountRow[]>`
+    SELECT ${accountRowColumns}
+    ${accountRowFrom}
+    WHERE ${appliedFilters}
+  `;
+}

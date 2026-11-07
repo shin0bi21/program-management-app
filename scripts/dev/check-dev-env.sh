@@ -17,27 +17,33 @@ service_running() {
 }
 
 newest_mtime() {
+  # 1. Initialize the latest observed modification time.
   local newest=0
   local file
   local modified
 
+  # 2. Read NUL-delimited paths and support both BSD and GNU stat.
   while IFS= read -r -d '' file; do
     modified="$(stat -f '%m' "$file" 2>/dev/null || stat -c '%Y' "$file" 2>/dev/null || printf '0')"
     [ "$modified" -gt "$newest" ] && newest="$modified"
   done
+  # 3. Return the greatest timestamp, or zero when no file could be inspected.
   printf '%s\n' "$newest"
 }
 
 started_epoch() {
+  # 1. Resolve the current service container and reject missing containers.
   local service="$1"
   local container_id
   local started_at
 
   container_id="$(docker compose ps -q "$service" 2>/dev/null)"
   [ -n "$container_id" ] || return 1
+  # 2. Read its start time and remove fractional seconds.
   started_at="$(docker inspect --format '{{.State.StartedAt}}' "$container_id" 2>/dev/null)"
   started_at="${started_at%%.*}Z"
 
+  # 3. Convert to epoch seconds using the available platform date command.
   date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$started_at" '+%s' 2>/dev/null \
     || date -u -d "$started_at" '+%s' 2>/dev/null
 }
@@ -45,6 +51,7 @@ started_epoch() {
 echo "Development environment doctor (read-only)"
 echo ""
 
+# 1. Verify tooling and daemon access before inspecting services.
 # Verify the local Docker tooling before inspecting the stack.
 if ! command -v docker >/dev/null 2>&1; then
   warn "Docker CLI is not installed."
@@ -64,6 +71,7 @@ pass "Docker daemon is reachable."
 
 echo ""
 echo "Containers"
+# 2. Report expected development containers and their current state.
 # Report the expected development services and their current state.
 docker compose ps
 for service in frontend backend db; do
@@ -76,6 +84,7 @@ done
 
 echo ""
 echo "Connectivity"
+# 3. Check database and backend connectivity for running services.
 # Check database readiness and the backend health endpoint.
 if service_running db && docker compose exec -T db pg_isready >/dev/null 2>&1; then
   pass "Development database accepts connections."
@@ -98,6 +107,7 @@ fi
 
 echo ""
 echo "Migrations and dependencies"
+# 4. Inspect migration status and installed dependency trees.
 # Validate schema state and installed packages inside running containers.
 if service_running backend; then
   migration_output="$(docker compose exec -T backend npm run db:status 2>&1)"
@@ -131,6 +141,7 @@ fi
 
 echo ""
 echo "Possible stale services"
+# 5. Compare service start times with files that require restart or rebuild.
 # Flag services started before files that require a restart or rebuild.
 if service_running backend; then
   backend_started="$(started_epoch backend || printf '0')"
@@ -157,6 +168,7 @@ else
 fi
 
 echo ""
+# 6. Return a failing status if any diagnostic reported a warning.
 # Return a nonzero status when any check needs attention.
 if [ "$warnings" -eq 0 ]; then
   echo "Doctor found no problems."

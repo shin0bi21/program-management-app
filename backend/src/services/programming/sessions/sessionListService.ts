@@ -2,20 +2,20 @@ import { sql } from '../../../db/client';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SessionListQuery } from '../../../validation/programmingSchemas';
 import { paginateQuery } from '../../shared/cursorPagination';
-import { getSessionRows } from './sessionRowQuery';
-import { filterSessionRows } from './sessionRowFilters';
+import { getSessionRows, type SessionRow } from './sessionRowQuery';
+import { buildSessionFilters } from './sessionRowFilters';
 
 /**
- * Lists accessible sessions matching the selected filters, sort, and optional cursor page.
+ * Lists matching sessions.
  * @param actor - Actor whose program access scopes the rows; callers enforce route permissions.
- * @param filters - Validated list filters; unpaged calendar ranges default to ascending order.
+ * @param filterValues - Validated list filters; unpaged calendar ranges default to ascending order.
  * @returns A cursor page when a limit is supplied, otherwise the complete matching rows.
- * @example listSessions(actor, filters) // { rows, nextCursor } when filters.limit is set
+ * @example listSessions(actor, filterValues) // { rows, nextCursor } when filterValues.limit is set
  */
-export function listSessions(actor: AccessTokenPayload, filters: SessionListQuery) {
+export function listSessions(actor: AccessTokenPayload, filterValues: SessionListQuery) {
   // 1. Filter the canonical, access-scoped session rows.
-  const filteredRows = filterSessionRows(getSessionRows(actor), filters);
-  const direction = !filters.limit && filters.start ? 'asc' : filters.direction;
+  const filteredRows = buildSessionFilters(getSessionRows(actor), filterValues);
+  const direction = !filterValues.limit && filterValues.start ? 'asc' : filterValues.direction;
 
   // 2. Choose the session sort and delegate cursor execution and response shaping.
   const sortValue = {
@@ -26,12 +26,22 @@ export function listSessions(actor: AccessTokenPayload, filters: SessionListQuer
     time: sql`page_row.starts_at::text`,
     type: sql`LOWER(page_row.session_type::text)`,
     status: sql`page_row.state`,
-  }[filters.sort]!;
+  }[filterValues.sort]!;
+
+  // 3. Keep complete lookups separate from bounded cursor pages.
+  if (filterValues.limit === undefined) {
+    const sortDirection = direction === 'asc' ? sql`ASC` : sql`DESC`;
+    return sql<SessionRow[]>`
+      SELECT page_row.*
+      FROM (${filteredRows}) page_row
+      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+    `;
+  }
 
   return paginateQuery(filteredRows, {
     sortValue,
     direction,
-    cursor: filters.cursor,
-    limit: filters.limit,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit,
   });
 }

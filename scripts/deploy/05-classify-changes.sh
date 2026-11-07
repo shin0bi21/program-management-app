@@ -1,11 +1,13 @@
 # shellcheck shell=bash
 
 classify_infrastructure_changes() {
+  # 1. Missing infrastructure history requires the full deployment flow.
   if [ -z "$INFRASTRUCTURE_REVISION" ]; then
     INFRASTRUCTURE_CHANGED=true
     return
   fi
 
+  # 2. Classify changed paths conservatively; unknown owners select infrastructure.
   local path
   while IFS= read -r path; do
     case "$path" in
@@ -27,6 +29,7 @@ classify_infrastructure_changes() {
 }
 
 classify_changes() {
+  # 1. Compare each component with its own last successful revision.
   if revision_changed "$FRONTEND_REVISION" \
     frontend/src frontend/public frontend/index.html frontend/package.json \
     frontend/package-lock.json frontend/vite.config.ts frontend/tsconfig.json \
@@ -40,10 +43,12 @@ classify_changes() {
     BACKEND_CHANGED=true
   fi
 
+  # 2. Select migration work independently from other backend changes.
   if revision_changed "$BACKEND_REVISION" backend/db; then
     MIGRATIONS_CHANGED=true
   fi
 
+  # 3. Infrastructure changes require both components and migration validation.
   classify_infrastructure_changes
   if [ "$INFRASTRUCTURE_CHANGED" = true ]; then
     FRONTEND_CHANGED=true
