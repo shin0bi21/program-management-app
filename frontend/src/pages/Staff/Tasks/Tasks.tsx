@@ -246,7 +246,7 @@ export default function Tasks() {
       isOpen
       initialSource="task"
       initialTask={hoursModalTask}
-      initialResourceId={hoursModalTask.staffId}
+      initialStaffId={hoursModalTask.staffId}
       canCompleteTask={canWrite}
       resources={pageData.resources}
       programs={pageData.programs}

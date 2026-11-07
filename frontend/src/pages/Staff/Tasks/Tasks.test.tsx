@@ -376,7 +376,7 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    expect(hoursModal.props).toMatchObject({ initialTask: task, initialResourceId: task.staffId });
+    expect(hoursModal.props).toMatchObject({ initialTask: task, initialStaffId: task.staffId });
   });
 
   it('reopens a completed task through the route action workflow', async () => {

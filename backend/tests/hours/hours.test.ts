@@ -3,6 +3,8 @@ import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriodUtils';
+import { getHoursRows } from '../../src/services/staff/hours/hoursRowQuery';
+import type { AccessTokenPayload } from '../../src/types/auth';
 
 const app = createApp();
 
@@ -106,6 +108,47 @@ describe('Hours API', () => {
     await deleteTestUser(secondStaffId);
     await deleteTestUser(firstStaffId);
     await deleteTestUser(adminId);
+  });
+
+  it('keeps resource scope inside the canonical hours query and preserves forbidden writes', async () => {
+    const createdIds: string[] = [];
+    try {
+      for (const staffId of [firstStaffId, secondStaffId, unrelatedStaffId]) {
+        const created = await request(app).post('/api/hours')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ source: 'regular', staffId, programId, category: 'meeting', date, hours: 1, note: 'Canonical Hours scope check' });
+        expect(created.status).toBe(201);
+        createdIds.push(created.body.id);
+      }
+      const actor: AccessTokenPayload = {
+        userId: firstStaffId, email: 'hours-scope@test.local', role: 'staff',
+        permissions: ['read:hours'], tokenType: 'access', jti: 'hours-scope', iat: 0, exp: 1,
+      };
+
+      const ownAndShared = await getHoursRows(actor);
+      expect(ownAndShared.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
+        .toEqual(createdIds.slice(0, 2).sort());
+      expect(await getHoursRows(actor, sql`entry.id = ${createdIds[2]}`)).toEqual([]);
+      const broadFilter = await getHoursRows(actor, sql`TRUE OR entry.id = ${createdIds[2]}`);
+      expect(broadFilter.some(row => row.id === createdIds[2])).toBe(false);
+      const adminRows = await getHoursRows({ ...actor, userId: adminId, role: 'admin' });
+      expect(adminRows.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
+        .toEqual([...createdIds].sort());
+
+      for (const id of createdIds.slice(1)) {
+        const moved = await request(app).patch(`/api/hours/${id}/placement`)
+          .set('Authorization', `Bearer ${firstStaffToken}`).send({ date: placementDate });
+        expect(moved.status).toBe(403);
+        const removed = await request(app).delete(`/api/hours/${id}`)
+          .set('Authorization', `Bearer ${firstStaffToken}`);
+        expect(removed.status).toBe(403);
+      }
+    } finally {
+      if (createdIds.length) {
+        await sql`DELETE FROM time_entries WHERE id IN ${sql(createdIds)}`;
+        await sql`DELETE FROM audit_log WHERE table_name = 'time_entries' AND record_id IN ${sql(createdIds)}`;
+      }
+    }
   });
 
   it('lets project managers log their own hours without writing shared coworkers hours', async () => {

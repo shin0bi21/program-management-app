@@ -24,7 +24,7 @@ export interface HoursTaskOption {
 }
 
 interface HoursDraft {
-  resourceId: string;
+  staffId: string;
   source: HoursSource;
   programId: string;
   date: string;
@@ -45,7 +45,7 @@ export interface UseHoursModalOptions {
     opts?: RequestOptions,
   ) => Promise<readonly HoursTaskOption[]>;
   onAdd: (input: SetHoursInput) => Promise<void>;
-  initialResourceId?: string;
+  initialStaffId?: string;
   initialDate?: string;
   initialSource?: HoursSource;
   initialTask?: HoursTaskOption;
@@ -56,7 +56,7 @@ export interface UseHoursModalOptions {
 type InitialDraftOptions = Pick<UseHoursModalOptions,
   | 'resources'
   | 'programs'
-  | 'initialResourceId'
+  | 'initialStaffId'
   | 'initialDate'
   | 'initialSource'
   | 'initialTask'
@@ -65,16 +65,16 @@ type InitialDraftOptions = Pick<UseHoursModalOptions,
 function buildInitialDraft({
   resources,
   programs,
-  initialResourceId,
+  initialStaffId,
   initialDate,
   initialSource = 'regular',
   initialTask,
   initialItem,
 }: InitialDraftOptions): HoursDraft {
-  const preferredResourceId = initialTask?.staffId ?? initialResourceId;
-  const resourceId = preferredResourceId
-    && resources.some(resource => resource.id === preferredResourceId)
-    ? preferredResourceId
+  const preferredStaffId = initialTask?.staffId ?? initialStaffId;
+  const staffId = preferredStaffId
+    && resources.some(resource => resource.id === preferredStaffId)
+    ? preferredStaffId
     : resources[0]?.id ?? '';
   const programId = initialItem?.programId
     && programs.some(program => program.id === initialItem.programId)
@@ -87,7 +87,7 @@ function buildInitialDraft({
       : initialSource;
 
   return {
-    resourceId,
+    staffId,
     source,
     programId,
     date: initialDate ?? dayKey(new Date()),
@@ -103,7 +103,7 @@ function buildInitialDraft({
 }
 
 function getDraftError(draft: HoursDraft) {
-  if (!draft.resourceId) return 'Select a staff member.';
+  if (!draft.staffId) return 'Select a staff member.';
   if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
   if (draft.source === 'session' && !draft.sessionId) return 'Select a session.';
 
@@ -122,7 +122,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     programs,
     loadTasks,
     onAdd,
-    initialResourceId,
+    initialStaffId,
     initialDate,
     initialSource = 'regular',
     initialTask,
@@ -132,7 +132,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   const initialDraft = useMemo(() => buildInitialDraft({
     resources,
     programs,
-    initialResourceId,
+    initialStaffId,
     initialDate,
     initialSource,
     initialTask,
@@ -140,7 +140,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   }), [
     initialDate,
     initialItem,
-    initialResourceId,
+    initialStaffId,
     initialSource,
     initialTask,
     programs,
@@ -155,8 +155,8 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     ? `entry:${initialItem.id}`
     : initialTask
       ? `task:${initialTask.id}`
-      : `new:${initialSource}:${initialResourceId ?? ''}:${initialDate ?? ''}`;
-  const initializationKey = `${targetKey}:${initialDraft.resourceId}:${initialDraft.programId}`;
+      : `new:${initialSource}:${initialStaffId ?? ''}:${initialDate ?? ''}`;
+  const initializationKey = `${targetKey}:${initialDraft.staffId}:${initialDraft.programId}`;
   const submitLock = useSubmitLock();
   initialDraftRef.current = initialDraft;
 
@@ -170,24 +170,24 @@ export default function useHoursModal(options: UseHoursModalOptions) {
 
   // Source-specific remote options.
   const taskQuery = useQuery({
-    queryKey: ['tasks', 'hours-options', draft.resourceId],
-    queryFn: ({ signal }) => loadTasks(draft.resourceId, { signal }),
-    enabled: isOpen && draft.source === 'task' && Boolean(draft.resourceId) && !taskLocked,
+    queryKey: ['tasks', 'hours-options', draft.staffId],
+    queryFn: ({ signal }) => loadTasks(draft.staffId, { signal }),
+    enabled: isOpen && draft.source === 'task' && Boolean(draft.staffId) && !taskLocked,
   });
   const taskOptions = initialTask
     ? [initialTask]
     : (taskQuery.data ?? []).filter(task => task.state === 'open');
 
   const sessionQuery = useQuery({
-    queryKey: ['hours-sessions', draft.resourceId, draft.date],
-    queryFn: ({ signal }) => getHoursSessions(draft.resourceId, draft.date, signal),
-    enabled: isOpen && draft.source === 'session' && Boolean(draft.resourceId) && Boolean(draft.date),
+    queryKey: ['hours-sessions', draft.staffId, draft.date],
+    queryFn: ({ signal }) => getHoursSessions(draft.staffId, draft.date, signal),
+    enabled: isOpen && draft.source === 'session' && Boolean(draft.staffId) && Boolean(draft.date),
   });
   const sessionOptions = sessionQuery.data ?? [];
 
   // Dependent field events.
-  const selectResource = (resourceId: string) => {
-    setDraft(current => ({ ...current, resourceId, taskId: '', sessionId: '' }));
+  const selectStaff = (staffId: string) => {
+    setDraft(current => ({ ...current, staffId, taskId: '', sessionId: '' }));
   };
   const selectProgram = (programId: string) => {
     setDraft(current => ({ ...current, programId }));
@@ -239,7 +239,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     setSubmitStatus('submitting');
     setError('');
     const shared = {
-      staffId: draft.resourceId,
+      staffId: draft.staffId,
       hours: Number(draft.hours),
       note: draft.note.trim(),
     };
@@ -287,7 +287,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     submitStatus,
     submitting,
     error,
-    selectResource,
+    selectStaff,
     selectProgram,
     selectCategory,
     selectTask,

@@ -191,7 +191,7 @@ describe('HoursCalendar', () => {
     });
     actions?.find(action => action.id === 'regular')?.onSelect();
     expect(onAdd).toHaveBeenCalledWith({
-      resourceId: 'staff-1',
+      staffId: 'staff-1',
       date: periods[1].key,
       source: 'regular',
     });
