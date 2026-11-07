@@ -907,14 +907,14 @@ describe('Hours API', () => {
       });
 
     expect(entry.status).toBe(403);
-    const [savedTask] = await sql<Array<{ status: string }>>`
-      SELECT status FROM tasks WHERE id = ${task.body.id}
+    const [savedTask] = await sql<Array<{ state: string }>>`
+      SELECT state FROM tasks WHERE id = ${task.body.id}
     `;
     const savedEntries = await sql<Array<{ id: string }>>`
       SELECT id FROM time_entries
       WHERE task_id = ${task.body.id} AND note = 'Should not complete task'
     `;
-    expect(savedTask.status).toBe('open');
+    expect(savedTask.state).toBe('open');
     expect(savedEntries).toHaveLength(0);
 
     const savedHours = await request(app)

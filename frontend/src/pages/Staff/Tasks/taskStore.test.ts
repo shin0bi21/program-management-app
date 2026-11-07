@@ -7,8 +7,8 @@ import { getTaskSortValue } from './taskStore';
 const row = makeTask();
 
 const sortValues: Array<[TaskSortKey, Partial<Task>, string]> = [
-  ['firstName', { assignee: { ...row.assignee, firstName: 'Other' } }, 'other'],
-  ['lastName', { assignee: { ...row.assignee, lastName: 'Other' } }, 'other'],
+  ['firstName', { firstName: 'Other' }, 'other'],
+  ['lastName', { lastName: 'Other' }, 'other'],
   ['title', { title: 'Other' }, 'other'],
   ['category', { category: 'meeting' }, 'meeting'],
   ['program', { program: 'Other' }, 'other'],

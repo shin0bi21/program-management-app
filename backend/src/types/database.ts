@@ -315,7 +315,7 @@ export interface Tasks {
   program_id: string | null;
   staff_id: string;
   start_date: Timestamp;
-  status: Generated<string>;
+  state: Generated<string>;
   title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;

@@ -32,8 +32,8 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
 
   // 2. Choose the order and load the page.
   const sortValue = {
-    firstName: sql`LOWER("row".staff_first_name)`,
-    lastName: sql`LOWER("row".staff_last_name)`,
+    firstName: sql`LOWER("row".first_name)`,
+    lastName: sql`LOWER("row".last_name)`,
     title: sql`LOWER("row".title)`,
     category: sql`"row".category::text`,
     program: sql`LOWER(COALESCE("row".program, ''))`,

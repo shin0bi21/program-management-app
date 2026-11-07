@@ -44,10 +44,10 @@ export function getTaskCategoryLabel(category: TaskCategory) {
  * @example getTaskStatus(openTask, '2026-08-10') // date-derived status
  */
 export function getTaskStatus(
-  task: Pick<TaskRow, 'status' | 'startDate' | 'dueDate'>,
+  task: Pick<TaskRow, 'state' | 'startDate' | 'dueDate'>,
   today = getCurrentTorontoDate(),
 ): TaskStatus {
-  if (task.status !== 'open') return task.status;
+  if (task.state !== 'open') return task.state;
   if (task.startDate > today) return 'upcoming';
   if (task.dueDate < today) return 'overdue';
   return 'in_progress';

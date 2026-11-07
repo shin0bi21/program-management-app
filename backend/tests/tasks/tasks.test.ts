@@ -187,6 +187,22 @@ describe('Tasks API', () => {
           startDate: taskDate, dueDate: taskDate, staffId: firstStaffId,
         }));
       expect(created.status).toBe(201);
+      expect(Object.keys(created.body).sort()).toEqual([
+        'id', 'title', 'details', 'category', 'categoryLabel',
+        'staffId', 'firstName', 'lastName', 'name', 'programId', 'program',
+        'state', 'status', 'statusLabel', 'startDate', 'dueDate',
+        'hoursLogged', 'loggedHoursByDate', 'completedAt', 'writable',
+      ].sort());
+      expect(created.body).toMatchObject({
+        staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', state: 'open',
+      });
+      for (const endpoint of ['list', 'calendar']) {
+        const collection = await request(app).get(`/api/tasks/${endpoint}`)
+          .query({ staffIds: firstStaffId, search: 'Directly readable general task', start: taskDate, end: taskDate })
+          .set('Authorization', `Bearer ${firstStaffToken}`);
+        expect(collection.status).toBe(200);
+        expect(endpoint === 'list' ? collection.body.rows : collection.body).toEqual([created.body]);
+      }
 
       for (const [token, writable] of [[firstStaffToken, true], [secondStaffToken, false], [adminToken, true]] as const) {
         const result = await request(app)
@@ -264,9 +280,9 @@ describe('Tasks API', () => {
         staffId: firstStaffId,
       }));
     expect(ownTask.status).toBe(201);
-    expect(ownTask.body.assignee).toEqual({
-      id: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson',
-    });
+    expect(ownTask.body).toEqual(expect.objectContaining({
+      staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson',
+    }));
 
     const otherCreate = await request(app)
       .post('/api/tasks')
@@ -385,7 +401,7 @@ describe('Tasks API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.rows).toEqual([
-      expect.objectContaining({ id: secondTask.body.id, assignee: expect.objectContaining({ id: secondStaffId }) }),
+      expect.objectContaining({ id: secondTask.body.id, staffId: secondStaffId }),
     ]);
   });
 
@@ -488,7 +504,7 @@ describe('Tasks API', () => {
     ]));
 
     await expect(sql`
-      INSERT INTO tasks (title, category, status, start_date, due_date)
+      INSERT INTO tasks (title, category, state, start_date, due_date)
       VALUES ('Ownerless task', 'outreach', 'open', ${taskDate}, ${taskDate})
     `).rejects.toMatchObject({ code: '23502' });
 
@@ -657,6 +673,11 @@ describe('Tasks API', () => {
       .send({ startDate: '2026-08-10', dueDate: '2026-08-12' });
 
     expect(placementUpdate.status).toBe(200);
+    const saved = await request(app).get(`/api/tasks/${task.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(saved.status).toBe(200);
+    expect(placementUpdate.body).toEqual(saved.body);
+    expect(Object.keys(placementUpdate.body).sort()).toEqual(Object.keys(contentUpdate.body).sort());
     expect(placementUpdate.body).toEqual(expect.objectContaining({
       title: 'Newer task title',
       details: 'Newer task details',
@@ -698,9 +719,9 @@ describe('Tasks API', () => {
         startDate: taskDate, dueDate: taskDate, staffId: secondStaffId,
       });
     expect(reassigned.status).toBe(200);
-    expect(reassigned.body.assignee).toEqual({
-      id: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
-    });
+    expect(reassigned.body).toEqual(expect.objectContaining({
+      staffId: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
+    }));
 
     const returned = await request(app)
       .patch(`/api/tasks/${task.body.id}/placement`)
@@ -896,17 +917,17 @@ describe('Tasks API', () => {
     expect(deleted.status).toBe(204);
     taskIds.delete(task.body.id);
 
-    const audits = await sql<Array<{ action: string; oldStatus: string | null; newStatus: string | null }>>`
-      SELECT action, old_data->>'status' AS old_status, new_data->>'status' AS new_status
+    const audits = await sql<Array<{ action: string; oldState: string | null; newState: string | null }>>`
+      SELECT action, old_data->>'state' AS old_state, new_data->>'state' AS new_state
       FROM audit_log
       WHERE table_name = 'tasks' AND record_id = ${task.body.id}
       ORDER BY created_at
     `;
     expect(audits).toEqual([
-      expect.objectContaining({ action: 'INSERT', oldStatus: null, newStatus: 'open' }),
-      expect.objectContaining({ action: 'UPDATE', oldStatus: 'open', newStatus: 'completed' }),
-      expect.objectContaining({ action: 'UPDATE', oldStatus: 'completed', newStatus: 'open' }),
-      expect.objectContaining({ action: 'DELETE', oldStatus: 'open', newStatus: null }),
+      expect.objectContaining({ action: 'INSERT', oldState: null, newState: 'open' }),
+      expect.objectContaining({ action: 'UPDATE', oldState: 'open', newState: 'completed' }),
+      expect.objectContaining({ action: 'UPDATE', oldState: 'completed', newState: 'open' }),
+      expect.objectContaining({ action: 'DELETE', oldState: 'open', newState: null }),
     ]);
     await sql`DELETE FROM audit_log WHERE table_name = 'tasks' AND record_id = ${task.body.id}`;
   });

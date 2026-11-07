@@ -14,12 +14,12 @@ export interface TaskRow {
   details: string | null;
   category: SetTaskInput['category'];
   staffId: string;
-  staffFirstName: string;
-  staffLastName: string;
-  staffName: string;
+  firstName: string;
+  lastName: string;
+  name: string;
   programId: string | null;
   program: string | null;
-  status: 'open' | 'completed' | 'cancelled';
+  state: 'open' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
   hoursLogged: number;
@@ -33,12 +33,12 @@ export const taskRowColumns = sql`
   task.details,
   task.category,
   task.staff_id,
-  staff.first_name AS staff_first_name,
-  staff.last_name AS staff_last_name,
-  CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
+  staff.first_name,
+  staff.last_name,
+  CONCAT(staff.first_name, ' ', staff.last_name) AS name,
   task.program_id,
   program.name AS program,
-  task.status,
+  task.state,
   task.start_date::text,
   task.due_date::text,
   task.completed_at::text,
@@ -113,17 +113,10 @@ export function attachTaskDetails<TRow extends TaskRow>(
     const status = getTaskStatus(row);
     return {
       ...row,
-      state: row.status,
       categoryLabel: getTaskCategoryLabel(row.category),
       status,
       statusLabel: getTaskStatusLabel(status),
       loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
-      assignee: {
-        id: row.staffId,
-        firstName: row.staffFirstName,
-        lastName: row.staffLastName,
-        name: row.staffName,
-      },
       writable: canWriteTaskFor(actor, row.staffId),
     };
   });

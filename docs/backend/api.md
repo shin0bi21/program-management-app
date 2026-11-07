@@ -36,7 +36,9 @@ boundaries unless an endpoint explicitly defines a different response, such as a
 
 ## Hours and Tasks
 
-Tasks store `open`, `completed`, or `cancelled` lifecycle states. Open tasks expose
+Tasks store `open`, `completed`, or `cancelled` in `tasks.state`, exposed as
+`state` throughout task records. Staff fields match Hours: `staffId`, `firstName`,
+`lastName`, and `name`. Open tasks expose
 the date-derived status `upcoming`, `in_progress` (label “In Progress”), or
 `overdue`; list and calendar filters use those derived values. Saved task filters
 belong to the `task-preferences` key.

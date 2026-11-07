@@ -45,7 +45,7 @@ function getInitialDraft(target: TaskModalProps['target']): TaskDraft {
     programId: target.task.programId ?? '',
     startDate: target.task.startDate,
     dueDate: target.task.dueDate,
-    staffId: target.task.assignee.id,
+    staffId: target.task.staffId,
   };
 }
 

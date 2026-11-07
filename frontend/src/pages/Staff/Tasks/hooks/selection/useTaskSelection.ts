@@ -18,7 +18,7 @@ export default function useTaskSelection({
   const records = taskStore.useRecords();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = selectedTaskId ? records[selectedTaskId] ?? null : null;
-  const selectedResourceId = selectedTask?.assignee.id ?? resourceId;
+  const selectedResourceId = selectedTask?.staffId ?? resourceId;
 
   const selectedResource = useMemo(
     () => resources.find(resource => resource.id === selectedResourceId) ?? null,
@@ -38,13 +38,13 @@ export default function useTaskSelection({
 
     setResourceId(fallbackResourceId);
     setSelectedTaskId(current => (
-      current && records[current]?.assignee.id === fallbackResourceId ? current : null
+      current && records[current]?.staffId === fallbackResourceId ? current : null
     ));
   }, [records, resourceId, resources, selectedResourceId]);
 
   // Selection transitions.
   const selectTask = useCallback((task: Task) => {
-    setResourceId(task.assignee.id);
+    setResourceId(task.staffId);
     setSelectedTaskId(task.id);
   }, []);
 

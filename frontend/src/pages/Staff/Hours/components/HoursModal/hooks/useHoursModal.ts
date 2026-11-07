@@ -20,7 +20,7 @@ export interface HoursTaskOption {
   id: string;
   title: string;
   state: 'open' | 'completed' | 'cancelled';
-  assignee: { id: string };
+  staffId: string;
 }
 
 interface HoursDraft {
@@ -71,7 +71,7 @@ function buildInitialDraft({
   initialTask,
   initialItem,
 }: InitialDraftOptions): HoursDraft {
-  const preferredResourceId = initialTask?.assignee.id ?? initialResourceId;
+  const preferredResourceId = initialTask?.staffId ?? initialResourceId;
   const resourceId = preferredResourceId
     && resources.some(resource => resource.id === preferredResourceId)
     ? preferredResourceId

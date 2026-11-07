@@ -8,8 +8,8 @@ import type { Task, TaskSortKey } from './types';
  */
 export function getTaskSortValue(task: Task, key: TaskSortKey) {
   return {
-    firstName: task.assignee.firstName.toLowerCase(),
-    lastName: task.assignee.lastName.toLowerCase(),
+    firstName: task.firstName.toLowerCase(),
+    lastName: task.lastName.toLowerCase(),
     title: task.title.toLowerCase(),
     category: task.category,
     program: task.program?.toLowerCase() ?? '',

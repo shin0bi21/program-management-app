@@ -18,10 +18,10 @@ export function buildTaskFilters(filterValues: TaskFilters) {
   const today = sql`(NOW() AT TIME ZONE 'America/Toronto')::date`;
   const status = sql`
     CASE
-      WHEN "row".status = 'open' AND "row".start_date::date > ${today} THEN 'upcoming'
-      WHEN "row".status = 'open' AND "row".due_date::date < ${today} THEN 'overdue'
-      WHEN "row".status = 'open' THEN 'in_progress'
-      ELSE "row".status
+      WHEN "row".state = 'open' AND "row".start_date::date > ${today} THEN 'upcoming'
+      WHEN "row".state = 'open' AND "row".due_date::date < ${today} THEN 'overdue'
+      WHEN "row".state = 'open' THEN 'in_progress'
+      ELSE "row".state
     END
   `;
 
@@ -46,11 +46,11 @@ export function buildTaskFilters(filterValues: TaskFilters) {
   }
   if (filterValues.statuses.length) {
     filters.push(sql`(
-      (${filterValues.statuses.includes('upcoming')} AND task.status = 'open' AND task.start_date > ${today})
-      OR (${filterValues.statuses.includes('in_progress')} AND task.status = 'open' AND task.start_date <= ${today} AND task.due_date >= ${today})
-      OR (${filterValues.statuses.includes('overdue')} AND task.status = 'open' AND task.due_date < ${today})
-      OR (${filterValues.statuses.includes('completed')} AND task.status = 'completed')
-      OR (${filterValues.statuses.includes('cancelled')} AND task.status = 'cancelled')
+      (${filterValues.statuses.includes('upcoming')} AND task.state = 'open' AND task.start_date > ${today})
+      OR (${filterValues.statuses.includes('in_progress')} AND task.state = 'open' AND task.start_date <= ${today} AND task.due_date >= ${today})
+      OR (${filterValues.statuses.includes('overdue')} AND task.state = 'open' AND task.due_date < ${today})
+      OR (${filterValues.statuses.includes('completed')} AND task.state = 'completed')
+      OR (${filterValues.statuses.includes('cancelled')} AND task.state = 'cancelled')
     )`);
   }
   if (filterValues.search) {
