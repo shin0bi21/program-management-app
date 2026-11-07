@@ -5,17 +5,20 @@ reexecute_deploy() {
 }
 
 synchronize_repository() {
+  # 1. Reuse the pinned target after re-executing freshly fetched tooling.
   if [ "${DEPLOY_BOOTSTRAPPED:-false}" = true ]; then
     TARGET_SHA="${DEPLOY_TARGET_SHA:?Missing bootstrapped target revision}"
     return
   fi
   echo ""
   echo "Pulling latest code..."
+  # 2. Reject local changes before fetching or replacing checkout contents.
   if [ -n "$(git status --porcelain)" ]; then
     echo "ERROR: Working tree has uncommitted changes. Resolve before deploying:"
     git status --short
     exit 1
   fi
+  # 3. Fetch main and re-execute the target script when the checkout revision changes.
   local previous_sha
   previous_sha="$(git rev-parse HEAD)"
   git fetch origin main

@@ -53,6 +53,10 @@ interface CliOptions {
   help: boolean;
 }
 
+/**
+ * Supplies CLI input and output options without reading stdin or running checks.
+ * @example usage().includes('--commands') // true
+ */
 function usage(): string {
   return `Usage: node scripts/ci/select-tests.ts [--base-ref REF] [--commands | --github-output FILE]
 
@@ -66,9 +70,15 @@ Read newline-delimited changed paths from stdin and plan checks without running 
 Without an output option, print JSON. GitHub output takes precedence over commands.`;
 }
 
+/**
+ * Parses output options and target branch tokens; missing values and unknown flags throw.
+ * @example parseArgs(['--commands']).commands // true
+ */
 function parseArgs(args: string[]): CliOptions {
+  // 1. Default to development planning and JSON output.
   const options: CliOptions = { baseRef: 'develop', commands: false, help: false };
 
+  // 2. Consume flags and their values, rejecting unknown options.
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
 
@@ -114,7 +124,12 @@ function parseArgs(args: string[]): CliOptions {
 // ============================================================================
 
 // Changed paths are streamed over stdin by Git locally and in GitHub Actions.
+/**
+ * Consumes UTF-8 stdin and returns nonempty newline-delimited repository paths in input order.
+ * @example await readFiles() // ['README.md'] when stdin contains 'README.md\n'
+ */
 async function readFiles(): Promise<string[]> {
+  // 1. Read the complete path stream as UTF-8 before splitting records.
   process.stdin.setEncoding('utf8');
 
   let input = '';
@@ -122,6 +137,7 @@ async function readFiles(): Promise<string[]> {
     input += chunk;
   }
 
+  // 2. Omit empty records while preserving path order.
   return input.split(/\r?\n/).filter(Boolean);
 }
 
@@ -131,6 +147,10 @@ async function readFiles(): Promise<string[]> {
 
 // Start with no work selected. Each changed path only enables the checks it
 // owns, keeping documentation-only and unrelated jobs off paid runners.
+/**
+ * Creates an independent plan with no checks or changed backend inputs selected.
+ * @example emptyPlan().backendMode // 'none'
+ */
 function emptyPlan(): TestPlan {
   return {
     static: false,
@@ -148,6 +168,10 @@ function emptyPlan(): TestPlan {
 
 // Unknown repository paths can affect either application, so their safe
 // fallback is every local application check rather than an incomplete subset.
+/**
+ * Mutates a plan to require static, deployment, and full application checks for an unknown owner.
+ * @example enableFullApplication(plan) // plan.backendMode and plan.frontendMode become 'full'
+ */
 function enableFullApplication(plan: TestPlan): void {
   plan.static = true;
   plan.deploy = true;
@@ -159,6 +183,10 @@ function enableFullApplication(plan: TestPlan): void {
 
 // Classify repository-relative changed paths into static, application, and
 // production checks. This function is the shared policy for local and CI runs.
+/**
+ * Classifies repository-relative paths into local and CI checks; unknown owners select full application coverage.
+ * @example selectTests(['README.md']).backend // false
+ */
 export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?: string } = {}): TestPlan {
   // Step 1. Start with no checks; paths can only add coverage.
   const plan = emptyPlan();
@@ -315,10 +343,16 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
 // ============================================================================
 
 // Convert the plan into stable commands consumed by the local test-app runner.
+/**
+ * Returns ordered local runner commands, retaining space-delimited inputs for related backend tests.
+ * @example planCommands(selectTests(['README.md'])) // []
+ */
 export function planCommands(plan: TestPlan): PlanCommand[] {
+  // 1. Emit deployment and static checks before application suites.
   const commands: PlanCommand[] = [];
   if (plan.deploy) commands.push(['deploy', '']);
   if (plan.static) commands.push(['static', '']);
+  // 2. Select full or related application commands from the shared plan.
   if (plan.backendMode === 'full') commands.push(['backend-full', '']);
   if (plan.backendMode === 'related') commands.push(['backend-related', plan.backendChangedPaths.join(' ')]);
   if (plan.frontendMode === 'full') commands.push(['frontend-full', '']);
@@ -327,6 +361,10 @@ export function planCommands(plan: TestPlan): PlanCommand[] {
 }
 
 // Convert the same plan to names suitable for GitHub job outputs.
+/**
+ * Maps a completed plan to GitHub job output names without writing an output file.
+ * @example githubOutputs(emptyPlan()).backend_mode // 'none'
+ */
 function githubOutputs(plan: TestPlan): Record<string, string | boolean> {
   return {
     static: plan.static,
@@ -346,6 +384,10 @@ function githubOutputs(plan: TestPlan): Record<string, string | boolean> {
 // 7. Main workflow
 // ============================================================================
 
+/**
+ * Reads CLI options and stdin, then prints a plan or appends GitHub outputs; help avoids stdin reads.
+ * @example // node scripts/ci/select-tests.ts --help prints the CLI reference.
+ */
 async function main(): Promise<void> {
   // Step 1. Validate options before reading stdin or appending GitHub outputs.
   const options = parseArgs(process.argv.slice(2));

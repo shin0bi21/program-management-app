@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# RESET DEVELOPMENT STACK — recreate intentionally disposable local state.
-# Deletes development Compose volumes, rebuilds services, applies both schemas,
-# then creates the configured administrator and regenerates database types.
-# Usage: bash scripts/dev/reset-dev-env.sh (safe to invoke from any directory).
-# Flow: preflight → delete volumes → rebuild → wait for readiness → migrate
-# development and test databases → seed administrator → generate types → report.
+# Reset the development stack, deleting its Compose volumes.
+# Usage: bash scripts/dev/reset-dev-env.sh
+# Flow: validate → rebuild → wait → migrate both databases → seed admin → generate types.
 
 set -Eeuo pipefail
 
@@ -26,6 +23,7 @@ fail() {
 }
 
 preflight() {
+  # 1. Require local tooling and reject remote Docker targets before deleting state.
   local endpoint
 
   command -v docker >/dev/null 2>&1 || fail 'docker is required'
@@ -42,6 +40,7 @@ preflight() {
     *) fail 'Remote Docker contexts are not supported' ;;
   esac
 
+  # 2. Validate administrator configuration through Compose without printing credentials.
   # Let Compose resolve env_file values without sourcing .env as shell code or
   # printing credentials. The required admin must be usable after the reset.
   "${compose[@]}" config --format json | node -e '
@@ -66,11 +65,13 @@ process.stdin.on("end", () => {
 # ============================================================================
 
 wait_for_service() {
+  # 1. Separate the service label from the command to probe.
   local label="$1"
   local attempt
 
   shift
 
+  # 2. Retry the readiness probe within a fixed limit.
   for ((attempt = 1; attempt <= 30; attempt++)); do
     if "${compose[@]}" exec -T "$@" >/dev/null 2>&1; then
       return 0
@@ -81,6 +82,7 @@ wait_for_service() {
     fi
   done
 
+  # 3. Fail with the service identity when readiness never succeeds.
   fail "$label did not become ready after 30 attempts; inspect the development container logs"
 }
 

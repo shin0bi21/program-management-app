@@ -109,8 +109,10 @@ interface CliOptions {
  * @example parseArgs(['--json', '--base', 'HEAD']) // { json: true, baseRef: 'HEAD' }
  */
 function parseArgs(args: string[]): CliOptions {
+  // 1. Default to terminal output before applying CLI overrides.
   const options: CliOptions = { json: false };
 
+  // 2. Consume options, advancing past the base revision value.
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
 
@@ -181,8 +183,10 @@ function gitText(repoRoot: string, args: string[]): string {
  * @example resolveDefaultBase('/repo') // 'HEAD' with no override or origin refs
  */
 function resolveDefaultBase(repoRoot: string): string {
+  // 1. Prefer the caller environment override.
   if (process.env.INSPECT_CHANGES_BASE_REF) return process.env.INSPECT_CHANGES_BASE_REF;
 
+  // 2. Use the development branch when its remote reference is available.
   try {
     git(repoRoot, ['rev-parse', '--verify', '--quiet', 'origin/develop^{commit}']);
     return 'origin/develop';
@@ -190,6 +194,7 @@ function resolveDefaultBase(repoRoot: string): string {
     // A local-only repository may not have origin/develop.
   }
 
+  // 3. Fall back to the remote default branch, then the current commit.
   try {
     return gitText(repoRoot, ['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']);
   } catch {
@@ -221,10 +226,12 @@ function assertBaseRef(repoRoot: string, baseRef: string): void {
  * @example parseDiffNameStatus('M\0docs/guide.md\0') // [{ path: 'docs/guide.md', status: 'M' }]
  */
 function parseDiffNameStatus(output: string): BaseChange[] {
+  // 1. Decode the NUL-delimited format without changing filenames.
   // Records are status\0path\0, or status\0originalPath\0path\0 for renames/copies.
   const fields = output.split('\0');
   const changes: BaseChange[] = [];
 
+  // 2. Consume each record, including its optional rename or copy source.
   // The final field is empty because Git terminates its output with NUL.
   for (let fieldIndex = 0; fieldIndex < fields.length - 1;) {
     const status = fields[fieldIndex];
@@ -252,10 +259,12 @@ function parseDiffNameStatus(output: string): BaseChange[] {
  * @example parseWorkingTreeStatus('?? new.txt\0') // [{ path: 'new.txt', indexStatus: '?', worktreeStatus: '?' }]
  */
 function parseWorkingTreeStatus(output: string): WorkingTreeChange[] {
+  // 1. Decode staged and unstaged status while preserving path text.
   // Records start with "XY path\0": X is staged, Y is unstaged, and ?? is untracked.
   const fields = output.split('\0');
   const changes: WorkingTreeChange[] = [];
 
+  // 2. Consume destinations and optional source fields in porcelain order.
   // The final field is empty because Git terminates its output with NUL.
   for (let fieldIndex = 0; fieldIndex < fields.length - 1;) {
     const statusAndPath = fields[fieldIndex];
@@ -294,6 +303,7 @@ function parseWorkingTreeStatus(output: string): WorkingTreeChange[] {
  * @example upstreamState('/repo') // { upstream: null, ahead: null, behind: null } without tracking
  */
 function upstreamState(repoRoot: string): Pick<Snapshot['git'], 'upstream' | 'ahead' | 'behind'> {
+  // 1. Resolve tracking configuration; absent upstreams have unknown divergence.
   let upstream: string;
   try {
     upstream = gitText(repoRoot, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}']);
@@ -301,6 +311,7 @@ function upstreamState(repoRoot: string): Pick<Snapshot['git'], 'upstream' | 'ah
     return { upstream: null, ahead: null, behind: null };
   }
 
+  // 2. Count commits unique to the upstream and current branch.
   const [behind, ahead] = gitText(repoRoot, ['rev-list', '--left-right', '--count', `${upstream}...HEAD`])
     .split(/\s+/)
     .map(Number);
@@ -326,6 +337,7 @@ function fingerprint(
   paths: string[],
   workingTreeChanges: WorkingTreeChange[],
 ): string {
+  // 1. Hash the comparison base and tracked binary changes.
   const hash = createHash('sha256');
   // Preserve the original hash namespace so renaming the command does not invalidate evidence.
   hash.update('snapshot-changes-v1\0');
@@ -334,6 +346,7 @@ function fingerprint(
   // The binary diff includes tracked file content and mode changes.
   hash.update(git(repoRoot, ['diff', '--binary', '--no-ext-diff', baseCommit, '--'], 'buffer'));
 
+  // 2. Include untracked contents and modes without following symlinks.
   // Untracked files are absent from git diff; hash their content and mode separately.
   const untracked = workingTreeChanges
     .filter(change => change.indexStatus === '?' && change.worktreeStatus === '?')
@@ -364,6 +377,7 @@ function fingerprint(
     }
   }
 
+  // 3. Include every affected path so renamed or deleted owners affect the digest.
   for (const path of paths) {
     hash.update('\0path\0');
     hash.update(path);
@@ -379,10 +393,12 @@ function fingerprint(
  * @example classifyPaths(['frontend/src/App.tsx']).frontend // ['frontend/src/App.tsx']
  */
 function classifyPaths(paths: string[]): Record<string, string[]> {
+  // 1. Prepare every report category, including those with no affected paths.
   const categories: Record<string, string[]> = {
     frontend: [], backend: [], migrations: [], skills: [], ci: [], documentation: [], tooling: [], other: [],
   };
 
+  // 2. Assign each path to its first matching repository owner.
   for (const path of paths) {
     const isMigrationPath = path.startsWith('backend/db/') && !path.startsWith('backend/db/scripts/');
 
@@ -414,9 +430,11 @@ function classifyPaths(paths: string[]): Record<string, string[]> {
  * @example stashInventory('/repo') // [] when no stashes exist
  */
 function stashInventory(repoRoot: string): StashEntry[] {
+  // 1. Read stash references without modifying the stash stack.
   const output = gitText(repoRoot, ['stash', 'list', '--format=%gd%x09%gs']);
   if (!output) return [];
 
+  // 2. Preserve tabs inside descriptions after separating the reference.
   return output.split('\n').map(line => {
     const [reference, ...description] = line.split('\t');
     return { reference, description: description.join('\t') };
@@ -506,6 +524,7 @@ export function inspectChanges({
  * @example formatHuman(snapshot).includes('Changed paths: 0') // true for a clean snapshot
  */
 function formatHuman(snapshot: Snapshot): string {
+  // 1. Present branch identity, comparison context, and content fingerprint.
   const lines = [
     `Branch: ${snapshot.git.branch ?? '(detached HEAD)'}`,
     `Base: ${snapshot.git.baseRef} (${snapshot.git.mergeBase.slice(0, 12)})`,
@@ -515,6 +534,7 @@ function formatHuman(snapshot: Snapshot): string {
     `Changed paths: ${snapshot.changes.paths.length}`,
   ];
 
+  // 2. List affected paths, suggested checks, and the stash count.
   for (const path of snapshot.changes.paths) lines.push(`  ${path}`);
   lines.push(`Selected checks: ${snapshot.verification.commands.length}`);
   for (const command of snapshot.verification.commands) {

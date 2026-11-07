@@ -24,6 +24,7 @@ fail() {
   exit 1
 }
 
+# 1. Validate explicit source and import mode before acquiring local resources.
 refresh_host=''
 refresh_identity=''
 refresh_mode=''
@@ -61,6 +62,7 @@ done
 command -v docker >/dev/null 2>&1 || fail 'docker is required'
 command -v node >/dev/null 2>&1 || fail 'node is required'
 
+# 2. Restrict mutation to local development Docker and acquire the refresh lock.
 # Every mutation is restricted to the repository development Compose stack on a local socket.
 case "${DOCKER_HOST:-unix://local}" in unix://*) ;; *) fail 'A local Unix Docker socket is required' ;; esac
 refresh_endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
@@ -104,10 +106,12 @@ SQL
 }
 
 start_backend() {
+  # 1. Recreate the backend with its current local environment.
   "${compose[@]}" up -d --no-deps --force-recreate backend
   refresh_backend_stopped=false
   local attempt=0
 
+  # 2. Require outbound isolation and a successful health response within the retry limit.
   while [ "$attempt" -lt 30 ]; do
     attempt=$((attempt + 1))
 
@@ -134,16 +138,19 @@ fetch("http://127.0.0.1:5001/health")
 }
 
 rollback_database() {
+  # 1. Stop the backend before reversing database names.
   printf 'Restoring the previous local database name...\n' >&2
   "${compose[@]}" stop backend >/dev/null 2>&1 || return 1
   refresh_backend_stopped=true
 
+  # 2. Move the failed replacement aside if it became the active database.
   if [ "$refresh_activated" = true ]; then
     set_connections "$refresh_target" false >/dev/null || return 1
     rename_database "$refresh_target" "$refresh_stage" >/dev/null || return 1
     refresh_activated=false
   fi
 
+  # 3. Restore the original database name and connection access, then restart.
   rename_database "$refresh_backup" "$refresh_target" >/dev/null || return 1
   set_connections "$refresh_target" true >/dev/null || return 1
   refresh_old_renamed=false
@@ -152,6 +159,7 @@ rollback_database() {
 }
 
 cleanup() {
+  # 1. Preserve the operation status and restore signing configuration on failure.
   local result=$?
 
   trap - EXIT
@@ -161,6 +169,7 @@ cleanup() {
     refresh_env_changed=false
   fi
 
+  # 2. Reverse a failed cutover or restart the unchanged original database.
   if [ "$result" -ne 0 ] && [ "$refresh_old_renamed" = true ]; then
     if ! rollback_database; then
       refresh_keep_stage=true
@@ -174,10 +183,12 @@ cleanup() {
     start_backend || printf 'The original database is unchanged, but the backend could not restart.\n' >&2
   fi
 
+  # 3. Remove disposable staging data only when recovery no longer needs it.
   if [ "$refresh_stage_created" = true ] && [ "$refresh_activated" = false ] && [ "$refresh_keep_stage" = false ]; then
     "${compose[@]}" exec -T db sh -c 'exec dropdb --if-exists --force --username="$POSTGRES_USER" "$1"' sh "$refresh_stage" >/dev/null 2>&1 || printf 'Could not remove temporary database %s.\n' "$refresh_stage" >&2
   fi
 
+  # 4. Remove private download files and release the refresh lock.
   if [ -n "$refresh_work" ]; then
     rm -rf "$refresh_work"
   fi
@@ -190,6 +201,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# 3. Validate the target database and local integration isolation before downloading live data.
 refresh_target="$("${compose[@]}" exec -T db sh -c 'printf "%s" "$POSTGRES_DB"')"
 [[ "$refresh_target" =~ ^[a-zA-Z_][a-zA-Z0-9_]{0,62}$ ]] || fail 'The local database name must be a simple PostgreSQL identifier'
 case "$refresh_target" in postgres|template0|template1|local_snapshot_*) fail 'Refusing to replace a system or snapshot database' ;; esac
@@ -209,6 +221,7 @@ for (const name of ["ADMIN_EMAIL", "ADMIN_PASSWORD"]) {
 }
 ' "$refresh_target" >/dev/null
 
+# 4. Download and verify the archive in a private temporary directory.
 refresh_work="$(mktemp -d "${TMPDIR:-/tmp}/my-webapp-refresh.XXXXXX")"
 refresh_suffix="$(date -u '+%Y%m%d%H%M%S')_$$_${RANDOM}"
 refresh_stage="local_snapshot_$refresh_suffix"
@@ -226,6 +239,7 @@ fi
 
 "${compose[@]}" exec -T db pg_restore --list < "$refresh_archive" >/dev/null
 
+# 5. Restore into a separate database before touching the current local database.
 printf 'Restoring into temporary local database %s...\n' "$refresh_stage"
 psql_admin -v database_name="$refresh_stage" <<'SQL'
 SELECT format('CREATE DATABASE %I TEMPLATE template0', :'database_name') \gexec
@@ -233,6 +247,7 @@ SQL
 refresh_stage_created=true
 "${compose[@]}" exec -T db sh -c 'exec pg_restore --exit-on-error --no-owner --no-acl --username="$POSTGRES_USER" --dbname="$1"' sh "$refresh_stage" < "$refresh_archive"
 
+# 6. Apply migrations and replace copied authentication within the staging database.
 printf 'Applying strict migrations and preparing local authentication...\n'
 "${compose[@]}" run -T --rm --no-deps -e NODE_ENV=development -e DISABLE_OUTBOUND=true backend node -e '
 const { spawnSync } = require("node:child_process");
@@ -250,6 +265,7 @@ for (const args of [["run", "db:migrate"], ["exec", "--", "tsx", "db/scripts/imp
 }
 ' "$refresh_stage"
 
+# 7. Stop after validation unless the caller explicitly selected local cutover.
 if [ "$refresh_mode" = --validate-only ]; then
   printf 'Validation complete. Current local database and backend were not replaced. Temporary import and download will be removed.\n'
   exit 0
@@ -259,6 +275,7 @@ if [ ! -f "$refresh_repo/.env" ] || [ -L "$refresh_repo/.env" ]; then
   fail 'A regular repository-local .env file is required'
 fi
 
+# 8. Stop the backend and swap database names while retaining the original for rollback.
 printf 'Switching the local backend to the prepared database...\n'
 "${compose[@]}" stop backend
 refresh_backend_stopped=true
@@ -270,6 +287,7 @@ refresh_old_renamed=true
 rename_database "$refresh_stage" "$refresh_target" >/dev/null
 refresh_activated=true
 
+# 9. Rotate local signing keys before verifying the replacement backend.
 # Rotate local signing keys so copied production or previous local JWTs cannot authenticate.
 cp -p "$refresh_repo/.env" "$refresh_work/local-env-backup"
 refresh_env_changed=true
@@ -298,6 +316,7 @@ try {
 }
 JS
 
+# 10. Require a healthy isolated backend before reporting completion.
 if ! start_backend; then
   fail 'New backend failed its health check; rolling back to the previous database'
 fi

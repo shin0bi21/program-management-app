@@ -104,8 +104,27 @@ interface PullRequest {
 
 type Request = (endpoint: string, paginate?: boolean) => string | Promise<string>;
 
+interface AttemptContext {
+  base: string;
+  branch: Branch;
+  options: Options;
+  request: Request;
+  changeSha: string | null;
+  pullRequest?: PullRequest;
+  changeComparisons: Map<string, Promise<boolean>>;
+}
 
 const COMPONENTS: Component[] = ['frontend', 'backend', 'migrations', 'infrastructure'];
+const TEST_STEP_NAMES = new Set(['Run tests', 'Run related tests', 'Test deployment planning']);
+const CHECK_STEP_PREFIXES = [
+  'Type check',
+  'Run static checks',
+  'Check changed repository patterns',
+  'Apply migrations',
+  'Validate migration checksums',
+  'Verify generated database types are committed',
+  'Validate production',
+];
 const execute = promisify(execFile);
 
 // 2. CLI usage, argument parsing, and validation
@@ -169,42 +188,55 @@ export function parseArgs(argv: string[]): Options {
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--help') return { ...options, help: true };
+
     if (argument === '--dev' || argument === '--main') {
       const branch = argument === '--dev' ? 'dev' : 'main';
       if (options.branch && options.branch !== branch) throw new Error('Choose either --dev or --main');
+
       options.branch = branch;
       continue;
     }
+
     if (['--success', '--failures', '--all'].includes(argument)) {
       const outcome = argument.slice(2) as Options['outcome'];
       if (selectedOutcome && selectedOutcome !== outcome) {
         throw new Error('Choose only one of --success, --failures, or --all');
       }
+
       options.outcome = outcome;
       selectedOutcome = outcome;
       continue;
     }
+
     if (argument === '--exclusive') {
       options.exclusive = true;
       continue;
     }
+
     if (!['--start', '--end', '--type', '--change'].includes(argument)) {
       throw new Error(`Unknown option: ${argument}`);
     }
+
     index += 1;
     const value = argv[index];
     if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value`);
+
     if (argument === '--start' || argument === '--end') {
       if (!validDate(value)) throw new Error(`${argument} must use a valid YYYY-MM-DD date`);
+
       if (argument === '--start') options.start = `${value}T00:00:00Z`;
       else options.end = `${value}T23:59:59.999Z`;
     }
+
     if (argument === '--type') {
       if (!COMPONENTS.includes(value as Component)) throw new Error('Unknown deployment component');
+
       if (!options.types.includes(value as Component)) options.types.push(value as Component);
     }
+
     if (argument === '--change') {
       if (!/^[a-f\d]{7,40}$/i.test(value)) throw new Error('--change must be a commit SHA (7–40 hexadecimal characters)');
+
       options.change = value.toLowerCase();
     }
   }
@@ -289,90 +321,6 @@ export async function collectHistory(repository: string, options: Options, reque
       });
     }
 
-    /**
-     * Collects one attempt's phases, test evidence, ancestry, or deployment flags.
-     * Missing logs (HTTP 404/410) retain timings with unknown details; other API failures reject.
-     * @param workflow - Completed run carrying the latest attempt number and original creation time.
-     * @param attempt - One-based attempt number, no greater than workflow.run_attempt.
-     * @returns An attempt record, or null for an excluded outcome or absent deployment job.
-     * @example await collectAttempt(workflow, 1) // First attempt, even when the latest run is a rerun.
-     */
-    async function collectAttempt(workflow: Workflow, attempt: number): Promise<Run | null> {
-
-      // 1. Load this attempt's jobs and choose the workflow or deployment boundary.
-      const endpoint = `${base}/actions/runs/${workflow.id}/attempts/${attempt}`;
-      const details: Workflow = attempt === workflow.run_attempt
-        ? workflow : JSON.parse(await request(endpoint));
-      const pages = JSON.parse(await request(`${endpoint}/jobs?per_page=100`, true)) as Array<{ jobs: Job[] }>;
-      const jobs = pages.flatMap(page => page.jobs).filter(job => job.conclusion !== 'skipped');
-      const deployment = jobs.find(job => job.name === 'Deploy to Lightsail');
-      if (branch === 'main' && !deployment) return null;
-      const measured = branch === 'main' ? [deployment!] : jobs;
-
-      // 2. Measure elapsed time across the selected non-skipped jobs.
-      const starts = measured.flatMap(job => job.started_at ? [Date.parse(job.started_at)] : []);
-      const ends = measured.flatMap(job => job.completed_at ? [Date.parse(job.completed_at)] : []);
-      const start = starts.length ? Math.min(...starts) : Date.parse(details.run_started_at);
-      const end = ends.length ? Math.max(...ends) : start;
-
-      // 3. Record the outcome, queue delay, and combined runner consumption.
-      const conclusion = branch === 'main' ? deployment!.conclusion ?? details.conclusion : details.conclusion;
-      const record: Run = {
-        runId: workflow.id, branch, group: branch === 'dev' ? 'CI' : 'Unclassified', attempt,
-        conclusion,
-        createdAt: workflow.created_at, durationSeconds: Math.max(0, (end - start) / 1000),
-      };
-      if (branch === 'dev') {
-        record.queueSeconds = attempt === 1 ? Math.max(0, (start - Date.parse(workflow.created_at)) / 1000) : null;
-        record.runnerSeconds = jobs.reduce((total, job) => total + (elapsedSeconds(job) ?? 0), 0);
-      }
-
-      // 4. Skip excluded outcomes before downloading their logs or ancestry evidence.
-      if (!filterRuns([record], { ...options, types: [], exclusive: false }).length) return null;
-
-      // 5. Attach development PR context, exact ancestry, and executed test evidence.
-      if (branch === 'dev') {
-        record.headSha = workflow.head_sha;
-        const pr = pullRequests.get(workflow.id);
-        if (pr) record.pullRequest = { number: pr.number, title: pr.title };
-        if (changeSha) {
-          record.containsChange = null;
-          if (workflow.head_sha) {
-            const headSha = workflow.head_sha;
-            let comparison = changeComparisons.get(headSha);
-            if (!comparison) {
-              comparison = requestComparison(`${base}/compare/${changeSha}...${headSha}`, request);
-              changeComparisons.set(headSha, comparison);
-            }
-            record.containsChange = await comparison;
-          }
-          record.group = changeGroup(record);
-        }
-        record.jobs = await Promise.all(jobs.map(async job => {
-          const timing = jobTiming(job);
-          if (timing.tests) {
-            const log = await optionalLog(`${base}/actions/jobs/${job.id}/logs`, request);
-            timing.tests = { ...timing.tests, ...testSummary(log, timing.tests.component) };
-          }
-          return timing;
-        }));
-      }
-
-      // 6. Classify production deployments from their recorded component flags.
-      if (branch === 'main' && deployment) {
-        const log = await optionalLog(`${base}/actions/jobs/${deployment.id}/logs`, request);
-        if (log !== null) record.flags = deploymentFlags(log);
-        if (record.flags) {
-          const selected = COMPONENTS.filter(component => component !== 'infrastructure' && record.flags![component]);
-          const componentGroup = selected.join('+') || 'no-production-change';
-          record.group = record.flags.infrastructure ? 'full' : componentGroup;
-          if (selected.length === 1 && !record.flags.infrastructure) record.group += '-only';
-        }
-      }
-
-      return record;
-    }
-
     // 4. Collect every attempt in bounded batches, reusing ancestry comparisons.
     const attempts = workflows.flatMap(workflow => Array.from(
       { length: workflow.run_attempt },
@@ -380,7 +328,10 @@ export async function collectHistory(repository: string, options: Options, reque
     ));
     for (let offset = 0; offset < attempts.length; offset += 6) {
       const batch = await Promise.all(attempts.slice(offset, offset + 6).map(
-        ({ workflow, attempt }) => collectAttempt(workflow, attempt),
+        ({ workflow, attempt }) => collectAttempt(workflow, attempt, {
+          base, branch, options, request, changeSha,
+          pullRequest: pullRequests.get(workflow.id), changeComparisons,
+        }),
       ));
       records.push(...batch.filter((run): run is Run => run !== null));
     }
@@ -389,6 +340,93 @@ export async function collectHistory(repository: string, options: Options, reque
   // 5. Return attempts in stable chronological order, including reruns.
   return records.sort((left, right) => left.createdAt.localeCompare(right.createdAt)
     || left.runId - right.runId || left.attempt - right.attempt);
+}
+
+/**
+ * Collects one attempt's phases, test evidence, ancestry, or deployment flags.
+ * Missing logs (HTTP 404/410) retain timings with unknown details; other API failures reject.
+ * @param workflow - Completed run carrying the latest attempt number and original creation time.
+ * @param attempt - One-based attempt number, no greater than workflow.run_attempt.
+ * @param context - Explicit branch, filters, PR metadata, and shared ancestry requests.
+ * @returns An attempt record, or null for an excluded outcome or absent deployment job.
+ * @example await collectAttempt(workflow, 1, context) // First attempt, even when the latest run is a rerun.
+ */
+async function collectAttempt(workflow: Workflow, attempt: number, context: AttemptContext): Promise<Run | null> {
+
+  // 1. Read the explicit collection context for this workflow attempt.
+  const { base, branch, options, request, changeSha, pullRequest, changeComparisons } = context;
+
+  // 2. Load this attempt's jobs and choose the workflow or deployment boundary.
+  const endpoint = `${base}/actions/runs/${workflow.id}/attempts/${attempt}`;
+  const details: Workflow = attempt === workflow.run_attempt
+    ? workflow : JSON.parse(await request(endpoint));
+  const pages = JSON.parse(await request(`${endpoint}/jobs?per_page=100`, true)) as Array<{ jobs: Job[] }>;
+  const jobs = pages.flatMap(page => page.jobs).filter(job => job.conclusion !== 'skipped');
+  const deployment = jobs.find(job => job.name === 'Deploy to Lightsail');
+  if (branch === 'main' && !deployment) return null;
+  const measured = branch === 'main' ? [deployment!] : jobs;
+
+  // 3. Measure elapsed time across the selected non-skipped jobs.
+  const starts = measured.flatMap(job => job.started_at ? [Date.parse(job.started_at)] : []);
+  const ends = measured.flatMap(job => job.completed_at ? [Date.parse(job.completed_at)] : []);
+  const start = starts.length ? Math.min(...starts) : Date.parse(details.run_started_at);
+  const end = ends.length ? Math.max(...ends) : start;
+
+  // 4. Record the outcome, queue delay, and combined runner consumption.
+  const conclusion = branch === 'main' ? deployment!.conclusion ?? details.conclusion : details.conclusion;
+  const record: Run = {
+    runId: workflow.id, branch, group: branch === 'dev' ? 'CI' : 'Unclassified', attempt,
+    conclusion,
+    createdAt: workflow.created_at, durationSeconds: Math.max(0, (end - start) / 1000),
+  };
+  if (branch === 'dev') {
+    record.queueSeconds = attempt === 1 ? Math.max(0, (start - Date.parse(workflow.created_at)) / 1000) : null;
+    record.runnerSeconds = jobs.reduce((total, job) => total + (elapsedSeconds(job) ?? 0), 0);
+  }
+
+  // 5. Skip excluded outcomes before downloading their logs or ancestry evidence.
+  if (!filterRuns([record], { ...options, types: [], exclusive: false }).length) return null;
+
+  // 6. Attach development PR context, exact ancestry, and executed test evidence.
+  if (branch === 'dev') {
+    record.headSha = workflow.head_sha;
+    if (pullRequest) record.pullRequest = { number: pullRequest.number, title: pullRequest.title };
+    if (changeSha) {
+      record.containsChange = null;
+      if (workflow.head_sha) {
+        const headSha = workflow.head_sha;
+        let comparison = changeComparisons.get(headSha);
+        if (!comparison) {
+          comparison = requestComparison(`${base}/compare/${changeSha}...${headSha}`, request);
+          changeComparisons.set(headSha, comparison);
+        }
+        record.containsChange = await comparison;
+      }
+      record.group = changeGroup(record);
+    }
+    record.jobs = await Promise.all(jobs.map(async job => {
+      const timing = jobTiming(job);
+      if (timing.tests) {
+        const log = await optionalLog(`${base}/actions/jobs/${job.id}/logs`, request);
+        timing.tests = { ...timing.tests, ...testSummary(log, timing.tests.component) };
+      }
+      return timing;
+    }));
+  }
+
+  // 7. Classify production deployments from their recorded component flags.
+  if (branch === 'main' && deployment) {
+    const log = await optionalLog(`${base}/actions/jobs/${deployment.id}/logs`, request);
+    if (log !== null) record.flags = deploymentFlags(log);
+    if (record.flags) {
+      const selected = COMPONENTS.filter(component => component !== 'infrastructure' && record.flags![component]);
+      const componentGroup = selected.join('+') || 'no-production-change';
+      record.group = record.flags.infrastructure ? 'full' : componentGroup;
+      if (selected.length === 1 && !record.flags.infrastructure) record.group += '-only';
+    }
+  }
+
+  return record;
 }
 
 /**
@@ -459,9 +497,9 @@ function jobTiming(job: Job): JobTiming {
     if (step.conclusion === 'skipped') continue;
     const seconds = elapsedSeconds(step);
     let metric: 'testSeconds' | 'buildSeconds' | 'checkSeconds' | null = null;
-    if (/^(Run (related )?tests|Test deployment planning)$/.test(step.name)) metric = 'testSeconds';
+    if (TEST_STEP_NAMES.has(step.name)) metric = 'testSeconds';
     else if (/^Build\b/.test(step.name)) metric = 'buildSeconds';
-    else if (/^(Type check|Run static checks|Check changed repository patterns|Apply migrations|Validate migration checksums|Verify generated database types are committed|Validate production)/.test(step.name)) {
+    else if (CHECK_STEP_PREFIXES.some(prefix => step.name.startsWith(prefix))) {
       metric = 'checkSeconds';
     }
     if (metric) {
@@ -644,33 +682,46 @@ export function renderReport(history: Run[], options: Options): string {
     for (const [label, timed] of timingGroups) {
       if (!timed.length) continue;
       lines.push(label);
-      const metrics = (['queueSeconds', 'runnerSeconds'] as const).filter(key => timed.some(run => run[key] != null));
-      const metricHeaders = metrics.map(key => key === 'queueSeconds' ? 'Queue median' : 'Runner median');
-      const rows = [['Group', 'Runs', 'Mean', 'Median', 'Range', ...metricHeaders]];
-
-      // 5. Summarize each cohort's elapsed, queue, and combined runner timings.
-      for (const group of [...new Set(timed.map(run => run.group))].sort()) {
-        const matching = timed.filter(run => run.group === group);
-        const values = matching.map(run => run.durationSeconds);
-        const meanSeconds = values.reduce((sum, value) => sum + value, 0) / values.length;
-        const range = `${duration(Math.min(...values))}–${duration(Math.max(...values))}`;
-        rows.push([group, String(values.length), duration(meanSeconds), duration(median(values)), range,
-          ...metrics.map(key => {
-            const recorded = matching.map(run => run[key]).filter((value): value is number => value != null);
-            return duration(recorded.length === matching.length ? median(recorded) : null);
-          })]);
-      }
-
-      // 6. Render overall timings alongside the development job-phase breakdown.
+      const rows = timingRows(timed);
       lines.push(...table(rows));
       if (branch === 'dev') lines.push(...developmentTimings(timed, options));
     }
 
-    // 7. Include individual development attempts so aggregate results remain traceable.
+    // 5. Include individual development attempts so aggregate results remain traceable.
     if (branch === 'dev') lines.push(...developmentAttempts(selected, options));
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Calculates display rows for each timing cohort without assembling the report sections.
+ * @param runs - Nonempty attempts from one outcome group; successful reruns are excluded by the caller.
+ * @returns Header and data rows with elapsed, queue, and runner summaries.
+ * @example timingRows(runs)[0][0] // 'Group'
+ */
+function timingRows(runs: Run[]): string[][] {
+
+  // 1. Select the timing columns available in this outcome group.
+  const metrics = (['queueSeconds', 'runnerSeconds'] as const).filter(key => runs.some(run => run[key] != null));
+  const metricHeaders = metrics.map(key => key === 'queueSeconds' ? 'Queue median' : 'Runner median');
+  const rows = [['Group', 'Runs', 'Mean', 'Median', 'Range', ...metricHeaders]];
+
+  // 2. Summarize each cohort's elapsed, queue, and combined runner timings.
+  for (const group of [...new Set(runs.map(run => run.group))].sort()) {
+    const matching = runs.filter(run => run.group === group);
+    const values = matching.map(run => run.durationSeconds);
+    const meanSeconds = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const range = `${duration(Math.min(...values))}–${duration(Math.max(...values))}`;
+    rows.push([group, String(values.length), duration(meanSeconds), duration(median(values)), range,
+      ...metrics.map(key => {
+        const recorded = matching.map(run => run[key]).filter((value): value is number => value != null);
+        return duration(recorded.length === matching.length ? median(recorded) : null);
+      })]);
+  }
+
+  // 3. Return the calculated rows for the shared table formatter.
+  return rows;
 }
 
 /**

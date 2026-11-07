@@ -25,22 +25,26 @@ run_full_suite() {
   echo "Running FULL test suite"
   echo "=========================================="
 
+  # 1. Validate deployment planning before backend and frontend application suites.
   bash scripts/tests/test-deploy.sh
   bash scripts/tests/backend/test-apis.sh
   bash scripts/tests/frontend/test-ui.sh
 
   echo ""
   echo "=========================================="
+  # 2. Report success only after all child runners complete.
   echo "Full test suite passed!"
   echo "=========================================="
 }
 
 run_related_backend_tests() {
+  # 1. Require graph inputs before preparing backend test services.
   if [ "$#" -eq 0 ]; then
     echo "ERROR: Related backend tests require at least one changed path." >&2
     exit 2
   fi
 
+  # 2. Prepare services once and fall back to all tests for deleted graph inputs.
   source scripts/tests/backend/_docker-health.sh
   export BACKEND_TEST_ENV_READY=1
   # Deleted or renamed-away inputs cannot be resolved in the current graph.
@@ -51,6 +55,7 @@ run_related_backend_tests() {
     fi
   done
 
+  # 3. Let Jest discover tests related to existing changed inputs.
   docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand --findRelatedTests "$@"
 }
 
@@ -60,16 +65,19 @@ run_related_frontend_tests() {
 }
 
 default_base_ref() {
+  # 1. Prefer an explicit environment override.
   if [ -n "${TEST_APP_BASE_REF:-}" ]; then
     printf '%s\n' "$TEST_APP_BASE_REF"
     return
   fi
 
+  # 2. Use the development reference when present.
   if git rev-parse --verify --quiet origin/develop >/dev/null; then
     printf '%s\n' "origin/develop"
     return
   fi
 
+  # 3. Fall back to the remote default branch, then HEAD.
   local remote_default
   remote_default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
   if [ -n "$remote_default" ]; then
@@ -81,6 +89,7 @@ default_base_ref() {
 }
 
 collect_changed_files() {
+  # 1. Validate the comparison revision before collecting changed paths.
   local base_ref="$1"
   local merge_base
 
@@ -89,6 +98,7 @@ collect_changed_files() {
     exit 2
   fi
 
+  # 2. Combine committed, staged, unstaged, and untracked changes without duplicates.
   merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || git rev-parse HEAD)"
   {
     git diff --no-renames --name-only --diff-filter=ACDMR "$merge_base"...HEAD
@@ -99,6 +109,7 @@ collect_changed_files() {
 }
 
 run_changed_suites() {
+  # 1. Collect changed paths and stop when there is no selected work.
   local base_ref="$1"
   local plan_only="${2:-false}"
   local changed_files
@@ -113,6 +124,7 @@ run_changed_suites() {
     return
   fi
 
+  # 2. Use the shared CI planner to select local runner commands.
   commands="$(printf '%s\n' "$changed_files" | node scripts/ci/select-tests.ts --commands)"
 
   echo ""
@@ -127,6 +139,7 @@ run_changed_suites() {
     return
   fi
 
+  # 3. Print selected commands without starting services in preview mode.
   if [ "$plan_only" = true ]; then
     echo "Selected suites:"
     while IFS=$'\t' read -r command value; do
@@ -142,6 +155,7 @@ run_changed_suites() {
     return
   fi
 
+  # 4. Execute the plan while keeping child stdin separate from the command stream.
   # Child runners must not consume the command list still being read by this loop.
   while IFS=$'\t' read -r command value; do
     case "$command" in
@@ -162,6 +176,7 @@ run_changed_suites() {
   done <<< "$commands"
 
   echo ""
+  # 5. Report completion only after every selected runner succeeds.
   echo "Selected test suites passed!"
 }
 

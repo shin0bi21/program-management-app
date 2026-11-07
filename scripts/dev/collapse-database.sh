@@ -10,6 +10,7 @@ usage() {
   printf '%s\n' 'Usage: bash scripts/dev/collapse-database.sh --environment local|production --apply [--reuse-baseline]'
 }
 
+# 1. Require an explicit environment and apply mode before selecting the Compose stack.
 environment=''
 apply=false
 reuse=false
@@ -31,6 +32,7 @@ case "$environment" in
   *) printf 'ERROR: Environment must be local or production.\n' >&2; exit 2 ;;
 esac
 
+# 2. Validate local Docker execution and acquire the maintenance lock.
 repo="$(cd "$(dirname "$0")/../.." && pwd -P)"
 compose=(docker compose --project-directory "$repo" -f "$repo/$compose_file")
 # Bind-mounted recovery files must belong to the operator.
@@ -56,6 +58,7 @@ paused=false
 committed=false
 
 run_phase() {
+  # 1. Select the compiled or local worker and requested maintenance phase.
   local phase="$1"
   local command=(node dist/db/scripts/collapse-database.js)
   local arguments=(--phase "$phase" --work-directory /maintenance --apply)
@@ -67,6 +70,7 @@ run_phase() {
     arguments+=(--reuse-baseline)
   fi
 
+  # 2. Run as the operator with explicit maintenance and migration-file mounts.
   "${compose[@]}" run -T --rm --no-deps --user "$caller_identity" \
     -v "$work:/maintenance" \
     -v "$repo/backend/db:/maintenance-db" \
@@ -84,6 +88,7 @@ start_backend() {
 }
 
 wait_for_backend_health() {
+  # 1. Poll backend health within the fixed retry bound.
   local attempt
   for ((attempt = 1; attempt <= 30; attempt++)); do
     if "${compose[@]}" exec -T backend node -e \
@@ -92,6 +97,7 @@ wait_for_backend_health() {
     fi
     if [ "$attempt" -lt 30 ]; then sleep 2; fi
   done
+  # 2. Fail the maintenance operation when health cannot be verified.
   printf 'ERROR: Backend did not become healthy after 30 attempts; inspect its container logs.\n' >&2
   return 1
 }
@@ -99,8 +105,10 @@ wait_for_backend_health() {
 # An uncommitted replacement is read-only. Restore it before resuming the app.
 # Once commit enables writes, recovery must preserve any newly accepted records.
 finish() {
+  # 1. Preserve failure status and disable recursive traps before recovery.
   local status=$?
   trap - EXIT INT TERM
+  # 2. Roll back only before commit; later failures must preserve accepted writes.
   if [ "$status" -ne 0 ]; then
     if [ "$committed" = false ] && [ -n "$work" ] && [ -f "$work/state.json" ]; then
       if stop_backend && run_phase rollback; then
@@ -120,6 +128,7 @@ finish() {
     fi
     if [ -n "$work" ]; then printf 'Recovery files retained: %s\n' "$work" >&2; fi
   fi
+  # 3. Release the lock while retaining recovery artifacts for inspection.
   rm -rf "$lock"
   exit "$status"
 }
@@ -127,11 +136,13 @@ trap finish EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# 3. Verify the baseline and running backend before allocating recovery storage.
 [ -f "$repo/backend/db/baseline.json" ] || { printf 'ERROR: baseline.json is required.\n' >&2; exit 1; }
 [ "$("${compose[@]}" ps --status running --services backend)" = backend ] || { printf 'ERROR: Start the backend before collapsing its database.\n' >&2; exit 1; }
 work="$(mktemp -d "${TMPDIR:-/tmp}/database-collapse.XXXXXX")"
 printf 'Private recovery directory: %s\n' "$work"
 
+# 4. Prepare the replacement during downtime, then verify it read-only through backend health.
 stop_backend
 paused=true
 run_phase prepare
@@ -140,12 +151,14 @@ start_backend
 paused=false
 wait_for_backend_health
 
+# 5. Commit only after provisional health succeeds and clean up disposable databases.
 stop_backend
 paused=true
 run_phase commit
 committed=true
 run_phase cleanup
 
+# 6. Verify the writable replacement before reporting completion.
 start_backend
 paused=false
 wait_for_backend_health

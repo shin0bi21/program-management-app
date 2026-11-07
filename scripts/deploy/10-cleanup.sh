@@ -1,9 +1,11 @@
 # shellcheck shell=bash
 
 cleanup() {
+  # 1. Preserve the original exit status and disable recursive cleanup traps.
   local exit_code=$?
   trap - EXIT INT TERM
 
+  # 2. Attempt database restoration only while the migration rollback guard is armed.
   if [ "$ROLLBACK_NEEDED" = true ] && [ -n "$SNAPSHOT" ] && [ -s "$SNAPSHOT" ]; then
     echo ""
     echo "Migration failed — restoring database from pre-migration snapshot..."
@@ -24,6 +26,7 @@ cleanup() {
     fi
   fi
 
+  # 3. Remove owned temporary resources and exit with the original status.
   rm -f "$SNAPSHOT" "$SNAPSHOT_TMP" "$LOCKFILE"
   exit "$exit_code"
 }

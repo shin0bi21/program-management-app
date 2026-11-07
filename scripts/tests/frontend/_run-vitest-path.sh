@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
+# 1. Require a display label and frontend-relative test owner path.
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 <label> <frontend-path>" >&2
   exit 1
@@ -14,12 +15,14 @@ echo ""
 echo "Running ${LABEL} frontend tests..."
 echo "------------------------------------------"
 
+# 2. Skip owners without colocated tests.
 if ! find "frontend/$TARGET" \( -name '*.test.ts' -o -name '*.test.tsx' \) -print -quit 2>/dev/null | grep -q .; then
   echo ""
   echo "No ${LABEL} frontend tests found under frontend/${TARGET}. Skipping."
   exit 0
 fi
 
+# 3. Run the selected Vitest owner and propagate failures.
 if (cd frontend && npm test -- "$TARGET"); then
   echo ""
   echo "${LABEL} frontend tests passed!"
