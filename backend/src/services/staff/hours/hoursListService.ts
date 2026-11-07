@@ -30,21 +30,21 @@ export async function getHoursList(actor: AccessTokenPayload, filterValues: Hour
   // 2. Keep numeric hours order encoded as text for existing cursor compatibility.
   const entryType = sql`
     CASE
-      WHEN page_row.task_id IS NOT NULL THEN 'task'
-      WHEN page_row.session_id IS NOT NULL THEN 'session'
+      WHEN "row".task_id IS NOT NULL THEN 'task'
+      WHEN "row".session_id IS NOT NULL THEN 'session'
       ELSE 'other'
     END
   `;
 
   const sortValue = {
-    firstName: sql`LOWER(page_row.staff_first_name)`,
-    lastName: sql`LOWER(page_row.staff_last_name)`,
-    date: sql`page_row.work_date`,
-    program: sql`LOWER(COALESCE(page_row.program_name, ''))`,
-    cycle: sql`LOWER(page_row.cycle_name)`,
-    category: sql`page_row.category::text`,
-    hours: sql`TO_CHAR(page_row.hours::numeric, 'FM0000000000.0000')`,
-    note: sql`LOWER(page_row.note)`,
+    firstName: sql`LOWER("row".staff_first_name)`,
+    lastName: sql`LOWER("row".staff_last_name)`,
+    date: sql`"row".work_date`,
+    program: sql`LOWER(COALESCE("row".program_name, ''))`,
+    cycle: sql`LOWER("row".cycle_name)`,
+    category: sql`"row".category::text`,
+    hours: sql`TO_CHAR("row".hours::numeric, 'FM0000000000.0000')`,
+    note: sql`LOWER("row".note)`,
     type: entryType,
   }[filterValues.sort]!;
   const page = await paginateQuery(rowsQuery, {

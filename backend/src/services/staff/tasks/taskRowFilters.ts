@@ -18,10 +18,10 @@ export function buildTaskFilters(filterValues: TaskFilters) {
   const today = sql`(NOW() AT TIME ZONE 'America/Toronto')::date`;
   const status = sql`
     CASE
-      WHEN page_row.status = 'open' AND page_row.start_date::date > ${today} THEN 'upcoming'
-      WHEN page_row.status = 'open' AND page_row.due_date::date < ${today} THEN 'overdue'
-      WHEN page_row.status = 'open' THEN 'in_progress'
-      ELSE page_row.status
+      WHEN "row".status = 'open' AND "row".start_date::date > ${today} THEN 'upcoming'
+      WHEN "row".status = 'open' AND "row".due_date::date < ${today} THEN 'overdue'
+      WHEN "row".status = 'open' THEN 'in_progress'
+      ELSE "row".status
     END
   `;
 

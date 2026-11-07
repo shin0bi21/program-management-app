@@ -12,7 +12,7 @@ export interface ListCursor {
 }
 
 interface QueryPagination {
-  /** Trusted, non-null SQL text expression against the query's `page_row` alias. */
+  /** Trusted, non-null SQL text expression against the query's `row` alias. */
   sortValue: PendingQuery<Row[]>;
   direction: 'asc' | 'desc';
   cursor?: string;
@@ -27,13 +27,13 @@ interface QueryPage<T> {
 
 /**
  * Executes an already scoped and filtered query with consistent cursor pagination.
- * Rows must have UUID IDs; sort expressions reference the `page_row` alias. Nullable
+ * Rows must have UUID IDs; sort expressions reference the `row` alias. Nullable
  * sort values must be normalized by the caller, and `cursor_value` is reserved.
  * @param rowsQuery - Unexecuted canonical rows with domain access and filters already applied.
  * @param pagination - Trusted sort expression, direction, optional cursor, and validated limit.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @returns A bounded cursor page without internal cursor values.
- * @example paginateQuery(rows, { sortValue: sql`LOWER(page_row.name)`, direction: 'asc', limit: 50 })
+ * @example paginateQuery(rows, { sortValue: sql`LOWER("row".name)`, direction: 'asc', limit: 50 })
  */
 export async function paginateQuery<T extends { id: string }>(
   rowsQuery: PendingQuery<T[]>,
@@ -47,16 +47,16 @@ export async function paginateQuery<T extends { id: string }>(
   let cursorFilter = query`TRUE`;
   if (cursor) {
     cursorFilter = direction === 'asc'
-      ? query`(${sortValue}, page_row.id) > (${cursor.value}, ${cursor.id}::uuid)`
-      : query`(${sortValue}, page_row.id) < (${cursor.value}, ${cursor.id}::uuid)`;
+      ? query`(${sortValue}, "row".id) > (${cursor.value}, ${cursor.id}::uuid)`
+      : query`(${sortValue}, "row".id) < (${cursor.value}, ${cursor.id}::uuid)`;
   }
 
   // 2. Fetch one extra row to determine whether another page exists.
   const rows = await query<Array<T & { cursorValue: string }>>`
-    SELECT page_row.*, ${sortValue} AS cursor_value
-    FROM (${rowsQuery}) page_row
+    SELECT "row".*, ${sortValue} AS cursor_value
+    FROM (${rowsQuery}) "row"
     WHERE ${cursorFilter}
-    ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+    ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
     LIMIT ${limit + 1}
   `;
 

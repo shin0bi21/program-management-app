@@ -41,7 +41,7 @@ describe('shared cursor pagination', () => {
 
   it.each(['asc', 'desc'] as const)('pages filtered SQL rows in %s order without losing tied values', async direction => {
     const rowsQuery = paginationRows();
-    const options = { sortValue: sql`page_row.name`, direction, limit: 1 };
+    const options = { sortValue: sql`"row".name`, direction, limit: 1 };
     const expectedIds = direction === 'asc' ? [firstId, secondId, thirdId] : [thirdId, secondId, firstId];
     const visibleIds: string[] = [];
     let cursor: string | undefined;
@@ -60,7 +60,7 @@ describe('shared cursor pagination', () => {
 
   it('bounds rows and strips internal cursor values', async () => {
     const page = await paginateQuery(paginationRows(), {
-      sortValue: sql`page_row.name`, direction: 'asc', limit: 2,
+      sortValue: sql`"row".name`, direction: 'asc', limit: 2,
     });
 
     expect(page.rows).toEqual([
@@ -74,7 +74,7 @@ describe('shared cursor pagination', () => {
     const rowsQuery = sql<{ id: string; name: string }[]>`SELECT * FROM (${paginationRows()}) filtered WHERE FALSE`;
 
     const page = await paginateQuery(rowsQuery, {
-      sortValue: sql`page_row.name`, direction: 'asc', limit: 2,
+      sortValue: sql`"row".name`, direction: 'asc', limit: 2,
     });
 
     expect(page).toEqual({ rows: [], nextCursor: null });
