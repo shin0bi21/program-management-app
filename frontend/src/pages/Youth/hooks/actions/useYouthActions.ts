@@ -28,6 +28,7 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
     reconcileSavedYouth(saved.youth);
     for (const session of saved.updatedSessions ?? []) {
       replaceInfiniteListRow(queryClient, ['sessions', 'table'], session);
+      void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
     }
     if (saved.updatedProgramCycle) {
       updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);

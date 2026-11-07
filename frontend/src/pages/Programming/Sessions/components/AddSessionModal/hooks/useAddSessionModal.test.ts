@@ -7,7 +7,7 @@ import useAddSessionModal from './useAddSessionModal';
 
 vi.mock('../../../sessions.api', () => ({ createSession: vi.fn() }));
 vi.mock('../../../hooks/data/useSessionTypes', () => {
-  const sessionTypes = [{ id: 'type-1', name: 'Regular' }];
+  const sessionTypes = [{ id: 'Regular', name: 'Regular' }];
   return { useSessionTypes: () => ({ sessionTypes }) };
 });
 const programs: Program[] = [
@@ -32,7 +32,7 @@ describe('single session creation', () => {
     await act(() => result.current.submit());
     expect(createSession).toHaveBeenCalledWith({
       programId: 'p2',
-      sessionTypeId: 'type-1', theme: 'Music', date: '2026-11-04', startTime: '16:00', endTime: '18:00',
+      sessionType: 'Regular', theme: 'Music', date: '2026-11-04', startTime: '16:00', endTime: '18:00',
     });
     expect(onSaved).toHaveBeenCalledOnce();
   });

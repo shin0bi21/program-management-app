@@ -8,6 +8,7 @@ import { useSessionDashboardErrors } from './hooks/useSessionDashboardErrors';
 interface SessionDashboardProps {
   sessionQueryKey: readonly unknown[];
   session: ProgramSession | null;
+  canReadAttendance: boolean;
   canWriteAttendance: boolean;
   canWriteSessions: boolean;
   onAddAttendance: (session: ProgramSession) => void;
@@ -15,12 +16,17 @@ interface SessionDashboardProps {
 }
 
 export default function SessionDashboard({
-  sessionQueryKey, session, canWriteAttendance, canWriteSessions, onAddAttendance, onErrorsChange,
+  sessionQueryKey, session, canReadAttendance, canWriteAttendance, canWriteSessions, onAddAttendance, onErrorsChange,
 }: SessionDashboardProps) {
-  const { setNotesError, setAttachmentsError } = useSessionDashboardErrors(onErrorsChange);
+  const { setAttendanceError, setNotesError, setAttachmentsError } = useSessionDashboardErrors(onErrorsChange);
 
   return <>
-    <SessionAttendanceDashboardCard session={session} canWrite={canWriteAttendance} onManage={onAddAttendance} />
+    {canReadAttendance && <SessionAttendanceDashboardCard
+      session={session}
+      canWrite={canWriteAttendance}
+      onManage={onAddAttendance}
+      onMessageChange={setAttendanceError}
+    />}
     <SessionNotesDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onMessageChange={setNotesError} />
     <SessionAttachmentsDashboardCard queryKey={sessionQueryKey} session={session} canWrite={canWriteSessions} onMessageChange={setAttachmentsError} />
   </>;

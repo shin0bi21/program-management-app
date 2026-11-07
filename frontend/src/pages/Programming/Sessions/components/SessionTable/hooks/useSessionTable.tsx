@@ -48,8 +48,8 @@ export default function useSessionTable({
       id: 'type',
       header: 'Type',
       size: 135,
-      accessorFn: session => session.sessionTypeName,
-      cell: ({ row: { original: session } }) => <SessionTypeLabel name={session.sessionTypeName} />,
+      accessorFn: session => session.sessionType,
+      cell: ({ row: { original: session } }) => <SessionTypeLabel name={session.sessionType} />,
     },
     {
       id: 'status',

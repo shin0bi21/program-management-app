@@ -36,7 +36,7 @@ describe('useEditSessionModal', () => {
     let resolveRefresh!: () => void;
     const onUpdated = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
-    act(() => result.current.setSessionTypeId('type-2'));
+    act(() => result.current.setSessionType('Guest Speaker'));
 
     let submission!: Promise<void>;
     act(() => { submission = result.current.submit(makeSubmitEvent()); });
@@ -53,7 +53,7 @@ describe('useEditSessionModal', () => {
     });
 
     expect(updateSession).toHaveBeenCalledWith(session.id, {
-      sessionTypeId: 'type-2',
+      sessionType: 'Guest Speaker',
       theme: 'Career Stories',
       startsAt: '2026-08-10T17:00:00Z',
       endsAt: '2026-08-10T19:00:00Z',
@@ -73,7 +73,7 @@ describe('useEditSessionModal', () => {
       .mockResolvedValueOnce({ session });
     const onUpdated = vi.fn();
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
-    act(() => result.current.setSessionTypeId('type-1'));
+    act(() => result.current.setSessionType('Regular'));
 
     await act(() => result.current.submit(makeSubmitEvent()));
     expect(result.current).toMatchObject({
@@ -88,13 +88,13 @@ describe('useEditSessionModal', () => {
 
   it('resets workflow state for a different session target', async () => {
     const first = makeProgramSession();
-    const second = makeProgramSession({ id: 'session-2', sessionTypeId: 'type-2' });
+    const second = makeProgramSession({ id: 'session-2', sessionType: 'Guest Speaker' });
     vi.mocked(updateSession).mockRejectedValue(new Error('Update failed'));
     const { result, rerender } = renderHook(
       ({ session }) => useEditSessionModal(session, vi.fn()),
       { initialProps: { session: first } },
     );
-    act(() => result.current.setSessionTypeId('type-1'));
+    act(() => result.current.setSessionType('Regular'));
     await act(() => result.current.submit(makeSubmitEvent()));
     expect(result.current.status).toBe('error');
 
@@ -102,7 +102,7 @@ describe('useEditSessionModal', () => {
     await waitFor(() => expect(result.current).toMatchObject({
       status: 'idle',
       statusMessage: '',
-      sessionTypeId: 'type-2',
+      sessionType: 'Guest Speaker',
     }));
   });
 
@@ -115,7 +115,7 @@ describe('useEditSessionModal', () => {
     const session = makeProgramSession();
     const { result } = renderHook(() => useEditSessionModal(session, onUpdated));
 
-    await act(async () => result.current.setSessionTypeId('type-2'));
+    await act(async () => result.current.setSessionType('Guest Speaker'));
     let firstSubmit!: Promise<void>;
     act(() => {
       firstSubmit = result.current.submit(makeSubmitEvent());

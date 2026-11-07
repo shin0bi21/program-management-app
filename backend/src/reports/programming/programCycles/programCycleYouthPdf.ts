@@ -168,7 +168,7 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<s
       const previous = youth.timeline[index - 1]!;
       doc.moveTo(chartLeft + ((index - 1) * stepX), pointY(previous.status)).lineTo(x, y).lineWidth(1.2).strokeColor(timelineLineColor).stroke();
     }
-    doc.circle(x, y, 3.2).fillColor(colors.get(point.sessionTypeName) ?? muted).fill();
+    doc.circle(x, y, 3.2).fillColor(colors.get(point.sessionType) ?? muted).fill();
     point.noteCategories.forEach((category, categoryIndex) => {
       const style = noteStyles[category];
       const markerY = Math.max(chartTop + 5, y - 12 - (categoryIndex * 11));

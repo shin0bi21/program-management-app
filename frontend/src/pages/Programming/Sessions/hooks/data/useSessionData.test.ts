@@ -16,7 +16,7 @@ describe('useSessionData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCycleReferences).mockResolvedValue(cycles);
-    vi.mocked(getSessionReferenceData).mockResolvedValue({ programs: [], sessionTypes: [{ id: 'type-1', name: 'Regular' }] });
+    vi.mocked(getSessionReferenceData).mockResolvedValue({ programs: [], sessionTypes: [{ id: 'Regular', name: 'Regular' }] });
   });
 
   it('composes session-owned options with shared cycles', async () => {
@@ -24,7 +24,7 @@ describe('useSessionData', () => {
       wrapper: createQueryClientWrapper(createTestQueryClient()),
     });
 
-    await waitFor(() => expect(result.current.sessionTypes).toEqual([{ id: 'type-1', name: 'Regular' }]));
+    await waitFor(() => expect(result.current.sessionTypes).toEqual([{ id: 'Regular', name: 'Regular' }]));
     expect(result.current.cycles).toEqual(cycles);
     expect(result.current.referencesError).toBe('');
     expect(getSessionReferenceData).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
@@ -37,7 +37,7 @@ describe('useSessionData', () => {
     });
 
     await waitFor(() => expect(result.current.cyclesError).toBe('Cycles unavailable'));
-    expect(result.current.sessionTypes).toEqual([{ id: 'type-1', name: 'Regular' }]);
+    expect(result.current.sessionTypes).toEqual([{ id: 'Regular', name: 'Regular' }]);
     expect(result.current.referencesLoading).toBe(false);
     expect(result.current.referencesError).toBe('');
   });

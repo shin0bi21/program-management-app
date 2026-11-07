@@ -29,8 +29,8 @@ export default function AddSessionModal({ onClose, ...options }: AddSessionModal
           }))} />
       </FormField>
       <FormField id="session-type" label="Type">
-        <FloatingSelect id="session-type" value={workflow.draft.sessionTypeId}
-          onChange={value => workflow.updateDraft('sessionTypeId', value)} disabled={workflow.locked}
+        <FloatingSelect id="session-type" value={workflow.draft.sessionType}
+          onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
           options={toFilterOptions(workflow.sessionTypes)} />
       </FormField>
       <FormField id="session-theme" label="Title / Theme">

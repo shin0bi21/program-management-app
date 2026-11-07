@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
-  getSessionRoster,
   getAttendanceYouth,
   setSessionAttendance,
   type SessionAttendanceResult,
@@ -14,6 +13,7 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import type { AttendanceStatus } from '../../../../../../common/features/AttendanceStatusSelect/types';
 import type { ProgramSession, SessionRosterMember } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
+import useSessionRoster from '../../../hooks/data/useSessionRoster';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 
@@ -62,11 +62,7 @@ export default function useSessionAttendanceModal({
     setStatusMessage('');
   }, [sessionId, unlock]);
 
-  const rosterQuery = useQuery<SessionRosterMember[]>({
-    queryKey: [...SESSION_QUERY_KEY, sessionId, 'roster'],
-    queryFn: ({ signal }) => getSessionRoster(sessionId!, { signal }),
-    enabled: sessionId !== undefined,
-  });
+  const rosterQuery = useSessionRoster(sessionId);
 
   useEffect(() => {
     if (!rosterQuery.data || draftDirtyRef.current) return;

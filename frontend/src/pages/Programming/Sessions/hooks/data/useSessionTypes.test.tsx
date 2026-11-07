@@ -11,7 +11,7 @@ describe('useSessionTypes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getSessionTypes).mockResolvedValue([{
-      id: 'type-1',
+      id: 'Regular',
       name: 'Regular',
     }]);
   });

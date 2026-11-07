@@ -16,7 +16,7 @@ const sortValues: Array<[SessionSortKey, Partial<ProgramSession>, string | Date]
   ['theme', { theme: 'Other' }, 'other'],
   ['date', { startsAt: '2027-01-01T12:00:00Z' }, new Date('2027-01-01T12:00:00Z')],
   ['time', { startsAt: '2027-01-01T12:00:00Z' }, new Date('2027-01-01T12:00:00Z')],
-  ['type', { sessionTypeName: 'Other' }, 'other'],
+  ['type', { sessionType: 'Field Trip' }, 'field trip'],
   ['status', { state: 'cancelled' }, 'cancelled'],
 ];
 

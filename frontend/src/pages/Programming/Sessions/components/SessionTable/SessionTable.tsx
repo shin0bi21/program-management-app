@@ -38,7 +38,7 @@ export default function SessionTable({
   const hasFilters = Boolean(filters.search)
     || Boolean(filters.cycleIds?.length)
     || Boolean(filters.programIds?.length)
-    || Boolean(filters.sessionTypeIds?.length)
+    || Boolean(filters.sessionTypes?.length)
     || Boolean(filters.statuses?.length);
 
   return <Table

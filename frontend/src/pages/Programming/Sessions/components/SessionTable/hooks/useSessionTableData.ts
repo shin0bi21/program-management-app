@@ -8,7 +8,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
   dateRange,
   programIds = [],
   cycleIds,
-  sessionTypeIds = [],
+  sessionTypes = [],
   statuses = [],
   search,
 }: SessionListFilters, sorting: ListSort<SessionSortKey>, enabled = true) {
@@ -16,7 +16,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     dateRange,
     programIds,
     cycleIds,
-    sessionTypeIds,
+    sessionTypes,
     statuses,
     search,
   };
@@ -25,7 +25,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
       direction: sorting.direction,
       getValue: session => ({
         program: session.programName.toLowerCase(), cycle: session.cycleName.toLowerCase(), theme: session.theme.toLowerCase(),
-        date: new Date(session.startsAt), time: new Date(session.startsAt), type: session.sessionTypeName.toLowerCase(), status: session.state,
+        date: new Date(session.startsAt), time: new Date(session.startsAt), type: session.sessionType.toLowerCase(), status: session.state,
       }[sorting.key]),
     },
     queryKey: [...queryKey, filters, sorting],

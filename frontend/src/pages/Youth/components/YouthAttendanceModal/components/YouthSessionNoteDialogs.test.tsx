@@ -24,7 +24,7 @@ describe('YouthSessionNoteDialogs', () => {
       noteTarget={{
         session: {
           id: 'session-1',
-          sessionTypeName: 'Regular',
+          sessionType: 'Regular',
           theme: 'Communication',
           startsAt: '2026-08-19T17:00:00.000Z',
           endsAt: '2026-08-19T19:00:00.000Z',

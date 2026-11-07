@@ -953,14 +953,13 @@ describe('Youth API', () => {
           (${softSkillsProgramId}, ${softSkillsCycleId}, ${youthId}, CURRENT_DATE - 30),
           (${softSkillsProgramId}, ${softSkillsCycleId}, ${otherYouthId}, CURRENT_DATE - 30)
       `;
-      const [sessionType] = await sql<{ id: string }[]>`SELECT id FROM session_types ORDER BY name LIMIT 1`;
       const sessions = await sql<{ id: string }[]>`
         INSERT INTO program_sessions (
-          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+          program_id, cycle_id, session_type, theme, starts_at, ends_at, created_by, updated_by
         )
         VALUES
-          (${softSkillsProgramId}, ${softSkillsCycleId}, ${sessionType.id}, ${`Youth Attendance A ${Date.now()}`}, CURRENT_DATE - 2 + TIME '17:00', CURRENT_DATE - 2 + TIME '18:00', ${adminUserId}, ${adminUserId}),
-          (${softSkillsProgramId}, ${softSkillsCycleId}, ${sessionType.id}, ${`Youth Attendance B ${Date.now()}`}, CURRENT_DATE - 1 + TIME '17:00', CURRENT_DATE - 1 + TIME '18:00', ${adminUserId}, ${adminUserId})
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${'Regular'}, ${`Youth Attendance A ${Date.now()}`}, CURRENT_DATE - 2 + TIME '17:00', CURRENT_DATE - 2 + TIME '18:00', ${adminUserId}, ${adminUserId}),
+          (${softSkillsProgramId}, ${softSkillsCycleId}, ${'Regular'}, ${`Youth Attendance B ${Date.now()}`}, CURRENT_DATE - 1 + TIME '17:00', CURRENT_DATE - 1 + TIME '18:00', ${adminUserId}, ${adminUserId})
         RETURNING id
       `;
       [firstSessionId, secondSessionId] = sessions.map(session => session.id);
@@ -999,9 +998,9 @@ describe('Youth API', () => {
       openCycleId = openCohort.cycleId;
       const [openSession] = await sql<{ id: string }[]>`
         INSERT INTO program_sessions (
-          program_id, cycle_id, session_type_id, theme, starts_at, ends_at, created_by, updated_by
+          program_id, cycle_id, session_type, theme, starts_at, ends_at, created_by, updated_by
         )
-        VALUES (${openProgramId}, ${openCycleId}, ${sessionType.id}, 'Open attendance', CURRENT_DATE - 1 + TIME '19:00', CURRENT_DATE - 1 + TIME '20:00', ${adminUserId}, ${adminUserId})
+        VALUES (${openProgramId}, ${openCycleId}, ${'Regular'}, 'Open attendance', CURRENT_DATE - 1 + TIME '19:00', CURRENT_DATE - 1 + TIME '20:00', ${adminUserId}, ${adminUserId})
         RETURNING id
       `;
       openSessionId = openSession.id;

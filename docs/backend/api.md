@@ -126,6 +126,9 @@ Direct pair creation validates the session dates against the selected program/cy
 combination. See
 [session service](../../backend/src/services/programming/sessions/sessionService.ts).
 
+Session types are fixed enum values: `Regular`, `Guest Speaker`, and `Field Trip`.
+Session requests and rows use `sessionType`; list filters use `sessionTypes`.
+
 Session queries combine cycle, program, type, status, search, and date
 filters while preserving program access. Paired timestamps use an exclusive end;
 multi-year ranges and real calendar dates in years 0001–9999 are supported.

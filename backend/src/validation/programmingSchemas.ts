@@ -1,3 +1,4 @@
+import { SESSION_TYPES } from '../types/programming';
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
 import { isCalendarDate, sessionRangeCalendarDates } from './dateRangeValidation';
@@ -80,7 +81,7 @@ export const withdrawYouthSchema = z.object({
 });
 
 const createSessionBodySchema = z.object({
-  sessionTypeId: z.string().uuid('Invalid session type ID'),
+  sessionType: z.enum(SESSION_TYPES),
   theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
   date: z.iso.date().optional(),
   startTime: timeSchema.optional(),
@@ -115,7 +116,7 @@ export const sessionListQuerySchema = z.object({
     end: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'End must use a supported calendar year').optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
-    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
+    sessionTypes: commaSeparated(z.enum(SESSION_TYPES)),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'], 'date', 'desc'),
@@ -164,7 +165,7 @@ export const moveSessionDateSchema = z.object({
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
-    sessionTypeId: z.string().uuid('Invalid session type ID').optional(),
+    sessionType: z.enum(SESSION_TYPES).optional(),
     theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),

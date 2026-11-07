@@ -3,7 +3,7 @@ import type { SessionNote } from '../../../Programming/Sessions/types';
 
 export interface YouthAttendanceSession {
   id: string;
-  sessionTypeName: string;
+  sessionType: string;
   theme: string;
   startsAt: string;
   endsAt: string;

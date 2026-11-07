@@ -20,7 +20,7 @@ describe('SessionAttendanceItem', () => {
     const onUnlinkNote = vi.fn();
     render(<SessionAttendanceItem
       session={{
-        id: 'session-1', sessionTypeName: 'Workshop', theme: 'Communication',
+        id: 'session-1', sessionType: 'Workshop', theme: 'Communication',
         startsAt: '2026-08-19T17:00:00.000Z', endsAt: '2026-08-19T18:00:00.000Z',
         cancelledAt: null, status: 'present', notes: null, sessionNotes: [note],
       }}

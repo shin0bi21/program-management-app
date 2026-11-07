@@ -1,3 +1,4 @@
+import { SESSION_TYPES } from '../../../types/programming';
 import { sql } from '../../../db/client';
 import { NotFoundError } from '../../../errors';
 import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
@@ -13,7 +14,7 @@ type AttendanceBreakdown = Record<ReportStatus, number> & {
 };
 type ReportYouth = { youthId: string; firstName: string; lastName: string };
 type SessionTypeRow = { name: string };
-type TimelineRow = { youthId: string; sessionId: string; sessionTypeName: string; sessionTheme: string | null; startsAt: string; status: AttendanceStatus | null };
+type TimelineRow = { youthId: string; sessionId: string; sessionType: string; sessionTheme: string | null; startsAt: string; status: AttendanceStatus | null };
 type NoteRow = {
   id: string; youthId: string; sessionId: string; sessionTheme: string | null; startsAt: string;
   category: 'general' | 'attendance' | 'behaviour' | 'achievement';
@@ -33,11 +34,7 @@ export async function getProgramCycleYouthReport(programId: string, cycleId: str
   `;
   if (!programCycles.length) throw new NotFoundError('Program cycle not found');
 
-  const sessionTypes = await sql<SessionTypeRow[]>`
-    SELECT name
-    FROM session_types
-    ORDER BY CASE name WHEN 'Regular' THEN 1 WHEN 'Guest Speaker' THEN 2 WHEN 'Field Trip' THEN 3 ELSE 4 END, name
-  `;
+  const sessionTypes = SESSION_TYPES.map(name => ({ name }));
 
   const youth = await sql<ReportYouth[]>`
     SELECT DISTINCT person.id AS youth_id, person.first_name, person.last_name
@@ -55,10 +52,16 @@ export async function getProgramCycleYouthReport(programId: string, cycleId: str
   `;
 
   const timeline = await sql<TimelineRow[]>`
-    SELECT roster.youth_id, session.id AS session_id, session_type.name AS session_type_name,
-      session.theme AS session_theme, session.starts_at, attendance.status
+    SELECT
+      session.id AS session_id,
+      session.theme AS session_theme,
+      session.starts_at,
+      session.session_type,
+
+      roster.youth_id,
+
+      attendance.status
     FROM program_sessions session
-    INNER JOIN session_types session_type ON session_type.id = session.session_type_id
     INNER JOIN programs program ON program.id = ${programId}
     INNER JOIN LATERAL (
       SELECT enrollment.youth_id
@@ -129,7 +132,7 @@ export async function getProgramCycleYouthReport(programId: string, cycleId: str
         })),
         timeline: records.map(record => ({
           sessionId: record.sessionId,
-          sessionTypeName: record.sessionTypeName,
+          sessionType: record.sessionType,
           sessionTheme: record.sessionTheme,
           startsAt: record.startsAt,
           status: record.status,
@@ -159,10 +162,10 @@ function buildAttendanceBreakdown(sessionTypes: SessionTypeRow[], records: Timel
   const totalCounts = emptyCounts();
   for (const record of records) {
     const status = record.status ?? 'unmarked';
-    const typeCounts = countsByType.get(record.sessionTypeName) ?? emptyCounts();
+    const typeCounts = countsByType.get(record.sessionType) ?? emptyCounts();
     typeCounts[status] += 1;
     totalCounts[status] += 1;
-    countsByType.set(record.sessionTypeName, typeCounts);
+    countsByType.set(record.sessionType, typeCounts);
   }
   return {
     bySessionType: Array.from(countsByType, ([name, counts]) => completeBreakdown(name, counts)),

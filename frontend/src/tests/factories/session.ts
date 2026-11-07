@@ -4,8 +4,8 @@ export function makeProgramSession(overrides: Partial<ProgramSession> = {}): Pro
   return {
     id: 'session-1',
     cycleId: 'cycle-1',
-    sessionTypeId: 'type-1',
-    sessionTypeName: 'Regular',
+
+    sessionType: 'Regular',
     theme: 'Communication',
     cycleName: 'Summer 2026',
     programId: 'program-1',
@@ -15,9 +15,6 @@ export function makeProgramSession(overrides: Partial<ProgramSession> = {}): Pro
     endsAt: '2026-08-10T19:00:00.000Z',
     cancelledAt: null,
     description: null,
-    attendanceMarkedCount: 0,
-    attendedCount: 0,
-    attendanceRate: null,
     state: 'upcoming',
     ...overrides,
   };

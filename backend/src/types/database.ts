@@ -43,6 +43,8 @@ export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
 
 export type ProgramTimezone = "America/Toronto";
 
+export type SessionType = "Field Trip" | "Guest Speaker" | "Regular";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Addresses {
@@ -230,7 +232,7 @@ export interface ProgramSessions {
   ends_at: Timestamp;
   id: Generated<string>;
   program_id: string;
-  session_type_id: Generated<string>;
+  session_type: Generated<SessionType>;
   starts_at: Timestamp;
   theme: string;
   updated_at: Generated<Timestamp>;
@@ -290,11 +292,6 @@ export interface SessionNotes {
   session_id: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
-}
-
-export interface SessionTypes {
-  id: Generated<string>;
-  name: string;
 }
 
 export interface SystemRevokedTokens {
@@ -515,7 +512,6 @@ export interface DB {
   session_attachments: SessionAttachments;
   session_note_has_youth: SessionNoteHasYouth;
   session_notes: SessionNotes;
-  session_types: SessionTypes;
   system_revoked_tokens: SystemRevokedTokens;
   tasks: Tasks;
   time_entries: TimeEntries;

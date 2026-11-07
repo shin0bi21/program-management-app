@@ -46,7 +46,8 @@ export default function useSessionActions({
   const syncUpdatedSession = useCallback((result: UpdatedSessionResult) => {
     syncSession(result.session);
     syncAssignments(result.updatedProgramCycles);
-  }, [syncAssignments, syncSession]);
+    void queryClient.invalidateQueries({ queryKey: ['sessions', result.session.id, 'roster'] });
+  }, [queryClient, syncAssignments, syncSession]);
 
   const syncAttendance = useCallback((result: SessionAttendanceResult) => {
     syncSession(result.session);

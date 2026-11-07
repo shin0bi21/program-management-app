@@ -3,17 +3,30 @@ import { getProgramCycleRowsByKeys } from '../programCycles/programCycleRecordQu
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
-import { getSessionRowsByIds } from './sessionRecordQuery';
+import { getSessionRows } from './sessionRowQuery';
+import { filterSessionRows } from './sessionRowFilters';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetAttendanceInput } from '../../../validation/programmingSchemas';
 
+/**
+ * Loads eligible and previously recorded attendees within the actor's session scope.
+ * @param sessionId - Session whose roster is needed.
+ * @param actor - Actor whose program access is enforced; callers enforce route permissions.
+ * @example getSessionRoster(sessionId, actor) // includes saved attendees after a date move
+ */
 export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, sessionId);
-  return readSessionRoster(sql, sessionId);
+  return readSessionRoster(sessionId);
 }
 
-async function readSessionRoster(database: typeof sql, sessionId: string) {
-  const sessions = await database<{ enrollmentRequired: boolean }[]>`
+/**
+ * Reads current enrollment eligibility together with preserved attendance history.
+ * @param sessionId - Authorized session; a missing session raises 404.
+ * @param query - Defaults to the shared client; pass trx to read inside the current write.
+ * @example readSessionRoster(sessionId, trx) // includes recorded youth outside the current enrollment window
+ */
+async function readSessionRoster(sessionId: string, query = sql) {
+  const sessions = await query<{ enrollmentRequired: boolean }[]>`
     SELECT p.enrollment_required
     FROM program_sessions cs
     INNER JOIN programs p ON p.id = cs.program_id
@@ -22,7 +35,7 @@ async function readSessionRoster(database: typeof sql, sessionId: string) {
   if (!sessions.length) throw new NotFoundError('Session not found');
 
   if (!sessions[0].enrollmentRequired) {
-    return database`
+    return query`
       SELECT
         u.id AS youth_id,
         u.first_name,
@@ -36,7 +49,7 @@ async function readSessionRoster(database: typeof sql, sessionId: string) {
     `;
   }
 
-  return database`
+  return query`
       SELECT
         u.id AS youth_id,
         u.first_name,
@@ -44,17 +57,23 @@ async function readSessionRoster(database: typeof sql, sessionId: string) {
         ar.status,
         ar.notes
       FROM program_sessions cs
-      INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
-      INNER JOIN users u ON u.id = ce.youth_id
+      INNER JOIN LATERAL (
+        SELECT enrollment.youth_id
+        FROM program_enrollments enrollment
+        WHERE enrollment.program_id = cs.program_id AND enrollment.cycle_id = cs.cycle_id
+          AND enrollment.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+          AND (
+            enrollment.withdrawn_on IS NULL
+            OR enrollment.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+          )
+        UNION
+        SELECT recorded.youth_id FROM attendance_records recorded WHERE recorded.session_id = cs.id
+      ) roster ON TRUE
+      INNER JOIN users u ON u.id = roster.youth_id
       LEFT JOIN attendance_records ar
         ON ar.session_id = cs.id
-        AND ar.youth_id = ce.youth_id
+        AND ar.youth_id = roster.youth_id
       WHERE cs.id = ${sessionId}
-        AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
-        AND (
-          ce.withdrawn_on IS NULL
-          OR ce.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
-        )
       ORDER BY u.first_name, u.last_name
     `;
 }
@@ -105,17 +124,8 @@ export async function setSessionAttendance(
           AND NOT (youth_id = ANY(${sql.array(submittedIds)}::uuid[]))
       `;
     } else {
-      const eligibleYouth = await trx<{ youthId: string }[]>`
-        SELECT ce.youth_id
-        FROM program_sessions cs
-        INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
-        WHERE cs.id = ${sessionId}
-          AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
-          AND (
-            ce.withdrawn_on IS NULL
-            OR ce.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
-          )
-      `;
+      // Use the same eligible-or-recorded membership shown by the roster editor.
+      const eligibleYouth = await readSessionRoster(sessionId, trx);
       const eligibleIds = new Set(eligibleYouth.map(youth => youth.youthId));
 
       for (const record of data.records) {
@@ -149,9 +159,9 @@ export async function setSessionAttendance(
       `;
     }
 
-    const [session] = await getSessionRowsByIds(trx, actor, [sessionId]);
+    const [session] = await filterSessionRows(getSessionRows(actor, trx), { ids: [sessionId] }, trx);
     if (!session) throw new InternalServerError('Saved attendance session is unavailable');
-    const roster = await readSessionRoster(trx, sessionId);
+    const roster = await readSessionRoster(sessionId, trx);
     const updatedYouth = actor.permissions.includes('read:youth_profiles')
       ? await getYouthRowsByIds(trx, affectedYouthIds)
       : undefined;
