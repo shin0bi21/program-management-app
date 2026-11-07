@@ -36,7 +36,7 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
     lastName: sql`LOWER("row".staff_last_name)`,
     title: sql`LOWER("row".title)`,
     category: sql`"row".category::text`,
-    program: sql`LOWER(COALESCE("row".program_name, ''))`,
+    program: sql`LOWER(COALESCE("row".program, ''))`,
     startDate: sql`"row".start_date`,
     dueDate: sql`"row".due_date`,
     status,

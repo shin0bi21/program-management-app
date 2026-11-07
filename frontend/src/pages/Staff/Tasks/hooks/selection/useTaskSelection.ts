@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { taskStore } from '../../taskStore';
 import type { Task, TaskResource } from '../../types';
 
 interface UseTaskSelectionOptions {
   resources: TaskResource[];
 }
 
+/**
+ * Keeps task/resource selection as IDs and resolves the current shared task for dashboards.
+ * @example useTaskSelection({ resources }).selectedTask
+ */
 export default function useTaskSelection({
   resources,
 }: UseTaskSelectionOptions) {
-  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [resourceId, setResourceId] = useState<string | null>(null);
+  const records = taskStore.useRecords();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = selectedTaskId ? records[selectedTaskId] ?? null : null;
+  const selectedResourceId = selectedTask?.assignee.id ?? resourceId;
 
   const selectedResource = useMemo(
     () => resources.find(resource => resource.id === selectedResourceId) ?? null,
@@ -19,37 +27,34 @@ export default function useTaskSelection({
 
   // Preserve a valid selection, then prefer a writable resource before a readable fallback.
   useEffect(() => {
-    if (selectedResourceId && resources.some(resource => resource.id === selectedResourceId)) return;
+    if (selectedResourceId && resources.some(resource => resource.id === selectedResourceId)) {
+      if (resourceId !== selectedResourceId) setResourceId(selectedResourceId);
+      return;
+    }
 
     const fallbackResourceId = resources.find(resource => resource.writable)?.id
       ?? resources[0]?.id
       ?? null;
 
-    setSelectedResourceId(fallbackResourceId);
-    setSelectedTask(current => (
-      current?.assignee.id === fallbackResourceId ? current : null
+    setResourceId(fallbackResourceId);
+    setSelectedTaskId(current => (
+      current && records[current]?.assignee.id === fallbackResourceId ? current : null
     ));
-  }, [resources, selectedResourceId]);
+  }, [records, resourceId, resources, selectedResourceId]);
 
   // Selection transitions.
   const selectTask = useCallback((task: Task) => {
-    setSelectedResourceId(task.assignee.id);
-    setSelectedTask(task);
+    setResourceId(task.assignee.id);
+    setSelectedTaskId(task.id);
   }, []);
 
   const selectResource = useCallback((resourceId: string) => {
-    setSelectedResourceId(resourceId);
-    setSelectedTask(null);
+    setResourceId(resourceId);
+    setSelectedTaskId(null);
   }, []);
 
-  // Keep selection aligned with completed task actions.
-  const updateSelectedTask = useCallback((task: Task) => {
-    if (selectedTask?.id === task.id) setSelectedResourceId(task.assignee.id);
-    setSelectedTask(current => current?.id === task.id ? task : current);
-  }, [selectedTask?.id]);
-
   const removeSelectedTask = useCallback((taskId: string) => {
-    setSelectedTask(current => current?.id === taskId ? null : current);
+    setSelectedTaskId(current => current === taskId ? null : current);
   }, []);
 
   return {
@@ -59,7 +64,6 @@ export default function useTaskSelection({
     selectedTask,
     selectTask,
     selectResource,
-    updateSelectedTask,
     removeSelectedTask,
   };
 }

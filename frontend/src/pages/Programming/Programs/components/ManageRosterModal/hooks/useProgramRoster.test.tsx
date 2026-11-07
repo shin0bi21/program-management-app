@@ -11,12 +11,12 @@ vi.mock('../../../api/programCycleAssignments.api', () => ({ getProgramRosterYou
 
 const assignment: ProgramCycleAssignment = {
   programId: 'program-1',
-  programName: 'Soft Skills',
+  program: 'Soft Skills',
   enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   cycleId: 'cycle-1',
-  cycleName: 'Summer 2026',
+  cycle: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
   state: 'active',
@@ -53,7 +53,7 @@ describe('useProgramRoster', () => {
     expect(result.current.youth.map((profile) => profile.id)).toEqual(['enrolled', 'available']);
 
     act(() => result.current.setSearch('available'));
-    rerender({ target: { ...assignment, cycleName: 'Updated label' } });
+    rerender({ target: { ...assignment, cycle: 'Updated label' } });
     expect(result.current.search).toBe('available');
 
     rerender({ target: { ...assignment, cycleId: 'assignment-2' } });

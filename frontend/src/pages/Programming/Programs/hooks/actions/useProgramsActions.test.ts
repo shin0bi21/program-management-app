@@ -45,14 +45,14 @@ describe('useProgramsActions', () => {
     }), { wrapper: createQueryClientWrapper(client) });
     const saved = { ...program, name: 'Zulu' };
     const programCycle: ProgramCycleAssignment = {
-      programId: program.id, programName: saved.name, enrollmentRequired: true,
-      minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycleName: 'Fall', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'active', enrolledCount: 1,
+      programId: program.id, program: saved.name, enrollmentRequired: true,
+      minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'active', enrolledCount: 1,
       nextSessionAt: null, nextSessionId: null, averageAttendance: null,
       attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
     };
     const youth = makeYouthProfile();
     const savedYouth = { ...youth, lastName: 'Canonical returned youth' };
-    client.setQueryData(['programs', 'cycle-assignments', { programId: program.id }], [{ ...programCycle, programName: 'Alpha' }]);
+    client.setQueryData(['programs', 'cycle-assignments', { programId: program.id }], [{ ...programCycle, program: 'Alpha' }]);
     client.setQueryData(['youth', 'table'], { pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
 
 

@@ -30,12 +30,12 @@ describe('YouthAttendanceDashboardCard', () => {
   it('separates active and historical attendance by program and programCycle', () => {
     render(<YouthAttendanceDashboardCard selected programCycles={[
       {
-        cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+        cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
         startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
         presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
       },
       {
-        cycleId: 'cycle-1', cycleName: 'Spring 2025', programId: 'program-2', programName: 'Drop In', enrollmentRequired: false,
+        cycleId: 'cycle-1', cycle: 'Spring 2025', programId: 'program-2', program: 'Drop In', enrollmentRequired: false,
         startsOn: '2025-01-01', endsOn: '2025-06-30', enrolledOn: null, withdrawnOn: null,
         presentCount: 3, lateCount: 0, absentCount: 0, lastAttendedOn: '2025-05-10',
       },
@@ -50,7 +50,7 @@ describe('YouthAttendanceDashboardCard', () => {
   it('opens youth attendance management for the selected programCycle', () => {
     const onManage = vi.fn();
     const programCycle = {
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+      cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };
@@ -63,7 +63,7 @@ describe('YouthAttendanceDashboardCard', () => {
   it('opens the selected youth report for an enrolled programCycle', () => {
     const onViewReport = vi.fn();
     const programCycle = {
-      cycleId: 'cycle-1', cycleName: 'Summer 2026', programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
+      cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
       startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
       presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
     };

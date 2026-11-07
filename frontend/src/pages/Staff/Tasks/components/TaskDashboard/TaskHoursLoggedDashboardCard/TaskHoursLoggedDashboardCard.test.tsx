@@ -5,7 +5,7 @@ import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
+  categoryLabel: 'Planning / Prep', programId: null, program: null, state: 'open',
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 4.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 3 }, { date: '2026-08-11', hours: 1.5 }],

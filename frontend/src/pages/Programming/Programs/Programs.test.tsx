@@ -43,10 +43,10 @@ const auth = vi.hoisted(() => ({ role: 'project_manager', permissions: [] as str
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 
 vi.mock('./components/ManageRosterModal/ManageRosterModal', () => ({
-  default: ({ assignment }: { assignment: { cycleName: string } | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycleName}`} /> : null,
+  default: ({ assignment }: { assignment: { cycle: string } | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycle}`} /> : null,
 }));
 vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ programCycle }: { programCycle: { cycleName: string } }) => <div role="dialog" aria-label={`Report for ${programCycle.cycleName}`} />,
+  default: ({ programCycle }: { programCycle: { cycle: string } }) => <div role="dialog" aria-label={`Report for ${programCycle.cycle}`} />,
 }));
 
 describe('Programs', () => {
@@ -55,7 +55,7 @@ describe('Programs', () => {
     auth.role = 'project_manager';
     auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
     vi.mocked(getProgramCycleAssignments).mockResolvedValue([{
-      programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Fall 2026',
+      programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Fall 2026',
       startsOn: '2020-01-01', endsOn: '2100-12-31', enrollmentRequired: true, minAge: 12, maxAge: 15, state: 'active',
       enrolledCount: 5, uniqueAttendeeCount: 0, averageAttendance: 75, attendanceAttendedCount: 3, attendanceRecordedCount: 4,
       nextSessionAt: null, nextSessionId: null,

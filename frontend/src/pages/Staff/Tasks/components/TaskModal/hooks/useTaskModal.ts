@@ -21,6 +21,10 @@ interface TaskDraft {
   staffId: string;
 }
 
+/**
+ * Initializes an editable draft from a saved task or a new task target.
+ * @example getInitialDraft(target) // independent form fields
+ */
 function getInitialDraft(target: TaskModalProps['target']): TaskDraft {
   if (target.mode === 'add') {
     return {
@@ -45,6 +49,10 @@ function getInitialDraft(target: TaskModalProps['target']): TaskDraft {
   };
 }
 
+/**
+ * Owns task draft fields and a submission lock for the current target identity.
+ * @example useTaskModal({ target, onSaved }) // saved record updates preserve the draft
+ */
 export default function useTaskModal({
   target,
   onSaved,
@@ -52,7 +60,7 @@ export default function useTaskModal({
   const initialDraftRef = useRef(getInitialDraft(target));
   initialDraftRef.current = getInitialDraft(target);
   const targetKey = target.mode === 'edit'
-    ? target.task
+    ? `edit:${target.task.id}`
     : `${target.initialValues.startDate}:${target.initialValues.dueDate}:${target.initialValues.staffId ?? ''}`;
   const submittingRef = useRef(false);
   const [draft, setDraft] = useState(initialDraftRef.current);
@@ -64,7 +72,7 @@ export default function useTaskModal({
     resetStatus,
   } = useSubmitStatus();
 
-  // Reset the create/edit form whenever a modal lifecycle begins.
+  // Saved-record updates must not reset an unfinished draft or unlock a completed submission.
   useEffect(() => {
     submittingRef.current = false;
     setDraft(initialDraftRef.current);

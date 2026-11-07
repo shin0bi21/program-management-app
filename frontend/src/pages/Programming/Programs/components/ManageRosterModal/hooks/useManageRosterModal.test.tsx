@@ -14,8 +14,8 @@ vi.mock('../../../api/programCycleAssignments.api', () => ({
 }));
 
 const assignment: ProgramCycleAssignment = {
-  programId: 'program-1', programName: 'Soft Skills', enrollmentRequired: true,
-  cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01',
+  programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
+  cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
   nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
   attendanceRecordedCount: 0, uniqueAttendeeCount: 0,

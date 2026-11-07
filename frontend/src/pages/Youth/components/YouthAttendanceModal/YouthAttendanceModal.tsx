@@ -86,7 +86,7 @@ export default function YouthAttendanceModal({
             {youth && programCycle && (
               <p className="youth-attendance-modal__context">
                 {youth.firstName} {youth.lastName}<span aria-hidden="true"> · </span>
-                {programCycle.programName}<span aria-hidden="true"> · </span>{programCycle.cycleName}
+                {programCycle.program}<span aria-hidden="true"> · </span>{programCycle.cycle}
               </p>
             )}
             {sessionNotes.sessionsWithNotes.length > 0 && (

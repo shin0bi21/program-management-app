@@ -1,6 +1,8 @@
+import { taskStore } from '../../taskStore';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
@@ -104,6 +106,20 @@ describe('TaskCalendar', () => {
     ));
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([task]));
     expect(calendarState.props?.rows).toEqual([resource]);
+  });
+
+  it('resolves buffered IDs to current shared records after another consumer saves or deletes', async () => {
+    const { queryClient } = renderCalendar();
+    act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
+    await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
+
+    const saved = makeTask({ title: 'Saved by another consumer' });
+    act(() => taskStore.write(queryClient, saved));
+    await waitFor(() => expect(calendarState.props!.items['staff-1']?.[0].title).toBe(saved.title));
+    expect(calendarState.props!.items['staff-1']![0]).toBe(taskStore.get(queryClient, task.id));
+
+    act(() => taskStore.remove(queryClient, task.id));
+    await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
   });
 
   it('emits narrow resize and cross-resource move commands with selection changes', async () => {

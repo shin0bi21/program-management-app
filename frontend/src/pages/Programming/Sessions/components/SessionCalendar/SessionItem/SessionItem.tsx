@@ -39,7 +39,7 @@ export default function SessionItem<TRow, TItemData>({
     calendar={calendar}
     id={session.id}
     selected={selected}
-    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionType}, ${startsAt} to ${endsAt}, ${status}`}
+    ariaLabel={`${session.theme}, ${session.program}, ${session.cycle}, ${session.sessionType}, ${startsAt} to ${endsAt}, ${status}`}
     summary={session.theme}
     detailTitle={<span className="session-item__detail-title">
       <span>{session.theme}</span>
@@ -49,8 +49,8 @@ export default function SessionItem<TRow, TItemData>({
       </span>
     </span>}
     details={[
-      { label: 'Program', value: session.programName },
-      { label: 'Cycle', value: session.cycleName },
+      { label: 'Program', value: session.program },
+      { label: 'Cycle', value: session.cycle },
       { label: 'Date', value: dateRange, sectionStart: true },
       ...(session.description ? [{ label: 'Description', value: session.description, multiline: true }] : []),
     ]}

@@ -6,16 +6,16 @@ import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, syncProgramCycleAssignmentChanges 
 
 it('reconciles saved assignments in existing list variants and refreshes assignment membership', () => {
   const client = createTestQueryClient();
-  const old = { programId: 'program-1', cycleId: 'edited', cycleName: 'Alpha' } as ProgramCycleAssignment;
-  const other = { programId: 'program-1', cycleId: 'other', cycleName: 'Beta' } as ProgramCycleAssignment;
-  const removed = { programId: 'program-1', cycleId: 'removed', cycleName: 'Gamma' } as ProgramCycleAssignment;
+  const old = { programId: 'program-1', cycleId: 'edited', cycle: 'Alpha' } as ProgramCycleAssignment;
+  const other = { programId: 'program-1', cycleId: 'other', cycle: 'Beta' } as ProgramCycleAssignment;
+  const removed = { programId: 'program-1', cycleId: 'removed', cycle: 'Gamma' } as ProgramCycleAssignment;
   const key = [...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: 'program-1' }];
   const unrelatedKey = [...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: 'program-2' }];
   client.setQueryData(key, [old, other, removed]);
   const sameCycleOtherProgram = { ...old, programId: 'program-2' };
   const removedCycleOtherProgram = { ...removed, programId: 'program-2' };
   client.setQueryData(unrelatedKey, [sameCycleOtherProgram, removedCycleOtherProgram]);
-  const saved = { ...old, cycleName: 'Zulu' };
+  const saved = { ...old, cycle: 'Zulu' };
 
   syncProgramCycleAssignmentChanges(client, { updatedProgramCycles: [saved], removedProgramCycles: [removed], createdProgramCycles: [] });
 

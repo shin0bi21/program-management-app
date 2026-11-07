@@ -14,11 +14,7 @@ describe('useHoursSelection', () => {
     const { result } = renderHook(() => useHoursSelection({
       resources, currentUserResource: resources[0],
     }));
-    const row = {
-      id: 'entry-1', resourceId: 'staff-2', date: '2026-08-19',
-      staffFirstName: 'Alex', staffLastName: 'Morgan', staffName: 'Alex Morgan',
-      item: makeHoursItem({ id: 'entry-1', cycleId: 'cycle-2' }),
-    };
+    const row = makeHoursItem({ id: 'entry-1', staffId: 'staff-2', cycleId: 'cycle-2' });
 
     act(() => result.current.selectRow(row));
     expect(result.current.selectedRowId).toBe('entry-1');

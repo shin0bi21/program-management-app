@@ -123,7 +123,7 @@ export default function useSignUpLeadModal({
 
     let nextSuccessMessage = `Youth profile successfully created for ${youthName}.`;
     if (selectedProgramCycle) {
-      nextSuccessMessage = `Youth profile successfully created and added to ${selectedProgramCycle.programName} - ${selectedProgramCycle.cycleName}.`;
+      nextSuccessMessage = `Youth profile successfully created and added to ${selectedProgramCycle.program} - ${selectedProgramCycle.cycle}.`;
     }
     if (refreshFailed) {
       nextSuccessMessage = 'Youth profile was created, but the page could not refresh. Reload to see it.';

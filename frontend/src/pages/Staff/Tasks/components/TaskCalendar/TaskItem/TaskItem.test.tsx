@@ -5,7 +5,7 @@ import type { Task } from '../../../types';
 
 const task: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
-  categoryLabel: 'Planning / Prep', programId: null, programName: null, state: 'open',
+  categoryLabel: 'Planning / Prep', programId: null, program: null, state: 'open',
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }],
@@ -27,7 +27,7 @@ describe('TaskItem', () => {
   afterEach(() => vi.useRealTimers());
 
   it('shows task details through the shared calendar-item hover behavior', async () => {
-    render(<TaskItem task={{ ...task, programName: 'Soft Skills', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<TaskItem task={{ ...task, program: 'Soft Skills', details: 'Prepare activities.' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     const item = screen.getByRole('button', { name: /Prepare workshop.*Open actions/ });
     expect(item).toHaveTextContent('Prepare workshop · Planning / Prep');

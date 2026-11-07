@@ -11,7 +11,7 @@ export function getActiveProgramLabels(profile: YouthProfile, today: string): st
       && programCycle.endsOn >= today
       && (programCycle.withdrawnOn === null || programCycle.withdrawnOn > today)
     ))
-    .map(programCycle => programCycle.programName);
+    .map(programCycle => programCycle.program);
 
   return [...new Set(names)].sort(compareListSortValues);
 }
@@ -25,7 +25,7 @@ export function getCompletedProgramLabels(profile: YouthProfile, today: string):
       && programCycle.withdrawnOn === null
       && programCycle.endsOn < today
     ))
-    .map(programCycle => programCycle.programName);
+    .map(programCycle => programCycle.program);
 
   return [...new Set(names)].sort(compareListSortValues);
 }

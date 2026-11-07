@@ -58,8 +58,8 @@ it('reconciles signup rows without refetching existing leads or programCycles an
   const { client, wrapper } = setup();
   const leadVariant = seedVariant(client, [lead, otherLead]);
   const programCycle: ProgramCycleAssignment = {
-    programId: 'program-1', programName: 'Future Ready', enrollmentRequired: true,
-    minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycleName: 'Summer', startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active', enrolledCount: 1,
+    programId: 'program-1', program: 'Future Ready', enrollmentRequired: true,
+    minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycle: 'Summer', startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active', enrolledCount: 1,
     nextSessionAt: null, nextSessionId: null, averageAttendance: null,
     attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
   };

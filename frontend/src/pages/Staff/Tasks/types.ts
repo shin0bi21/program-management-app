@@ -18,7 +18,7 @@ export interface Task {
   category: TaskCategory;
   categoryLabel: string;
   programId: string | null;
-  programName: string | null;
+  program: string | null;
   state: TaskState;
   status: TaskStatus;
   statusLabel: string;

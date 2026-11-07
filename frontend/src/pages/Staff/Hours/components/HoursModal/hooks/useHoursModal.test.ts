@@ -60,7 +60,7 @@ describe('useHoursModal', () => {
     expect(onAdd).toHaveBeenCalledWith({
       source: 'regular',
       staffId: 'staff-1',
-      workDate: '2026-08-19',
+      date: '2026-08-19',
       programId: 'program-1',
       category: 'meeting',
       hours: 2.5,
@@ -93,7 +93,7 @@ describe('useHoursModal', () => {
     expect(onAdd).toHaveBeenCalledWith({
       source: 'task',
       staffId: 'staff-1',
-      workDate: '2026-08-19',
+      date: '2026-08-19',
       taskId: 'task-1',
       completeTask: true,
       hours: 1,
@@ -126,8 +126,8 @@ describe('useHoursModal', () => {
       id: 'session-1',
       label: 'Leadership',
       programId: 'program-1',
-      programName: 'Soft Skills',
-      workDate: '2026-08-20',
+      program: 'Soft Skills',
+      date: '2026-08-20',
       startsAt: '2026-08-20T14:00:00.000Z',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);

@@ -8,7 +8,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     category: 'planning_prep',
     categoryLabel: 'Planning / Prep',
     programId: null,
-    programName: null,
+    program: null,
     state: 'open',
     status: 'in_progress',
     statusLabel: 'In Progress',

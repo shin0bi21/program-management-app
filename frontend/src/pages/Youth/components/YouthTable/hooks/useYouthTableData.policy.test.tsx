@@ -14,7 +14,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 const participation: YouthProfile['programCycles'][number] = {
-  cycleId: 'cycle-1', cycleName: 'Fall', programId: 'program-1', programName: 'Skills', enrollmentRequired: true,
+  cycleId: 'cycle-1', cycle: 'Fall', programId: 'program-1', program: 'Skills', enrollmentRequired: true,
   startsOn: '2026-09-01', endsOn: '2026-12-31', enrolledOn: '2026-09-01', withdrawnOn: null,
   presentCount: 1, lateCount: 0, absentCount: 0, lastAttendedOn: '2026-10-01',
 };
@@ -25,7 +25,7 @@ const sortValues: Array<[YouthSortKey, Partial<YouthProfile>, string]> = [
   ['lastName', { lastName: 'Other' }, 'other'],
   ['dateOfBirth', { dateOfBirth: '2012-01-01' }, '2012-01-01'],
   ['school', { schoolName: 'Other' }, 'other'],
-  ['activePrograms', { programCycles: [{ ...participation, programName: 'Other' }] }, 'other'],
+  ['activePrograms', { programCycles: [{ ...participation, program: 'Other' }] }, 'other'],
   ['completedPrograms', { programCycles: [{ ...participation, endsOn: '2026-11-03' }] }, 'skills'],
 ];
 
@@ -40,8 +40,8 @@ it('uses the first raw program name among current enrollments before case normal
   renderHook(() => useYouthTableData({}, { key: 'activePrograms', direction: 'asc' }));
   const getValue = vi.mocked(useInfiniteListQuery<YouthProfile>).mock.lastCall![0].ordering!.getValue;
   const programCycles = [
-    { ...participation, programName: 'apple' },
-    { ...participation, programName: 'Zoo' },
+    { ...participation, program: 'apple' },
+    { ...participation, program: 'Zoo' },
   ];
 
   expect(getValue({ ...row, programCycles })).toBe('zoo');

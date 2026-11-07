@@ -15,64 +15,39 @@ import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import {
   getHoursRow,
-  hoursRowToEntry,
-  hoursRowToTableRow,
+  toHoursItem,
   getHoursRows,
   hoursRowColumns,
   hoursRowFrom,
   type HoursRow,
 } from './hoursRowQuery';
 import {
-  getHoursCategoryLabel,
   HOURS_CATEGORY_OPTIONS,
-  HOURS_ENTRY_TYPE_OPTIONS,
+  HOURS_ITEM_TYPE_OPTIONS,
 } from './hoursReferenceData';
 import { buildHoursFilters } from './hoursRowFilters';
 
 /**
- * Groups hours by staff member and work date.
+ * Lists hours matching the calendar filters.
  * @param actor - Actor whose staff scope limits the results.
  * @param query - Validated calendar filters.
- * @example getHoursCalendarData(actor, query) // grouped entries
+ * @example getHoursCalendarData(actor, query) // matching entries
  */
 export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
   // 1. Load hours matching the calendar filters.
   const rows = await sql<HoursRow[]>`
     ${getHoursRows(sql`
       ${query.start && query.end
-        ? sql`entry.work_date BETWEEN ${query.start}::date AND ${query.end}::date`
+        ? sql`entry.date BETWEEN ${query.start}::date AND ${query.end}::date`
         : sql`TRUE`}
       ${buildHoursFilters(query)}
       AND ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
     `)}
-    ORDER BY entry.work_date, staff.first_name, staff.last_name, entry.created_at, entry.id
+    ORDER BY entry.date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
 
-  // 2. Group entries by staff member and work date.
-  const data: Record<string, Record<string, Array<{ id: string; programId: string | null; programName: string | null; cycleId: string; cycleName: string; cycleStartsOn: string; cycleEndsOn: string; category: string; categoryLabel: string; taskId: string | null; taskTitle: string | null; sessionId: string | null; sessionLabel: string | null; hours: number; note: string }>>> = {};
-  rows.forEach(row => {
-    data[row.staffId] ??= {};
-    data[row.staffId][row.workDate] ??= [];
-    data[row.staffId][row.workDate].push({
-      id: row.id,
-      programId: row.programId,
-      programName: row.programName,
-      cycleId: row.cycleId,
-      cycleName: row.cycleName,
-      cycleStartsOn: row.cycleStartsOn,
-      cycleEndsOn: row.cycleEndsOn,
-      category: row.category,
-      categoryLabel: getHoursCategoryLabel(row.category),
-      taskId: row.taskId,
-      taskTitle: row.taskTitle,
-      sessionId: row.sessionId,
-      sessionLabel: row.sessionLabel,
-      hours: Number(row.hours),
-      note: row.note,
-    });
-  });
-
-  return data;
+  // 2. Return the same entries used by the table and saved responses.
+  return rows.map(toHoursItem);
 }
 
 /**
@@ -81,7 +56,7 @@ export async function getHoursCalendarData(actor: AccessTokenPayload, query: Hou
  */
 export function getHoursReferenceData() {
   // 1. Return the supported choices.
-  return { categories: HOURS_CATEGORY_OPTIONS, types: HOURS_ENTRY_TYPE_OPTIONS };
+  return { categories: HOURS_CATEGORY_OPTIONS, types: HOURS_ITEM_TYPE_OPTIONS };
 }
 
 /**
@@ -97,18 +72,18 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
-    id: string; label: string; programId: string; programName: string; workDate: string; startsAt: string;
+    id: string; label: string; programId: string; program: string; date: string; startsAt: string;
   }>>`
     SELECT session.id,
       session.theme AS label,
-      program.id AS program_id, program.name AS program_name,
-      (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date,
+      program.id AS program_id, program.name AS program,
+      (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date,
       session.starts_at::text AS starts_at
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
     WHERE session.cancelled_at IS NULL
-      AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = ${query.workDate}::date
+      AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = ${query.date}::date
       AND EXISTS (
         SELECT 1
         FROM user_program_assignments assignment
@@ -143,7 +118,7 @@ export async function setHours(
     // 2. Check the source and work date.
     const scope = await resolveHoursScope(input, trx);
     await assertProgramExists(scope.programId, trx);
-    const cycleId = await resolveCycleForWorkDate(scope.workDate, scope.programId, trx);
+    const cycleId = await resolveCycleForDate(scope.date, scope.programId, trx);
     const existing = id ? await getOwnedEntry(trx, id, actor) : null;
 
     // 3. Save the hours entry.
@@ -171,8 +146,7 @@ export async function setHours(
     updatedTasks = await getAffectedTasks([existing?.taskId, scope.taskId], actor, trx);
   });
   return {
-    ...hoursRowToEntry(saved),
-    tableRow: hoursRowToTableRow(saved),
+    ...toHoursItem(saved),
     ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
@@ -197,15 +171,15 @@ export async function updateHoursPlacement(
 
     // 1. Load the entry and check access.
     const existing = await getOwnedEntry(trx, id, actor);
-    if (existing.sessionId && input.workDate !== existing.workDate) {
+    if (existing.sessionId && input.date !== existing.date) {
       throw new ConflictError('Session time must stay on the session date');
     }
 
     // 2. Find the destination cycle and move the entry.
-    const cycleId = await resolveCycleForWorkDate(input.workDate, existing.programId, trx);
+    const cycleId = await resolveCycleForDate(input.date, existing.programId, trx);
     await trx`
       UPDATE time_entries
-      SET work_date = ${input.workDate},
+      SET date = ${input.date},
         cycle_id = ${cycleId},
         updated_by = ${actor.userId},
         updated_at = NOW()
@@ -219,8 +193,7 @@ export async function updateHoursPlacement(
     updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
   });
   return {
-    ...hoursRowToEntry(updated),
-    tableRow: hoursRowToTableRow(updated),
+    ...toHoursItem(updated),
     ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
@@ -276,11 +249,11 @@ async function insertHoursRecord(
   const [created] = await trx<{ id: string }[]>`
     INSERT INTO time_entries (
       staff_id, program_id, cycle_id, category, task_id, session_id,
-      work_date, hours, note, created_by, updated_by
+      date, hours, note, created_by, updated_by
     )
     VALUES (
       ${input.staffId}, ${scope.programId}, ${cycleId}, ${scope.category}, ${scope.taskId},
-      ${scope.sessionId}, ${scope.workDate}, ${input.hours}, ${input.note}, ${actorId}, ${actorId}
+      ${scope.sessionId}, ${scope.date}, ${input.hours}, ${input.note}, ${actorId}, ${actorId}
     )
     RETURNING id
   `;
@@ -315,7 +288,7 @@ async function updateHoursRecord(
       category = ${scope.category},
       task_id = ${scope.taskId},
       session_id = ${scope.sessionId},
-      work_date = ${scope.workDate},
+      date = ${scope.date},
       hours = ${input.hours},
       note = ${input.note},
       updated_by = ${actorId},
@@ -337,14 +310,14 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
   // 1. Use the supplied details for regular time.
   if (input.source === 'regular') return {
     programId: input.programId, category: input.category,
-    taskId: null, sessionId: null, workDate: input.workDate,
+    taskId: null, sessionId: null, date: input.date,
   };
 
   // 2. Load the assigned session.
   if (input.source === 'session') {
-    const rows = await trx<Array<{ programId: string; workDate: string }>>`
+    const rows = await trx<Array<{ programId: string; date: string }>>`
       SELECT session.program_id,
-        (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS work_date
+        (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date
       FROM program_sessions session
       INNER JOIN users target_staff ON target_staff.id = ${input.staffId}
       WHERE session.id = ${input.sessionId}
@@ -380,7 +353,7 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
   const task = rows[0];
   return {
     programId: task.programId, category: task.category as HoursCategory,
-    taskId: input.taskId, sessionId: null, workDate: input.workDate,
+    taskId: input.taskId, sessionId: null, date: input.date,
   };
 }
 
@@ -459,17 +432,17 @@ async function assertProgramExists(programId: string | null, query = sql) {
 
 /**
  * Finds the one eligible cycle covering a work date.
- * @param workDate - Validated work date.
+ * @param date - Validated work date.
  * @param programId - Program whose assignments limit eligible cycles, or null.
  * @param query - Defaults to the shared client; pass trx for a transaction.
- * @example resolveCycleForWorkDate(workDate, programId, trx) // cycle ID, or 409
+ * @example resolveCycleForDate(date, programId, trx) // cycle ID, or 409
  */
-async function resolveCycleForWorkDate(workDate: string, programId: string | null, query = sql) {
+async function resolveCycleForDate(date: string, programId: string | null, query = sql) {
   // 1. Find the eligible cycle for the work date.
   const rows = await query<{ id: string }[]>`
     SELECT cycle.id
     FROM program_cycles cycle
-    WHERE ${workDate}::date BETWEEN cycle.starts_on AND cycle.ends_on
+    WHERE ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
       AND ${programId ? sql`EXISTS (
         SELECT 1
         FROM program_cycle_assignments assignment

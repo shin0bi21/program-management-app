@@ -24,8 +24,8 @@ export default function useSessionTable({
   onDelete: (session: ProgramSession) => void;
 }) {
   return useMemo<TableColumnDef<ProgramSession>[]>(() => [
-    { id: 'program', header: 'Program', accessorFn: session => session.programName },
-    { id: 'cycle', header: 'Cycle', accessorFn: session => session.cycleName },
+    { id: 'program', header: 'Program', accessorFn: session => session.program },
+    { id: 'cycle', header: 'Cycle', accessorFn: session => session.cycle },
     { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
     {
       id: 'date', header: 'Date', size: 135,

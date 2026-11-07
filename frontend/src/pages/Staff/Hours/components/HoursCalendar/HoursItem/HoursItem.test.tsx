@@ -1,26 +1,27 @@
+import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import HoursItem from './HoursItem';
 
-const item = {
+const item = makeHoursItem({
   id: 'entry-1',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  program: 'Soft Skills',
   cycleId: 'cycle-1',
-  cycleName: 'Summer 2026',
+  cycle: 'Summer 2026',
   category: 'program_delivery' as const,
   categoryLabel: 'Program Delivery',
   taskId: null,
   taskTitle: null, sessionId: null, sessionLabel: null,
   hours: 2,
   note: 'Workshop delivery',
-};
+});
 
 describe('HoursItem', () => {
   it.each([
-    ['Task', { taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null }],
-    ['Session', { taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Healthy Relationships' }],
-    ['Regular', { taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
+    ['Task', { type: 'task' as const, taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null }],
+    ['Session', { type: 'session' as const, taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Healthy Relationships' }],
+    ['Regular', { type: 'regular' as const, taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
   ])('shows hours and the %s entry type', (type, source) => {
     render(<HoursItem item={{ ...item, ...source }} />);
 
@@ -30,7 +31,7 @@ describe('HoursItem', () => {
   });
 
   it('shows complete entry details on hover', async () => {
-    render(<HoursItem item={{ ...item, cycleName: 'Summer 2026' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    render(<HoursItem item={{ ...item, cycle: 'Summer 2026' }} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     fireEvent.mouseEnter(screen.getByRole('button', { name: /program delivery, 2 hours/i }));
 
@@ -43,7 +44,7 @@ describe('HoursItem', () => {
   });
 
   it('omits the program detail instead of labeling an unspecified program as General', async () => {
-    render(<HoursItem item={{ ...item, programId: null, programName: null }} />);
+    render(<HoursItem item={{ ...item, programId: null, program: null }} />);
 
     const timeItem = screen.getByRole('button', { name: /program delivery, 2 hours/i });
     expect(timeItem).not.toHaveTextContent('General');
@@ -57,6 +58,7 @@ describe('HoursItem', () => {
   it('keeps program and category details for session time', async () => {
     render(<HoursItem item={{
       ...item,
+      type: 'session',
       sessionId: 'session-1',
       sessionLabel: 'Healthy Relationships',
     }} />);

@@ -4,11 +4,11 @@ export interface ProgramCycleKey {
 }
 
 export interface ProgramCycleAssignment extends ProgramCycleKey {
-  programName: string;
+  program: string;
   enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
-  cycleName: string;
+  cycle: string;
   startsOn: string;
   endsOn: string;
   state: 'upcoming' | 'active' | 'completed';

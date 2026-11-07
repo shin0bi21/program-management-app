@@ -2,13 +2,14 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
+import { getHoursScope, isHoursScope, writeHoursItem } from '../../../Hours/hoursItemStore';
 import {
   deleteTask,
   updateTaskPlacement,
   updateTaskState,
 } from '../../tasks.api';
 import type { Task } from '../../types';
-import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { taskStore } from '../../taskStore';
 
 import type { TaskCalendarCache } from '../../types';
 
@@ -21,20 +22,23 @@ interface TaskActionHandlers {
   taskQueryKey: readonly unknown[];
   taskTableQueryKey: readonly unknown[];
   hoursQueryKey: readonly unknown[];
-  onTaskSynced?: (task: Task) => void;
   onTaskRemoved?: (taskId: string) => void;
 }
 
+/**
+ * Reconciles task actions and Hours logged from Tasks.
+ * @example actions.logHours(input) // stores Hours once and updates affected tasks
+ */
 export default function useTaskActions({
   taskQueryKey,
   taskTableQueryKey,
   hoursQueryKey,
-  onTaskSynced,
   onTaskRemoved,
 }: TaskActionHandlers) {
-  
+
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
+  const scope = taskStore.getScope(queryClient);
   const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
@@ -42,15 +46,17 @@ export default function useTaskActions({
 
   const startTaskAction = useCallback((taskId: string) => {
     if (pendingTaskIdsRef.current.has(taskId)) return false;
+    taskStore.setPending(queryClient, taskId, true, scope);
     pendingTaskIdsRef.current.add(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
     return true;
-  }, []);
+  }, [queryClient, scope]);
 
   const finishTaskAction = useCallback((taskId: string) => {
+    taskStore.setPending(queryClient, taskId, false, scope);
     pendingTaskIdsRef.current.delete(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
-  }, []);
+  }, [queryClient, scope]);
 
   const isTaskPending = useCallback(
     (taskId: string) => pendingTaskIds.has(taskId),
@@ -63,16 +69,16 @@ export default function useTaskActions({
   }, [queryClient, taskQueryKey]);
 
   const syncTask = useCallback((task: Task, created = false) => {
+    if (!taskStore.isScope(queryClient, scope)) return;
+
+    taskStore.write(queryClient, task);
     if (created) {
       void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
-    } else {
-      replaceInfiniteListRow(queryClient, taskTableQueryKey, task);
     }
 
     calendarCacheRef.current.upsert(task);
-    onTaskSynced?.(task);
     refreshTaskOverview();
-  }, [onTaskSynced, queryClient, refreshTaskOverview, taskTableQueryKey]);
+  }, [queryClient, refreshTaskOverview, scope, taskTableQueryKey]);
 
   // User-triggered task actions.
   const deleteTaskAction = useCallback(async (task: Task) => {
@@ -80,14 +86,15 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
-      removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
+      if (!taskStore.isScope(queryClient, scope)) return;
+      taskStore.remove(queryClient, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
       refreshTaskOverview();
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, startTaskAction, taskTableQueryKey]);
+  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, scope, startTaskAction]);
 
   const setTaskRange = useCallback(async (
     task: Task,
@@ -105,6 +112,7 @@ export default function useTaskActions({
         dueDate: nextRange.end,
         ...(staffId !== task.assignee.id ? { staffId } : {}),
       });
+      if (!taskStore.isScope(queryClient, scope)) return null;
       syncTask(updatedTask);
       return updatedTask;
     } catch {
@@ -113,7 +121,7 @@ export default function useTaskActions({
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, startTaskAction, syncTask]);
+  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
 
   const setState = useCallback(async (task: Task, state: Task['state']) => {
     setActionError('');
@@ -122,36 +130,49 @@ export default function useTaskActions({
 
     try {
       const updatedTask = await updateTaskState(task.id, state);
+      if (!taskStore.isScope(queryClient, scope)) return;
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, startTaskAction, syncTask]);
+  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
 
   const logHours = useCallback(async (input: SetHoursInput) => {
-    const saved = await setHours(input);
-    setActionError('');
+    const taskId = input.source === 'task' ? input.taskId : undefined;
+    if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
-    if (input.source === 'task') {
-      if (saved.updatedTasks?.length) {
-        saved.updatedTasks.forEach(task => syncTask(task));
+    try {
+      const hoursScope = getHoursScope(queryClient);
+      const saved = await setHours(input);
+      if (!isHoursScope(queryClient, hoursScope) || !taskStore.isScope(queryClient, scope)) return;
+
+      const { updatedTasks, ...entry } = saved;
+      writeHoursItem(queryClient, entry, [...hoursQueryKey, 'table']);
+      setActionError('');
+
+      if (input.source === 'task') {
+        if (updatedTasks?.length) {
+          updatedTasks.forEach(task => syncTask(task));
+        } else {
+          // A committed save must not invite duplicate submission if its task projection is unavailable.
+          setActionError('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
+        }
       } else {
-        // A committed save must not invite duplicate submission if its task projection is unavailable.
-        setActionError('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
+        refreshTaskOverview();
       }
-    } else {
-      refreshTaskOverview();
-    }
 
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'table'] }),
-      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'calendar'] }),
-      queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'dashboard'] }),
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'hours-options'] }),
-    ]);
-  }, [queryClient, hoursQueryKey, refreshTaskOverview, syncTask]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'table'] }),
+        queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'calendar'] }),
+        queryClient.invalidateQueries({ queryKey: [...hoursQueryKey, 'dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['tasks', 'hours-options'] }),
+      ]);
+    } finally {
+      if (taskId) finishTaskAction(taskId);
+    }
+  }, [finishTaskAction, queryClient, hoursQueryKey, refreshTaskOverview, scope, startTaskAction, syncTask]);
 
   return {
     actionError,

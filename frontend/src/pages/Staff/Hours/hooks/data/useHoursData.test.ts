@@ -21,7 +21,7 @@ describe('useHoursData', () => {
     vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       categories: [{ value: 'meeting', label: 'Meeting' }],
-      types: [{ value: 'other', label: 'Regular' }],
+      types: [{ value: 'regular', label: 'Regular' }],
     });
     vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
