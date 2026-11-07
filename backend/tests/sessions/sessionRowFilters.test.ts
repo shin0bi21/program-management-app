@@ -1,26 +1,26 @@
 import { sql } from '../shared/db';
-import { filterSessionRows } from '../../src/services/programming/sessions/sessionRowFilters';
-import type { ProgramSessionRow } from '../../src/services/programming/sessions/sessionRowQuery';
+import { buildSessionFilters } from '../../src/services/programming/sessions/sessionRowFilters';
+import type { SessionRow } from '../../src/services/programming/sessions/sessionRowQuery';
 
 const firstId = '00000000-0000-4000-8000-000000000011';
 const secondId = '00000000-0000-4000-8000-000000000012';
 const excludedId = '00000000-0000-4000-8000-000000000013';
 
 it('leaves the source rows unrestricted when IDs are omitted', async () => {
-  const rows = await filterSessionRows(sessionRows(), {});
+  const rows = await buildSessionFilters(sessionRows(), {});
 
   expect(rows.map(row => row.id).sort()).toEqual([firstId, secondId]);
 });
 
 it('matches no rows for an explicitly empty ID filter', async () => {
-  expect(await filterSessionRows(sessionRows(), { ids: [] })).toEqual([]);
+  expect(await buildSessionFilters(sessionRows(), { ids: [] })).toEqual([]);
 });
 
 it('intersects IDs with other filters and cannot introduce rows absent from the source', async () => {
-  const rows = await filterSessionRows(sessionRows(), {
+  const rows = await buildSessionFilters(sessionRows(), {
     ids: [firstId, secondId, excludedId], sessionTypes: ['Guest Speaker'], search: 'Beta',
   });
-  const excluded = await filterSessionRows(sessionRows(), { ids: [excludedId] });
+  const excluded = await buildSessionFilters(sessionRows(), { ids: [excludedId] });
 
   expect(rows).toEqual([expect.objectContaining({ id: secondId, theme: 'Beta', sessionType: 'Guest Speaker' })]);
   expect(excluded).toEqual([]);
@@ -32,7 +32,7 @@ it('intersects IDs with other filters and cannot introduce rows absent from the 
  * @example await sessionRows() // Alpha (Regular) and Beta (Guest Speaker)
  */
 function sessionRows() {
-  return sql<ProgramSessionRow[]>`
+  return sql<SessionRow[]>`
     SELECT
       fixture.id,
       fixture.theme,

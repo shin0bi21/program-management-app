@@ -1,27 +1,27 @@
 import { sql } from '../../../db/client';
-import { programAccessPredicate } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { ProgramListQuery } from '../../../validation/programSchemas';
-import { cursorPage, decodeCursor, DEFAULT_BATCH_SIZE } from '../../shared/cursorPagination';
-import { programRecordColumns, type ProgramRow } from './programRecordQuery';
+import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { getProgramRows } from './programRowQuery';
+import { buildProgramFilters } from './programRowFilters';
 
-export async function getProgramList(actor: AccessTokenPayload, query: ProgramListQuery) {
-  const cursor = decodeCursor(query.cursor);
-  const direction = query.direction;
-  const limit = query.limit ?? DEFAULT_BATCH_SIZE;
-  const sortValue = sql`LOWER(p.name)`;
+/**
+ * Lists programs matching the selected scope.
+ * @param actor - User requesting the programs.
+ * @param filterValues - Validated scope and pagination options.
+ * @returns A page of matching programs.
+ * @example getProgramList(actor, filterValues) // { rows, nextCursor }
+ */
+export function getProgramList(actor: AccessTokenPayload, filterValues: ProgramListQuery) {
+  // 1. Find matching programs.
+  const appliedFilters = buildProgramFilters(actor, filterValues);
+  const rowsQuery = getProgramRows(appliedFilters);
 
-  const rows = await sql<Array<ProgramRow & { cursorValue: string }>>`
-    SELECT ${programRecordColumns}, ${sortValue} AS cursor_value
-    FROM programs p
-    WHERE ${query.scope === 'assigned' ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`}
-      AND ${cursor ? (direction === 'asc'
-        ? sql`(${sortValue}, p.id) > (${cursor.value}, ${cursor.id}::uuid)`
-        : sql`(${sortValue}, p.id) < (${cursor.value}, ${cursor.id}::uuid)`) : sql`TRUE`}
-    ORDER BY ${sortValue} ${direction === 'asc' ? sql`ASC` : sql`DESC`},
-      p.id ${direction === 'asc' ? sql`ASC` : sql`DESC`}
-    LIMIT ${limit + 1}
-  `;
-
-  return cursorPage(rows, limit);
+  // 2. Return the requested page.
+  return paginateQuery(rowsQuery, {
+    sortValue: sql`LOWER(page_row.name)`,
+    direction: filterValues.direction,
+    cursor: filterValues.cursor,
+    limit: filterValues.limit ?? BATCH_SIZE,
+  });
 }

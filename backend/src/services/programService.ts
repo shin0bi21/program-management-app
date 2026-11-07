@@ -3,9 +3,9 @@ import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } 
 import { programAccessPredicate } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput, UpdateProgramInput } from '../validation/programSchemas';
-import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRecordQuery';
-import { getYouthRowsByIds, type YouthRecordRow } from './youth/youthRecordQuery';
-import { programRecordColumns, type ProgramRow } from './programming/programs/programRecordQuery';
+import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRowQuery';
+import { getYouthRowsByIds, type YouthRow } from './youth/youthRowQuery';
+import { getProgramRows, programRowColumns, type ProgramRow } from './programming/programs/programRowQuery';
 
 /**
  * Lists all program lookup rows by name, optionally restricted to the actor's program scope.
@@ -14,10 +14,9 @@ import { programRecordColumns, type ProgramRow } from './programming/programs/pr
  * @example await getPrograms(assignedStaff, true) // Only programs assigned to this staff member.
  */
 export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
+  // 1. Load matching programs.
   return sql<ProgramRow[]>`
-    SELECT ${programRecordColumns}
-    FROM programs p
-    WHERE ${assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`}
+    ${getProgramRows(assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`)}
     ORDER BY name ASC
   `;
 }
@@ -29,12 +28,17 @@ export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
  * @example await createProgram({ ...validatedSettings, name: ' Leadership ' }) // program.name is 'Leadership'.
  */
 export async function createProgram(data: CreateProgramInput) {
+  // 1. Check the program name.
   const name = data.name.trim();
   const existing = await sql<{ id: string }[]>`
-    SELECT id FROM programs WHERE LOWER(name) = LOWER(${name}) LIMIT 1
+    SELECT id
+    FROM programs
+    WHERE LOWER(name) = LOWER(${name})
+    LIMIT 1
   `;
   if (existing.length) throw new ConflictError('A program with this name already exists');
 
+  // 2. Save the program.
   const rows = await sql<ProgramRow[]>`
     INSERT INTO programs AS p (name, description, enrollment_required, min_age, max_age, default_day_of_week, default_start_time, default_end_time, timezone)
     VALUES (
@@ -45,7 +49,7 @@ export async function createProgram(data: CreateProgramInput) {
       ${data.maxAge ?? null},
       ${data.defaultDayOfWeek}, ${data.defaultStartTime}, ${data.defaultEndTime}, ${data.timezone}
     )
-    RETURNING ${programRecordColumns}
+    RETURNING ${programRowColumns}
   `.catch(rethrowProgramConflict);
   if (!rows[0]) throw new InternalServerError('Program creation returned no record');
   return { program: rows[0], updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] };
@@ -63,15 +67,27 @@ export async function createProgram(data: CreateProgramInput) {
 export async function updateProgram(id: string, data: UpdateProgramInput, actor: AccessTokenPayload) {
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    const [current] = await trx<{ id: string }[]>`SELECT id FROM programs WHERE id = ${id} FOR UPDATE`;
+
+    // 1. Lock the program.
+    const [current] = await trx<{ id: string }[]>`
+      SELECT id
+      FROM programs
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
     if (!current) throw new NotFoundError('Program not found');
 
+    // 2. Check the program name.
     const name = data.name.trim();
     const existing = await trx<{ id: string }[]>`
-      SELECT id FROM programs WHERE LOWER(name) = LOWER(${name}) AND id != ${id} LIMIT 1
+      SELECT id
+      FROM programs
+      WHERE LOWER(name) = LOWER(${name}) AND id != ${id}
+      LIMIT 1
     `;
     if (existing.length) throw new ConflictError('A program with this name already exists');
 
+    // 3. Save the program settings.
     const [program] = await trx<ProgramRow[]>`
       UPDATE programs AS p
       SET name = ${name},
@@ -84,14 +100,20 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
           default_end_time = ${data.defaultEndTime},
           timezone = ${data.timezone}
       WHERE id = ${id}
-      RETURNING ${programRecordColumns}
+      RETURNING ${programRowColumns}
     `;
     if (!program) throw new InternalServerError('Program update returned no record');
 
-    const keys = await trx<ProgramCycleKey[]>`SELECT program_id, cycle_id FROM program_cycle_assignments WHERE program_id = ${id} ORDER BY cycle_id`;
+    // 4. Return the affected rows.
+    const keys = await trx<ProgramCycleKey[]>`
+      SELECT program_id, cycle_id
+      FROM program_cycle_assignments
+      WHERE program_id = ${id}
+      ORDER BY cycle_id
+    `;
     const updatedProgramCycles = actor.permissions.includes('read:programs')
       ? await getProgramCycleRowsByKeys(trx, actor, keys) : [];
-    let updatedYouth: YouthRecordRow[] = [];
+    let updatedYouth: YouthRow[] = [];
     if (actor.permissions.includes('read:youth_profiles')) {
       const youthIds = await getProgramCycleYouthIds(trx, keys);
       updatedYouth = await getYouthRowsByIds(trx, youthIds);

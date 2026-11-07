@@ -4,15 +4,24 @@ import { assertCanAccessProgramCycle } from '../../../policies/programAccessPoli
 import { lockAssignmentProgram } from './assignmentService';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/programmingSchemas';
-import { getProgramCycleRowsByKeys } from './programCycleRecordQuery';
-import { getYouthRowsByIds } from '../../youth/youthRecordQuery';
+import { getProgramCycleRowsByKeys } from './programCycleRowQuery';
+import { getYouthRowsByIds } from '../../youth/youthRowQuery';
 
+/**
+ * Enrolls the selected youth and returns affected rows.
+ * @param programId - Enrollment program.
+ * @param cycleId - Assigned cycle.
+ * @param data - Validated youth IDs.
+ * @param actor - User whose program access is checked.
+ * @example enrollYouth(programId, cycleId, data, actor)
+ */
 export async function enrollYouth(programId: string, cycleId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
+  // 1. Check access to the program cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
-    // Match assignment mutations: lock the program before its programCycle, then validate current values.
+    // 2. Lock and check the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
 
     const programCycles = await trx<{
@@ -32,6 +41,7 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
       throw new ConflictError('Open attendance programs do not use enrollment');
     }
 
+    // 3. Check the selected youth and age requirements.
     const age = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
     const youth = await trx<{ id: string; age: number | null }[]>`
       SELECT user_id AS id, ${age} AS age
@@ -52,6 +62,7 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
       throw new ConflictError('One or more youth profiles do not meet this program age range');
     }
 
+    // 4. Save the enrollments.
     const enrollments = await trx`
       INSERT INTO program_enrollments (
         program_id, cycle_id, youth_id, created_by, updated_by
@@ -76,6 +87,8 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
         created_at,
         updated_at
     `;
+
+    // 5. Return the affected rows.
     const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
     return {
       enrollments,
@@ -86,17 +99,34 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
   });
 }
 
+/**
+ * Withdraws an enrolled youth and returns affected rows.
+ * @param programId - Enrollment program.
+ * @param cycleId - Assigned cycle.
+ * @param youthId - Youth with an active enrollment.
+ * @param actor - User whose program access is checked.
+ * @example withdrawYouth(programId, cycleId, youthId, actor)
+ */
 export async function withdrawYouth(
   programId: string, cycleId: string,
   youthId: string,
   actor: AccessTokenPayload,
 ) {
+  // 1. Check access to the program cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    await lockAssignmentProgram(trx, programId, actor);
-    await trx`SELECT program_id FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycleId} FOR UPDATE`;
 
+    // 2. Lock the program assignment.
+    await lockAssignmentProgram(trx, programId, actor);
+    await trx`
+      SELECT program_id
+      FROM program_cycle_assignments
+      WHERE program_id = ${programId} AND cycle_id = ${cycleId}
+      FOR UPDATE
+    `;
+
+    // 3. Withdraw the active enrollment.
     const [enrollment] = await trx`
       UPDATE program_enrollments
       SET withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
@@ -107,6 +137,7 @@ export async function withdrawYouth(
     `;
     if (!enrollment) throw new NotFoundError('Active programCycle enrollment not found');
 
+    // 5. Return the affected rows.
     const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
     return {
       enrollment,

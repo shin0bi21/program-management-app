@@ -7,22 +7,15 @@ import { audit } from '../shared/auditService';
 import { setAddresses } from './youthAddressService';
 import { setContacts } from './youthContactService';
 import type { SetYouthContactsInput } from '../../validation/youthSchemas';
-import { youthRecordColumns, youthRecordFrom, type YouthRecordRow } from './youthRecordQuery';
-
-// ============================================================================
-// QUERIES
-// ============================================================================
+import { getYouthRows, type YouthRow } from './youthRowQuery';
 
 /** Loads a required youth profile; an unavailable ID rejects with 404.
  * @example getYouthProfile(youthId) // returns the profile or throws NotFoundError
  */
-export async function getYouthProfile(id: string): Promise<YouthRecordRow> {
-  const youth = await sql<YouthRecordRow[]>`
-    SELECT
-      ${youthRecordColumns}
-    ${youthRecordFrom}
-    WHERE ur.name = 'youth'
-      AND u.id = ${id}
+export async function getYouthProfile(id: string): Promise<YouthRow> {
+  // 1. Load the youth profile.
+  const youth = await sql<YouthRow[]>`
+    ${getYouthRows(sql`u.id = ${id}`)}
     LIMIT 1
   `;
   if (!youth[0]) throw new NotFoundError('Youth profile not found');
@@ -45,6 +38,7 @@ export interface SetYouthInput {
  * @example setYouthProfile({ id: youthId, firstName: 'Sam', lastName: 'Lee' }, actorId)
  */
 export async function setYouthProfile(data: SetYouthInput, actorId: string) {
+  // 1. Prepare the profile change.
   const { id, firstName, lastName, dateOfBirth, schoolId, addresses, contacts } = data;
   const transactionId = crypto.randomUUID();
 
@@ -53,6 +47,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
 
     let persistedUserId: string;
 
+    // 2. Update the locked profile or create a new one.
     if (id) {
       const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>>[]>`
         SELECT u.id, u.first_name, u.last_name
@@ -121,7 +116,11 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
     } else {
       const newUsers = await trx<DbRow<Users>[]>`
         INSERT INTO users (first_name, last_name, role_id)
-        VALUES (${firstName}, ${lastName}, (SELECT id FROM user_roles WHERE name = 'youth'))
+        VALUES (${firstName}, ${lastName}, (
+          SELECT id
+          FROM user_roles
+          WHERE name = 'youth'
+        ))
         RETURNING *
       `;
 
@@ -136,6 +135,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
       await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth ?? null, schoolId: schoolId || null });
     }
 
+    // 3. Save the supplied addresses and contacts.
     if (id) {
       await setAddresses(persistedUserId, addresses || [], actorId, transactionId, trx);
       await setContacts(persistedUserId, contacts || [], actorId, transactionId, trx);
@@ -147,12 +147,21 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
     return persistedUserId;
   });
 
+  // 4. Return the saved profile.
   return getYouthProfile(userId);
 }
 
-
+/**
+ * Replaces a youth's contacts after checking submitted contact IDs.
+ * @param id - Youth to lock and update.
+ * @param data - Validated replacement contacts.
+ * @param actorId - User recorded on writes and audits.
+ * @example setYouthContacts(youthId, data, actorId)
+ */
 export async function setYouthContacts(id: string, data: SetYouthContactsInput, actorId: string) {
   const transactionId = crypto.randomUUID();
+
+  // 1. Normalize the submitted contact IDs.
   const contacts = data.contacts.map(contact => ({
     ...contact,
     ...(contact.id ? { id: contact.id.toLowerCase() } : {}),
@@ -160,6 +169,8 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
 
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+
+    // 2. Lock the youth profile.
     const profiles = await trx`
       SELECT yp.user_id
       FROM youth_profiles yp
@@ -170,6 +181,7 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
     `;
     if (!profiles.length) throw new NotFoundError('Youth profile not found');
 
+    // 3. Check that submitted contacts belong to this youth.
     const activeContacts = await trx<{ contactId: string }[]>`
       SELECT contact_id
       FROM user_has_contacts
@@ -181,8 +193,10 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
     ));
     if (hasUnavailableContact) throw new NotFoundError('One or more youth contacts were not found');
 
+    // 4. Save the replacement contacts.
     await setContacts(id, contacts, actorId, transactionId, trx);
   });
 
+  // 5. Return the saved profile.
   return getYouthProfile(id);
 }

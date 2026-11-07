@@ -27,7 +27,7 @@ export interface TaskRow {
 }
 
 /** Canonical task fields shared by collection and direct-record reads. */
-export const taskRecordColumns = sql`
+export const taskRowColumns = sql`
   task.id,
   task.title,
   task.details,
@@ -42,13 +42,15 @@ export const taskRecordColumns = sql`
   task.start_date::text,
   task.due_date::text,
   task.completed_at::text,
-  (SELECT COALESCE(SUM(entry.hours), 0)::float
-   FROM time_entries entry
-   WHERE entry.task_id = task.id) AS hours_logged
+  (
+    SELECT COALESCE(SUM(entry.hours), 0)::float
+    FROM time_entries entry
+    WHERE entry.task_id = task.id
+  ) AS hours_logged
 `;
 
 /** Canonical task relationships shared by collection and direct-record reads. */
-export const taskRecordFrom = sql`
+export const taskRowFrom = sql`
   FROM tasks task
   INNER JOIN users staff ON staff.id = task.staff_id
   LEFT JOIN programs program ON program.id = task.program_id
@@ -56,6 +58,26 @@ export const taskRecordFrom = sql`
 
 interface LoggedHoursRow { taskId: string; workDate: string; hours: number }
 
+/**
+ * Builds rows for table and calendar items.
+ * @param appliedFilters - SQL filters supplied by the service.
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getTaskRows(appliedFilters, trx)
+ */
+export function getTaskRows(appliedFilters = sql`TRUE`, query = sql) {
+  return query<TaskRow[]>`
+    SELECT ${taskRowColumns}
+    ${taskRowFrom}
+    WHERE ${appliedFilters}
+  `;
+}
+
+/**
+ * Loads daily logged hours for the selected tasks.
+ * @param taskIds - Tasks to load.
+ * @param db - Database client for the read.
+ * @example loadTaskLoggedHours([taskId])
+ */
 export async function loadTaskLoggedHours(taskIds: string[], db: typeof sql = sql) {
   if (!taskIds.length) return [];
   return db<LoggedHoursRow[]>`
@@ -67,6 +89,13 @@ export async function loadTaskLoggedHours(taskIds: string[], db: typeof sql = sq
   `;
 }
 
+/**
+ * Adds logged hours, labels, and access to task rows.
+ * @param rows - Task rows to shape.
+ * @param loggedHours - Daily totals for those tasks.
+ * @param actor - User viewing the tasks.
+ * @example attachTaskDetails(rows, loggedHours, actor)
+ */
 export function attachTaskDetails<TRow extends TaskRow>(
   rows: TRow[],
   loggedHours: LoggedHoursRow[],
