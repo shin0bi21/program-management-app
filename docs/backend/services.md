@@ -40,17 +40,42 @@ Keep full-record selector lookups and small reference projections separate from 
 collections. Existing combined endpoints may retain array lookups, but table adapters
 must request the bounded cursor contract explicitly. A small current row count is not
 an exception to table pagination. Share the canonical row projection with mutation
-responses, following the frontend [row contract](../frontend/components/table-rows.md).
+responses. Commands updating existing table records return their complete canonical
+rows, including joined names, capabilities, and server-derived fields. List and command
+services share that projection and mapping. A command changing rows across application
+areas returns an endpoint-specific envelope of those rows; clients must not reconstruct
+server-owned fields from drafts or cached input. See the frontend
+[row reconciliation owner](../../frontend/src/query/infiniteListCache.ts).
+
+## Organize SQL Projections
+
+Group selected columns by source table: the primary table first, followed by
+joined tables in join order. Within each group, keep the selected stored columns
+in their table definition order, skipping columns the query does not need.
+Use the schema definition or database column order; generated TypeScript
+interfaces may sort columns alphabetically. Separate table groups with a blank
+line and put derived fields and aggregates in a final separate group. Follow the
+same organization in explicit `RETURNING` projections and row interfaces.
 
 ## Write the Public Operations First
 
 Order a main service so it is easy to scan:
 
-1. Put primary reads first.
-2. Follow with `set` and focused commands.
+1. Put primary reads (`get...`) first.
+2. Follow with `set...` and focused mutations such as invite, activate, or revoke.
 3. Put delete operations next.
 4. Add secondary public operations after the main write lifecycle.
 5. Finish with private helpers.
+
+Group by behavior; keep descriptive command names rather than renaming every mutation
+to `set`. Omit groups the service does not need.
+
+Within each operation, use numbered `// 1. ...` comments in source order to label
+query and mutation steps, including locks, audits, and external work. Restart numbering
+for each function and keep each comment to one short line describing its purpose,
+for example `// 2. Lock the user while changing account credentials.`
+Separate each new step from preceding statements with a blank line.
+Place a conditional step's comment before its `if`, so it introduces the whole block.
 
 When the same full-record form adds and edits a record, expose one `set<Domain>` operation with an optional ID. Share validation, permissions, transaction work, and response mapping. Keep the insert and locked update SQL in small private branches instead of hiding the difference in an upsert.
 
@@ -58,6 +83,12 @@ Name a command after the record it changes. Session attendance belongs to `sessi
 
 ## Keep Writes Safe
 
+- Use `sql` for the shared client and `trx` for an existing transaction. Reusable
+  reads accept a final `query = sql` parameter so TypeScript infers the client
+  type. Pass `trx` explicitly when a read belongs to a transaction; use `query`
+  for its SQL tags and array helpers. Do not add `SqlExecutor` aliases. Helpers
+  that require transaction-owned locks or writes keep a required `trx: typeof sql`
+  parameter rather than defaulting to the shared client.
 - Use parameterized `sql` templates.
 - Open one transaction for a multi-write or audited command. Pass `trx` to nested helpers instead of opening another transaction.
 - Lock the current row with `FOR UPDATE` when permissions, state, assignments, or delete rules must stay valid during the write.
@@ -68,7 +99,7 @@ Name a command after the record it changes. Session attendance belongs to `sessi
   silently dropping submitted records.
 - Preserve unchanged data and deterministic response ordering.
 
-Use the repository error classes for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
+Use the [repository errors](errors.md#choose-an-error) for invalid input, denied or concealed access, conflicts, unavailable dependencies, and impossible stored states. Do not hide a missing required value with optional chaining or a fallback.
 
 ## Handle Audits and External Work
 
@@ -85,4 +116,4 @@ Keep report data and file rendering in separate owners.
 - A renderer under `src/reports/<product-area>/` accepts that result and produces a file. Renderers do not query the database, check permissions, or depend on Express requests and responses.
 - The controller obtains the authorized report result, passes it to the renderer, and sends the file with the appropriate HTTP headers.
 
-For cohort youth reports, `getCohortYouthReport` supplies the data and `renderCohortYouthPdf` renders the PDF. Keep format-specific layout and filename generation with the renderer.
+For program-cycle youth reports, [getProgramCycleYouthReport](../../backend/src/services/programming/programCycles/programCycleReportService.ts) supplies the data and [renderProgramCycleYouthPdf](../../backend/src/reports/programming/programCycles/programCycleYouthPdf.ts) renders the PDF. Keep format-specific layout and filename generation with the renderer.

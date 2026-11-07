@@ -4,7 +4,7 @@ import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
-const regularType = '00000000-0000-4000-8000-000000000001';
+const regularType = 'Regular';
 
 describe('Single session scheduling defaults', () => {
   let userId: string;
@@ -42,13 +42,13 @@ describe('Single session scheduling defaults', () => {
   function create(input: Record<string, unknown>, authToken = token) {
     return request(app).post(`/api/programs/${programId}/cycles/${cycleId}/sessions`)
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ sessionTypeId: regularType, theme: `Defaults ${Date.now()}`, ...input });
+      .send({ sessionType: regularType, theme: `Defaults ${Date.now()}`, ...input });
   }
 
   function createForProgram(input: Record<string, unknown>, authToken = token) {
     return request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ programId, sessionTypeId: regularType, theme: 'Resolved session', ...input });
+      .send({ programId, sessionType: regularType, theme: 'Resolved session', ...input });
   }
 
   it('resolves the assigned cycle by program and date and preserves explicit local times', async () => {
@@ -106,7 +106,7 @@ describe('Single session scheduling defaults', () => {
       const direct = await request(app)
         .post(`/api/programs/${programId}/cycles/${unassigned.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ sessionTypeId: regularType, theme: 'Unassigned pair', date: '2027-01-15' });
+        .send({ sessionType: regularType, theme: 'Unassigned pair', date: '2027-01-15' });
       expect(direct.status).toBe(404);
       expect(await sql`SELECT 1 FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${unassigned.id}`).toHaveLength(0);
     } finally {
@@ -183,7 +183,7 @@ describe('Single session scheduling defaults', () => {
     try {
       const response = await request(app).post(`/api/programs/${programId}/cycles/${cycle.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ sessionTypeId: regularType, theme: 'Timezone boundary', date: '2027-01-13',
+        .send({ sessionType: regularType, theme: 'Timezone boundary', date: '2027-01-13',
           startTime: '22:30', endTime: '23:00' });
       expect(response.status).toBe(201);
       expect(response.body.startsAt).toBe('2027-01-14T03:30:00.000Z');

@@ -9,14 +9,9 @@ import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import Sessions from './Sessions';
 import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
 import { makeProgramSession } from '../../../tests/factories/session';
-
-const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="location">{location.pathname}{location.search}</span>;
-}
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 
 const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
@@ -98,7 +93,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
         type="button"
         onClick={() =>
           onSessionSelect(makeProgramSession({
-            sessionTypeId: 'type-1',
+            sessionType: 'Regular',
             theme: 'Communication',
             programId: 'program-1',
             programName: 'Soft Skills',
@@ -117,7 +112,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 describe('Sessions', () => {
   beforeEach(() => {
     localStorage.clear();
-    preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
     preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
       preferenceApi.value = value;
@@ -137,8 +132,8 @@ describe('Sessions', () => {
       maxAge: 15,
     }];
     getSessionTypes.mockResolvedValue([
-      { id: 'type-regular', name: 'Regular' },
-      { id: 'type-field-trip', name: 'Field Trip' },
+      { id: 'Regular', name: 'Regular' },
+      { id: 'Field Trip', name: 'Field Trip' },
     ]);
     getCycleReferences.mockResolvedValue([{
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
@@ -166,7 +161,7 @@ describe('Sessions', () => {
       },
     ]);
     getSessions.mockResolvedValue({ rows: [makeProgramSession({
-      sessionTypeId: 'type-regular',
+      sessionType: 'Regular',
       theme: 'Communication',
       programId: 'program-1',
       programName: 'Soft Skills',
@@ -222,7 +217,7 @@ describe('Sessions', () => {
   });
 
   it('enables calendar moves only for session writers', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     const view = render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'true');
     auth.permissions = auth.permissions.filter(permission => permission !== 'write:sessions');
@@ -232,19 +227,19 @@ describe('Sessions', () => {
 
   // Rendered states.
   it('shows open attendance as a check-in count', async () => {
+    getSessionRoster.mockResolvedValue(['youth-1', 'youth-2', 'youth-3'].map(youthId => ({
+      youthId, firstName: 'Alex', lastName: 'Lee', status: 'present', notes: null,
+    })));
     getSessions.mockResolvedValue({ rows: [makeProgramSession({
       id: 'drop-in-session',
-      sessionTypeId: 'type-field-trip',
-      sessionTypeName: 'Field Trip',
+
+      sessionType: 'Field Trip',
       theme: 'Friday Drop In',
       programId: 'drop-in',
       programName: 'Drop In',
       enrollmentRequired: false,
       startsAt: '2026-07-31T21:00:00.000Z',
       endsAt: '2026-07-31T23:00:00.000Z',
-      attendanceMarkedCount: 3,
-      attendedCount: 3,
-      attendanceRate: 100,
     })], nextCursor: null });
 
     render(
@@ -261,7 +256,7 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
-    expect(screen.getByText('3 check-ins')).toBeInTheDocument();
+    expect(await screen.findByText('3 check-ins')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
   });
@@ -342,7 +337,6 @@ describe('Sessions', () => {
   });
 
   // Selection and coordination.
-
   it('removes a selected session and clears its dashboard without refetching the table', async () => {
     const user = userEvent.setup();
     render(
@@ -353,9 +347,7 @@ describe('Sessions', () => {
     );
     await screen.findByText('Communication');
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent(
-      'No attendance.',
-    );
+    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
     const initialRequestCount = getSessions.mock.calls.length;
 
     await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
@@ -370,7 +362,7 @@ describe('Sessions', () => {
   });
 
   it('keeps the session dashboard while a program row changes scheduling context', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
@@ -394,7 +386,7 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('region', { name: 'Programming sessions and overview' })).toHaveTextContent('No attendance.');
+    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
     expect(await screen.findByText('No attachments.')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
@@ -425,9 +417,8 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
   });
 
-
   it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     getProgramCycleAssignments.mockResolvedValue([{
       programId: 'program-1', programName: 'Soft Skills', cycleId: 'cycle-1', cycleName: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
       state: 'completed', enrollmentRequired: true, enrolledCount: 0, averageAttendance: null,
@@ -444,7 +435,7 @@ describe('Sessions', () => {
   });
 
   it('opens a session with the calendar date and program default times', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar date' }));
     expect(screen.getByLabelText('Session Date')).toHaveValue('2026-07-29');
@@ -453,7 +444,7 @@ describe('Sessions', () => {
   });
 
   it('keeps the Session dashboard after buffer eviction and program row selection', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypeIds: [], statuses: [] };
+    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
@@ -471,5 +462,15 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
   });
-
 });
+
+/**
+ * Displays the router path and query string so tests can observe selection-link changes.
+ * Must render inside a router.
+ * @example At /programming/sessions?session=session-1, displays that path and query string.
+ */
+function LocationProbe() {
+  const location = useLocation();
+
+  return <span data-testid="location">{location.pathname}{location.search}</span>;
+}

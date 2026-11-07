@@ -7,6 +7,13 @@ interface ConfirmModalProps {
   onClose: () => void;
 }
 
+/**
+ * Asks the user to confirm an action and shows its progress and result.
+ * Successful actions close immediately, or after one second when a success message is supplied.
+ * @param props.action - Operation to confirm, including its title/message; null closes the dialog.
+ * @param props.onClose - Requests dismissal; the caller clears the pending action.
+ * @example <ConfirmModal action={{ title: 'Delete task', message: 'Delete this task?', onConfirm: deleteTask }} onClose={clearAction} />
+ */
 export default function ConfirmModal({ action, onClose }: ConfirmModalProps) {
   const confirmation = useConfirmModal({ action, onClose });
 

@@ -32,13 +32,14 @@ bash scripts/dev/check-dev-env.sh
 A nonzero exit reports warnings; the check does not change the environment.
 
 For large captured logs or filtered Docker output, use the
-[Log Report](delivery/reports.md#log-report).
+[log report](../../scripts/reports/log-report.ts). Run
+`npm run report:logs -- --help` for filters and examples.
 
 ## Trace a Client or API Failure
 
 1. In the browser developer tools, inspect the failing request under
    **Network**. Record its method, URL, status, response body, and
-   `X-Request-ID` response header. For API failures, the JSON body also carries
+   `X-Request-ID` response header. API error responses from the global handler also carry
    the same `requestId`.
 2. Distinguish the client failure before changing code:
    - No HTTP response usually means a `NetworkError`, browser connectivity, or
@@ -74,8 +75,8 @@ development Compose configuration and must not be copied into production.
 
 ## Attach the Backend Debugger
 
-The development backend starts Node Inspector on container port `9229`, which
-Compose publishes to `localhost:9229`. Start the stack and attach a Node
+The development backend starts Node Inspector on container port `9229`, available
+on the host at `localhost:9229`. Start the stack and attach a Node
 debugger to that port. In VS Code, configure the debugger with `backend/` as
 the local root, `/app` as the remote root, source maps enabled, and automatic
 reconnection after backend restarts.

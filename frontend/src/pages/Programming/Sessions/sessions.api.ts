@@ -36,7 +36,7 @@ interface UpdateSessionAttachmentInput {
 }
 
 interface UpdateSessionInput {
-  sessionTypeId: string;
+  sessionType: string;
   theme: string;
   startsAt: string;
   endsAt: string;
@@ -57,7 +57,7 @@ export function getAttendanceYouth(opts?: RequestOptions) {
 
 export interface CreateSessionInput {
   programId: string;
-  sessionTypeId: string;
+  sessionType: string;
   theme: string;
   date?: string;
   startTime?: string;
@@ -108,7 +108,7 @@ export function getSessions(
   if ('end' in filters) query.set('end', filters.end);
   if (filters.programIds?.length) query.set('programIds', filters.programIds.join(','));
   if (filters.cycleIds?.length) query.set('cycleIds', filters.cycleIds.join(','));
-  if (filters.sessionTypeIds?.length) query.set('sessionTypeIds', filters.sessionTypeIds.join(','));
+  if (filters.sessionTypes?.length) query.set('sessionTypes', filters.sessionTypes.join(','));
   if (filters.statuses?.length) query.set('statuses', filters.statuses.join(','));
   if (filters.search) query.set('search', filters.search);
   if (pagination) {

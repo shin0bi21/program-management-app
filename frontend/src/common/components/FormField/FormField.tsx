@@ -14,6 +14,13 @@ interface FormFieldProps {
   }>;
 }
 
+/**
+ * Labels a control and associates a validation alert without replacing its existing descriptions.
+ * @param props.id - Must match the contained control's ID so its label targets it.
+ * @param props.children - One control that forwards aria-describedby and aria-invalid to its focusable element.
+ * @param props.error - Nonempty message to display as an alert and mark the control invalid.
+ * @example <FormField id="name" label="Name" error="Required"><input id="name" /></FormField>
+ */
 export default function FormField({ id, label, error, children }: FormFieldProps) {
   const errorId = `${id}-error`;
   const control = error && isValidElement(children)

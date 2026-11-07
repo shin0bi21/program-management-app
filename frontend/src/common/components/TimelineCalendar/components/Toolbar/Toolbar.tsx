@@ -10,6 +10,11 @@ interface ToolbarProps {
   onNext?: () => void;
 }
 
+/**
+ * Shows the visible year and supplied calendar navigation actions.
+ * Both directional callbacks are required to show arrows; callers enforce navigation bounds.
+ * @example <Toolbar year={2026} onToday={goToToday} todayDisabled /> shows a disabled Today button.
+ */
 export default function Toolbar({ year, onToday, todayDisabled = false, onPrevious, onNext }: ToolbarProps) {
   return (
     <div className="header" aria-label="Calendar navigation">

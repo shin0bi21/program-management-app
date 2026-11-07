@@ -1,8 +1,10 @@
 import { BadRequestError } from '../../src/errors';
-import { cursorPage, decodeCursor, encodeCursor } from '../../src/services/shared/cursorPagination';
+import { sql } from '../shared/db';
+import { cursorPage, decodeCursor, encodeCursor, paginateQuery } from '../../src/services/shared/cursorPagination';
 
 const firstId = '00000000-0000-4000-8000-000000000001';
 const secondId = '00000000-0000-4000-8000-000000000002';
+const thirdId = '00000000-0000-4000-8000-000000000003';
 
 describe('shared cursor pagination', () => {
   it('encodes and decodes a cursor', () => {
@@ -36,4 +38,63 @@ describe('shared cursor pagination', () => {
     });
     expect(cursorPage([], 1)).toEqual({ rows: [], nextCursor: null });
   });
+
+  it.each(['asc', 'desc'] as const)('pages filtered SQL rows in %s order without losing tied values', async direction => {
+    const rowsQuery = paginationRows();
+    const options = { sortValue: sql`page_row.name`, direction, limit: 1 };
+    const expectedIds = direction === 'asc' ? [firstId, secondId, thirdId] : [thirdId, secondId, firstId];
+    const visibleIds: string[] = [];
+    let cursor: string | undefined;
+
+    for (const expectedId of expectedIds) {
+      const page = await paginateQuery(rowsQuery, { ...options, cursor });
+      if (Array.isArray(page)) throw new Error('Expected a cursor page');
+
+      expect(page.rows).toEqual([{ id: expectedId, name: expectedId === thirdId ? 'beta' : 'alpha' }]);
+      visibleIds.push(...page.rows.map(row => row.id));
+      cursor = page.nextCursor ?? undefined;
+      expect(Boolean(cursor)).toBe(visibleIds.length < expectedIds.length);
+    }
+
+    expect(visibleIds).toEqual(expectedIds);
+  });
+
+  it('returns ordered unpaged rows without internal cursor values', async () => {
+    const rows = await paginateQuery(paginationRows(), {
+      sortValue: sql`page_row.name`, direction: 'asc',
+    });
+
+    expect(rows).toEqual([
+      { id: firstId, name: 'alpha' },
+      { id: secondId, name: 'alpha' },
+      { id: thirdId, name: 'beta' },
+    ]);
+  });
+
+  it('returns an empty terminal page when the filtered query has no rows', async () => {
+    const rowsQuery = sql<{ id: string; name: string }[]>`SELECT * FROM (${paginationRows()}) filtered WHERE FALSE`;
+
+    const page = await paginateQuery(rowsQuery, {
+      sortValue: sql`page_row.name`, direction: 'asc', limit: 2,
+    });
+
+    expect(page).toEqual({ rows: [], nextCursor: null });
+  });
 });
+
+/**
+ * Builds filtered SQL fixtures with equal sort values and an excluded row.
+ * @returns An unexecuted query requiring no persistent fixture records.
+ * @example await paginationRows() // two alpha rows and one beta row
+ */
+function paginationRows() {
+  return sql<{ id: string; name: string }[]>`
+    SELECT * FROM (VALUES
+      (${thirdId}::uuid, 'beta'),
+      (${secondId}::uuid, 'alpha'),
+      (${firstId}::uuid, 'alpha'),
+      ('00000000-0000-4000-8000-000000000004'::uuid, 'hidden')
+    ) fixture(id, name)
+    WHERE name <> 'hidden'
+  `;
+}

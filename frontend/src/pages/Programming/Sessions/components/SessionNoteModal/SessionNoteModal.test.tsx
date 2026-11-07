@@ -17,7 +17,7 @@ vi.mock('../../sessions.api', () => ({
 }));
 
 const session = makeProgramSession({
-  sessionTypeId: 'type-regular',
+  sessionType: 'Regular',
   startsAt: '2026-07-28T21:00:00.000Z',
   endsAt: '2026-07-28T23:30:00.000Z',
   description: 'Planned communication exercise',

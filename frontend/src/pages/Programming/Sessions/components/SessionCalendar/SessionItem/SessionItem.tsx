@@ -7,7 +7,21 @@ import './SessionItem.css';
 
 const statusLabels = { upcoming: 'Upcoming', completed: 'Completed', cancelled: 'Cancelled' } as const;
 
-export default function SessionItem<TRow, TItemData>({ calendar, session, timezone = 'America/Toronto', selected = false, onEdit, onDelete }: {
+/**
+ * Displays a session theme with type/status badges in details and a full schedule in its accessible name.
+ * @param props.session - Session with valid, ordered start/end timestamps and program/cycle names.
+ * @param props.timezone - Intl-supported program timezone for details and accessible text; defaults to Toronto.
+ * @param props.calendar - Placement and interaction callbacks supplied by TimelineCalendar.
+ * @example An overnight session shows both local dates in its details while its theme stays concise.
+ */
+export default function SessionItem<TRow, TItemData>({
+  calendar,
+  session,
+  timezone = 'America/Toronto',
+  selected = false,
+  onEdit,
+  onDelete,
+}: {
   calendar?: ItemCalendarProps<TRow, TItemData>;
   session: ProgramSession;
   timezone?: string;
@@ -25,12 +39,12 @@ export default function SessionItem<TRow, TItemData>({ calendar, session, timezo
     calendar={calendar}
     id={session.id}
     selected={selected}
-    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionTypeName}, ${startsAt} to ${endsAt}, ${status}`}
+    ariaLabel={`${session.theme}, ${session.programName}, ${session.cycleName}, ${session.sessionType}, ${startsAt} to ${endsAt}, ${status}`}
     summary={session.theme}
     detailTitle={<span className="session-item__detail-title">
       <span>{session.theme}</span>
       <span className="session-item__detail-badges">
-        <SessionTypeLabel name={session.sessionTypeName} appearance="calendar" />
+        <SessionTypeLabel name={session.sessionType} appearance="calendar" />
         <StatusLabel status={session.state} label={status} />
       </span>
     </span>}
@@ -47,9 +61,13 @@ export default function SessionItem<TRow, TItemData>({ calendar, session, timezo
 }
 
 /**
- * Formats a compact local schedule, retaining both dates for an overnight session.
- * Requires: start and end are valid ordered timestamps and timezone is supported by Intl.
- * Example: Dec 21 at 17:00–19:30 in Toronto => "Dec 21, 5–7:30 p.m." (locale spacing varies).
+ * Formats a session's local dates and times, showing both dates when it runs overnight.
+ * @param start - Valid session start timestamp.
+ * @param end - Valid session end timestamp, no earlier than start.
+ * @param timezone - Intl-supported program timezone, such as America/Toronto.
+ * @returns Local date/time range with whole-hour minutes omitted; locale spacing may vary.
+ * @example formatSessionDateRange('2026-12-22T04:00:00Z', '2026-12-22T06:30:00Z', 'America/Toronto')
+ * // "Dec 21, 11 p.m. – Dec 22, 1:30 a.m." (locale spacing varies).
  */
 function formatSessionDateRange(start: string, end: string, timezone: string): string {
   const formatter = new Intl.DateTimeFormat('en-CA', {

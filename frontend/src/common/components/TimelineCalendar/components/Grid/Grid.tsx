@@ -63,6 +63,15 @@ const EMPTY_ITEMS = [] as const;
 
 type GridComponent = <TRow, TItemData>(props: GridProps<TRow, TItemData>) => ReactNode;
 
+/**
+ * Displays the visible date headers and resource rows, keeping space for offscreen content.
+ * Layout widths and heights are in pixels; firstRowIndex is the slice's zero-based offset in all rows.
+ * @param props.rows - Resource slice whose original indices reach row renderers and cell contexts.
+ * @param props.periods - Ordered visible date columns; today matches a start-inclusive, end-exclusive interval.
+ * @param props.items - Records keyed by getRowId; missing entries render an empty row.
+ * @example With firstRowIndex = 4, two visible staff rows receive indices 4 and 5;
+ * at rowHeight = 92, topSpacerHeight = 368 reserves the four preceding rows.
+ */
 const Grid = memo(function Grid<TRow, TItemData>({
   // Grid layout
   gridColumns,

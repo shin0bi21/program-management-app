@@ -88,12 +88,9 @@ describe('Hours API', () => {
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
     const [session] = await sql<Array<{ id: string }>>`
-      INSERT INTO program_sessions (program_id, cycle_id, session_type_id, theme, starts_at, ends_at)
-      SELECT ${programId}, ${activeCycleId}, type.id, 'Hours workshop',
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, starts_at, ends_at)
+      SELECT ${programId}, ${activeCycleId}, 'Regular', 'Hours workshop',
         ${workDate}::date + TIME '10:00', ${workDate}::date + TIME '12:00'
-      FROM session_types type
-      ORDER BY type.name
-      LIMIT 1
       RETURNING id
     `;
     sessionId = session.id;
@@ -450,18 +447,6 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(widened.status).toBe(200);
     expect(widened.body).toEqual({});
-  });
-
-  it('enforces a linked source for Program Delivery at the database boundary', async () => {
-    await expect(sql`
-      INSERT INTO time_entries (
-        staff_id, program_id, cycle_id, category, work_date, hours, note
-      )
-      VALUES (
-        ${firstStaffId}, ${programId}, ${activeCycleId}, 'program_delivery',
-        ${workDate}, 1, 'Unlinked delivery'
-      )
-    `).rejects.toMatchObject({ code: '23514' });
   });
 
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {

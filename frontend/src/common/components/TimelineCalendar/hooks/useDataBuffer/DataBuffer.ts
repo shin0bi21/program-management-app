@@ -4,9 +4,9 @@ import { addDays, buildDayPeriod } from '../../utils/periods';
 export type BufferDirection = 'initial' | 'left' | 'right';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_RUNWAY_DAYS = 42;
-const DEFAULT_REPLENISH_THRESHOLD_DAYS = 21;
-const DEFAULT_REPLENISH_DAYS = 21;
+const DEFAULT_PRELOAD_PERIODS = 42;
+const DEFAULT_REFILL_THRESHOLD_PERIODS = 21;
+const DEFAULT_REFILL_PERIODS = 21;
 
 export interface PeriodBufferAdapter {
   shift: (period: CalendarPeriod, amount: number) => CalendarPeriod;
@@ -20,13 +20,40 @@ export interface PeriodBufferAdapter {
 }
 
 export const dayPeriodBufferAdapter: PeriodBufferAdapter = {
+  /**
+   * Moves a local calendar day by a signed count of days.
+   * @param period - Day whose local start supplies the date.
+   * @param amount - Whole days to move; negative values move backward.
+   * @example Shifting Aug 9 by -2 produces the Aug 7 day period.
+   */
   shift: (period, amount) => buildDayPeriod(addDays(period.start, amount)),
-  // Compare local dates as UTC ordinals so 23- and 25-hour DST days still count as one period.
+  /**
+   * Counts signed local date steps, regardless of daylight-saving hour changes.
+   * @param start - Day counted as zero.
+   * @param end - Day whose distance from start is measured.
+   * @returns Positive for later days, negative for earlier days.
+   * @example March 7 to March 9 is 2 even when the clock changes between those dates.
+   */
   distance: (start, end) => (
     (Date.UTC(end.start.getFullYear(), end.start.getMonth(), end.start.getDate())
       - Date.UTC(start.start.getFullYear(), start.start.getMonth(), start.start.getDate())) / DAY_MS
   ),
+  /**
+   * Checks whether an ISO date key lies in an inclusive day interval.
+   * @param start - First included day.
+   * @param end - Last included day, at or after start.
+   * @param periodKey - Zero-padded YYYY-MM-DD date to test.
+   * @example Aug 9 is included in Aug 9–11; Aug 12 is not.
+   */
   includes: (start, end, periodKey) => periodKey >= start.key && periodKey <= end.key,
+  /**
+   * Finds the first shared day of an item's inclusive range and a loaded interval.
+   * @param range - Ordered inclusive YYYY-MM-DD item dates.
+   * @param start - First loaded day.
+   * @param end - Last loaded day, at or after start.
+   * @returns First overlapping date key, or undefined for disjoint intervals.
+   * @example An Aug 1–10 item in Aug 5–15 is anchored at Aug 5.
+   */
   getRangeAnchor: (range, start, end) => {
     if (range.start > end.key || range.end < start.key) return undefined;
     if (range.start < start.key) return start.key;
@@ -77,9 +104,10 @@ interface ItemLocation {
 }
 
 /**
- * Loads ranges around the rendered window and reconciles optimistic item changes.
- * Requires a stable item ID for mutation methods; range-aware items need `getItemRange`.
- * Example: initialize(periods), then periodsBuilt(nextPeriods, 'right') as scrolling continues.
+ * Loads calendar data for the rendered range plus 42 extra periods on each side by default.
+ * As scrolling leaves 21 extra periods, fetches another 21 in that direction. Keeps at most
+ * 250 periods by default and reapplies pending local item edits/deletes after loads.
+ * @example Three rendered days initially request 87 days; scrolling right fetches more future days.
  */
 export class DataBuffer<TItemData> {
   private readonly load: DataBufferOptions<TItemData>['load'];
@@ -95,6 +123,8 @@ export class DataBuffer<TItemData> {
   private readonly itemLocations = new Map<string, ItemLocation>();
   private readonly controller = new AbortController();
   private mutationRevision = 0;
+  private readonly activeLoads = new Set<{ revision: number }>();
+  private resetQueue: Promise<void> = Promise.resolve();
   private data: RowPeriodData<TItemData>;
   private renderedStart: CalendarPeriod | null = null;
   private renderedEnd: CalendarPeriod | null = null;
@@ -108,14 +138,31 @@ export class DataBuffer<TItemData> {
     right: Promise.resolve(),
   };
 
-  /** function Object() { [native code] } */
+  /**
+   * Creates a calendar data cache; loading starts with initialize, not construction.
+   * Period counts must be finite non-negative integers, with positive replenishSize and retention.
+   * Item IDs must be globally unique; ranged retention also requires getItemId.
+   * @param options.initialData - Seed items grouped by resource row and period; not published on construction.
+   * @param options.load - Supplies authoritative range contents, including empty results for omissions;
+   * receives a lifetime cancellation signal. Rejections propagate to the load caller.
+   * @param options.onData - Receives cache snapshots synchronously after merges and mutations,
+   * and again after pruning; callbacks must not mutate them or throw.
+   * @param options.getItemId - Identifies an item across loads/edits, such as task.id; needed for mutations.
+   * @param options.getItemRange - Ordered first and last keys an item occupies, both included.
+   * @param options.adapter - Consistent period shifting, distance, membership, and overlap rules; defaults to days.
+   * @param options.targetSize - Extra periods initially loaded on each side (42).
+   * @param options.threshold - Remaining extra periods that trigger another load (21).
+   * @param options.replenishSize - Extra periods fetched by each normal edge load (21).
+   * @param options.maxRetainedPeriods - Memory limit in periods (250); must fit the initial load.
+   * @example new DataBuffer({ load, onData, getItemId: task => task.id }) starts with no requests.
+   */
   constructor(options: DataBufferOptions<TItemData>) {
     this.load = options.load;
     this.onData = options.onData;
     this.data = options.initialData ?? {};
-    this.targetSize = options.targetSize ?? DEFAULT_RUNWAY_DAYS;
-    this.threshold = options.threshold ?? DEFAULT_REPLENISH_THRESHOLD_DAYS;
-    this.replenishSize = options.replenishSize ?? DEFAULT_REPLENISH_DAYS;
+    this.targetSize = options.targetSize ?? DEFAULT_PRELOAD_PERIODS;
+    this.threshold = options.threshold ?? DEFAULT_REFILL_THRESHOLD_PERIODS;
+    this.replenishSize = options.replenishSize ?? DEFAULT_REFILL_PERIODS;
     this.maxRetainedPeriods = options.maxRetainedPeriods ?? 250;
     this.getItemId = options.getItemId;
     this.getItemRange = options.getItemRange;
@@ -123,47 +170,78 @@ export class DataBuffer<TItemData> {
     this.rebuildItemIndex();
   }
 
-  /** Permanently releases this calendar instance and cancels its outstanding reads. */
+  /**
+   * Stops this buffer permanently, signalling cancellation and dropping cached items.
+   * Reads check cancellation before merging; queued work checks it before starting.
+   * Existing callers must handle rejection; no empty snapshot is published.
+   * @example Disposing before a response arrives prevents that response from reaching onData.
+   */
   dispose(): void {
     this.controller.abort();
     this.data = {};
     this.itemOverrides.clear();
     this.itemLocations.clear();
+    this.activeLoads.clear();
     this.initialPeriods = [];
     this.queues = { left: Promise.resolve(), right: Promise.resolve() };
   }
 
-  /** Starts the initial window load once, sharing an in-flight initialization. */
+  /**
+   * Loads items for renderedPeriods plus the configured extra periods on each side.
+   * Reuses a pending initialization; failures reject and allow a later retry.
+   * @param renderedPeriods - Chronologically ordered contiguous displayed periods; empty input is a no-op.
+   * @returns Completion after loading and pruning, or immediately if initialized or disposed.
+   * @example With default options, three rendered days request 87 days in one load.
+   */
   initialize(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
     if (this.controller.signal.aborted || this.initialized || !renderedPeriods.length) return Promise.resolve();
     if (this.initializing) return this.initializing;
 
     this.initialPeriods = renderedPeriods;
-    this.initializing = this.runInitialization(renderedPeriods);
+    // Cleanup belongs to the assigned promise, including failures before the loader starts.
+    this.initializing = this.runInitialization(renderedPeriods).finally(() => {
+      this.initializing = null;
+    });
 
     return this.initializing;
   }
 
-  /** Waits for pending loads, then rebuilds the buffer around a replacement window. */
-  async reset(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
-    if (this.controller.signal.aborted || !renderedPeriods.length) return;
+  /**
+   * Serializes replacement windows, waiting for existing loads before each replacement; failures reject.
+   * Keeps the old snapshot until replacement data arrives.
+   * @param renderedPeriods - Chronologically ordered contiguous replacement periods; empty input is a no-op.
+   * @example Jumping from August to January replaces the August cache with January's range.
+   */
+  reset(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
+    if (this.controller.signal.aborted || !renderedPeriods.length) return Promise.resolve();
 
-    if (this.initializing) await this.initializing.catch(() => undefined);
-    await Promise.all(Object.values(this.queues).map(queue => queue.catch(() => undefined)));
+    this.resetQueue = this.resetQueue.catch(() => undefined).then(async () => {
+      if (this.controller.signal.aborted) return;
 
-    if (this.controller.signal.aborted) return;
+      if (this.initializing) await this.initializing.catch(() => undefined);
+      await Promise.all(Object.values(this.queues).map(queue => queue.catch(() => undefined)));
 
-    this.initialized = false;
-    this.renderedStart = null;
-    this.renderedEnd = null;
-    this.loadedStart = null;
-    this.loadedEnd = null;
-    this.queues = { left: Promise.resolve(), right: Promise.resolve() };
+      if (this.controller.signal.aborted) return;
 
-    await this.initialize(renderedPeriods);
+      this.initialized = false;
+      this.renderedStart = null;
+      this.renderedEnd = null;
+      this.loadedStart = null;
+      this.loadedEnd = null;
+      this.queues = { left: Promise.resolve(), right: Promise.resolve() };
+
+      await this.initialize(renderedPeriods);
+    });
+
+    return this.resetQueue;
   }
 
-  /** Queues directional replenishment as scrolling exposes new periods. */
+  /**
+   * Loads more items if scrolling has brought an edge within threshold periods of cached bounds.
+   * @param periods - Chronologically ordered new columns at the scrolling edge; empty input is a no-op.
+   * @param direction - Which edge changed; same-edge requests run sequentially and failures reject.
+   * @example Scrolling right until 21 cached days remain requests another 21 future days by default.
+   */
   periodsBuilt(periods: readonly CalendarPeriod[], direction: 'left' | 'right'): Promise<void> {
     if (this.controller.signal.aborted || !periods.length) return Promise.resolve();
 
@@ -185,7 +263,13 @@ export class DataBuffer<TItemData> {
     return this.queues[direction];
   }
 
-  /** Applies a saved record locally while guarding it against stale loads. */
+  /**
+   * Adds or replaces an item immediately and records an override for pending reads.
+   * @param rowId - Resource row receiving the item, such as its assigned staff ID.
+   * @param periodKey - Date bucket holding the item, usually its first day.
+   * @param item - Updated record; getItemId must be configured or this throws.
+   * @example Moving task-1 to another staff row removes its old placement and publishes the new one.
+   */
   upsertItem(rowId: string, periodKey: string, item: TItemData): void {
     if (this.controller.signal.aborted) return;
 
@@ -219,7 +303,11 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  /** Removes a record locally and retains its delete override until acknowledged. */
+  /**
+   * Removes an item immediately and records a deletion override for pending reads.
+   * @param itemId - ID of the removed record; getItemId must be configured or this throws.
+   * @example Removing task-1 during a load keeps task-1 absent when that response arrives.
+   */
   removeItem(itemId: string): void {
     if (this.controller.signal.aborted) return;
 
@@ -244,7 +332,12 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  /** Load the initial runway before publishing its bounds as initialized. */
+  /**
+   * Loads the initial displayed dates and extra periods before recording cached bounds.
+   * Rejects if maxRetainedPeriods cannot fit that range or loading fails.
+   * @param renderedPeriods - Nonempty, chronologically ordered contiguous displayed periods.
+   * @example Three displayed days plus 42 on each side require a retention limit of at least 87.
+   */
   private async runInitialization(renderedPeriods: readonly CalendarPeriod[]): Promise<void> {
     const renderedStart = renderedPeriods[0];
     const renderedEnd = renderedPeriods[renderedPeriods.length - 1];
@@ -270,12 +363,15 @@ export class DataBuffer<TItemData> {
     } catch (error) {
       this.initialized = false;
       throw error;
-    } finally {
-      this.initializing = null;
     }
   }
 
-  /** Extends or replaces the loaded runway when a rendered edge reaches its threshold. */
+  /**
+   * Fetches another edge range, or recenters the cache after a jump beyond cached dates.
+   * @param direction - Edge to extend; requires initialized loaded and rendered bounds.
+   * @returns Completion after a successful load and retention pass; load or cancellation failures reject.
+   * @example Jumping a year ahead loads around the new edge instead of every intervening day.
+   */
   private async replenishIfNeeded(direction: 'left' | 'right'): Promise<void> {
     if (!this.loadedStart || !this.loadedEnd || !this.renderedStart || !this.renderedEnd) return;
 
@@ -346,40 +442,59 @@ export class DataBuffer<TItemData> {
     this.trimRetainedData('right');
   }
 
-  /** Loads one range and acknowledges only mutation overrides covered by that request. */
+  /**
+   * Fetches one date range and acknowledges covered overrides when no pre-mutation read remains.
+   * Deferred overrides win the merge until a later covering load; failed or aborted reads do not merge.
+   * @param range - Inclusive requested periods and the edge or initialization that requested them.
+   * @example A response for September cannot clear an outstanding edit in June.
+   */
   private async loadAndMerge(range: PeriodRange): Promise<void> {
     const signal = this.controller.signal;
     signal.throwIfAborted();
 
-    const requestRevision = this.mutationRevision;
-    const incoming = await this.load(range, signal);
-    signal.throwIfAborted();
+    const request = { revision: this.mutationRevision };
+    this.activeLoads.add(request);
 
-    // A response acknowledges only overrides it covered and that existed when its request began.
-    this.itemOverrides.forEach((override, itemId) => {
-      if (override.revision > requestRevision) return;
+    try {
+      const incoming = await this.load(range, signal);
+      signal.throwIfAborted();
 
-      if (this.getItemRange && override.range) {
-        if (this.adapter.getRangeAnchor(override.range, range.start, range.end) !== undefined) {
-          this.itemOverrides.delete(itemId);
+      // A newer response cannot retire protection while a pre-mutation read can still arrive.
+      this.itemOverrides.forEach((override, itemId) => {
+        if (override.revision > request.revision) return;
+
+        const hasOlderRead = [...this.activeLoads].some(load => load.revision < override.revision);
+        if (hasOlderRead) return;
+
+        if (this.getItemRange && override.range) {
+          if (this.adapter.getRangeAnchor(override.range, range.start, range.end) !== undefined) {
+            this.itemOverrides.delete(itemId);
+          }
+
+          return;
         }
 
-        return;
-      }
+        override.pendingPeriodKeys.forEach(periodKey => {
+          if (this.adapter.includes(range.start, range.end, periodKey)) {
+            override.pendingPeriodKeys.delete(periodKey);
+          }
+        });
 
-      override.pendingPeriodKeys.forEach(periodKey => {
-        if (this.adapter.includes(range.start, range.end, periodKey)) {
-          override.pendingPeriodKeys.delete(periodKey);
-        }
+        if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
       });
 
-      if (!override.pendingPeriodKeys.size) this.itemOverrides.delete(itemId);
-    });
-
-    this.mergeData(incoming, range);
+      this.mergeData(incoming, range);
+    } finally {
+      this.activeLoads.delete(request);
+    }
   }
 
-  /** Reconciles the authoritative requested range, including absent rows and buckets. */
+  /**
+   * Replaces cached items overlapping a fetched range, then reapplies outstanding edits/deletes.
+   * @param incoming - Authoritative items grouped by row and bucket; omitted overlapping items are removed.
+   * @param range - Inclusive requested range used to identify replaced items.
+   * @example An empty response removes previously cached items in that range, not disjoint dates.
+   */
   private mergeData(incoming: RowPeriodData<TItemData>, range: PeriodRange): void {
     const getItemId = this.getItemId;
 
@@ -434,7 +549,10 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  /** Reapplies pending local updates and deletes after server data is merged. */
+  /**
+   * Restores local edits/deletes whose overrides have not been acknowledged by a covered later request.
+   * @example A saved two-hour entry wins over a one-hour value from an older response.
+   */
   private applyItemOverrides(): void {
     if (!this.getItemId) return;
 
@@ -447,7 +565,13 @@ export class DataBuffer<TItemData> {
     });
   }
 
-  /** Places an item once under its current retained row and period. */
+  /**
+   * Stores an item in its resource/date bucket after removing its previous placement.
+   * @param rowId - Resource row receiving the record.
+   * @param periodKey - Bucket chosen by the caller, already anchored when range-aware.
+   * @param item - Record with a stable globally unique ID; no-op without getItemId.
+   * @example Assigning task-1 to staff-2 moves it out of staff-1's cached items.
+   */
   private placeIndexedItem(rowId: string, periodKey: string, item: TItemData): void {
     const getItemId = this.getItemId;
 
@@ -470,7 +594,11 @@ export class DataBuffer<TItemData> {
     this.itemLocations.set(itemId, { rowId, periodKey, range: this.getItemRange?.(item) });
   }
 
-  /** Removes an item from its indexed location without scanning every row. */
+  /**
+   * Removes an item from the resource/date bucket recorded in its lookup index.
+   * @param itemId - Stable record ID; unknown IDs or absent getItemId leave data unchanged.
+   * @example Removing an unknown item ID leaves cached rows unchanged.
+   */
   private removeIndexedItem(itemId: string): void {
     const getItemId = this.getItemId;
 
@@ -493,7 +621,10 @@ export class DataBuffer<TItemData> {
     this.itemLocations.delete(itemId);
   }
 
-  /** Rebuilds item lookup locations after the retained buffer changes. */
+  /**
+   * Rebuilds the lookup from each item ID to its resource, date bucket, and occupied range.
+   * @example After trimming August, retained September items still have lookup locations.
+   */
   private rebuildItemIndex(): void {
     this.itemLocations.clear();
 
@@ -512,14 +643,24 @@ export class DataBuffer<TItemData> {
     });
   }
 
-  /** Chooses an in-range anchor for ranged records, retaining the fallback when unavailable. */
+  /**
+   * Chooses a cached date bucket for an item's overlap with the loaded range.
+   * @param range - Inclusive occupied keys, if range-aware item placement is enabled.
+   * @param fallback - Caller-supplied bucket used without bounds or an overlap.
+   * @returns First overlapping loaded key, or fallback when no anchor is available.
+   * @example An Aug 1–10 item with Aug 5–15 loaded is anchored under Aug 5.
+   */
   private getRangeAnchor(range: { start: string; end: string } | undefined, fallback: string) {
     if (!range || !this.loadedStart || !this.loadedEnd) return fallback;
 
     return this.adapter.getRangeAnchor(range, this.loadedStart, this.loadedEnd) ?? fallback;
   }
 
-  /** Limits the retained runway after loading a new edge. */
+  /**
+   * Trims the opposite edge after loading would exceed maxRetainedPeriods.
+   * @param direction - Newly extended edge to keep while dropping periods from the other side.
+   * @example Loading future days past a 100-period limit drops the oldest cached days.
+   */
   private trimRetainedData(direction: 'left' | 'right'): void {
     if (!this.loadedStart || !this.loadedEnd) return;
 
@@ -545,7 +686,10 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  /** Drops data outside loaded bounds and reapplies pending item overrides. */
+  /**
+   * Drops items outside the loaded dates while preserving overlapping items and pending edits.
+   * @example A jump to January removes disjoint August records.
+   */
   private pruneToLoadedRange(): void {
     if (!this.loadedStart || !this.loadedEnd) return;
 
@@ -559,7 +703,13 @@ export class DataBuffer<TItemData> {
     this.onData(this.data);
   }
 
-  /** Keeps only mutation overrides still covered by the retained window. */
+  /**
+   * Discards pending edits/deletes outside retained dates and relocates overlapping edits inside them.
+   * @param start - First retained period.
+   * @param end - Last retained period, included.
+   * @param retainedKeys - Exact retained bucket keys for non-ranged items; otherwise uses adapter membership.
+   * @example Trimming an item's original start keeps its edit if later days still overlap the cache.
+   */
   private retainOverrides(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
     this.itemOverrides.forEach((override, itemId) => {
       if (this.getItemRange && override.range) {
@@ -577,6 +727,11 @@ export class DataBuffer<TItemData> {
         return;
       }
 
+      /**
+       * Tests bucket retention using exact keys when supplied, otherwise the inclusive interval.
+       * @param periodKey - Bucket key to keep or discard.
+       * @example With retained keys Aug 5–9, Aug 4 returns false and Aug 5 returns true.
+       */
       const includes = (periodKey: string) => retainedKeys?.has(periodKey)
         ?? this.adapter.includes(start, end, periodKey);
 
@@ -593,12 +748,23 @@ export class DataBuffer<TItemData> {
     });
   }
 
-  /** Keeps each retained record once, re-anchoring ranged records inside the window. */
+  /**
+   * Retains buckets within the interval; with item IDs and ranges, deduplicates each row and reanchors overlaps.
+   * @param start - First retained period.
+   * @param end - Last retained period, included.
+   * @param retainedKeys - Exact retained bucket keys when IDs or item ranges are unavailable.
+   * @example An Aug 1–10 task survives trimming Aug 1–4 and is stored under Aug 5.
+   */
   private retainData(start: CalendarPeriod, end: CalendarPeriod, retainedKeys?: ReadonlySet<string>) {
     const getItemRange = this.getItemRange;
     const getItemId = this.getItemId;
 
     if (!getItemRange || !getItemId) {
+      /**
+       * Tests bucket retention using exact keys when supplied, otherwise the inclusive interval.
+       * @param periodKey - Bucket key to keep or discard.
+       * @example With retained keys Aug 5–9, Aug 4 returns false and Aug 5 returns true.
+       */
       const includes = (periodKey: string) => retainedKeys?.has(periodKey)
         ?? this.adapter.includes(start, end, periodKey);
 

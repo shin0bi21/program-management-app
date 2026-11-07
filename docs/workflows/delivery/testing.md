@@ -112,7 +112,7 @@ largest supported viewport; functional assertions alone do not establish them.
 
 ## Scaffold Implementation and Tests Together
 
-Use [Frontend Scaffolding](../../frontend/architecture/scaffolding.md) for commands
+Use [Frontend Scaffolding](../../frontend/04-scaffolding.md) for commands
 and test outlines.
 
 ## Browser Component Tests
@@ -165,7 +165,9 @@ queries/services, with representative API checks. Database preservation and reco
 belong to workers tested against disposable databases. A UI test cannot prove SQL
 behavior; do not duplicate a shared matrix at each consumer.
 
-- Repository-tool tests live beside scripts. Register new TypeScript script
+- Repository-tool tests live beside scripts, except reports. Reports have no
+  automated tests; keep them in lint and typechecking, and inspect representative
+  command output while changing them. Register other new TypeScript script
   folders in root lint and `scripts/tests/test-static.sh`.
 - Backend suites live in `backend/tests/<domain>/`; reuse `backend/tests/shared/`.
   Mount new routes in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.

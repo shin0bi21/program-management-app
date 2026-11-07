@@ -22,7 +22,7 @@ export interface SessionPreference {
   view: SessionView;
   programIds: string[];
   cycleIds: string[];
-  sessionTypeIds: string[];
+  sessionTypes: string[];
   statuses: SessionStatusFilter[];
   sorting?: ListSort<SessionSortKey>;
 }
@@ -45,7 +45,7 @@ const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'des
 const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle' };
 export function useSessionControls({
   role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
-  sessionTypes, sessionTypesLoading, sessionTypesError, tableKeys,
+  sessionTypes: sessionTypeOptions, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
   const [search, setSearch] = useState('');
@@ -58,12 +58,12 @@ export function useSessionControls({
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
-      sessionTypeIds: preferenceIds(sessionTypesLoading || sessionTypesError ? undefined : sessionTypes.map(type => type.id)),
+      sessionTypes: preferenceIds(sessionTypesLoading || sessionTypesError ? undefined : sessionTypeOptions.map(type => type.id)),
       statuses: preferenceOptions(['upcoming', 'completed'] as const),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
     },
   });
-  const { view, programIds, cycleIds, sessionTypeIds, statuses, sorting } = preferences;
+  const { view, programIds, cycleIds, sessionTypes, statuses, sorting } = preferences;
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const applySearch = () => setAppliedSearch(search.trim());
@@ -75,9 +75,9 @@ export function useSessionControls({
   const filterCategories = useMemo(() => [
     { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
     { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
-    { id: 'sessionTypeIds' as const, label: 'Type', options: toFilterOptions(sessionTypes) },
+    { id: 'sessionTypes' as const, label: 'Type', options: toFilterOptions(sessionTypeOptions) },
     { id: 'statuses' as const, label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
-  ], [cycles, programs, sessionTypes]);
+  ], [cycles, programs, sessionTypeOptions]);
 
   const setView = (view: SessionView) => updatePreferences({ view });
   const setSorting = (sorting: ListSort<SessionSortKey>) => updatePreferences({ sorting });
@@ -100,7 +100,7 @@ export function useSessionControls({
         values: {
           programIds,
           cycleIds,
-          sessionTypeIds,
+          sessionTypes,
           statuses,
         },
         definitions: filterCategories,

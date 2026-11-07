@@ -15,7 +15,8 @@ Choose the category that matches your task. Each overview links to focused guide
 | Deploy, verify, or troubleshoot production | [Production](docs/production/README.md) |
 | Follow repository-wide agent instructions | [AGENTS.md](AGENTS.md) |
 
-Keep each rule in its focused guide and link to it elsewhere. Use focused checks
+Keep architecture and process rules in their focused guides and component contracts
+with their source owners. Link to those owners elsewhere. Use focused checks
 while implementing and required GitHub checks to merge into `develop`. Review,
 shipping, and production deployment have separate handoff boundaries;
 deployment requires explicit authorization.

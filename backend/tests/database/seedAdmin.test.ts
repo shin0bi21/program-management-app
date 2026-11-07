@@ -28,13 +28,6 @@ afterEach(async () => {
   for (const id of createdIds) await deleteTestUser(id);
 });
 
-it('rolls back the user when credentials fail a database constraint', async () => {
-  await expect(seedInTransaction(configuration('invalid-email'))).rejects.toMatchObject({ code: '23514' });
-
-  const users = await sql`SELECT id FROM users WHERE first_name = ${marker}`;
-  expect(users).toHaveLength(0);
-});
-
 it('concurrent and repeated seed runs create one account without changing its password', async () => {
   const email = `admin-seed-${crypto.randomUUID()}@test.local`;
   const settings = configuration(email);

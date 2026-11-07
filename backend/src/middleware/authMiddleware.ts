@@ -1,20 +1,24 @@
 import type { Request } from 'express';
 import jwt from 'jsonwebtoken';
-import type { Permission } from '../types/auth';
-import type { AccessTokenPayload } from '../types/auth';
+import type { AccessTokenPayload, Permission } from '../types/auth';
 import { requireEnv } from '../utils/env';
 import { isBlacklisted } from '../services/auth/tokenRevocationService';
+import { isAccountActive } from '../services/auth/accountStatusService';
 import { UnauthorizedError, ForbiddenError } from '../errors';
 import { asyncHandler } from './routeMiddleware';
-import { sql } from '../db/client';
 
 const JWT_SECRET = requireEnv('JWT_SECRET');
 
-// Extend Express Request
+/** Request carrying the access-token identity attached after authentication succeeds. */
 export interface AuthRequest extends Request {
   user?: AccessTokenPayload;
 }
 
+/**
+ * Verifies an access token, rejects revoked tokens or inactive accounts, and attaches its identity.
+ * Account status and revocation are read through auth services; failures reach the global handler.
+ * @example router.use(authenticateToken);
+ */
 export const authenticateToken = asyncHandler(async (req, _res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -36,12 +40,7 @@ export const authenticateToken = asyncHandler(async (req, _res, next) => {
     throw new UnauthorizedError('Token has been revoked');
   }
 
-  const accounts = await sql<{ status: string }[]>`
-    SELECT status FROM user_credentials
-    WHERE user_id = ${verified.userId}
-    LIMIT 1
-  `;
-  if (!accounts.length || accounts[0].status !== 'active') {
+  if (!(await isAccountActive(verified.userId))) {
     throw new ForbiddenError('Account is inactive');
   }
 
@@ -49,19 +48,30 @@ export const authenticateToken = asyncHandler(async (req, _res, next) => {
   next();
 });
 
-// Permission-based authorization — use after authenticateToken
+/**
+ * Requires every listed endpoint capability after authentication; missing capabilities are 403.
+ * @param required - Permissions the authenticated actor must all hold.
+ * @returns Middleware rejecting unauthenticated requests with 401 and continuing authorized requests.
+ * @example router.use(authenticateToken, requirePermission('read:accounts'));
+ */
 export const requirePermission = (...required: Permission[]) =>
   asyncHandler(async (req, _res, next) => {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) throw new UnauthorizedError('Not authenticated');
+    const actor = (req as AuthRequest).user;
+    if (!actor) throw new UnauthorizedError('Not authenticated');
 
-    const hasAll = required.every(p => authReq.user!.permissions.includes(p));
+    const hasAll = required.every(permission => actor.permissions.includes(permission));
     if (!hasAll) throw new ForbiddenError('Insufficient permissions');
 
     next();
   });
 
-// Reference lookups may serve several independently authorized page capabilities.
+/**
+ * Requires at least one listed endpoint capability after authentication; missing capabilities are 403.
+ * Reference lookups may serve several independently authorized page capabilities.
+ * @param required - Alternative permissions, any one of which permits the request.
+ * @returns Middleware rejecting unauthenticated requests with 401 and continuing authorized requests.
+ * @example router.use(authenticateToken, requireAnyPermission('read:programs', 'read:sessions'));
+ */
 export const requireAnyPermission = (...required: Permission[]) =>
   asyncHandler(async (req, _res, next) => {
     const actor = (req as AuthRequest).user;

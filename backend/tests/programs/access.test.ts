@@ -51,7 +51,7 @@ describe('Program authorization before missing-record responses', () => {
   ])('returns the authorized missing-program result for %s', async (actor, status) => {
     const response = await request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${tokens[actor]}`)
-      .send({ programId: missingId, sessionTypeId: '00000000-0000-4000-8000-000000000001',
+      .send({ programId: missingId, sessionType: 'Regular',
         theme: 'Missing program', date: '2026-06-01' });
 
     expect(response.status).toBe(status);

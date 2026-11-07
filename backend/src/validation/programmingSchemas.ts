@@ -1,18 +1,14 @@
+import { SESSION_TYPES } from '../types/programming';
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
 import { isCalendarDate, sessionRangeCalendarDates } from './dateRangeValidation';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
-const weekdaySchema = z.enum([
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-]);
+/**
+ * Parses at most 20 filter values from comma-separated strings or repeated query parameters.
+ * @example commaSeparated(z.string()).parse('a,b') // ['a', 'b']
+ */
 const commaSeparated = <T extends z.ZodType>(schema: T) => z.preprocess(value => {
   if (value === undefined) return [];
   const values = Array.isArray(value) ? value : [value];
@@ -85,7 +81,7 @@ export const withdrawYouthSchema = z.object({
 });
 
 const createSessionBodySchema = z.object({
-  sessionTypeId: z.string().uuid('Invalid session type ID'),
+  sessionType: z.enum(SESSION_TYPES),
   theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
   date: z.iso.date().optional(),
   startTime: timeSchema.optional(),
@@ -93,6 +89,10 @@ const createSessionBodySchema = z.object({
   description: z.string().trim().max(5000).nullable().optional(),
 });
 
+/**
+ * Requires supplied end times to follow start times; omitted values use program defaults later.
+ * @example validSessionTimes({ startTime: '17:00', endTime: '18:00' }) // true
+ */
 const validSessionTimes = (data: { startTime?: string; endTime?: string }) => (
   !data.startTime || !data.endTime || data.endTime > data.startTime
 );
@@ -110,45 +110,13 @@ export const createProgramSessionSchema = z.object({
     .refine(validSessionTimes, sessionTimeError),
 });
 
-export const generateSessionsSchema = z.object({
-  params: programCycleParams,
-  body: z.object({
-    sessionTypeId: z.string().uuid('Invalid session type ID')
-      .default('00000000-0000-4000-8000-000000000001'),
-    theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
-    frequency: z.enum(['once', 'weekly', 'biweekly', 'monthly']),
-    dayOfWeek: weekdaySchema.optional(),
-    dayOfMonth: z.number().int().min(1).max(31).optional(),
-    startsOn: dateSchema,
-    endsOn: dateSchema.optional(),
-    startTime: timeSchema,
-    endTime: timeSchema,
-  }).superRefine((data, context) => {
-    if (data.endTime <= data.startTime) {
-      context.addIssue({ code: 'custom', message: 'End time must be after start time', path: ['endTime'] });
-    }
-    if (data.frequency !== 'once' && !data.endsOn) {
-      context.addIssue({ code: 'custom', message: 'End date is required for recurring activities', path: ['endsOn'] });
-    }
-    if ((data.frequency === 'weekly' || data.frequency === 'biweekly') && !data.dayOfWeek) {
-      context.addIssue({ code: 'custom', message: 'Day of week is required', path: ['dayOfWeek'] });
-    }
-    if (data.frequency === 'monthly' && !data.dayOfMonth) {
-      context.addIssue({ code: 'custom', message: 'Day of month is required', path: ['dayOfMonth'] });
-    }
-    if (data.endsOn && data.endsOn < data.startsOn) {
-      context.addIssue({ code: 'custom', message: 'End date must be on or after start date', path: ['endsOn'] });
-    }
-  }),
-});
-
 export const sessionListQuerySchema = z.object({
   query: z.object({
     start: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'Start must use a supported calendar year').optional(),
     end: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'End must use a supported calendar year').optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
-    sessionTypeIds: commaSeparated(z.string().uuid('Invalid session type ID')),
+    sessionTypes: commaSeparated(z.enum(SESSION_TYPES)),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'], 'date', 'desc'),
@@ -197,7 +165,7 @@ export const moveSessionDateSchema = z.object({
 export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
-    sessionTypeId: z.string().uuid('Invalid session type ID').optional(),
+    sessionType: z.enum(SESSION_TYPES).optional(),
     theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
@@ -294,7 +262,6 @@ export const sessionAttachmentParamsSchema = z.object({
 export type SetProgramCycleInput = z.infer<typeof updateCycleSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
-export type GenerateSessionsInput = z.infer<typeof generateSessionsSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type ProgramCycleQuery = z.infer<typeof programCycleQuerySchema.shape.query>;
 export type ProgramCycleYouthReportQuery = z.infer<typeof programCycleYouthReportSchema.shape.query>;

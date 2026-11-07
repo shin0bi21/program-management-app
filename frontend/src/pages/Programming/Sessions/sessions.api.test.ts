@@ -36,8 +36,8 @@ describe('session API', () => {
   });
 
   it('forwards canonical edit and attendance command responses to their owners', async () => {
-    const saved = { id: 'session-1', theme: 'Authoritative session', attendedCount: 2 };
-    const edit = { sessionTypeId: 'type-1', theme: 'Edited', startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z' };
+    const saved = { id: 'session-1', theme: 'Authoritative session' };
+    const edit = { sessionType: 'Regular', theme: 'Edited', startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z' };
     vi.mocked(apiClient.put).mockResolvedValueOnce({ session: saved });
 
     await expect(updateSession('session-1', edit)).resolves.toEqual({ session: saved });
@@ -50,7 +50,7 @@ describe('session API', () => {
   });
 
   it('creates by program and date so the server resolves the assigned cycle', () => {
-    const data = { programId: 'program-1', sessionTypeId: 'type-1', theme: 'Art', date: '2026-10-27' };
+    const data = { programId: 'program-1', sessionType: 'Regular', theme: 'Art', date: '2026-10-27' };
     createSession(data);
     expect(apiClient.post).toHaveBeenCalledWith('/sessions', data);
   });

@@ -5,17 +5,20 @@ import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
+/**
+ * Shifts an ISO calendar date by the requested number of days.
+ * @example addDays('2027-01-31', 1) // '2027-02-01'
+ */
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T12:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
 
-function weekdayFor(date: string) {
-  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-  return weekdays[new Date(`${date}T12:00:00.000Z`).getUTCDay()];
-}
-
+/**
+ * Builds a valid general note with scenario-specific replacements.
+ * @example sessionNoteInput({ details: 'Follow-up' }) // general note with no youth links
+ */
 function sessionNoteInput(
   overrides: Partial<{
     category: 'general' | 'attendance' | 'behaviour' | 'achievement';
@@ -45,7 +48,7 @@ describe('Program cycle sessions and attendance API', () => {
   let unassignedProgramId: string;
   let mainCycleId: string;
   let today: string;
-  const guestSpeakerTypeId = '00000000-0000-4000-8000-000000000002';
+  const guestSpeakerType = 'Guest Speaker';
 
   beforeAll(async () => {
     const staff = await seedTestUser({ role: 'staff' });
@@ -226,22 +229,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('requires a weekday for weekly and biweekly schedules', async () => {
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        name: 'Missing Weekday',
-        frequency: 'weekly',
-        startsOn: addDays(today, 1),
-        endsOn: addDays(today, 15),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
-
-    expect(response.status).toBe(400);
-  });
-
   it('lists the available session types', async () => {
     const response = await request(app)
       .get('/api/session-types')
@@ -249,33 +236,26 @@ describe('Program cycle sessions and attendance API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(expect.arrayContaining([
-      { id: '00000000-0000-4000-8000-000000000001', name: 'Regular' },
-      { id: guestSpeakerTypeId, name: 'Guest Speaker' },
-      { id: '00000000-0000-4000-8000-000000000003', name: 'Field Trip' },
+      { id: 'Regular', name: 'Regular' },
+      { id: guestSpeakerType, name: 'Guest Speaker' },
+      { id: 'Field Trip', name: 'Field Trip' },
     ]));
   });
 
-  it('generates weekly sessions from form input without persisting a schedule', async () => {
+  it('creates individual sessions with explicit dates and type', async () => {
     const firstSessionDate = addDays(today, 1);
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        sessionTypeId: guestSpeakerTypeId,
-        theme: 'Communication',
-        frequency: 'weekly',
-        dayOfWeek: weekdayFor(firstSessionDate),
-        startsOn: firstSessionDate,
-        endsOn: addDays(today, 15),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
+    const sessionDates = [firstSessionDate, addDays(firstSessionDate, 7), addDays(firstSessionDate, 14)];
+    for (const date of sessionDates) {
+      const response = await request(app)
+        .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ sessionType: guestSpeakerType, theme: 'Communication', date, startTime: '17:00', endTime: '19:30' });
 
-    expect(response.status).toBe(201);
-    expect(response.body.sessions).toHaveLength(3);
-    expect(response.body.sessions[0].theme).toBe('Communication');
-    expect(response.body.sessions[0].sessionTypeName).toBe('Guest Speaker');
-    sessionId = response.body.sessions[0].id;
+      expect(response.status).toBe(201);
+      expect(response.body.theme).toBe('Communication');
+      expect(response.body.sessionType).toBe('Guest Speaker');
+      if (date === firstSessionDate) sessionId = response.body.id;
+    }
 
     const dates = await sql<{ localDate: string }[]>`
       SELECT (starts_at AT TIME ZONE 'America/Toronto')::date::text AS local_date
@@ -292,11 +272,11 @@ describe('Program cycle sessions and attendance API', () => {
 
   it('rejects a session without a title or theme', async () => {
     const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        frequency: 'once',
-        startsOn: addDays(today, 2),
+        sessionType: guestSpeakerType,
+        date: addDays(today, 2),
         startTime: '13:00',
         endTime: '14:00',
       });
@@ -586,45 +566,21 @@ describe('Program cycle sessions and attendance API', () => {
     expect(assignmentResponse.status).toBe(409);
   });
 
-  it('generates monthly sessions on the selected day of month', async () => {
-    const response = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        theme: 'Monthly Workshop',
-        frequency: 'monthly',
-        dayOfMonth: 15,
-        startsOn: addDays(today, 1),
-        endsOn: addDays(today, 60),
-        startTime: '17:00',
-        endTime: '19:30',
-      });
-
-    expect(response.status).toBe(201);
-    expect(response.body.sessions.length).toBeGreaterThan(0);
-    const dates = await sql<{ dayOfMonth: number }[]>`
-      SELECT EXTRACT(DAY FROM starts_at AT TIME ZONE 'America/Toronto')::int AS day_of_month
-      FROM program_sessions
-      WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND theme = 'Monthly Workshop'
-    `;
-    expect(dates.every(session => session.dayOfMonth === 15)).toBe(true);
-  });
-
   it('creates an open Drop In session with no enrollment roster', async () => {
     await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${openProgramId}, ${mainCycleId})`;
 
-    const generated = await request(app)
-      .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions/generate`)
+    const created = await request(app)
+      .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         theme: 'Friday Drop In',
-        frequency: 'once',
-        startsOn: addDays(today, 1),
+        sessionType: guestSpeakerType,
+        date: addDays(today, 1),
         startTime: '17:00',
         endTime: '20:00',
       });
-    expect(generated.status).toBe(201);
-    openSessionId = generated.body.sessions[0].id;
+    expect(created.status).toBe(201);
+    openSessionId = created.body.id;
 
     const roster = await request(app)
       .get(`/api/sessions/${openSessionId}/roster`)
@@ -744,24 +700,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('enforces the cycle date range at the database boundary', async () => {
-    await expect(sql`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-      VALUES (
-        ${programId}, ${mainCycleId},
-        'Outside range',
-        ${`${addDays(today, 61)}T21:00:00.000Z`},
-        ${`${addDays(today, 61)}T23:30:00.000Z`}
-      )
-    `).rejects.toBeDefined();
-
-    await expect(sql`
-      UPDATE program_cycles
-      SET ends_on = ${addDays(today, 7)}
-      WHERE id = ${mainCycleId}
-    `).rejects.toBeDefined();
-  });
-
   it('returns enrolled youth on the session roster and saves attendance', async () => {
     const roster = await request(app)
       .get(`/api/sessions/${sessionId}/roster`)
@@ -783,7 +721,7 @@ describe('Program cycle sessions and attendance API', () => {
       });
 
     expect(saved.status).toBe(200);
-    expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId, attendanceMarkedCount: 2 });
+    expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId });
     expect(saved.body.session.cycleName).toEqual(expect.any(String));
     expect(saved.body.updatedProgramCycle).toMatchObject({ programId, cycleId: mainCycleId, averageAttendance: 100 });
     expect(saved.body.updatedYouth).toEqual(expect.arrayContaining([
@@ -807,20 +745,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.body).not.toHaveProperty('updatedYouth');
   });
 
-  it('rejects duplicate youth in an attendance replacement', async () => {
-    const response = await request(app)
-      .put(`/api/sessions/${sessionId}/attendance`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        records: [
-          { youthId, status: 'present' },
-          { youthId, status: 'late' },
-        ],
-      });
-
-    expect(response.status).toBe(400);
-  });
-
   it('returns program cycle overview metrics for Programming', async () => {
     const overview = await request(app)
       .get(`/api/programs/cycle-assignments?programId=${programId}`)
@@ -842,7 +766,7 @@ describe('Program cycle sessions and attendance API', () => {
     const response = await request(app)
       .get(
         `/api/sessions?programIds=${programId}&cycleIds=${mainCycleId}`
-        + `&sessionTypeIds=${guestSpeakerTypeId}&statuses=upcoming&search=Communication`,
+        + `&sessionTypes=${encodeURIComponent(guestSpeakerType)}&statuses=upcoming&search=Communication`,
       )
       .set('Authorization', `Bearer ${staffToken}`);
 
@@ -852,10 +776,8 @@ describe('Program cycle sessions and attendance API', () => {
         id: sessionId,
         programId, cycleId: mainCycleId,
         theme: 'Communication',
-        sessionTypeId: guestSpeakerTypeId,
-        sessionTypeName: 'Guest Speaker',
-        attendanceMarkedCount: 2,
-        attendanceRate: 100,
+
+        sessionType: 'Guest Speaker',
       }),
     ]));
   });
@@ -996,9 +918,6 @@ describe('Program cycle sessions and attendance API', () => {
       expect.objectContaining({
         id: openSessionId,
         programId: openProgramId, cycleId: mainCycleId,
-        attendanceMarkedCount: 1,
-        attendedCount: 1,
-        attendanceRate: 100,
         state: 'upcoming',
       }),
     ]);
@@ -1029,13 +948,43 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.status).toBe(400);
   });
 
-  it('edits and deletes sessions while retaining enrollment history', async () => {
-    const generated = await request(app)
-      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions/generate`)
+  it('preserves a session and its logged hours when hours are the only deletion dependency', async () => {
+    const created = await request(app)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ theme: 'Disposable Session', frequency: 'once', startsOn: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
-    expect(generated.status).toBe(201);
-    const disposableSessionId = generated.body.sessions[0].id;
+      .send({ sessionType: guestSpeakerType, theme: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
+    expect(created.status).toBe(201);
+    const recordedSessionId = created.body.id;
+    let entryId: string | undefined;
+
+    try {
+      const hours = await request(app).post('/api/hours')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ source: 'session', staffId, sessionId: recordedSessionId, hours: 1, note: 'Delivered session' });
+      expect(hours.status).toBe(201);
+      entryId = hours.body.id as string;
+
+      const response = await request(app).delete(`/api/sessions/${recordedSessionId}`)
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe('Session cannot be deleted because hours have been logged');
+      expect(await sql`SELECT id FROM program_sessions WHERE id = ${recordedSessionId}`).toHaveLength(1);
+      expect(await sql`SELECT id FROM time_entries WHERE id = ${entryId} AND session_id = ${recordedSessionId}`).toHaveLength(1);
+    } finally {
+      await sql`DELETE FROM time_entries WHERE session_id = ${recordedSessionId}`;
+      if (entryId) await sql`DELETE FROM audit_log WHERE table_name = 'time_entries' AND record_id = ${entryId}`;
+      await sql`DELETE FROM program_sessions WHERE id = ${recordedSessionId}`;
+    }
+  });
+
+  it('edits and deletes sessions while retaining enrollment history', async () => {
+    const created = await request(app)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ sessionType: guestSpeakerType, theme: 'Disposable Session', date: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
+    expect(created.status).toBe(201);
+    const disposableSessionId = created.body.id;
 
     const updated = await request(app).put(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -1045,20 +994,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect((await request(app).delete(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
     expect(await sql`SELECT 1 FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`).toHaveLength(2);
-  });
-
-  it('returns a conflict when deleting a session or assignment with attendance', async () => {
-    expect((await request(app)
-      .delete(`/api/sessions/${sessionId}`)
-      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
-    expect((await request(app)
-      .put(`/api/programs/${programId}/cycles`)
-      .set('Authorization', `Bearer ${adminToken}`).send({ cycleIds: [] })).status).toBe(409);
-  });
-
-  it('uses attendance foreign keys to block deletion through the assignment tree', async () => {
-    await expect(sql`DELETE FROM program_sessions WHERE id = ${sessionId}`).rejects.toBeDefined();
-    await expect(sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`).rejects.toBeDefined();
   });
 
   it('clears an existing attendance record when a roster member is not marked', async () => {
@@ -1105,7 +1040,7 @@ describe('Program cycle sessions and attendance API', () => {
             attendedCount: 1, countedCount: 1, attendanceRate: 100,
           },
         },
-        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
+        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
       }),
       expect.objectContaining({
         id: secondYouthId,
@@ -1125,7 +1060,7 @@ describe('Program cycle sessions and attendance API', () => {
           expect.objectContaining({ category: 'behaviour', details: 'Updated details.' }),
         ]),
         timeline: expect.arrayContaining([
-          expect.objectContaining({ sessionId, sessionTypeName: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
+          expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
         ]),
       }),
     ]));

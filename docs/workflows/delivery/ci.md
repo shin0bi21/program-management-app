@@ -114,13 +114,24 @@ Before changing CI:
 5. Inspect the first GitHub run at job level; local checks cannot fully verify triggers, services, permissions, caches, or rulesets.
 6. Update this guide when workflow ownership, routing, gates, or operation changes.
 
-Use the [CI History Report](reports.md#ci-history-report) to compare completed
-check timings, runner consumption, and reliability. Record comparable sample
-sizes and date windows before claiming an improvement.
+Use the [CI history report](../../../scripts/reports/ci-history-report.ts) to compare completed
+check timings, runner consumption, and reliability. Development reports include
+job phases, executed full/related test scope, suite and case totals, and per-attempt
+PR and head-commit evidence. Missing or expired logs retain timings with unknown
+scope and counts. Use explicit UTC date windows and `--dev --change SHA` to split
+runs by whether their head contains a cleanup commit; merge dates alone do not
+establish inclusion. Squash source PRs can contain equivalent changes without
+containing the squash merge commit. Output ordering and classification follow
+fixed rules, but GitHub history remains live as runs complete or logs expire.
+
+Compare the same job and scope with adequate sample sizes before claiming an
+improvement. Related runs can select different suites, and full suites can change
+between commits. Phase medians describe runner time and do not add up to workflow
+wall time because jobs run concurrently.
 
 ## Dependency Updates
 
 [Dependabot](../../../.github/dependabot.yml) opens weekly updates targeting
-`develop` for root, backend, and frontend npm packages, GitHub Actions, and
+`develop` for root, backend, frontend, and docs npm packages, GitHub Actions, and
 Docker images. Dependency Review and CodeQL workflows are not configured;
 any future scans should remain outside the production deployment path.

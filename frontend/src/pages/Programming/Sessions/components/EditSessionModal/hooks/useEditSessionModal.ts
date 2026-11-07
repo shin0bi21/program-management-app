@@ -10,7 +10,7 @@ import { useSessionTypes } from '../../../hooks/data/useSessionTypes';
 export function useEditSessionModal(session: ProgramSession | null, onUpdated: (result: UpdatedSessionResult) => void | Promise<void>, timezone = 'America/Toronto') {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const [sessionTypeId, setSessionTypeId] = useState('');
+  const [sessionType, setSessionType] = useState('');
   const { sessionTypes } = useSessionTypes();
   const { tryLock, unlock } = useSubmitLock();
 
@@ -18,7 +18,7 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
     if (!session) return;
     setStatus('idle');
     setStatusMessage('');
-    setSessionTypeId(session.sessionTypeId);
+    setSessionType(session.sessionType);
     unlock();
   }, [session, unlock]);
 
@@ -37,7 +37,7 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
       if (endTime <= startTime) throw new Error('End time must be after start time.');
 
       const saved = await updateSession(session.id, {
-        sessionTypeId,
+        sessionType,
         theme: String(form.get('theme')).trim(),
         startsAt: sessionInstant(date, startTime, timezone),
         endsAt: sessionInstant(date, endTime, timezone),
@@ -57,8 +57,8 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
     status,
     statusMessage,
     submissionComplete: status === 'submitting' || status === 'success',
-    sessionTypeId,
-    setSessionTypeId,
+    sessionType,
+    setSessionType,
     sessionTypes,
     submit,
   };

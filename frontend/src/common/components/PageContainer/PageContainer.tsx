@@ -4,11 +4,11 @@ import type { PageControls, PageViewControls } from './PageContainer.types';
 import ColumnVisibilityMenu from '../ColumnVisibilityMenu/ColumnVisibilityMenu';
 import FilterCard from '../FilterCard/FilterCard';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
-import PageBody from '../PageBody/PageBody';
 import PageHeader from '../PageHeader/PageHeader';
 import PageMessageOverlay, { type PageMessageValue } from '../PageMessageOverlay/PageMessageOverlay';
 import SearchInput from '../SearchInput/SearchInput';
 import ViewMenu from '../ViewMenu/ViewMenu';
+import './PageContainer.css';
 
 interface PageSearch {
   label: string;
@@ -38,6 +38,19 @@ const VIEW_OPTIONS = [
   { value: 'table' as const, label: 'Table' },
 ];
 
+/**
+ * Displays a collection page with its controls, summary cards, and table or calendar.
+ * While saved controls restore, actions and messages remain available but controls,
+ * summary cards, and both views stay unmounted.
+ * @param props.controls - Saved-input readiness, search, filters, column visibility, and the current view; omitted controls mean ready.
+ * @param props.ariaLabel - Name announced for the page's main content.
+ * @param props.dashboard - Summary cards displayed above the table/calendar.
+ * @param props.columns - Table columns offered in the visibility menu.
+ * @param props.search - Search label and placeholder; shown only when search controls are also supplied.
+ * @param props.table - The page's table.
+ * @param props.calendar - The page's alternative calendar view, when available.
+ * @example With controls.view='calendar', the calendar mounts and the table stays unmounted.
+ */
 export default function PageContainer<T>({
   title,
   ariaLabel,
@@ -59,10 +72,11 @@ export default function PageContainer<T>({
   const searchControls = controls?.search;
 
   const activeView = controls?.view ?? 'table';
-  const content = activeView === 'calendar' ? { calendar } : { table };
+  const content = activeView === 'calendar' ? calendar : table;
+  const contentClassName = activeView === 'calendar' ? 'page-calendar' : 'page-table';
 
   return (
-    <main className={`page-container${className ? ` ${className}` : ''}`} data-view={dataView}>
+    <main className={`page-container${className ? ` ${className}` : ''}`} aria-label={ariaLabel} data-view={dataView}>
       <PageHeader
         title={title}
         actions={actions}
@@ -95,9 +109,12 @@ export default function PageContainer<T>({
           : undefined}
       />
       <PageMessageOverlay messages={messages} />
-      {/* Keep view queries and dashboard effects unmounted until their saved inputs are ready. */}
+      {/* Wait for saved controls before mounting views that fetch data from those inputs. */}
       {ready ? (
-        <PageBody ariaLabel={ariaLabel} dashboard={dashboard} {...content} />
+        <>
+          {dashboard != null && <aside className="page-dashboard">{dashboard}</aside>}
+          <div className={contentClassName}>{content}</div>
+        </>
       ) : (
         <p role="status" className={loadingSpinner ? 'page-loading-status' : undefined}>
           {loadingSpinner && <LoadingSpinner />}

@@ -12,15 +12,23 @@ interface ModalProps {
   maxWidth?: string;
   status?: 'idle' | 'submitting' | 'success' | 'error';
   statusMessage?: string;
-  // Auto-close after successDelay ms when status becomes 'success'. Defaults to 1000; 0 disables it.
   successDelay?: number;
-  // Disable the X close button (e.g. while a request is in-flight)
   disableClose?: boolean;
-  // Keep dialog semantics and focus management without offering dismissal.
   dismissible?: boolean;
   ariaDescribedBy?: string;
 }
 
+/**
+ * Displays a dialog that keeps focus inside it and restores focus when it closes.
+ * @param props.status - Submission feedback; submitting/success block user dismissal.
+ * @param props.statusMessage - Feedback text shown above the dialog content.
+ * @param props.successDelay - Milliseconds before closing after success (1000); 0 disables it.
+ * @param props.disableClose - Blocks the close button and Escape; callers must also lock custom footer actions.
+ * @param props.dismissible - Whether the close button and Escape dismissal are available.
+ * @param props.ariaDescribedBy - ID of an existing element describing the dialog.
+ * @param props.onClose - Requests closing; the caller changes isOpen or unmounts the dialog.
+ * @example <Modal isOpen title="Edit task" onClose={close} status={workflow.status} footer={footer}>{form}</Modal>
+ */
 export default function Modal({
   isOpen,
   onClose,
@@ -38,20 +46,21 @@ export default function Modal({
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const titleId = useId();
   const closeDisabled = !dismissible || disableClose || status === 'submitting' || status === 'success';
-  // Keep a ref to onClose so the timer always calls the latest version
-  // without needing it as an effect dependency
+
+  // Use the latest close callback without restarting the success countdown.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const containerRef = useModalFocusTrap({ isOpen, disableClose: closeDisabled, onClose });
 
   useEffect(() => {
-    if (status === 'success' && successDelay > 0) {
+    if (isOpen && status === 'success' && successDelay > 0) {
       timerRef.current = setTimeout(() => onCloseRef.current(), successDelay);
     }
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [status, successDelay]);
+  }, [isOpen, status, successDelay]);
 
   if (!isOpen) return null;
 
@@ -69,7 +78,17 @@ export default function Modal({
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          {dismissible && <button type="button" className="modal-close" aria-label="Close" onClick={onClose} disabled={closeDisabled}>&times;</button>}
+          {dismissible && (
+            <button
+              type="button"
+              className="modal-close"
+              aria-label="Close"
+              onClick={onClose}
+              disabled={closeDisabled}
+            >
+              &times;
+            </button>
+          )}
         </div>
 
         {status !== 'idle' && (

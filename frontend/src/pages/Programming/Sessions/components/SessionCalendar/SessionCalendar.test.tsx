@@ -78,7 +78,7 @@ describe('SessionCalendar', () => {
   it('loads complete filters with a Toronto range, groups sessions by program and resolves buffered selection records', async () => {
     const filters: SessionListFilters = {
       programIds: ['program-1', 'program-2'], cycleIds: ['cycle-1'],
-      sessionTypeIds: ['type-1'], statuses: ['upcoming'], search: 'Communication',
+      sessionTypes: ['Regular'], statuses: ['upcoming'], search: 'Communication',
     };
     const otherSession = makeProgramSession({ id: 'session-2', programId: 'program-2' });
     api.getSessions.mockResolvedValue([session, otherSession]);

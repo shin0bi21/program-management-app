@@ -19,6 +19,15 @@ interface ColumnVisibilityMenuProps<T> {
   label?: string;
 }
 
+/**
+ * Displays controlled column visibility choices and prevents hiding the final visible hideable column.
+ * Changes leave the menu open; the caller supplies the updated hidden column IDs.
+ * @param props.columns - Flat columns with stable IDs and string titles; enableHiding=false excludes a column.
+ * @param props.hiddenColumnKeys - IDs of columns currently hidden, such as ['notes'].
+ * @param props.onHiddenColumnKeysChange - Receives the requested list of hidden column IDs.
+ * @param props.label - Trigger text, accessible name, and menu heading; defaults to 'Columns'.
+ * @example Unchecking Notes adds 'notes' to the hidden columns while leaving other columns visible.
+ */
 export default function ColumnVisibilityMenu<T>({
   columns,
   hiddenColumnKeys,
@@ -43,12 +52,20 @@ export default function ColumnVisibilityMenu<T>({
     column => !hiddenColumnKeys.includes(getTableColumnId(column)),
   ).length;
 
+  /**
+   * Requests a visibility toggle unless it would hide the last hideable column.
+   * @param key - ID of one of this menu's hideable columns.
+   * @example Toggling a hidden 'notes' removes it from hiddenColumnKeys.
+   */
   const toggleColumn = (key: string) => {
     const hidden = hiddenColumnKeys.includes(key);
     if (!hidden && visibleCount === 1) return;
-    onHiddenColumnKeysChange(hidden
+
+    const nextHiddenColumnKeys = hidden
       ? hiddenColumnKeys.filter(columnKey => columnKey !== key)
-      : [...hiddenColumnKeys, key]);
+      : [...hiddenColumnKeys, key];
+
+    onHiddenColumnKeysChange(nextHiddenColumnKeys);
   };
 
   return (
@@ -64,6 +81,7 @@ export default function ColumnVisibilityMenu<T>({
             const key = getTableColumnId(column);
             const visible = !hiddenColumnKeys.includes(key);
             const disableHide = visible && visibleCount === 1;
+
             return (
               <button key={key} type="button" role="menuitemcheckbox" aria-checked={visible} disabled={disableHide} className="column-visibility-menu__option" onClick={() => toggleColumn(key)}>
                 <span className={`column-visibility-menu__checkbox${visible ? ' checked' : ''}`}>{visible && <FontAwesomeIcon icon={faCheck} />}</span>

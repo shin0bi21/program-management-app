@@ -36,7 +36,7 @@ describe('useSessionActions', () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
       ...session, theme: 'Changed after the client read', cycleName: 'Winter', cycleId: 'cycle-2',
-      startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z', attendedCount: 4,
+      startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z',
     });
     const { result, client, invalidate, calendar, other, onSessionSynced } = renderActions(session);
     let finish!: (value: UpdatedSessionResult) => void;
@@ -59,7 +59,8 @@ describe('useSessionActions', () => {
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
     expect(result.current.pendingSessionIds).toEqual([]);
-    expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['programs', 'cycle-assignments'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', saved.id, 'roster'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 
@@ -93,7 +94,7 @@ describe('useSessionActions', () => {
 
   it('reconciles the canonical attendance response without invalidating table collections', () => {
     const { result, client, invalidate } = renderActions();
-    const session = makeProgramSession({ attendedCount: 2, attendanceMarkedCount: 3, attendanceRate: 66.7 });
+    const session = makeProgramSession({ theme: 'Saved attendance session' });
     const youth = makeYouthProfile({ lastAttendedOn: '2026-08-10' });
     const cycle: ProgramCycleAssignment = {
       programId: 'program-1', programName: 'Future Ready', enrollmentRequired: true,

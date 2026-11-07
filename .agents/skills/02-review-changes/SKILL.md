@@ -39,7 +39,7 @@ Follow the narrowest applicable contract; keep the rules in those owners:
 
 | Review surface | Contract |
 |---|---|
-| Frontend structure and composition | [Ownership](../../../docs/frontend/architecture/ownership.md), [scaffolding](../../../docs/frontend/architecture/scaffolding.md#maintain-the-pattern), and the focused [frontend guide](../../../docs/frontend/README.md#find-the-right-guide) |
+| Frontend structure and composition | [Ownership](../../../docs/frontend/01-ownership.md), [scaffolding](../../../docs/frontend/04-scaffolding.md#maintain-the-pattern), and the focused [frontend guide](../../../docs/frontend/README.md#find-the-right-guide) |
 | Backend behavior and layers | [Backend routing](../../../docs/backend/README.md), then the affected policy/service/data/API guide |
 | Naming, expressions, function phases, spacing | [Code Readability](../../../docs/workflows/readability.md) |
 | Function purposes, contracts, examples, comments | [Code Documentation](../../../docs/workflows/documentation.md) |

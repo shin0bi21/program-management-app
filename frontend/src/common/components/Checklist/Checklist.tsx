@@ -17,6 +17,16 @@ interface ChecklistProps {
   search?: boolean;
 }
 
+/**
+ * Displays controlled checkbox choices, optionally filtered by a local search field.
+ * In a floating panel, search requires keyboardMode="form" and the default inMenu=false.
+ * @param props.options - Available choices with unique stored values and displayed labels.
+ * @param props.value - Values of the checked choices.
+ * @param props.onToggle - Receives the activated choice value; the caller updates value to change its checked state.
+ * @param props.inMenu - Uses checkbox menu items; the caller supplies the surrounding menu and its keyboard navigation.
+ * @param props.dynamicItems - Reveals 25 choices at a time as the user scrolls or tabs.
+ * @example <Checklist options={[{ value: "fall", label: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
+ */
 export default function Checklist({
   options,
   value,

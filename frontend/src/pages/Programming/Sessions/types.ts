@@ -1,23 +1,24 @@
 import type { DateRange } from '../../../common/utils/dateRange';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
 
+export type SessionTypeValue = 'Regular' | 'Guest Speaker' | 'Field Trip';
+
 export interface ProgramSession {
   id: string;
-  cycleId: string;
-  sessionTypeId: string;
-  sessionTypeName: string;
   theme: string;
-  cycleName: string;
-  programId: string;
-  programName: string;
-  enrollmentRequired: boolean;
   startsAt: string;
   endsAt: string;
   cancelledAt: string | null;
   description: string | null;
-  attendanceMarkedCount: number;
-  attendedCount: number;
-  attendanceRate: number | null;
+  cycleId: string;
+  sessionType: SessionTypeValue;
+
+  cycleName: string;
+
+  programId: string;
+  programName: string;
+  enrollmentRequired: boolean;
+
   state: 'upcoming' | 'completed' | 'cancelled';
 }
 
@@ -25,7 +26,7 @@ export interface SessionListFilters {
   dateRange?: DateRange;
   programIds?: string[];
   cycleIds?: string[];
-  sessionTypeIds?: string[];
+  sessionTypes?: string[];
   statuses?: SessionStatusFilter[];
   search?: string;
 }
@@ -40,7 +41,7 @@ export interface SessionType {
   name: string;
 }
 
-export const REGULAR_SESSION_TYPE_ID = '00000000-0000-4000-8000-000000000001';
+export const DEFAULT_SESSION_TYPE = 'Regular';
 
 export interface SessionRosterMember {
   youthId: string;

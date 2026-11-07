@@ -1,19 +1,16 @@
 import { randomUUID } from 'crypto';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { ValidationError } from '../errors';
+import { createValidationError } from '../errors';
 
 // ============================================================================
 // ASYNC HANDLER
 // ============================================================================
 
 /**
- * Wraps an async route handler so rejected promises are forwarded to the
- * Express error handler via `next(err)`.
- *
- * Express 4 does not catch async errors natively — every async handler must
- * be wrapped or errors will be silently swallowed.
- *
+ * Forwards an async handler's rejected promise to Express 4's error middleware.
+ * @param fn - Async request handler whose rejection must reach the global error handler.
+ * @returns Express middleware forwarding rejected promises to next.
  * @example
  * router.get('/', asyncHandler(handleGetUsers));
  */
@@ -28,16 +25,15 @@ export const asyncHandler =
 // ============================================================================
 
 /**
- * Assigns a request ID to every incoming request.
- *
- * Stores the ID on `res.locals.requestId` and echoes it as `X-Request-ID`.
- * If the client supplies a well-formed `X-Request-ID` header (≤128
- * alphanumeric/hyphen/underscore chars) it is reused; otherwise a fresh UUID
- * is generated. Must be registered as the first middleware in `index.ts`.
+ * Stores a correlation ID in `res.locals.requestId` and the `X-Request-ID` header.
+ * Reuses incoming IDs of 1–128 ASCII letters, digits, hyphens, or underscores;
+ * otherwise generates a UUID. Register first so later middleware can use the ID.
+ * @example app.use(requestId); // Incoming X-Request-ID: retry-42 is echoed as retry-42.
  */
 export function requestId(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.headers['x-request-id'] as string | undefined;
   const id = incoming && /^[\w-]{1,128}$/.test(incoming) ? incoming : randomUUID();
+
   res.locals.requestId = id;
   res.setHeader('X-Request-ID', id);
   next();
@@ -48,18 +44,20 @@ export function requestId(req: Request, res: Response, next: NextFunction): void
 // ============================================================================
 
 /**
- * Middleware that validates `req.body`, `req.query`, and `req.params` against
- * a Zod schema. Throws `ValidationError` (400 with field-level details) on
- * failure — caught and formatted by `handleError`.
+ * Parses request input and replaces the body, query, and params fields present in the output.
+ * Forwards Zod failures as HTTP 400 errors with dotted field paths; other failures propagate.
+ * @param schema - Schema for the combined `{ body, query, params }` shape; output must be an object.
+ * @returns Middleware that waits for async parsing before replacing input and continuing.
+ * @example router.post('/example', validateRequest(exampleSchema), asyncHandler(controller));
  */
 export const validateRequest = (schema: ZodSchema) =>
   asyncHandler(async (req, _res, next) => {
     try {
-      const parsed = await schema.parseAsync({
+      const parsed = (await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
-      }) as {
+      })) as {
         body?: Request['body'];
         query?: Request['query'];
         params?: Request['params'];
@@ -68,6 +66,7 @@ export const validateRequest = (schema: ZodSchema) =>
       if ('body' in parsed) req.body = parsed.body;
       if ('query' in parsed) req.query = parsed.query ?? {};
       if ('params' in parsed) req.params = parsed.params ?? {};
+
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -75,8 +74,10 @@ export const validateRequest = (schema: ZodSchema) =>
           field: issue.path.join('.'),
           message: issue.message,
         }));
-        throw new ValidationError('Validation failed', details);
+
+        throw createValidationError(details);
       }
+
       throw error;
     }
   });

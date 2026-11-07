@@ -16,7 +16,12 @@ interface SelectOptionsProps {
   'aria-invalid'?: boolean | 'false' | 'true';
 }
 
-// Mounting with the popup gives every open session fresh search and navigation state.
+/**
+ * Displays the searchable option list and actions inside an open FloatingSelect popup.
+ * Unmount when the popup closes so reopening resets search and highlights the selected option.
+ * @param props.onSelect - Reports a chosen value; the caller controls selection and dismissal.
+ * @example With value="two", reopening shows all choices and highlights the option with value "two".
+ */
 export default function SelectOptions({
   id,
   label,
@@ -43,6 +48,10 @@ export default function SelectOptions({
   } = useSelectOptions({ id, value, options });
   const actions = activeOption && optionActions ? optionActions(activeOption) : [];
 
+  /**
+   * Selects an existing highlight on Enter or moves it with vertical arrows.
+   * @example Enter with no matching options never emits a new free-text value.
+   */
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -56,6 +65,10 @@ export default function SelectOptions({
     moveActiveOption(event.key === 'ArrowDown' ? 1 : -1);
   };
 
+  /**
+   * Dismisses this session before invoking an option or global action.
+   * @example Add program closes the selector before its caller opens an editor.
+   */
   const runAction = (onAction: () => void) => {
     onClose();
     onAction();

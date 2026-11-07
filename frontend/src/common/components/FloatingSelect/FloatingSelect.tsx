@@ -38,6 +38,17 @@ interface FloatingSelectProps {
   optionActions?: (option: FloatingSelectOption) => FloatingSelectOptionAction[];
 }
 
+/**
+ * Displays a controlled single-choice field with an optional searchable popup.
+ * @param props.id - Connects the button to its form label.
+ * @param props.value - Selected option value; the placeholder appears when no option matches.
+ * @param props.options - Available choices with unique values, such as programs or staff members.
+ * @param props.onChange - Receives the chosen value before the popup closes; update value to display it.
+ * @param props.search - Adds a field to find an existing option; typing alone does not select it.
+ * @param props.action - Optional action above the choices; closes the popup before invoking onSelect.
+ * @param props.optionActions - Extra actions for an option, such as Edit or Delete.
+ * @example <FloatingSelect id="program" value={programId} options={programs} onChange={setProgramId} search />
+ */
 export default function FloatingSelect({
   id,
   value,
@@ -61,9 +72,16 @@ export default function FloatingSelect({
     { widthEstimate: triggerWidth ?? 240, heightEstimate: 260 },
   );
   const selected = options.find(option => option.value === value);
-  const fieldLabel = Array.from(triggerRef.current?.labels ?? []).map(item => item.textContent).join(' ');
+  const fieldLabel = Array.from(triggerRef.current?.labels ?? [])
+    .map(item => item.textContent)
+    .join(' ');
   const label = ariaLabel ?? (fieldLabel || placeholder);
 
+  /**
+   * Reports the chosen option value and dismisses this popup session.
+   * @param nextValue - Value of the option chosen from the displayed choices.
+   * @example select('program-1') calls onChange('program-1') before closing.
+   */
   const select = (nextValue: string) => {
     onChange(nextValue);
     close();

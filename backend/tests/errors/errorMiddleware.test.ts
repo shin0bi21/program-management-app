@@ -1,22 +1,20 @@
 import express from 'express';
+import createError from 'http-errors';
 import supertest from 'supertest';
-import type { NextFunction, Request, Response } from 'express';
-import { BadRequestError, errorForLog, ConflictError, DbConnectionError, InternalServerError, PayloadTooLargeError, ValidationError, isUniqueViolation } from '../../src/errors';
+import { z } from 'zod';
+import type { Request, Response } from 'express';
+import {
+  BadRequestError,
+  classifyError,
+  errorForLog,
+  ConflictError,
+  InternalServerError,
+  PayloadTooLargeError,
+  ServiceUnavailableError,
+} from '../../src/errors';
 import { uploadFile } from '../../src/middleware/fileUpload';
-import { requestId } from '../../src/middleware/routeMiddleware';
-import { classifyError, handleError } from '../../src/middleware/errorMiddleware';
-
-/** Creates a response double with captured status/body calls. @example response().locals.requestId // 'request-123' */
-function response(requestId = 'request-123') {
-  const res = {
-    headersSent: false,
-    locals: { requestId },
-    status: jest.fn(),
-    json: jest.fn(),
-  };
-  res.status.mockReturnValue(res);
-  return res as unknown as Response;
-}
+import { requestId, validateRequest } from '../../src/middleware/routeMiddleware';
+import { handleError } from '../../src/middleware/errorMiddleware';
 
 const request = {
   method: 'POST',
@@ -39,7 +37,7 @@ describe('error middleware logging', () => {
     const original = new Error('database lookup exploded');
     const res = response();
 
-    handleError(original, request, res, jest.fn() as NextFunction);
+    handleError(original, request, res, jest.fn());
 
     expect(console.error).toHaveBeenCalledWith(
       '[request-123] POST /api/example 500 InternalServerError: An unexpected error occurred',
@@ -50,18 +48,18 @@ describe('error middleware logging', () => {
   });
 
   it('logs validation failures without dumping field details', () => {
-    const validation = new ValidationError('Validation failed', [
-      { field: 'body.authId', message: 'Invalid identifier' },
-    ]);
+    const validation = createError(400, 'Validation failed', {
+      details: [{ field: 'body.authId', message: 'Invalid identifier' }],
+    });
     const res = response('validation-456');
 
-    handleError(validation, request, res, jest.fn() as NextFunction);
+    handleError(validation, request, res, jest.fn());
 
     expect(console.warn).toHaveBeenCalledWith(
-      '[validation-456] POST /api/example 400 ValidationError: Validation failed',
+      '[validation-456] POST /api/example 400 BadRequestError: Validation failed',
       errorForLog(validation),
     );
-    expect(validation.stack).toContain('ValidationError');
+    expect(validation.stack).toContain('BadRequestError');
     expect(res.json).toHaveBeenCalledWith({
       error: 'Validation failed',
       details: [{ field: 'body.authId', message: 'Invalid identifier' }],
@@ -70,15 +68,94 @@ describe('error middleware logging', () => {
   });
 });
 
+describe('HTTP error integration', () => {
+  it('preserves library errors and their contextual client messages', () => {
+    const error = new createError.NotFound('Lead not found');
+    const res = response();
+
+    expect(classifyError(error)).toBe(error);
+    handleError(error, request, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Lead not found', requestId: 'request-123' });
+  });
+
+  it('passes through factory-decorated errors with their metadata', () => {
+    const original = Object.assign(new Error('Conflicting operation'), {
+      code: '23505',
+      constraint_name: 'user_credentials_email_key',
+    });
+    const error = createError(409, original, {
+      details: [{ field: 'body.email', message: 'Already in use' }],
+    });
+    const res = response();
+
+    expect(classifyError(error)).toBe(error);
+    handleError(error, request, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Conflicting operation',
+      details: [{ field: 'body.email', message: 'Already in use' }],
+      requestId: 'request-123',
+    });
+  });
+
+  it('returns field details from request validation through the global handler', async () => {
+    const app = express();
+    app.use(requestId);
+    app.use(express.json());
+    const schema = z.object({
+      body: z.object({ email: z.email('Invalid email') }),
+    });
+    app.post('/example', validateRequest(schema), (_req, res) => {
+      res.json({ ok: true });
+    });
+    app.use(handleError);
+
+    const result = await supertest(app).post('/example')
+      .set('X-Request-ID', 'validation-request')
+      .send({ email: 'invalid' });
+
+    expect(result.status).toBe(400);
+    expect(result.body).toEqual({
+      error: 'Validation failed',
+      details: [{ field: 'body.email', message: 'Invalid email' }],
+      requestId: 'validation-request',
+    });
+  });
+
+  it.each([
+    [new createError.InternalServerError('Private diagnostic'), 'An unexpected error occurred'],
+    [new ServiceUnavailableError('Private upstream diagnostic'), 'The server is temporarily unavailable. Please try again shortly.'],
+  ])('preserves the production message policy for %p', (error, expectedMessage) => {
+    const previousEnvironment = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const res = response();
+
+    try {
+      handleError(error, request, res, jest.fn());
+
+      expect(res.status).toHaveBeenCalledWith(error.statusCode);
+      expect(res.json).toHaveBeenCalledWith({ error: expectedMessage, requestId: 'request-123' });
+    } finally {
+      if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousEnvironment;
+    }
+  });
+});
+
 describe('JSON parser failures', () => {
   it.each([
-    ['malformed JSON', '{"password":"synthetic-secret",', 400, 'InvalidJsonError', 'Invalid JSON request body'],
+    ['malformed JSON', '{"password":"synthetic-secret",', 400, 'BadRequestError', 'Invalid JSON request body'],
     ['oversized JSON', JSON.stringify({ value: 'x'.repeat(21 * 1024) }), 413, 'PayloadTooLargeError', 'Request body is too large'],
   ])('normalizes %s through the actual parser and global handler', async (_label, body, status, errorClass, message) => {
     const app = express();
     app.use(requestId);
     app.use(express.json({ limit: '20kb' }));
-    app.post('/example', (_req, res) => { res.json({ ok: true }); });
+    app.post('/example', (_req, res) => {
+      res.json({ ok: true });
+    });
     app.use(handleError);
 
     const result = await supertest(app).post('/example')
@@ -93,6 +170,13 @@ describe('JSON parser failures', () => {
       `[parser-request] POST /example ${status} ${errorClass}: ${message}`,
       expect.any(String),
     );
+
+    const diagnosticOutput = jest.mocked(console.warn).mock.lastCall?.[1] as string;
+    const diagnostic = JSON.parse(diagnosticOutput);
+
+    expect(diagnosticOutput).not.toContain('synthetic-secret');
+    expect(diagnostic).not.toHaveProperty('body');
+    expect(diagnostic).not.toHaveProperty('cause');
   });
 
   it.each([
@@ -109,21 +193,24 @@ describe('JSON parser failures', () => {
   });
 });
 
-
 describe('default error messages and unexpected failures', () => {
   it('provides standard class messages while preserving contextual overrides', () => {
-    expect(new BadRequestError().message).toBe('Invalid request');
-    expect(new PayloadTooLargeError().message).toBe('Request body is too large');
-    expect(new ConflictError().message).toBe('A record with that value already exists');
-    expect(new DbConnectionError().message).toBe('Database connection failed');
     const contextual = new ConflictError('This session already has attendance');
+
+    expect(new BadRequestError().message).toBe('Bad Request');
+    expect(new PayloadTooLargeError().message).toBe('Payload Too Large');
+    expect(new ConflictError().message).toBe('Conflict');
+    expect(new ServiceUnavailableError().message).toBe('Service Unavailable');
+    expect(new InternalServerError().message).toBe('Internal Server Error');
 
     expect(classifyError(contextual)).toBe(contextual);
     expect(contextual.message).toBe('This session already has attendance');
     expect(contextual.statusCode).toBe(409);
   });
 
-  it.each([new Error('')])('gives a message-less unexpected failure a 500 fallback: %p', original => {
+  it('gives a message-less unexpected failure a 500 fallback', () => {
+    const original = new Error('');
+
     const classified = classifyError(original);
 
     expect(classified.statusCode).toBe(500);
@@ -138,7 +225,7 @@ describe('default error messages and unexpected failures', () => {
     const res = response('unexpected-request');
 
     try {
-      handleError(original, request, res, jest.fn() as NextFunction);
+      handleError(original, request, res, jest.fn());
 
       expect(console.error).toHaveBeenLastCalledWith(
         '[unexpected-request] POST /api/example 500 InternalServerError: An unexpected error occurred',
@@ -153,41 +240,13 @@ describe('default error messages and unexpected failures', () => {
   });
 });
 
-describe('database fallbacks and contextual conflicts', () => {
-  it('retains a contextual conflict without replacing its message or cause', () => {
-    const original = Object.assign(new Error('duplicate key'), {
-      code: '23505', constraint_name: 'user_credentials_email_key',
-    });
-    const contextual = new ConflictError('A user with this email already exists', original);
-
-    expect(isUniqueViolation(original, 'user_credentials_email_key')).toBe(true);
-    expect(classifyError(contextual)).toBe(contextual);
-    expect(contextual.cause).toBe(original);
-  });
-
-  it.each([
-    ['23505', 'schools_name_key'],
-    ['23503', 'user_credentials_email_key'],
-    ['23514', 'user_credentials_email_key'],
-  ])('does not mistake %s on %s for a duplicate email', (code, constraintName) => {
-    const failure = Object.assign(new Error('database failure'), { code, constraint_name: constraintName });
-    expect(isUniqueViolation(failure, 'user_credentials_email_key')).toBe(false);
-  });
-
-  it('keeps the generic duplicate fallback for errors not translated by a service', () => {
-    const original = Object.assign(new Error('duplicate key'), { code: '23505' });
-    const classified = classifyError(original);
-
-    expect(classified).toBeInstanceOf(ConflictError);
-    expect(classified.message).toBe('A record with that value already exists');
-    expect(classified.cause).toBe(original);
-  });
+describe('database connection failures', () => {
 
   it.each(['ECONNREFUSED', '57P03', '08006', '53300'])('keeps the connection fallback for %s', code => {
     const original = Object.assign(new Error('database unavailable'), { code });
     const classified = classifyError(original);
 
-    expect(classified).toBeInstanceOf(DbConnectionError);
+    expect(classified).toBeInstanceOf(ServiceUnavailableError);
     expect(classified.statusCode).toBe(503);
     expect(classified.cause).toBe(original);
   });
@@ -200,7 +259,9 @@ describe('multipart parser failures', () => {
   ])('normalizes rejected %s uploads to %i-byte input and status %i', async (field, size, status, message) => {
     const app = express();
     app.use(requestId);
-    app.post('/upload', uploadFile, (_req, res) => { res.json({ ok: true }); });
+    app.post('/upload', uploadFile, (_req, res) => {
+      res.json({ ok: true });
+    });
     app.use(handleError);
 
     const result = await supertest(app).post('/upload')
@@ -212,7 +273,6 @@ describe('multipart parser failures', () => {
   });
 });
 
-
 describe('safe error diagnostics', () => {
   it('keeps codes, constraints and source locations without submitted data in nested causes', () => {
     const original = Object.assign(new Error('password=synthetic-secret'), {
@@ -223,7 +283,7 @@ describe('safe error diagnostics', () => {
       query: 'synthetic-secret',
       parameters: ['synthetic-secret'],
     });
-    const error = new ConflictError('A user with this email already exists', original);
+    const error = Object.assign(new ConflictError('A user with this email already exists'), { cause: original });
 
     const output = errorForLog(error);
 
@@ -240,6 +300,7 @@ describe('safe error diagnostics', () => {
       body: 'synthetic-secret',
     });
     const res = response();
+
     handleError(original, request, res, jest.fn());
     res.headersSent = true;
     handleError(original, request, res, jest.fn());
@@ -247,3 +308,21 @@ describe('safe error diagnostics', () => {
     expect(JSON.stringify(jest.mocked(console.error).mock.calls)).not.toContain('synthetic-secret');
   });
 });
+
+/**
+ * Creates a response double that captures status and JSON writes without sending HTTP data.
+ * @param requestId - Correlation identifier supplied to the handler through response locals.
+ * @returns An Express response double whose status mock supports chaining into json.
+ * @example response('validation-456').locals.requestId // 'validation-456'
+ */
+function response(requestId = 'request-123') {
+  const res = {
+    headersSent: false,
+    locals: { requestId },
+    status: jest.fn(),
+    json: jest.fn(),
+  };
+  res.status.mockReturnValue(res);
+
+  return res as unknown as Response;
+}

@@ -71,7 +71,7 @@ describe('useYouthActions', () => {
   it('reconciles attendance response rows and selection without invalidating table queries', () => {
     const rendered = renderActions();
     const youth = makeYouthProfile();
-    const session = makeProgramSession({ attendedCount: 1 });
+    const session = makeProgramSession({ theme: 'Updated attendance session' });
     const key = ['sessions', 'table'];
     rendered.queryClient.setQueryData(key, { pages: [{ rows: [makeProgramSession()], nextCursor: null }], pageParams: [null] });
     const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries');
@@ -84,6 +84,7 @@ describe('useYouthActions', () => {
     expect(rendered.onYouthReconciled).toHaveBeenCalledWith(youth);
     expect(rendered.queryClient.getQueryData(key)).toEqual({ pages: [{ rows: [session], nextCursor: null }], pageParams: [null] });
     expect(rendered.queryClient.getQueryState(key)?.isInvalidated).toBe(false);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', session.id, 'roster'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'calendar'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
   });
