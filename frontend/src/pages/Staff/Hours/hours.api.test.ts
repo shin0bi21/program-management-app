@@ -7,6 +7,7 @@ import {
   getHoursDashboardData,
   getHoursTableData,
   getHoursReferenceData,
+  getHoursSessions,
   setHours,
   deleteHours,
   updateHoursPlacement,
@@ -25,7 +26,7 @@ describe('hours API', () => {
     getHoursCalendarData(
       {
         staffIds: ['staff-1'], categories: ['meeting'], programIds: ['general', 'program-1'],
-        types: ['task', 'other'], cycleIds: ['cycle-1', 'cycle-2'], search: 'follow up',
+        types: ['task', 'regular'], cycleIds: ['cycle-1', 'cycle-2'], search: 'follow up',
         dateRange: { start: '2026-01-01', end: '2026-12-31' },
       },
       { start: '2026-08-01', end: '2026-08-31' },
@@ -35,7 +36,7 @@ describe('hours API', () => {
 
     expect(apiClient.get).toHaveBeenNthCalledWith(
       1,
-      '/hours/calendar?start=2026-08-01&end=2026-08-31&staffIds=staff-1&categories=meeting&programIds=general%2Cprogram-1&types=task%2Cother&cycleIds=cycle-1%2Ccycle-2&search=follow+up',
+      '/hours/calendar?start=2026-08-01&end=2026-08-31&staffIds=staff-1&categories=meeting&programIds=general%2Cprogram-1&types=task%2Cregular&cycleIds=cycle-1%2Ccycle-2&search=follow+up',
       { signal: controller.signal },
     );
     expect(apiClient.get).toHaveBeenNthCalledWith(
@@ -76,7 +77,7 @@ describe('hours API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/hours/calendar?start=2026-08-01&end=2026-08-10', undefined);
 
     vi.mocked(apiClient.get).mockClear();
-    expect(await getHoursCalendarData(filters, { start: '2026-09-01', end: '2026-09-30' })).toEqual({});
+    expect(await getHoursCalendarData(filters, { start: '2026-09-01', end: '2026-09-30' })).toEqual([]);
     expect(apiClient.get).not.toHaveBeenCalled();
   });
 
@@ -90,11 +91,21 @@ describe('hours API', () => {
     );
   });
 
+  it('requests session options with the canonical date field and cancellation signal', () => {
+    const signal = new AbortController().signal;
+    getHoursSessions('staff-1', '2026-08-19', signal);
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/hours/sessions?staffId=staff-1&date=2026-08-19',
+      { signal },
+    );
+  });
+
   it('uses create, update, and placement endpoints without widening their commands', () => {
     const input = {
       source: 'task' as const,
       staffId: 'staff-1',
-      workDate: '2026-08-19',
+      date: '2026-08-19',
       taskId: 'task-1',
       hours: 2,
       note: '',
@@ -102,14 +113,14 @@ describe('hours API', () => {
 
     setHours(input);
     setHours(input, 'entry-1');
-    updateHoursPlacement('entry-1', { workDate: '2026-08-20' });
+    updateHoursPlacement('entry-1', { date: '2026-08-20' });
     deleteHours('entry-1');
 
     expect(apiClient.delete).toHaveBeenCalledWith('/hours/entry-1');
     expect(apiClient.post).toHaveBeenCalledWith('/hours', input);
     expect(apiClient.put).toHaveBeenCalledWith('/hours/entry-1', input);
     expect(apiClient.patch).toHaveBeenCalledWith('/hours/entry-1/placement', {
-      workDate: '2026-08-20',
+      date: '2026-08-20',
     });
   });
 });

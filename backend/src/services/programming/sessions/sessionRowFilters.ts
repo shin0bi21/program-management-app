@@ -54,8 +54,8 @@ export function buildSessionFilters(
     filters.push(query`(
       COALESCE(session.theme, '') ILIKE ${search}
       OR COALESCE(session.description, '') ILIKE ${search}
-      OR session.cycle_name ILIKE ${search}
-      OR session.program_name ILIKE ${search}
+      OR session.cycle ILIKE ${search}
+      OR session.program ILIKE ${search}
       OR session.session_type::text ILIKE ${search}
     )`);
   }

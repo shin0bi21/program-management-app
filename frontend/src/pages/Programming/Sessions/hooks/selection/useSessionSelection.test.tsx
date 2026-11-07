@@ -1,91 +1,55 @@
 import type { PropsWithChildren } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
-
 import { makeProgramSession } from '../../../../../tests/factories/session';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
+import { sessionStore } from '../../sessionStore';
 import useSessionSelection from './useSessionSelection';
 
-function Router({ children }: PropsWithChildren) {
-  return <MemoryRouter
-    initialEntries={['/programming/sessions?session=session-1']}
-    future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-  >{children}</MemoryRouter>;
+function renderSelection() {
+  const client = createTestQueryClient();
+  const QueryProvider = createQueryClientWrapper(client);
+  function Wrapper({ children }: PropsWithChildren) {
+    return <QueryProvider><MemoryRouter initialEntries={['/programming/sessions?session=session-1']}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>{children}</MemoryRouter></QueryProvider>;
+  }
+  return { client, ...renderHook(() => ({ selection: useSessionSelection(), navigate: useNavigate() }), { wrapper: Wrapper }) };
 }
 
 describe('useSessionSelection', () => {
-  it('resolves the selected record from the active view owner', () => {
+  it('resolves a restored URL when either view loads the shared record and follows subsequent saves', async () => {
+    const { client, result } = renderSelection();
+    expect(result.current.selection.selectedSession).toBeNull();
     const session = makeProgramSession();
-    const { result } = renderHook(useSessionSelection, { wrapper: Router });
+    act(() => sessionStore.write(client, session));
+    await waitFor(() => expect(result.current.selection.selectedSession).toEqual(session));
 
-    act(() => result.current.setSelectedTableSession(session));
-    expect(result.current.getSelectedSession('table')).toEqual(session);
-
-    act(() => result.current.selectCalendarSession(session));
-    expect(result.current.getSelectedSession('calendar')).toEqual(session);
-  });
-
-  it('replaces selected records from an authoritative mutation without changing selection', () => {
-    const session = makeProgramSession();
     const saved = makeProgramSession({ theme: 'Updated theme' });
-    const { result } = renderHook(useSessionSelection, { wrapper: Router });
-    act(() => {
-      result.current.setSelectedTableSession(session);
-      result.current.setCalendarSessions([session]);
-    });
-
-    act(() => result.current.syncSelectedSession(saved));
-
-    expect(result.current.selectedSessionId).toBe(session.id);
-    expect(result.current.getSelectedSession('table')).toBe(saved);
-    expect(result.current.getSelectedSession('calendar')).toBe(saved);
+    act(() => sessionStore.write(client, saved));
+    await waitFor(() => expect(result.current.selection.selectedSession).toEqual(saved));
+    expect(result.current.selection.selectedSessionId).toBe(session.id);
   });
 
-  it('clears a removed selected session from every selection owner', () => {
-    const session = makeProgramSession();
-    const { result } = renderHook(useSessionSelection, { wrapper: Router });
-
-    act(() => {
-      result.current.setSelectedTableSession(session);
-      result.current.setCalendarSessions([session]);
-    });
-    act(() => result.current.removeSelectedSession(session.id));
-
-    expect(result.current.selectedSessionId).toBe('');
-    expect(result.current.getSelectedSession('table')).toBeNull();
-    expect(result.current.getSelectedSession('calendar')).toBeNull();
-  });
-
-  it('resolves a clicked table session immediately when switching records', () => {
-    const first = makeProgramSession();
+  it('stores only the clicked ID and resolves its record from the shared owner', async () => {
+    const { client, result } = renderSelection();
     const next = makeProgramSession({ id: 'session-2' });
-    const { result } = renderHook(useSessionSelection, { wrapper: Router });
-
-    act(() => result.current.selectSession(first));
-    act(() => result.current.selectSession(next));
-
-    expect(result.current.selectedSessionId).toBe(next.id);
-    expect(result.current.getSelectedSession('table')).toBe(next);
+    act(() => { sessionStore.write(client, next); result.current.selection.selectSession(next); });
+    await waitFor(() => expect(result.current.selection.selectedSession).toEqual(next));
+    expect(result.current.selection.selectedSessionId).toBe(next.id);
   });
 
-  it('clears resolved records when its buffered record disappears or is removed', () => {
-    const session = makeProgramSession();
-    const { result } = renderHook(useSessionSelection, { wrapper: Router });
-
-    act(() => result.current.selectCalendarSession(session));
-    act(() => result.current.setCalendarSessions([]));
-
-    expect(result.current.getSelectedSession('calendar')).toBeNull();
-
-    act(() => result.current.removeSelectedSession(session.id));
-    expect(result.current.selectedSessionId).toBe('');
+  it('removes a deleted selection from the URL and shared resolution', async () => {
+    const { client, result } = renderSelection();
+    act(() => sessionStore.write(client, makeProgramSession()));
+    act(() => { sessionStore.remove(client, 'session-1'); result.current.selection.removeSelectedSession('session-1'); });
+    await waitFor(() => expect(result.current.selection.selectedSession).toBeNull());
+    expect(result.current.selection.selectedSessionId).toBe('');
   });
 
   it('clears a session restored through navigation', () => {
-    const { result } = renderHook(() => ({ selection: useSessionSelection(), navigate: useNavigate() }), { wrapper: Router });
-
+    const { result } = renderSelection();
     act(() => result.current.navigate('?session=restored-session'));
-
     act(() => result.current.selection.clearSelectedSession());
     expect(result.current.selection.selectedSessionId).toBe('');
   });

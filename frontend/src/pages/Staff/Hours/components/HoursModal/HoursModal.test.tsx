@@ -1,3 +1,4 @@
+import { makeHoursItem } from '../../../../../tests/factories/hours';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import type { ComponentProps } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
@@ -81,15 +82,15 @@ describe('HoursModal', () => {
   });
 
   it('reloads rendered session options for an editable date', async () => {
-    vi.mocked(getHoursSessions).mockImplementation(async (_staffId, workDate) => (
-      workDate === '2099-01-01'
+    vi.mocked(getHoursSessions).mockImplementation(async (_staffId, date) => (
+      date === '2099-01-01'
         ? [{
           id: 'session-future',
           label: 'Leadership',
           programId: 'program-1',
-          programName: 'Soft Skills',
-          workDate,
-          startsAt: `${workDate}T14:00:00.000Z`,
+          program: 'Soft Skills',
+          date,
+          startsAt: `${date}T14:00:00.000Z`,
         }]
         : []
     ));
@@ -110,8 +111,8 @@ describe('HoursModal', () => {
       id: 'session-1',
       label: 'Confidence',
       programId: 'program-1',
-      programName: 'Soft Skills',
-      workDate: '2026-08-18',
+      program: 'Soft Skills',
+      date: '2026-08-18',
       startsAt: '2026-08-18T14:00:00.000Z',
     }]);
     renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialResourceId: 'staff-2' });
@@ -136,21 +137,21 @@ describe('HoursModal', () => {
     renderModal({
       initialDate: '2026-08-18',
       initialResourceId: 'staff-1',
-      initialItem: {
+      initialItem: makeHoursItem({
         id: 'entry-1',
         category: 'meeting',
         categoryLabel: 'Meeting',
         programId: 'program-1',
-        programName: 'Soft Skills',
+        program: 'Soft Skills',
         cycleId: '',
-        cycleName: '',
+        cycle: '',
         taskId: null,
         taskTitle: null,
         sessionId: null,
         sessionLabel: null,
         hours: 2,
         note: 'Original note',
-      },
+      }),
     });
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();

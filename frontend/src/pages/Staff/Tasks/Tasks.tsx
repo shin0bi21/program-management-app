@@ -28,6 +28,7 @@ import {
   type TaskModalState,
 } from './types';
 
+import { taskStore } from './taskStore';
 import './Tasks.css';
 
 // Page-owned cache contracts.
@@ -36,6 +37,10 @@ const TASK_TABLE_QUERY_KEY = [...TASK_QUERY_KEY, 'table'] as const;
 const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
+/**
+ * Coordinates task controls, selection IDs, drafts, and shared-record views.
+ * @example <Tasks /> // staff task route
+ */
 export default function Tasks() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
   const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
@@ -81,7 +86,6 @@ export default function Tasks() {
     taskQueryKey: TASK_QUERY_KEY,
     taskTableQueryKey: TASK_TABLE_QUERY_KEY,
     hoursQueryKey: HOURS_QUERY_KEY,
-    onTaskSynced: selection.updateSelectedTask,
     onTaskRemoved: selection.removeSelectedTask,
   });
   const deleteTaskAction = actions.deleteTask;
@@ -95,12 +99,21 @@ export default function Tasks() {
   }, [selection.selectedTaskId]);
 
   // Task modal.
-  const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
+  const records = taskStore.useRecords();
+  const [taskModalTarget, setTaskModalState] = useState<
+    { mode: 'add'; initialValues: AddTaskModalInitialValues } | { mode: 'edit'; taskId: string } | null
+  >(null);
+  let taskModalState: TaskModalState = null;
+  if (taskModalTarget?.mode === 'add') taskModalState = taskModalTarget;
+  if (taskModalTarget?.mode === 'edit') {
+    const task = records[taskModalTarget.taskId];
+    if (task) taskModalState = { mode: 'edit', task };
+  }
   const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
     setTaskModalState({ mode: 'add', initialValues });
   };
   const openEditTaskModal = useCallback((task: Task) => {
-    setTaskModalState({ mode: 'edit', task });
+    setTaskModalState({ mode: 'edit', taskId: task.id });
   }, []);
   const closeTaskModal = () => setTaskModalState(null);
 

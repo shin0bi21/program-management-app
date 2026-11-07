@@ -11,13 +11,16 @@ export type HoursCategory =
 
 export type { StaffReference as StaffResource, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
 export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
-export interface HoursEntry {
+export interface HoursItem {
   id: string;
   staffId: string;
+  firstName: string;
+  lastName: string;
+  name: string;
   programId: string | null;
-  programName: string | null;
+  program: string | null;
   cycleId: string;
-  cycleName: string;
+  cycle: string;
   cycleStartsOn: string;
   cycleEndsOn: string;
   category: HoursCategory;
@@ -26,50 +29,33 @@ export interface HoursEntry {
   taskTitle: string | null;
   sessionId: string | null;
   sessionLabel: string | null;
-  workDate: string;
+  date: string;
+  type: HoursItemType;
   hours: number;
   note: string;
-}
-
-export type HoursItem = Omit<
-  HoursEntry,
-  'staffId' | 'workDate' | 'cycleStartsOn' | 'cycleEndsOn'
->;
-
-export interface HoursTableRow {
-  id: string;
-  resourceId: string;
-  date: string;
-  item: HoursItem;
-  staffFirstName: string;
-  staffLastName: string;
-  staffName: string;
 }
 
 // Table and filter values.
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
-export type HoursEntryType = 'task' | 'session' | 'other';
+export type HoursItemType = 'task' | 'session' | 'regular';
 
 export interface HoursFilters {
   dateRange?: DateRange;
   staffIds: string[];
   categories: HoursCategory[];
   programIds: string[];
-  types: HoursEntryType[];
+  types: HoursItemType[];
   cycleIds?: string[];
   search: string;
 }
 
-export type HoursEntryTarget = { resourceId: string; date: string; item: HoursItem };
-
-export type HoursEntryMove = {
+export interface HoursItemMove {
   item: HoursItem;
-  source: { resourceId: string; date: string };
-  destination: { resourceId: string; date: string };
-};
+  date: string;
+}
 
-export interface HoursCalendarCache {
-  upsert: (resourceId: string, date: string, item: HoursItem) => void;
+export interface HoursCalendarIndex {
+  upsert: (item: HoursItem) => void;
   remove: (itemId: string) => void;
 }

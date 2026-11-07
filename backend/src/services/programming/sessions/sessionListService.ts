@@ -19,22 +19,22 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
 
   // 2. Choose the session sort and delegate cursor execution and response shaping.
   const sortValue = {
-    program: sql`LOWER(page_row.program_name)`,
-    cycle: sql`LOWER(page_row.cycle_name)`,
-    theme: sql`LOWER(COALESCE(page_row.theme, ''))`,
-    date: sql`page_row.starts_at::text`,
-    time: sql`page_row.starts_at::text`,
-    type: sql`LOWER(page_row.session_type::text)`,
-    status: sql`page_row.state`,
+    program: sql`LOWER("row".program)`,
+    cycle: sql`LOWER("row".cycle)`,
+    theme: sql`LOWER(COALESCE("row".theme, ''))`,
+    date: sql`"row".starts_at::text`,
+    time: sql`"row".starts_at::text`,
+    type: sql`LOWER("row".session_type::text)`,
+    status: sql`"row".state`,
   }[filterValues.sort]!;
 
   // 3. Keep complete lookups separate from bounded cursor pages.
   if (filterValues.limit === undefined) {
     const sortDirection = direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<SessionRow[]>`
-      SELECT page_row.*
-      FROM (${filteredRows}) page_row
-      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+      SELECT "row".*
+      FROM (${filteredRows}) "row"
+      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
     `;
   }
 

@@ -28,7 +28,7 @@ const noteStyles = {
 } as const;
 
 export async function renderProgramCycleYouthPdf(report: ProgramCycleYouthReport) {
-  const title = `${report.programCycle.programName} - ${report.programCycle.cycleName} Youth Report`;
+  const title = `${report.programCycle.program} - ${report.programCycle.cycle} Youth Report`;
   const doc = new PDFDocument({ size: 'LETTER', margin, autoFirstPage: true, info: { Title: title } });
   const chunks: Buffer[] = [];
   doc.on('data', chunk => chunks.push(Buffer.from(chunk)));

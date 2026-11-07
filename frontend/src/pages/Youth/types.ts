@@ -12,9 +12,9 @@ export interface YouthProfile {
   schoolName: string | null;
   programCycles: Array<{
     cycleId: string;
-    cycleName: string;
+    cycle: string;
     programId: string;
-    programName: string;
+    program: string;
     enrollmentRequired: boolean;
     startsOn: string;
     endsOn: string;

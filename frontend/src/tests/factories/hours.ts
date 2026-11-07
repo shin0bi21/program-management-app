@@ -1,12 +1,27 @@
 import type { HoursItem } from '../../pages/Staff/Hours/types';
 
+/**
+ * Builds a complete Hours entry with scenario overrides.
+ * @example makeHoursItem({ hours: 2 }) // a two-hour meeting
+ */
 export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
+  let type = overrides.type ?? 'regular';
+  if (!overrides.type && overrides.taskId) type = 'task';
+  if (!overrides.type && !overrides.taskId && overrides.sessionId) type = 'session';
   return {
+    type,
     id: 'hours-1',
+    staffId: 'staff-1',
+    firstName: 'Zoe',
+    lastName: 'Wilson',
+    name: 'Zoe Wilson',
+    date: '2026-08-19',
+    cycleStartsOn: '2026-07-01',
+    cycleEndsOn: '2026-09-01',
     programId: null,
-    programName: null,
+    program: null,
     cycleId: 'cycle-1',
-    cycleName: 'Summer 2026',
+    cycle: 'Summer 2026',
     category: 'meeting',
     categoryLabel: 'Meeting',
     taskId: null,

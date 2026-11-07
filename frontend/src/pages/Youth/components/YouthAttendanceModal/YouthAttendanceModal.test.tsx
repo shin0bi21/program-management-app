@@ -20,9 +20,9 @@ vi.mock('../../../Programming/Sessions/sessions.api', () => sessionNoteApi);
 
 const programCycle = {
   cycleId: 'cycle-1',
-  cycleName: 'Summer 2026',
+  cycle: 'Summer 2026',
   programId: 'program-1',
-  programName: 'Soft Skills',
+  program: 'Soft Skills',
   enrollmentRequired: true,
   startsOn: '2026-06-01',
   endsOn: '2026-08-31',
@@ -38,8 +38,8 @@ const attendance = {
   programCycle: {
     programId: programCycle.programId,
     cycleId: programCycle.cycleId,
-    cycleName: programCycle.cycleName,
-    programName: programCycle.programName,
+    cycle: programCycle.cycle,
+    program: programCycle.program,
     enrollmentRequired: programCycle.enrollmentRequired,
   },
   sessions: [

@@ -19,20 +19,20 @@ export function listAccounts(actor: AccessTokenPayload, filterValues: AccountQue
 
   // 2. Choose the account order.
   const sortValue = {
-    name: sql`LOWER(page_row.first_name || ' ' || page_row.last_name)`,
-    email: sql`LOWER(page_row.email)`,
-    role: sql`page_row.role::text`,
-    status: sql`page_row.status::text`,
-    createdAt: sql`page_row.created_at::text`,
+    name: sql`LOWER("row".first_name || ' ' || "row".last_name)`,
+    email: sql`LOWER("row".email)`,
+    role: sql`"row".role::text`,
+    status: sql`"row".status::text`,
+    createdAt: sql`"row".created_at::text`,
   }[filterValues.sort]!;
 
   // 3. Return the requested list or page.
   if (filterValues.limit === undefined) {
     const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<AccountRow[]>`
-      SELECT page_row.*
-      FROM (${rowsQuery}) page_row
-      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+      SELECT "row".*
+      FROM (${rowsQuery}) "row"
+      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
     `;
   }
 

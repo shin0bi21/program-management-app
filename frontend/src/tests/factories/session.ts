@@ -7,9 +7,9 @@ export function makeProgramSession(overrides: Partial<ProgramSession> = {}): Pro
 
     sessionType: 'Regular',
     theme: 'Communication',
-    cycleName: 'Summer 2026',
+    cycle: 'Summer 2026',
     programId: 'program-1',
-    programName: 'Future Ready',
+    program: 'Future Ready',
     enrollmentRequired: true,
     startsAt: '2026-08-10T17:00:00.000Z',
     endsAt: '2026-08-10T19:00:00.000Z',

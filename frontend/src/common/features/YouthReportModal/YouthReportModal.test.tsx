@@ -6,7 +6,7 @@ import YouthReportModal from './YouthReportModal';
 const api = vi.hoisted(() => ({ getReportPdf: vi.fn() }));
 vi.mock('./youthReport.api', () => ({ getProgramCycleYouthReportPdf: api.getReportPdf }));
 
-const programCycle = { programId: 'program-1', cycleId: 'cycle-1', programName: 'Soft Skills', cycleName: 'Summer 2026' };
+const programCycle = { programId: 'program-1', cycleId: 'cycle-1', program: 'Soft Skills', cycle: 'Summer 2026' };
 
 describe('YouthReportModal', () => {
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe('YouthReportModal', () => {
   });
 
   it('revokes generated URLs when the report target changes and on unmount', async () => {
-    const nextProgramCycle = { ...programCycle, cycleId: 'cycle-2', cycleName: 'Fall 2026' };
+    const nextProgramCycle = { ...programCycle, cycleId: 'cycle-2', cycle: 'Fall 2026' };
     api.getReportPdf
       .mockResolvedValueOnce(new Blob(['first'], { type: 'application/pdf' }))
       .mockResolvedValueOnce(new Blob(['second'], { type: 'application/pdf' }));

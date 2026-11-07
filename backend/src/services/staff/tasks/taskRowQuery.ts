@@ -18,7 +18,7 @@ export interface TaskRow {
   staffLastName: string;
   staffName: string;
   programId: string | null;
-  programName: string | null;
+  program: string | null;
   status: 'open' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
@@ -37,7 +37,7 @@ export const taskRowColumns = sql`
   staff.last_name AS staff_last_name,
   CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
   task.program_id,
-  program.name AS program_name,
+  program.name AS program,
   task.status,
   task.start_date::text,
   task.due_date::text,
@@ -56,7 +56,7 @@ export const taskRowFrom = sql`
   LEFT JOIN programs program ON program.id = task.program_id
 `;
 
-interface LoggedHoursRow { taskId: string; workDate: string; hours: number }
+interface LoggedHoursRow { taskId: string; date: string; hours: number }
 
 /**
  * Builds rows for table and calendar items.
@@ -75,17 +75,17 @@ export function getTaskRows(appliedFilters = sql`TRUE`, query = sql) {
 /**
  * Loads daily logged hours for the selected tasks.
  * @param taskIds - Tasks to load.
- * @param db - Database client for the read.
+ * @param query - Database client; pass trx inside a transaction.
  * @example loadTaskLoggedHours([taskId])
  */
-export async function loadTaskLoggedHours(taskIds: string[], db: typeof sql = sql) {
+export async function loadTaskLoggedHours(taskIds: string[], query: typeof sql = sql) {
   if (!taskIds.length) return [];
-  return db<LoggedHoursRow[]>`
-    SELECT task_id, work_date::text, SUM(hours)::float AS hours
+  return query<LoggedHoursRow[]>`
+    SELECT task_id, date::text, SUM(hours)::float AS hours
     FROM time_entries
-    WHERE task_id IN ${sql(taskIds)}
-    GROUP BY task_id, work_date
-    ORDER BY work_date, task_id
+    WHERE task_id IN ${query(taskIds)}
+    GROUP BY task_id, date
+    ORDER BY date, task_id
   `;
 }
 
@@ -104,7 +104,7 @@ export function attachTaskDetails<TRow extends TaskRow>(
   const loggedHoursByTask = new Map<string, Array<{ date: string; hours: number }>>();
   loggedHours.forEach(entry => {
     const taskHours = loggedHoursByTask.get(entry.taskId);
-    const dailyHours = { date: entry.workDate, hours: entry.hours };
+    const dailyHours = { date: entry.date, hours: entry.hours };
     if (taskHours) taskHours.push(dailyHours);
     else loggedHoursByTask.set(entry.taskId, [dailyHours]);
   });

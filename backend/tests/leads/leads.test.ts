@@ -114,7 +114,7 @@ describe('Leads API', () => {
       youthLastName: 'Prospect',
       status: 'new',
       recommendedProgramId: eligibleProgramId,
-      recommendedProgramName: eligibleProgramName,
+      recommendedProgram: eligibleProgramName,
       createdBy: staffUserId,
     }));
   });
@@ -675,7 +675,7 @@ describe('Leads API', () => {
       .set('Authorization', `Bearer ${staffToken}`);
     expect(listed.body).toEqual(expect.arrayContaining([expect.objectContaining({
       id: created.body.id, dateOfBirth: null, age: null,
-      recommendedProgramId: null, recommendedProgramName: null,
+      recommendedProgramId: null, recommendedProgram: null,
     })]));
     const rejected = await request(app).post(`/api/leads/${created.body.id}/sign-up`)
       .set('Authorization', `Bearer ${staffToken}`).send({});

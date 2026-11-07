@@ -106,6 +106,25 @@ describe('useEditSessionModal', () => {
     }));
   });
 
+  it('preserves the draft and completed save lock when the shared session is replaced', async () => {
+    const session = makeProgramSession();
+    const saved = makeProgramSession({ theme: 'Saved theme' });
+    vi.mocked(updateSession).mockResolvedValue({ session: saved });
+    const { result, rerender } = renderHook(({ current }) => useEditSessionModal(current, vi.fn()), {
+      initialProps: { current: session },
+    });
+    act(() => result.current.setSessionType('Guest Speaker'));
+    rerender({ current: makeProgramSession({ sessionType: 'Field Trip' }) });
+    expect(result.current.sessionType).toBe('Guest Speaker');
+
+    await act(() => result.current.submit(makeSubmitEvent()));
+    rerender({ current: saved });
+    expect(result.current.status).toBe('success');
+    expect(result.current.submissionComplete).toBe(true);
+    await act(() => result.current.submit(makeSubmitEvent()));
+    expect(updateSession).toHaveBeenCalledOnce();
+  });
+
   it('locks same-tick submissions until the save workflow settles', async () => {
     let resolveUpdate!: () => void;
     vi.mocked(updateSession).mockReturnValue(new Promise(resolve => {

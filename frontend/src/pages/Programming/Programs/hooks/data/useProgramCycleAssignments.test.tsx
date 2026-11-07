@@ -12,9 +12,9 @@ describe('useProgramCycleAssignments', () => {
     vi.clearAllMocks();
     vi.mocked(getProgramCycleAssignments).mockResolvedValue([{
       programId: 'program-1',
-      programName: 'Soft Skills',
+      program: 'Soft Skills',
       cycleId: 'cycle-1',
-      cycleName: 'Summer 2026',
+      cycle: 'Summer 2026',
       startsOn: '2026-07-01',
       endsOn: '2026-08-31',
       state: 'active',

@@ -43,7 +43,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
     { value: '', label: 'Do not enroll yet' },
     ...workflow.visibleProgramCycles.map(programCycle => ({
       value: `${programCycle.programId}:${programCycle.cycleId}`,
-      label: `${programCycle.programName} — ${programCycle.cycleName} · ${formatDate(programCycle.startsOn)}–${formatDate(programCycle.endsOn)}`,
+      label: `${programCycle.program} — ${programCycle.cycle} · ${formatDate(programCycle.startsOn)}–${formatDate(programCycle.endsOn)}`,
     })),
   ];
   const modalStatus = workflow.submitStatus === 'idle' && workflow.loadError
@@ -98,7 +98,7 @@ export default function SignUpLeadModal({ queryKey, lead, onClose, onSuccess }: 
               </div>
               <div>
                 <dt>Eligible Program</dt>
-                <dd>{lead.recommendedProgramName || 'Not available'}</dd>
+                <dd>{lead.recommendedProgram || 'Not available'}</dd>
               </div>
             </dl>
           </section>

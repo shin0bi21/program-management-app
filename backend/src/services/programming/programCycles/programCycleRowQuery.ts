@@ -4,12 +4,12 @@ import type { AccessTokenPayload } from '../../../types/auth';
 
 export interface ProgramCycleRow {
   programId: string;
-  programName: string;
+  program: string;
   enrollmentRequired: boolean;
   minAge: number | null;
   maxAge: number | null;
   cycleId: string;
-  cycleName: string;
+  cycle: string;
   startsOn: string;
   endsOn: string;
   enrolledCount: number;
@@ -32,12 +32,12 @@ export const programCycleState = sql`
 
 export const programCycleRowColumns = sql`
   pc.program_id,
-  p.name AS program_name,
+  p.name AS program,
   p.enrollment_required,
   p.min_age,
   p.max_age,
   cycle.id AS cycle_id,
-  cycle.name AS cycle_name,
+  cycle.name AS cycle,
   cycle.starts_on::text AS starts_on,
   cycle.ends_on::text AS ends_on,
   (

@@ -13,10 +13,10 @@ export interface ProgramSession {
   cycleId: string;
   sessionType: SessionTypeValue;
 
-  cycleName: string;
+  cycle: string;
 
   programId: string;
-  programName: string;
+  program: string;
   enrollmentRequired: boolean;
 
   state: 'upcoming' | 'completed' | 'cancelled';
@@ -78,9 +78,9 @@ export interface YouthSessionNote extends SessionNote {
   cycleId: string;
   sessionTheme: string | null;
   startsAt: string;
-  cycleName: string;
+  cycle: string;
   programId: string;
-  programName: string;
+  program: string;
   enrollmentRequired: boolean;
 }
 

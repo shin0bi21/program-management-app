@@ -18,8 +18,9 @@ import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
+import { useHoursItems } from './hoursItemStore';
 import { getTaskDashboardData } from '../Tasks/tasks.api';
-import { HOURS_TABLE_KEYS, type HoursEntryTarget, type HoursFilters } from './types';
+import { HOURS_TABLE_KEYS, type HoursItem, type HoursFilters } from './types';
 
 import './Hours.css';
 
@@ -31,7 +32,7 @@ type HoursAddTarget = {
 
 type HoursModalState =
   | { mode: 'add'; initialValues: HoursAddTarget }
-  | { mode: 'edit'; target: HoursEntryTarget }
+  | { mode: 'edit'; itemId: string }
   | null;
 
 // Page-owned cache contracts.
@@ -90,12 +91,13 @@ export default function Hours() {
     preferences.search.appliedValue,
   ]);
 
+  const records = useHoursItems();
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
   // Keep table action cells mounted when preferences or page data refresh.
-  const closeRemovedEntry = useCallback((entryId: string) => {
+  const closeRemovedItem = useCallback((itemId: string) => {
     setHoursModalState(current => (
-      current?.mode === 'edit' && current.target.item.id === entryId ? null : current
+      current?.mode === 'edit' && current.itemId === itemId ? null : current
     ));
   }, []);
 
@@ -109,16 +111,18 @@ export default function Hours() {
     hoursQueryKey: HOURS_QUERY_KEY,
     hoursTableQueryKey: HOURS_TABLE_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
-    onEntryRemoved: closeRemovedEntry,
+    onItemRemoved: closeRemovedItem,
   });
+
+  const editedItem = hoursModalState?.mode === 'edit' ? records[hoursModalState.itemId] : undefined;
 
   // Hours modal.
   const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
     setHoursModalState({ mode: 'add', initialValues });
   }, []);
 
-  const openEditHoursModal = useCallback((target: HoursEntryTarget) => {
-    setHoursModalState({ mode: 'edit', target });
+  const openEditHoursModal = useCallback((target: HoursItem) => {
+    setHoursModalState({ mode: 'edit', itemId: target.id });
   }, []);
 
   const closeHoursModal = useCallback(() => setHoursModalState(null), []);
@@ -126,7 +130,7 @@ export default function Hours() {
   const submitHours = (input: SetHoursInput) => (
     actions.saveHours(
       input,
-      hoursModalState?.mode === 'edit' ? hoursModalState.target.item.id : undefined,
+      hoursModalState?.mode === 'edit' ? hoursModalState.itemId : undefined,
     )
   );
 
@@ -134,7 +138,7 @@ export default function Hours() {
   const table = useHoursTable({
     canWrite,
     resourcesById: pageData.resourcesById,
-    isEntryPending: actions.isEntryPending,
+    isItemPending: actions.isItemPending,
     onEdit: openEditHoursModal,
     onDelete: actions.requestDelete,
   });
@@ -170,8 +174,8 @@ export default function Hours() {
       filters={hoursFilters}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
-      calendarCacheRef={actions.calendarCacheRef}
-      isEntryPending={actions.isEntryPending}
+      calendarIndexRef={actions.calendarIndexRef}
+      isItemPending={actions.isItemPending}
       onStaffSelect={selection.selectStaff}
       onEdit={openEditHoursModal}
       onDelete={actions.requestDelete}
@@ -188,7 +192,7 @@ export default function Hours() {
   return <>
     <PageContainer
       className="hours-page"
-      ariaLabel="Hours overview and entries"
+      ariaLabel="Hours overview and records"
       controls={preferences}
       loadingSpinner
       title="Hours"
@@ -237,10 +241,10 @@ export default function Hours() {
       onClose={closeHoursModal}
       onAdd={submitHours}
       initialResourceId={hoursModalState?.mode === 'edit'
-        ? hoursModalState.target.resourceId
+        ? editedItem?.staffId
         : hoursModalState?.initialValues.resourceId ?? currentUserId}
       initialDate={hoursModalState?.mode === 'edit'
-        ? hoursModalState.target.date
+        ? editedItem?.date
         : hoursModalState?.initialValues.date}
       initialSource={hoursModalState?.mode === 'add'
         ? hoursModalState.initialValues.source
@@ -248,7 +252,7 @@ export default function Hours() {
       canCompleteTask={canCompleteTask}
       staffLocked={hoursModalState?.mode === 'edit'
         || Boolean(hoursModalState?.initialValues.resourceId)}
-      initialItem={hoursModalState?.mode === 'edit' ? hoursModalState.target.item : undefined}
+      initialItem={hoursModalState?.mode === 'edit' ? editedItem : undefined}
     />
 
     <ConfirmModal

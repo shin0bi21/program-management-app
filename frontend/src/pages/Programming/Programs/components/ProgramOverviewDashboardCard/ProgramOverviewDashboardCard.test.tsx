@@ -12,16 +12,16 @@ const program: Program = {
   enrollmentRequired: true, minAge: null, maxAge: null,
 };
 const programCycle: ProgramCycleAssignment = {
-  programId: program.id, programName: program.name,
+  programId: program.id, program: program.name,
 
   enrollmentRequired: true, minAge: null, maxAge: null,
-  cycleId: 'cycle-1', cycleName: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
+  cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
   averageAttendance: 75, attendanceAttendedCount: 9,
   attendanceRecordedCount: 12, uniqueAttendeeCount: 10,
 };
 const openProgramCycle: ProgramCycleAssignment = {
-  ...programCycle, cycleId: 'cycle-2', cycleName: 'Winter',
+  ...programCycle, cycleId: 'cycle-2', cycle: 'Winter',
   enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
 };
 const makeProps = () => ({

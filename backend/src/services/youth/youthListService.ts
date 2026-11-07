@@ -20,16 +20,16 @@ export function listYouth(filterValues: YouthQuery) {
 
   // 2. Keep list-only sort calculations outside the canonical profile projection.
   const sortValue = ({
-    firstName: sql`LOWER(page_row.first_name)`,
-    lastName: sql`LOWER(page_row.last_name)`,
-    dateOfBirth: sql`COALESCE(page_row.date_of_birth::text, '')`,
-    school: sql`LOWER(COALESCE(page_row.school_name, ''))`,
+    firstName: sql`LOWER("row".first_name)`,
+    lastName: sql`LOWER("row".last_name)`,
+    dateOfBirth: sql`COALESCE("row".date_of_birth::text, '')`,
+    school: sql`LOWER(COALESCE("row".school_name, ''))`,
     activePrograms: sql`LOWER(COALESCE((
       SELECT MIN(p_sort.name)
       FROM program_enrollments ce_sort
       INNER JOIN programs p_sort ON p_sort.id = ce_sort.program_id
       INNER JOIN program_cycles cycle_sort ON cycle_sort.id = ce_sort.cycle_id
-      WHERE ce_sort.youth_id = page_row.id
+      WHERE ce_sort.youth_id = "row".id
         AND p_sort.enrollment_required = TRUE
         AND ce_sort.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
         AND (ce_sort.withdrawn_on IS NULL OR ce_sort.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
@@ -40,22 +40,22 @@ export function listYouth(filterValues: YouthQuery) {
       FROM program_enrollments ce_sort
       INNER JOIN programs p_sort ON p_sort.id = ce_sort.program_id
       INNER JOIN program_cycles cycle_sort ON cycle_sort.id = ce_sort.cycle_id
-      WHERE ce_sort.youth_id = page_row.id
+      WHERE ce_sort.youth_id = "row".id
         AND p_sort.enrollment_required = TRUE
         AND ce_sort.enrolled_on <= cycle_sort.ends_on
         AND ce_sort.withdrawn_on IS NULL
         AND cycle_sort.ends_on < (NOW() AT TIME ZONE 'America/Toronto')::date
     ), ''))`,
-    status: sql`page_row.status`,
+    status: sql`"row".status`,
   }[filterValues.sort]!);
 
   // 3. Return the requested list or page.
   if (filterValues.limit === undefined) {
     const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<YouthRow[]>`
-      SELECT page_row.*
-      FROM (${rowsQuery}) page_row
-      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+      SELECT "row".*
+      FROM (${rowsQuery}) "row"
+      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
     `;
   }
 

@@ -7,9 +7,9 @@ import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriodUt
 const app = createApp();
 
 describe('Hours API', () => {
-  let workDate: string;
-  let linkedWorkDate: string;
-  let placementWorkDate: string;
+  let date: string;
+  let linkedDate: string;
+  let placementDate: string;
   let adminId: string;
   let adminToken: string;
   let firstStaffId: string;
@@ -19,26 +19,26 @@ describe('Hours API', () => {
   let unrelatedStaffId: string;
   let unrelatedStaffToken: string;
   let programId: string;
-  let programName: string;
+  let program: string;
   let activeCycleId: string;
   let upcomingCycleId: string;
-  let upcomingWorkDate: string;
+  let upcomingDate: string;
   let sessionId: string | null = null;
   let assignedTaskId: string | null = null;
 
   beforeAll(async () => {
     const stamp = Date.now();
     const [dates] = await sql<Array<{
-      workDate: string;
-      linkedWorkDate: string;
-      placementWorkDate: string;
+      date: string;
+      linkedDate: string;
+      placementDate: string;
     }>>`
       SELECT
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS work_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_work_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_work_date
+        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_date,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_date
     `;
-    ({ workDate, linkedWorkDate, placementWorkDate } = dates);
+    ({ date, linkedDate, placementDate } = dates);
     const admin = await seedTestUser({ email: `hours-admin-${stamp}@test.local`, role: 'admin' });
     const firstStaff = await seedTestUser({
       email: `hours-staff-a-${stamp}@test.local`, firstName: 'Zoe', lastName: 'Wilson', role: 'staff',
@@ -61,17 +61,17 @@ describe('Hours API', () => {
       SELECT id, name FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
     `;
     programId = programs[0].id;
-    programName = programs[0].name;
+    program = programs[0].name;
     const assignments = await sql<Array<{ cycleId: string }>>`
       WITH cycles AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
         VALUES
           (
             ${`Active Hours ${stamp}`},
-            ${workDate}::date - 7,
-            ${workDate}::date + 7
+            ${date}::date - 7,
+            ${date}::date + 7
           ),
-          (${`Upcoming Hours ${stamp}`}, ${workDate}::date + 14, ${workDate}::date + 28)
+          (${`Upcoming Hours ${stamp}`}, ${date}::date + 14, ${date}::date + 28)
         RETURNING id, starts_on
       )
       INSERT INTO program_cycle_assignments (program_id, cycle_id)
@@ -82,7 +82,7 @@ describe('Hours API', () => {
     const upcomingDates = await sql<Array<{ startsOn: string }>>`
       SELECT starts_on::text FROM program_cycles WHERE id = ${upcomingCycleId}
     `;
-    upcomingWorkDate = upcomingDates[0].startsOn;
+    upcomingDate = upcomingDates[0].startsOn;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
@@ -90,7 +90,7 @@ describe('Hours API', () => {
     const [session] = await sql<Array<{ id: string }>>`
       INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, starts_at, ends_at)
       SELECT ${programId}, ${activeCycleId}, 'Regular', 'Hours workshop',
-        ${workDate}::date + TIME '10:00', ${workDate}::date + TIME '12:00'
+        ${date}::date + TIME '10:00', ${date}::date + TIME '12:00'
       RETURNING id
     `;
     sessionId = session.id;
@@ -115,7 +115,7 @@ describe('Hours API', () => {
 
     try {
       await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${manager.userId}, ${programId})`;
-      const payload = { source: 'regular', programId, category: 'meeting', workDate, hours: 1, note: 'Project meeting' };
+      const payload = { source: 'regular', programId, category: 'meeting', date, hours: 1, note: 'Project meeting' };
       const own = await request(app).post('/api/hours')
         .set('Authorization', `Bearer ${token}`).send({ ...payload, staffId: manager.userId });
       if (own.body.id) entryIds.push(own.body.id);
@@ -131,10 +131,10 @@ describe('Hours API', () => {
       if (shared.body.id) entryIds.push(shared.body.id);
       expect(shared.status).toBe(201);
 
-      const readable = await request(app).get(`/api/hours/calendar?start=${workDate}&end=${workDate}&staffIds=${firstStaffId}`)
+      const readable = await request(app).get(`/api/hours/calendar?start=${date}&end=${date}&staffIds=${firstStaffId}`)
         .set('Authorization', `Bearer ${token}`);
       expect(readable.status).toBe(200);
-      expect(readable.body[firstStaffId][workDate]).toEqual(expect.arrayContaining([
+      expect(readable.body.filter((entry: { staffId: string; date: string }) => entry.staffId === firstStaffId && entry.date === date)).toEqual(expect.arrayContaining([
         expect.objectContaining({ id: shared.body.id }),
       ]));
       const deniedDelete = await request(app).delete(`/api/hours/${shared.body.id}`)
@@ -153,13 +153,13 @@ describe('Hours API', () => {
     const created = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 2.5, note: 'Program meeting' });
+      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 2.5, note: 'Program meeting' });
 
     expect(created.status).toBe(201);
-    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', taskId: null, sessionId: null, hours: 2.5 }));
+    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', type: 'regular', taskId: null, sessionId: null, hours: 2.5 }));
 
     const listed = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     const referenceData = await request(app)
       .get('/api/reference-data/staff?feature=hours')
@@ -177,11 +177,11 @@ describe('Hours API', () => {
     expect(referenceData.body).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: unrelatedStaffId }),
     ]));
-    expect(listed.body[firstStaffId][workDate]).toEqual([
+    expect(listed.body.filter((entry: { staffId: string; date: string }) => entry.staffId === firstStaffId && entry.date === date)).toEqual([
       expect.objectContaining({
         id: created.body.id,
         programId,
-        programName,
+        program: program,
         note: 'Program meeting',
       }),
     ]);
@@ -197,25 +197,25 @@ describe('Hours API', () => {
         staffId: firstStaffId,
         programId,
         category: 'meeting',
-        workDate,
+        date,
         hours: 1,
         note: marker,
       });
     expect(created.status).toBe(201);
 
     const matched = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&search=${encodeURIComponent(marker)}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}&search=${encodeURIComponent(marker)}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(matched.status).toBe(200);
-    expect(matched.body[firstStaffId][workDate]).toEqual([
+    expect(matched.body.filter((entry: { staffId: string; date: string }) => entry.staffId === firstStaffId && entry.date === date)).toEqual([
       expect.objectContaining({ id: created.body.id, note: marker }),
     ]);
 
     const unmatched = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&search=missing-calendar-entry`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}&search=missing-calendar-entry`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(unmatched.status).toBe(200);
-    expect(unmatched.body).toEqual({});
+    expect(unmatched.body).toEqual([]);
   });
 
   it('cursor-paginates the filtered hours list', async () => {
@@ -224,7 +224,7 @@ describe('Hours API', () => {
       const created = await request(app)
         .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
-        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours, note: `${marker} ${hours}` });
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours, note: `${marker} ${hours}` });
       expect(created.status).toBe(201);
     }
 
@@ -233,7 +233,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({
-      rows: [expect.objectContaining({ resourceId: firstStaffId, item: expect.objectContaining({ hours: 1, note: `${marker} 1` }) })],
+      rows: [expect.objectContaining({ staffId: firstStaffId, hours: 1, note: `${marker} 1` })],
       nextCursor: expect.any(String),
     });
 
@@ -242,7 +242,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(second.status).toBe(200);
     expect(second.body).toEqual({
-      rows: [expect.objectContaining({ item: expect.objectContaining({ hours: 2, note: `${marker} 2` }) })],
+      rows: [expect.objectContaining({ hours: 2, note: `${marker} 2` })],
       nextCursor: null,
     });
   });
@@ -250,16 +250,16 @@ describe('Hours API', () => {
   it('applies inclusive work-date bounds before table pagination', async () => {
     const marker = `Date-range hours ${firstStaffId}`;
     const ids: string[] = [];
-    for (const date of [workDate, linkedWorkDate, placementWorkDate]) {
+    for (const entryDate of [date, linkedDate, placementDate]) {
       const created = await request(app)
         .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
-        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate: date, hours: 1, note: marker });
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date: entryDate, hours: 1, note: marker });
       expect(created.status).toBe(201);
       ids.push(created.body.id);
     }
 
-    const query = `start=${linkedWorkDate}&end=${placementWorkDate}&search=${encodeURIComponent(marker)}&sort=date&direction=asc&limit=1`;
+    const query = `start=${linkedDate}&end=${placementDate}&search=${encodeURIComponent(marker)}&sort=date&direction=asc&limit=1`;
     const first = await request(app)
       .get(`/api/hours/table?${query}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
@@ -275,10 +275,10 @@ describe('Hours API', () => {
     expect(second.body.nextCursor).toBeNull();
 
     const calendar = await request(app)
-      .get(`/api/hours/calendar?start=${linkedWorkDate}&end=${placementWorkDate}&search=${encodeURIComponent(marker)}`)
+      .get(`/api/hours/calendar?start=${linkedDate}&end=${placementDate}&search=${encodeURIComponent(marker)}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(calendar.status).toBe(200);
-    expect(Object.values(calendar.body[firstStaffId]).flat().map(entry => (entry as { id: string }).id).sort()).toEqual(ids.slice(1).sort());
+    expect(calendar.body.map((entry: { id: string }) => entry.id).sort()).toEqual(ids.slice(1).sort());
   });
 
   it.each([
@@ -314,11 +314,11 @@ describe('Hours API', () => {
   it('filters table and calendar collections by any selected cycle without widening staff scope', async () => {
     const marker = `Multi-cycle hours ${firstStaffId}`;
     const createdIds: string[] = [];
-    for (const date of [workDate, upcomingWorkDate]) {
+    for (const entryDate of [date, upcomingDate]) {
       const created = await request(app)
         .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
-        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate: date, hours: 1, note: marker });
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date: entryDate, hours: 1, note: marker });
       expect(created.status).toBe(201);
       createdIds.push(created.body.id);
     }
@@ -334,7 +334,7 @@ describe('Hours API', () => {
       expect(table.status).toBe(200);
       expect(calendar.status).toBe(200);
       expect(table.body.rows.map((row: { id: string }) => row.id).sort()).toEqual([...expectedIds].sort());
-      const calendarIds = Object.values(calendar.body).flatMap(periods => Object.values(periods as Record<string, Array<{ id: string }>>).flat()).map(entry => entry.id);
+      const calendarIds = calendar.body.map((entry: { id: string }) => entry.id);
       expect(calendarIds.sort()).toEqual([...expectedIds].sort());
     }
 
@@ -350,17 +350,17 @@ describe('Hours API', () => {
 
   it('lists assigned open-program sessions and derives session time metadata', async () => {
     const sessions = await request(app)
-      .get(`/api/hours/sessions?staffId=${firstStaffId}&workDate=${workDate}`)
+      .get(`/api/hours/sessions?staffId=${firstStaffId}&date=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(sessions.status).toBe(200);
     expect(sessions.body).toEqual([
       expect.objectContaining({
-        id: sessionId, label: 'Hours workshop', programId, workDate,
+        id: sessionId, label: 'Hours workshop', programId, date,
       }),
     ]);
 
     const unassignedSessions = await request(app)
-      .get(`/api/hours/sessions?staffId=${unrelatedStaffId}&workDate=${workDate}`)
+      .get(`/api/hours/sessions?staffId=${unrelatedStaffId}&date=${date}`)
       .set('Authorization', `Bearer ${unrelatedStaffToken}`);
     expect(unassignedSessions.status).toBe(200);
     expect(unassignedSessions.body).toEqual([]);
@@ -380,18 +380,19 @@ describe('Hours API', () => {
     expect(created.body).toEqual(expect.objectContaining({
       staffId: firstStaffId,
       sessionId,
+      type: 'session',
       category: 'program_delivery',
       programId,
       cycleId: activeCycleId,
-      workDate,
+      date: date,
     }));
 
     const adminSessions = await request(app)
-      .get(`/api/hours/sessions?staffId=${adminId}&workDate=${workDate}`)
+      .get(`/api/hours/sessions?staffId=${adminId}&date=${date}`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminSessions.status).toBe(200);
     expect(adminSessions.body).toEqual([
-      expect.objectContaining({ id: sessionId, label: 'Hours workshop', workDate }),
+      expect.objectContaining({ id: sessionId, label: 'Hours workshop', date }),
     ]);
 
     const adminEntry = await request(app)
@@ -400,7 +401,7 @@ describe('Hours API', () => {
       .send({ source: 'session', staffId: adminId, sessionId, hours: 1, note: 'Admin delivered workshop' });
     expect(adminEntry.status).toBe(201);
     expect(adminEntry.body).toEqual(expect.objectContaining({
-      staffId: adminId, sessionId, category: 'program_delivery', workDate,
+      staffId: adminId, sessionId, category: 'program_delivery', date: date,
     }));
   });
 
@@ -408,7 +409,7 @@ describe('Hours API', () => {
     const response = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'program_delivery', workDate, hours: 1, note: 'Wrong workflow' });
+      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'program_delivery', date, hours: 1, note: 'Wrong workflow' });
     expect(response.status).toBe(400);
   });
 
@@ -416,31 +417,31 @@ describe('Hours API', () => {
     const general = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, category: 'other', workDate, hours: 1, note: 'General filtered entry' });
+      .send({ source: 'regular', staffId: firstStaffId, category: 'other', date, hours: 1, note: 'General filtered entry' });
     expect(general.status).toBe(201);
 
     const filterSets = [
-      `categories=other`, `programIds=general`, `types=other`, `staffIds=${firstStaffId}`, `cycleIds=${activeCycleId}`,
+      `categories=other`, `programIds=general`, `types=regular`, `staffIds=${firstStaffId}`, `cycleIds=${activeCycleId}`,
     ];
     for (const filter of filterSets) {
-      const table = await request(app).get(`/api/hours/table?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
-      const calendar = await request(app).get(`/api/hours/calendar?start=${workDate}&end=${workDate}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
+      const table = await request(app).get(`/api/hours/table?start=${date}&end=${date}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
+      const calendar = await request(app).get(`/api/hours/calendar?start=${date}&end=${date}&${filter}`).set('Authorization', `Bearer ${adminToken}`);
       expect(table.status).toBe(200);
       expect(calendar.status).toBe(200);
       const tableIds = table.body.rows.map((row: { id: string }) => row.id).sort();
-      const calendarIds = Object.values(calendar.body).flatMap((dates: unknown) => Object.values(dates as Record<string, Array<{ id: string }>>).flat()).map(entry => entry.id).sort();
+      const calendarIds = calendar.body.map((entry: { id: string }) => entry.id).sort();
       expect(calendarIds).toEqual(tableIds);
     }
     const generalTable = await request(app)
-      .get('/api/hours/table?programIds=general&types=other')
+      .get('/api/hours/table?programIds=general&types=regular')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(generalTable.body.rows.map((row: { id: string }) => row.id)).toContain(general.body.id);
 
     const widened = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}&staffIds=${secondStaffId}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}&staffIds=${secondStaffId}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(widened.status).toBe(200);
-    expect(widened.body).toEqual({});
+    expect(widened.body).toEqual([]);
   });
 
   it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
@@ -454,7 +455,7 @@ describe('Hours API', () => {
     const payPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
     try {
       await sql`
-        INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
+        INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
         VALUES
           (${adminId}, ${activeCycleId}, 'meeting', ${payPeriod.periodStart}::date, 2, 'Current meeting'),
           (${adminId}, ${activeCycleId}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
@@ -543,7 +544,7 @@ describe('Hours API', () => {
 
   it('returns overview data for a shared-readable staff resource without matching entry metadata', async () => {
     const [entry] = await sql<Array<{ id: string }>>`
-      INSERT INTO time_entries (staff_id, cycle_id, category, work_date, hours, note)
+      INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
       VALUES (${secondStaffId}, ${activeCycleId}, 'meeting', CURRENT_DATE, 2, 'Shared resource overview')
       RETURNING id
     `;
@@ -594,7 +595,7 @@ describe('Hours API', () => {
         source: 'regular',
         staffId: firstStaffId,
         category: 'planning_prep',
-        workDate,
+        date,
         hours: 1,
         note: 'Cohort preparation',
       });
@@ -610,7 +611,7 @@ describe('Hours API', () => {
     const response = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: ' ' });
+      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 1, note: ' ' });
     expect(response.status).toBe(400);
   });
 
@@ -618,7 +619,7 @@ describe('Hours API', () => {
     const response = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Team meeting' });
+      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'meeting', date, hours: 1, note: 'Team meeting' });
     expect(response.status).toBe(403);
   });
 
@@ -626,12 +627,12 @@ describe('Hours API', () => {
     const created = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', workDate, hours: 1, note: 'Created campaign materials' });
+      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', date, hours: 1, note: 'Created campaign materials' });
     expect(created.status).toBe(201);
     expect(created.body.category).toBe('outreach');
 
     const listed = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}`)
       .set('Authorization', `Bearer ${adminToken}`);
     const referenceData = await request(app)
       .get('/api/reference-data/staff?feature=hours')
@@ -644,15 +645,15 @@ describe('Hours API', () => {
     ]));
 
     const coworkerRead = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(coworkerRead.status).toBe(200);
-    expect(coworkerRead.body[secondStaffId][workDate]).toEqual(expect.arrayContaining([
+    expect(coworkerRead.body.filter((entry: { staffId: string; date: string }) => entry.staffId === secondStaffId && entry.date === date)).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: created.body.id, programId, note: 'Created campaign materials' }),
     ]));
 
     const unrelatedRead = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}&end=${workDate}`)
+      .get(`/api/hours/calendar?start=${date}&end=${date}`)
       .set('Authorization', `Bearer ${unrelatedStaffToken}`);
     const unrelatedReferenceData = await request(app)
       .get('/api/reference-data/staff?feature=hours')
@@ -662,12 +663,12 @@ describe('Hours API', () => {
     expect(unrelatedReferenceData.body).toEqual([
       expect.objectContaining({ id: unrelatedStaffId, writable: true }),
     ]);
-    expect(unrelatedRead.body[secondStaffId]).toBeUndefined();
+    expect(unrelatedRead.body).not.toEqual(expect.arrayContaining([expect.objectContaining({ staffId: secondStaffId })]));
 
     const coworkerUpdate = await request(app)
       .put(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', workDate, hours: 2, note: 'Unauthorized edit' });
+      .send({ source: 'regular', staffId: secondStaffId, programId, category: 'outreach', date, hours: 2, note: 'Unauthorized edit' });
     expect(coworkerUpdate.status).toBe(403);
 
     const coworkerDelete = await request(app)
@@ -685,8 +686,8 @@ describe('Hours API', () => {
         details: 'Prepare the fall outreach poster',
         category: 'outreach',
         programId,
-        startDate: workDate,
-        dueDate: workDate,
+        startDate: date,
+        dueDate: date,
         staffId: firstStaffId,
       });
     expect(createdTask.status).toBe(201);
@@ -697,7 +698,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${secondStaffToken}`)
       .send({
         source: 'task', staffId: secondStaffId, taskId: assignedTaskId,
-        workDate, hours: 1, note: 'Not assigned to this task',
+        date, hours: 1, note: 'Not assigned to this task',
       });
     expect(unassignedEntry.status).toBe(404);
 
@@ -708,13 +709,14 @@ describe('Hours API', () => {
         source: 'task',
         staffId: firstStaffId,
         taskId: assignedTaskId,
-        workDate: linkedWorkDate,
+        date: linkedDate,
         hours: 2,
         note: 'Drafted the poster',
       });
     expect(linkedEntry.status).toBe(201);
     expect(linkedEntry.body).toEqual(expect.objectContaining({
       taskId: assignedTaskId,
+      type: 'task',
       taskTitle: 'Create marketing poster',
       category: 'outreach', programId,
     }));
@@ -727,7 +729,7 @@ describe('Hours API', () => {
         id: assignedTaskId,
         state: 'open',
         hoursLogged: 2,
-        loggedHoursByDate: [{ date: linkedWorkDate, hours: 2 }],
+        loggedHoursByDate: [{ date: linkedDate, hours: 2 }],
       }),
     ]));
 
@@ -739,7 +741,7 @@ describe('Hours API', () => {
     const completedTime = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, workDate, hours: 1, note: 'Closed task time' });
+      .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, date, hours: 1, note: 'Closed task time' });
     expect(completedTime.status).toBe(404);
 
     const reopened = await request(app)
@@ -755,7 +757,7 @@ describe('Hours API', () => {
     const cancelledTime = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, workDate, hours: 1, note: 'Cancelled task time' });
+      .send({ source: 'task', staffId: firstStaffId, taskId: assignedTaskId, date, hours: 1, note: 'Cancelled task time' });
     expect(cancelledTime.status).toBe(404);
 
     const linkedDelete = await request(app)
@@ -765,9 +767,9 @@ describe('Hours API', () => {
     expect(linkedDelete.body.error).toBe('Tasks with logged time cannot be deleted');
 
     const entriesAfterRejectedDelete = await request(app)
-      .get(`/api/hours/calendar?start=${linkedWorkDate}&end=${linkedWorkDate}`)
+      .get(`/api/hours/calendar?start=${linkedDate}&end=${linkedDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(entriesAfterRejectedDelete.body[firstStaffId][linkedWorkDate]).toEqual(expect.arrayContaining([
+    expect(entriesAfterRejectedDelete.body.filter((entry: { staffId: string; date: string }) => entry.staffId === firstStaffId && entry.date === linkedDate)).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: linkedEntry.body.id, taskId: assignedTaskId, taskTitle: 'Create marketing poster' }),
     ]));
   });
@@ -778,10 +780,10 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body[firstStaffId][workDate]).toEqual(expect.arrayContaining([
+    expect(response.body.filter((entry: { staffId: string; date: string }) => entry.staffId === firstStaffId && entry.date === date)).toEqual(expect.arrayContaining([
       expect.objectContaining({ cycleId: activeCycleId, note: 'Delivered workshop' }),
     ]));
-    expect(response.body[secondStaffId][workDate]).toEqual(expect.arrayContaining([
+    expect(response.body.filter((entry: { staffId: string; date: string }) => entry.staffId === secondStaffId && entry.date === date)).toEqual(expect.arrayContaining([
       expect.objectContaining({ cycleId: activeCycleId, note: 'Created campaign materials' }),
     ]));
   });
@@ -792,7 +794,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         title: 'Complete with time', category: 'planning_prep', programId,
-        startDate: workDate, dueDate: workDate, staffId: firstStaffId,
+        startDate: date, dueDate: date, staffId: firstStaffId,
       });
     expect(task.status).toBe(201);
 
@@ -801,11 +803,11 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
-        workDate, hours: 1, note: 'Finished in one session',
+        date, hours: 1, note: 'Finished in one session',
       });
     expect(entry.status).toBe(201);
     const tasks = await request(app)
-      .get(`/api/tasks/calendar?start=${workDate}&end=${workDate}&staffIds=${firstStaffId}&statuses=completed`)
+      .get(`/api/tasks/calendar?start=${date}&end=${date}&staffIds=${firstStaffId}&statuses=completed`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(tasks.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: task.body.id, status: 'completed', hoursLogged: 1 }),
@@ -820,24 +822,28 @@ describe('Hours API', () => {
     const tasks: string[] = [];
     let entryId: string | undefined;
     const note = `Canonical hours ${Date.now()}`;
-    const payload = { source: 'task', staffId: firstStaffId, workDate, hours: 2, note };
+    const payload = { source: 'task', staffId: firstStaffId, date, hours: 2, note };
     const taskRecord = async (id: string) => {
       const result = await request(app).get(`/api/tasks/${id}`).set('Authorization', `Bearer ${firstStaffToken}`);
       expect(result.status).toBe(200);
       return result.body;
     };
-    const tableRow = async () => {
+    const readableEntry = async () => {
       const result = await request(app).get('/api/hours/table').query({ search: note })
         .set('Authorization', `Bearer ${firstStaffToken}`);
       expect(result.status).toBe(200);
       expect(result.body.rows).toHaveLength(1);
+      const calendar = await request(app).get('/api/hours/calendar').query({ search: note })
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+      expect(calendar.status).toBe(200);
+      expect(calendar.body).toEqual(result.body.rows);
       return result.body.rows[0];
     };
 
     try {
       for (const title of ['First hours task', 'Second hours task']) {
         const task = await request(app).post('/api/tasks').set('Authorization', `Bearer ${adminToken}`)
-          .send({ title, category: 'planning_prep', programId, startDate: workDate, dueDate: placementWorkDate, staffId: firstStaffId });
+          .send({ title, category: 'planning_prep', programId, startDate: date, dueDate: placementDate, staffId: firstStaffId });
         expect(task.status).toBe(201);
         tasks.push(task.body.id);
       }
@@ -845,21 +851,24 @@ describe('Hours API', () => {
         .send({ ...payload, taskId: tasks[0] });
       expect(created.status).toBe(201);
       entryId = created.body.id;
-      expect(created.body.tableRow).toEqual(await tableRow());
-      expect(created.body.updatedTasks).toEqual([await taskRecord(tasks[0])]);
+      const { updatedTasks: createdTasks, ...createdEntry } = created.body;
+      expect(createdEntry).toEqual(await readableEntry());
+      expect(createdTasks).toEqual([await taskRecord(tasks[0])]);
 
       const moved = await request(app).patch(`/api/hours/${entryId}/placement`)
-        .set('Authorization', `Bearer ${firstStaffToken}`).send({ workDate: placementWorkDate });
+        .set('Authorization', `Bearer ${firstStaffToken}`).send({ date: placementDate });
       expect(moved.status).toBe(200);
-      expect(moved.body.tableRow).toEqual(await tableRow());
-      expect(moved.body.updatedTasks).toEqual([await taskRecord(tasks[0])]);
-      expect(moved.body.updatedTasks[0].loggedHoursByDate).toEqual([{ date: placementWorkDate, hours: 2 }]);
+      const { updatedTasks: movedTasks, ...movedEntry } = moved.body;
+      expect(movedEntry).toEqual(await readableEntry());
+      expect(movedTasks).toEqual([await taskRecord(tasks[0])]);
+      expect(moved.body.updatedTasks[0].loggedHoursByDate).toEqual([{ date: placementDate, hours: 2 }]);
 
       const updated = await request(app).put(`/api/hours/${entryId}`).set('Authorization', `Bearer ${firstStaffToken}`)
         .send({ ...payload, taskId: tasks[1], hours: 3 });
       expect(updated.status).toBe(200);
-      expect(updated.body.tableRow).toEqual(await tableRow());
-      expect(updated.body.updatedTasks).toEqual([await taskRecord(tasks[0]), await taskRecord(tasks[1])]);
+      const { updatedTasks: updatedTasks, ...updatedEntry } = updated.body;
+      expect(updatedEntry).toEqual(await readableEntry());
+      expect(updatedTasks).toEqual([await taskRecord(tasks[0]), await taskRecord(tasks[1])]);
       expect(updated.body.updatedTasks.map((task: { hoursLogged: number }) => task.hoursLogged)).toEqual([0, 3]);
 
       const deleted = await request(app).delete(`/api/hours/${entryId}`).set('Authorization', `Bearer ${firstStaffToken}`);
@@ -879,7 +888,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         title: 'Protected task completion', category: 'planning_prep', programId,
-        startDate: workDate, dueDate: workDate, staffId: firstStaffId,
+        startDate: date, dueDate: date, staffId: firstStaffId,
       });
     expect(task.status).toBe(201);
 
@@ -894,7 +903,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${hoursOnlyToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
-        workDate, hours: 1, note: 'Should not complete task',
+        date, hours: 1, note: 'Should not complete task',
       });
 
     expect(entry.status).toBe(403);
@@ -913,7 +922,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${hoursOnlyToken}`)
       .send({
         source: 'task', staffId: firstStaffId, taskId: task.body.id,
-        workDate, hours: 1, note: 'Hours without task read permission',
+        date, hours: 1, note: 'Hours without task read permission',
       });
     expect(savedHours.status).toBe(201);
     expect(savedHours.body).not.toHaveProperty('updatedTasks');
@@ -935,7 +944,7 @@ describe('Hours API', () => {
         programId: null,
         cycleId: activeCycleId,
         category: 'planning_prep',
-        workDate: outsideCycleDate,
+        date: outsideCycleDate,
         hours: 1,
         note: 'Planning attributed to the active cycle',
       });
@@ -947,7 +956,7 @@ describe('Hours API', () => {
     const [overlap] = await sql<Array<{ cycleId: string }>>`
       WITH cycle AS (
         INSERT INTO program_cycles (name, starts_on, ends_on)
-        VALUES ('Overlapping write cycle', ${workDate}, ${workDate})
+        VALUES ('Overlapping write cycle', ${date}, ${date})
         RETURNING id
       ), assignment AS (
         INSERT INTO program_cycle_assignments (program_id, cycle_id)
@@ -960,7 +969,7 @@ describe('Hours API', () => {
       const response = await request(app)
         .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
-        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Ambiguous cycle' });
+        .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 1, note: 'Ambiguous cycle' });
 
       expect(response.status).toBe(409);
       expect(response.body.error).toBe('Multiple cycles cover the selected work date');
@@ -974,22 +983,22 @@ describe('Hours API', () => {
     const created = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Move across cycles' });
+      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 1, note: 'Move across cycles' });
     expect(created.status).toBe(201);
     expect(created.body.cycleId).toBe(activeCycleId);
 
     const moved = await request(app)
       .patch(`/api/hours/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ workDate: upcomingWorkDate });
+      .send({ date: upcomingDate });
 
     expect(moved.status).toBe(200);
-    expect(moved.body).toEqual(expect.objectContaining({ workDate: upcomingWorkDate, cycleId: upcomingCycleId }));
+    expect(moved.body).toEqual(expect.objectContaining({ date: upcomingDate, cycleId: upcomingCycleId }));
   });
 
   it('requires range dates to be provided together', async () => {
     const response = await request(app)
-      .get(`/api/hours/calendar?start=${workDate}`)
+      .get(`/api/hours/calendar?start=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(400);
@@ -1001,7 +1010,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular', staffId: firstStaffId, programId,
-        category: 'meeting', workDate, hours: 1, note: 'Original note',
+        category: 'meeting', date, hours: 1, note: 'Original note',
       });
     expect(created.status).toBe(201);
 
@@ -1010,14 +1019,14 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
         source: 'regular', staffId: firstStaffId, programId: null,
-        category: 'planning_prep', workDate, hours: 2.5, note: 'Newer saved note',
+        category: 'planning_prep', date, hours: 2.5, note: 'Newer saved note',
       });
     expect(contentUpdate.status).toBe(200);
 
     const placementUpdate = await request(app)
       .patch(`/api/hours/${created.body.id}/placement`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ workDate: placementWorkDate });
+      .send({ date: placementDate });
 
     expect(placementUpdate.status).toBe(200);
     expect(placementUpdate.body).toEqual(expect.objectContaining({
@@ -1025,26 +1034,27 @@ describe('Hours API', () => {
       programId: null,
       cycleId: activeCycleId,
       category: 'planning_prep',
-      workDate: placementWorkDate,
+      date: placementDate,
       hours: 2.5,
       note: 'Newer saved note',
     }));
     const listed = await request(app).get('/api/hours/table').query({ search: 'Newer saved note' })
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(listed.status).toBe(200);
-    expect(placementUpdate.body.tableRow).toEqual(listed.body.rows.find((row: { id: string }) => row.id === created.body.id));
+    const { updatedTasks: _updatedTasks, ...placedEntry } = placementUpdate.body;
+    expect(placedEntry).toEqual(listed.body.rows.find((row: { id: string }) => row.id === created.body.id));
   });
 
   it('allows staff to update and delete their own entry', async () => {
     const created = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', workDate, hours: 1, note: 'Initial note' });
+      .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 1, note: 'Initial note' });
 
     const updated = await request(app)
       .put(`/api/hours/${created.body.id}`)
       .set('Authorization', `Bearer ${firstStaffToken}`)
-      .send({ source: 'regular', staffId: firstStaffId, programId: null, category: 'planning_prep', workDate, hours: 1.5, note: 'Updated note' });
+      .send({ source: 'regular', staffId: firstStaffId, programId: null, category: 'planning_prep', date, hours: 1.5, note: 'Updated note' });
     expect(updated.status).toBe(200);
     expect(updated.body).toEqual(expect.objectContaining({ programId: null, category: 'planning_prep', hours: 1.5, note: 'Updated note' }));
 

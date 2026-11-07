@@ -195,7 +195,7 @@ export async function listSessionNotesForYouth(
       sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
       cs.theme AS session_theme, cs.starts_at, cs.cycle_id,
-      cycle.name AS cycle_name, p.id AS program_id, p.name AS program_name, p.enrollment_required,
+      cycle.name AS cycle, p.id AS program_id, p.name AS program, p.enrollment_required,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(

@@ -1,3 +1,5 @@
+import { sessionStore } from '../../sessionStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
@@ -6,6 +8,8 @@ import { useDataBuffer } from '../../../../../common/components/TimelineCalendar
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
   BuildItemContext,
+  CalendarItemReference,
+  RowItemData,
   ItemCapabilityContext,
   ItemMoveContext,
   RenderRowContext,
@@ -30,7 +34,6 @@ interface SessionCalendarProps {
   pendingSessionIds?: string[];
 
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
-  onSessionsLoaded?: (sessions: ProgramSession[]) => void;
   onSessionSelect: (session: ProgramSession) => void;
   onSessionMove?: (session: ProgramSession, date: string) => Promise<ProgramSession | null>;
   onAddSession?: (program: Program, date: string) => void;
@@ -40,16 +43,29 @@ interface SessionCalendarProps {
 }
 
 const getProgramId = (program: Program) => program.id;
-const getSessionId = (session: ProgramSession) => session.id;
+const getSessionId = (session: { id: string }) => session.id;
+const getReferenceRange = (reference: CalendarItemReference) => ({ start: reference.start, end: reference.end });
 
+/**
+ * Displays the program name in a calendar resource header.
+ * @example renderProgramRow(context) // program display name
+ */
 function renderProgramRow({ row }: RenderRowContext<Program>) {
   return <span>{row.name}</span>;
 }
 
+/**
+ * Restricts session moves to their existing program.
+ * @example canMoveWithinProgram(context) // false for a different program
+ */
 function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, ProgramSession>) {
   return row.id === destinationRow.id;
 }
 
+/**
+ * Displays shared sessions through a buffer of IDs and inclusive date placement.
+ * @example <SessionCalendar filters={filters} {...viewProps} />
+ */
 export default function SessionCalendar({
   filters,
   programs,
@@ -59,7 +75,6 @@ export default function SessionCalendar({
   pendingSessionIds = [],
 
   onProgramSelect,
-  onSessionsLoaded,
   onSessionSelect,
   onSessionMove,
   onAddSession,
@@ -68,6 +83,8 @@ export default function SessionCalendar({
   onMessageChange,
 }: SessionCalendarProps) {
   const { cycleIds, programIds, dateRange } = filters;
+  const client = useQueryClient();
+  const records = sessionStore.useRecords();
 
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
@@ -75,24 +92,36 @@ export default function SessionCalendar({
 
     const requestRange = getSessionRequestRange(dates.start, dates.end);
     const requestFilters = { ...filters, ...requestRange };
-    const sessions = await getSessions(requestFilters, { signal });
+    const read = sessionStore.beginRead(client);
+    const incoming = await getSessions(requestFilters, { signal });
 
-    const data: Record<string, Record<string, ProgramSession[]>> = {};
+    const sessions = sessionStore.finishRead(client, read, incoming, signal);
+    const data: Record<string, Record<string, CalendarItemReference[]>> = {};
     for (const session of sessions) {
       data[session.programId] ??= {};
       data[session.programId][start.key] ??= [];
-      data[session.programId][start.key].push(session);
+      data[session.programId][start.key].push({ id: session.id, ...getSessionRange(session) });
     }
 
     return data;
-  }, [filters]);
+  }, [client, filters]);
 
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getSessionId,
-    getItemRange: getSessionRange,
+    getItemRange: getReferenceRange,
     errorMessage: 'Unable to load sessions calendar data',
   });
+  const visibleItems = useMemo<RowItemData<ProgramSession>>(() => {
+    const items: Record<string, ProgramSession[]> = {};
+    for (const references of Object.values(calendar.items)) {
+      for (const { id } of references ?? []) {
+        const session = records[id];
+        if (session) (items[session.programId] ??= []).push(session);
+      }
+    }
+    return items;
+  }, [calendar.items, records]);
   const { upsertItem, removeItem } = calendar;
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
@@ -108,7 +137,8 @@ export default function SessionCalendar({
           return;
         }
 
-        upsertItem(session.programId, getSessionRange(session).start, session);
+        const range = getSessionRange(session);
+        upsertItem(session.programId, range.start, { id: session.id, ...range });
       },
       remove: removeItem,
     };
@@ -127,14 +157,10 @@ export default function SessionCalendar({
     return programs.filter(program => programIds.includes(program.id));
   }, [programIds, programs]);
 
-  const sessions = useMemo(() => {
-    return Object.values(calendar.items).flatMap(items => items ?? []);
-  }, [calendar.items]);
-
-  useEffect(() => {
-    onSessionsLoaded?.(sessions);
-  }, [onSessionsLoaded, sessions]);
-
+  /**
+   * Displays a shared session with selection and permitted edit/delete actions.
+   * @example buildItem(context) // session item for its program row
+   */
   function buildItem({ data: session, row, calendar: itemCalendar }: BuildItemContext<Program, ProgramSession>) {
     const isPending = pendingSessionIds.includes(session.id);
 
@@ -150,6 +176,10 @@ export default function SessionCalendar({
     );
   }
 
+  /**
+   * Allows dragging upcoming, active sessions when no mutation is pending.
+   * @example getItemCapabilities(context) // draggable flag and resizing disabled
+   */
   function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, ProgramSession>) {
     const draggable = Boolean(onSessionMove)
       && !session.cancelledAt
@@ -159,6 +189,10 @@ export default function SessionCalendar({
     return { draggable, resizable: false };
   }
 
+  /**
+   * Reports the requested date to the session mutation owner.
+   * @example moveSession(context) // saves the new start day
+   */
   async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, ProgramSession>) {
     await onSessionMove?.(session, nextRange.start);
   }
@@ -184,7 +218,7 @@ export default function SessionCalendar({
         selectedRowId={selectedProgramId}
         onRowSelect={onProgramSelect}
 
-        items={calendar.items}
+        items={visibleItems}
         getItemId={getSessionId}
         getItemRange={getSessionRange}
         buildItem={buildItem}

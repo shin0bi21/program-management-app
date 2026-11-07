@@ -14,8 +14,8 @@ import { listSessionNotesForYouth } from '../programming/sessions/sessionNoteSer
 interface YouthProgramCycleContext {
   programId: string;
   cycleId: string;
-  cycleName: string;
-  programName: string;
+  cycle: string;
+  program: string;
   enrollmentRequired: boolean;
 }
 
@@ -191,7 +191,7 @@ async function getYouthProgramCycleContext(
 
   // 2. Load the program cycle and check enrollment.
   const programCycles = await query<YouthProgramCycleContext[]>`
-    SELECT pc.program_id, pc.cycle_id, cycle.name AS cycle_name, p.name AS program_name, p.enrollment_required
+    SELECT pc.program_id, pc.cycle_id, cycle.name AS cycle, p.name AS program, p.enrollment_required
     FROM program_cycle_assignments pc
     INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
     INNER JOIN programs p ON p.id = pc.program_id

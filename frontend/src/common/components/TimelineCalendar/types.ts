@@ -20,6 +20,9 @@ export interface ItemRange {
   end: PeriodKey;
 }
 
+/** Buffered membership and inclusive placement; the feature owner holds the full record. */
+export interface CalendarItemReference extends ItemRange { id: string }
+
 // Item layout
 export type ItemDensity = 'normal' | 'compact' | 'dense';
 export type ResizeEdge = 'start' | 'end';

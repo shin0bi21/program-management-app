@@ -6,8 +6,8 @@ import { getProgramCycleYouthReportPdf } from './youthReport.api';
 interface ReportProgramCycle {
   programId: string;
   cycleId: string;
-  cycleName: string;
-  programName: string;
+  cycle: string;
+  program: string;
 }
 
 interface YouthReportModalProps {
@@ -17,7 +17,7 @@ interface YouthReportModalProps {
 }
 
 export default function YouthReportModal({ programCycle, youthId, onClose }: YouthReportModalProps) {
-  const filename = `${programCycle.programName} - ${programCycle.cycleName} Youth Report.pdf`
+  const filename = `${programCycle.program} - ${programCycle.cycle} Youth Report.pdf`
     .replace(/[\\/:*?"<>|]+/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
@@ -25,7 +25,7 @@ export default function YouthReportModal({ programCycle, youthId, onClose }: You
   const viewFileModal = useViewFileModal({
     isOpen: true,
     requestKey: `${programCycle.programId}:${programCycle.cycleId}:${youthId ?? 'all'}`,
-    title: `${programCycle.cycleName} Youth Report`,
+    title: `${programCycle.cycle} Youth Report`,
     maxWidth: '1100px',
     mimeType: 'application/pdf',
     downloadName: filename,

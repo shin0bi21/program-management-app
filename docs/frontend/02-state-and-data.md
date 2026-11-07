@@ -38,6 +38,13 @@ component → focused query hook → typed feature API → centralized HTTP clie
 3. Forward cancellation through the API adapter to the HTTP client.
 4. Keep cancellation and timeouts active through response-body consumption, including errors and downloads.
 
+### Record Field Names
+
+Use `programId` and `cycleId` for related record identifiers, with `program` and
+`cycle` for their display values. Use the same fields in backend projections,
+API responses, shared stores, tables, and calendars. A Program or Cycle record
+itself keeps its own `id` and `name`. Keep display labels out of identifier fields.
+
 ### API Adapters
 
 - Own endpoint paths, HTTP methods, request/response contracts, serialization, and boundary normalization.
@@ -56,9 +63,23 @@ component → focused query hook → typed feature API → centralized HTTP clie
 ### Calendars
 
 1. Load filtered ranges through [useDataBuffer](../../frontend/src/common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer.ts), which owns reads, retries, and cancellation.
-2. Forward its signal through the API adapter; do not duplicate ranges in an imperative query cache.
-3. Key the calendar by applied filters so changes start a fresh buffer.
-4. Keep browser-local scroll position separate through `positionStorageKey`.
+2. Keep range membership and calendar layout separate from the complete backend record.
+3. Forward its signal through the API adapter; do not duplicate ranges in an imperative query cache.
+4. Key the calendar by applied filters so changes start a fresh buffer.
+5. Keep browser-local scroll position separate through `positionStorageKey`.
+
+### Share Records Across Views
+
+- Give records one feature-owned store, indexed by ID, when tables and calendars share them.
+- Keep IDs, cursor/order values, and date/resource membership in view caches. Resolve IDs through the shared store for rendering; derived groups hold references to those records.
+- Store selected record IDs. Keep editable form drafts separate from saved records.
+- Merge reads and saved mutations through that owner. Protect pending changes, rollback, deletion, and account cache clearing from late responses.
+- Let view indexes retain loaded membership and ordering until refresh; update aggregates separately.
+
+Hours, Tasks, and Sessions use feature-owned record stores. Tables retain
+pagination and ordering indexes; calendars retain range membership and placement
+indexes. Both resolve IDs to the same current records. Tasks and Sessions share
+the revision and account-lifecycle implementation in `query/createRecordStore.ts`.
 
 ## Handle Request Failures
 
@@ -84,10 +105,10 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 ## Reconcile Mutations
 
-1. Use the backend's returned record; do not rebuild it from form values.
+1. Use one complete backend record shape across reads and mutations; do not rebuild it from form values or create separate table/calendar records.
 2. Define cancellation, serialization, or revision rules so stale work cannot replace newer state.
 3. Account for out-of-order completion, repeated edits, rollback order, reset during loading, and deletion followed by a late response.
-4. Update affected rows, selection, calendars, and dashboards in the owning action hook; avoid whole-page refreshes.
+4. Write the saved record once, then reconcile affected view indexes and dashboards in the owning action hook; avoid whole-page refreshes.
 5. Use [cursor-list cache helpers](../../frontend/src/query/infiniteListCache.ts) for authoritative row replacements and confirmed deletes; reconcile aggregates separately.
 6. After creation, invalidate only the list prefix unless insertion membership and position are provable in every cached variant.
 

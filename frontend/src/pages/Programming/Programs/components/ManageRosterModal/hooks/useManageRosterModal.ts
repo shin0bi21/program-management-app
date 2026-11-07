@@ -67,7 +67,7 @@ export function useManageRosterModal({ assignment, refresh, onSuccess }: UseMana
     setActionError('');
     setConfirmAction({
       title: 'Withdraw Youth',
-      message: `Withdraw ${profile.firstName} ${profile.lastName} from ${assignment.programName} - ${assignment.cycleName}? Their existing attendance history will be kept.`,
+      message: `Withdraw ${profile.firstName} ${profile.lastName} from ${assignment.program} - ${assignment.cycle}? Their existing attendance history will be kept.`,
       confirmVariant: 'danger',
       successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
       onConfirm: async () => {

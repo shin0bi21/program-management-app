@@ -32,13 +32,13 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
 
   // 2. Choose the order and load the page.
   const sortValue = {
-    firstName: sql`LOWER(page_row.staff_first_name)`,
-    lastName: sql`LOWER(page_row.staff_last_name)`,
-    title: sql`LOWER(page_row.title)`,
-    category: sql`page_row.category::text`,
-    program: sql`LOWER(COALESCE(page_row.program_name, ''))`,
-    startDate: sql`page_row.start_date`,
-    dueDate: sql`page_row.due_date`,
+    firstName: sql`LOWER("row".staff_first_name)`,
+    lastName: sql`LOWER("row".staff_last_name)`,
+    title: sql`LOWER("row".title)`,
+    category: sql`"row".category::text`,
+    program: sql`LOWER(COALESCE("row".program, ''))`,
+    startDate: sql`"row".start_date`,
+    dueDate: sql`"row".due_date`,
     status,
   }[filterValues.sort]!;
   const page = await paginateQuery(rowsQuery, {

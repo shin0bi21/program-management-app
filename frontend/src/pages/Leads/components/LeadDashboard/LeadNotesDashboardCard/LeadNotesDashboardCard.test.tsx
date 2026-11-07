@@ -23,7 +23,7 @@ const lead: Lead = {
   age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: null,
-  recommendedProgramName: null,
+  recommendedProgram: null,
   contactPhoneNumber: '519-555-0100',
   contactRelationship: 'guardian',
   discoverySource: 'online',

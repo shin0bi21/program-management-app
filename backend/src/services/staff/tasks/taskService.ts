@@ -106,7 +106,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
           SELECT name
           FROM programs
           WHERE id = tasks.program_id
-        ) AS program_name,
+        ) AS program,
         status, start_date::text, due_date::text, completed_at::text, 0::float AS hours_logged
     `;
     if (!rows[0]) throw new InternalServerError('Task creation returned no record');
@@ -190,7 +190,7 @@ export async function updateTaskPlacement(
           SELECT name
           FROM programs
           WHERE id = tasks.program_id
-        ) AS program_name,
+        ) AS program,
         status, start_date::text, due_date::text, completed_at::text,
         (
           SELECT COALESCE(SUM(entry.hours), 0)::float
@@ -283,7 +283,7 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
           SELECT name
           FROM programs
           WHERE id = tasks.program_id
-        ) AS program_name,
+        ) AS program,
         status, start_date::text, due_date::text, completed_at::text,
         (
           SELECT COALESCE(SUM(entry.hours), 0)::float
@@ -421,7 +421,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
           SELECT name
           FROM programs
           WHERE id = tasks.program_id
-        ) AS program_name,
+        ) AS program,
         status, start_date::text, due_date::text, completed_at::text,
         (
           SELECT COALESCE(SUM(entry.hours), 0)::float

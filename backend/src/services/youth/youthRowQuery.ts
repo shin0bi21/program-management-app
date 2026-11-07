@@ -9,9 +9,9 @@ export type YouthRow =
     status: 'active' | 'inactive';
     programCycles: Array<{
       cycleId: string;
-      cycleName: string;
+      cycle: string;
       programId: string;
-      programName: string;
+      program: string;
       enrollmentRequired: boolean;
       startsOn: string;
       endsOn: string;
@@ -70,9 +70,9 @@ export const youthRowColumns = sql`
     SELECT json_agg(
       json_build_object(
         'cycleId', cycle.id,
-        'cycleName', cycle.name,
+        'cycle', cycle.name,
         'programId', p.id,
-        'programName', p.name,
+        'program', p.name,
         'enrollmentRequired', p.enrollment_required,
         'startsOn', cycle.starts_on,
         'endsOn', cycle.ends_on,

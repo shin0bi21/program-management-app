@@ -203,7 +203,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     setDraft(current => ({
       ...current,
       sessionId,
-      date: session?.workDate ?? current.date,
+      date: session?.date ?? current.date,
     }));
   };
   const updateDate = (date: string) => {
@@ -249,7 +249,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
         ? {
           ...shared,
           source: 'task',
-          workDate: draft.date,
+          date: draft.date,
           taskId: draft.taskId,
           completeTask: canCompleteTask && draft.completeTask,
         }
@@ -258,7 +258,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
           : {
             ...shared,
             source: 'regular',
-            workDate: draft.date,
+            date: draft.date,
             programId: draft.programId || null,
             category: draft.category,
       };

@@ -28,7 +28,7 @@ const lead: Lead = {
   dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
   school: 'Test School',
   recommendedProgramId: 'program-1',
-  recommendedProgramName: 'Future Ready',
+  recommendedProgram: 'Future Ready',
   contactPhoneNumber: '416-555-0142',
   contactRelationship: 'guardian',
   discoverySource: 'online',
@@ -40,12 +40,12 @@ const lead: Lead = {
 
 const programCycle = {
   programId: 'program-1',
-  programName: 'Future Ready',
+  program: 'Future Ready',
   enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
   cycleId: 'cycle-summer-2026',
-  cycleName: 'Summer 2026',
+  cycle: 'Summer 2026',
   startsOn: '2026-06-30',
   endsOn: '2026-08-31',
   state: 'active' as const,
@@ -63,8 +63,8 @@ describe('SignUpLeadModal', () => {
     vi.clearAllMocks();
     vi.mocked(getProgramCycleAssignments).mockResolvedValue([
       programCycle,
-      { ...programCycle, cycleId: 'programCycle-completed', cycleName: 'Spring 2026', state: 'completed' },
-      { ...programCycle, cycleId: 'programCycle-open', cycleName: 'Drop In', enrollmentRequired: false },
+      { ...programCycle, cycleId: 'programCycle-completed', cycle: 'Spring 2026', state: 'completed' },
+      { ...programCycle, cycleId: 'programCycle-open', cycle: 'Drop In', enrollmentRequired: false },
     ]);
     vi.mocked(signUpLead).mockResolvedValue({ lead });
   });

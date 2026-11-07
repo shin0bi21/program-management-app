@@ -1024,7 +1024,7 @@ describe('Youth API', () => {
       expect(response.status).toBe(200);
       expect(response.body.programCycle).toEqual(expect.objectContaining({
         programId: softSkillsProgramId, cycleId: softSkillsCycleId,
-        programName: 'Soft Skills',
+        program: 'Soft Skills',
         enrollmentRequired: true,
       }));
       expect(response.body.sessions).toHaveLength(2);

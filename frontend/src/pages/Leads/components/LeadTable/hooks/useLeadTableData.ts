@@ -16,7 +16,7 @@ export function useLeadTableData(
         firstName: lead.youthFirstName.toLowerCase(),
         lastName: lead.youthLastName.toLowerCase(),
         school: lead.school.toLowerCase(),
-        program: lead.recommendedProgramName?.toLowerCase() ?? '',
+        program: lead.recommendedProgram?.toLowerCase() ?? '',
         status: lead.status,
         created: new Date(lead.createdAt),
       }[sorting.key]),

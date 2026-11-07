@@ -35,7 +35,7 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
       <Modal
         isOpen={assignment !== null && workflow.confirmAction === null}
         onClose={onClose}
-        title={assignment ? `${assignment.programName} - ${assignment.cycleName} Roster` : ''}
+        title={assignment ? `${assignment.program} - ${assignment.cycle} Roster` : ''}
         disableClose={workflow.pendingYouthId !== null}
         footer={<Button
           variant="secondary"

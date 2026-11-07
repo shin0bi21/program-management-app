@@ -39,7 +39,7 @@ export default function useTaskTable({
       id: 'program',
       header: 'Program',
       size: 160,
-      accessorFn: task => task.programName ?? '—',
+      accessorFn: task => task.program ?? '—',
     },
     {
       id: 'category',
