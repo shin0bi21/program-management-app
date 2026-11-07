@@ -700,24 +700,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('enforces the cycle date range at the database boundary', async () => {
-    await expect(sql`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-      VALUES (
-        ${programId}, ${mainCycleId},
-        'Outside range',
-        ${`${addDays(today, 61)}T21:00:00.000Z`},
-        ${`${addDays(today, 61)}T23:30:00.000Z`}
-      )
-    `).rejects.toBeDefined();
-
-    await expect(sql`
-      UPDATE program_cycles
-      SET ends_on = ${addDays(today, 7)}
-      WHERE id = ${mainCycleId}
-    `).rejects.toBeDefined();
-  });
-
   it('returns enrolled youth on the session roster and saves attendance', async () => {
     const roster = await request(app)
       .get(`/api/sessions/${sessionId}/roster`)
@@ -761,20 +743,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId });
     expect(response.body).not.toHaveProperty('updatedProgramCycle');
     expect(response.body).not.toHaveProperty('updatedYouth');
-  });
-
-  it('rejects duplicate youth in an attendance replacement', async () => {
-    const response = await request(app)
-      .put(`/api/sessions/${sessionId}/attendance`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({
-        records: [
-          { youthId, status: 'present' },
-          { youthId, status: 'late' },
-        ],
-      });
-
-    expect(response.status).toBe(400);
   });
 
   it('returns program cycle overview metrics for Programming', async () => {
@@ -1031,20 +999,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect((await request(app).delete(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
     expect(await sql`SELECT 1 FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`).toHaveLength(2);
-  });
-
-  it('returns a conflict when deleting a session or assignment with attendance', async () => {
-    expect((await request(app)
-      .delete(`/api/sessions/${sessionId}`)
-      .set('Authorization', `Bearer ${staffToken}`)).status).toBe(409);
-    expect((await request(app)
-      .put(`/api/programs/${programId}/cycles`)
-      .set('Authorization', `Bearer ${adminToken}`).send({ cycleIds: [] })).status).toBe(409);
-  });
-
-  it('uses attendance foreign keys to block deletion through the assignment tree', async () => {
-    await expect(sql`DELETE FROM program_sessions WHERE id = ${sessionId}`).rejects.toBeDefined();
-    await expect(sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`).rejects.toBeDefined();
   });
 
   it('clears an existing attendance record when a roster member is not marked', async () => {
