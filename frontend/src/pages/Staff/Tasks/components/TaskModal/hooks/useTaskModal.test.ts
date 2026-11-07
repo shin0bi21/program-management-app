@@ -74,7 +74,7 @@ describe('useTaskModal', () => {
 
     expect(setTask).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Existing task',
-      staffId: task.assignee.id,
+      staffId: task.staffId,
     }), 'task-1');
   });
 

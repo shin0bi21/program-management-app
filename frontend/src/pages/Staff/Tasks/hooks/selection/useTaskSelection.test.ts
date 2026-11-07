@@ -41,7 +41,7 @@ describe('useTaskSelection', () => {
     const task = makeTask();
     const updated = makeTask({
       title: 'Updated workshop',
-      assignee: { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' },
+      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
     });
     const { result, client } = renderHook(() => useTaskSelection({ resources }));
 

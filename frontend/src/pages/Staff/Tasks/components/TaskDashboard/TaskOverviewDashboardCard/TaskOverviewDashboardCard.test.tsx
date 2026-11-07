@@ -14,7 +14,7 @@ const baseTask: Task = {
   categoryLabel: 'Planning / Prep', programId: null, program: null, state: 'open',
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-10', dueDate: '2026-08-12', hoursLogged: 0, loggedHoursByDate: [], completedAt: null,
-  assignee: { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' }, writable: true,
+  staffId: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', writable: true,
 };
 
 afterEach(() => vi.useRealTimers());

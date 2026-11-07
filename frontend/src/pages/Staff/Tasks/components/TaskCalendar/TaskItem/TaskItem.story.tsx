@@ -10,12 +10,8 @@ const initialTask: Task = {
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
-  assignee: {
-    id: resource.id,
-    firstName: resource.firstName,
-    lastName: resource.lastName,
-    name: resource.name,
-  }, writable: true,
+  staffId: resource.id, firstName: resource.firstName, lastName: resource.lastName, name: resource.name,
+  writable: true,
 };
 
 export function InteractiveTaskItem() {

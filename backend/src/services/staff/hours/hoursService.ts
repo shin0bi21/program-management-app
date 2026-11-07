@@ -345,7 +345,7 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}
-      AND task.status = 'open'
+      AND task.state = 'open'
     LIMIT 1
     FOR UPDATE OF task
   `;
@@ -382,14 +382,14 @@ async function completeTaskFromHours(
   }
   await trx`
     UPDATE tasks
-    SET status = 'completed',
+    SET state = 'completed',
       completed_at = NOW(),
       updated_by = ${actor.userId},
       updated_at = NOW()
     WHERE id = ${taskId}
   `;
   await audit(trx, actor.userId, transactionId, 'tasks', taskId, 'UPDATE',
-    { status: 'open', staffId }, { status: 'completed', staffId });
+    { state: 'open', staffId }, { state: 'completed', staffId });
 }
 
 /**

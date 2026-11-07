@@ -4,12 +4,11 @@ import { audit } from '../../shared/auditService';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
-import { assertCanAssignTaskTo, taskReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
+import { assertCanAssignTaskTo, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import {
   attachTaskDetails,
   loadTaskLoggedHours,
-  taskRowColumns,
-  taskRowFrom,
+  getTaskRows,
   type TaskRow,
 } from './taskRowQuery';
 import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
@@ -18,21 +17,16 @@ import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData'
  * Loads one accessible task with its logged hours.
  * @param id - Task to load.
  * @param actor - User whose staff scope is checked.
- * @param db - Database client; pass trx inside a transaction.
+ * @param query - Database client; pass trx inside a transaction.
  * @example getTask(taskId, actor, trx)
  */
-export async function getTask(id: string, actor: AccessTokenPayload, db: typeof sql = sql) {
+export async function getTask(id: string, actor: AccessTokenPayload, query = sql) {
   // 1. Load the accessible task.
-  const rows = await db<TaskRow[]>`
-    SELECT ${taskRowColumns}
-    ${taskRowFrom}
-    WHERE task.id = ${id}
-      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-  `;
+  const rows = await getTaskRows(actor, query`task.id = ${id}`, query);
   if (!rows.length) throw new NotFoundError('Task not found');
 
   // 2. Include logged hours and access.
-  return attachTaskDetails(rows, await loadTaskLoggedHours([id], db), actor)[0];
+  return attachTaskDetails(rows, await loadTaskLoggedHours([id], query), actor)[0];
 }
 
 /**
@@ -44,11 +38,10 @@ export async function getTask(id: string, actor: AccessTokenPayload, db: typeof 
 export async function getOpenTasks(actor: AccessTokenPayload, query: OpenTaskQuery) {
   // 1. Load accessible open tasks.
   const rows = await sql<TaskRow[]>`
-    SELECT ${taskRowColumns}
-    ${taskRowFrom}
-    WHERE ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
-      AND ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-      AND task.status = 'open'
+    ${getTaskRows(actor, sql`
+      ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
+      AND task.state = 'open'
+    `)}
     ORDER BY task.start_date, task.due_date, task.title, task.id
   `;
 
@@ -69,8 +62,8 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
   if (id) return updateTaskRecord(id, input, actor);
   assertCanAssignTaskTo(actor, input.staffId);
   const transactionId = crypto.randomUUID();
-  let created!: TaskRow;
-  await sql.begin(async tx => {
+
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
@@ -78,46 +71,25 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
     await assertProgramExists(input.programId, trx);
 
     // 3. Save the task.
-    const rows = await trx<TaskRow[]>`
+    const rows = await trx<{ id: string }[]>`
       INSERT INTO tasks (
-        title, details, category, staff_id, program_id, status, start_date, due_date, completed_at, created_by, updated_by
+        title, details, category, staff_id, program_id, state, start_date, due_date, completed_at, created_by, updated_by
       ) VALUES (
         ${input.title}, ${input.details}, ${input.category}, ${input.staffId}, ${input.programId}, 'open', ${input.startDate}, ${input.dueDate},
         null, ${actor.userId}, ${actor.userId}
       )
-      RETURNING id, title, details, category, staff_id,
-        (
-          SELECT first_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_first_name,
-        (
-          SELECT last_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_last_name,
-        (
-          SELECT CONCAT(first_name, ' ', last_name)
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_name,
-        program_id,
-        (
-          SELECT name
-          FROM programs
-          WHERE id = tasks.program_id
-        ) AS program,
-        status, start_date::text, due_date::text, completed_at::text, 0::float AS hours_logged
+      RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task creation returned no record');
-    created = rows[0];
+    const [created] = await getTaskRows(actor, trx`task.id = ${rows[0].id}`, trx);
+    if (!created) throw new InternalServerError('Saved task record is unavailable');
 
     // 4. Record the change.
-    await audit(trx, actor.userId, transactionId, 'tasks', created.id, 'INSERT', null, { ...created, staffId: input.staffId });
-  });
+    await audit(trx, actor.userId, transactionId, 'tasks', created.id, 'INSERT', null, { ...created });
 
-  // 5. Return the saved task.
-  return attachTaskDetails([created], [], actor)[0];
+    // 5. Return the complete saved task before commit.
+    return attachTaskDetails([created], await loadTaskLoggedHours([created.id], trx), actor)[0];
+  });
 }
 
 /**
@@ -135,17 +107,16 @@ export async function updateTaskPlacement(
   // 1. Check the destination assignee.
   if (input.staffId) assertCanAssignTaskTo(actor, input.staffId);
   const transactionId = crypto.randomUUID();
-  let updated!: TaskRow;
 
-  await sql.begin(async tx => {
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -165,54 +136,23 @@ export async function updateTaskPlacement(
     }
 
     // 4. Save the placement.
-    const rows = await trx<TaskRow[]>`
+    const rows = await trx<{ id: string }[]>`
       UPDATE tasks
       SET staff_id = ${nextStaffId}, start_date = ${input.startDate}, due_date = ${input.dueDate},
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
-      RETURNING id, title, details, category, staff_id,
-        (
-          SELECT first_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_first_name,
-        (
-          SELECT last_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_last_name,
-        (
-          SELECT CONCAT(first_name, ' ', last_name)
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_name,
-        program_id, (
-          SELECT name
-          FROM programs
-          WHERE id = tasks.program_id
-        ) AS program,
-        status, start_date::text, due_date::text, completed_at::text,
-        (
-          SELECT COALESCE(SUM(entry.hours), 0)::float
-          FROM time_entries entry
-          WHERE entry.task_id = tasks.id
-        ) AS hours_logged
+      RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    updated = rows[0];
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
+    if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 5. Record the change.
-    await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', {
-      ...existing,
-      staffId: existing.staffId,
-    }, {
-      ...updated,
-      staffId: nextStaffId,
-    });
-  });
+    await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', { ...existing }, { ...updated });
 
-  // 6. Return the saved task.
-  return attachTaskDetails([updated], await loadTaskLoggedHours([id]), actor)[0];
+    // 6. Return the complete saved task before commit.
+    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+  });
 }
 
 /**
@@ -224,84 +164,57 @@ export async function updateTaskPlacement(
  */
 export async function updateTaskState(id: string, state: 'open' | 'completed' | 'cancelled', actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
-  let updated!: TaskRow;
-  await sql.begin(async tx => {
+
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 1. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
 
     // 2. Check the requested state.
-    if (state === 'completed' && existingRows[0].status !== 'open') {
+    if (state === 'completed' && existingRows[0].state !== 'open') {
       throw new ConflictError('Only open tasks can be completed');
     }
     if (state === 'completed' && existingRows[0].hoursLogged === 0) {
       throw new ConflictError('Tasks need logged time before they can be completed');
     }
-    if (state === 'cancelled' && existingRows[0].status !== 'open') {
+    if (state === 'cancelled' && existingRows[0].state !== 'open') {
       throw new ConflictError('Only open tasks can be cancelled');
     }
-    if (state === 'open' && !['completed', 'cancelled'].includes(existingRows[0].status)) {
+    if (state === 'open' && !['completed', 'cancelled'].includes(existingRows[0].state)) {
       throw new ConflictError('Only completed or cancelled tasks can be reopened');
     }
 
     // 3. Save the task state.
-    const rows = await trx<TaskRow[]>`
+    const rows = await trx<{ id: string }[]>`
       UPDATE tasks
-      SET status = ${state},
+      SET state = ${state},
         completed_at = CASE
           WHEN ${state} = 'completed' THEN COALESCE(completed_at, NOW())
           ELSE NULL
         END,
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
-      RETURNING id, title, details, category, staff_id,
-        (
-          SELECT first_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_first_name,
-        (
-          SELECT last_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_last_name,
-        (
-          SELECT CONCAT(first_name, ' ', last_name)
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_name,
-        program_id,
-        (
-          SELECT name
-          FROM programs
-          WHERE id = tasks.program_id
-        ) AS program,
-        status, start_date::text, due_date::text, completed_at::text,
-        (
-          SELECT COALESCE(SUM(entry.hours), 0)::float
-          FROM time_entries entry
-          WHERE entry.task_id = tasks.id
-        ) AS hours_logged
+      RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    updated = rows[0];
-    const staffId = existingRows[0].staffId;
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
+    if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 4. Record the change.
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE',
-      { ...existingRows[0], staffId }, { ...updated, staffId });
-  });
+      { ...existingRows[0] }, { ...updated });
 
-  // 5. Return the saved task.
-  return attachTaskDetails([updated], await loadTaskLoggedHours([id]), actor)[0];
+    // 5. Return the complete saved task before commit.
+    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+  });
 }
 
 /**
@@ -312,15 +225,16 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
  */
 export async function deleteTask(id: string, actor: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
-  await sql.begin(async tx => {
+
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 1. Lock the accessible task.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -336,14 +250,13 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
     }
 
     // 3. Delete the task and record the change.
-    const staffId = existingRows[0].staffId;
     await trx`
       DELETE
       FROM tasks
       WHERE id = ${id}
     `;
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'DELETE',
-      { ...existingRows[0], staffId }, null);
+      { ...existingRows[0] }, null);
   });
 }
 
@@ -366,8 +279,8 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
   // 1. Check the assignee.
   assertCanAssignTaskTo(actor, input.staffId);
   const transactionId = crypto.randomUUID();
-  let updated!: TaskRow;
-  await sql.begin(async tx => {
+
+  return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
@@ -376,10 +289,10 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
 
     // 3. Lock the task and check whether it can be edited.
     const existingRows = await trx<TaskRow[]>`
-      SELECT ${taskRowColumns}
-      ${taskRowFrom}
-      WHERE task.id = ${id}
-        AND ${taskWriteScopePredicate(actor, sql`task.staff_id`)}
+      ${getTaskRows(actor, trx`
+        task.id = ${id}
+        AND ${taskWriteScopePredicate(actor, trx`task.staff_id`)}
+      `, trx)}
       FOR UPDATE OF task
     `;
     if (!existingRows.length) throw new NotFoundError('Task not found');
@@ -393,53 +306,25 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
     }
 
     // 4. Save the task details.
-    const rows = await trx<TaskRow[]>`
+    const rows = await trx<{ id: string }[]>`
       UPDATE tasks
       SET title = ${input.title}, details = ${input.details}, category = ${input.category},
         staff_id = ${input.staffId}, program_id = ${input.programId},
         start_date = ${input.startDate}, due_date = ${input.dueDate},
         updated_by = ${actor.userId}, updated_at = NOW()
       WHERE id = ${id}
-      RETURNING id, title, details, category, staff_id,
-        (
-          SELECT first_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_first_name,
-        (
-          SELECT last_name
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_last_name,
-        (
-          SELECT CONCAT(first_name, ' ', last_name)
-          FROM users
-          WHERE id = tasks.staff_id
-        ) AS staff_name,
-        program_id,
-        (
-          SELECT name
-          FROM programs
-          WHERE id = tasks.program_id
-        ) AS program,
-        status, start_date::text, due_date::text, completed_at::text,
-        (
-          SELECT COALESCE(SUM(entry.hours), 0)::float
-          FROM time_entries entry
-          WHERE entry.task_id = tasks.id
-        ) AS hours_logged
+      RETURNING id
     `;
     if (!rows[0]) throw new InternalServerError('Task update returned no record');
-    updated = rows[0];
+    const [updated] = await getTaskRows(actor, trx`task.id = ${id}`, trx);
+    if (!updated) throw new InternalServerError('Saved task record is unavailable');
 
     // 5. Record the change.
-    await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', {
-      ...existingRows[0], staffId: oldStaffId,
-    }, { ...updated, staffId: input.staffId });
-  });
+    await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', { ...existingRows[0] }, { ...updated });
 
-  // 6. Return the saved task.
-  return attachTaskDetails([updated], await loadTaskLoggedHours([id]), actor)[0];
+    // 6. Return the complete saved task before commit.
+    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+  });
 }
 
 /**
@@ -448,7 +333,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
  * @example isTerminalTask(completedTask) // true
  */
 function isTerminalTask(task: TaskRow) {
-  return task.status === 'completed' || task.status === 'cancelled';
+  return task.state === 'completed' || task.state === 'cancelled';
 }
 
 /**

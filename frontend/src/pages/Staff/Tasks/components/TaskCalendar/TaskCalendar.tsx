@@ -112,7 +112,7 @@ export default function TaskCalendar({
     const data: Record<string, Record<string, CalendarItemReference[]>> = {};
 
     for (const task of tasks) {
-      const resourceId = task.assignee.id;
+      const resourceId = task.staffId;
       data[resourceId] ??= {};
       data[resourceId][start.key] ??= [];
       data[resourceId][start.key].push({ id: task.id, ...getTaskRange(task) });
@@ -132,7 +132,7 @@ export default function TaskCalendar({
     for (const references of Object.values(calendar.items)) {
       for (const { id } of references ?? []) {
         const task = records[id];
-        if (task) (items[task.assignee.id] ??= []).push(task);
+        if (task) (items[task.staffId] ??= []).push(task);
       }
     }
     return items;
@@ -144,7 +144,7 @@ export default function TaskCalendar({
 
   useEffect(() => {
     calendarCacheRef.current = {
-      upsert: task => upsertItem(task.assignee.id, task.startDate, { id: task.id, ...getTaskRange(task) }),
+      upsert: task => upsertItem(task.staffId, task.startDate, { id: task.id, ...getTaskRange(task) }),
       remove: removeItem,
     };
 

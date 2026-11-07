@@ -22,13 +22,13 @@ export default function useTaskTable({
       id: 'firstName',
       header: 'First Name',
       size: 150,
-      accessorFn: task => task.assignee.firstName,
+      accessorFn: task => task.firstName,
     },
     {
       id: 'lastName',
       header: 'Last Name',
       size: 150,
-      accessorFn: task => task.assignee.lastName,
+      accessorFn: task => task.lastName,
     },
     {
       id: 'title',

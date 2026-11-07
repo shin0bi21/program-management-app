@@ -47,14 +47,15 @@ function renderCalendar({
       currentTask,
       nextRange,
       _action,
-      staffId = currentTask.assignee.id,
+      staffId = currentTask.staffId,
     ) => ({
       ...currentTask,
       startDate: nextRange.start,
       dueDate: nextRange.end,
-      assignee: staffId === coworker.id
-        ? { id: coworker.id, firstName: coworker.firstName, lastName: coworker.lastName, name: coworker.name }
-        : currentTask.assignee,
+      staffId,
+      firstName: staffId === coworker.id ? coworker.firstName : currentTask.firstName,
+      lastName: staffId === coworker.id ? coworker.lastName : currentTask.lastName,
+      name: staffId === coworker.id ? coworker.name : currentTask.name,
     })),
   };
   const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {
@@ -150,7 +151,7 @@ describe('TaskCalendar', () => {
     }));
     expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(2, expect.objectContaining({
       startDate: '2026-08-12', dueDate: '2026-08-14',
-      assignee: expect.objectContaining({ id: 'staff-2' }),
+      staffId: 'staff-2',
     }));
     expect(rendered.onResourceSelect).not.toHaveBeenCalled();
   });

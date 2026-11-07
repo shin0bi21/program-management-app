@@ -100,7 +100,7 @@ export default function useTaskActions({
     task: Task,
     nextRange: { start: string; end: string },
     action: 'move' | 'resize',
-    staffId = task.assignee.id,
+    staffId = task.staffId,
   ) => {
     setActionError('');
 
@@ -110,7 +110,7 @@ export default function useTaskActions({
       const updatedTask = await updateTaskPlacement(task.id, {
         startDate: nextRange.start,
         dueDate: nextRange.end,
-        ...(staffId !== task.assignee.id ? { staffId } : {}),
+        ...(staffId !== task.staffId ? { staffId } : {}),
       });
       if (!taskStore.isScope(queryClient, scope)) return null;
       syncTask(updatedTask);

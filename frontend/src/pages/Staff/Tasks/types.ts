@@ -27,12 +27,10 @@ export interface Task {
   hoursLogged: number;
   loggedHoursByDate: Array<{ date: string; hours: number }>;
   completedAt: string | null;
-  assignee: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    name: string;
-  };
+  staffId: string;
+  firstName: string;
+  lastName: string;
+  name: string;
   writable: boolean;
 }
 

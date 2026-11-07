@@ -17,12 +17,10 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     hoursLogged: 0,
     loggedHoursByDate: [],
     completedAt: null,
-    assignee: {
-      id: 'staff-1',
-      firstName: 'Zoe',
-      lastName: 'Wilson',
-      name: 'Zoe Wilson',
-    },
+    staffId: 'staff-1',
+    firstName: 'Zoe',
+    lastName: 'Wilson',
+    name: 'Zoe Wilson',
     writable: true,
     ...overrides,
   };

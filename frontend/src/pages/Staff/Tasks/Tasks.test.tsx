@@ -166,7 +166,7 @@ describe('Tasks', () => {
       title: 'Complete administration',
       programId: null,
       program: null,
-      assignee: { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith' },
+      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
       writable: false,
     };
     vi.mocked(getTaskDashboardData).mockResolvedValue([task, coworkerTask]);
@@ -376,7 +376,7 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    expect(hoursModal.props).toMatchObject({ initialTask: task, initialResourceId: task.assignee.id });
+    expect(hoursModal.props).toMatchObject({ initialTask: task, initialResourceId: task.staffId });
   });
 
   it('reopens a completed task through the route action workflow', async () => {
@@ -427,7 +427,7 @@ describe('Tasks', () => {
 
     fireEvent.click(await screen.findByText('Prepare workshop'));
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
-    const input = { source: 'task' as const, staffId: task.assignee.id, taskId: task.id, date: today, hours: 1, note: 'Done', completeTask: true };
+    const input = { source: 'task' as const, staffId: task.staffId, taskId: task.id, date: today, hours: 1, note: 'Done', completeTask: true };
     await act(async () => hoursModal.props!.onAdd(input));
 
     expect(setHours).toHaveBeenCalledWith(input);
