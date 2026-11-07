@@ -17,21 +17,21 @@ export function getLeads(filterValues: LeadQuery) {
 
   // 2. Choose the lead order.
   const sortValue = {
-    firstName: sql`LOWER(page_row.youth_first_name)`,
-    lastName: sql`LOWER(page_row.youth_last_name)`,
-    school: sql`LOWER(page_row.school)`,
-    program: sql`LOWER(COALESCE(page_row.recommended_program_name, ''))`,
-    status: sql`page_row.status::text`,
-    created: sql`page_row.created_at::text`,
+    firstName: sql`LOWER("row".youth_first_name)`,
+    lastName: sql`LOWER("row".youth_last_name)`,
+    school: sql`LOWER("row".school)`,
+    program: sql`LOWER(COALESCE("row".recommended_program_name, ''))`,
+    status: sql`"row".status::text`,
+    created: sql`"row".created_at::text`,
   }[filterValues.sort]!;
 
   // 3. Return the requested list or page.
   if (filterValues.limit === undefined) {
     const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<LeadRow[]>`
-      SELECT page_row.*
-      FROM (${rowsQuery}) page_row
-      ORDER BY ${sortValue} ${sortDirection}, page_row.id ${sortDirection}
+      SELECT "row".*
+      FROM (${rowsQuery}) "row"
+      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
     `;
   }
 

@@ -19,7 +19,7 @@ export function getProgramList(actor: AccessTokenPayload, filterValues: ProgramL
 
   // 2. Return the requested page.
   return paginateQuery(rowsQuery, {
-    sortValue: sql`LOWER(page_row.name)`,
+    sortValue: sql`LOWER("row".name)`,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
     limit: filterValues.limit ?? BATCH_SIZE,

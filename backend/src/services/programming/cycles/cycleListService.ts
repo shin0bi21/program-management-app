@@ -15,8 +15,8 @@ export function listCycles(filters: CycleListQuery) {
 
   // 2. Apply the selected sort and bounded page contract.
   const sortValue = filters.sort === 'name'
-    ? sql`LOWER(page_row.name)`
-    : sql`page_row.starts_on`;
+    ? sql`LOWER("row".name)`
+    : sql`"row".starts_on`;
 
   return paginateQuery(rowsQuery, {
     sortValue,
