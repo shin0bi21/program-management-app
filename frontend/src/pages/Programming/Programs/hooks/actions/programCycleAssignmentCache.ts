@@ -28,10 +28,10 @@ export function updateProgramCycleAssignments(
 }
 
 /**
- * Reconciles saved assignments and youth rows, then refreshes membership and roster eligibility.
+ * Reconciles saved assignments and youth rows, then refreshes membership, roster eligibility, and attendance summaries.
  * @param queryClient - Cache shared by program, cycle, and Youth views.
  * @param changes - Authoritative assignment changes and affected youth returned by the save.
- * @example syncProgramCycleAssignmentChanges(client, saved) // updates rows and refreshes affected rosters
+ * @example syncProgramCycleAssignmentChanges(client, saved) // updates rows and refreshes affected views
  */
 export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, changes: ProgramCycleAssignmentChanges) {
   updateProgramCycleAssignments(queryClient, changes.updatedProgramCycles, changes.removedProgramCycles);
@@ -44,4 +44,5 @@ export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, chan
   void queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY });
   void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignment-editor'] });
   void queryClient.invalidateQueries({ queryKey: ['programs', 'roster-youth'] });
+  void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary'] });
 }

@@ -118,7 +118,6 @@ export default function Users() {
 
       {modals.youthInvite.open && (
         <YouthModal
-          isOpen
           inviteYouth
           suspended={schoolModal.action !== null}
           onManageSchool={schoolModal.open}

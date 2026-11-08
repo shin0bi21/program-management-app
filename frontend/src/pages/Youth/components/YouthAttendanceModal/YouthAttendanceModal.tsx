@@ -1,3 +1,4 @@
+import type { YouthAttendanceSummary } from '../YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api';
 import type { YouthAttendanceResult } from './youthAttendance.api';
 import type { FormEvent } from 'react';
 import { faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
@@ -13,7 +14,7 @@ import useYouthAttendance from './hooks/useYouthAttendance';
 import useYouthSessionNotes from './hooks/useYouthSessionNotes';
 import './YouthAttendanceModal.css';
 
-type AttendanceProgramCycle = YouthProfile['programCycles'][number];
+type AttendanceProgramCycle = Pick<YouthAttendanceSummary, 'programId' | 'cycleId' | 'program' | 'cycle' | 'enrollmentRequired'>;
 
 export default function YouthAttendanceModal({
   youth,

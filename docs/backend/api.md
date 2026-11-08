@@ -88,6 +88,12 @@ Program and cycle filters must match the same nonwithdrawn enrollment or
 open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthRowFilters.ts)
 preserves that cross-domain selection contract.
 
+The main Youth record includes profile fields and one active program, or null when none is active.
+The attendance dashboard loads its own summaries from `/:id/attendance-summary`,
+owned by the [attendance summary service](../../backend/src/services/youth/youthAttendanceSummaryService.ts).
+That read requires Youth and attendance read permissions and applies program scope;
+attendance counts and open-program visits are not part of profile rows.
+
 ## Programming
 
 The Programs page owns program and cycle management; Sessions owns scheduling and

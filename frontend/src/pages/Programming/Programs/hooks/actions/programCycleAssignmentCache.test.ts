@@ -4,7 +4,7 @@ import { createTestQueryClient } from '../../../../../tests/queryClientTestUtils
 import type { ProgramCycleAssignment } from '../../types';
 import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, syncProgramCycleAssignmentChanges } from './programCycleAssignmentCache';
 
-it('reconciles saved assignments in existing list variants and refreshes assignment membership and roster eligibility', () => {
+it('reconciles saved assignments and refreshes membership, cross-program roster eligibility, and attendance summaries', () => {
   const client = createTestQueryClient();
   const old = { programId: 'program-1', cycleId: 'edited', cycle: 'Alpha' } as ProgramCycleAssignment;
   const other = { programId: 'program-1', cycleId: 'other', cycle: 'Beta' } as ProgramCycleAssignment;
@@ -15,6 +15,8 @@ it('reconciles saved assignments in existing list variants and refreshes assignm
   const sameCycleOtherProgram = { ...old, programId: 'program-2' };
   const removedCycleOtherProgram = { ...removed, programId: 'program-2' };
   client.setQueryData(unrelatedKey, [sameCycleOtherProgram, removedCycleOtherProgram]);
+  const attendanceKey = ['youth', 'attendance-summary', 'youth-1'];
+  client.setQueryData(attendanceKey, []);
   const saved = { ...old, cycle: 'Zulu' };
   const firstRosterKey = ['programs', 'roster-youth', 'program-1', 'cycle-1'];
   const otherRosterKey = ['programs', 'roster-youth', 'program-2', 'cycle-2'];
@@ -29,4 +31,5 @@ it('reconciles saved assignments in existing list variants and refreshes assignm
   expect(client.getQueryState(key)?.isInvalidated).toBe(true);
   expect(client.getQueryState(firstRosterKey)?.isInvalidated).toBe(true);
   expect(client.getQueryState(otherRosterKey)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(attendanceKey)?.isInvalidated).toBe(true);
 });

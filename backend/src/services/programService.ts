@@ -5,7 +5,7 @@ import { rethrowEnrollmentConflict } from './programming/programCycles/enrollmen
 import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput, UpdateProgramInput } from '../validation/programSchemas';
 import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRowQuery';
-import { getYouthRowsByIds, type YouthRow } from './youth/youthRowQuery';
+import { getYouthRows, type YouthRow } from './youth/youthRowQuery';
 import { getProgramRows, programRowColumns, type ProgramRow } from './programming/programs/programRowQuery';
 
 /**
@@ -132,7 +132,7 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
     let updatedYouth: YouthRow[] = [];
     if (actor.permissions.includes('read:youth_profiles')) {
       const youthIds = await getProgramCycleYouthIds(trx, keys);
-      updatedYouth = await getYouthRowsByIds(trx, youthIds);
+      updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
     }
 
     return { program, updatedProgramCycles, removedProgramCycles: [], createdProgramCycles: [], updatedYouth };

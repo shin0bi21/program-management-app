@@ -98,7 +98,11 @@ describe('Programs API', () => {
 
   it('returns canonical retained program cycles and youth memberships after a program edit without expanding read capabilities', async () => {
     const [program] = await sql<{ id: string }[]>`INSERT INTO programs (name) VALUES (${`Program envelope ${Date.now()}`}) RETURNING id`;
-    const { cycleId } = await seedTestProgramCycle({ programId: program.id });
+    const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
+      SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+    `;
+    const { cycleId } = await seedTestProgramCycle({ programId: program.id, ...dates });
     const youth = await seedTestUser({ role: 'youth', firstName: 'Envelope', lastName: 'Youth' });
     await sql`INSERT INTO youth_profiles (user_id) VALUES (${youth.userId})`;
     await sql`INSERT INTO program_enrollments (program_id, cycle_id, youth_id) VALUES (${program.id}, ${cycleId}, ${youth.userId})`;
@@ -115,9 +119,9 @@ describe('Programs API', () => {
       expect(programCycles.status).toBe(200);
       expect(youthRows.status).toBe(200);
       expect(saved.body.updatedProgramCycles).toEqual(programCycles.body);
-      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, cycleId, program: name, minAge: 13, maxAge: 18 });
+      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, program: name, minAge: 13, maxAge: 18 });
       expect(saved.body.updatedYouth).toEqual(youthRows.body.rows);
-      expect(saved.body.updatedYouth[0].programCycles).toEqual(expect.arrayContaining([expect.objectContaining({ programId: program.id, cycleId, program: name })]));
+      expect(saved.body.updatedYouth[0].activeProgram).toEqual(expect.objectContaining({ programId: program.id, program: name }));
       expect(saved.body.removedProgramCycles).toEqual([]);
       expect(saved.body.createdProgramCycles).toEqual([]);
 

@@ -18,8 +18,20 @@ describe('Youth birth date writes and focused contacts', () => {
   let yesterday: string;
   const createdIds: string[] = [];
 
+  /**
+   * Sends a profile create or update request as the test administrator.
+   * @param body - Request fields, including deliberately invalid fields in validation tests.
+   * @example saveProfile(profile) // profile creation response
+   */
   const saveProfile = (body: object) => request(app).post('/api/youth')
     .set('Authorization', `Bearer ${adminToken}`).send(body);
+  /**
+   * Sends a focused contact replacement request for one youth.
+   * @param body - Replacement contact list or deliberately invalid request fields.
+   * @param id - Youth ID to update; defaults to the legacy profile fixture.
+   * @param token - Authentication token to use; defaults to the test administrator's token.
+   * @example saveContacts({ contacts: [] }) // clears the legacy profile's contacts
+   */
   const saveContacts = (body: object, id = legacyId, token = adminToken) => request(app)
     .put(`/api/youth/${id}/contacts`).set('Authorization', `Bearer ${token}`).send(body);
 
@@ -94,7 +106,7 @@ describe('Youth birth date writes and focused contacts', () => {
       const response = await saveProfile({ ...profile, ...(operation === 'edit' ? { id: youthId } : {}), dateOfBirth });
       expect(response.status).toBe(operation === 'create' ? 201 : 200);
       if (operation === 'create') createdIds.push(response.body.id);
-      expect(response.body.dateOfBirth).toBe(`${dateOfBirth}T00:00:00.000Z`);
+      expect(response.body.dateOfBirth).toBe(dateOfBirth);
       if (operation === 'edit') {
         expect((await saveProfile({ ...profile, id: youthId })).status).toBe(200);
       }
@@ -113,7 +125,7 @@ describe('Youth birth date writes and focused contacts', () => {
     it('preserves known DOB when omitted and records explicit clearing in the audit', async () => {
       const omitted = await saveProfile({ id: youthId, firstName: profile.firstName, lastName: profile.lastName });
       expect(omitted.status).toBe(200);
-      expect(omitted.body.dateOfBirth).toBe(`${profile.dateOfBirth}T00:00:00.000Z`);
+      expect(omitted.body.dateOfBirth).toBe(profile.dateOfBirth);
 
       const cleared = await saveProfile({ ...profile, id: youthId, dateOfBirth: null });
       expect(cleared.status).toBe(200);
@@ -217,6 +229,11 @@ describe('Youth birth date writes and focused contacts', () => {
       expect(foreign.status).toBe(201);
       createdIds.push(foreign.body.id);
 
+      /**
+       * Finds a contact ID in the successfully created target profile.
+       * @param phoneNumber - Phone number of a contact included in the creation request.
+       * @example contactIdFor('4165550300') // ID of the first saved contact
+       */
       const contactIdFor = (phoneNumber: string) => target.body.contacts.find(
         (contact: { phoneNumber: string }) => contact.phoneNumber === phoneNumber,
       ).id as string;
@@ -233,11 +250,17 @@ describe('Youth birth date writes and focused contacts', () => {
 
       const ids = [target.body.id, foreign.body.id];
       const newPhoneNumber = '4165550399';
-      const snapshot = async () => ({
+      /**
+       * Captures both profiles, their contacts, and the administrator's audit records.
+       * @example captureSavedState() // state to compare before and after a rejected request
+       */
+      const captureSavedState = async () => ({
         profiles: await sql`
-          SELECT u.*, to_jsonb(yp) AS profile FROM users u
-          INNER JOIN youth_profiles yp ON yp.user_id = u.id
-          WHERE u.id = ANY(${sql.array(ids)}::uuid[]) ORDER BY u.id
+          SELECT youth.*, to_jsonb(profile) AS profile
+          FROM users youth
+          INNER JOIN youth_profiles profile ON profile.user_id = youth.id
+          WHERE youth.id = ANY(${sql.array(ids)}::uuid[])
+          ORDER BY youth.id
         `,
         links: await sql`
           SELECT * FROM user_has_contacts
@@ -250,7 +273,7 @@ describe('Youth birth date writes and focused contacts', () => {
         `,
         audits: await sql`SELECT * FROM audit_log WHERE user_id = ${adminId} ORDER BY id`,
       });
-      const before = await snapshot();
+      const before = await captureSavedState();
       const invalidId = ({
         foreign: foreign.body.contacts[0].id,
         inactive: inactiveId,
@@ -272,7 +295,7 @@ describe('Youth birth date writes and focused contacts', () => {
       } else {
         expect(response.body.error).toBe('One or more youth contacts were not found');
       }
-      expect(await snapshot()).toEqual(before);
+      expect(await captureSavedState()).toEqual(before);
     });
 
     it('preserves authoritative profile fields changed before a focused contact save', async () => {

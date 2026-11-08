@@ -14,6 +14,11 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 import { useYouthActions } from './useYouthActions';
 
+/**
+ * Wraps supplied profile pages in the query cache's infinite-list shape.
+ * @param pages - Profiles grouped into the pages loaded by a test.
+ * @example infiniteData([profile]) // one terminal page containing that profile
+ */
 function infiniteData(...pages: YouthProfile[][]): InfiniteData<CursorPage<YouthProfile>> {
   return {
     pages: pages.map(rows => ({ rows, nextCursor: null })),
@@ -21,6 +26,11 @@ function infiniteData(...pages: YouthProfile[][]): InfiniteData<CursorPage<Youth
   };
 }
 
+/**
+ * Mounts Youth actions with an isolated cache and selected-profile reconciliation callback.
+ * @param onYouthReconciled - Receives authoritative profiles after a successful update.
+ * @example renderActions() // hook, cache, and reconciliation spy for one test
+ */
 function renderActions(onYouthReconciled = vi.fn()) {
   const queryClient = createTestQueryClient();
   const rendered = renderHook(() => useYouthActions({ onYouthReconciled }), {
@@ -88,5 +98,6 @@ describe('useYouthActions', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', session.id, 'roster'] });
     expect(sessionStore.get(rendered.queryClient, session.id)).toEqual(session);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary', youth.id] });
   });
 });

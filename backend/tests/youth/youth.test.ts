@@ -25,9 +25,14 @@ describe('Youth API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
+    const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
+      SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
+        ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+    `;
     ({ cycleId: softSkillsCycleId } = await seedTestProgramCycle({
       programId: softSkillsProgramId,
       name: `Youth Test ${Date.now()}`,
+      ...dates,
     }));
   });
 
@@ -47,7 +52,7 @@ describe('Youth API', () => {
       expect(res.body.error).toMatch(/token/i);
     });
 
-    it.each(['age', 'grade'])('rejects the removed %s sort', async sort => {
+    it.each(['age', 'grade', 'status', 'completedPrograms'])('rejects the removed %s sort', async sort => {
       const res = await request(app).get('/api/youth').query({ sort })
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(400);
@@ -133,17 +138,14 @@ describe('Youth API', () => {
           `;
         }
 
-        for (const [sort, expected] of [
-          ['activePrograms', [youthIds[2], youthIds[0], youthIds[1]]],
-          ['completedPrograms', [youthIds[2], youthIds[1], youthIds[0]]],
-        ] as const) {
-          const response = await request(app).get('/api/youth')
-            .query({ search: surname, sort, direction: 'asc', limit: 3 })
-            .set('Authorization', `Bearer ${adminToken}`);
+        const response = await request(app).get('/api/youth')
+          .query({ search: surname, sort: 'activeProgram', direction: 'asc', limit: 3 })
+          .set('Authorization', `Bearer ${adminToken}`);
 
-          expect(response.status).toBe(200);
-          expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual(expected);
-        }
+        expect(response.status).toBe(200);
+        expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual([youthIds[2], youthIds[0], youthIds[1]]);
+        expect(response.body.rows[0].activeProgram).toBeNull();
+        expect(response.body.rows[1].activeProgram).toEqual({ programId: jobProgram.id, program: 'Job Readiness' });
       } finally {
         for (const id of youthIds) await deleteTestYouth(id);
         for (const fixture of fixtures) await deleteTestProgramCycle(fixture.programId, fixture.cycleId);
@@ -259,8 +261,19 @@ describe('Youth API', () => {
         for (const programCycle of [current, past, open]) await deleteTestProgramCycle(programCycle.programId, programCycle.cycleId);
       });
 
+      /**
+       * Lists youth matching the supplied query parameters as the test administrator.
+       * @param query - Search, filter, or pagination parameters for the request.
+       * @example list({ cycleIds: current.cycleId }) // profiles participating in the current cycle
+       */
       const list = (query: Record<string, string | number> = {}) => request(app)
         .get('/api/youth').query(query).set('Authorization', `Bearer ${adminToken}`);
+
+      /**
+       * Extracts IDs in a stable order for comparisons that do not depend on list sorting.
+       * @param rows - Records returned by the list request.
+       * @example ids([{ id: 'b' }, { id: 'a' }]) // ['a', 'b']
+       */
       const ids = (rows: Array<{ id: string }>) => rows.map(row => row.id).sort();
 
       it('filters one cycle and excludes withdrawn and unrelated youth', async () => {
@@ -370,6 +383,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
       expect(res.body).not.toHaveProperty('age');
+      expect(res.body).not.toHaveProperty('status');
       expect(res.body).not.toHaveProperty('gradeLevel');
       expect(res.body).not.toHaveProperty('ageGroup');
       createdIds.push(res.body.id);
@@ -396,7 +410,7 @@ describe('Youth API', () => {
         });
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
-      expect(res.body.programCycles).toEqual([]);
+      expect(res.body.activeProgram).toBeNull();
       await sql`
         INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
         VALUES (
@@ -417,13 +431,11 @@ describe('Youth API', () => {
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({
           firstName: 'Jordan',
-          programCycles: expect.arrayContaining([
-            expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }),
-          ]),
+          activeProgram: expect.objectContaining({ programId: softSkillsProgramId }),
         }),
       ]));
-      expect(res.body.every((profile: { programCycles: Array<{ programId: string }> }) =>
-        profile.programCycles.some(programCycle => programCycle.programId === softSkillsProgramId)
+      expect(res.body.every((profile: { activeProgram: { programId: string } | null }) =>
+        profile.activeProgram?.programId === softSkillsProgramId
       )).toBe(true);
     });
 
@@ -436,25 +448,12 @@ describe('Youth API', () => {
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({
           firstName: 'Jordan',
-          programCycles: expect.arrayContaining([
-            expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }),
-          ]),
+          activeProgram: expect.objectContaining({ programId: softSkillsProgramId }),
         }),
       ]));
-      expect(res.body.every((profile: { programCycles: Array<{ programId: string; cycleId: string }> }) =>
-        profile.programCycles.some(programCycle => programCycle.programId === softSkillsProgramId && programCycle.cycleId === softSkillsCycleId)
+      expect(res.body.every((profile: { activeProgram: { programId: string } | null }) =>
+        profile.activeProgram?.programId === softSkillsProgramId
       )).toBe(true);
-    });
-
-    it('should derive active status from current program enrollment', async () => {
-      const res = await request(app)
-        .get('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual(expect.arrayContaining([
-        expect.objectContaining({ firstName: 'Jordan', status: 'active' }),
-      ]));
     });
 
     it('should create and invite a youth account when email is provided', async () => {
@@ -531,16 +530,6 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should derive no active program for a newly created youth', async () => {
-      const res = await request(app)
-        .post('/api/youth')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({ ...baseYouth, firstName: 'Test', lastName: 'User' });
-      expect(res.status).toBe(201);
-      expect(res.body.status).toBe('inactive');
-      createdIds.push(res.body.id);
-    });
-
     it('should reject an invalid login email (400)', async () => {
       const res = await request(app)
         .post('/api/youth')
@@ -589,10 +578,10 @@ describe('Youth API', () => {
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(youthId);
       expect(res.body.firstName).toBe('GetById');
-      expect(res.body.lastAttendedOn).toBeNull();
+      expect(res.body).not.toHaveProperty('lastAttendedOn');
     });
 
-    it('should return the latest session date marked present or late', async () => {
+    it('loads attendance counts separately from the canonical profile', async () => {
       const sessions = await sql<{ id: string; sessionDate: string }[]>`
         INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
         VALUES
@@ -628,14 +617,17 @@ describe('Youth API', () => {
           .set('Authorization', `Bearer ${adminToken}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.lastAttendedOn).toBe(sessions[0].sessionDate);
-        expect(res.body.programCycles).toEqual(expect.arrayContaining([
+        expect(res.body).not.toHaveProperty('lastAttendedOn');
+        expect(res.body.activeProgram).not.toHaveProperty('presentCount');
+        const summary = await request(app).get(`/api/youth/${youthId}/attendance-summary`)
+          .set('Authorization', `Bearer ${adminToken}`);
+        expect(summary.status).toBe(200);
+        expect(summary.body).toEqual(expect.arrayContaining([
           expect.objectContaining({
             programId: softSkillsProgramId, cycleId: softSkillsCycleId,
             presentCount: 1,
             lateCount: 0,
             absentCount: 1,
-            lastAttendedOn: sessions[0].sessionDate,
           }),
         ]));
       } finally {
@@ -682,8 +674,8 @@ describe('Youth API', () => {
       const getRes = await request(app)
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
-      expect(getRes.body.status).toBe('inactive');
       expect(getRes.body.account).toEqual({ email, status: 'invited' });
+      expect(getRes.body.activeProgram).toBeNull();
     });
 
     it('should reject inviting a youth who already has an account', async () => {
@@ -741,7 +733,6 @@ describe('Youth API', () => {
         .get(`/api/youth?id=${youthId}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(getRes.body.firstName).toBe('Updated');
-      expect(getRes.body.status).toBe('inactive');
     });
 
     it('should add addresses on update (200)', async () => {

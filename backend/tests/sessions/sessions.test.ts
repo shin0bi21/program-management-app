@@ -672,11 +672,11 @@ describe('Program cycle sessions and attendance API', () => {
       WHERE session_id = ${openSessionId} AND youth_id = ${youthId}
     `;
 
-    const profile = await request(app)
-      .get(`/api/youth?id=${secondYouthId}`)
+    const summary = await request(app)
+      .get(`/api/youth/${secondYouthId}/attendance-summary`)
       .set('Authorization', `Bearer ${staffToken}`);
-    expect(profile.status).toBe(200);
-    expect(profile.body.programCycles).toEqual(expect.arrayContaining([
+    expect(summary.status).toBe(200);
+    expect(summary.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         programId: openProgramId, cycleId: mainCycleId,
         program: 'Drop In',

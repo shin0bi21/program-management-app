@@ -20,9 +20,15 @@ const account: User = {
   role: 'admin',
   status: 'active',
   createdAt: '2026-01-01T00:00:00Z',
+  programIds: [],
 };
 const tableQueryKey = ['accounts', 'table'] as const;
 
+/**
+ * Mounts account actions with an isolated query cache for the test.
+ * @param queryClient - Cache to use; creates a fresh cache when omitted.
+ * @example renderActions() // hook result and the cache it updates
+ */
 function renderActions(queryClient = createTestQueryClient()) {
   return {
     queryClient,

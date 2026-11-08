@@ -15,6 +15,13 @@ export const youthSchema = z.object({
   email: z.union([z.literal(''), z.string().email('Invalid email address')]),
   dateOfBirth: z.union([z.literal(''), dateOfBirthSchema]),
   schoolId: z.string().optional(),
+  addresses: z.array(z.object({
+    id: z.string().optional(),
+    address: z.string().trim(),
+  }).refine(address => !address.id || address.address.length > 0, {
+    message: 'Street address is required',
+    path: ['address'],
+  })).optional(),
 });
 
 export type YouthFormData = z.infer<typeof youthSchema>;

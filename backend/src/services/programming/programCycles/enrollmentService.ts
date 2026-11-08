@@ -6,7 +6,7 @@ import { rethrowEnrollmentConflict } from './enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/programmingSchemas';
 import { getProgramCycleRowsByKeys } from './programCycleRowQuery';
-import { getYouthRowsByIds } from '../../youth/youthRowQuery';
+import { getYouthRows } from '../../youth/youthRowQuery';
 
 /**
  * Enrolls the selected youth in one program at a time and returns affected rows.
@@ -99,7 +99,7 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
       enrollments,
       programCycle: updatedProgramCycle,
       updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, data.youthIds) : [],
+        ? await getYouthRows(trx`youth.id = ANY(${trx.array(data.youthIds)}::uuid[])`, trx) : [],
     };
   }).catch(rethrowEnrollmentConflict);
 }
@@ -149,7 +149,7 @@ export async function withdrawYouth(
       enrollment,
       programCycle,
       updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, [youthId]) : [],
+        ? await getYouthRows(trx`youth.id = ${youthId}`, trx) : [],
     };
   }).catch(rethrowEnrollmentConflict);
 }

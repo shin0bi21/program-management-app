@@ -36,6 +36,7 @@ export default function useSessionActions({
 
   const refreshProgramOverviews = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
+    void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary'] });
   }, [queryClient]);
 
   const syncSession = useCallback((session: ProgramSession) => {

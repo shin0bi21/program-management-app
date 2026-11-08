@@ -1,70 +1,89 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
+import type { ContactDraft, ContactRelationship } from '../types';
 
-export interface Contact {
+const EMPTY_CONTACT: ContactDraft = { id: '', phoneNumber: '', type: 'parent' };
+
+/**
+ * Manages the contacts shown in a form and prepares them for saving.
+ * @param initialContacts - Contacts to show when the form first opens. If omitted or empty, show one blank contact.
+ * @returns Contacts, actions to edit them, a check for missing phone numbers, and contacts ready to save.
+ * @example useContacts() // one blank parent contact
+ */
+export function useContacts(initialContacts?: Array<{
   id: string;
-  phoneNumber: string;
-  type: 'parent' | 'sibling' | 'guardian';
-}
+  phoneNumber: string | null;
+  type: ContactRelationship;
+}> | null) {
+  const [contacts, setContacts] = useState<ContactDraft[]>(() => {
+    if (!initialContacts?.length) return [{ ...EMPTY_CONTACT }];
 
-const EMPTY_CONTACT: Contact = { id: '', phoneNumber: '', type: 'parent' };
+    return initialContacts.map(contact => ({
+      id: contact.id,
+      phoneNumber: contact.phoneNumber ?? '',
+      type: contact.type,
+    }));
+  });
 
-export function useContacts(initialContacts?: Contact[]) {
-  const [contacts, setContacts] = useState<Contact[]>(
-    initialContacts && initialContacts.length > 0 ? initialContacts : [{ ...EMPTY_CONTACT }]
-  );
-
-  const initialize = useCallback((incoming: Array<{
-    id: string;
-    phoneNumber: string | null;
-    type: string;
-  }> | null | undefined) => {
-    if (incoming && incoming.length > 0) {
-      setContacts(incoming.map(c => ({
-        id: c.id,
-        phoneNumber: c.phoneNumber || '',
-        type: (c.type as 'parent' | 'sibling' | 'guardian') || 'parent',
-      })));
-    } else {
-      setContacts([{ ...EMPTY_CONTACT }]);
-    }
-  }, []);
-
-  const reset = useCallback(() => setContacts([{ ...EMPTY_CONTACT }]), []);
-
+  /**
+   * Adds a blank contact at the end of the form.
+   * @example handleAdd() // adds another parent contact
+   */
   const handleAdd = () => {
-    setContacts(prev => [...prev, { ...EMPTY_CONTACT }]);
+    setContacts(currentContacts => [...currentContacts, { ...EMPTY_CONTACT }]);
   };
 
+  /**
+   * Removes a contact from the form.
+   * @param index - Contact position, starting at 0 for the first contact.
+   * @example handleDelete(0) // removes the first contact
+   */
   const handleDelete = (index: number) => {
-    setContacts(prev => prev.filter((_, i) => i !== index));
+    setContacts(currentContacts => currentContacts.filter((_, contactIndex) => contactIndex !== index));
   };
 
-  const handleChange = (index: number, field: keyof Contact, value: string) => {
-    setContacts(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
+  /**
+   * Changes one field on a contact in the form.
+   * @param index - Contact position, starting at 0 for the first contact.
+   * @param field - Contact field to change: 'id', 'phoneNumber', or 'type' (relationship).
+   * @param value - New value for that field. For 'type', use 'parent', 'sibling', or 'guardian'.
+   * @example handleChange(0, 'type', 'guardian') // changes the first relationship
+   */
+  const handleChange = (index: number, field: keyof ContactDraft, value: string) => {
+    setContacts(currentContacts => {
+      const updatedContacts = [...currentContacts];
+      updatedContacts[index] = { ...updatedContacts[index], [field]: value };
+      return updatedContacts;
     });
   };
 
+  /**
+   * Checks whether an existing contact has had its phone number cleared.
+   * @returns A message identifying the first missing phone number, or undefined when valid.
+   * @example validate() // 'Contact 1: Phone number is required' for a blank saved contact
+   */
   const validate = (): string | undefined => {
-    for (let i = 0; i < contacts.length; i++) {
-      const cont = contacts[i];
-      if (!cont.phoneNumber.trim() && cont.id) {
-        return `Contact ${i + 1}: Phone number is required`;
+    for (let contactIndex = 0; contactIndex < contacts.length; contactIndex++) {
+      const contact = contacts[contactIndex];
+      if (!contact.phoneNumber.trim() && contact.id) {
+        return `Contact ${contactIndex + 1}: Phone number is required`;
       }
     }
     return undefined;
   };
 
+  /**
+   * Prepares contacts for saving, removing spaces around phone numbers and skipping blank entries.
+   * @returns Contacts with phone numbers; existing contacts also include their saved IDs.
+   * @example getPayload() // [] when the only draft is blank
+   */
   const getPayload = () =>
     contacts
-      .filter(c => c.phoneNumber.trim())
-      .map(c => ({
-        ...(c.id && { id: c.id }),
-        phoneNumber: c.phoneNumber.trim(),
-        type: c.type,
+      .filter(contact => contact.phoneNumber.trim())
+      .map(contact => ({
+        ...(contact.id && { id: contact.id }),
+        phoneNumber: contact.phoneNumber.trim(),
+        type: contact.type,
       }));
 
-  return { contacts, initialize, reset, handleAdd, handleDelete, handleChange, validate, getPayload };
+  return { contacts, handleAdd, handleDelete, handleChange, validate, getPayload };
 }

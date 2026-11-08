@@ -15,6 +15,11 @@ vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, moveSes
 
 const tableKey = ['sessions', 'table', {}, { key: 'date', direction: 'asc' }];
 
+/**
+ * Mounts session actions with isolated records, table pages, and a calendar test adapter.
+ * @param session - Saved session targeted by the test's action.
+ * @example renderActions(session) // returns the hook and the caches its actions reconcile
+ */
 function renderActions(session = makeProgramSession()) {
   const client = createTestQueryClient();
   const other = makeProgramSession({ id: 'other-session' });
@@ -92,14 +97,16 @@ describe('useSessionActions', () => {
     expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [{ id: other.id, sortValue: getSessionSortValue(other, 'date') }], nextCursor: 'next' }] });
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
-    expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['programs', 'cycle-assignments'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 
   it('reconciles the canonical attendance response without invalidating table collections', () => {
     const { result, client, invalidate } = renderActions();
     const session = makeProgramSession({ theme: 'Saved attendance session' });
-    const youth = makeYouthProfile({ lastAttendedOn: '2026-08-10' });
+    const youth = makeYouthProfile();
     const cycle: ProgramCycleAssignment = {
       programId: 'program-1', program: 'Future Ready', enrollmentRequired: true,
       minAge: null, maxAge: null, cycleId: 'cycle-1', cycle: 'Fall',
@@ -118,7 +125,7 @@ describe('useSessionActions', () => {
     expect(client.getQueryData(['youth', 'table', {}])).toMatchObject({ pages: [{ rows: [youth] }] });
     expect(client.getQueryData(['programs', 'cycle-assignments', {}])).toEqual([cycle]);
     expect(invalidate.mock.calls.map(([options]) => options?.queryKey)).toEqual([
-      ['programs', 'cycle-assignments'], ['youth-program-cycle-attendance'],
+      ['programs', 'cycle-assignments'], ['youth', 'attendance-summary'], ['youth-program-cycle-attendance'],
     ]);
     expect(result.current.calendarRevision).toBe(0);
   });

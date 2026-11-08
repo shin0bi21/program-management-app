@@ -1,12 +1,17 @@
 import { TABLE_PAGE_SIZE } from '../../../../../query/types';
-import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
-import { getActiveProgramLabels, getCompletedProgramLabels } from '../programColumns';
 import { getYouth } from '../../../youth.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { YouthFilters, YouthSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import type { YouthProfile } from '../../../types';
 
+/**
+ * Loads Youth table pages with the selected filters and server-compatible ordering.
+ * @param filters - Applied search, program, and cycle selections; null waits for controls to initialize.
+ * @param sorting - Selected column and direction, also used to reconcile saved rows in the cache.
+ * @returns Loaded profiles, request feedback, and actions to load or retry pages.
+ * @example useYouthTableData({ search: 'Jamie' }) // first-name ordering for matching profiles
+ */
 export default function useYouthTableData(
   filters: YouthFilters | null = {},
   sorting: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' },
@@ -19,8 +24,7 @@ export default function useYouthTableData(
         lastName: profile.lastName.toLowerCase(),
         dateOfBirth: profile.dateOfBirth ?? '',
         school: profile.schoolName?.toLowerCase() ?? '',
-        activePrograms: getActiveProgramLabels(profile, getDateKeyInTimeZone())[0]?.toLowerCase() ?? '',
-        completedPrograms: getCompletedProgramLabels(profile, getDateKeyInTimeZone())[0]?.toLowerCase() ?? '',
+        activeProgram: profile.activeProgram?.program.toLowerCase() ?? '',
       }[sorting.key]),
     },
     queryKey: ['youth', 'table', filters, sorting],

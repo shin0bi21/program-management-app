@@ -33,6 +33,7 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
   const reconcileAttendance = useCallback((saved: YouthAttendanceResult) => {
     if (!sessionStore.isScope(queryClient, sessionScope)) return;
     reconcileSavedYouth(saved.youth);
+    void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary', saved.youth.id] });
     for (const session of saved.updatedSessions ?? []) {
       sessionStore.write(queryClient, session);
       void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
