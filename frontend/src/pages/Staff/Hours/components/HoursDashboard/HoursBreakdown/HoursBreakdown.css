@@ -91,6 +91,6 @@
   line-height: 1.2;
 }
 
-.hours-breakdown__total span {
+.hours-breakdown__total-label {
   color: var(--color-muted);
 }

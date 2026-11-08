@@ -65,7 +65,7 @@ export default function HoursBreakdown({ data, scopeKey, disabled = false }: {
             </div>)}
           </dl>
         </> : <p className="hours-breakdown__no-breakdown">No hours recorded.</p>}
-        <div className="hours-breakdown__total"><span>Total</span><strong>{data.total.toFixed(2)}</strong></div>
+        <div className="hours-breakdown__total"><span className="hours-breakdown__total-label">Total</span><span>{data.total.toFixed(2)}</span></div>
       </>}
     </Modal>
   </>;

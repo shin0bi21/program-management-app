@@ -46,7 +46,7 @@ export default function HoursPayPeriodDashboardCard({ queryKey, staff, onErrorCh
     content = <UnavailableState compact title="Pay-period hours unavailable" onRetry={state.retry} />;
   } else if (payPeriod) {
     content = <>
-      <strong className="dashboard-card__metric">{payPeriod.totalHours.toFixed(2)}</strong>
+      <span className="dashboard-card__metric">{payPeriod.totalHours.toFixed(2)}</span>
       <p>{payPeriodLabel}</p>
     </>;
   }

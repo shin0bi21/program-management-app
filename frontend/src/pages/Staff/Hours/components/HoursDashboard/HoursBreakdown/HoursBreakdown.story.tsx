@@ -20,7 +20,7 @@ export function HoursSummary({ loading = false }: { loading?: boolean }) {
       loading={loading}
       action={<HoursBreakdown data={data} scopeKey="staff-1:2026-10-01" disabled={loading} />}
     >
-      <strong className="dashboard-card__metric">12.00</strong>
+      <span className="dashboard-card__metric">12.00</span>
       <p>Oct 1–14</p>
     </DashboardCard>
   </div>;

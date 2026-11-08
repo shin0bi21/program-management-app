@@ -48,7 +48,7 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle,
   if (state.status === 'error') {
     content = <UnavailableState compact title="Cycle hours unavailable" onRetry={state.retry} />;
   } else if (summary) {
-    content = <strong className="dashboard-card__metric">{summary.averageHours.toFixed(2)}</strong>;
+    content = <span className="dashboard-card__metric">{summary.averageHours.toFixed(2)}</span>;
   }
 
   return <DashboardCard
