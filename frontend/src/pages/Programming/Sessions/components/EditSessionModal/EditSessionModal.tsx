@@ -5,19 +5,20 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramSession } from '../../types';
+import type { ProgramSession, SessionType } from '../../types';
 import { useEditSessionModal } from './hooks/useEditSessionModal';
 
 interface EditSessionModalProps {
   session: ProgramSession | null;
+  sessionTypes: SessionType[];
   timezone?: string;
   onClose: () => void;
   onUpdated: (result: UpdatedSessionResult) => void | Promise<void>;
 }
 
-export default function EditSessionModal({ session, onClose, onUpdated, timezone = 'America/Toronto' }: EditSessionModalProps) {
+export default function EditSessionModal({ session, sessionTypes, onClose, onUpdated, timezone = 'America/Toronto' }: EditSessionModalProps) {
   const {
-    status, statusMessage, submissionComplete, sessionType, setSessionType, sessionTypes, submit,
+    status, statusMessage, submissionComplete, sessionType, setSessionType, submit,
   } = useEditSessionModal(session, onUpdated, timezone);
 
   return (

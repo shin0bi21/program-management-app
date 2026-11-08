@@ -5,7 +5,6 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import { getErrorMessage } from '../../../../../../http/errors';
 import { createSession, type CreatedSessionResult } from '../../../sessions.api';
 import { DEFAULT_SESSION_TYPE } from '../../../types';
-import { useSessionTypes } from '../../../hooks/data/useSessionTypes';
 import { nextSessionDate } from '../../../utils/sessionSchedule';
 
 export default function useAddSessionModal({ programs, initialProgramId, initialDate, onSaved }: {
@@ -26,7 +25,6 @@ export default function useAddSessionModal({ programs, initialProgramId, initial
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [message, setMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
-  const { sessionTypes } = useSessionTypes();
 
   const updateDraft = (key: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [key]: value }));
   const selectProgram = (id: string) => {
@@ -81,5 +79,5 @@ export default function useAddSessionModal({ programs, initialProgramId, initial
   };
 
   return { programId, program, draft, updateDraft, selectProgram,
-    sessionTypes, status, message, submit, locked: status === 'submitting' || status === 'success' };
+    status, message, submit, locked: status === 'submitting' || status === 'success' };
 }

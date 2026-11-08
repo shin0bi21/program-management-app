@@ -3,24 +3,23 @@ import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getSessionTypes, updateSession } from '../../sessions.api';
+import { updateSession } from '../../sessions.api';
 import { makeProgramSession } from '../../../../../tests/factories/session';
 import EditSessionModal from './EditSessionModal';
 
 vi.mock('../../sessions.api', () => ({
-  getSessionTypes: vi.fn(),
   updateSession: vi.fn(),
 }));
 
 const session = makeProgramSession({ description: 'Practice session' });
+const sessionTypes = [
+  { id: 'Regular', name: 'Regular' },
+  { id: 'Guest Speaker', name: 'Guest Speaker' },
+];
 
 describe('EditSessionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getSessionTypes).mockResolvedValue([
-      { id: 'Regular', name: 'Regular' },
-      { id: 'Guest Speaker', name: 'Guest Speaker' },
-    ]);
   });
 
   it('renders session fields and submits edits with success feedback', async () => {
@@ -29,6 +28,7 @@ describe('EditSessionModal', () => {
     const user = userEvent.setup();
     renderWithQueryClient(
       <EditSessionModal
+        sessionTypes={sessionTypes}
         session={session}
         onClose={vi.fn()}
         onUpdated={onUpdated}
@@ -53,6 +53,7 @@ describe('EditSessionModal', () => {
     vi.mocked(updateSession).mockRejectedValue(new Error('Session overlaps another session'));
     renderWithQueryClient(
       <EditSessionModal
+        sessionTypes={sessionTypes}
         session={session}
         onClose={vi.fn()}
         onUpdated={vi.fn()}
@@ -67,7 +68,7 @@ describe('EditSessionModal', () => {
   });
 
   it('renders fields for a different session target', async () => {
-    const props = { onClose: vi.fn(), onUpdated: vi.fn() };
+    const props = { sessionTypes, onClose: vi.fn(), onUpdated: vi.fn() };
     const view = renderWithQueryClient(<EditSessionModal session={session} {...props} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));

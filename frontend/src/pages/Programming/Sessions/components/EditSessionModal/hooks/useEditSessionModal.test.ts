@@ -6,9 +6,6 @@ import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { useEditSessionModal } from './useEditSessionModal';
 
 vi.mock('../../../sessions.api', () => ({ updateSession: vi.fn() }));
-vi.mock('../../../hooks/data/useSessionTypes', () => ({
-  useSessionTypes: () => ({ sessionTypes: [] }),
-}));
 
 function makeSubmitEvent() {
   const form = document.createElement('form');
