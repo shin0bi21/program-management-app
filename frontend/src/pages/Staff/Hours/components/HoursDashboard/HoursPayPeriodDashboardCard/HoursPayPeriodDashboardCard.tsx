@@ -1,9 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 
 import type { StaffResource } from '../../../types';
 import type { PageMessageItem } from '../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import { formatShortDateRange } from '../../../../../../common/utils/date';
-import HoursDashboardCard from '../HoursDashboardCard/HoursDashboardCard';
+import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
+import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
 
 /**
@@ -32,23 +34,34 @@ export default function HoursPayPeriodDashboardCard({ queryKey, staff, onErrorCh
 
   const payPeriod = state.status === 'ready' ? state.data : null;
   const payPeriodLabel = payPeriod ? formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd) : null;
-  const readyProps = payPeriod ? {
+  const breakdownData = payPeriod ? {
     total: payPeriod.totalHours,
-    modalTitle: staff?.name ?? '',
-    modalSubtitle: payPeriodLabel ?? '',
-    breakdown: payPeriod.breakdown.map(item => [item.label, item.hours] as [string, number]),
-  } : {};
+    title: staff?.name ?? '',
+    subtitle: payPeriodLabel ?? '',
+    breakdown: payPeriod.breakdown,
+  } : null;
 
-  return <HoursDashboardCard
-    {...readyProps}
+  let content: ReactNode;
+  if (state.status === 'error') {
+    content = <UnavailableState compact title="Pay-period hours unavailable" onRetry={state.retry} />;
+  } else if (payPeriod) {
+    content = <>
+      <strong className="dashboard-card__metric">{payPeriod.totalHours.toFixed(2)}</strong>
+      <p>{payPeriodLabel}</p>
+    </>;
+  }
+
+  return <DashboardCard
     title="Hours This Pay Period"
     loading={state.status === 'loading'}
-    scopeKey={JSON.stringify([staff?.id, payPeriod?.periodStart])}
+    loadingLabel="Loading pay-period hours…"
     emptyMessage="Select a staff member to view their pay-period hours."
-    unavailable={state.status === 'error' ? { title: 'Pay-period hours unavailable', onRetry: state.retry } : undefined}
-    details={[
-      ['Current Pay Period', payPeriodLabel],
-      ['Hours', payPeriod?.totalHours.toFixed(2) ?? null],
-    ]}
-  />;
+    action={<HoursBreakdown
+      data={breakdownData}
+      scopeKey={JSON.stringify([staff?.id, payPeriod?.periodStart])}
+      disabled={state.status !== 'ready'}
+    />}
+  >
+    {content}
+  </DashboardCard>;
 }

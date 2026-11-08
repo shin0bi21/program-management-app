@@ -377,8 +377,6 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00');
     const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
     expect(averageCard.closest('article')).toHaveTextContent('4.00');
-    expect(averageCard.closest('article')).toHaveTextContent('CycleFall 2026');
-    expect(averageCard.closest('article')).toHaveTextContent('Biweekly Average4.00');
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
     expect(getHoursCycleSummaryData).toHaveBeenCalledWith(
@@ -429,8 +427,6 @@ describe('Hours', () => {
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
-    expect(getPeriodCard()).toHaveTextContent('Current Pay Period');
-    expect(getPeriodCard()).toHaveTextContent('Hours');
     expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
     fireEvent.keyDown(document, { key: 'Escape' });
 

@@ -1,0 +1,96 @@
+.hours-breakdown__modal-subtitle,
+.hours-breakdown__no-breakdown {
+  color: var(--color-muted);
+}
+
+.hours-breakdown__modal-subtitle {
+  margin: 0;
+}
+
+.hours-breakdown__segments {
+  display: flex;
+  height: 10px;
+  margin-top: var(--space-5);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ink-08);
+}
+
+.hours-breakdown__segments span {
+  min-width: 0;
+}
+
+.hours-breakdown__breakdown {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.hours-breakdown__breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-line-soft);
+  border-left: 4px solid;
+}
+
+.hours-breakdown__breakdown dt {
+  font-weight: 650;
+}
+
+.hours-breakdown__breakdown dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.hours-breakdown__segments .hours-breakdown__tone-0 { background: #1f9d74; }
+.hours-breakdown__segments .hours-breakdown__tone-1 { background: #f5a623; }
+.hours-breakdown__segments .hours-breakdown__tone-2 { background: #b7b7af; }
+.hours-breakdown__segments .hours-breakdown__tone-3 { background: var(--brand-accent); }
+.hours-breakdown__segments .hours-breakdown__tone-4 { background: #8b6fc0; }
+
+.hours-breakdown__breakdown-row.hours-breakdown__tone-0 {
+  border-left-color: #1f9d74;
+  background: color-mix(in srgb, #1f9d74 10%, transparent);
+}
+
+.hours-breakdown__breakdown-row.hours-breakdown__tone-1 {
+  border-left-color: #f5a623;
+  background: color-mix(in srgb, #f5a623 12%, transparent);
+}
+
+.hours-breakdown__breakdown-row.hours-breakdown__tone-2 {
+  border-left-color: #989890;
+  background: color-mix(in srgb, #b7b7af 14%, transparent);
+}
+
+.hours-breakdown__breakdown-row.hours-breakdown__tone-3 {
+  border-left-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 9%, transparent);
+}
+
+.hours-breakdown__breakdown-row.hours-breakdown__tone-4 {
+  border-left-color: #8b6fc0;
+  background: color-mix(in srgb, #8b6fc0 10%, transparent);
+}
+
+.hours-breakdown__no-breakdown {
+  margin: var(--space-5) 0 0;
+}
+
+.hours-breakdown__total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: var(--border-line-soft);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.hours-breakdown__total span {
+  color: var(--color-muted);
+}

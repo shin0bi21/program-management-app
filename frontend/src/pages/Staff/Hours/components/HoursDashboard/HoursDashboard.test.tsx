@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getHoursCycleSummaryData, getHoursPayPeriodData, type HoursPayPeriodData } from '../../hours.api';
@@ -86,7 +86,10 @@ describe('HoursDashboard', () => {
     const { rerender } = renderWithQueryClient(<HoursDashboard {...baseProps} />);
     await screen.findByText('12.00');
     fireEvent.click(screen.getAllByRole('button', { name: 'See Breakdown' })[0]);
-    expect(screen.getByRole('dialog', { name: 'Zoe Wilson' })).toBeInTheDocument();
+    const breakdown = screen.getByRole('dialog', { name: 'Zoe Wilson' });
+    expect(within(breakdown).getByText('Meeting')).toBeInTheDocument();
+    expect(within(breakdown).getByRole('img', { name: 'Breakdown of 12.00 hours' })).toBeInTheDocument();
+    expect(within(breakdown).getByText('Total').parentElement).toHaveTextContent('12.00');
 
     rerender(<HoursDashboard {...baseProps} staff={{ ...staff, id: 'staff-2', name: 'Jordan Lee' }} />);
 

@@ -1,9 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 
 import type { StaffResource } from '../../../types';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import type { PageMessageItem } from '../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import HoursDashboardCard from '../HoursDashboardCard/HoursDashboardCard';
+import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
+import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
 
 /**
@@ -32,26 +34,34 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle,
   }, [message, onErrorChange]);
 
   const summary = state.status === 'ready' ? state.data : null;
-  const readyProps = summary ? {
+  const breakdownData = summary ? {
     total: summary.averageHours,
-    modalTitle: staff?.name ?? '',
-    modalSubtitle: `${cycle?.name ?? ''} · Biweekly Average`,
-    breakdown: summary.breakdown.map(item => [item.label, item.hours] as [string, number]),
-  } : {};
+    title: staff?.name ?? '',
+    subtitle: `${cycle?.name ?? ''} · Biweekly Average`,
+    breakdown: summary.breakdown,
+  } : null;
   const emptyMessage = staff
     ? 'Select a cycle to view its hours average.'
     : 'Select a staff member to view their cycle hours.';
 
-  return <HoursDashboardCard
-    {...readyProps}
+  let content: ReactNode;
+  if (state.status === 'error') {
+    content = <UnavailableState compact title="Cycle hours unavailable" onRetry={state.retry} />;
+  } else if (summary) {
+    content = <strong className="dashboard-card__metric">{summary.averageHours.toFixed(2)}</strong>;
+  }
+
+  return <DashboardCard
     title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
     loading={state.status === 'loading'}
-    scopeKey={JSON.stringify([staff?.id, cycle?.id])}
+    loadingLabel="Loading cycle hours…"
     emptyMessage={emptyMessage}
-    unavailable={state.status === 'error' ? { title: 'Cycle hours unavailable', onRetry: state.retry } : undefined}
-    details={[
-      ['Cycle', cycle?.name ?? null],
-      ['Biweekly Average', summary?.averageHours.toFixed(2) ?? null],
-    ]}
-  />;
+    action={<HoursBreakdown
+      data={breakdownData}
+      scopeKey={JSON.stringify([staff?.id, cycle?.id])}
+      disabled={state.status !== 'ready'}
+    />}
+  >
+    {content}
+  </DashboardCard>;
 }
