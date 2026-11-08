@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -13,6 +13,12 @@ import { getErrorMessage } from '../../../../http/errors';
 import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
 
+/**
+ * Initializes one lead edit draft per open target and submits its normalized fields.
+ * Saved-record refreshes for the same target leave the editable draft intact.
+ * @param options - Open state, current saved target, and completion callbacks.
+ * @example useLeadModal({ isOpen: true, lead, onClose, onSuccess })
+ */
 export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   isOpen: boolean;
   onClose: () => void;
@@ -26,9 +32,13 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
     defaultValues: outreachFormDefaultValues,
   });
 
+  const leadId = lead?.id;
+  const leadRef = useRef(lead);
+  leadRef.current = lead;
+
   useEffect(() => {
-    if (isOpen) reset(valuesForLead(lead));
-  }, [isOpen, lead, reset]);
+    if (isOpen) reset(valuesForLead(leadRef.current));
+  }, [isOpen, leadId, reset]);
 
   const resetForm = () => {
     reset(outreachFormDefaultValues);
@@ -73,7 +83,11 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
   return { register, control, errors, handleSubmit, onValid, submitStatus, error, handleClose };
 }
 
-/** Initializes an edit draft from the saved DOB, leaving legacy dates blank. */
+/**
+ * Initializes an editable draft from a saved lead, leaving legacy birth dates blank.
+ * @param lead - Saved record to edit; omitted for creation.
+ * @example valuesForLead(undefined) // empty outreach form values
+ */
 const valuesForLead = (lead?: Lead): OutreachFormValues => (
   lead
     ? {

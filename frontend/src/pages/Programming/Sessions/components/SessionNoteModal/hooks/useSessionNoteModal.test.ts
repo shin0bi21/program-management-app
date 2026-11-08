@@ -29,6 +29,10 @@ const note: SessionNote = {
   youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
 };
 
+/**
+ * Isolates roster queries for each note workflow example.
+ * @example renderHook(useExample, { wrapper: wrapper() })
+ */
 function wrapper() {
   return createQueryClientWrapper(createTestQueryClient());
 }
@@ -120,6 +124,30 @@ describe('useSessionNoteModal', () => {
     rerender({ ...options, session: { ...session }, note: { ...note } });
 
     expect(result.current.draft.details).toBe('Keep this draft');
+  });
+
+  it('keeps the draft and pending save locked when the saved note refreshes', async () => {
+    let resolveUpdate!: () => void;
+    vi.mocked(updateSessionNote).mockReturnValue(new Promise(resolve => {
+      resolveUpdate = () => resolve(note);
+    }));
+    const options = { session, note, onSaved: vi.fn() };
+    const { result, rerender } = renderHook(props => useSessionNoteModal(props), {
+      initialProps: options, wrapper: wrapper(),
+    });
+    act(() => result.current.updateDetails('Keep this pending draft'));
+    let submission!: Promise<void>;
+    act(() => { submission = result.current.submit(); });
+
+    rerender({ ...options, session: { ...session }, note: { ...note, details: 'Refreshed saved text' } });
+    expect(result.current.draft.details).toBe('Keep this pending draft');
+    expect(result.current.submitStatus).toBe('submitting');
+    act(() => { void result.current.submit(); });
+    expect(updateSessionNote).toHaveBeenCalledOnce();
+
+    resolveUpdate();
+    await act(async () => submission);
+    expect(result.current.submitStatus).toBe('success');
   });
 
   it('does not make a saved note retryable when refresh fails', async () => {

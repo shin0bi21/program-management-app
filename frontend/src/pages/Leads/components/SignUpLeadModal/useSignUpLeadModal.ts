@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
@@ -25,6 +25,12 @@ interface UseSignUpLeadModalOptions {
   onSuccess: (result: LeadSignUpResult) => void | Promise<void>;
 }
 
+/**
+ * Owns a lead's enrollment draft and creates a youth profile after validating its birth date.
+ * Saved-record refreshes preserve the draft until the target identity changes.
+ * @param options - Current lead, assignment query key, and authoritative save callback.
+ * @example useSignUpLeadModal({ queryKey, lead, onSuccess })
+ */
 export default function useSignUpLeadModal({
   queryKey,
   lead,
@@ -38,7 +44,8 @@ export default function useSignUpLeadModal({
   const [showAllPrograms, setShowAllPrograms] = useState(false);
   const submitLock = useSubmitLock();
   const leadId = lead?.id;
-  const storedDateOfBirth = lead?.dateOfBirth;
+  const leadRef = useRef(lead);
+  leadRef.current = lead;
 
   const {
     submitStatus,
@@ -64,12 +71,12 @@ export default function useSignUpLeadModal({
   // A different lead starts with a clean enrollment and note draft.
   useEffect(() => {
     setSelectedPairKey('');
-    setDateOfBirth(storedDateOfBirth ?? '');
+    setDateOfBirth(leadRef.current?.dateOfBirth ?? '');
     setNoteCategory('general');
     setSuccessMessage('');
     setShowAllPrograms(false);
     resetStatus();
-  }, [leadId, storedDateOfBirth, resetStatus]);
+  }, [leadId, resetStatus]);
 
   const visibleProgramCycles = useMemo(() => {
     if (!lead) return programCycles;

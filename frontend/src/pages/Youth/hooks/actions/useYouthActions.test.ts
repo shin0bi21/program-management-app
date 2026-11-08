@@ -1,3 +1,5 @@
+import { youthData, getYouthSortValue } from '../data/useYouthData';
+import type { RecordListIndex } from '../../../../query/createRecordStore';
 import { sessionStore, getSessionSortValue } from '../../../Programming/Sessions/sessionStore';
 import { makeProgramSession } from '../../../../tests/factories/session';
 import type { InfiniteData } from '@tanstack/react-query';
@@ -19,28 +21,27 @@ import { useYouthActions } from './useYouthActions';
  * @param pages - Profiles grouped into the pages loaded by a test.
  * @example infiniteData([profile]) // one terminal page containing that profile
  */
-function infiniteData(...pages: YouthProfile[][]): InfiniteData<CursorPage<YouthProfile>> {
+function infiniteData(...pages: YouthProfile[][]): InfiniteData<CursorPage<RecordListIndex>> {
   return {
-    pages: pages.map(rows => ({ rows, nextCursor: null })),
+    pages: pages.map(rows => ({ rows: rows.map(profile => ({ id: profile.id, sortValue: getYouthSortValue(profile, 'firstName') })), nextCursor: null })),
     pageParams: pages.map(() => null),
   };
 }
 
 /**
- * Mounts Youth actions with an isolated cache and selected-profile reconciliation callback.
- * @param onYouthReconciled - Receives authoritative profiles after a successful update.
- * @example renderActions() // hook, cache, and reconciliation spy for one test
+ * Mounts Youth actions with an isolated record and list cache.
+ * @example renderActions() // hook and cache for one test
  */
-function renderActions(onYouthReconciled = vi.fn()) {
+function renderActions() {
   const queryClient = createTestQueryClient();
-  const rendered = renderHook(() => useYouthActions({ onYouthReconciled }), {
+  const rendered = renderHook(() => useYouthActions(), {
     wrapper: createQueryClientWrapper(queryClient),
   });
-  return { ...rendered, queryClient, onYouthReconciled };
+  return { ...rendered, queryClient };
 }
 
 describe('useYouthActions', () => {
-  it('replaces the authoritative row in every table variant while preserving unrelated references', () => {
+  it('replaces the authoritative index in every table variant while preserving unrelated references', () => {
     const original = makeYouthProfile();
     const unrelated = makeYouthProfile({ id: 'youth-2', firstName: 'Alex' });
     const saved = makeYouthProfile({ firstName: 'Updated', contacts: [] });
@@ -58,13 +59,13 @@ describe('useYouthActions', () => {
 
     act(() => rendered.result.current.reconcileSavedYouth(saved));
 
-    const firstResult = rendered.queryClient.getQueryData<InfiniteData<CursorPage<YouthProfile>>>(firstKey)!;
-    const secondResult = rendered.queryClient.getQueryData<InfiniteData<CursorPage<YouthProfile>>>(secondKey)!;
-    expect(firstResult.pages[0].rows).toEqual([saved, unrelated]);
-    expect(firstResult.pages[0].rows[1]).toBe(unrelated);
-    expect(secondResult.pages[0].rows).toEqual([saved]);
+    const firstResult = rendered.queryClient.getQueryData<InfiniteData<CursorPage<RecordListIndex>>>(firstKey)!;
+    const secondResult = rendered.queryClient.getQueryData<InfiniteData<CursorPage<RecordListIndex>>>(secondKey)!;
+    expect(firstResult.pages[0].rows).toEqual([{ id: saved.id, sortValue: 'updated' }, { id: unrelated.id, sortValue: 'alex' }]);
+    expect(youthData.get(rendered.queryClient, saved.id)).toEqual(saved);
+    expect(firstResult.pages[0].rows[1]).toBe(first.pages[0].rows[1]);
+    expect(secondResult.pages[0].rows).toEqual([{ id: saved.id, sortValue: getYouthSortValue(saved, 'lastName') }]);
     expect(rendered.queryClient.getQueryData(absentKey)).toBe(absent);
-    expect(rendered.onYouthReconciled).toHaveBeenCalledWith(saved);
     expect(invalidate).not.toHaveBeenCalled();
   });
 
@@ -76,10 +77,10 @@ describe('useYouthActions', () => {
 
     expect(invalidate).toHaveBeenCalledOnce();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: YOUTH_TABLE_QUERY_KEY });
-    expect(rendered.onYouthReconciled).not.toHaveBeenCalled();
+    expect(youthData.get(rendered.queryClient, 'youth-new')).toEqual(makeYouthProfile({ id: 'youth-new' }));
   });
 
-  it('reconciles attendance response rows and selection without invalidating table queries', () => {
+  it('reconciles attendance response records without invalidating table queries', () => {
     const rendered = renderActions();
     const youth = makeYouthProfile();
     const session = makeProgramSession({ theme: 'Updated attendance session' });
@@ -92,12 +93,32 @@ describe('useYouthActions', () => {
       sessions: [], youth, updatedSessions: [session],
     }));
 
-    expect(rendered.onYouthReconciled).toHaveBeenCalledWith(youth);
+    expect(youthData.get(rendered.queryClient, youth.id)).toEqual(youth);
     expect(rendered.queryClient.getQueryData(key)).toEqual({ pages: [{ rows: [{ id: session.id, sortValue: getSessionSortValue(session, 'date') }], nextCursor: null }], pageParams: [null] });
     expect(rendered.queryClient.getQueryState(key)?.isInvalidated).toBe(false);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', session.id, 'roster'] });
     expect(sessionStore.get(rendered.queryClient, session.id)).toEqual(session);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary', youth.id] });
+  });
+
+  it('ignores modal save callbacks captured before account cache clearing', () => {
+    const rendered = renderActions();
+    const oldActions = rendered.result.current;
+    rendered.queryClient.clear();
+    const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries');
+
+    act(() => {
+      oldActions.reconcileSavedYouth(makeYouthProfile());
+      oldActions.reconcileCreatedYouth(makeYouthProfile({ id: 'new-youth' }));
+      oldActions.reconcileAttendance({
+        programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycle: 'Summer', program: 'Skills', enrollmentRequired: true },
+        sessions: [], youth: makeYouthProfile(),
+      });
+    });
+
+    expect(youthData.get(rendered.queryClient, 'youth-1')).toBeUndefined();
+    expect(youthData.get(rendered.queryClient, 'new-youth')).toBeUndefined();
+    expect(invalidate).not.toHaveBeenCalled();
   });
 });

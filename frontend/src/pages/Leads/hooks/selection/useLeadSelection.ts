@@ -1,23 +1,27 @@
-import { useCallback, useState } from 'react';
-
+import { useCallback, useEffect, useState } from 'react';
 import type { Lead } from '../../types';
 
-export default function useLeadSelection() {
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+/**
+ * Retains selection across table filters while resolving the latest saved lead.
+ * @param records - Current saved leads supplied by the page data owner.
+ * @example selection.selectLead(row) // dashboard follows subsequent owner updates
+ */
+export default function useLeadSelection(records: Readonly<Record<string, Lead>>) {
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-  const syncSelectedLead = useCallback((lead: Lead) => {
-    setSelectedLead(current => current?.id === lead.id ? lead : current);
-  }, []);
+  useEffect(() => {
+    if (selectedLeadId && !records[selectedLeadId]) setSelectedLeadId(null);
+  }, [records, selectedLeadId]);
 
+  const selectLead = useCallback((lead: Lead | null) => setSelectedLeadId(lead?.id ?? null), []);
   const removeSelectedLead = useCallback((leadId: string) => {
-    setSelectedLead(current => current?.id === leadId ? null : current);
+    setSelectedLeadId(current => current === leadId ? null : current);
   }, []);
 
   return {
-    selectedLead,
-    selectedLeadId: selectedLead?.id ?? null,
-    selectLead: setSelectedLead,
-    syncSelectedLead,
+    selectedLead: selectedLeadId ? records[selectedLeadId] ?? null : null,
+    selectedLeadId,
+    selectLead,
     removeSelectedLead,
   };
 }

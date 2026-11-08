@@ -7,6 +7,11 @@ import type { ProgramSession, SessionAttachment } from '../../../../types';
 import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
 import './SessionAttachmentModal.css';
 
+/**
+ * Displays an independent attachment draft for the supplied saved-record identity.
+ * @param props - Current saved targets, roster query scope, and close/save actions.
+ * @example <SessionAttachmentModal queryKey={['sessions']} session={session} onClose={close} onSaved={refresh} />
+ */
 export default function SessionAttachmentModal({
   queryKey,
   session,
@@ -32,9 +37,9 @@ export default function SessionAttachmentModal({
       statusMessage={statusMessage || undefined}
       footer={<ModalFormFooter formId="session-attachment-form" submitStatus={submitStatus} onClose={onClose} />}
     >
-      <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
+      <form key={`${session?.id ?? 'closed'}:${attachment?.id ?? 'new'}`} id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
         <FormField id="session-attachment-title" label="Title">
-          <input key={`${attachment?.id ?? 'new'}-title`} id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
+          <input id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
         </FormField>
         {!attachment && <FormField id="session-attachment-file" label="File">
           <input
@@ -48,7 +53,7 @@ export default function SessionAttachmentModal({
           />
         </FormField>}
         <FormField id="session-attachment-description" label="Description (optional)">
-          <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
+          <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
         </FormField>
         <FormFieldGroup label="Link youth" className="session-attachment-youth" disabled={submissionComplete}>
           {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (

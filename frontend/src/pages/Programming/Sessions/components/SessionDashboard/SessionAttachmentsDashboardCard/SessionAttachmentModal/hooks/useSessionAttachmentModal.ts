@@ -1,10 +1,16 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createSessionAttachment, getSessionRoster, updateSessionAttachment } from '../../../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../../../common/hooks/useSubmitLock';
 import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../../../../../types';
 
+/**
+ * Owns attachment upload or metadata-edit drafts and prevents duplicate pending saves.
+ * Same-ID saved-record refreshes preserve the draft and submission lock.
+ * @param options - Current saved session and attachment, roster query scope, and save refresh action.
+ * @example useSessionAttachmentModal({ queryKey: ['sessions'], session, attachment, onSaved })
+ */
 export function useSessionAttachmentModal({ queryKey, session, attachment, onSaved }: {
   queryKey: readonly unknown[];
   session: ProgramSession | null;
@@ -16,6 +22,9 @@ export function useSessionAttachmentModal({ queryKey, session, attachment, onSav
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
+  const initialYouthIds = useRef<string[]>([]);
+  initialYouthIds.current = attachment?.youth.map(youth => youth.youthId) ?? [];
+  const targetKey = session ? `${session.id}:${attachment?.id ?? 'new'}` : 'closed';
   const rosterQuery = useQuery<SessionRosterMember[]>({
     queryKey: [...queryKey, session?.id, 'roster'],
     queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
@@ -23,13 +32,12 @@ export function useSessionAttachmentModal({ queryKey, session, attachment, onSav
   });
 
   useEffect(() => {
-    if (!session) return;
-    setSelectedYouthIds(attachment?.youth.map(youth => youth.youthId) ?? []);
+    setSelectedYouthIds(initialYouthIds.current);
     setSelectedFile(null);
     setSubmitStatus('idle');
     setStatusMessage('');
     unlock();
-  }, [attachment, session, unlock]);
+  }, [targetKey, unlock]);
 
   const toggleYouth = (youthId: string) => setSelectedYouthIds(current => current.includes(youthId)
     ? current.filter(id => id !== youthId)

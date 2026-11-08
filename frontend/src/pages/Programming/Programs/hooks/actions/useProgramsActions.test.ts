@@ -1,3 +1,4 @@
+import { youthData, getYouthSortValue } from '../../../../Youth/hooks/data/useYouthData';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -53,8 +54,8 @@ describe('useProgramsActions', () => {
     const youth = makeYouthProfile();
     const savedYouth = { ...youth, lastName: 'Canonical returned youth' };
     client.setQueryData(['programs', 'cycle-assignments', { programId: program.id }], [{ ...programCycle, program: 'Alpha' }]);
-    client.setQueryData(['youth', 'table'], { pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
-
+    const youthKey = ['youth', 'table', {}, { key: 'lastName', direction: 'asc' }];
+    client.setQueryData(youthKey, { pages: [{ rows: [{ id: youth.id, sortValue: getYouthSortValue(youth, 'lastName') }], nextCursor: null }], pageParams: [null] });
 
     act(() => result.current.syncProgram({ program: saved, updatedProgramCycles: [programCycle], removedProgramCycles: [], createdProgramCycles: [], updatedYouth: [savedYouth] }, 'update'));
 
@@ -66,9 +67,10 @@ describe('useProgramsActions', () => {
     [assignedKey, allKey].forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
     expect(onProgramSynced).toHaveBeenCalledWith(saved);
     expect(client.getQueryData(['programs', 'cycle-assignments', { programId: program.id }])).toEqual([programCycle]);
-    expect(client.getQueryData(['youth', 'table'])).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
+    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [{ id: youth.id, sortValue: getYouthSortValue(savedYouth, 'lastName') }], nextCursor: null }], pageParams: [null] });
+    expect(youthData.get(client, youth.id)).toEqual(savedYouth);
     expect(client.getQueryState(['programs', 'cycle-assignments', { programId: program.id }])?.isInvalidated).toBe(true);
-    expect(client.getQueryState(['youth', 'table'])?.isInvalidated).toBe(false);
+    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
 
     derivedKeys.forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
   });

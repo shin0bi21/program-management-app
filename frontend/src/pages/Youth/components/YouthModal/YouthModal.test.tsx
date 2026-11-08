@@ -190,6 +190,30 @@ describe('YouthModal', () => {
       expect(screen.getByLabelText('First Name *')).toHaveValue('Unsaved name');
     });
 
+    it('preserves the edited draft and pending save when the same saved profile refreshes', async () => {
+      const profile = makeYouthProfile({ contacts: [{ id: 'contact-1', phoneNumber: '4165550100', type: 'parent' }] });
+      const onSuccess = vi.fn();
+      const props = { onClose: vi.fn(), onSuccess };
+      let finish!: (saved: ReturnType<typeof makeYouthProfile>) => void;
+      mockSetYouth.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+      const { rerender } = renderModal({ ...props, youthData: profile });
+      fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Draft name' } });
+      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '5195550100' } });
+      submitForm();
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledOnce());
+
+      rerender(<YouthModal {...props} youthData={{ ...profile, firstName: 'Refreshed name', contacts: [] }} />);
+
+      expect(screen.getByLabelText('First Name *')).toHaveValue('Draft name');
+      expect(screen.getByLabelText(/Phone Number/)).toHaveValue('5195550100');
+      expect(screen.getByLabelText('First Name *')).toBeDisabled();
+      submitForm();
+      expect(mockSetYouth).toHaveBeenCalledOnce();
+
+      await act(async () => finish({ ...profile, firstName: 'Saved name' }));
+      expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ firstName: 'Saved name' }));
+    });
+
     it('omits school management when the caller does not supply a workflow', () => {
       renderModal({ onManageSchool: undefined });
       fireEvent.click(screen.getByRole('button', { name: 'School' }));

@@ -1,11 +1,7 @@
-import { renderHook } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
-import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
+// @vitest-environment node
+import { expect, it } from 'vitest';
 import type { Lead, LeadSortKey } from '../../../types';
-import { useLeadTableData } from './useLeadTableData';
-
-vi.mock('../../../../../query/hooks/useInfiniteListQuery', () => ({ default: vi.fn(() => ({ rows: [] })) }));
-beforeEach(() => vi.clearAllMocks());
+import { getLeadSortValue } from '../../../hooks/data/useLeadData';
 
 const row: Lead = {
   id: 'lead-1', origin: 'internal', submittedByRole: 'staff', convertedYouthId: null,
@@ -25,15 +21,9 @@ const sortValues: Array<[LeadSortKey, Partial<Lead>, string | Date]> = [
 ];
 
 it.each(sortValues)('maps %s to its canonical sort value', (key, changes, expected) => {
-  renderHook(() => useLeadTableData(['leads', 'table'], {}, { key, direction: 'asc' }));
-  const getValue = vi.mocked(useInfiniteListQuery<Lead>).mock.lastCall![0].ordering!.getValue;
-
-  expect(getValue({ ...row, ...changes })).toEqual(expected);
+  expect(getLeadSortValue({ ...row, ...changes }, key)).toEqual(expected);
 });
 
 it('compares timestamp instants independently of their serialized offset', () => {
-  renderHook(() => useLeadTableData(['leads', 'table'], {}, { key: 'created', direction: 'asc' }));
-  const getValue = vi.mocked(useInfiniteListQuery<Lead>).mock.lastCall![0].ordering!.getValue;
-
-  expect(getValue({ ...row, createdAt: '2026-10-01T08:00:00-04:00' })).toEqual(new Date('2026-10-01T12:00:00Z'));
+  expect(getLeadSortValue({ ...row, createdAt: '2026-10-01T08:00:00-04:00' }, 'created')).toEqual(new Date('2026-10-01T12:00:00Z'));
 });

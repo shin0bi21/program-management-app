@@ -1,3 +1,4 @@
+import { youthData, getYouthSortValue } from '../../../../Youth/hooks/data/useYouthData';
 import { sessionStore, getSessionSortValue } from '../../sessionStore';
 import type { RecordListIndex } from '../../../../../query/createRecordStore';
 import { act, renderHook } from '@testing-library/react';
@@ -114,7 +115,8 @@ describe('useSessionActions', () => {
       nextSessionId: null, averageAttendance: 66.7, attendanceAttendedCount: 2,
       attendanceRecordedCount: 3, uniqueAttendeeCount: 2, state: 'active',
     };
-    client.setQueryData(['youth', 'table', {}], { pages: [{ rows: [makeYouthProfile()], nextCursor: null }], pageParams: [null] });
+    const youthKey = ['youth', 'table', {}, { key: 'firstName', direction: 'asc' }];
+    client.setQueryData(youthKey, { pages: [{ rows: [{ id: youth.id, sortValue: getYouthSortValue(youth, 'firstName') }], nextCursor: null }], pageParams: [null] });
     client.setQueryData(['programs', 'cycle-assignments', {}], [{ ...cycle, averageAttendance: null }]);
     const roster = [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Lee', status: 'present' as const, notes: null }];
 
@@ -122,7 +124,8 @@ describe('useSessionActions', () => {
 
     expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [{ id: session.id, sortValue: getSessionSortValue(session, 'date') }, expect.anything()] }] });
     expect(client.getQueryData(['sessions', session.id, 'roster'])).toBe(roster);
-    expect(client.getQueryData(['youth', 'table', {}])).toMatchObject({ pages: [{ rows: [youth] }] });
+    expect(client.getQueryData(youthKey)).toMatchObject({ pages: [{ rows: [{ id: youth.id, sortValue: getYouthSortValue(youth, 'firstName') }] }] });
+    expect(youthData.get(client, youth.id)).toEqual(youth);
     expect(client.getQueryData(['programs', 'cycle-assignments', {}])).toEqual([cycle]);
     expect(invalidate.mock.calls.map(([options]) => options?.queryKey)).toEqual([
       ['programs', 'cycle-assignments'], ['youth', 'attendance-summary'], ['youth-program-cycle-attendance'],

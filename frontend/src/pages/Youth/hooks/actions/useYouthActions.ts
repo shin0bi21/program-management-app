@@ -2,36 +2,35 @@ import type { YouthAttendanceResult } from '../../components/YouthAttendanceModa
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { YouthProfile } from '../../types';
-import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
+import { youthData } from '../data/useYouthData';
 
 import { sessionStore } from '../../../Programming/Sessions/sessionStore';
 import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
 
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
-interface UseYouthActionsOptions {
-  onYouthReconciled: (youth: YouthProfile) => void;
-}
-
 /**
  * Reconciles saved youth and attendance projections with their feature-owned records.
  * @example actions.reconcileAttendance(saved) // updates youth, shared sessions, and summaries
  */
-export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
+export function useYouthActions() {
   const queryClient = useQueryClient();
+  const youthScope = youthData.getScope(queryClient);
   const sessionScope = sessionStore.getScope(queryClient);
 
-  const reconcileCreatedYouth = useCallback((_savedYouth: YouthProfile) => {
+  const reconcileCreatedYouth = useCallback((savedYouth: YouthProfile) => {
+    if (!youthData.isScope(queryClient, youthScope)) return;
+    youthData.write(queryClient, savedYouth);
     void queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY });
-  }, [queryClient]);
+  }, [queryClient, youthScope]);
 
   const reconcileSavedYouth = useCallback((savedYouth: YouthProfile) => {
-    replaceInfiniteListRow(queryClient, YOUTH_TABLE_QUERY_KEY, savedYouth);
-    onYouthReconciled(savedYouth);
-  }, [onYouthReconciled, queryClient]);
+    if (!youthData.isScope(queryClient, youthScope)) return;
+    youthData.write(queryClient, savedYouth);
+  }, [queryClient, youthScope]);
 
   const reconcileAttendance = useCallback((saved: YouthAttendanceResult) => {
-    if (!sessionStore.isScope(queryClient, sessionScope)) return;
+    if (!youthData.isScope(queryClient, youthScope) || !sessionStore.isScope(queryClient, sessionScope)) return;
     reconcileSavedYouth(saved.youth);
     void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary', saved.youth.id] });
     for (const session of saved.updatedSessions ?? []) {
@@ -42,7 +41,7 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
       updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
-  }, [queryClient, reconcileSavedYouth, sessionScope]);
+  }, [queryClient, reconcileSavedYouth, sessionScope, youthScope]);
 
   return { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance };
 }
