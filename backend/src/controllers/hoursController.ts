@@ -8,9 +8,9 @@ import {
   setHours,
   updateHoursPlacement,
 } from '../services/staff/hours/hoursService';
-import { getHoursDashboardData } from '../services/staff/hours/hoursDashboardService';
+import { getHoursCycleSummaryData, getHoursPayPeriodData } from '../services/staff/hours/hoursDashboardService';
 import { getHoursList } from '../services/staff/hours/hoursListService';
-import type { HoursTableQuery, HoursDashboardQuery, HoursCalendarQuery, HoursSessionQuery } from '../validation/hoursSchemas';
+import type { HoursTableQuery, HoursCycleSummaryQuery, HoursPayPeriodQuery, HoursCalendarQuery, HoursSessionQuery } from '../validation/hoursSchemas';
 
 /**
  * Returns hours for the requested calendar range.
@@ -41,13 +41,23 @@ export async function handleGetHoursReferenceData(_req: Request, res: Response) 
 }
 
 /**
- * Returns the selected staff hours overview.
- * @example handleGetHoursDashboardData(req, res)
+ * Returns the selected staff member's pay-period totals.
+ * @example handleGetHoursPayPeriodData(req, res)
  */
-export async function handleGetHoursDashboardData(req: Request, res: Response) {
+export async function handleGetHoursPayPeriodData(req: Request, res: Response) {
   const actor = (req as AuthRequest).user!;
-  const query = req.query as unknown as HoursDashboardQuery;
-  res.json(await getHoursDashboardData(actor, query));
+  const query = req.query as unknown as HoursPayPeriodQuery;
+  res.json(await getHoursPayPeriodData(actor, query));
+}
+
+/**
+ * Returns the selected staff member's cycle biweekly average.
+ * @example handleGetHoursCycleSummaryData(req, res)
+ */
+export async function handleGetHoursCycleSummaryData(req: Request, res: Response) {
+  const actor = (req as AuthRequest).user!;
+  const query = req.query as unknown as HoursCycleSummaryQuery;
+  res.json(await getHoursCycleSummaryData(actor, query));
 }
 
 /**

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
-import { getHoursScope, isHoursScope, writeHoursItem } from '../../../Hours/hoursItemStore';
+import { hoursData } from '../../../Hours/hooks/data/useHoursData';
 import {
   deleteTask,
   updateTaskPlacement,
@@ -144,12 +144,12 @@ export default function useTaskActions({
     if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
     try {
-      const hoursScope = getHoursScope(queryClient);
+      const hoursScope = hoursData.getScope(queryClient);
       const saved = await setHours(input);
-      if (!isHoursScope(queryClient, hoursScope) || !taskStore.isScope(queryClient, scope)) return;
+      if (!hoursData.isScope(queryClient, hoursScope) || !taskStore.isScope(queryClient, scope)) return;
 
       const { updatedTasks, ...entry } = saved;
-      writeHoursItem(queryClient, entry, [...hoursQueryKey, 'table']);
+      hoursData.write(queryClient, entry);
       setActionError('');
 
       if (input.source === 'task') {

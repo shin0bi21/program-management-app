@@ -7,7 +7,7 @@ import { getHoursTableData } from '../../../hours.api';
 import useHoursTableData from './useHoursTableData';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
-import { getHoursItem } from '../../../hoursItemStore';
+import { hoursData } from '../../../hooks/data/useHoursData';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
   default: vi.fn(() => ({ rows: [] })),
@@ -27,7 +27,7 @@ describe('useHoursTableData', () => {
     const client = createTestQueryClient();
     const entry = makeHoursItem();
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [entry], nextCursor: 'next' });
-    renderHook(() => useHoursTableData(['hours', 'table'], filters, sorting), { wrapper: createQueryClientWrapper(client) });
+    renderHook(() => useHoursTableData(['hours', 'table'], filters, sorting, {}), { wrapper: createQueryClientWrapper(client) });
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     const signal = new AbortController().signal;
 
@@ -36,7 +36,7 @@ describe('useHoursTableData', () => {
       const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
       expect(page).toEqual({ rows: [{ id: entry.id, sortValue: entry.date }], nextCursor: 'next' });
     });
-    expect(getHoursItem(client, entry.id)).toEqual(entry);
+    expect(hoursData.get(client, entry.id)).toEqual(entry);
     expect(getHoursTableData).toHaveBeenLastCalledWith(
       filters, { signal }, { ...sorting, cursor: undefined, limit: TABLE_PAGE_SIZE },
     );
