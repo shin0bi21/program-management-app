@@ -1,7 +1,7 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
-import { lockAssignmentProgram } from './assignmentService';
+import { lockAssignmentCycle, lockAssignmentProgram } from './assignmentService';
 import { rethrowEnrollmentConflict } from './enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/programmingSchemas';
@@ -26,7 +26,7 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     // 2. Lock and check the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
 
-    await lockEnrollmentCycle(trx, cycleId);
+    await lockAssignmentCycle(trx, cycleId);
 
     const [programCycle] = await trx<{
       programId: string;
@@ -124,7 +124,7 @@ export async function withdrawYouth(
 
     // 2. Lock the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
-    await lockEnrollmentCycle(trx, cycleId);
+    await lockAssignmentCycle(trx, cycleId);
     await trx`
       SELECT program_id
       FROM program_cycle_assignments
@@ -152,19 +152,4 @@ export async function withdrawYouth(
         ? await getYouthRowsByIds(trx, [youthId]) : [],
     };
   }).catch(rethrowEnrollmentConflict);
-}
-
-/**
- * Locks the enrollment cycle after the caller has locked its program.
- * @param trx - Transaction holding the program lock before any assignment lock.
- * @param cycleId - Cycle whose dates must remain stable during the enrollment change.
- * @example await lockEnrollmentCycle(trx, cycleId) // program → cycle → assignment
- */
-async function lockEnrollmentCycle(trx: typeof sql, cycleId: string) {
-  await trx`
-    SELECT id
-    FROM program_cycles
-    WHERE id = ${cycleId}
-    FOR NO KEY UPDATE
-  `;
 }

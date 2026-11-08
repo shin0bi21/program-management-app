@@ -80,11 +80,27 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
  */
 export async function lockAssignmentProgram(trx: typeof sql, programId: string, actor: AccessTokenPayload) {
   const programs = await trx`
-    SELECT p.id
-    FROM programs p
-    WHERE p.id = ${programId} AND ${programAccessPredicate(actor, sql`p.id`)} FOR UPDATE
+    SELECT program.id
+    FROM programs program
+    WHERE program.id = ${programId} AND ${programAccessPredicate(actor, sql`program.id`)}
+    FOR UPDATE
   `;
   if (!programs.length) throw new NotFoundError('Program not found');
+}
+
+/**
+ * Keeps cycle dates stable while changing an enrollment on its program assignment.
+ * @param trx - Transaction already holding the program lock, before locking the assignment.
+ * @param cycleId - Assigned cycle to lock until the transaction completes.
+ * @example await lockAssignmentCycle(trx, cycleId) // program → cycle → assignment
+ */
+export async function lockAssignmentCycle(trx: typeof sql, cycleId: string) {
+  await trx`
+    SELECT id
+    FROM program_cycles
+    WHERE id = ${cycleId}
+    FOR NO KEY UPDATE
+  `;
 }
 
 /**
