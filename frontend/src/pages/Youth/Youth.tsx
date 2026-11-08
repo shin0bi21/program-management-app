@@ -1,3 +1,4 @@
+import type { YouthAttendanceSummary } from './components/YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api';
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
@@ -28,7 +29,8 @@ export default function Youth() {
   // Permissions and services.
   const { permissions, role } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
-  const canManageAttendance = permissions.includes('read:attendance')
+  const canReadAttendance = permissions.includes('read:attendance');
+  const canManageAttendance = canReadAttendance
     && permissions.includes('write:attendance')
     && permissions.includes('read:sessions');
   const canViewAttendanceReport = permissions.includes('read:programs')
@@ -57,7 +59,7 @@ export default function Youth() {
   } : null, [search.appliedValue, controlsReady, filters.values.programIds, filters.values.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthProfile['programCycles'][number] | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<YouthAttendanceSummary | null>(null);
   const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
   const { selectedProfile, selectedProfileId, selectProfile, reconcileSavedProfile } = useYouthSelection({
     onSelectedProfileIdChange: closeAttendanceModal,
@@ -86,16 +88,15 @@ export default function Youth() {
 
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    programCycle: YouthProfile['programCycles'][number];
+    programCycle: YouthAttendanceSummary;
     youthId: string;
   } | null>(null);
   const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
 
   // Table configuration.
-  const addProfileNote = useCallback((profile: YouthProfile) => {
-    selectProfile(profile);
-    openProfileNoteEditor('new', profile.id);
-  }, [openProfileNoteEditor, selectProfile]);
+  const addProfileNote = useCallback((youthId: string) => {
+    openProfileNoteEditor('new', youthId);
+  }, [openProfileNoteEditor]);
   const { columns: youthColumns } = useYouthTable({
     canWrite,
     onEdit: setModalTarget,
@@ -127,6 +128,7 @@ export default function Youth() {
           profile={selectedProfile}
           canWrite={canWrite}
           onManagePrimaryContact={setContactTarget}
+          canReadAttendance={canReadAttendance}
           canManageAttendance={canManageAttendance}
           onManageAttendance={setAttendanceTarget}
           canViewAttendanceReport={canViewAttendanceReport}
@@ -157,14 +159,14 @@ export default function Youth() {
         />}
       />
 
-      <YouthModal
-        isOpen={modalTarget !== null}
+      {modalTarget !== null && <YouthModal
+        key={modalTarget === 'new' ? 'new' : modalTarget.id}
         suspended={schoolModal.action !== null}
         onManageSchool={schoolModal.open}
-        youthData={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
+        youthData={modalTarget !== 'new' ? modalTarget : undefined}
         onClose={closeYouthModal}
         onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
-      />
+      />}
       <SchoolModal workflow={schoolModal} />
       <YouthAttendanceModal
         youth={selectedProfile}
@@ -177,13 +179,13 @@ export default function Youth() {
         youthId={attendanceReportTarget.youthId}
         onClose={closeAttendanceReportModal}
       />}
-      <YouthModal
-        isOpen={contactTarget !== null}
-        youthData={contactTarget ?? undefined}
+      {contactTarget !== null && <YouthModal
+        key={contactTarget.id}
+        youthData={contactTarget}
         mode="contact"
         onClose={closeContactModal}
         onSuccess={reconcileSavedYouth}
-      />
+      />}
 
       <ProfileNoteDialogs
         editorTarget={profileNotes.editorTarget}

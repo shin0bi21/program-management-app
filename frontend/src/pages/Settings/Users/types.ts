@@ -9,7 +9,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   createdAt: string;
-  programIds?: string[];
+  programIds: string[];
 }
 
 export interface UserFilters {
@@ -17,5 +17,6 @@ export interface UserFilters {
   roles?: UserRole[];
   statuses?: UserStatus[];
 }
+
 export const USER_TABLE_KEYS = ['name', 'email', 'role', 'status', 'createdAt'] as const;
 export type UserSortKey = typeof USER_TABLE_KEYS[number];

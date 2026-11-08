@@ -19,6 +19,7 @@ describe('YouthDashboard', () => {
       profile={profile}
       canWrite
       onManagePrimaryContact={onManagePrimaryContact}
+      canReadAttendance={false}
       canManageAttendance={false}
       onManageAttendance={vi.fn()}
       canViewAttendanceReport={false}

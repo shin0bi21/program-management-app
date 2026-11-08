@@ -1,3 +1,4 @@
+import type { YouthAttendanceSummary } from './YouthAttendanceDashboardCard/youthAttendanceSummary.api';
 import Button from '../../../../common/components/Button/Button';
 import PrimaryContactDashboardCard from '../../../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
 import type { YouthProfile } from '../../types';
@@ -5,12 +6,13 @@ import type { YouthProfileNote } from '../../types';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
 import YouthNotesDashboardCard from './YouthNotesDashboardCard/YouthNotesDashboardCard';
 
-type AttendanceProgramCycle = YouthProfile['programCycles'][number];
+type AttendanceProgramCycle = YouthAttendanceSummary;
 
 interface YouthDashboardProps {
   profile: YouthProfile | null;
   canWrite: boolean;
   onManagePrimaryContact: (profile: YouthProfile) => void;
+  canReadAttendance: boolean;
   canManageAttendance: boolean;
   onManageAttendance: (programCycle: AttendanceProgramCycle) => void;
   canViewAttendanceReport: boolean;
@@ -25,10 +27,18 @@ interface YouthDashboardProps {
   onDeleteProfileNote: (note: YouthProfileNote) => void;
 }
 
+/**
+ * Displays the selected youth's contact, attendance, and profile-note cards.
+ * @param props.profile - Selected saved profile; null displays the cards' no-selection states.
+ * @param props.canReadAttendance - Whether to mount the card that loads attendance summaries.
+ * @param props - Available actions, note data, and permission flags supplied by the Youth page.
+ * @example <YouthDashboard {...dashboardProps} profile={selectedProfile} />
+ */
 export default function YouthDashboard({
   profile,
   canWrite,
   onManagePrimaryContact,
+  canReadAttendance,
   canManageAttendance,
   onManageAttendance,
   canViewAttendanceReport,
@@ -65,14 +75,13 @@ export default function YouthDashboard({
         </Button>
       ) : undefined}
     />
-    <YouthAttendanceDashboardCard
-      programCycles={profile?.programCycles}
-      selected={selected}
+    {canReadAttendance && <YouthAttendanceDashboardCard
+      youthId={profile?.id ?? null}
       canManage={canManageAttendance}
       onManage={onManageAttendance}
       canViewReport={canViewAttendanceReport}
       onViewReport={onViewAttendanceReport}
-    />
+    />}
     <YouthNotesDashboardCard
       profileNotes={profileNotes}
       selected={selected}

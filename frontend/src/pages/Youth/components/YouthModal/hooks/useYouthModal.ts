@@ -1,26 +1,15 @@
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { setYouth, setYouthContacts } from '../../../youth.api';
 import { getErrorMessage } from '../../../../../http/errors';
 import { useContacts } from '../../../../../common/features/contacts/hooks/useContacts';
-import { useAddresses } from './useAddresses';
 import { useSchools } from '../../../../../common/features/SchoolModal/hooks/useSchools';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import { youthSchema, youthContactSchema, type YouthFormData } from '../youthSchema';
 import type { YouthProfile } from '../../../types';
 
-const defaultValues: YouthFormData = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  dateOfBirth: '',
-  schoolId: '',
-};
-
 interface UseYouthModalProps {
-  isOpen: boolean;
   youthData?: YouthProfile;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
@@ -28,85 +17,60 @@ interface UseYouthModalProps {
   mode?: 'full' | 'contact';
 }
 
-export function useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYouth = false, mode = 'full' }: UseYouthModalProps) {
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+/**
+ * Manages the Youth form and saves either the whole profile or just its contacts.
+ * @param props.youthData - Saved profile to edit; omit it to create a new profile.
+ * @param props.onClose - Closes the form; the caller unmounts it to discard the draft.
+ * @param props.onSuccess - Receives the profile returned by the server after saving.
+ * @param props.inviteYouth - Whether to include the entered email when saving the profile.
+ * @param props.mode - Use 'contact' to save only contacts; 'full' saves the profile and its addresses and contacts.
+ * @returns Form fields, editable addresses and contacts, validation messages, and save status.
+ * @example useYouthModal({ onClose, onSuccess }) // new profile form
+ */
+export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = false, mode = 'full' }: UseYouthModalProps) {
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const { tryLock, unlock } = useSubmitLock();
 
   const {
     register,
     handleSubmit: rhfHandleSubmit,
-    reset,
     setValue,
     watch,
     formState: { errors },
   } = useForm<YouthFormData>({
     resolver: zodResolver(mode === 'contact' ? youthContactSchema : youthSchema),
-    defaultValues,
+    defaultValues: {
+      firstName: youthData?.firstName ?? '',
+      lastName: youthData?.lastName ?? '',
+      email: youthData?.account?.email ?? '',
+      dateOfBirth: youthData?.dateOfBirth ?? '',
+      schoolId: youthData?.schoolId ?? '',
+      addresses: youthData?.addresses?.length ? youthData.addresses : [{ address: '' }],
+    },
   });
 
   const { schools, loading: schoolsLoading, error: schoolsError } = useSchools();
   const schoolId = watch('schoolId');
 
-  const {
-    addresses,
-    initialize: initAddresses,
-    reset: resetAddresses,
-    handleChange: handleAddressChange,
-    validate: validateAddresses,
-    getPayload: getAddressPayload,
-  } = useAddresses();
+  const addresses = watch('addresses') ?? [];
 
   const {
     contacts,
-    initialize: initContacts,
-    reset: resetContacts,
     handleChange: handleContactChange,
     validate: validateContacts,
     getPayload: getContactPayload,
-  } = useContacts();
+  } = useContacts(youthData?.contacts);
 
-  // Pre-fill form when editing
-  useEffect(() => {
-    if (!isOpen || !youthData) return;
-
-    reset({
-      firstName: youthData.firstName || '',
-      lastName: youthData.lastName || '',
-      email: youthData.account?.email || '',
-      dateOfBirth: youthData.dateOfBirth ? youthData.dateOfBirth.split('T')[0] : '',
-      schoolId: youthData.schoolId || '',
-    });
-
-    initAddresses(youthData.addresses);
-    initContacts(youthData.contacts);
-  }, [isOpen, youthData, reset, initAddresses, initContacts]);
-
-  const resetForm = () => {
-    reset(defaultValues);
-    resetAddresses();
-    resetContacts();
-    resetStatus();
-    unlock();
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
+  /**
+   * Saves the form and reports the profile returned by the server.
+   * @param data - Validated profile fields; contact mode saves the separate contact list instead.
+   * @example onValid(data) // calls onSuccess with the saved profile
+   */
   const onValid = async (data: YouthFormData) => {
     if (!tryLock()) return;
 
     setSubmitStatus('submitting');
     setError('');
-
-    const addressError = mode === 'contact' ? undefined : validateAddresses();
-    if (addressError) {
-      setError(addressError);
-      setSubmitStatus('error');
-      unlock();
-      return;
-    }
 
     const contactError = validateContacts();
     if (contactError) {
@@ -129,14 +93,19 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYou
           ...(inviteYouth && data.email && { email: data.email.trim() }),
           dateOfBirth: data.dateOfBirth || null,
           ...(data.schoolId && { schoolId: data.schoolId }),
-          addresses: getAddressPayload(),
+          addresses: (data.addresses ?? [])
+            .filter(address => address.address)
+            .map(address => ({
+              ...(address.id && { id: address.id }),
+              address: address.address,
+            })),
           contacts: getContactPayload(),
         };
 
         savedYouth = await setYouth(payload);
       }
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, youthData ? 'Failed to update youth profile' : 'Failed to create youth profile'));
       setSubmitStatus('error');
       unlock();
       return;
@@ -147,25 +116,24 @@ export function useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYou
   };
 
   return {
-    // RHF
+    // Profile form fields and submission.
     register,
     errors,
     rhfHandleSubmit,
     onValid,
-    // Sub-entity state
+    // School, address, and contact fields.
     schools,
     schoolsLoading,
     schoolsError,
     schoolId,
     setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
     addresses,
-    handleAddressChange,
     contacts,
     handleContactChange,
     // Submit state
     submitStatus,
     error,
     // Actions
-    handleClose,
+    handleClose: onClose,
   };
 }

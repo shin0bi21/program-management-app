@@ -1,4 +1,4 @@
-import { getYouthRowsByIds } from '../../youth/youthRowQuery';
+import { getYouthRows, type YouthRow } from '../../youth/youthRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertAssignmentUnused } from '../programCycles/assignmentService';
@@ -194,14 +194,19 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     const affectedProgramCycles = [...retained, ...created];
 
     // 6. Return the saved cycle and affected rows.
+    let updatedYouth: YouthRow[] = [];
+    if (actor.permissions.includes('read:youth_profiles')) {
+      const youthIds = await getProgramCycleYouthIds(trx, affectedProgramCycles);
+      updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
+    }
+
     return {
       cycle: await requireCycleRow(trx, id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
         ? await getProgramCycleRowsByKeys(trx, actor, affectedProgramCycles) : [],
       createdProgramCycles: created,
       removedProgramCycles: removed,
-      updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, await getProgramCycleYouthIds(trx, affectedProgramCycles)) : [],
+      updatedYouth,
     };
   }).catch(rethrowCycleConflict);
 }

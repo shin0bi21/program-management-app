@@ -7,6 +7,7 @@ import useAccountModals from './useAccountModals';
 const account: User = {
   id: 'account-1', firstName: 'Alice', lastName: 'Admin', email: 'alice@example.com',
   role: 'admin', status: 'active', createdAt: '2026-01-01T00:00:00Z',
+  programIds: [],
 };
 
 describe('useAccountModals', () => {

@@ -15,6 +15,12 @@ vi.mock('../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
   },
 }));
 
+/**
+ * Renders a column's cell for the supplied youth profile.
+ * @param column - Column with a cell renderer; throws if the renderer is missing.
+ * @param profile - Youth profile to supply as the row's original record.
+ * @example renderCell(actionsColumn, profile) // renders the profile's action menu
+ */
 function renderCell(column: ColumnDef<YouthProfile>, profile: YouthProfile) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
   return column.cell({ row: { original: profile } } as CellContext<YouthProfile, unknown>);
@@ -39,12 +45,12 @@ describe('useYouthTable', () => {
     const column = result.current.columns.find(column => column.id === 'dateOfBirth')!;
     if (!('accessorFn' in column)) throw new Error('DOB column requires an accessor');
 
-    expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: '2012-06-15T00:00:00.000Z' }), 0)).toBe('Jun 15, 2012');
+    expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: '2012-06-15' }), 0)).toBe('Jun 15, 2012');
     expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: '0080-06-15' }), 0)).toBe('Jun 15, 80');
     expect(column.accessorFn?.(makeYouthProfile({ dateOfBirth: null }), 0)).toBe('—');
   });
 
-  it('maps writable row actions and emits the selected profile', () => {
+  it('emits the profile for editing and the youth ID for adding a note', () => {
     const profile = makeYouthProfile();
     const onEdit = vi.fn();
     const onAddNote = vi.fn();
@@ -55,6 +61,6 @@ describe('useYouthTable', () => {
     menu.items.find(item => item.id === 'edit')!.onClick();
     menu.items.find(item => item.id === 'add-note')!.onClick();
     expect(onEdit).toHaveBeenCalledWith(profile);
-    expect(onAddNote).toHaveBeenCalledWith(profile);
+    expect(onAddNote).toHaveBeenCalledWith(profile.id);
   });
 });

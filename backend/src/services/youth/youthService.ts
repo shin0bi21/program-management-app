@@ -9,17 +9,19 @@ import { setContacts } from './youthContactService';
 import type { SetYouthContactsInput } from '../../validation/youthSchemas';
 import { getYouthRows, type YouthRow } from './youthRowQuery';
 
-/** Loads a required youth profile; an unavailable ID rejects with 404.
+/**
+ * Loads one youth profile, including participation, addresses, and contacts.
+ * @param id - Youth ID to look up; a missing profile produces a 404 error.
  * @example getYouthProfile(youthId) // returns the profile or throws NotFoundError
  */
 export async function getYouthProfile(id: string): Promise<YouthRow> {
   // 1. Load the youth profile.
-  const youth = await sql<YouthRow[]>`
-    ${getYouthRows(sql`u.id = ${id}`)}
+  const [profile] = await sql<YouthRow[]>`
+    ${getYouthRows(sql`youth.id = ${id}`)}
     LIMIT 1
   `;
-  if (!youth[0]) throw new NotFoundError('Youth profile not found');
-  return youth[0];
+  if (!profile) throw new NotFoundError('Youth profile not found');
+  return profile;
 }
 
 export interface SetYouthInput {
@@ -33,8 +35,12 @@ export interface SetYouthInput {
   contacts?: Array<{ id?: string; phoneNumber: string; type: string }>;
 }
 
-/** Creates a youth or edits an existing youth, including its audit and supplied children.
+/**
+ * Creates or updates a youth profile and saves its addresses, contacts, and audit history.
  * An ID selects a required, locked youth target; it never creates a replacement.
+ * @param data - Validated profile fields. Omit id to create a youth; include it to update one.
+ * @param actorId - ID of the signed-in user to record in the audit history.
+ * @returns The saved profile with its current participation, addresses, and contacts.
  * @example setYouthProfile({ id: youthId, firstName: 'Sam', lastName: 'Lee' }, actorId)
  */
 export async function setYouthProfile(data: SetYouthInput, actorId: string) {
@@ -50,12 +56,12 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
     // 2. Update the locked profile or create a new one.
     if (id) {
       const existingUsers = await trx<DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>>[]>`
-        SELECT u.id, u.first_name, u.last_name
-        FROM users u
-        INNER JOIN user_roles role ON role.id = u.role_id
-        WHERE u.id = ${id} AND role.name = 'youth'
+        SELECT youth.id, youth.first_name, youth.last_name
+        FROM users youth
+        INNER JOIN user_roles role ON role.id = youth.role_id
+        WHERE youth.id = ${id} AND role.name = 'youth'
         LIMIT 1
-        FOR UPDATE OF u
+        FOR UPDATE OF youth
       `;
       const existingProfiles = await trx<DbRow<Pick<YouthProfiles, 'user_id' | 'date_of_birth' | 'school_id'>>[]>`
         SELECT user_id, date_of_birth, school_id
@@ -153,9 +159,9 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
 
 /**
  * Replaces a youth's contacts after checking submitted contact IDs.
- * @param id - Youth to lock and update.
- * @param data - Validated replacement contacts.
- * @param actorId - User recorded on writes and audits.
+ * @param id - ID of the youth whose contacts should be replaced.
+ * @param data - Complete list of contacts to keep; an empty list removes all active contacts.
+ * @param actorId - ID of the signed-in user to record in the audit history.
  * @example setYouthContacts(youthId, data, actorId)
  */
 export async function setYouthContacts(id: string, data: SetYouthContactsInput, actorId: string) {
@@ -172,12 +178,12 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
 
     // 2. Lock the youth profile.
     const profiles = await trx`
-      SELECT yp.user_id
-      FROM youth_profiles yp
-      INNER JOIN users u ON u.id = yp.user_id
-      INNER JOIN user_roles role ON role.id = u.role_id
-      WHERE yp.user_id = ${id} AND role.name = 'youth'
-      FOR UPDATE OF yp
+      SELECT profile.user_id
+      FROM youth_profiles profile
+      INNER JOIN users youth ON youth.id = profile.user_id
+      INNER JOIN user_roles role ON role.id = youth.role_id
+      WHERE profile.user_id = ${id} AND role.name = 'youth'
+      FOR UPDATE OF profile
     `;
     if (!profiles.length) throw new NotFoundError('Youth profile not found');
 

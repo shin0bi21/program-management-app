@@ -13,7 +13,6 @@ import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBi
 import './YouthModal.css';
 
 interface YouthModalProps {
-  isOpen: boolean;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
   youthData?: YouthProfile;
@@ -23,8 +22,13 @@ interface YouthModalProps {
   onManageSchool?: (action: SchoolAction, selection: SchoolSelection) => void;
 }
 
+/**
+ * Edits one Youth profile or its primary contact for a single open form.
+ * Mount when opened and unmount on close. Suspension hides the dialog while keeping its draft.
+ * @param props - Initial profile, save callbacks, and optional school workflow.
+ * @example <YouthModal youthData={profile} onClose={close} onSuccess={save} />
+ */
 export default function YouthModal({
-  isOpen,
   onClose,
   onSuccess,
   youthData,
@@ -46,13 +50,12 @@ export default function YouthModal({
     schoolId,
     setSchoolId,
     addresses,
-    handleAddressChange,
     contacts,
     handleContactChange,
     submitStatus,
     error,
     handleClose,
-  } = useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYouth, mode });
+  } = useYouthModal({ youthData, onClose, onSuccess, inviteYouth, mode });
 
   const contactOnly = mode === 'contact';
   const birthDateBounds = getDateOfBirthBounds();
@@ -95,7 +98,7 @@ export default function YouthModal({
 
   return (
     <Modal
-      isOpen={isOpen && !suspended}
+      isOpen={!suspended}
       onClose={handleClose}
       title={title}
       footer={footer}
@@ -155,15 +158,19 @@ export default function YouthModal({
               />
             </FormField>
 
-            {addresses.map((address, index) => (
-              <FormField key={index} id={`address-${index}`} label="Address (optional)">
+            {addresses.map((_, index) => (
+              <FormField
+                key={index}
+                id={`address-${index}`}
+                label="Address (optional)"
+                error={errors.addresses?.[index]?.address?.message}
+              >
                 <input
                   id={`address-${index}`}
                   type="text"
-                  value={address.address}
-                  onChange={event => handleAddressChange(index, 'address', event.target.value)}
                   placeholder="123 Main Street"
                   disabled={submissionComplete}
+                  {...register(`addresses.${index}.address`)}
                 />
               </FormField>
             ))}

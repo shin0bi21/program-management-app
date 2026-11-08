@@ -28,10 +28,7 @@ const programCycle = {
   endsOn: '2026-08-31',
   enrolledOn: '2026-06-01',
   withdrawnOn: null,
-  presentCount: 1,
-  lateCount: 0,
-  absentCount: 0,
-  lastAttendedOn: '2026-07-14',
+
 };
 
 const attendance = {
@@ -79,7 +76,7 @@ describe('YouthAttendanceModal', () => {
   it('shows note metadata in the row and full details on demand', async () => {
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
@@ -111,7 +108,7 @@ describe('YouthAttendanceModal', () => {
   it('adds a prelinked youth note without showing link controls', async () => {
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
@@ -138,7 +135,7 @@ describe('YouthAttendanceModal', () => {
   it('edits and unlinks session notes without deleting them', async () => {
     const view = render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
@@ -158,7 +155,7 @@ describe('YouthAttendanceModal', () => {
     view.unmount();
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         canManageSessionNotes
         onClose={vi.fn()}
@@ -179,7 +176,7 @@ describe('YouthAttendanceModal', () => {
     const onSaved = vi.fn();
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         onClose={vi.fn()}
         onSaved={onSaved}
@@ -213,7 +210,7 @@ describe('YouthAttendanceModal', () => {
     api.getYouthProgramCycleAttendance.mockRejectedValue(new Error('Attendance unavailable'));
     render(
       <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1', programCycles: [programCycle] })}
+        youth={makeYouthProfile({ id: 'youth-1' })}
         programCycle={programCycle}
         onClose={vi.fn()}
         onSaved={vi.fn()}

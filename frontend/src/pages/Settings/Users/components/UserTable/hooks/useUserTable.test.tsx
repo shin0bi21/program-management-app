@@ -18,11 +18,18 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 const account: User = {
   id: 'account-1', firstName: 'Alice', lastName: 'Admin', email: 'alice@example.com',
   role: 'admin', status: 'active', createdAt: '2026-01-01T00:00:00.000Z',
+  programIds: [],
 };
 
-function renderCell(column: ColumnDef<User>, value: User) {
+/**
+ * Renders a column's cell for the supplied account.
+ * @param column - Column with a cell renderer; throws if the renderer is missing.
+ * @param account - Account to supply as the row's original record.
+ * @example renderCell(actionsColumn, account) // renders the account's action menu
+ */
+function renderCell(column: ColumnDef<User>, account: User) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: value } } as CellContext<User, unknown>);
+  return column.cell({ row: { original: account } } as CellContext<User, unknown>);
 }
 
 describe('useUserTable', () => {

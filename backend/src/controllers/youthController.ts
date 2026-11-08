@@ -9,6 +9,7 @@ import { deleteYouthProfileNote, getYouthProfileNotes, setYouthProfileNote } fro
 import type { SetYouthProfileNoteInput } from '../validation/youthProfileNoteSchemas';
 import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../services/youth/youthAttendanceService';
 import type { SetYouthProgramCycleAttendanceInput } from '../validation/youthSchemas';
+import { getYouthAttendanceSummary } from '../services/youth/youthAttendanceSummaryService';
 
 export const handleGetYouth = async (req: Request, res: Response) => {
   const filters = req.query as unknown as YouthQuery;
@@ -34,6 +35,11 @@ export const handleSetYouthContacts = async (req: Request, res: Response) => {
 export const handleGetYouthSessionNotes = async (req: Request, res: Response) => {
   const actor = (req as AuthRequest).user!;
   res.json(await listSessionNotesForYouth(req.params.id, actor));
+};
+
+export const handleGetYouthAttendanceSummary = async (req: Request, res: Response) => {
+  const actor = (req as AuthRequest).user!;
+  res.json(await getYouthAttendanceSummary(req.params.id, actor));
 };
 
 export const handleGetYouthProgramCycleAttendance = async (req: Request, res: Response) => {
