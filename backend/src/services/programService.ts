@@ -1,6 +1,7 @@
 import { asTransactionSql, sql } from '../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../errors';
 import { programAccessPredicate } from '../policies/programAccessPolicy';
+import { rethrowEnrollmentConflict } from './programming/programCycles/enrollmentConflict';
 import type { AccessTokenPayload } from '../types/auth';
 import type { CreateProgramInput, UpdateProgramInput } from '../validation/programSchemas';
 import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from './programming/programCycles/programCycleRowQuery';
@@ -69,8 +70,8 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
     const trx = asTransactionSql(tx);
 
     // 1. Lock the program.
-    const [current] = await trx<{ id: string }[]>`
-      SELECT id
+    const [current] = await trx<{ id: string; enrollmentRequired: boolean }[]>`
+      SELECT id, enrollment_required
       FROM programs
       WHERE id = ${id}
       FOR UPDATE
@@ -87,7 +88,22 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
     `;
     if (existing.length) throw new ConflictError('A program with this name already exists');
 
-    // 3. Save the program settings.
+    // 3. Lock affected cycles in a shared order before changing enrollment mode.
+    if (current.enrollmentRequired !== data.enrollmentRequired) {
+      await trx`
+        SELECT cycle.id
+        FROM program_cycles cycle
+        WHERE EXISTS (
+          SELECT 1
+          FROM program_enrollments enrollment
+          WHERE enrollment.program_id = ${id} AND enrollment.cycle_id = cycle.id
+        )
+        ORDER BY cycle.id
+        FOR NO KEY UPDATE
+      `;
+    }
+
+    // 4. Save the program settings.
     const [program] = await trx<ProgramRow[]>`
       UPDATE programs AS p
       SET name = ${name},
@@ -104,7 +120,7 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
     `;
     if (!program) throw new InternalServerError('Program update returned no record');
 
-    // 4. Return the affected rows.
+    // 5. Return the affected rows.
     const keys = await trx<ProgramCycleKey[]>`
       SELECT program_id, cycle_id
       FROM program_cycle_assignments
@@ -124,7 +140,8 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
 }
 
 /**
- * Adds domain context only for the program-name constraint; other failures propagate.
+ * Reports duplicate names and enrollment conflicts caused by program mode changes.
+ * Other failures propagate unchanged.
  * @param error - Database or transaction failure to rethrow, retaining the original cause for duplicates.
  * @example rethrowProgramConflict(Object.assign(new Error('duplicate'), { code: '23505', constraint_name: 'programs_name_key' })) // Throws a contextual 409.
  */
@@ -132,5 +149,5 @@ function rethrowProgramConflict(error: unknown): never {
   if (isUniqueViolation(error, 'programs_name_key')) {
     throw Object.assign(new ConflictError('A program with this name already exists'), { cause: error });
   }
-  throw error;
+  rethrowEnrollmentConflict(error);
 }

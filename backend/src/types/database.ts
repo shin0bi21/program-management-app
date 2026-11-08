@@ -201,6 +201,10 @@ export interface ProgramEnrollments {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
+  /**
+   * Trigger-maintained enrollment/cycle date intersection; empty for open-attendance programs.
+   */
+  effective_period: Generated<string>;
   enrolled_on: Generated<Timestamp>;
   id: Generated<string>;
   program_id: string;
