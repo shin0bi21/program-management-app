@@ -6,8 +6,7 @@ import useTaskOverviewData from './hooks/useTaskOverviewData';
 
 vi.mock('./hooks/useTaskOverviewData', () => ({ default: vi.fn() }));
 const overviewData = { tasks: [] as Task[], loading: false, error: null as string | null, retry: vi.fn() };
-const cardProps = { records: {}, queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11' };
-
+const cardProps = { queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11' };
 
 const baseTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: null, category: 'planning_prep',
@@ -38,7 +37,7 @@ describe('TaskOverviewDashboardCard', () => {
     };
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks: [baseTask, overdueTask, upcomingTask] });
     render(<TaskOverviewDashboardCard {...cardProps} />);
-    expect(useTaskOverviewData).toHaveBeenCalledWith(cardProps.queryKey, cardProps.resourceId, cardProps.records);
+    expect(useTaskOverviewData).toHaveBeenCalledWith(cardProps.queryKey, cardProps.resourceId);
 
     expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');

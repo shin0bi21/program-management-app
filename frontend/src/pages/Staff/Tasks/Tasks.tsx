@@ -37,7 +37,7 @@ const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 /**
- * Coordinates task controls, selection IDs, drafts, and shared-record views.
+ * Coordinates task controls, selected row context, drafts, and query views.
  * @example <Tasks /> // staff task route
  */
 export default function Tasks() {
@@ -51,7 +51,6 @@ export default function Tasks() {
 
   // Page data and preferences.
   const pageData = useTaskData(TASK_REFERENCE_DATA_QUERY_KEY);
-  const records = pageData.records;
 
   const preferences = useTaskPreferences({
     referenceData: pageData.referenceData,
@@ -80,13 +79,14 @@ export default function Tasks() {
   }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
-  const selection = useTaskSelection({ resources: pageData.resources, records });
+  const selection = useTaskSelection({ resources: pageData.resources });
 
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
     taskTableQueryKey: TASK_TABLE_QUERY_KEY,
     hoursQueryKey: HOURS_QUERY_KEY,
     onTaskRemoved: selection.removeSelectedTask,
+    onTaskSynced: selection.onTaskSynced,
   });
   const deleteTaskAction = actions.deleteTask;
 
@@ -99,20 +99,12 @@ export default function Tasks() {
   }, [selection.selectedTaskId]);
 
   // Task modal.
-  const [taskModalTarget, setTaskModalState] = useState<
-    { mode: 'add'; initialValues: AddTaskModalInitialValues } | { mode: 'edit'; taskId: string } | null
-  >(null);
-  let taskModalState: TaskModalState = null;
-  if (taskModalTarget?.mode === 'add') taskModalState = taskModalTarget;
-  if (taskModalTarget?.mode === 'edit') {
-    const task = records[taskModalTarget.taskId];
-    if (task) taskModalState = { mode: 'edit', task };
-  }
+  const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
   const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
     setTaskModalState({ mode: 'add', initialValues });
   };
   const openEditTaskModal = useCallback((task: Task) => {
-    setTaskModalState({ mode: 'edit', taskId: task.id });
+    setTaskModalState({ mode: 'edit', task });
   }, []);
   const closeTaskModal = () => setTaskModalState(null);
 
@@ -145,7 +137,6 @@ export default function Tasks() {
 
   const taskTable = (
     <TaskTable
-      records={records}
       queryKey={TASK_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -163,7 +154,6 @@ export default function Tasks() {
 
   const taskCalendar = (
     <TaskCalendar
-      records={records}
       key={JSON.stringify(taskFilters)}
       resources={pageData.resources}
       filters={taskFilters}
@@ -222,7 +212,6 @@ export default function Tasks() {
         dashboardError,
       ]}
       dashboard={selection.selectedResource ? <TaskDashboard
-        records={records}
         queryKey={TASK_QUERY_KEY}
         resourceId={selection.selectedResource.id}
         resourceName={selection.selectedResource.name}
@@ -240,7 +229,7 @@ export default function Tasks() {
       resources={pageData.writableResources}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
-      onSaved={task => actions.syncTask(task, taskModalState.mode === 'add')}
+      onSaved={actions.syncTask}
       onClose={closeTaskModal}
     />}
 

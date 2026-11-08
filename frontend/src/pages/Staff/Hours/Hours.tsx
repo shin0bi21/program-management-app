@@ -31,7 +31,7 @@ type HoursAddTarget = {
 
 type HoursModalState =
   | { mode: 'add'; initialValues: HoursAddTarget }
-  | { mode: 'edit'; itemId: string }
+  | { mode: 'edit'; item: HoursItem }
   | null;
 
 // Page-owned cache contracts.
@@ -41,8 +41,8 @@ const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 
 /**
- * Composes page-owned Hours records and choices with independent body and dashboard queries.
- * @example <Hours /> // shared table/calendar records with staff summaries
+ * Composes page-owned Hours choices with independent body and dashboard queries.
+ * @example <Hours /> // table/calendar rows with staff summaries
  */
 export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
@@ -94,13 +94,12 @@ export default function Hours() {
     preferences.search.appliedValue,
   ]);
 
-  const records = pageData.records;
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
   // Keep table action cells mounted when preferences or page data refresh.
   const closeRemovedItem = useCallback((itemId: string) => {
     setHoursModalState(current => (
-      current?.mode === 'edit' && current.itemId === itemId ? null : current
+      current?.mode === 'edit' && current.item.id === itemId ? null : current
     ));
   }, []);
 
@@ -117,7 +116,7 @@ export default function Hours() {
     onItemRemoved: closeRemovedItem,
   });
 
-  const editedItem = hoursModalState?.mode === 'edit' ? records[hoursModalState.itemId] : undefined;
+  const editedItem = hoursModalState?.mode === 'edit' ? hoursModalState.item : undefined;
 
   // Hours modal.
   const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
@@ -125,7 +124,7 @@ export default function Hours() {
   }, []);
 
   const openEditHoursModal = useCallback((target: HoursItem) => {
-    setHoursModalState({ mode: 'edit', itemId: target.id });
+    setHoursModalState({ mode: 'edit', item: target });
   }, []);
 
   const closeHoursModal = useCallback(() => setHoursModalState(null), []);
@@ -133,7 +132,7 @@ export default function Hours() {
   const submitHours = (input: SetHoursInput) => (
     actions.saveHours(
       input,
-      hoursModalState?.mode === 'edit' ? hoursModalState.itemId : undefined,
+      hoursModalState?.mode === 'edit' ? hoursModalState.item.id : undefined,
     )
   );
 
@@ -156,7 +155,6 @@ export default function Hours() {
     ?? null;
   const hoursTable = (
     <HoursTable
-      records={records}
       queryKey={HOURS_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -174,7 +172,6 @@ export default function Hours() {
   const hoursCalendar = (
     <HoursCalendar
       key={JSON.stringify(hoursFilters)}
-      records={records}
       resources={pageData.resources}
       filters={hoursFilters}
       canWrite={canWrite}

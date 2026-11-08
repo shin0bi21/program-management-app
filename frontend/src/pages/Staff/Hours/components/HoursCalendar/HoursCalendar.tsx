@@ -19,13 +19,11 @@ import type {
 } from '../../types';
 import HoursCalendarItem from './HoursItem/HoursItem';
 import useHoursCalendarData from './hooks/useHoursCalendarData';
-import type { RecordReference } from '../../../../../query/createRecordStore';
 
 const initialDate = new Date();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
 
 interface HoursCalendarProps {
-  records: Readonly<Record<string, HoursItem>>;
   resources: StaffResource[];
   filters: HoursFilters;
   canWrite: boolean;
@@ -42,11 +40,10 @@ interface HoursCalendarProps {
 }
 
 /**
- * Displays shared Hours records through a range buffer of entry IDs.
+ * Displays Hours rows from the calendar range buffer.
  * @example <HoursCalendar filters={filters} {...viewProps} />
  */
 export default function HoursCalendar({
-  records,
   resources,
   filters,
   canWrite,
@@ -62,7 +59,7 @@ export default function HoursCalendar({
   onMessageChange,
 }: HoursCalendarProps) {
   const { staffIds, dateRange } = filters;
-  const { calendar, visibleItems } = useHoursCalendarData(records, filters, calendarIndexRef);
+  const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
@@ -164,7 +161,7 @@ export default function HoursCalendar({
 /** Identifies a staff calendar row. @example getStaffResourceId(staff) // staff.id */
 const getStaffResourceId = (resource: StaffResource) => resource.id;
 /** Identifies a saved entry in a calendar membership index. @example getHoursItemId(entry) // entry.id */
-const getHoursItemId = (item: RecordReference) => item.id;
+const getHoursItemId = (item: HoursItem) => item.id;
 /** Places an entry on its logged day. @example getHoursItemRange(entry) // { start: entry.date, end: entry.date } */
 const getHoursItemRange = (data: HoursItem) => ({ start: data.date, end: data.date });
 

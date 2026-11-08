@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
@@ -17,14 +17,13 @@ import useSessionActions from './hooks/actions/useSessionActions';
 import useSessionData from './hooks/data/useSessionData';
 import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
-import { sessionStore } from './sessionStore';
 import './Sessions.css';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 
 /**
- * Coordinates session controls, selection IDs, dialogs, and shared-record views.
+ * Coordinates session controls, selection, dialogs, and collection views.
  * @example <Sessions /> // programming sessions route
  */
 export default function Sessions() {
@@ -65,7 +64,6 @@ export default function Sessions() {
 
   // Selection and actions.
   const selection = useSessionSelection();
-  const records = sessionStore.useRecords();
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   useEffect(() => {
     if (!referencesLoading && !referencesError && selectedProgramId
@@ -79,7 +77,7 @@ export default function Sessions() {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
-  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
+  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
   const applyFilter = (category: string, selected: string[]) => {
     selection.clearSelectedSession();
     setSelectedProgramId(null);
@@ -92,11 +90,7 @@ export default function Sessions() {
   };
 
   // Attendance modal.
-  const [attendanceTargetId, setAttendanceTargetId] = useState<string | null>(null);
-  const attendanceTarget = attendanceTargetId ? records[attendanceTargetId] ?? null : null;
-  const setAttendanceTarget = useCallback((session: ProgramSession | null) => {
-    setAttendanceTargetId(session?.id ?? null);
-  }, []);
+  const [attendanceTarget, setAttendanceTarget] = useState<ProgramSession | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
   // Single-session creation from the page or a calendar date.
@@ -104,12 +98,7 @@ export default function Sessions() {
   const closeAddSessionModal = () => setAddSessionTarget(null);
 
   // Edit session modal.
-  const [editTargetId, setEditTargetId] = useState<string | null>(null);
-  const editTarget = editTargetId ? records[editTargetId] ?? null : null;
-  // Keep table action cells mounted when shared records or reference data update.
-  const setEditTarget = useCallback((session: ProgramSession | null) => {
-    setEditTargetId(session?.id ?? null);
-  }, []);
+  const [editTarget, setEditTarget] = useState<ProgramSession | null>(null);
   const closeEditSessionModal = () => setEditTarget(null);
 
   // Table configuration.
@@ -143,6 +132,7 @@ export default function Sessions() {
     sorting={tableControls.sorting}
     columnWidths={tableControls.columnWidths}
     selectedSessionId={selection.selectedSessionId}
+    onSelectedSessionLoaded={selection.syncSelectedSession}
     onSessionSelect={selectSession}
     onSortingChange={tableControls.setSorting}
     onColumnWidthsChange={tableControls.setColumnWidths}
@@ -160,6 +150,7 @@ export default function Sessions() {
     onProgramSelect={selectProgram}
     filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
+    onSelectedSessionLoaded={selection.syncSelectedSession}
     onSessionSelect={session => {
       setSelectedProgramId(session.programId);
       selection.selectSession(session);

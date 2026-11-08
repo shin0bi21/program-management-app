@@ -4,7 +4,6 @@ import TaskHoursLoggedDashboardCard from './TaskHoursLoggedDashboardCard/TaskHou
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 
 interface TaskDashboardProps {
-  records: Readonly<Record<string, Task>>;
   queryKey: readonly unknown[];
   resourceId: string;
   resourceName: string;
@@ -16,11 +15,10 @@ interface TaskDashboardProps {
 
 /**
  * Composes staff overview queries and the selected task's already loaded hours.
- * @param props - Main records, staff selection, selected saved task, and permitted actions.
- * @example <TaskDashboard records={records} {...dashboardProps} />
+ * @param props - staff selection, selected saved task, and permitted actions.
+ * @example <TaskDashboard {...dashboardProps} />
  */
 export default function TaskDashboard({
-  records,
   queryKey,
   resourceId,
   resourceName,
@@ -31,7 +29,6 @@ export default function TaskDashboard({
 }: TaskDashboardProps) {
   return <>
     <TaskOverviewDashboardCard
-      records={records}
       queryKey={queryKey}
       resourceId={resourceId}
       resourceName={resourceName}

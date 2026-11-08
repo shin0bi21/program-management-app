@@ -5,7 +5,6 @@ import { getTaskDashboardData } from '../../../../tasks.api';
 import { makeTask } from '../../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../../tests/queryClientTestUtils';
 import useTaskOverviewData from './useTaskOverviewData';
-import { taskData } from '../../../../hooks/data/useTaskData';
 
 vi.mock('../../../../tasks.api', () => ({
   getTaskDashboardData: vi.fn(),
@@ -18,7 +17,7 @@ describe('useTaskOverviewData', () => {
     const task = makeTask();
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     const client = createTestQueryClient();
-    const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1', taskData.useRecords()), {
+    const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1'), {
       wrapper: createQueryClientWrapper(client),
     });
 
@@ -28,13 +27,13 @@ describe('useTaskOverviewData', () => {
       'staff-1',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    expect(client.getQueryData(['tasks', 'overview', 'staff-1'])).toEqual([{ id: task.id }]);
+    expect(client.getQueryData(['tasks', 'overview', 'staff-1'])).toEqual([task]);
   });
 
   it('owns the overview error message', async () => {
     vi.mocked(getTaskDashboardData).mockRejectedValue(new Error('offline'));
     const client = createTestQueryClient();
-    const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1', taskData.useRecords()), {
+    const { result } = renderHook(() => useTaskOverviewData(['tasks'], 'staff-1'), {
       wrapper: createQueryClientWrapper(client),
     });
 
@@ -51,7 +50,7 @@ describe('useTaskOverviewData', () => {
     ));
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(
-      ({ resourceId }) => useTaskOverviewData(['tasks'], resourceId, taskData.useRecords()),
+      ({ resourceId }) => useTaskOverviewData(['tasks'], resourceId),
       {
         initialProps: { resourceId: 'staff-1' },
         wrapper: createQueryClientWrapper(client),

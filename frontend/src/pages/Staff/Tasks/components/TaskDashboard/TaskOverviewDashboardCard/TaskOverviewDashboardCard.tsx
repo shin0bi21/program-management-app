@@ -13,19 +13,18 @@ import './TaskOverviewDashboardCard.css';
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
 
 /**
- * Queries the selected staff overview and displays its current page-owned tasks.
- * @param props - Main records, staff identity, local date, and page-message reporter.
- * @example <TaskOverviewDashboardCard records={records} {...overviewProps} />
+ * Queries the selected staff overview and displays its queried tasks.
+ * @param props - staff identity, local date, and page-message reporter.
+ * @example <TaskOverviewDashboardCard {...overviewProps} />
  */
-export default function TaskOverviewDashboardCard({ records, queryKey, resourceId, resourceName, today, onMessageChange }: {
-  records: Readonly<Record<string, Task>>;
+export default function TaskOverviewDashboardCard({ queryKey, resourceId, resourceName, today, onMessageChange }: {
   queryKey: readonly unknown[];
   resourceId: string;
   resourceName: string;
   today: string;
   onMessageChange?: PageMessageChangeHandler;
 }) {
-  const overviewData = useTaskOverviewData(queryKey, resourceId, records);
+  const overviewData = useTaskOverviewData(queryKey, resourceId);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
   usePageMessageReporter(onMessageChange, overviewData.error, retryAction);
 

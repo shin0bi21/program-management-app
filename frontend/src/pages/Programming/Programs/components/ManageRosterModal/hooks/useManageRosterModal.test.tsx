@@ -1,4 +1,3 @@
-import { youthData, getYouthSortValue } from '../../../../../Youth/hooks/data/useYouthData';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,7 +34,7 @@ describe('useManageRosterModal', () => {
     vi.mocked(withdrawYouth).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
   });
 
-  it('enrolls an unchecked youth and reconciles both roster owners', async () => {
+  it('enrolls an unchecked youth and refreshes roster and Youth queries', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
     const client = createTestQueryClient();
@@ -45,7 +44,7 @@ describe('useManageRosterModal', () => {
     const programCycleKey = ['programs', 'cycle-assignments', { programId: assignment.programId }];
     const youthKey = ['youth', 'table', { search: 'filtered' }, { key: 'firstName', direction: 'asc' }];
     client.setQueryData(programCycleKey, [assignment]);
-    client.setQueryData(youthKey, { pages: [{ rows: [{ id: savedYouth.id, sortValue: 'old' }], nextCursor: null }], pageParams: [null] });
+    client.setQueryData(youthKey, { pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
     const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: createQueryClientWrapper(client) });
 
     await act(() => result.current.addYouth(youth));
@@ -54,39 +53,9 @@ describe('useManageRosterModal', () => {
     expect(refresh).toHaveBeenCalledOnce();
     expect(onSuccess).toHaveBeenCalledWith({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
     expect(client.getQueryState(programCycleKey)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
+    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(true);
     expect(client.getQueryData(programCycleKey)).toEqual([savedProgramCycle]);
-    expect(youthData.get(client, savedYouth.id)).toEqual(savedYouth);
-    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [{ id: savedYouth.id, sortValue: getYouthSortValue(savedYouth, 'firstName') }], nextCursor: null }], pageParams: [null] });
-  });
-
-  it('ignores an enrollment result and its callbacks after the account cache is cleared', async () => {
-    const client = createTestQueryClient();
-    const refresh = vi.fn().mockResolvedValue(undefined);
-    const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const savedYouth = makeYouthProfile({ id: youth.id });
-    let finish!: (result: Awaited<ReturnType<typeof enrollYouth>>) => void;
-    vi.mocked(enrollYouth).mockReturnValue(new Promise(resolve => { finish = resolve; }));
-    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), {
-      wrapper: createQueryClientWrapper(client),
-    });
-    let pending!: Promise<void>;
-    act(() => { pending = result.current.addYouth(youth); });
-    client.clear();
-    // Initializing a new owner must not accept the previous account's response.
-    youthData.getScope(client);
-    const invalidate = vi.spyOn(client, 'invalidateQueries');
-
-    await act(async () => {
-      finish({ programCycle: assignment, updatedYouth: [savedYouth] });
-      await pending;
-    });
-
-    expect(youthData.get(client, youth.id)).toBeUndefined();
-    expect(client.getQueryData(['programs', 'cycle-assignments'])).toBeUndefined();
-    expect(refresh).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
   });
 
   it('locks enrollment while a youth update is pending', async () => {

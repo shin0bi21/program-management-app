@@ -1,5 +1,5 @@
 import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../../../common/features/referenceData/referenceData.api';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getHoursReferenceData } from '../../hours.api';
@@ -7,11 +7,9 @@ import {
   createQueryClientWrapper,
   createTestQueryClient,
 } from '../../../../../tests/queryClientTestUtils';
-import useHoursData, { hoursData, getHoursSortValue } from './useHoursData';
+import useHoursData, { getHoursSortValue } from './useHoursData';
 import type { HoursItem, HoursSortKey } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
-import { getInfiniteListViewState, registerInfiniteListQuery } from '../../../../../query/infiniteListCache';
-import type { RecordListIndex } from '../../../../../query/createRecordStore';
 
 vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
 vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
@@ -49,41 +47,6 @@ describe('useHoursData', () => {
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });
     expect(getCycleReferences).toHaveBeenCalledOnce();
   });
-});
-
-
-const tableKey = ['hours', 'table'];
-const signal = new AbortController().signal;
-
-it('keeps one record for multiple consumers while list caches retain only membership and sort values', async () => {
-  const client = createTestQueryClient();
-  const wrapper = createQueryClientWrapper(client);
-  const first = renderHook(hoursData.useRecords, { wrapper });
-  const second = renderHook(hoursData.useRecords, { wrapper });
-  const entry = makeHoursItem();
-  const untouched = makeHoursItem({ id: 'untouched', date: '2026-08-20' });
-  act(() => hoursData.finishRead(client, hoursData.beginRead(client), [entry, untouched], signal));
-  await waitFor(() => expect(first.result.current[entry.id]).toEqual(entry));
-  const originalUntouched = first.result.current[untouched.id];
-  const key = [...tableKey, {}, { key: 'date', direction: 'asc' }];
-  client.setQueryData(key, {
-    pages: [{ rows: [{ id: entry.id, sortValue: entry.date }, { id: untouched.id, sortValue: untouched.date }], nextCursor: null }],
-    pageParams: [null],
-  });
-  registerInfiniteListQuery<RecordListIndex>(client, key, {
-    ordering: { direction: 'asc', getValue: index => index.sortValue },
-  });
-
-  act(() => hoursData.write(client, { ...entry, date: '2026-08-21' }));
-
-  await waitFor(() => expect(first.result.current[entry.id].date).toBe('2026-08-21'));
-  expect(second.result.current[entry.id]).toBe(first.result.current[entry.id]);
-  expect(first.result.current[untouched.id]).toBe(originalUntouched);
-  expect(client.getQueryData(key)).toEqual({
-    pages: [{ rows: [{ id: entry.id, sortValue: '2026-08-21' }, { id: untouched.id, sortValue: untouched.date }], nextCursor: null }],
-    pageParams: [null],
-  });
-  expect(getInfiniteListViewState(client, key)).toBe('retained');
 });
 
 const row = makeHoursItem({ date: '2026-10-01', firstName: 'Avery', lastName: 'Youth', name: 'Avery Youth' });

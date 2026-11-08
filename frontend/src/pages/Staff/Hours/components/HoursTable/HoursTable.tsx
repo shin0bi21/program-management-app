@@ -8,7 +8,6 @@ import { HOURS_TABLE_KEYS, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';
 
 interface HoursTableProps {
-  records: Readonly<Record<string, HoursItem>>;
   queryKey: readonly unknown[];
   columns: TableColumnDef<HoursItem>[];
   hiddenColumnKeys: string[];
@@ -23,15 +22,15 @@ interface HoursTableProps {
 }
 
 /**
- * Displays filtered Hours records resolved from their shared owner.
+ * Displays filtered Hours rows from the table query.
  * @example <HoursTable filters={filters} {...tableProps} />
  */
 export default function HoursTable({
-  records, queryKey, columns, hiddenColumnKeys, filters,
+  queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
   onColumnWidthsChange, onMessageChange,
 }: HoursTableProps) {
-  const query = useHoursTableData(queryKey, filters, sorting, records);
+  const query = useHoursTableData(queryKey, filters, sorting);
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table

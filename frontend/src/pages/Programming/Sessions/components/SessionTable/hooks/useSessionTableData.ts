@@ -1,15 +1,11 @@
-import { useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { RecordListIndex } from '../../../../../../query/createRecordStore';
-import { sessionStore, getSessionSortValue } from '../../../sessionStore';
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getSessions } from '../../../sessions.api';
-import type { SessionListFilters, SessionSortKey } from '../../../types';
+import type { ProgramSession, SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
 /**
- * Loads paginated session IDs and resolves their current shared records.
+ * Loads complete paginated session rows.
  * @example useSessionTableData(['sessions', 'table'], filters, sorting)
  */
 export function useSessionTableData(queryKey: readonly unknown[], {
@@ -28,28 +24,18 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     statuses,
     search,
   };
-  const client = useQueryClient();
-  const records = sessionStore.useRecords();
-  const query = useInfiniteListQuery<RecordListIndex>({
-    ordering: { direction: sorting.direction, getValue: index => index.sortValue },
+  const query = useInfiniteListQuery<ProgramSession>({
+    ordering: { direction: sorting.direction, getValue: session => getSessionSortValue(session, sorting.key) },
     queryKey: [...queryKey, filters, sorting],
-    queryFn: async ({ signal, pageParam }) => {
-      const read = sessionStore.beginRead(client);
-      const page = await getSessions(filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE });
-      const sessions = sessionStore.finishRead(client, read, page.rows, signal);
-      return {
-        nextCursor: page.nextCursor,
-        rows: sessions.map(session => ({ id: session.id, sortValue: getSessionSortValue(session, sorting.key) })),
-      };
-    },
+    queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, {
+      ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE,
+    }),
     errorMessage: 'Could not load sessions',
     enabled,
   });
 
-  const sessions = useMemo(() => query.rows.flatMap(({ id }) => records[id] ? [records[id]] : []), [query.rows, records]);
-
   return {
-    sessions,
+    sessions: query.rows,
     loading: query.loading,
     refreshing: query.refreshing,
     error: query.error,
@@ -61,4 +47,20 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     retry: query.retry,
     ...(query.refreshNotice ? { refreshNotice: query.refreshNotice } : {}),
   };
+}
+
+/**
+ * Supplies server-compatible text or timestamp instants for the selected session order.
+ * @example getSessionSortValue(session, 'date') // Date representing startsAt
+ */
+export function getSessionSortValue(session: ProgramSession, key: SessionSortKey) {
+  return {
+    program: session.program.toLowerCase(),
+    cycle: session.cycle.toLowerCase(),
+    theme: session.theme.toLowerCase(),
+    date: new Date(session.startsAt),
+    time: new Date(session.startsAt),
+    type: session.sessionType.toLowerCase(),
+    status: session.state,
+  }[key];
 }

@@ -143,7 +143,7 @@ describe('useSessionNotes', () => {
     expect(result.current.detailNote).toEqual(other);
   });
 
-  it.each(['session', 'account'] as const)('ignores a delete completion after the %s changes', async transition => {
+  it('ignores a delete completion after the selected session changes', async () => {
     let resolveDelete!: () => void;
     vi.mocked(deleteSessionNote).mockReturnValue(new Promise(resolve => {
       resolveDelete = () => resolve({} as never);
@@ -161,8 +161,7 @@ describe('useSessionNotes', () => {
     let deletion!: Promise<void>;
     act(() => { deletion = result.current.confirmAction!.onConfirm(); });
 
-    if (transition === 'account') act(() => client.clear());
-    rerender({ target: transition === 'session' ? nextSession : session });
+    rerender({ target: nextSession });
     await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
     const readsAfterTransition = vi.mocked(getSessionNotes).mock.calls.length;
     expect(result.current.noteTarget).toBeNull();

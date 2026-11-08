@@ -19,7 +19,6 @@ vi.mock('./hooks/useHoursTableData', () => ({ default: useHoursTableData }));
 vi.mock('../../../../../common/components/Table/Table', () => ({ default: () => null }));
 
 const baseProps = {
-  records: {},
   queryKey: ['hours', 'table'] as const,
   columns: [],
   hiddenColumnKeys: [],

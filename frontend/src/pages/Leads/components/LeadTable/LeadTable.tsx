@@ -7,7 +7,6 @@ import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadSortKey } from '
 import { useLeadTableData } from './hooks/useLeadTableData';
 
 interface LeadTableProps {
-  records: Readonly<Record<string, Lead>>;
   queryKey: readonly unknown[];
   columns: TableColumnDef<Lead>[];
   hiddenColumnKeys: string[];
@@ -22,15 +21,15 @@ interface LeadTableProps {
 }
 
 /**
- * Displays current page-owned lead records using private table membership and request state.
- * @param props - Saved record map, applied filters, table controls, selection, and page callbacks.
+ * Displays paginated lead rows and their loading and retry states.
+ * @param props - Applied filters, table controls, selection, and page callbacks.
  * @example <LeadTable {...tableProps} filters={{ statuses: ['new'] }} />
  */
 export default function LeadTable({
-  records, queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths,
+  queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths,
   selectedLeadId, onLeadSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: LeadTableProps) {
-  const query = useLeadTableData(queryKey, filters, sorting, records);
+  const query = useLeadTableData(queryKey, filters, sorting);
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   const hasFilters = Boolean(filters && (
     filters.search?.trim()

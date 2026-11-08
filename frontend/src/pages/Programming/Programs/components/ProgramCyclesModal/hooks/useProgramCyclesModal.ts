@@ -1,4 +1,3 @@
-import { youthData } from '../../../../../Youth/hooks/data/useYouthData';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -17,7 +16,6 @@ import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/progra
  */
 export default function useProgramCyclesModal(programId: string, cyclesReady: boolean) {
   const queryClient = useQueryClient();
-  const scope = youthData.getScope(queryClient);
   const assignments = useQuery({
     queryKey: ['programs', 'cycle-assignment-editor', programId],
     queryFn: ({ signal }) => getProgramCycleAssignments(programId, { includeAllPrograms: true }, { signal }),
@@ -51,16 +49,13 @@ export default function useProgramCyclesModal(programId: string, cyclesReady: bo
 
     try {
       const saved = await setProgramCycles(programId, selectedCycleIds);
-      if (!youthData.isScope(queryClient, scope)) return;
 
-      syncProgramCycleAssignmentChanges(queryClient, saved, scope);
+      syncProgramCycleAssignmentChanges(queryClient, saved);
 
       setSelectedCycleIds(saved.cycleIds);
       setSubmitStatus('success');
       setStatusMessage('Assigned cycles saved.');
     } catch (cause) {
-      if (!youthData.isScope(queryClient, scope)) return;
-
       setStatusMessage(getErrorMessage(cause, 'Could not save assigned cycles'));
       setSubmitStatus('error');
       unlock();

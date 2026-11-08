@@ -3,8 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { getHoursReferenceData } from '../../hours.api';
-import { createRecordStore } from '../../../../../query/createRecordStore';
-import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { HoursItem, HoursSortKey } from '../../types';
 
 /**
@@ -18,26 +16,16 @@ export function getHoursSortValue(item: HoursItem, key: HoursSortKey) {
   return typeof value === 'string' ? value.toLowerCase() : value ?? '';
 }
 
-export const hoursData = createRecordStore<HoursItem>({
-  queryKey: ['hours', 'records'],
-  listKey: ['hours', 'table'],
-  getSortValue: (item, queryKey) => {
-    const sorting = queryKey[queryKey.length - 1] as ListSort<HoursSortKey>;
-    return getHoursSortValue(item, sorting.key);
-  },
-});
-
 /**
- * Supplies current saved Hours records and shared staff, program, cycle, and hour choices.
+ * Supplies shared staff, program, cycle, and hour choices.
  * @param referenceDataQueryKey - Cache key for hour categories and source types.
  * @param currentUserId - Signed-in staff member used to resolve the default resource.
- * @example const { records, resources, cycles } = useHoursData(['hours-reference-data'], userId)
+ * @example const { resources, cycles } = useHoursData(['hours-reference-data'], userId)
  */
 export default function useHoursData(
   referenceDataQueryKey: readonly unknown[],
   currentUserId?: string,
 ) {
-  const records = hoursData.useRecords();
   const referenceDataQuery = useQuery({
     queryKey: referenceDataQueryKey,
     queryFn: ({ signal }) => getHoursReferenceData({ signal }),
@@ -56,7 +44,6 @@ export default function useHoursData(
   );
 
   return {
-    records,
     resources: resources ?? [],
     writableResources,
     resourcesById,

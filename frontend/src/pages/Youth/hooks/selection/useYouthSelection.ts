@@ -6,21 +6,23 @@ interface UseYouthSelectionOptions {
 }
 
 /**
- * Keeps a selected Youth identifier across table changes and resolves its latest saved profile.
- * @param records - Current saved profiles supplied by the page data owner.
+ * Keeps the selected Youth profile across table changes.
  * @param options - Callback that closes dependent workflows when the selected ID changes.
- * @example useYouthSelection(records, { onSelectedProfileIdChange: closeAttendance })
+ * @example useYouthSelection({ onSelectedProfileIdChange: closeAttendance })
  */
-export function useYouthSelection(records: Readonly<Record<string, YouthProfile>>, { onSelectedProfileIdChange }: UseYouthSelectionOptions) {
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const selectedProfile = selectedProfileId ? records[selectedProfileId] ?? null : null;
+export function useYouthSelection({ onSelectedProfileIdChange }: UseYouthSelectionOptions) {
+  const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
+  const selectedProfileId = selectedProfile?.id ?? null;
   const selectProfile = useCallback((profile: YouthProfile | null) => {
-    setSelectedProfileId(profile?.id ?? null);
+    setSelectedProfile(profile);
+  }, []);
+  const updateSelectedProfile = useCallback((profile: YouthProfile) => {
+    setSelectedProfile(current => current?.id === profile.id ? profile : current);
   }, []);
 
   useEffect(() => {
     onSelectedProfileIdChange();
   }, [onSelectedProfileIdChange, selectedProfileId]);
 
-  return { selectedProfile, selectedProfileId, selectProfile };
+  return { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile };
 }
