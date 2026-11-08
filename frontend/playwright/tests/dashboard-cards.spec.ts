@@ -42,8 +42,8 @@ for (const width of [1280, 390]) {
     });
 
     for (const { story, dataClass } of [
-      { story: 'TaskOverviewDashboardCard/TaskSummary', dataClass: '.task-overview-card__data' },
-      { story: 'TaskHoursLoggedDashboardCard/LoggedHours', dataClass: '.task-hours-breakdown__data' },
+      { story: 'TaskOverviewDashboardCard/TaskSummary', dataClass: '.dashboard-card__content' },
+      { story: 'TaskHoursLoggedDashboardCard/LoggedHours', dataClass: '.dashboard-card__content' },
     ]) {
       test(`${story} scrolls data while its actions stay fixed`, async ({ mount }) => {
         const component = await mount(story);

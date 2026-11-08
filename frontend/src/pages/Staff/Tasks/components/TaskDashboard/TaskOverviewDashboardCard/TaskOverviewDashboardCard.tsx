@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardCardLoading } from '../../../../../../common/components/DashboardCard/DashboardCard';
+import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
@@ -7,7 +7,6 @@ import type { Task } from '../../../types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import useTaskOverviewData from './hooks/useTaskOverviewData';
-import '../../../../../../common/components/DashboardCard/DashboardCard.css';
 import './TaskOverviewDashboardCard.css';
 
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
@@ -67,29 +66,26 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
   const dueThisWeekIds = new Set(overview.dueThisWeekTasks.map(task => task.id));
 
   return <>
-    <article className="dashboard-card dashboard-card--short task-overview-card" aria-busy={loading || undefined}>
-      <h2 className="task-overview-card__accessible-title">Task Overview</h2>
-      <div className="dashboard-card__compact-layout task-overview-card__layout">
-        <div className="task-overview-card__data">
-          <dl className="task-overview-card__metrics">
-            <div><dt>Assigned</dt><dd>{renderOverviewCount(summary.assigned, loading, error)}</dd></div>
-            <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{renderOverviewCount(summary.upcoming, loading, error)}</dd></div>
-            <div className="task-overview-card__metric-in-progress"><dt>In Progress</dt><dd>{renderOverviewCount(summary.inProgress, loading, error)}</dd></div>
-            <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{renderOverviewCount(summary.overdue, loading, error)}</dd></div>
-          </dl>
-          {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
-        </div>
-        <div className="dashboard-card__compact-action task-overview-card__action">
-          <Button
-            size="sm"
-            variant="secondary"
-            aria-haspopup="dialog"
-            disabled={loading || Boolean(error)}
-            onClick={() => setOpenResourceId(resourceId)}
-          >See Breakdown</Button>
-        </div>
-      </div>
-    </article>
+    <DashboardCard
+      title="Task Overview"
+      className="dashboard-card--short task-overview-card"
+      loading={loading}
+      details={[
+        { label: 'Assigned', value: error ? null : summary.assigned },
+        { label: 'Upcoming', value: error ? null : summary.upcoming },
+        { label: 'In Progress', value: error ? null : summary.inProgress },
+        { label: 'Overdue', value: error ? null : summary.overdue },
+      ]}
+      action={<Button
+        size="sm"
+        variant="secondary"
+        aria-haspopup="dialog"
+        disabled={loading || Boolean(error)}
+        onClick={() => setOpenResourceId(resourceId)}
+      >See Breakdown</Button>}
+    >
+      {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
+    </DashboardCard>
     <Modal isOpen={openResourceId === resourceId && !loading && !error} onClose={() => setOpenResourceId(null)} title={resourceName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
@@ -172,20 +168,6 @@ function sortByDueDate(tasks: readonly Task[]) {
   return [...tasks].sort((left, right) => (
     left.dueDate.localeCompare(right.dueDate) || left.title.localeCompare(right.title)
   ));
-}
-
-/**
- * Shows a status count, its loading indicator, or an unavailable placeholder.
- * @param count - Number of tasks in the status group.
- * @param loading - Whether the current staff query is pending.
- * @param error - Current query failure, or null when available.
- * @example renderOverviewCount(0, false, null) // 0
- */
-function renderOverviewCount(count: number, loading: boolean, error: string | null) {
-  if (loading) return <DashboardCardLoading label="Loading task overview…" />;
-  if (error) return '—';
-
-  return count;
 }
 
 /**
