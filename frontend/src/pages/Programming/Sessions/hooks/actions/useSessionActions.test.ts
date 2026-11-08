@@ -78,7 +78,7 @@ describe('useSessionActions', () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it('invalidates deleted rows without rebuilding the calendar buffer', async () => {
+  it('removes deleted rows without rebuilding the calendar buffer', async () => {
     const session = makeProgramSession();
     const { result, client, invalidate, calendar, onSessionRemoved, other } = renderActions(session);
     api.deleteSession.mockResolvedValue({ id: session.id });
@@ -86,12 +86,12 @@ describe('useSessionActions', () => {
     act(() => result.current.requestDelete(session));
     await act(() => result.current.confirmAction!.onConfirm());
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, other], nextCursor: 'next' }] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [other], nextCursor: 'next' }] });
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 

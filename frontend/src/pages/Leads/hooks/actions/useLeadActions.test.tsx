@@ -53,7 +53,7 @@ it('updates the saved lead row and selected context after a status save', async 
   expect(updateLeadStatus).toHaveBeenCalledWith(lead.id, 'contacted');
 });
 
-it('invalidates the lead table and clears selected context after a confirmed delete', async () => {
+it('removes the lead row and clears selected context after a confirmed delete', async () => {
   const { client, wrapper } = setup();
   seedVariant(client, [lead, otherLead]);
   const invalidate = vi.spyOn(client, 'invalidateQueries');
@@ -65,7 +65,7 @@ it('invalidates the lead table and clears selected context after a confirmed del
 
   expect(deleteLead).toHaveBeenCalledWith(lead.id);
   expect(onLeadRemoved).toHaveBeenCalledWith(lead.id);
-  expect(invalidate).toHaveBeenCalledWith({ queryKey: tableKey });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: tableKey });
 });
 
 it('updates signup context and invalidates affected collections', async () => {

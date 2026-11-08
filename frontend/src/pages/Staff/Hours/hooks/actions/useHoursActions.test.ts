@@ -87,7 +87,7 @@ describe('useHoursActions', () => {
     ]);
   });
 
-  it('owns confirmation, calendar removal, and query invalidation together', async () => {
+  it('owns confirmation, calendar removal, and related summary refreshes together', async () => {
     vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted', updatedTasks: [updatedTask] });
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -100,7 +100,7 @@ describe('useHoursActions', () => {
     expect(rendered.remove).toHaveBeenCalledWith('entry-1');
     expect(rendered.onItemRemoved).toHaveBeenCalledWith('entry-1');
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      ['hours', 'table'], ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
+      ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
     ]);
   });
 

@@ -134,7 +134,7 @@ describe('useTaskActions', () => {
     expect(deleteTask).toHaveBeenCalledWith('task-1');
     expect(rendered.onTaskRemoved).toHaveBeenCalledWith('task-1');
     expect(rendered.removeCalendarTask).toHaveBeenCalledWith('task-1');
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
   });
 
   it('does not reconcile failed status or deletion actions', async () => {

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import {
@@ -137,7 +137,7 @@ export default function useHoursActions({
 
       try {
         const deleted = await deleteHours(target.id);
-        void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
+        removeInfiniteListRow(queryClient, hoursTableQueryKey, target.id);
         calendarIndexRef.current.remove(target.id);
         onItemRemoved?.(target.id);
         refreshOverview();

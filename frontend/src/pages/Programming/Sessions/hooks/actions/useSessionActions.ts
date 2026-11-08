@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import { deleteSession, moveSessionDate, type CreatedSessionResult, type UpdatedSessionResult, type SessionAttendanceResult } from '../../sessions.api';
@@ -107,7 +107,7 @@ export default function useSessionActions({
         const saved = await deleteSession(session.id);
 
         syncAssignments(saved.updatedProgramCycles);
-        void queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+        removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
         calendarCacheRef.current.remove(session.id);
         onSessionRemoved(session.id);
         refreshProgramOverviews();

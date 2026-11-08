@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import { deleteLead, updateLeadStatus, type LeadSignUpResult } from '../../leads.api';
 import type { EditableLeadStatus, Lead } from '../../types';
@@ -61,10 +61,10 @@ export default function useLeadActions({
     successMessage: 'Lead deleted',
     onConfirm: async () => {
       await deleteLead(lead.id);
+      removeInfiniteListRow(queryClient, tableQueryKey, lead.id);
       onLeadRemoved?.(lead.id);
-      await refreshLeads();
     },
-  }), [onLeadRemoved, refreshLeads]);
+  }), [onLeadRemoved, queryClient, tableQueryKey]);
 
   const reconcileSignUp = useCallback(async (saved: LeadSignUpResult) => {
     setActionError('');

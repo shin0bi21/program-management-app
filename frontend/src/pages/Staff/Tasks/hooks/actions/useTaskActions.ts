@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
 import {
@@ -85,7 +85,7 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
-      void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+      removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
       refreshTaskOverview();
