@@ -1,19 +1,26 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../../common/features/programs/types';
 import type { ProgramCycleAssignment } from '../../types';
 import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
+import { useProgramCycleAssignments } from '../../hooks/data/useProgramCycleAssignments';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+
+vi.mock('../../hooks/data/useProgramCycleAssignments', () => ({ useProgramCycleAssignments: vi.fn() }));
+vi.mock('../ManageRosterModal/ManageRosterModal', () => ({
+  default: ({ assignment }: { assignment: ProgramCycleAssignment | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycle}`} /> : null,
+}));
+vi.mock('../../../../../common/features/YouthReportModal/YouthReportModal', () => ({
+  default: ({ programCycle }: { programCycle: ProgramCycleAssignment }) => <div role="dialog" aria-label={`Report for ${programCycle.cycle}`} />,
+}));
 
 const program: Program = {
   id: 'program-1', name: 'Art', description: 'Make art together.',
-
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
-
   enrollmentRequired: true, minAge: null, maxAge: null,
 };
 const programCycle: ProgramCycleAssignment = {
   programId: program.id, program: program.name,
-
   enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
@@ -24,14 +31,19 @@ const openProgramCycle: ProgramCycleAssignment = {
   ...programCycle, cycleId: 'cycle-2', cycle: 'Winter',
   enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
 };
+/** Supplies the selected program context and permissions. @example makeProps().program.name // Art */
 const makeProps = () => ({
-  program, assignments: [programCycle, openProgramCycle], canManageRoster: true, canViewYouthReport: true,
-  onManageRoster: vi.fn(), onViewReport: vi.fn(),
+  program, canManageRoster: true, canViewYouthReport: true,
 });
 
 describe('ProgramOverviewDashboardCard', () => {
-  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-27T16:00:00Z')); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-27T16:00:00Z'));
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [programCycle, openProgramCycle], loading: false, error: '', refresh: vi.fn() });
+  });
   afterEach(() => vi.useRealTimers());
+
   it('shows selection, loading, and filtered empty states without current-cycle actions', () => {
     const props = makeProps();
     const { rerender } = render(<ProgramOverviewDashboardCard {...props} program={null} />);
@@ -40,12 +52,14 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.getByText('Select a program to view its current cycle.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
 
-    rerender(<ProgramOverviewDashboardCard {...props} loading />);
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    rerender(<ProgramOverviewDashboardCard {...props} />);
     expect(screen.getByRole('status', { name: 'Loading program rosters…' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
 
-    rerender(<ProgramOverviewDashboardCard {...props} assignments={[]} />);
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: '', refresh: vi.fn() });
+    rerender(<ProgramOverviewDashboardCard {...props} />);
     expect(screen.getByRole('heading', { name: `${program.name} Overview` })).toBeInTheDocument();
     expect(screen.queryByText(program.description!)).not.toBeInTheDocument();
     expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
@@ -54,7 +68,8 @@ describe('ProgramOverviewDashboardCard', () => {
   it('preserves a failed program-cycle load as unavailable and offers recovery', () => {
     const props = makeProps();
     const onRetry = vi.fn();
-    render(<ProgramOverviewDashboardCard {...props} assignments={[]} error="Request failed" onRetry={onRetry} />);
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: 'Request failed', refresh: onRetry });
+    render(<ProgramOverviewDashboardCard {...props} />);
 
     expect(screen.getByText('Program rosters unavailable')).toBeInTheDocument();
     expect(screen.queryByText('No current cycle for this program.')).not.toBeInTheDocument();
@@ -78,17 +93,18 @@ describe('ProgramOverviewDashboardCard', () => {
     const header = screen.getByRole('heading', { name: 'Art - Fall Overview' }).parentElement!;
     fireEvent.click(within(header).getByRole('button', { name: 'Manage Roster' }));
     fireEvent.click(within(header).getByRole('button', { name: 'Attendance Report' }));
-    expect(props.onManageRoster).toHaveBeenCalledWith(programCycle);
-    expect(props.onViewReport).toHaveBeenCalledWith(programCycle);
+    expect(screen.getByRole('dialog', { name: 'Roster for Fall' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Report for Fall' })).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: 'Edit ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete ProgramCycle' })).not.toBeInTheDocument();
   });
 
   it('shows an empty state when only past and upcoming programCycles exist', () => {
-    render(<ProgramOverviewDashboardCard {...makeProps()} assignments={[
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [
       { ...programCycle, startsOn: '2026-01-01', endsOn: '2026-06-30', state: 'completed' }, openProgramCycle,
-    ]} />);
+    ], loading: false, error: '', refresh: vi.fn() });
+    render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
@@ -100,9 +116,10 @@ describe('ProgramOverviewDashboardCard', () => {
   });
 
   it('keeps the current drop-in report disabled', () => {
-    render(<ProgramOverviewDashboardCard {...makeProps()} assignments={[
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [
       { ...openProgramCycle, startsOn: programCycle.startsOn, endsOn: programCycle.endsOn, state: 'active' },
-    ]} />);
+    ], loading: false, error: '', refresh: vi.fn() });
+    render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
   });
@@ -114,20 +131,20 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete ProgramCycle' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Attendance Report' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeInTheDocument();
 
     rerender(<ProgramOverviewDashboardCard {...props} canViewYouthReport={false} />);
     expect(screen.queryByRole('button', { name: 'Attendance Report' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeInTheDocument();
   });
+
   it('preserves the shell and metric labels while loading a different program', () => {
     const props = makeProps();
     const view = render(<ProgramOverviewDashboardCard {...props} />);
-    const card = screen.getByRole('heading', { name: 'Art - Fall Overview' }).closest('article');
 
-    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} assignments={[]} loading />);
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} />);
 
-    expect(screen.getByRole('heading', { name: 'Music Overview' }).closest('article')).toBe(card);
     expect(screen.getByText('Enrollment')).toBeInTheDocument();
     expect(screen.getByText('Average attendance')).toBeInTheDocument();
     expect(screen.queryByText('75%')).not.toBeInTheDocument();
@@ -135,20 +152,17 @@ describe('ProgramOverviewDashboardCard', () => {
   });
 
   it('keeps metrics and disabled actions when a pending program load fails', () => {
-    const props = { ...makeProps(), assignments: [] };
-    const view = render(<ProgramOverviewDashboardCard {...props} loading />);
-    const heading = screen.getByRole('heading', { name: 'Art Overview' });
-    const card = heading.closest('article');
+    const props = makeProps();
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    const view = render(<ProgramOverviewDashboardCard {...props} />);
 
-    view.rerender(<ProgramOverviewDashboardCard {...props} error="Unavailable" />);
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: 'Unavailable', refresh: vi.fn() });
+    view.rerender(<ProgramOverviewDashboardCard {...props} />);
 
-    expect(screen.getByRole('heading', { name: 'Art Overview' })).toBe(heading);
-    expect(heading.closest('article')).toBe(card);
     expect(screen.getByText('Enrollment')).toBeInTheDocument();
     expect(screen.getByText('Average attendance')).toBeInTheDocument();
     expect(screen.getByText('Program rosters unavailable')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
-
 });

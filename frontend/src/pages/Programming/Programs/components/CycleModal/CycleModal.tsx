@@ -1,7 +1,7 @@
 import { type FormEvent } from 'react';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import Button from '../../../../../common/components/Button/Button';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import FormField from '../../../../../common/components/FormField/FormField';
 import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -13,7 +13,7 @@ import type { SetCycleResult } from '../../api/cycles.api';
 interface CycleModalProps {
   isOpen: boolean;
   cycle: ProgramCycle | null;
-  programs: Program[];
+  programs: ProgramReference[];
   programsReady?: boolean;
   programsError?: string | null;
   onRetryPrograms?: () => void;
@@ -21,6 +21,11 @@ interface CycleModalProps {
   onSaved: (result: SetCycleResult, operation: 'create' | 'update') => void | Promise<void>;
 }
 
+/**
+ * Displays a cycle editor with page-supplied program labels and its independent assignment draft.
+ * @param props - Open/edit target, program choices and readiness, close action, and saved-result callback.
+ * @example <CycleModal isOpen cycle={cycle} programs={programs} {...actions} />
+ */
 export default function CycleModal({ isOpen, cycle, programs, programsReady = true, programsError, onRetryPrograms, onClose, onSaved }: CycleModalProps) {
   const workflow = useCycleModal({ isOpen, cycle, programs, programsReady, onSaved });
 

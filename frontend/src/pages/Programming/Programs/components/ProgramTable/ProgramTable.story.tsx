@@ -1,14 +1,14 @@
 import { CYCLE_TABLE_QUERY_KEY } from '../CycleTable/queryKeys';
+import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY } from '../../hooks/actions/programCycleAssignmentCache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import PageContainer from '../../../../../common/components/PageContainer/PageContainer';
 import type { Program } from '../../../../../common/features/programs/types';
 import CycleTable from '../CycleTable/CycleTable';
-import useCycleTable from '../CycleTable/hooks/useCycleTable';
 import ProgramTable from './ProgramTable';
-import useProgramTable from './hooks/useProgramTable';
 
+const PROGRAM_TABLE_QUERY_KEY = ['programs', 'table'] as const;
 const program: Program = {
   id: 'program-1', name: 'Art', enrollmentRequired: true, minAge: null, maxAge: null,
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
@@ -22,38 +22,38 @@ const cycle = {
  * @example Opening Manage Cycles shows Fall 2026 in the Cycles dialog.
  */
 export function ManagementTables() {
+  const [cyclesOpen, setCyclesOpen] = useState(false);
   const [client] = useState(() => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-    queryClient.setQueryData(['gallery-programs', 'table', { assignedOnly: true }], { pages: [{ rows: [program], nextCursor: null }], pageParams: [null] });
+    queryClient.setQueryData([...PROGRAM_TABLE_QUERY_KEY, { assignedOnly: true }], { pages: [{ rows: [program], nextCursor: null }], pageParams: [null] });
     queryClient.setQueryData([...CYCLE_TABLE_QUERY_KEY, { key: 'startsOn', direction: 'desc' }], { pages: [{ rows: [cycle], nextCursor: null }], pageParams: [null] });
-
+    queryClient.setQueryData([...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: undefined }], [{
+      programId: program.id, program: program.name, cycleId: cycle.id, cycle: cycle.name,
+      startsOn: cycle.startsOn, endsOn: cycle.endsOn, state: cycle.state,
+      enrollmentRequired: true, minAge: null, maxAge: null, enrolledCount: 0,
+      nextSessionAt: null, nextSessionId: null, averageAttendance: null,
+      attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+    }]);
     return queryClient;
   });
-  const [cyclesOpen, setCyclesOpen] = useState(false);
-  const { columns: programColumns } = useProgramTable(() => {}, () => {}, true, {
-    assignments: [{ programId: program.id, state: 'active' }], loading: false, error: null,
-  });
-  const { columns: cycleColumns } = useCycleTable({ onEdit: () => {}, onDelete: () => {} });
 
-  return (
-    <QueryClientProvider client={client}>
-      <PageContainer
-        title="Programs"
-        ariaLabel="Program management"
-        actions={<Button onClick={() => setCyclesOpen(true)}>Manage Cycles</Button>}
-        table={<ProgramTable
-          queryKey={['gallery-programs', 'table']}
-          filters={{ assignedOnly: true }}
-          columns={programColumns}
-        />}
-      />
-      <CycleTable
-        columns={cycleColumns}
-        isOpen={cyclesOpen}
-        enabled={cyclesOpen}
-        onClose={() => setCyclesOpen(false)}
-        onAdd={() => {}}
-      />
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={client}>
+    <PageContainer
+      title="Programs"
+      ariaLabel="Program management"
+      actions={<Button onClick={() => setCyclesOpen(true)}>Manage Cycles</Button>}
+      table={<ProgramTable
+        queryKey={PROGRAM_TABLE_QUERY_KEY}
+        filters={{ assignedOnly: true }}
+        canWrite onEdit={() => {}} onManageCycles={() => {}}
+      />}
+    />
+    <CycleTable
+      onEdit={() => {}} onDelete={() => {}}
+      isOpen={cyclesOpen}
+      enabled={cyclesOpen}
+      onClose={() => setCyclesOpen(false)}
+      onAdd={() => {}}
+    />
+  </QueryClientProvider>;
 }

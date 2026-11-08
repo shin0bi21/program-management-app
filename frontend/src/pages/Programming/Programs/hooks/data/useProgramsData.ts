@@ -1,19 +1,23 @@
-import { useCycleReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
-import { usePrograms } from '../../../../../common/features/programs/hooks/usePrograms';
+import { useCycleReferences, useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
+/**
+ * Supplies shared program and cycle choices for page filters and forms.
+ * Tables and dashboard cards own their complete query results.
+ * @example const { programs, cycles } = useProgramsData()
+ */
 export default function useProgramsData() {
-  const programs = usePrograms({ assignedOnly: true });
+  const programs = useProgramReferences({ assignedOnly: true });
   const cycles = useCycleReferences();
 
   return {
-    programs: programs.programs,
+    programs: programs.rows,
     programsLoading: programs.loading,
     programsError: programs.error,
-    retryPrograms: programs.retry,
+    retryPrograms: programs.refetch,
     cycles: cycles.rows,
     cyclesLoading: cycles.loading,
     cyclesError: cycles.error,
-    refreshCycles: cycles.refetch,
+    retryCycles: cycles.refetch,
     removeCycle: cycles.remove,
   };
 }

@@ -3,12 +3,13 @@ import Modal from '../../../../../common/components/Modal/Modal';
 import Button from '../../../../../common/components/Button/Button';
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
-import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import useCycleTableData from './hooks/useCycleTableData';
+import useCycleTable from './hooks/useCycleTable';
 
 interface CycleTableProps {
-  columns: TableColumnDef<ProgramCycle>[];
+  onEdit: (cycle: ProgramCycle) => void;
+  onDelete: (cycle: ProgramCycle) => void;
   isOpen: boolean;
   enabled: boolean;
   onClose: () => void;
@@ -16,8 +17,14 @@ interface CycleTableProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
-export default function CycleTable({ columns, isOpen, enabled, onClose, onAdd, onMessageChange }: CycleTableProps) {
+/**
+ * Keeps cycle membership loaded through child dialogs and displays complete cycle rows.
+ * @param props - Management-session state, and permitted edit/delete actions.
+ * @example <CycleTable {...managementProps} />
+ */
+export default function CycleTable({ onEdit, onDelete, isOpen, enabled, onClose, onAdd, onMessageChange }: CycleTableProps) {
   const query = useCycleTableData(enabled);
+  const { columns } = useCycleTable({ onEdit, onDelete });
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, {
     label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry,
   }, tableRefreshMessage(query.refreshNotice));
