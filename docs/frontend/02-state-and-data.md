@@ -58,7 +58,7 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`.
 3. Let the server filter and sort before pagination.
 4. Supply the active server-compatible `ordering`.
-5. Display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts) when edited rows need a fresh first page.
+5. Replace saved rows in place with the existing cursor-list cache helpers. When an edit changes their sort order, display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts): “This table’s data is out of order.” with the **Refresh** action. Keep the loaded positions until the user refreshes; do not automatically reorder or refetch solely to correct sort order.
 
 ### Calendars
 
@@ -110,7 +110,7 @@ query states; independent summary cards can query their supplied page context.
 - **Calendar:** Own range requests and the buffer of complete returned rows.
 - **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied fields that are already available. Sibling cards sharing a request use one dashboard data hook; independent requests stay with their cards.
 - **Selection and forms:** Retain the selected ID and any clicked row needed as temporary UI context. Initialize a form from supplied data for editing or empty defaults for adding. Keep its draft for the mounted form's lifetime.
-- **Mutations:** Invalidate affected query prefixes after a successful save or delete. Update the mounted calendar buffer or selected context directly when the workflow already requires it. Keep existing submission locks; do not add custom read revision or record-store synchronization machinery.
+- **Mutations:** Reconcile saved records with their owning queries and invalidate affected reference or summary queries. Cursor tables retain edited row positions and use the shared out-of-order notice; reload membership when filters or creation require it. Update the mounted calendar buffer or selected context when the workflow already requires it. Keep existing submission locks; do not add custom read revision or record-store synchronization machinery.
 
 Separate queries may cache overlapping records. Use TanStack Query's ordinary
 query results and targeted invalidation to refresh their server data.
@@ -141,8 +141,9 @@ query results and targeted invalidation to refresh their server data.
 
 1. Use one complete backend record shape across reads and mutations; do not rebuild it from form values or create separate table/calendar records.
 2. Forward cancellation signals through reads and keep existing mutation submission locks.
-3. After a successful mutation, invalidate affected table, dashboard, and related feature query prefixes in the owning action hook.
-4. Reconcile an existing calendar buffer or selected UI context with the authoritative saved row where needed; keep editable drafts independent of background refetches.
+3. For loaded cursor tables, use [the existing cache helpers](../../frontend/src/query/infiniteListCache.ts) to replace saved rows or remove confirmed deletions. When edits leave loaded rows out of order, retain their positions and show the shared out-of-order message with **Refresh**; confirmed deletion does not require backfilling the page.
+4. Invalidate a table prefix when creation or changed filter membership requires a server read. Invalidate affected reference, dashboard, and related feature queries separately; do not invalidate solely to correct retained sort order.
+5. Reconcile an existing calendar buffer or selected UI context with the authoritative saved row where needed; keep editable drafts independent of background refetches.
 
 ## Keep Application Selection with Its Domain
 
