@@ -1,14 +1,18 @@
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { taskStore } from '../../taskStore';
+import { taskData } from '../data/useTaskData';
 import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
 import useTaskSelection from './useTaskSelection';
 
+/**
+ * Observes selection with a fresh account cache seeded with the default saved task.
+ * @example renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }))
+ */
 function renderHook<T, P>(callback: (props: P) => T, options?: { initialProps: P }) {
   const client = createTestQueryClient();
-  taskStore.write(client, makeTask());
+  taskData.write(client, makeTask());
   const hook = renderHookBase(callback, { ...options, wrapper: createQueryClientWrapper(client) });
   return { ...hook, client };
 }
@@ -22,7 +26,7 @@ const resources = [
 describe('useTaskSelection', () => {
   it('selects a task and clears task state when the resource changes directly', async () => {
     const task = makeTask();
-    const { result } = renderHook(() => useTaskSelection({ resources }));
+    const { result } = renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }));
 
     await waitFor(() => expect(result.current.selectedResourceId).toBe('staff-1'));
 
@@ -43,16 +47,15 @@ describe('useTaskSelection', () => {
       title: 'Updated workshop',
       staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
     });
-    const { result, client } = renderHook(() => useTaskSelection({ resources }));
+    const { result, client } = renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }));
 
     await waitFor(() => expect(result.current.selectedResourceId).toBe('staff-1'));
 
     act(() => result.current.selectTask(task));
-    act(() => taskStore.finishRead(
-      client, taskStore.beginRead(client), [updated], new AbortController().signal,
+    act(() => taskData.finishRead(
+      client, taskData.beginRead(client), [updated], new AbortController().signal,
     ));
     await waitFor(() => expect(result.current.selectedTask).toEqual(updated));
-    expect(result.current.selectedTask).toEqual(updated);
     expect(result.current.selectedResource?.id).toBe('staff-2');
 
     act(() => result.current.removeSelectedTask(task.id));
@@ -61,7 +64,7 @@ describe('useTaskSelection', () => {
 
   it('falls back to a valid readable resource when options change', async () => {
     const { result, rerender } = renderHook(
-      ({ currentResources }) => useTaskSelection({ resources: currentResources }),
+      ({ currentResources }) => useTaskSelection({ resources: currentResources, records: taskData.useRecords() }),
       { initialProps: { currentResources: resources } },
     );
 

@@ -1,16 +1,10 @@
-import { taskStore } from '../../taskStore';
-import { useQueryClient } from '@tanstack/react-query';
 import type { DateRange } from '../../../../../common/utils/dateRange';
-import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
+import { useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
-import { useDataBuffer } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
-import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
   BuildItemContext,
-  CalendarItemReference,
-  RowItemData,
   CalendarCellContext,
   ItemCapabilityContext,
   ItemMoveContext,
@@ -18,7 +12,7 @@ import type {
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import { getTasksCalendarData, type TasksFilters } from '../../tasks.api';
+import type { TasksFilters } from '../../tasks.api';
 import type { AddTaskModalInitialValues, Task, TaskCalendarCache, TaskResource } from '../../types';
 import {
   canCancelTask,
@@ -28,6 +22,7 @@ import {
   canReopenTask,
 } from '../../utils/taskCapabilities';
 import TaskItem from './TaskItem/TaskItem';
+import useTaskCalendarData from './hooks/useTaskCalendarData';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
 
@@ -44,6 +39,7 @@ export interface TaskCalendarActions {
 }
 
 interface TaskCalendarProps {
+  records: Readonly<Record<string, Task>>;
   resources: TaskResource[];
   filters: TasksFilters;
   dateRange?: DateRange;
@@ -60,32 +56,12 @@ interface TaskCalendarProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
-const getTaskResourceId = (resource: TaskResource) => resource.id;
-const getTaskId = (task: { id: string }) => task.id;
-const getReferenceRange = (reference: CalendarItemReference) => ({ start: reference.start, end: reference.end });
-const getTaskRange = (task: Task) => ({ start: task.startDate, end: task.dueDate });
-
-/**
- * Displays a compact staff name in the resource header.
- * @example renderStaffRow(context) // staff display name
- */
-function renderStaffRow({ row }: RenderRowContext<TaskResource>) {
-  return <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>;
-}
-
-/**
- * Allows reassignment only for open tasks without logged hours.
- * @example canReassignTask(task) // false after time has been logged
- */
-function canReassignTask(task: Task) {
-  return task.state === 'open' && task.hoursLogged === 0;
-}
-
 /**
  * Displays shared task records using buffered IDs and inclusive date placement.
  * @example <TaskCalendar filters={filters} {...viewProps} />
  */
 export default function TaskCalendar({
+  records,
   resources,
   filters,
   dateRange,
@@ -102,59 +78,10 @@ export default function TaskCalendar({
   onMessageChange,
 }: TaskCalendarProps) {
   const { staffIds } = filters;
-  const client = useQueryClient();
-  const records = taskStore.useRecords();
-
-  const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
-    const read = taskStore.beginRead(client);
-    const incoming = await getTasksCalendarData(filters, { start: start.key, end: end.key }, { signal });
-    const tasks = taskStore.finishRead(client, read, incoming, signal);
-    const data: Record<string, Record<string, CalendarItemReference[]>> = {};
-
-    for (const task of tasks) {
-      const resourceId = task.staffId;
-      data[resourceId] ??= {};
-      data[resourceId][start.key] ??= [];
-      data[resourceId][start.key].push({ id: task.id, ...getTaskRange(task) });
-    }
-
-    return data;
-  }, [client, filters]);
-
-  const calendar = useDataBuffer({
-    load: loadRange,
-    getItemId: getTaskId,
-    getItemRange: getReferenceRange,
-    errorMessage: 'Unable to load task calendar data',
-  });
-  const visibleItems = useMemo<RowItemData<Task>>(() => {
-    const items: Record<string, Task[]> = {};
-    for (const references of Object.values(calendar.items)) {
-      for (const { id } of references ?? []) {
-        const task = records[id];
-        if (task) (items[task.staffId] ??= []).push(task);
-      }
-    }
-    return items;
-  }, [calendar.items, records]);
-  const { upsertItem, removeItem } = calendar;
+  const { calendar, visibleItems } = useTaskCalendarData(records, filters, calendarCacheRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
-
-  useEffect(() => {
-    calendarCacheRef.current = {
-      upsert: task => upsertItem(task.staffId, task.startDate, { id: task.id, ...getTaskRange(task) }),
-      remove: removeItem,
-    };
-
-    return () => {
-      calendarCacheRef.current = {
-        upsert: () => undefined,
-        remove: () => undefined,
-      };
-    };
-  }, [calendarCacheRef, removeItem, upsertItem]);
 
   const visibleResources = useMemo(() => {
     if (!staffIds.length) return resources;
@@ -269,4 +196,27 @@ export default function TaskCalendar({
       onCellActivate={canWrite ? addTask : undefined}
     />
   );
+}
+
+/** Identifies a staff row. @example getTaskResourceId(resource) // resource.id */
+const getTaskResourceId = (resource: TaskResource) => resource.id;
+/** Identifies a task. @example getTaskId(task) // task.id */
+const getTaskId = (task: { id: string }) => task.id;
+/** Reads inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
+const getTaskRange = (task: Task) => ({ start: task.startDate, end: task.dueDate });
+
+/**
+ * Displays a compact staff name in the resource header.
+ * @example renderStaffRow(context) // staff display name
+ */
+function renderStaffRow({ row }: RenderRowContext<TaskResource>) {
+  return <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>;
+}
+
+/**
+ * Allows reassignment only for open tasks without logged hours.
+ * @example canReassignTask(task) // false after time has been logged
+ */
+function canReassignTask(task: Task) {
+  return task.state === 'open' && task.hoursLogged === 0;
 }

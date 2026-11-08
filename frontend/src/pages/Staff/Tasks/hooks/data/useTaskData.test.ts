@@ -5,11 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTaskReferenceData } from '../../tasks.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import useTaskData from './useTaskData';
+import useTaskData, { getTaskSortValue } from './useTaskData';
+import type { Task, TaskSortKey } from '../../types';
+import { makeTask } from '../../../../../tests/factories/task';
 
 vi.mock('../../tasks.api', () => ({
   getTaskReferenceData: vi.fn(),
 }));
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
 
 const resources = [
   { id: 'staff-read', firstName: 'Read', lastName: 'Only', name: 'Read Only', role: 'staff', writable: false },
@@ -53,4 +56,19 @@ describe('useTaskData', () => {
   });
 });
 
-vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
+const row = makeTask();
+
+const sortValues: Array<[TaskSortKey, Partial<Task>, string]> = [
+  ['firstName', { firstName: 'Other' }, 'other'],
+  ['lastName', { lastName: 'Other' }, 'other'],
+  ['title', { title: 'Other' }, 'other'],
+  ['category', { category: 'meeting' }, 'meeting'],
+  ['program', { program: 'Other' }, 'other'],
+  ['startDate', { startDate: '2027-01-01' }, '2027-01-01'],
+  ['dueDate', { dueDate: '2027-01-01' }, '2027-01-01'],
+  ['status', { status: 'cancelled' }, 'cancelled'],
+];
+
+it.each(sortValues)('maps %s to its canonical sort value', (key, changes, expected) => {
+  expect(getTaskSortValue({ ...row, ...changes }, key)).toEqual(expected);
+});

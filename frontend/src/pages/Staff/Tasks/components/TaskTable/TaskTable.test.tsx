@@ -20,6 +20,7 @@ vi.mock('../../../../../common/components/Table/Table', () => ({
 }));
 
 const baseProps = {
+  records: {},
   queryKey: ['tasks', 'table'] as const,
   today: '2026-08-11',
   columns: [], hiddenColumnKeys: [],

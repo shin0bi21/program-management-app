@@ -9,6 +9,7 @@ import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
 import useTaskTableData from './hooks/useTaskTableData';
 
 interface TaskTableProps {
+  records: Readonly<Record<string, Task>>;
   queryKey: readonly unknown[];
   columns: TableColumnDef<Task>[];
   hiddenColumnKeys: string[];
@@ -23,11 +24,16 @@ interface TaskTableProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays filtered task membership resolved through the page's saved records.
+ * @param props - Main records, table controls, selection, and page-message reporting.
+ * @example <TaskTable records={records} {...tableProps} />
+ */
 export default function TaskTable({
-  queryKey, columns, hiddenColumnKeys, filters, today, sorting, columnWidths,
+  records, queryKey, columns, hiddenColumnKeys, filters, today, sorting, columnWidths,
   selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: TaskTableProps) {
-  const query = useTaskTableData(queryKey, filters, sorting, today);
+  const query = useTaskTableData(queryKey, filters, sorting, today, records);
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   const hasFilters = filters.staffIds.length > 0
     || filters.programIds.length > 0

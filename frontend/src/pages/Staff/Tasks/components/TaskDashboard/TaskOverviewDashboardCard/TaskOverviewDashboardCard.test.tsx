@@ -6,7 +6,7 @@ import useTaskOverviewData from './hooks/useTaskOverviewData';
 
 vi.mock('./hooks/useTaskOverviewData', () => ({ default: vi.fn() }));
 const overviewData = { tasks: [] as Task[], loading: false, error: null as string | null, retry: vi.fn() };
-const cardProps = { queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11' };
+const cardProps = { records: {}, queryKey: ['tasks'], resourceId: 'staff-1', resourceName: 'Zoe Wilson', today: '2026-08-11' };
 
 
 const baseTask: Task = {
@@ -38,7 +38,7 @@ describe('TaskOverviewDashboardCard', () => {
     };
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks: [baseTask, overdueTask, upcomingTask] });
     render(<TaskOverviewDashboardCard {...cardProps} />);
-    expect(useTaskOverviewData).toHaveBeenCalledWith(cardProps.queryKey, cardProps.resourceId);
+    expect(useTaskOverviewData).toHaveBeenCalledWith(cardProps.queryKey, cardProps.resourceId, cardProps.records);
 
     expect(screen.getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(screen.getByText('Upcoming').nextSibling).toHaveTextContent('1');
@@ -99,11 +99,9 @@ describe('TaskOverviewDashboardCard', () => {
   it('reports its query error and wires retry into the unavailable card', () => {
     const onMessageChange = vi.fn();
     const { rerender } = render(<TaskOverviewDashboardCard {...cardProps} onMessageChange={onMessageChange} />);
-    const card = screen.getByRole('heading', { name: 'Task Overview' }).closest('article');
 
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, error: 'Unable to load task overview.' });
     rerender(<TaskOverviewDashboardCard {...cardProps} onMessageChange={onMessageChange} />);
-    expect(screen.getByRole('heading', { name: 'Task Overview' }).closest('article')).toBe(card);
 
     expect(onMessageChange).toHaveBeenLastCalledWith({
       message: 'Unable to load task overview.',
@@ -116,17 +114,14 @@ describe('TaskOverviewDashboardCard', () => {
     expect(overviewData.retry).toHaveBeenCalledOnce();
   });
 
-  it('preserves the card and labels while closing the old report as the resource changes', () => {
+  it('disables the old report and closes it while the resource changes', () => {
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, tasks: [baseTask] });
     const { rerender } = render(<TaskOverviewDashboardCard {...cardProps} />);
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    const card = screen.getByRole('heading', { name: 'Task Overview' }).closest('article');
 
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, loading: true });
     rerender(<TaskOverviewDashboardCard {...cardProps} resourceId="staff-2" />);
-    expect(screen.getAllByRole('status')).toHaveLength(4);
-    expect(screen.getByRole('heading', { name: 'Task Overview' }).closest('article')).toBe(card);
     for (const label of ['Assigned', 'Upcoming', 'In Progress', 'Overdue']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }

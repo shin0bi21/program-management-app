@@ -1,4 +1,4 @@
-import { taskStore, getTaskSortValue } from '../../taskStore';
+import { taskData, getTaskSortValue } from '../data/useTaskData';
 import type { RecordListIndex } from '../../../../../query/createRecordStore';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,12 +19,14 @@ vi.mock('../../../Hours/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
 
+/** Supplies controlled async completion. @example const request = deferred<Task>() // resolve after starting the action */
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(done => { resolve = done; });
   return { promise, resolve };
 }
 
+/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
 function renderActions(client = createTestQueryClient()) {
   const onTaskRemoved = vi.fn();
   const result = renderHook(() => useTaskActions({
@@ -69,7 +71,7 @@ describe('useTaskActions', () => {
       startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
     });
     expect(updateTaskState).toHaveBeenCalledWith('task-1', 'cancelled');
-    expect(taskStore.get(rendered.client, task.id)).toEqual(cancelled);
+    expect(taskData.get(rendered.client, task.id)).toEqual(cancelled);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
     expect(returnedTask).toEqual(moved);
@@ -89,7 +91,7 @@ describe('useTaskActions', () => {
     });
 
     expect(rendered.result.current.actionError).toBe('Unable to resize task.');
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(returnedTask).toBeNull();
   });
@@ -118,7 +120,7 @@ describe('useTaskActions', () => {
     });
 
     expect(rendered.result.current.isTaskPending(task.id)).toBe(false);
-    expect(taskStore.get(rendered.client, task.id)).toMatchObject({ startDate: '2026-08-11', dueDate: '2026-08-13' });
+    expect(taskData.get(rendered.client, task.id)).toMatchObject({ startDate: '2026-08-11', dueDate: '2026-08-13' });
     expect(rendered.upsertCalendarTask).toHaveBeenCalledOnce();
   });
 
@@ -145,7 +147,7 @@ describe('useTaskActions', () => {
     await act(async () => rendered.result.current.setState(task, 'completed'));
     expect(rendered.result.current.actionError).toBe('Unable to update task status.');
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
 
     await act(async () => {
       await expect(rendered.result.current.deleteTask(task)).rejects.toThrow('delete failed');
@@ -182,7 +184,7 @@ describe('useTaskActions', () => {
 
     let saving!: Promise<void>;
     act(() => { saving = rendered.result.current.logHours(input); });
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
 
     await act(async () => {
       savedHours.resolve({ ...makeHoursItem(), updatedTasks: [updatedTask] });
@@ -191,7 +193,7 @@ describe('useTaskActions', () => {
 
     expect(setHours).toHaveBeenCalledWith(input);
     expect(hoursData.get(client, 'hours-1')).toEqual(makeHoursItem());
-    expect(taskStore.get(rendered.client, task.id)).toEqual(updatedTask);
+    expect(taskData.get(rendered.client, task.id)).toEqual(updatedTask);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
     for (const key of containingKeys) {
       const data = client.getQueryData<{ pages: Array<{ rows: RecordListIndex[]; nextCursor: string }> }>(key)!;
@@ -224,7 +226,7 @@ describe('useTaskActions', () => {
     });
 
     expect(hoursData.get(rendered.client, 'hours-1')).toBeUndefined();
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
   });
 
@@ -239,7 +241,7 @@ describe('useTaskActions', () => {
       })).rejects.toThrow('Save failed');
     });
 
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
   });
@@ -252,7 +254,7 @@ describe('useTaskActions', () => {
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
-    expect(taskStore.get(rendered.client, task.id)).toEqual(task);
+    expect(taskData.get(rendered.client, task.id)).toEqual(task);
   });
 
   it('reports an unavailable task projection without rejecting the saved hours', async () => {
@@ -268,7 +270,7 @@ describe('useTaskActions', () => {
 
     expect(setHours).toHaveBeenCalledOnce();
     expect(rendered.result.current.actionError).toBe('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
-    expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
+    expect(taskData.get(rendered.client, task.id)).toBeUndefined();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
