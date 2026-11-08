@@ -28,6 +28,7 @@ import './Youth.css';
 export default function Youth() {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
+  const [notesError, setNotesError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions, role } = useAuth();
@@ -120,10 +121,7 @@ export default function Youth() {
           programsError,
           cyclesError,
           viewError,
-          profileNotes.error ? {
-            message: profileNotes.error,
-            action: { label: 'Retry', onClick: profileNotes.retry },
-          } : null,
+          notesError,
         ]}
         dashboard={<YouthDashboard
           profile={selectedProfile}
@@ -136,10 +134,7 @@ export default function Youth() {
           onViewAttendanceReport={programCycle => {
             if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
           }}
-          profileNotes={profileNotes.notes}
-          profileNotesLoading={profileNotes.loading}
-          profileNotesError={profileNotes.error}
-          onRetryProfileNotes={profileNotes.retry}
+          onNotesMessageChange={setNotesError}
           onSelectProfileNote={profileNotes.openDetails}
           onAddProfileNote={() => profileNotes.openEditor('new')}
           onEditProfileNote={profileNotes.openEditor}

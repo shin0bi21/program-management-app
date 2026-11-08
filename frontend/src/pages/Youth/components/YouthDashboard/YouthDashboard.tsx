@@ -3,6 +3,7 @@ import Button from '../../../../common/components/Button/Button';
 import PrimaryContactDashboardCard from '../../../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
 import type { YouthProfile } from '../../types';
 import type { YouthProfileNote } from '../../types';
+import type { PageMessageChangeHandler } from '../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
 import YouthNotesDashboardCard from './YouthNotesDashboardCard/YouthNotesDashboardCard';
 
@@ -17,10 +18,7 @@ interface YouthDashboardProps {
   onManageAttendance: (programCycle: AttendanceProgramCycle) => void;
   canViewAttendanceReport: boolean;
   onViewAttendanceReport: (programCycle: AttendanceProgramCycle) => void;
-  profileNotes: YouthProfileNote[];
-  profileNotesLoading: boolean;
-  profileNotesError: string | null;
-  onRetryProfileNotes?: () => void;
+  onNotesMessageChange?: PageMessageChangeHandler;
   onSelectProfileNote: (note: YouthProfileNote) => void;
   onAddProfileNote: () => void;
   onEditProfileNote: (note: YouthProfileNote) => void;
@@ -31,7 +29,7 @@ interface YouthDashboardProps {
  * Displays the selected youth's contact, attendance, and profile-note cards.
  * @param props.profile - Selected saved profile; null displays the cards' no-selection states.
  * @param props.canReadAttendance - Whether to mount the card that loads attendance summaries.
- * @param props - Available actions, note data, and permission flags supplied by the Youth page.
+ * @param props - Available actions, note error reporting, and permission flags supplied by the Youth page.
  * @example <YouthDashboard {...dashboardProps} profile={selectedProfile} />
  */
 export default function YouthDashboard({
@@ -43,10 +41,7 @@ export default function YouthDashboard({
   onManageAttendance,
   canViewAttendanceReport,
   onViewAttendanceReport,
-  profileNotes,
-  profileNotesLoading,
-  profileNotesError,
-  onRetryProfileNotes,
+  onNotesMessageChange,
   onSelectProfileNote,
   onAddProfileNote,
   onEditProfileNote,
@@ -83,16 +78,13 @@ export default function YouthDashboard({
       onViewReport={onViewAttendanceReport}
     />}
     <YouthNotesDashboardCard
-      profileNotes={profileNotes}
-      selected={selected}
+      youthId={profile?.id ?? null}
       onSelectProfileNote={onSelectProfileNote}
       canManageProfileNotes={canWrite}
       onAddProfileNote={onAddProfileNote}
       onEditProfileNote={onEditProfileNote}
       onDeleteProfileNote={onDeleteProfileNote}
-      profileNotesLoading={profileNotesLoading}
-      profileNotesError={profileNotesError}
-      onRetry={onRetryProfileNotes}
+      onMessageChange={onNotesMessageChange}
     />
   </>;
 }
