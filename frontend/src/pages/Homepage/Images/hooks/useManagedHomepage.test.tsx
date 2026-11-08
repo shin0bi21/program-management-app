@@ -96,12 +96,15 @@ describe('useManagedHomepage', () => {
     vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images: [...images, savedImage] });
 
     await act(() => result.current.saveImage(savedImage));
+    expect(queryClient.getQueryData(['homepage', 'managed', 'images'])).toEqual({
+      images: [...images, savedImage],
+    });
     await act(async () => {
       finishInitialRead({ images });
       await Promise.resolve();
     });
 
-    expect(result.current.images).toEqual([...images, savedImage]);
+    await waitFor(() => expect(result.current.images).toEqual([...images, savedImage]));
     expect(getManagedHomepage).toHaveBeenCalledTimes(2);
   });
 
