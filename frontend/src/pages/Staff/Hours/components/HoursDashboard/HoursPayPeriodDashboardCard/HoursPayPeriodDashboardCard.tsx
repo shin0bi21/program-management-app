@@ -44,18 +44,18 @@ export default function HoursPayPeriodDashboardCard({ queryKey, staff, onErrorCh
   let content: ReactNode;
   if (state.status === 'error') {
     content = <UnavailableState compact title="Pay-period hours unavailable" onRetry={state.retry} />;
-  } else if (payPeriod) {
-    content = <>
-      <strong className="dashboard-card__metric">{payPeriod.totalHours.toFixed(2)}</strong>
-      <p>{payPeriodLabel}</p>
-    </>;
+  } else if (state.status === 'unavailable') {
+    content = <p className="dashboard-card__empty">Select a staff member to view their pay-period hours.</p>;
   }
 
   return <DashboardCard
     title="Hours This Pay Period"
     loading={state.status === 'loading'}
-    loadingLabel="Loading pay-period hours…"
-    emptyMessage="Select a staff member to view their pay-period hours."
+    className="dashboard-card--short"
+    details={[
+      { label: 'Current Pay Period', value: payPeriodLabel },
+      { label: 'Hours', value: payPeriod?.totalHours.toFixed(2) },
+    ]}
     action={<HoursBreakdown
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, payPeriod?.periodStart])}

@@ -47,15 +47,18 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle,
   let content: ReactNode;
   if (state.status === 'error') {
     content = <UnavailableState compact title="Cycle hours unavailable" onRetry={state.retry} />;
-  } else if (summary) {
-    content = <strong className="dashboard-card__metric">{summary.averageHours.toFixed(2)}</strong>;
+  } else if (state.status === 'unavailable') {
+    content = <p className="dashboard-card__empty">{emptyMessage}</p>;
   }
 
   return <DashboardCard
     title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
     loading={state.status === 'loading'}
-    loadingLabel="Loading cycle hours…"
-    emptyMessage={emptyMessage}
+    className="dashboard-card--short"
+    details={[
+      { label: 'Cycle', value: cycle?.name },
+      { label: 'Biweekly Average', value: summary?.averageHours.toFixed(2) },
+    ]}
     action={<HoursBreakdown
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, cycle?.id])}
