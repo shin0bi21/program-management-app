@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
 import {
@@ -65,8 +66,13 @@ export default function useTaskActions({
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
   }, [queryClient, taskQueryKey]);
 
-  const syncTask = useCallback((task: Task) => {
-    void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+  const syncTask = useCallback((task: Task, operation: 'create' | 'update' = 'update') => {
+    if (operation === 'create') {
+      void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+    } else {
+      replaceInfiniteListRow(queryClient, taskTableQueryKey, task);
+    }
+
     onTaskSynced?.(task);
 
     calendarCacheRef.current.upsert(task);

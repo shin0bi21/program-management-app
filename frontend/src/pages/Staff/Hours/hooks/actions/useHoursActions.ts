@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import {
@@ -24,9 +25,9 @@ const EMPTY_CALENDAR_INDEX: HoursCalendarIndex = {
 };
 
 /**
- * Saves, moves, and deletes Hours rows, then refreshes affected queries.
+ * Saves Hours rows into loaded views and refreshes their related summaries.
  * @param options - Query prefixes and the callback for closing a deleted entry.
- * @example actions.moveHours({ item, date }) // updates the mounted calendar and refreshes queries
+ * @example actions.moveHours({ item, date }) // replaces the saved row in the table and mounted calendar
  */
 export default function useHoursActions({
   hoursQueryKey,
@@ -70,20 +71,26 @@ export default function useHoursActions({
   const syncTasks = useCallback((tasks: Task[] = []) => {
     if (!tasks.length) return;
 
-    void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'table'] });
+    for (const task of tasks) {
+      replaceInfiniteListRow(queryClient, [...taskQueryKey, 'table'], task);
+    }
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'hours-options'] });
   }, [queryClient, taskQueryKey]);
 
-  // Keep the mounted calendar responsive while table queries refresh.
+  // Keep the mounted calendar responsive while a save is pending.
   const applyItem = useCallback((item: HoursItem) => {
     calendarIndexRef.current.upsert(item);
   }, []);
 
-  const syncHours = useCallback((saved: HoursMutationResult) => {
+  const syncHours = useCallback((saved: HoursMutationResult, operation: 'create' | 'update' = 'update') => {
     const { updatedTasks, ...entry } = saved;
+    if (operation === 'create') {
+      void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
+    } else {
+      replaceInfiniteListRow(queryClient, hoursTableQueryKey, entry);
+    }
     applyItem(entry);
-    void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
     syncTasks(updatedTasks);
     refreshOverview();
   }, [applyItem, hoursTableQueryKey, queryClient, refreshOverview, syncTasks]);
@@ -95,7 +102,7 @@ export default function useHoursActions({
       const saved = itemId
         ? await setHours(input, itemId)
         : await setHours(input);
-      syncHours(saved);
+      syncHours(saved, itemId ? 'update' : 'create');
     } finally {
       if (itemId) {
         finishItemAction(itemId);

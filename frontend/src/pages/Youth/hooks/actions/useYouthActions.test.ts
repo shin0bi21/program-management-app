@@ -4,6 +4,7 @@ import { makeYouthProfile } from '../../../../tests/factories/youth';
 import { makeProgramSession } from '../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import { useYouthActions } from './useYouthActions';
+import * as infiniteListCache from '../../../../query/infiniteListCache';
 
 /**
  * Mounts Youth actions with isolated queries and a selected-profile callback.
@@ -19,15 +20,17 @@ function renderActions() {
 }
 
 describe('useYouthActions', () => {
-  it('refreshes table queries and updates selected context after a save', () => {
+  it('replaces saved table rows and updates selected context after a save', () => {
     const rendered = renderActions();
     const saved = makeYouthProfile({ firstName: 'Updated' });
+    const replaceRow = vi.spyOn(infiniteListCache, 'replaceInfiniteListRow');
     const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries').mockResolvedValue();
 
     act(() => rendered.result.current.reconcileSavedYouth(saved));
 
     expect(rendered.onYouthSynced).toHaveBeenCalledWith(saved);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
+    expect(replaceRow).toHaveBeenCalledWith(rendered.queryClient, ['youth', 'table'], saved);
+    expect(invalidate).not.toHaveBeenCalled();
   });
 
   it('refreshes table queries after creation', () => {
@@ -44,6 +47,7 @@ describe('useYouthActions', () => {
     const rendered = renderActions();
     const youth = makeYouthProfile();
     const session = makeProgramSession();
+    const replaceRow = vi.spyOn(infiniteListCache, 'replaceInfiniteListRow');
     const invalidate = vi.spyOn(rendered.queryClient, 'invalidateQueries').mockResolvedValue();
 
     act(() => rendered.result.current.reconcileAttendance({
@@ -52,8 +56,10 @@ describe('useYouthActions', () => {
     }));
 
     expect(rendered.onYouthSynced).toHaveBeenCalledWith(youth);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(replaceRow).toHaveBeenCalledWith(rendered.queryClient, ['youth', 'table'], youth);
+    expect(replaceRow).toHaveBeenCalledWith(rendered.queryClient, ['sessions', 'table'], session);
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', session.id, 'roster'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary', youth.id] });
