@@ -12,6 +12,14 @@ interface ProgramCycleStatus {
   error: string | null;
 }
 
+/**
+ * Builds program columns from current assignment status and permitted row actions.
+ * @param onEdit - Opens the saved program selected from an action cell.
+ * @param onManageCycles - Opens cycle assignment editing for that program.
+ * @param canWrite - Whether program edit actions are available.
+ * @param status - Current aggregate rows and their loading/failure state.
+ * @example useProgramTable(edit, manageCycles, true, status).columns
+ */
 export default function useProgramTable(
   onEdit: (program: Program) => void,
   onManageCycles: (program: Program) => void,
@@ -71,7 +79,11 @@ export default function useProgramTable(
     } satisfies TableColumnDef<Program>] : []),
   ], [onEdit, onManageCycles, canWrite]);
 
-  const columns = useMemo(() => [...programColumns.filter(column => column.id !== 'actions'), statusColumn, ...programColumns.filter(column => column.id === 'actions')], [programColumns, statusColumn]);
+  const columns = useMemo(() => {
+    const fields = programColumns.filter(column => column.id !== 'actions');
+    const actions = programColumns.filter(column => column.id === 'actions');
+    return [...fields, statusColumn, ...actions];
+  }, [programColumns, statusColumn]);
 
   return { columns };
 }

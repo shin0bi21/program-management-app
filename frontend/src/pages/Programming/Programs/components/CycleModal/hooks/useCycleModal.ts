@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { setProgramCycle, type SetCycleResult } from '../../../api/cycles.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
@@ -17,11 +17,16 @@ interface CycleInput {
 interface UseCycleModalOptions {
   isOpen: boolean;
   cycle: ProgramCycle | null;
-  programs: Program[];
+  programs: ProgramReference[];
   programsReady?: boolean;
   onSaved: (result: SetCycleResult, operation: 'create' | 'update') => void | Promise<void>;
 }
 
+/**
+ * Initializes the open cycle's assignment draft from current program choices and saves its form values.
+ * @param options - Open/edit target, program reference choices, readiness, and saved-result callback.
+ * @example useCycleModal({ isOpen: true, cycle, programs, onSaved }).selectedProgramIds
+ */
 export default function useCycleModal({ isOpen, cycle, programs, programsReady = true, onSaved }: UseCycleModalOptions) {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');

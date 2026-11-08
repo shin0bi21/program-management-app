@@ -2,15 +2,12 @@ import { createQueryClientWrapper, createTestQueryClient } from '../../../../../
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getCycleReferences } from '../../../../../common/features/referenceData/referenceData.api';
-import { getPrograms } from '../../../../../common/features/programs/programs.api';
+import { getCycleReferences, getProgramReferences } from '../../../../../common/features/referenceData/referenceData.api';
 import useProgramsData from './useProgramsData';
 
 vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(),
-}));
-vi.mock('../../../../../common/features/programs/programs.api', () => ({
-  getPrograms: vi.fn(),
+  getProgramReferences: vi.fn(),
 }));
 
 const cycle = {
@@ -24,7 +21,7 @@ const cycle = {
 describe('useProgramsData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getPrograms).mockResolvedValue([]);
+    vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getCycleReferences).mockResolvedValue([cycle]);
   });
 
@@ -33,7 +30,7 @@ describe('useProgramsData', () => {
 
     await waitFor(() => expect(result.current.cycles).toEqual([cycle]));
     expect(result.current.cyclesLoading).toBe(false);
-    expect(getPrograms).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
+    expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
 
     act(() => result.current.removeCycle(cycle.id));
     await waitFor(() => expect(result.current.cycles).toEqual([]));
@@ -46,7 +43,7 @@ describe('useProgramsData', () => {
     const { result } = renderHook(() => useProgramsData(), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     await waitFor(() => expect(result.current.cyclesError).toBe('Cycle service unavailable'));
-    await act(async () => result.current.refreshCycles());
+    await act(async () => result.current.retryCycles());
 
     await waitFor(() => expect(result.current.cycles).toEqual([cycle]));
     expect(result.current.cyclesError).toBe('');

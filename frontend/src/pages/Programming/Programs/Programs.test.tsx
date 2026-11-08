@@ -15,6 +15,7 @@ vi.mock('./api/programCycleAssignments.api', () => ({ getProgramCycleAssignments
 
 const programmingApi = vi.hoisted(() => ({
   getCycleReferences: vi.fn(),
+  getProgramReferences: vi.fn(),
   getCycleList: vi.fn(),
   setProgramCycle: vi.fn(),
   deleteProgramCycle: vi.fn(),
@@ -29,15 +30,8 @@ const programState = vi.hoisted<{ programs: Program[] }>(() => ({
 }));
 
 vi.mock('./api/cycles.api', () => programmingApi);
-vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: programmingApi.getCycleReferences }));
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: programmingApi.getCycleReferences, getProgramReferences: programmingApi.getProgramReferences }));
 vi.mock('./api/programs.api', () => programsApi);
-vi.mock('../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({
-    programs: programState.programs,
-    loading: false,
-    error: null,
-  }),
-}));
 
 const auth = vi.hoisted(() => ({ role: 'project_manager', permissions: [] as string[] }));
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
@@ -64,6 +58,7 @@ describe('Programs', () => {
     programState.programs = [{
       id: 'program-1', name: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }];
+    programmingApi.getProgramReferences.mockImplementation(async () => programState.programs.map(({ id, name }) => ({ id, name })));
     programsApi.getProgramList.mockImplementation(async () => ({ rows: programState.programs, nextCursor: null }));
     programmingApi.getCycleList.mockResolvedValue({ rows: [{
       id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
@@ -108,6 +103,7 @@ describe('Programs', () => {
     await user.click(await screen.findByText('Soft Skills'));
     expect(await screen.findByRole('heading', { name: 'Soft Skills - Fall 2026 Overview' })).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', {}, { signal: expect.any(AbortSignal) });
     await user.click(screen.getByRole('button', { name: 'Manage Roster' }));
     expect(screen.getByRole('dialog', { name: 'Roster for Fall 2026' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
@@ -121,7 +117,8 @@ describe('Programs', () => {
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
 
     await user.click(await screen.findByText('Soft Skills'));
-    await user.click(await screen.findByRole('button', { name: 'Manage Roster' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Manage Roster' }));
     expect(screen.getByRole('dialog', { name: 'Roster for Fall 2026' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add Program' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage Cycles' })).not.toBeInTheDocument();

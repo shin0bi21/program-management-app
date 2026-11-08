@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LeadModal from './LeadModal';
+import type { Lead } from '../../types';
 
 const createLead = vi.fn();
 const updateLead = vi.fn();
@@ -8,10 +9,6 @@ const updateLead = vi.fn();
 vi.mock('../../leads.api', () => ({
   createLead: (...args: unknown[]) => createLead(...args),
   updateLead: (...args: unknown[]) => updateLead(...args),
-}));
-
-vi.mock('../../../../common/features/programs/hooks/usePrograms', () => ({
-  usePrograms: () => ({ programs: [{ id: 'program-1', name: 'Future Ready' }], setPrograms: vi.fn(), loading: false, error: '' }),
 }));
 
 vi.mock('../../../../auth/authContext', () => ({
@@ -52,9 +49,9 @@ describe('LeadModal', () => {
   });
 
   it('prefills and updates an existing Lead', async () => {
-    const lead = {
+    const lead: Lead = {
       id: 'lead-1', origin: 'internal' as const, submittedByRole: 'staff' as const, convertedYouthId: null,
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Test School',
+      youthFirstName: 'Avery', youthLastName: 'Outreach', dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, age: 14, school: 'Test School',
       recommendedProgramId: null, recommendedProgram: null,
       contactPhoneNumber: '416-555-0142',
       contactRelationship: 'guardian' as const, discoverySource: 'online' as const, notes: null,
