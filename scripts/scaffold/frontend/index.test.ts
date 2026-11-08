@@ -1,3 +1,10 @@
+/**
+ * Verifies scaffold plans and generated syntax in an isolated temporary repository.
+ * Flow:
+ * 1. Create the temporary frontend root and import the configured generator.
+ * 2. Exercise preview, generation, ownership, validation, and overwrite contracts.
+ * 3. Parse generated sources and verify their data-ownership wiring.
+ */
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,10 +18,20 @@ mkdirSync(join(repoRoot, 'frontend/src'), { recursive: true });
 process.env.SCAFFOLD_REPO_ROOT = repoRoot;
 const { scaffoldFrontend } = await import('./index.ts');
 
+/**
+ * Reads one generated source from the isolated scaffold repository.
+ * @param relativePath - Planned repository-relative output path.
+ * @example read('frontend/src/pages/Example/Example.tsx') // generated source
+ */
 function read(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), 'utf8');
 }
 
+/**
+ * Verifies generated source has no TypeScript syntax diagnostics.
+ * @param relativePath - Generated source to parse as its declared file extension.
+ * @example assertParses('frontend/src/pages/Example/Example.tsx')
+ */
 function assertParses(relativePath: string): void {
   const result = ts.transpileModule(read(relativePath), {
     compilerOptions: {
@@ -29,6 +46,12 @@ function assertParses(relativePath: string): void {
   assert.deepEqual(errors.map(diagnostic => ({ code: diagnostic.code, message: diagnostic.messageText })), []);
 }
 
+/**
+ * Verifies required outline phases appear in their intended reading order.
+ * @param source - Generated source containing each marker once.
+ * @param markers - Required phase labels in expected order.
+ * @example assertOrdered('load then render', ['load', 'render'])
+ */
 function assertOrdered(source: string, markers: string[]): void {
   const positions = markers.map(marker => source.indexOf(marker));
   assert.equal(positions.every(position => position >= 0), true);
@@ -58,10 +81,20 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.equal(existsSync(join(repoRoot, 'frontend/src/pages/Temporary/ScaffoldPage/components')), false);
   assert.match(read(files[0]), /import useScaffoldPageData from '\.\/hooks\/data\/useScaffoldPageData'/);
   assert.match(read(files[0]), /import PageContainer from/);
-  assertOrdered(read(files[0]), ['Permissions and application services', 'useScaffoldPageData();', 'Saved preferences']);
+  assertOrdered(read(files[0]), ['Permissions and application services', 'const data = useScaffoldPageData();', 'Saved preferences']);
   assert.match(read(files[0]), /<PageContainer[\s\S]*messages={pageMessages}/);
   assert.doesNotMatch(read(files[0]), /<PageHeader|<PageBody|<PageMessageOverlay|<main/);
   assert.match(read(files[2]), /export default function useScaffoldPageData/);
+  assert.match(read(files[2]), /createRecordStore<ScaffoldPageRecord>/);
+  assert.match(read(files[2]), /return { records: scaffoldPageData.useRecords\(\) }/);
+  assert.match(read(files[2]), /Replace this ID-only scaffold with the complete domain API record type/);
+  assert.match(read(files[2]), /Supply the actual server-compatible sort projection/);
+  assert.doesNotMatch(files.join('\n'), /Store\.ts|ReferenceData/);
+  assert.match(read(files[2]), /Compose required page-wide reference hooks once/);
+  assert.match(read(files[0]), /Consume the main data hook's reference results/);
+  assert.match(read(files[3]), /required reference rows with their loading and error states/);
+  assert.match(read(files[3]), /domain inputs and enabled gates to composed reference hooks/);
+  assert.match(read(files[0]), /Pass data to table\/calendar components and dashboard cards/);
   assert.match(read(files[3]), /describe\('useScaffoldPageData'/);
   assert.match(read(files[0]), /Permissions and application services/);
   assert.match(read(files[0]), /Saved preferences, when this page has durable controls/);
@@ -82,6 +115,19 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.match(read(files[1]), /applies search and filters to each active data view/);
   assert.doesNotMatch(read(files[1]), /first search change|sorting|resizing|pagination/);
   files.forEach(assertParses);
+});
+
+test('isolates same-named page record and list caches across route families', () => {
+  const staffFiles = scaffoldFrontend(['page', 'Staff/Schedules']);
+  const youthFiles = scaffoldFrontend(['page', 'Youth/Schedules']);
+  const staffData = read(staffFiles[2]);
+  const youthData = read(youthFiles[2]);
+
+  assert.match(staffData, /queryKey: \['staff', 'schedules', 'records'\]/);
+  assert.match(staffData, /listKey: \['staff', 'schedules', 'table'\]/);
+  assert.match(youthData, /queryKey: \['youth', 'schedules', 'records'\]/);
+  assert.match(youthData, /listKey: \['youth', 'schedules', 'table'\]/);
+  [...staffFiles, ...youthFiles].forEach(assertParses);
 });
 
 test('creates a non-trivial modal workflow in page, family-common, and both feature owner forms', () => {
@@ -114,6 +160,16 @@ test('creates focused table, calendar, and dashboard owners under page component
   assert.equal(tableFiles.length, 4);
   assert.equal(calendarFiles.length, 2);
   assert.equal(dashboardFiles.length, 2);
+  assert.equal(tableFiles[2], 'frontend/src/pages/Temporary/Presets/components/ExampleTable/hooks/useExampleTableData.ts');
+  assert.match(read(tableFiles[0]), /from '.\/hooks\/useExampleTableData'/);
+  assert.match(read(tableFiles[0]), /useExampleTableData\(data\)/);
+  assert.match(read(tableFiles[2]), /import type { PresetsData }/);
+  assert.match(read(tableFiles[2]), /RecordListIndex/);
+  assert.match(read(tableFiles[2]), /presetsData.finishRead/);
+  assert.doesNotMatch(read(tableFiles[2]), /import usePresetsData/);
+  assert.match(read(calendarFiles[0]), /Receive main records\/references through data/);
+  assert.match(read(calendarFiles[0]), /presetsData.finishRead/);
+  assert.match(read(calendarFiles[1]), /requested range, and AbortSignal/);
   assert.match(read(tableFiles[1]), /renders domain cell values/);
   assert.match(read(tableFiles[1]), /selected record and its selection event/);
   assert.doesNotMatch(read(tableFiles[1]), /it\.todo\('.*(?:sort|resiz|paginat|eligib)/);
@@ -122,6 +178,11 @@ test('creates focused table, calendar, and dashboard owners under page component
   assert.match(read(calendarFiles[1]), /TimelineCalendar tests retain generic/);
   assert.match(read(dashboardFiles[1]), /Cards own private queries/);
   assert.match(read(dashboardFiles[0]), /return \(\s*<>/);
+  assert.match(read(dashboardFiles[0]), /selectedId: string \| null/);
+  assert.match(read(dashboardFiles[0]), /queries keyed by selectedId/);
+  assert.match(read(dashboardFiles[0]), /resource-summary cards may be independent/);
+  assert.doesNotMatch(read(dashboardFiles[0]), /if \(!selectedId\)|if \(!selectedRecord\)/);
+  assert.match(read(dashboardFiles[0]), /DashboardData only for queries shared by sibling cards/);
   assert.doesNotMatch(read(dashboardFiles[0]), /<section|<div/);
   [...tableFiles, ...calendarFiles, ...dashboardFiles].forEach(assertParses);
 });
@@ -190,7 +251,7 @@ test('scaffolds a calendar page with separate page, data, and calendar test owne
   ]);
   assert.deepEqual(pageFiles.map(read), pageContents);
   assert.match(read(pageFiles[1]), /shares selected context across page views/);
-  assert.match(read(pageFiles[3]), /forwards request inputs and AbortSignal/);
-  assert.match(read(calendarFiles[1]), /forwards the complete page filters and requested range/);
+  assert.match(read(pageFiles[3]), /server-compatible values/);
+  assert.match(read(calendarFiles[1]), /forwards the complete page filters, requested range, and AbortSignal/);
   [...pageFiles, ...calendarFiles].forEach(assertParses);
 });

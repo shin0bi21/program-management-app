@@ -11,10 +11,10 @@ The `page` preset targets authenticated collection routes using
 
 | Command after `npm run scaffold:frontend --` | Generated files |
 |---|---|
-| `page <PagePath>` | Route component, page-data hook, and their tests |
-| `table <owner-path> <NameTable>` | Table component, collection-data hook, and their tests |
+| `page <PagePath>` | Route component, main record-data owner, and their tests |
+| `table <owner-path> <NameTable>` | Table component, component-owned table-data hook, and their tests |
 | `modal <owner-path> <NameModal>` | Form component, workflow hook, and their tests |
-| `calendar <owner-path> <NameCalendar>` | Calendar component and its test |
+| `calendar <owner-path> <NameCalendar>` | Calendar range/buffer adapter and its test |
 | `dashboard <owner-path> <NameDashboard>` | Dashboard component and its test |
 
 ### Path and Name Requirements
@@ -35,9 +35,10 @@ The `page` preset targets authenticated collection routes using
    ```
 
 2. Check the listed paths, then remove `--dry-run` to generate the files.
-3. Replace reference-query placeholders in the page-data hook. Remove the hook and its test if no page-wide reference data is needed.
-4. Add table, calendar, dashboard, or modal presets only as needed.
-5. Connect generated components to their parent and register the route; presets do neither.
+3. Replace the ID-only record placeholder and unfinished sort projection in `hooks/data/use<Domain>Data.ts` with the complete domain API type and server-compatible ordering. Compose required page-wide reference lookups in this main hook.
+4. Pass the main hook's records and reference context down to views and dashboard cards. Descendant data hooks consume this context instead of repeating page reference queries.
+5. Add table, calendar, dashboard, or modal presets only as needed.
+6. Connect generated components to their parent and register the route; presets do neither.
 
 Every preset refuses to overwrite existing files. If a destination exists, choose a new name or edit the existing owner.
 
@@ -67,10 +68,11 @@ pages/Youth/Placements/
 ## Complete Generated Outlines
 
 1. Replace applicable prompts with domain APIs, permission rules, and record types; remove unused phases.
-2. For calendars, complete the range-loading, buffer, error, cache, display, and interaction prompts.
-3. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
-4. Complete generated `it.todo` outlines following [Testing](../workflows/delivery/testing.md#scaffold-implementation-and-tests-together).
-5. Document completed functions using the [design recipe](../workflows/documentation.md).
+2. Implement table requests in the component's `hooks/use<Domain>TableData` hook using the supplied page context. Keep the calendar range adapter and buffer with its component, extracting a private data hook when needed. Publish complete records through the main data owner; retain only membership, ordering, and range placement in view indexes.
+3. Pass selected IDs to dashboard cards for their focused summary or child queries. Read existing record fields from the supplied page context. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
+4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
+5. Complete generated `it.todo` outlines following [Testing](../workflows/delivery/testing.md#scaffold-implementation-and-tests-together).
+6. Document completed functions using the [design recipe](../workflows/documentation.md).
 
 ## Maintain the Pattern
 
