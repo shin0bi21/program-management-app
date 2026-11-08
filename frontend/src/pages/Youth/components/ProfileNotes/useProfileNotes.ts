@@ -1,14 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   deleteYouthProfileNote,
-  getYouthProfileNotes,
 } from '../../youth.api';
 import type { YouthProfileNote } from '../../types';
 import { getErrorMessage } from '../../../../http/errors';
 
-const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;
+/**
+ * Identifies the saved profile notes for one youth.
+ * @param youthId - Selected youth ID, or null before a selection is made.
+ * @example profileNotesQueryKey('youth-1') // ['youth-profile-notes', 'youth-1']
+ */
+export const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;
 
+/**
+ * Owns page-spanning profile-note dialogs and saved-note cache updates.
+ * @param selectedYouthId - Current selection used by dashboard actions; row actions may supply another ID.
+ * @example useProfileNotes(selectedYouthId).openEditor('new', row.id)
+ */
 export default function useProfileNotes(selectedYouthId: string | null) {
   const queryClient = useQueryClient();
   const [editorTarget, setEditorTarget] = useState<{
@@ -19,15 +28,6 @@ export default function useProfileNotes(selectedYouthId: string | null) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-
-  const query = useQuery({
-    queryKey: profileNotesQueryKey(selectedYouthId),
-    queryFn: ({ signal }) => {
-      if (!selectedYouthId) throw new Error('A selected youth profile is required to load profile notes');
-      return getYouthProfileNotes(selectedYouthId, { signal });
-    },
-    enabled: selectedYouthId !== null,
-  });
 
   useEffect(() => {
     setEditorTarget(current => current?.youthId === selectedYouthId ? current : null);
@@ -96,10 +96,6 @@ export default function useProfileNotes(selectedYouthId: string | null) {
   }, [queryClient, selectedNote]);
 
   return {
-    notes: query.data ?? [],
-    loading: query.isLoading,
-    error: query.error ? 'Could not load profile notes' : null,
-    retry: query.refetch,
     editorTarget,
     selectedNote,
     confirmingDelete,

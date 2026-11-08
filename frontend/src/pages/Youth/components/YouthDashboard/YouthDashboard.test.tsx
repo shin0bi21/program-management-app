@@ -1,8 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithQueryClient as render } from '../../../../tests/queryClientTestUtils';
 import { describe, expect, it, vi } from 'vitest';
 
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthDashboard from './YouthDashboard';
+
+vi.mock('../../youth.api', () => ({ getYouthProfileNotes: vi.fn().mockResolvedValue([]) }));
 
 const profile = makeYouthProfile({
   contacts: [{
@@ -24,9 +27,6 @@ describe('YouthDashboard', () => {
       onManageAttendance={vi.fn()}
       canViewAttendanceReport={false}
       onViewAttendanceReport={vi.fn()}
-      profileNotes={[]}
-      profileNotesLoading={false}
-      profileNotesError={null}
       onSelectProfileNote={vi.fn()}
       onAddProfileNote={vi.fn()}
       onEditProfileNote={vi.fn()}
