@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import HoursCalendar from './HoursCalendar';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getHoursItem, writeHoursItem } from '../../hoursItemStore';
+import { hoursData } from '../../hooks/data/useHoursData';
 
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type {
@@ -69,6 +69,13 @@ function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
   });
 }
 
+
+/** Supplies the page-owned snapshot to the calendar while testing its real range query. */
+function CalendarWithRecords(props: Omit<Parameters<typeof HoursCalendar>[0], 'records'>) {
+  const records = hoursData.useRecords();
+  return <HoursCalendar {...props} records={records} />;
+}
+
 function renderCalendar({
   data = [],
   resources = [resource],
@@ -101,7 +108,7 @@ function renderCalendar({
     current: { upsert: vi.fn(), remove: vi.fn() },
   };
   const result = renderWithQueryClient(
-      <HoursCalendar
+      <CalendarWithRecords
         resources={resources}
         filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
         canWrite={canWrite}
@@ -149,14 +156,14 @@ describe('HoursCalendar', () => {
     expect(signal?.aborted).toBe(true);
   });
 
-  it('removes a moved or saved entry when its resolved cycle is outside the active selection', () => {
+  it('removes a moved or saved entry when its resolved cycle is outside the active selection', async () => {
     const { calendarIndexRef, queryClient } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
     const item = buildItem({ cycleId: 'cycle-1', date: '2026-08-10' });
     act(() => {
-      writeHoursItem(queryClient, item, ['hours', 'table']);
+      hoursData.write(queryClient, item);
       calendarIndexRef.current.upsert(item);
     });
-    expect(calendarState.props!.items).toEqual({ 'staff-1': [item] });
+    await waitFor(() => expect(calendarState.props!.items).toEqual({ 'staff-1': [item] }));
 
     act(() => calendarIndexRef.current.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
     expect(calendarState.props!.items).toEqual({});
@@ -228,10 +235,10 @@ describe('HoursCalendar', () => {
     await initializeCalendar(periods);
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
 
-    act(() => writeHoursItem(queryClient, { ...item, note: 'Edited from table', hours: 3 }, ['hours', 'table']));
+    act(() => hoursData.write(queryClient, { ...item, note: 'Edited from table', hours: 3 }));
 
     await waitFor(() => expect(calendarState.props!.items!['staff-1']![0].note).toBe('Edited from table'));
-    expect(calendarState.props!.items!['staff-1']![0]).toBe(getHoursItem(queryClient, item.id));
+    expect(calendarState.props!.items!['staff-1']![0]).toBe(hoursData.get(queryClient, item.id));
     expect(getHoursCalendarData).toHaveBeenCalledOnce();
   });
 

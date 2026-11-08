@@ -7,7 +7,7 @@ import { deleteTask, updateTaskPlacement, updateTaskState } from '../../tasks.ap
 import type { Task } from '../../types';
 import { setHours } from '../../../Hours/hours.api';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
-import { getHoursItem } from '../../../Hours/hoursItemStore';
+import { hoursData } from '../../../Hours/hooks/data/useHoursData';
 import { makeTask } from '../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import useTaskActions from './useTaskActions';
@@ -190,7 +190,7 @@ describe('useTaskActions', () => {
     });
 
     expect(setHours).toHaveBeenCalledWith(input);
-    expect(getHoursItem(client, 'hours-1')).toEqual(makeHoursItem());
+    expect(hoursData.get(client, 'hours-1')).toEqual(makeHoursItem());
     expect(taskStore.get(rendered.client, task.id)).toEqual(updatedTask);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
     for (const key of containingKeys) {
@@ -223,7 +223,7 @@ describe('useTaskActions', () => {
       await saving;
     });
 
-    expect(getHoursItem(rendered.client, 'hours-1')).toBeUndefined();
+    expect(hoursData.get(rendered.client, 'hours-1')).toBeUndefined();
     expect(taskStore.get(rendered.client, task.id)).toBeUndefined();
     expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
   });

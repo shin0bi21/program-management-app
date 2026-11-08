@@ -36,22 +36,24 @@ export interface HoursReferenceData {
   types: Array<{ value: HoursItemType; label: string }>;
 }
 
-export interface HoursDashboardData {
-  payPeriod: {
-    periodStart: string;
-    periodEnd: string;
-    totalHours: number;
-    breakdown: Array<{ label: string; hours: number }>;
-  };
-  biweeklyAverage: {
-    periodCount: number;
-    averageHours: number;
-    breakdown: Array<{ label: string; hours: number }>;
-  };
+export interface HoursPayPeriodData {
+  periodStart: string;
+  periodEnd: string;
+  totalHours: number;
+  breakdown: Array<{ label: string; hours: number }>;
+}
+
+export interface HoursCycleSummaryData {
+  periodCount: number;
+  averageHours: number;
+  breakdown: Array<{ label: string; hours: number }>;
 }
 
 /**
  * Loads Hours entries within the visible and applied date ranges.
+ * @param filters - Applied staff, category, program, source, cycle, search, and date restrictions.
+ * @param range - Inclusive calendar buffer dates; requests are clipped to the applied range.
+ * @param opts - Request cancellation options.
  * @example getHoursCalendarData(filters, range, { signal })
  */
 export function getHoursCalendarData(
@@ -69,6 +71,7 @@ export function getHoursCalendarData(
 
 /**
  * Loads supported Hours categories and source types.
+ * @param opts - Request cancellation options.
  * @example getHoursReferenceData({ signal })
  */
 export function getHoursReferenceData(opts?: RequestOptions) {
@@ -77,6 +80,9 @@ export function getHoursReferenceData(opts?: RequestOptions) {
 
 /**
  * Loads one filtered, sorted Hours page.
+ * @param filters - Applied restrictions shared with the calendar.
+ * @param opts - Request cancellation options.
+ * @param pagination - Server sort field, direction, cursor, and page size.
  * @example getHoursTableData(filters, { signal }, pagination)
  */
 export function getHoursTableData(
@@ -97,7 +103,76 @@ export function getHoursTableData(
 }
 
 /**
+ * Loads one staff member's pay-period totals independently of the selected cycle.
+ * @param staffId - Staff member whose readable hours are summarized.
+ * @param date - Date within the desired pay period; null requests the current period.
+ * @param opts - Request cancellation options.
+ * @example getHoursPayPeriodData(staffId, null, { signal })
+ */
+export function getHoursPayPeriodData(staffId: string, date: string | null, opts?: RequestOptions) {
+  const params = new URLSearchParams({ staffId });
+  if (date) params.set('date', date);
+
+  return apiClient.get<HoursPayPeriodData>(`/hours/pay-period?${params}`, opts);
+}
+
+/**
+ * Loads one staff member's biweekly average within the selected cycle.
+ * @param staffId - Staff member whose readable hours are summarized.
+ * @param cycleId - Cycle used for the totals and elapsed pay-period count.
+ * @param opts - Request cancellation options.
+ * @example getHoursCycleSummaryData(staffId, cycleId, { signal })
+ */
+export function getHoursCycleSummaryData(staffId: string, cycleId: string, opts?: RequestOptions) {
+  const params = new URLSearchParams({ staffId, cycleId });
+  return apiClient.get<HoursCycleSummaryData>(`/hours/cycle-summary?${params}`, opts);
+}
+
+/**
+ * Loads assigned sessions available for logging on a date.
+ * @param staffId - Staff member whose assigned sessions are requested.
+ * @param date - Work date in YYYY-MM-DD format.
+ * @param signal - Cancels the session lookup when the caller departs.
+ * @example getHoursSessions(staffId, date, signal)
+ */
+export function getHoursSessions(staffId: string, date: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ staffId, date });
+  return apiClient.get<HoursSession[]>(`/hours/sessions?${params}`, { signal });
+}
+
+/**
+ * Creates or updates an Hours entry and returns its complete saved record.
+ * @param input - Source-specific hours command, including staff and decimal hours.
+ * @param id - Saved entry ID to update; omit it to create an entry.
+ * @example setHours(input, itemId) // omit the ID to create
+ */
+export function setHours(input: SetHoursInput, id?: string) {
+  return id
+    ? apiClient.put<SetHoursResult>(`/hours/${id}`, input)
+    : apiClient.post<SetHoursResult>('/hours', input);
+}
+
+/**
+ * Moves an Hours entry to a work date and returns its saved record.
+ * @param id - Saved entry ID to move.
+ * @param input - New work date in YYYY-MM-DD format.
+ * @example updateHoursPlacement(itemId, { date })
+ */
+export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
+  return apiClient.patch<HoursMutationResult>(`/hours/${id}/placement`, input);
+}
+
+/**
+ * Deletes an Hours entry and returns its affected task records.
+ * @param id - Saved entry ID to delete.
+ * @example deleteHours(itemId)
+ */
+export function deleteHours(id: string) { return apiClient.delete<DeleteHoursResult>(`/hours/${id}`); }
+
+/**
  * Adds selected Hours filters to the request parameters.
+ * @param params - Request parameters to update in place.
+ * @param filters - Applied restrictions; empty selections leave that field unrestricted.
  * @example applyHoursFilters(params, filters) // empty selections add no restriction
  */
 function applyHoursFilters(params: URLSearchParams, filters: HoursFilters) {
@@ -108,42 +183,3 @@ function applyHoursFilters(params: URLSearchParams, filters: HoursFilters) {
   if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
   if (filters.search) params.set('search', filters.search);
 }
-
-/**
- * Loads pay-period totals for one staff member and cycle.
- * @example getHoursDashboardData(staffId, cycleId, { signal })
- */
-export function getHoursDashboardData(staffId: string, cycleId: string, opts?: RequestOptions) {
-  const params = new URLSearchParams({ staffId, cycleId });
-  return apiClient.get<HoursDashboardData>(`/hours/dashboard?${params}`, opts);
-}
-
-/**
- * Loads assigned sessions available for logging on a date.
- * @example getHoursSessions(staffId, date, signal)
- */
-export function getHoursSessions(staffId: string, date: string, signal?: AbortSignal) {
-  const params = new URLSearchParams({ staffId, date });
-  return apiClient.get<HoursSession[]>(`/hours/sessions?${params}`, { signal });
-}
-/**
- * Creates or updates an Hours entry and returns its complete saved record.
- * @example setHours(input, itemId) // omit the ID to create
- */
-export function setHours(input: SetHoursInput, id?: string) {
-  return id
-    ? apiClient.put<SetHoursResult>(`/hours/${id}`, input)
-    : apiClient.post<SetHoursResult>('/hours', input);
-}
-/**
- * Moves an Hours entry to a work date and returns its saved record.
- * @example updateHoursPlacement(itemId, { date })
- */
-export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
-  return apiClient.patch<HoursMutationResult>(`/hours/${id}/placement`, input);
-}
-/**
- * Deletes an Hours entry and returns its affected task records.
- * @example deleteHours(itemId)
- */
-export function deleteHours(id: string) { return apiClient.delete<DeleteHoursResult>(`/hours/${id}`); }

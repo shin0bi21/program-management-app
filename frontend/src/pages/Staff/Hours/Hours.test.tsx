@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import {
   deleteHours,
-  getHoursDashboardData,
+  getHoursPayPeriodData,
+  getHoursCycleSummaryData,
   getHoursTableData,
   getHoursReferenceData,
   getHoursCalendarData,
@@ -25,7 +26,8 @@ vi.mock('./hours.api', () => ({
   getHoursCalendarData: vi.fn(),
   getHoursTableData: vi.fn(),
   getHoursReferenceData: vi.fn(),
-  getHoursDashboardData: vi.fn(),
+  getHoursPayPeriodData: vi.fn(),
+  getHoursCycleSummaryData: vi.fn(),
   getHoursSessions: vi.fn(),
   setHours: vi.fn(),
   updateHoursPlacement: vi.fn(),
@@ -54,12 +56,23 @@ const hoursReferenceChoices = {
   types: [{ value: 'regular' as const, label: 'Regular' }],
 };
 
+/**
+ * Opens the Hours route with an isolated query client and the scenario's account.
+ * @param authValue - Account permissions supplied to the route.
+ * @example renderHours() // opens Hours as the default staff member
+ */
 function renderHours(authValue: AuthContextValue = auth) {
   return renderWithQueryClient(
     <MemoryRouter><AuthContext.Provider value={authValue}><Hours /></AuthContext.Provider></MemoryRouter>,
   );
 }
 
+/**
+ * Builds a complete saved Hours record with the scenario's field overrides.
+ * @param overrides - Entry fields that differ from the default meeting.
+ * @param placement - Staff or date fields applied after the other overrides.
+ * @example hoursItem({ hours: 4 }) // four hours on the default meeting
+ */
 function hoursItem(
   overrides: Partial<HoursItem> = {},
   placement: Partial<HoursItem> = {},
@@ -67,6 +80,12 @@ function hoursItem(
   return makeHoursItem({ id: 'entry-1', date: '2026-08-09', ...overrides, ...placement });
 }
 
+/**
+ * Supplies representative pay-period and cycle responses for a route scenario.
+ * @param totalHours - Hours shown by each summary.
+ * @param label - Category represented by the breakdown.
+ * @example dashboardOverview(2) // two Meeting hours in each response
+ */
 function dashboardOverview(totalHours: number, label = 'Meeting') {
   const breakdown = totalHours ? [{ label, hours: totalHours }] : [];
   return {
@@ -77,6 +96,20 @@ function dashboardOverview(totalHours: number, label = 'Meeting') {
   };
 }
 
+/**
+ * Supplies each independent dashboard request from a scenario's existing summary fixture.
+ * @param data - Pay-period totals and cycle averages for the scenario.
+ * @example mockDashboardData(dashboardOverview(2)) // both cards show two hours
+ */
+function mockDashboardData(data: ReturnType<typeof dashboardOverview>) {
+  vi.mocked(getHoursPayPeriodData).mockResolvedValue(data.payPeriod);
+  vi.mocked(getHoursCycleSummaryData).mockResolvedValue(data.biweeklyAverage);
+}
+
+/**
+ * Opens the table with one editable saved entry for command scenarios.
+ * @example mockWritableTableEntry() // Edit and Delete target entry-1
+ */
 function mockWritableTableEntry() {
   preferenceHook.preference = {
     view: 'table',
@@ -138,7 +171,7 @@ describe('Hours', () => {
       ...hoursReferenceChoices,
     });
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [], nextCursor: null });
-    vi.mocked(getHoursDashboardData).mockResolvedValue({
+    mockDashboardData({
       payPeriod: {
         periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
       },
@@ -199,8 +232,8 @@ describe('Hours', () => {
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
-    vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
-      staffId === 'staff-2' ? dashboardOverview(4, 'Administration') : dashboardOverview(1)
+    vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
+      staffId === 'staff-2' ? dashboardOverview(4, 'Administration').payPeriod : dashboardOverview(1).payPeriod
     ));
 
     renderHours();
@@ -241,7 +274,7 @@ describe('Hours', () => {
       id: 'entry-list', programId: 'program-1', program: 'Soft Skills', category: 'program_delivery',
       categoryLabel: 'Program Delivery', hours: 2, note: 'Youth workshop',
     })], nextCursor: null });
-    vi.mocked(getHoursDashboardData).mockResolvedValue(dashboardOverview(2, 'Program Delivery'));
+    mockDashboardData(dashboardOverview(2, 'Program Delivery'));
     renderHours();
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
@@ -322,13 +355,13 @@ describe('Hours', () => {
   });
 
   // Selection and coordination.
-  it('renders both dashboard cards from the selected staff and cycle overview', async () => {
+  it('renders independent dashboard summaries for the selected staff and cycle', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
       id: 'fall-entry', cycleId: 'cycle-fall', cycle: 'Fall 2026', category: 'outreach',
       categoryLabel: 'Outreach', hours: 4, note: 'Fall cycle work',
     }, { date: '2026-09-03' })], nextCursor: null });
-    vi.mocked(getHoursDashboardData).mockResolvedValue({
+    mockDashboardData({
       payPeriod: {
         periodStart: '2026-09-02', periodEnd: '2026-09-15', totalHours: 4,
         breakdown: [{ label: 'Outreach', hours: 4 }],
@@ -348,7 +381,7 @@ describe('Hours', () => {
     expect(averageCard.closest('article')).toHaveTextContent('Biweekly Average4.00');
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
     expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
-    expect(getHoursDashboardData).toHaveBeenCalledWith(
+    expect(getHoursCycleSummaryData).toHaveBeenCalledWith(
       'staff-1',
       'cycle-fall',
       expect.anything(),
@@ -377,8 +410,8 @@ describe('Hours', () => {
         firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
       }),
     ], nextCursor: null });
-    vi.mocked(getHoursDashboardData).mockImplementation(async staffId => (
-      staffId === 'staff-2' ? dashboardOverview(7) : dashboardOverview(2, 'Program Delivery')
+    vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
+      staffId === 'staff-2' ? dashboardOverview(7).payPeriod : dashboardOverview(2, 'Program Delivery').payPeriod
     ));
     vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },

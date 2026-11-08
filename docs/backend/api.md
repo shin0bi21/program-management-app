@@ -56,7 +56,13 @@ options, and returned entries use the same `date` field; session-linked creation
 derives it from the session. Tasks use overlap of their inclusive start/due interval.
 Date filters apply before pagination, paired bounds are required, and multi-year
 ranges are supported. Hours collection `cycleIds` match selected membership;
-an empty selection is unrestricted, while its dashboard uses a single `cycleId`.
+an empty selection is unrestricted. Dashboard cards query independently:
+`/hours/pay-period` accepts `staffId` and an optional `date` (today in Toronto by
+default), using the most recent cycle start on or before that date to anchor the
+14-day pay period. It totals all entries within that period regardless of cycle
+membership. `/hours/cycle-summary` accepts `staffId` and `cycleId` and returns the
+cycle's category totals averaged over its elapsed biweekly periods. The cycle
+selection does not restrict or move the pay-period query.
 
 ## Youth Profiles and Lead Signup
 

@@ -487,7 +487,8 @@ describe('Hours API', () => {
     expect(widened.body).toEqual([]);
   });
 
-  it('returns the complete cycle-based dashboard overview for an authorized staff member', async () => {
+  it('returns independent pay-period totals and cycle averages for an authorized staff member', async () => {
+    const staff = await seedTestUser({ role: 'staff' });
     const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
         starts_on::text AS starts_on,
@@ -500,42 +501,31 @@ describe('Hours API', () => {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
         VALUES
-          (${adminId}, ${activeCycleId}, 'meeting', ${payPeriod.periodStart}::date, 2, 'Current meeting'),
-          (${adminId}, ${activeCycleId}, 'outreach', (NOW() AT TIME ZONE 'America/Toronto')::date, 3, 'Current outreach')
+          (${staff.userId}, ${activeCycleId}, 'meeting', ${payPeriod.periodStart}::date, 2, 'Current meeting'),
+          (${staff.userId}, ${activeCycleId}, 'outreach', ${cycle.currentDate}::date, 3, 'Current outreach'),
+          (${staff.userId}, ${upcomingCycleId}, 'meeting', ${cycle.currentDate}::date, 1, 'Other cycle in pay period')
       `;
 
-      const overview = await request(app)
-        .get(`/api/hours/dashboard?staffId=${adminId}&cycleId=${activeCycleId}`)
+      const periodResponse = await request(app)
+        .get(`/api/hours/pay-period?staffId=${staff.userId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      const cycleResponse = await request(app)
+        .get(`/api/hours/cycle-summary?staffId=${staff.userId}&cycleId=${activeCycleId}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(overview.status).toBe(200);
-      expect(overview.body).toEqual({
-        payPeriod: {
-          periodStart: payPeriod.periodStart,
-          periodEnd: payPeriod.periodEnd,
-          totalHours: 6,
-          breakdown: [
-            { label: 'Outreach', hours: 3 },
-            { label: 'Meeting', hours: 2 },
-            { label: 'Program Delivery', hours: 1 },
-          ],
-        },
-        biweeklyAverage: {
-          periodCount: 1,
-          averageHours: 6,
-          breakdown: [
-            { label: 'Outreach', hours: 3 },
-            { label: 'Meeting', hours: 2 },
-            { label: 'Program Delivery', hours: 1 },
-          ],
-        },
-      });
+      const periodBreakdown = [{ label: 'Meeting', hours: 3 }, { label: 'Outreach', hours: 3 }];
+      const cycleBreakdown = [{ label: 'Outreach', hours: 3 }, { label: 'Meeting', hours: 2 }];
+      expect(periodResponse.status).toBe(200);
+      expect(periodResponse.body).toEqual({ ...payPeriod, totalHours: 6, breakdown: periodBreakdown });
+      expect(cycleResponse.status).toBe(200);
+      expect(cycleResponse.body).toEqual({ periodCount: 1, averageHours: 5, breakdown: cycleBreakdown });
     } finally {
-      await sql`DELETE FROM time_entries WHERE staff_id = ${adminId} AND note IN ('Current meeting', 'Current outreach')`;
+      await sql`DELETE FROM time_entries WHERE staff_id = ${staff.userId}`;
+      await deleteTestUser(staff.userId);
     }
   });
 
-  it('keeps the current organization pay period independent of an upcoming selected cycle', async () => {
+  it('loads a requested pay period without requiring a selected cycle', async () => {
     const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
         starts_on::text AS starts_on,
@@ -543,17 +533,23 @@ describe('Hours API', () => {
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
-    const expected = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
+    const currentPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
+    const requestedPeriod = getBiweeklyPayPeriod(upcomingDate, upcomingDate);
 
-    const response = await request(app)
-      .get(`/api/hours/dashboard?staffId=${firstStaffId}&cycleId=${upcomingCycleId}`)
+    const currentResponse = await request(app)
+      .get(`/api/hours/pay-period?staffId=${firstStaffId}`)
+      .set('Authorization', `Bearer ${firstStaffToken}`);
+    const requestedResponse = await request(app)
+      .get(`/api/hours/pay-period?staffId=${firstStaffId}&date=${upcomingDate}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
-    expect(response.status).toBe(200);
-    expect(response.body.payPeriod).toEqual(expect.objectContaining(expected));
+    expect(currentResponse.status).toBe(200);
+    expect(currentResponse.body).toEqual(expect.objectContaining(currentPeriod));
+    expect(requestedResponse.status).toBe(200);
+    expect(requestedResponse.body).toEqual(expect.objectContaining(requestedPeriod));
   });
 
-  it('keeps the dashboard available when multiple cycles overlap', async () => {
+  it('keeps pay-period data available when multiple cycles overlap', async () => {
     const [overlappingCycle] = await sql<Array<{ id: string }>>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
       SELECT ${`Overlapping Hours ${Date.now()}`}, starts_on, ends_on
@@ -564,53 +560,100 @@ describe('Hours API', () => {
 
     try {
       const response = await request(app)
-        .get(`/api/hours/dashboard?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
+        .get(`/api/hours/pay-period?staffId=${firstStaffId}`)
         .set('Authorization', `Bearer ${firstStaffToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual(expect.objectContaining({
-        payPeriod: expect.any(Object),
-        biweeklyAverage: expect.any(Object),
-      }));
+      expect(response.body.totalHours).toEqual(expect.any(Number));
     } finally {
       await sql`DELETE FROM program_cycles WHERE id = ${overlappingCycle.id}`;
     }
   });
 
-  it('conceals dashboard overview data for an unreadable staff resource', async () => {
-    const response = await request(app)
-      .get(`/api/hours/dashboard?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-
-    expect(response.status).toBe(404);
-  });
-
-  it('returns overview data for a shared-readable staff resource without matching entry metadata', async () => {
-    const [entry] = await sql<Array<{ id: string }>>`
-      INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
-      VALUES (${secondStaffId}, ${activeCycleId}, 'meeting', CURRENT_DATE, 2, 'Shared resource overview')
-      RETURNING id
-    `;
-    try {
-      const response = await request(app)
-        .get(`/api/hours/dashboard?staffId=${secondStaffId}&cycleId=${activeCycleId}`)
+  it('conceals each summary for an unreadable staff resource', async () => {
+    for (const path of [
+      `/api/hours/pay-period?staffId=${unrelatedStaffId}`,
+      `/api/hours/cycle-summary?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`,
+    ]) {
+      const response = await request(app).get(path)
         .set('Authorization', `Bearer ${firstStaffToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.payPeriod.totalHours).toBe(2);
-      expect(response.body.payPeriod.breakdown).toEqual([{ label: 'Meeting', hours: 2 }]);
-    } finally {
-      await sql`DELETE FROM time_entries WHERE id = ${entry.id}`;
+      expect(response.status).toBe(404);
     }
   });
 
-  it('requires the read hours permission for dashboard overview data', async () => {
-    const token = generateToken(firstStaffId, 'staff', 'hours-no-read@test.local', []);
-    const response = await request(app)
-      .get(`/api/hours/dashboard?staffId=${firstStaffId}&cycleId=${activeCycleId}`)
-      .set('Authorization', `Bearer ${token}`);
+  it('returns shared-readable staff summaries without matching entry metadata', async () => {
+    const coworker = await seedTestUser({ role: 'staff' });
+    await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${coworker.userId}, ${programId})`;
+    try {
+      await sql`
+        INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
+        VALUES (${coworker.userId}, ${activeCycleId}, 'meeting', ${date}::date, 2, 'Shared resource overview')
+      `;
+      const periodResponse = await request(app)
+        .get(`/api/hours/pay-period?staffId=${coworker.userId}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
+      const cycleResponse = await request(app)
+        .get(`/api/hours/cycle-summary?staffId=${coworker.userId}&cycleId=${activeCycleId}`)
+        .set('Authorization', `Bearer ${firstStaffToken}`);
 
-    expect(response.status).toBe(403);
+      expect(periodResponse.status).toBe(200);
+      expect(periodResponse.body.totalHours).toBe(2);
+      expect(periodResponse.body.breakdown).toEqual([{ label: 'Meeting', hours: 2 }]);
+      expect(cycleResponse.status).toBe(200);
+      expect(cycleResponse.body.averageHours).toBe(2);
+    } finally {
+      await sql`DELETE FROM time_entries WHERE staff_id = ${coworker.userId}`;
+      await deleteTestUser(coworker.userId);
+    }
+  });
+
+  it('requires the read hours permission for each summary', async () => {
+    const token = generateToken(firstStaffId, 'staff', 'hours-no-read@test.local', []);
+    for (const path of [
+      `/api/hours/pay-period?staffId=${firstStaffId}`,
+      `/api/hours/cycle-summary?staffId=${firstStaffId}&cycleId=${activeCycleId}`,
+    ]) {
+      const response = await request(app).get(path).set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    }
+  });
+
+  it('returns empty summaries and validates their independent inputs', async () => {
+    const staff = await seedTestUser({ role: 'staff' });
+    const token = generateToken(staff.userId, 'staff', staff.email);
+    try {
+      const periodResponse = await request(app)
+        .get(`/api/hours/pay-period?staffId=${staff.userId}`)
+        .set('Authorization', `Bearer ${token}`);
+      const cycleResponse = await request(app)
+        .get(`/api/hours/cycle-summary?staffId=${staff.userId}&cycleId=${activeCycleId}`)
+        .set('Authorization', `Bearer ${token}`);
+      const missingCycle = await request(app)
+        .get(`/api/hours/cycle-summary?staffId=${staff.userId}&cycleId=00000000-0000-4000-8000-000000000000`)
+        .set('Authorization', `Bearer ${token}`);
+      const invalidDate = await request(app)
+        .get(`/api/hours/pay-period?staffId=${staff.userId}&date=2026-02-30`)
+        .set('Authorization', `Bearer ${token}`);
+      const unavailablePeriod = await request(app)
+        .get(`/api/hours/pay-period?staffId=${staff.userId}&date=0001-01-01`)
+        .set('Authorization', `Bearer ${token}`);
+      const missingCycleId = await request(app)
+        .get(`/api/hours/cycle-summary?staffId=${staff.userId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(periodResponse.status).toBe(200);
+      expect(periodResponse.body).toEqual(expect.objectContaining({ totalHours: 0, breakdown: [] }));
+      expect(cycleResponse.status).toBe(200);
+      expect(cycleResponse.body).toEqual({ periodCount: 1, averageHours: 0, breakdown: [] });
+      expect(missingCycle.status).toBe(404);
+      expect(invalidDate.status).toBe(400);
+      expect(unavailablePeriod.status).toBe(404);
+      expect(missingCycleId.status).toBe(400);
+    } finally {
+      await deleteTestUser(staff.userId);
+    }
   });
 
   it('returns read-only resource capabilities without writable rows', async () => {
@@ -866,11 +909,20 @@ describe('Hours API', () => {
     let entryId: string | undefined;
     const note = `Canonical hours ${Date.now()}`;
     const payload = { source: 'task', staffId: firstStaffId, date, hours: 2, note };
+    /**
+     * Loads an authoritative task for comparing cross-domain mutation responses.
+     * @param id - Task created by this test and readable by its staff actor.
+     * @example await taskRecord(tasks[0]) // current saved task, including logged hours
+     */
     const taskRecord = async (id: string) => {
       const result = await request(app).get(`/api/tasks/${id}`).set('Authorization', `Bearer ${firstStaffToken}`);
       expect(result.status).toBe(200);
       return result.body;
     };
+    /**
+     * Loads this test's uniquely named entry and checks table/calendar record agreement.
+     * @example await readableEntry() // the current canonical saved Hours record
+     */
     const readableEntry = async () => {
       const result = await request(app).get('/api/hours/table').query({ search: note })
         .set('Authorization', `Bearer ${firstStaffToken}`);

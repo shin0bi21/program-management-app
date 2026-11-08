@@ -18,7 +18,6 @@ import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
-import { useHoursItems } from './hoursItemStore';
 import { getTaskDashboardData } from '../Tasks/tasks.api';
 import { HOURS_TABLE_KEYS, type HoursItem, type HoursFilters } from './types';
 
@@ -41,6 +40,10 @@ const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 
+/**
+ * Composes page-owned Hours records and choices with independent body and dashboard queries.
+ * @example <Hours /> // shared table/calendar records with staff summaries
+ */
 export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
   const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
@@ -91,7 +94,7 @@ export default function Hours() {
     preferences.search.appliedValue,
   ]);
 
-  const records = useHoursItems();
+  const records = pageData.records;
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
   // Keep table action cells mounted when preferences or page data refresh.
@@ -153,6 +156,7 @@ export default function Hours() {
     ?? null;
   const hoursTable = (
     <HoursTable
+      records={records}
       queryKey={HOURS_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -170,6 +174,7 @@ export default function Hours() {
   const hoursCalendar = (
     <HoursCalendar
       key={JSON.stringify(hoursFilters)}
+      records={records}
       resources={pageData.resources}
       filters={hoursFilters}
       canWrite={canWrite}

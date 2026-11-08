@@ -8,7 +8,7 @@ import {
   updateHoursPlacement,
 } from '../../hours.api';
 import { makeTask } from '../../../../../tests/factories/task';
-import { getHoursItem, writeHoursItem } from '../../hoursItemStore';
+import { hoursData } from '../data/useHoursData';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import {
   createQueryClientWrapper,
@@ -76,7 +76,7 @@ describe('useHoursActions', () => {
 
     const old = { ...entry, hours: 1 };
     const untouched = { ...entry, id: 'untouched' };
-    writeHoursItem(rendered.client, untouched, ['hours', 'table']);
+    hoursData.write(rendered.client, untouched);
     const firstKey = ['hours', 'table', {}, { key: 'date', direction: 'asc' }];
     const secondKey = ['hours', 'table', { search: 'Planning' }, { key: 'hours', direction: 'desc' }];
     rendered.client.setQueryData(firstKey, cacheRows([{ id: old.id, sortValue: old.date }, { id: untouched.id, sortValue: untouched.date }]));
@@ -87,8 +87,8 @@ describe('useHoursActions', () => {
 
     expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
     expect(rendered.client.getQueryData(firstKey)).toEqual(cacheRows([{ id: entry.id, sortValue: entry.date }, { id: untouched.id, sortValue: untouched.date }]));
-    expect(getHoursItem(rendered.client, entry.id)).toEqual(entry);
-    expect(getHoursItem(rendered.client, untouched.id)).toEqual(untouched);
+    expect(hoursData.get(rendered.client, entry.id)).toEqual(entry);
+    expect(hoursData.get(rendered.client, untouched.id)).toEqual(untouched);
     expect(rendered.client.getQueryData(secondKey)).toEqual(cacheRows([{ id: entry.id, sortValue: entry.hours }]));
     expect(rendered.client.getQueryData(['tasks', 'table', {}, { key: 'title', direction: 'asc' }, 'today'])).toEqual(cacheRows([{ id: updatedTask.id, sortValue: getTaskSortValue(updatedTask, 'title') }]));
     expect(taskStore.get(rendered.client, updatedTask.id)).toEqual(updatedTask);
@@ -197,7 +197,7 @@ describe('useHoursActions', () => {
       [item],
     ]);
     expect(rendered.client.getQueryData(key)).toEqual(cacheRows([{ id: item.id, sortValue: item.date }]));
-    expect(getHoursItem(rendered.client, item.id)).toEqual(item);
+    expect(hoursData.get(rendered.client, item.id)).toEqual(item);
     expect(rendered.result.current.moveError).toBe(
       'Unable to move logged hours. The hours were returned to their original day.',
     );
@@ -221,7 +221,7 @@ describe('useHoursActions', () => {
       await saving;
     });
 
-    expect(getHoursItem(rendered.client, entry.id)).toBeUndefined();
+    expect(hoursData.get(rendered.client, entry.id)).toBeUndefined();
     expect(rendered.upsert).not.toHaveBeenCalled();
     expect(rendered.result.current.isItemPending(entry.id)).toBe(false);
   });

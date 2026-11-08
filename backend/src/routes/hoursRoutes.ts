@@ -4,7 +4,8 @@ import {
   handleGetHoursCalendarData,
   handleGetHoursTableData,
   handleGetHoursReferenceData,
-  handleGetHoursDashboardData,
+  handleGetHoursPayPeriodData,
+  handleGetHoursCycleSummaryData,
   handleGetHoursSessions,
   handleSetHours,
   handleUpdateHoursPlacement,
@@ -14,7 +15,8 @@ import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import {
   setHoursSchema,
-  hoursDashboardQuerySchema,
+  hoursPayPeriodQuerySchema,
+  hoursCycleSummaryQuerySchema,
   hoursTableQuerySchema,
   hoursParamsSchema,
   hoursCalendarQuerySchema,
@@ -27,7 +29,8 @@ const router = Router();
 router.get('/calendar', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursCalendarQuerySchema), asyncHandler(handleGetHoursCalendarData));
 router.get('/table', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursTableQuerySchema), asyncHandler(handleGetHoursTableData));
 router.get('/reference-data', authenticateToken, requirePermission('read:hours'), generalLimiter, asyncHandler(handleGetHoursReferenceData));
-router.get('/dashboard', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursDashboardQuerySchema), asyncHandler(handleGetHoursDashboardData));
+router.get('/pay-period', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursPayPeriodQuerySchema), asyncHandler(handleGetHoursPayPeriodData));
+router.get('/cycle-summary', authenticateToken, requirePermission('read:hours'), generalLimiter, validateRequest(hoursCycleSummaryQuerySchema), asyncHandler(handleGetHoursCycleSummaryData));
 router.get('/sessions', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(hoursSessionQuerySchema), asyncHandler(handleGetHoursSessions));
 router.post('/', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(setHoursSchema), asyncHandler(handleSetHours));
 router.put('/:id', authenticateToken, requirePermission('write:hours'), generalLimiter, validateRequest(hoursParamsSchema), validateRequest(setHoursSchema), asyncHandler(handleSetHours));
