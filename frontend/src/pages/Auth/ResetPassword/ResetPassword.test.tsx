@@ -7,6 +7,11 @@ import ResetPassword from './ResetPassword';
 
 vi.mock('../../../auth/auth.api', () => ({ resetPassword: vi.fn() }));
 
+/**
+ * Renders the password recovery page at the supplied URL.
+ * @param path - Recovery route with an optional emailed reset token.
+ * @example renderPage('/reset-password') // page with the missing-token warning
+ */
 function renderPage(path = '/reset-password?token=reset-token') {
   return render(
     <MemoryRouter
@@ -51,5 +56,6 @@ describe('ResetPassword', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('Password reset successful');
     expect(resetPassword).toHaveBeenCalledOnce();
+    expect(resetPassword).toHaveBeenCalledWith('reset-token', 'new-password');
   });
 });

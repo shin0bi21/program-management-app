@@ -23,6 +23,9 @@ flowchart TD
 
 Only active accounts may log in. Five consecutive failed password attempts lock an account for 15 minutes. A 2FA code expires after 5 minutes. Adding or reconfirming a trusted device during 2FA sets trust for 30 days.
 
+Login responses use `requiresVerification: true` when the caller must enter a
+2FA code. The frontend API, Login page, and re-login dialog use that same field.
+
 | Contract | Access token | Refresh token |
 |---|---|---|
 | Secret | `JWT_SECRET` | `REFRESH_SECRET` |
@@ -108,6 +111,11 @@ to the global error handler; middleware does not query the database directly.
 - Logout handles either token independently and tolerates expired or invalid tokens. Persistence failures propagate, and the controller clears the refresh cookie even on failure. Access-token revocation updates the local cache immediately; other processes refresh stale caches on protected requests after 60 seconds.
 
 Revocation is owned by [tokenRevocationService.ts](../../backend/src/services/auth/tokenRevocationService.ts). Logic shared by middleware and auth services belongs in services or utilities; services must not import middleware.
+
+Reset forms and requests call the replacement password `newPassword`;
+confirmation stays within frontend validation. Reset and invitation URLs carry a
+raw token, while `user_password_reset_tokens.token_hash` stores its SHA-256 digest.
+Renaming the stored column preserves existing links and historical audit records.
 
 <a id="where-to-add-a-new-permission"></a>
 

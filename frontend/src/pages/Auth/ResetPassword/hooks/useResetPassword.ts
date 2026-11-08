@@ -8,18 +8,23 @@ import { resetPassword } from '../../../../auth/auth.api';
 import { getErrorMessage } from '../../../../http/errors';
 
 interface ResetPasswordFormData {
-  password: string;
+  newPassword: string;
   confirmPassword: string;
 }
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((data) => data.newPassword === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
 }) satisfies z.ZodType<ResetPasswordFormData, ResetPasswordFormData>;
 
+/**
+ * Validates a replacement password and resets it using the token in the current URL.
+ * Returns form state and submission feedback, then redirects to login after success.
+ * @example const { form, onSubmit } = useResetPassword(); // bind the recovery form
+ */
 export const useResetPassword = () => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -44,6 +49,11 @@ export const useResetPassword = () => {
     };
   }, []);
 
+  /**
+   * Saves the validated replacement password and schedules login after success.
+   * @param data - Matching replacement and confirmation values from the form resolver.
+   * @example await onSubmit({ newPassword: 'replacement', confirmPassword: 'replacement' })
+   */
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (navigationTimerRef.current) {
       clearTimeout(navigationTimerRef.current);
@@ -58,7 +68,7 @@ export const useResetPassword = () => {
     }
 
     try {
-      await resetPassword(token, data.password);
+      await resetPassword(token, data.newPassword);
       if (!activeRef.current) return;
 
       setMessage('Password reset successful');

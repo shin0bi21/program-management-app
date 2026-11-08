@@ -14,7 +14,17 @@ vi.mock('react-router-dom', async () => ({
   useNavigate: () => navigate,
 }));
 
+/**
+ * Mounts the reset workflow with a recovery URL and Strict Mode cleanup checks.
+ * @param path - Route and optional reset-token query parameter for the test.
+ * @example renderResetPassword('/reset-password') // workflow without a token
+ */
 function renderResetPassword(path = '/reset-password?token=reset-token') {
+  /**
+   * Supplies the test route while exercising the workflow's effect cleanup.
+   * @param children - Hook test rendered inside the router.
+   * @example wrapper({ children }) // routed Strict Mode test content
+   */
   function wrapper({ children }: PropsWithChildren) {
     return <StrictMode><MemoryRouter
       initialEntries={[path]}
@@ -37,7 +47,7 @@ describe('useResetPassword', () => {
     const { result } = renderResetPassword('/reset-password');
 
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
 
@@ -50,7 +60,7 @@ describe('useResetPassword', () => {
     const { result } = renderResetPassword();
 
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
 
@@ -67,7 +77,7 @@ describe('useResetPassword', () => {
     const { result, unmount } = renderResetPassword();
 
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
     unmount();
@@ -83,11 +93,11 @@ describe('useResetPassword', () => {
     const { result } = renderResetPassword();
 
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
     act(() => vi.runAllTimers());
@@ -103,7 +113,7 @@ describe('useResetPassword', () => {
     let submission!: Promise<void>;
 
     act(() => {
-      submission = result.current.onSubmit({ password: 'new-password', confirmPassword: 'new-password' });
+      submission = result.current.onSubmit({ newPassword: 'new-password', confirmPassword: 'new-password' });
     });
     unmount();
     await act(async () => {
@@ -120,7 +130,7 @@ describe('useResetPassword', () => {
     const { result } = renderResetPassword();
 
     await act(() => result.current.onSubmit({
-      password: 'new-password',
+      newPassword: 'new-password',
       confirmPassword: 'new-password',
     }));
 

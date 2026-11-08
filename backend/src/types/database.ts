@@ -393,7 +393,7 @@ export interface UserPasswordResetTokens {
   created_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
   id: Generated<string>;
-  token: string;
+  token_hash: string;
   used_at: Timestamp | null;
   user_id: string;
 }

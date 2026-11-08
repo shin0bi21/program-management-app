@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../http/client';
 import { login, resend2FA, verify2FA } from './auth.api';
@@ -9,10 +10,10 @@ vi.mock('../http/client', () => ({
 describe('auth API', () => {
   beforeEach(() => vi.mocked(apiClient.post).mockReset());
 
-  it('maps the backend 2FA response into the frontend login contract', async () => {
+  it('returns the verification challenge directly from login', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       message: 'Verification required',
-      requires2FA: true,
+      requiresVerification: true,
       userId: 'user-1',
     });
 
@@ -47,4 +48,3 @@ describe('auth API', () => {
     );
   });
 });
-// @vitest-environment node
