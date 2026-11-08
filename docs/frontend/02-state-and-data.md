@@ -42,7 +42,7 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 Use `programId` and `cycleId` for related record identifiers, with `program` and
 `cycle` for their display values. Use the same fields in backend projections,
-API responses, shared stores, tables, and calendars. A Program or Cycle record
+API responses, queries, tables, and calendars. A Program or Cycle record
 itself keeps its own `id` and `name`. Keep display labels out of identifier fields.
 
 ### API Adapters
@@ -70,10 +70,10 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 
 ### Page Data Flow
 
-The page calls `use<Domain>Data` once for shared main records and reference
-lookups. It manages applied controls and selected IDs, then passes the required
-data and context down to the body and dashboard. Main data is the single owner
-of saved records; do not add a separate domain store module.
+The page calls `use<Domain>Data` once for shared reference lookups. It manages
+applied controls and selected context, then passes the required inputs to the
+body and dashboard. Each consuming view owns its ordinary query results or
+calendar buffer; do not add a separate normalized record store.
 
 ```text
 <Page>/
@@ -105,20 +105,15 @@ that same ID and the query's AbortSignal to the API adapter. Enable the query
 only when its required ID is present. Each card handles its own selection and
 query states; independent summary cards can query their supplied page context.
 
-- **Main data:** Own complete saved records indexed by ID, shared reference queries, and read/write reconciliation in the page data module. Reuse `query/createRecordStore.ts` internally for revision and account-lifecycle behavior when records are shared across views.
-- **Table:** Receive main data and applied controls. Own the paginated query, loading/retry state, and ordering indexes; publish fetched records through the main data owner.
-- **Calendar:** Receive the same main data and applied controls. Own range requests and buffer setup; retain range/placement indexes and publish fetched records through the main data owner.
-- **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied main records for fields already loaded.
-- **Selection and forms:** Keep selected IDs at the page. Resolve saved records through main data and keep editable drafts independent; same-ID refreshes must not reset fields or unlock pending saves.
-- **Mutations:** Write the authoritative saved record once through main data, reconcile view indexes, and update summaries separately. Protect pending work, deletion, and account clearing from late responses.
+- **Main data:** Compose page-wide reference queries, including choices used by filters and selectors. Pass these results to consumers instead of repeating the main hook.
+- **Table:** Own the paginated query, complete returned rows, loading/retry state, and ordering.
+- **Calendar:** Own range requests and the buffer of complete returned rows.
+- **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied fields that are already available. Sibling cards sharing a request use one dashboard data hook; independent requests stay with their cards.
+- **Selection and forms:** Retain the selected ID and any clicked row needed as temporary UI context. Initialize a form from supplied data for editing or empty defaults for adding. Keep its draft for the mounted form's lifetime.
+- **Mutations:** Invalidate affected query prefixes after a successful save or delete. Update the mounted calendar buffer or selected context directly when the workflow already requires it. Keep existing submission locks; do not add custom read revision or record-store synchronization machinery.
 
-View indexes preserve loaded membership and ordering until refresh. A body query
-must not call the page data hook again to duplicate shared reference requests.
-
-### Share Records Across Views
-
-Tables and calendars resolve their retained IDs through the same main records.
-Derived groups hold references to those records rather than saved copies.
+Separate queries may cache overlapping records. Use TanStack Query's ordinary
+query results and targeted invalidation to refresh their server data.
 
 ## Handle Request Failures
 
@@ -145,11 +140,9 @@ Derived groups hold references to those records rather than saved copies.
 ## Reconcile Mutations
 
 1. Use one complete backend record shape across reads and mutations; do not rebuild it from form values or create separate table/calendar records.
-2. Define cancellation, serialization, or revision rules so stale work cannot replace newer state.
-3. Account for out-of-order completion, repeated edits, rollback order, reset during loading, and deletion followed by a late response.
-4. Write the saved record once, then reconcile affected view indexes and dashboards in the owning action hook; avoid whole-page refreshes.
-5. Use [cursor-list cache helpers](../../frontend/src/query/infiniteListCache.ts) for authoritative row replacements and confirmed deletes; reconcile aggregates separately.
-6. After creation, invalidate only the list prefix unless insertion membership and position are provable in every cached variant.
+2. Forward cancellation signals through reads and keep existing mutation submission locks.
+3. After a successful mutation, invalidate affected table, dashboard, and related feature query prefixes in the owning action hook.
+4. Reconcile an existing calendar buffer or selected UI context with the authoritative saved row where needed; keep editable drafts independent of background refetches.
 
 ## Keep Application Selection with Its Domain
 

@@ -18,7 +18,6 @@ it('selects the empty message from the applied lead filters', () => {
     hasNextPage: false, loadingNextPage: false, nextPageError: '', retryNextPage: vi.fn(), loadNextPage: vi.fn(), retry: vi.fn(),
   });
   renderWithQueryClient(<LeadTable
-    records={{}}
     queryKey={['leads', 'table']}
     columns={[]}
     hiddenColumnKeys={[]}

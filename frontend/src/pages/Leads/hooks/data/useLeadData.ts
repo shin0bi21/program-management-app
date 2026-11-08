@@ -1,6 +1,4 @@
 import { useProgramReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
-import { createRecordStore } from '../../../../query/createRecordStore';
-import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { Lead, LeadSortKey } from '../../types';
 
 /**
@@ -20,26 +18,14 @@ export function getLeadSortValue(lead: Lead, key: LeadSortKey) {
   }[key];
 }
 
-export const leadData = createRecordStore<Lead>({
-  queryKey: ['leads', 'records'],
-  listKey: ['leads', 'table'],
-  getSortValue: (lead, queryKey) => {
-    const sorting = queryKey[queryKey.length - 1] as ListSort<LeadSortKey>;
-    return getLeadSortValue(lead, sorting.key);
-  },
-});
-
 /**
- * Supplies the route's current saved leads and shared program references.
- * The page passes records to selection and view children; each view owns its membership query.
- * @example const { records } = useLeadData() // resolve a selected lead by ID
+ * Supplies shared program references for lead filters and forms.
+ * @example const { programs } = useLeadData()
  */
 export default function useLeadData() {
-  const records = leadData.useRecords();
   const programs = useProgramReferences();
 
   return {
-    records,
     programs: programs.rows,
     programsLoading: programs.loading,
     programsError: programs.error,

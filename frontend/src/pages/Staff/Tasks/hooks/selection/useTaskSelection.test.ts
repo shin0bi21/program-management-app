@@ -1,21 +1,8 @@
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { taskData } from '../data/useTaskData';
-import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
 import useTaskSelection from './useTaskSelection';
-
-/**
- * Observes selection with a fresh account cache seeded with the default saved task.
- * @example renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }))
- */
-function renderHook<T, P>(callback: (props: P) => T, options?: { initialProps: P }) {
-  const client = createTestQueryClient();
-  taskData.write(client, makeTask());
-  const hook = renderHookBase(callback, { ...options, wrapper: createQueryClientWrapper(client) });
-  return { ...hook, client };
-}
 
 const resources = [
   { id: 'staff-read', firstName: 'Read', lastName: 'Only', name: 'Read Only', role: 'staff', writable: false },
@@ -26,7 +13,7 @@ const resources = [
 describe('useTaskSelection', () => {
   it('selects a task and clears task state when the resource changes directly', async () => {
     const task = makeTask();
-    const { result } = renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }));
+    const { result } = renderHook(() => useTaskSelection({ resources }));
 
     await waitFor(() => expect(result.current.selectedResourceId).toBe('staff-1'));
 
@@ -41,20 +28,18 @@ describe('useTaskSelection', () => {
     expect(result.current.selectedResource?.id).toBe('staff-2');
   });
 
-  it('follows reassignment from a shared read without a separate selection synchronization callback', async () => {
+  it('follows reassignment after a successful task action synchronizes the selection', async () => {
     const task = makeTask();
     const updated = makeTask({
       title: 'Updated workshop',
       staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
     });
-    const { result, client } = renderHook(() => useTaskSelection({ resources, records: taskData.useRecords() }));
+    const { result } = renderHook(() => useTaskSelection({ resources }));
 
     await waitFor(() => expect(result.current.selectedResourceId).toBe('staff-1'));
 
     act(() => result.current.selectTask(task));
-    act(() => taskData.finishRead(
-      client, taskData.beginRead(client), [updated], new AbortController().signal,
-    ));
+    act(() => result.current.onTaskSynced(updated));
     await waitFor(() => expect(result.current.selectedTask).toEqual(updated));
     expect(result.current.selectedResource?.id).toBe('staff-2');
 
@@ -64,7 +49,7 @@ describe('useTaskSelection', () => {
 
   it('falls back to a valid readable resource when options change', async () => {
     const { result, rerender } = renderHook(
-      ({ currentResources }) => useTaskSelection({ resources: currentResources, records: taskData.useRecords() }),
+      ({ currentResources }) => useTaskSelection({ resources: currentResources }),
       { initialProps: { currentResources: resources } },
     );
 

@@ -1,4 +1,3 @@
-import { sessionStore } from '../../sessionStore';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { ReactElement } from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -83,7 +82,7 @@ describe('SessionCalendar', () => {
     };
     const otherSession = makeProgramSession({ id: 'session-2', programId: 'program-2' });
     api.getSessions.mockResolvedValue([session, otherSession]);
-    const rendered = renderCalendar(filters);
+    renderCalendar(filters);
     act(() => calendarState.props!.onInitialPeriods!([period]));
 
     const requestFilters = {
@@ -93,23 +92,8 @@ describe('SessionCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items).toEqual({
       'program-1': [session], 'program-2': [otherSession],
     }));
-    expect(sessionStore.get(rendered.queryClient, session.id)).toBe(calendarState.props!.items[session.programId]![0]);
     expect(calendarState.props!.rows).toEqual(programs);
     expect(calendarState.props!.getItemRange(session)).toEqual({ start: '2026-08-10', end: '2026-08-10' });
-  });
-
-  it('resolves buffered IDs to the current shared session after another consumer saves or deletes', async () => {
-    const { queryClient } = renderCalendar();
-    act(() => calendarState.props!.onInitialPeriods!([period]));
-    await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([session]));
-
-    const saved = makeProgramSession({ theme: 'Saved by another consumer' });
-    act(() => sessionStore.write(queryClient, saved));
-    await waitFor(() => expect(calendarState.props!.items['program-1']?.[0].theme).toBe(saved.theme));
-    expect(calendarState.props!.items['program-1']![0]).toBe(sessionStore.get(queryClient, session.id));
-
-    act(() => sessionStore.remove(queryClient, session.id));
-    await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
   });
 
   it('keeps selected program rows and connects program/session selection and edit/delete actions', () => {
@@ -150,13 +134,12 @@ describe('SessionCalendar', () => {
     const updated = { ...future, cycleId: 'cycle-1', startsAt: '2099-08-11T21:00:00Z', endsAt: '2099-08-11T23:00:00Z' };
     const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
     const move = vi.fn().mockImplementation(async () => {
-      sessionStore.write(rendered.queryClient, updated);
       calendarCacheRef.current.upsert(updated);
       return updated;
     });
     api.getSessions.mockResolvedValue([future]);
     const day = buildDayPeriod(new Date(2099, 7, 10));
-    const rendered = render(<SessionCalendar calendarCacheRef={calendarCacheRef} filters={{}} programs={programs}
+    render(<SessionCalendar calendarCacheRef={calendarCacheRef} filters={{}} programs={programs}
       selectedSessionId={future.id} onSessionSelect={vi.fn()} onSessionMove={move} />);
     act(() => calendarState.props!.onInitialPeriods!([day]));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([future]));
@@ -175,7 +158,7 @@ describe('SessionCalendar', () => {
   });
 
   it('reconciles saved rows through its cache adapter and excludes an unselected cycle', async () => {
-    const { calendarCacheRef, queryClient } = renderCalendar({ cycleIds: ['cycle-1'] });
+    const { calendarCacheRef } = renderCalendar({ cycleIds: ['cycle-1'] });
     act(() => calendarState.props!.onInitialPeriods!([period]));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([session]));
 
@@ -183,7 +166,7 @@ describe('SessionCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
 
     const saved = makeProgramSession({ theme: 'Authoritative edit' });
-    act(() => { sessionStore.write(queryClient, saved); calendarCacheRef.current.upsert(saved); });
+    act(() => calendarCacheRef.current.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([saved]));
 
     act(() => calendarCacheRef.current.remove(saved.id));

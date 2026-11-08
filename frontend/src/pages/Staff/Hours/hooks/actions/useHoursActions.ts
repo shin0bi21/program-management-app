@@ -10,9 +10,7 @@ import {
   updateHoursPlacement,
 } from '../../hours.api';
 
-import { taskData } from '../../../Tasks/hooks/data/useTaskData';
 import type { Task } from '../../../Tasks/types';
-import { hoursData } from '../data/useHoursData';
 
 import type {
   HoursCalendarIndex,
@@ -26,9 +24,9 @@ const EMPTY_CALENDAR_INDEX: HoursCalendarIndex = {
 };
 
 /**
- * Saves, moves, and deletes shared Hours records and reconciles their view indexes.
+ * Saves, moves, and deletes Hours rows, then refreshes affected queries.
  * @param options - Query prefixes and the callback for closing a deleted entry.
- * @example actions.moveHours({ item, date }) // both views resolve the changed record
+ * @example actions.moveHours({ item, date }) // updates the mounted calendar and refreshes queries
  */
 export default function useHoursActions({
   hoursQueryKey,
@@ -70,68 +68,58 @@ export default function useHoursActions({
   }, [queryClient, hoursQueryKey]);
 
   const syncTasks = useCallback((tasks: Task[] = []) => {
-    tasks.forEach(task => taskData.write(queryClient, task));
     if (!tasks.length) return;
 
+    void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'table'] });
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'hours-options'] });
   }, [queryClient, taskQueryKey]);
 
-  // Save the record once, then update view membership and ordering.
-  const applyItem = useCallback((item: HoursItem, created = false) => {
-    hoursData.write(queryClient, item);
-    if (created) {
-      void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
-    }
+  // Keep the mounted calendar responsive while table queries refresh.
+  const applyItem = useCallback((item: HoursItem) => {
     calendarIndexRef.current.upsert(item);
-  }, [hoursTableQueryKey, queryClient]);
+  }, []);
 
-  const syncHours = useCallback((saved: HoursMutationResult, created = false) => {
+  const syncHours = useCallback((saved: HoursMutationResult) => {
     const { updatedTasks, ...entry } = saved;
-    applyItem(entry, created);
+    applyItem(entry);
+    void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
     syncTasks(updatedTasks);
     refreshOverview();
-  }, [applyItem, refreshOverview, syncTasks]);
+  }, [applyItem, hoursTableQueryKey, queryClient, refreshOverview, syncTasks]);
 
   const saveHours = useCallback(async (input: SetHoursInput, itemId?: string) => {
     if (itemId && !startItemAction(itemId)) return;
 
-    const scope = hoursData.getScope(queryClient);
-    if (itemId) hoursData.setPending(queryClient, itemId, true, scope);
     try {
       const saved = itemId
         ? await setHours(input, itemId)
         : await setHours(input);
-      if (hoursData.isScope(queryClient, scope)) syncHours(saved, !itemId);
+      syncHours(saved);
     } finally {
       if (itemId) {
-        hoursData.setPending(queryClient, itemId, false, scope);
         finishItemAction(itemId);
       }
     }
-  }, [finishItemAction, queryClient, startItemAction, syncHours]);
+  }, [finishItemAction, startItemAction, syncHours]);
 
   const moveHours = useCallback(async ({ item, date }: HoursItemMove) => {
     if (!startItemAction(item.id)) return;
 
-    const scope = hoursData.getScope(queryClient);
-    hoursData.setPending(queryClient, item.id, true, scope);
-    const previous = hoursData.get(queryClient, item.id) ?? item;
+    const previous = item;
     setMoveError(null);
     applyItem({ ...previous, date });
 
     try {
       const updated = await updateHoursPlacement(item.id, { date });
-      if (hoursData.isScope(queryClient, scope)) syncHours(updated);
+      syncHours(updated);
     } catch {
-      if (!hoursData.isScope(queryClient, scope)) return;
       applyItem(previous);
       setMoveError('Unable to move logged hours. The hours were returned to their original day.');
     } finally {
-      hoursData.setPending(queryClient, item.id, false, scope);
       finishItemAction(item.id);
     }
-  }, [applyItem, finishItemAction, queryClient, startItemAction, syncHours]);
+  }, [applyItem, finishItemAction, startItemAction, syncHours]);
 
   const requestDelete = useCallback((target: HoursItem) => setConfirmAction({
     title: 'Delete logged hours',
@@ -140,22 +128,18 @@ export default function useHoursActions({
     onConfirm: async () => {
       if (!startItemAction(target.id)) return;
 
-      const scope = hoursData.getScope(queryClient);
-      hoursData.setPending(queryClient, target.id, true, scope);
       try {
         const deleted = await deleteHours(target.id);
-        if (!hoursData.isScope(queryClient, scope)) return;
-        hoursData.remove(queryClient, target.id);
+        void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
         calendarIndexRef.current.remove(target.id);
         onItemRemoved?.(target.id);
         refreshOverview();
         syncTasks(deleted.updatedTasks);
       } finally {
-        hoursData.setPending(queryClient, target.id, false, scope);
         finishItemAction(target.id);
       }
     },
-  }), [finishItemAction, onItemRemoved, queryClient, refreshOverview, startItemAction, syncTasks]);
+  }), [finishItemAction, hoursTableQueryKey, onItemRemoved, queryClient, refreshOverview, startItemAction, syncTasks]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 

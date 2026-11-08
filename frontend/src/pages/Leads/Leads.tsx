@@ -36,7 +36,6 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const preferenceKey = origin === 'external' ? 'outreach-external-leads-filters' : 'outreach-internal-leads-filters';
   const tableQueryKey = ['leads', 'table', origin] as const;
   const data = useLeadData();
-  const { records } = data;
   const preferences = useLeadPreferences(
     origin,
     preferenceKey,
@@ -56,27 +55,28 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   } : null, [origin, preferences.filters.values.programIds, preferences.filters.values.statuses, preferences.filters.values.submitterRoles, preferences.ready, preferences.search.appliedValue]);
 
   // Selection and actions.
-  const selection = useLeadSelection(records);
+  const selection = useLeadSelection();
   const actions = useLeadActions({
     tableQueryKey,
     onLeadRemoved: selection.removeSelectedLead,
+    onLeadSynced: selection.updateSelectedLead,
   });
 
   // Lead modal.
-  const [modalTarget, setModalTarget] = useState<string | null>(null);
-  const modalLead = modalTarget ? records[modalTarget] : undefined;
+  const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
+  const modalLead = modalTarget && modalTarget !== 'new' ? modalTarget : undefined;
   const closeLeadModal = () => setModalTarget(null);
 
   // Sign-up modal.
-  const [signUpTarget, setSignUpTarget] = useState<string | null>(null);
-  const requestSignUp = (lead: Lead) => setSignUpTarget(lead.id);
+  const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
+  const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
   const closeSignUpModal = () => setSignUpTarget(null);
 
   // Table configuration.
   const { columns } = useLeadTable({
     origin,
     canWrite,
-    onEdit: lead => setModalTarget(lead.id),
+    onEdit: lead => setModalTarget(lead),
     onDelete: actions.requestDelete,
     onSignUp: requestSignUp,
     onStatusChange: actions.setStatus,
@@ -102,7 +102,6 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
         onMessageChange={setDashboardError}
       />}
       table={<LeadTable
-        records={records}
         queryKey={tableQueryKey}
         columns={columns}
         hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -120,14 +119,11 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       isOpen={modalTarget === 'new' || Boolean(modalLead)}
       lead={modalLead}
       onClose={closeLeadModal}
-      onSuccess={savedLead => {
-        actions.syncLead(savedLead);
-        if (modalTarget === 'new') void actions.refreshLeads();
-      }}
+      onSuccess={actions.syncLead}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}
-      lead={signUpTarget ? records[signUpTarget] ?? null : null}
+      lead={signUpTarget}
       onClose={closeSignUpModal}
       onSuccess={actions.reconcileSignUp}
     />

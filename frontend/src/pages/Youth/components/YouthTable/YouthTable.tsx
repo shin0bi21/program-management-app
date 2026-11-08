@@ -8,7 +8,6 @@ import type { YouthProfile } from '../../types';
 import useYouthTableData from './hooks/useYouthTableData';
 
 interface YouthTableProps {
-  records: Readonly<Record<string, YouthProfile>>;
   columns: TableColumnDef<YouthProfile>[];
   filters: YouthFilters | null;
   hiddenColumnKeys: string[];
@@ -27,11 +26,11 @@ interface YouthTableProps {
  * @example <YouthTable {...tableProps} selectedProfileId={selectedId} />
  */
 export default function YouthTable({
-  records, columns, filters,
+  columns, filters,
   hiddenColumnKeys, sorting, columnWidths, selectedProfileId,
   onRowSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: YouthTableProps) {
-  const tableData = useYouthTableData(records, filters, sorting);
+  const tableData = useYouthTableData(filters, sorting);
   const hasFilters = Boolean(
     filters?.search || filters?.programIds?.length || filters?.cycleIds?.length,
   );

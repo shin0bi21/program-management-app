@@ -2,14 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
-import { hoursData } from '../../../Hours/hooks/data/useHoursData';
 import {
   deleteTask,
   updateTaskPlacement,
   updateTaskState,
 } from '../../tasks.api';
 import type { Task } from '../../types';
-import { taskData } from '../data/useTaskData';
 
 import type { TaskCalendarCache } from '../../types';
 
@@ -22,23 +20,24 @@ interface TaskActionHandlers {
   taskQueryKey: readonly unknown[];
   taskTableQueryKey: readonly unknown[];
   hoursQueryKey: readonly unknown[];
+  onTaskSynced?: (task: Task) => void;
   onTaskRemoved?: (taskId: string) => void;
 }
 
 /**
  * Reconciles task actions and Hours logged from Tasks.
- * @param options - List/summary query prefixes and the callback for removing the current selection.
- * @example actions.logHours(input) // stores Hours once and updates affected tasks
+ * @param options - Query prefixes and callbacks that update temporary selection context.
+ * @example actions.logHours(input) // saves Hours and refreshes affected task and Hours views
  */
 export default function useTaskActions({
   taskQueryKey,
   taskTableQueryKey,
   hoursQueryKey,
   onTaskRemoved,
+  onTaskSynced,
 }: TaskActionHandlers) {
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
-  const scope = taskData.getScope(queryClient);
   const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
@@ -46,17 +45,15 @@ export default function useTaskActions({
 
   const startTaskAction = useCallback((taskId: string) => {
     if (pendingTaskIdsRef.current.has(taskId)) return false;
-    taskData.setPending(queryClient, taskId, true, scope);
     pendingTaskIdsRef.current.add(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
     return true;
-  }, [queryClient, scope]);
+  }, []);
 
   const finishTaskAction = useCallback((taskId: string) => {
-    taskData.setPending(queryClient, taskId, false, scope);
     pendingTaskIdsRef.current.delete(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
-  }, [queryClient, scope]);
+  }, []);
 
   const isTaskPending = useCallback(
     (taskId: string) => pendingTaskIds.has(taskId),
@@ -68,17 +65,13 @@ export default function useTaskActions({
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
   }, [queryClient, taskQueryKey]);
 
-  const syncTask = useCallback((task: Task, created = false) => {
-    if (!taskData.isScope(queryClient, scope)) return;
-
-    taskData.write(queryClient, task);
-    if (created) {
-      void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
-    }
+  const syncTask = useCallback((task: Task) => {
+    void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+    onTaskSynced?.(task);
 
     calendarCacheRef.current.upsert(task);
     refreshTaskOverview();
-  }, [queryClient, refreshTaskOverview, scope, taskTableQueryKey]);
+  }, [onTaskSynced, queryClient, refreshTaskOverview, taskTableQueryKey]);
 
   // User-triggered task actions.
   const deleteTaskAction = useCallback(async (task: Task) => {
@@ -86,15 +79,14 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
-      if (!taskData.isScope(queryClient, scope)) return;
-      taskData.remove(queryClient, task.id);
+      void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
       refreshTaskOverview();
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, scope, startTaskAction]);
+  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, startTaskAction, taskTableQueryKey]);
 
   const setTaskRange = useCallback(async (
     task: Task,
@@ -112,7 +104,6 @@ export default function useTaskActions({
         dueDate: nextRange.end,
         ...(staffId !== task.staffId ? { staffId } : {}),
       });
-      if (!taskData.isScope(queryClient, scope)) return null;
       syncTask(updatedTask);
       return updatedTask;
     } catch {
@@ -121,7 +112,7 @@ export default function useTaskActions({
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, startTaskAction, syncTask]);
 
   const setState = useCallback(async (task: Task, state: Task['state']) => {
     setActionError('');
@@ -130,26 +121,21 @@ export default function useTaskActions({
 
     try {
       const updatedTask = await updateTaskState(task.id, state);
-      if (!taskData.isScope(queryClient, scope)) return;
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, startTaskAction, syncTask]);
 
   const logHours = useCallback(async (input: SetHoursInput) => {
     const taskId = input.source === 'task' ? input.taskId : undefined;
     if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
     try {
-      const hoursScope = hoursData.getScope(queryClient);
       const saved = await setHours(input);
-      if (!hoursData.isScope(queryClient, hoursScope) || !taskData.isScope(queryClient, scope)) return;
-
-      const { updatedTasks, ...entry } = saved;
-      hoursData.write(queryClient, entry);
+      const { updatedTasks } = saved;
       setActionError('');
 
       if (input.source === 'task') {
@@ -172,7 +158,7 @@ export default function useTaskActions({
     } finally {
       if (taskId) finishTaskAction(taskId);
     }
-  }, [finishTaskAction, queryClient, hoursQueryKey, refreshTaskOverview, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, queryClient, hoursQueryKey, refreshTaskOverview, startTaskAction, syncTask]);
 
   return {
     actionError,

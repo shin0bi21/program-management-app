@@ -1,5 +1,3 @@
-import { sessionStore } from '../../sessionStore';
-import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
@@ -8,8 +6,6 @@ import { useDataBuffer } from '../../../../../common/components/TimelineCalendar
 import type { PeriodRange } from '../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type {
   BuildItemContext,
-  CalendarItemReference,
-  RowItemData,
   ItemCapabilityContext,
   ItemMoveContext,
   RenderRowContext,
@@ -35,6 +31,7 @@ interface SessionCalendarProps {
 
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
   onSessionSelect: (session: ProgramSession) => void;
+  onSelectedSessionLoaded?: (session: ProgramSession) => void;
   onSessionMove?: (session: ProgramSession, date: string) => Promise<ProgramSession | null>;
   onAddSession?: (program: Program, date: string) => void;
   onSessionEdit?: (session: ProgramSession) => void;
@@ -44,7 +41,6 @@ interface SessionCalendarProps {
 
 const getProgramId = (program: Program) => program.id;
 const getSessionId = (session: { id: string }) => session.id;
-const getReferenceRange = (reference: CalendarItemReference) => ({ start: reference.start, end: reference.end });
 
 /**
  * Displays the program name in a calendar resource header.
@@ -63,7 +59,7 @@ function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, 
 }
 
 /**
- * Displays shared sessions through a buffer of IDs and inclusive date placement.
+ * Displays complete sessions through a date-range buffer.
  * @example <SessionCalendar filters={filters} {...viewProps} />
  */
 export default function SessionCalendar({
@@ -75,6 +71,7 @@ export default function SessionCalendar({
   pendingSessionIds = [],
 
   onProgramSelect,
+  onSelectedSessionLoaded,
   onSessionSelect,
   onSessionMove,
   onAddSession,
@@ -83,8 +80,6 @@ export default function SessionCalendar({
   onMessageChange,
 }: SessionCalendarProps) {
   const { cycleIds, programIds, dateRange } = filters;
-  const client = useQueryClient();
-  const records = sessionStore.useRecords();
 
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
@@ -92,36 +87,30 @@ export default function SessionCalendar({
 
     const requestRange = getSessionRequestRange(dates.start, dates.end);
     const requestFilters = { ...filters, ...requestRange };
-    const read = sessionStore.beginRead(client);
-    const incoming = await getSessions(requestFilters, { signal });
+    const sessions = await getSessions(requestFilters, { signal });
 
-    const sessions = sessionStore.finishRead(client, read, incoming, signal);
-    const data: Record<string, Record<string, CalendarItemReference[]>> = {};
+    signal.throwIfAborted();
+    const data: Record<string, Record<string, ProgramSession[]>> = {};
     for (const session of sessions) {
       data[session.programId] ??= {};
       data[session.programId][start.key] ??= [];
-      data[session.programId][start.key].push({ id: session.id, ...getSessionRange(session) });
+      data[session.programId][start.key].push(session);
     }
 
     return data;
-  }, [client, filters]);
+  }, [filters]);
 
   const calendar = useDataBuffer({
     load: loadRange,
     getItemId: getSessionId,
-    getItemRange: getReferenceRange,
+    getItemRange: getSessionRange,
     errorMessage: 'Unable to load sessions calendar data',
   });
-  const visibleItems = useMemo<RowItemData<ProgramSession>>(() => {
-    const items: Record<string, ProgramSession[]> = {};
-    for (const references of Object.values(calendar.items)) {
-      for (const { id } of references ?? []) {
-        const session = records[id];
-        if (session) (items[session.programId] ??= []).push(session);
-      }
-    }
-    return items;
-  }, [calendar.items, records]);
+  const loadedSelection = Object.values(calendar.items).flatMap(items => items ?? []).find(session => session.id === selectedSessionId);
+  useEffect(() => {
+    if (loadedSelection) onSelectedSessionLoaded?.(loadedSelection);
+  }, [loadedSelection, onSelectedSessionLoaded]);
+
   const { upsertItem, removeItem } = calendar;
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
@@ -138,7 +127,7 @@ export default function SessionCalendar({
         }
 
         const range = getSessionRange(session);
-        upsertItem(session.programId, range.start, { id: session.id, ...range });
+        upsertItem(session.programId, range.start, session);
       },
       remove: removeItem,
     };
@@ -218,7 +207,7 @@ export default function SessionCalendar({
         selectedRowId={selectedProgramId}
         onRowSelect={onProgramSelect}
 
-        items={visibleItems}
+        items={calendar.items}
         getItemId={getSessionId}
         getItemRange={getSessionRange}
         buildItem={buildItem}

@@ -1,4 +1,3 @@
-import { youthData } from '../../../../Youth/hooks/data/useYouthData';
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
@@ -19,18 +18,15 @@ interface UseProgramsActionsOptions {
 }
 
 /**
- * Reconciles saved programs and cycles within the account that opened each workflow.
+ * Reconciles saved programs and cycles with their loaded queries.
  * @param options - Table cache key and callbacks for saved programs and removed cycles.
  * @example useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted })
  */
 export default function useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted }: UseProgramsActionsOptions) {
   const queryClient = useQueryClient();
-  const scope = youthData.getScope(queryClient);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const syncProgram = (result: ProgramMutationResult, operation: 'create' | 'update') => {
-    if (!youthData.isScope(queryClient, scope)) return;
-
     const { program } = result;
     if (operation === 'create') {
       void queryClient.invalidateQueries({ queryKey: programTableQueryKey });
@@ -40,21 +36,19 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
     }
 
     void queryClient.invalidateQueries({ queryKey: ['programs', 'options'] });
-    syncProgramCycleAssignmentChanges(queryClient, result, scope);
+    syncProgramCycleAssignmentChanges(queryClient, result);
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(false) });
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.programs(true) });
     void queryClient.invalidateQueries({ queryKey: referenceDataKeys.sessionScheduling });
   };
 
   const syncCycle = (result: SetCycleResult, operation: 'create' | 'update') => {
-    if (!youthData.isScope(queryClient, scope)) return;
-
     if (operation === 'create') {
       void queryClient.invalidateQueries({ queryKey: CYCLE_TABLE_QUERY_KEY });
     } else {
       replaceInfiniteListRow(queryClient, CYCLE_TABLE_QUERY_KEY, result.cycle);
     }
-    syncProgramCycleAssignmentChanges(queryClient, result, scope);
+    syncProgramCycleAssignmentChanges(queryClient, result);
     const choices = queryClient.getQueryData<ProgramCycle[]>(referenceDataKeys.cycles);
     if (choices) {
       queryClient.setQueryData(referenceDataKeys.cycles, choices.some(cycle => cycle.id === result.cycle.id)
@@ -73,13 +67,12 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
       successMessage: 'Cycle deleted',
       onConfirm: async () => {
         await deleteProgramCycle(cycle.id);
-        if (!youthData.isScope(queryClient, scope)) return;
 
         removeInfiniteListRow(queryClient, CYCLE_TABLE_QUERY_KEY, cycle.id);
         onCycleDeleted(cycle.id);
       },
     });
-  }, [onCycleDeleted, queryClient, scope]);
+  }, [onCycleDeleted, queryClient]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 

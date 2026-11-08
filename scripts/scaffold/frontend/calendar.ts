@@ -24,7 +24,6 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
   const directory = context.componentOwner(owner, name, 'Calendar', 'Calendar');
   const title = name.replace(/Calendar$/, '');
   const pageName = basename(dirname(owner));
-  const dataName = `${pageName[0].toLowerCase()}${pageName.slice(1)}Data`;
   const pageDataImport = context.relativeImport(directory, join(dirname(owner), `hooks/data/use${pageName}Data`));
   // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
@@ -34,18 +33,16 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
 
     /**
      * Displays a placeholder for the ${title} calendar until its domain data is connected.
-     * @param props.data - Main records and reference context supplied by the page.
+     * @param props.data - Reference context supplied by the page.
      * @example <${name} data={data} /> shows the ${title} calendar setup prompt.
      */
     export default function ${name}({ data }: { data: ${pageName}Data }) {
       // Define domain types, constants, and pure identity/range helpers outside the component.
 
       // Own the range adapter/useDataBuffer here, or extract a private hooks/use${name}Data.
-      // Receive main records/references through data; never call the page's main data hook here.
+      // Receive shared references through data; never call the page's main data hook here.
       // Adapt applied filters, inclusive period keys, and AbortSignal to the real domain API.
-      // Capture ${dataName}.beginRead(client) before loading; publish complete records with
-      // ${dataName}.finishRead(client, read, rows, signal), then buffer only ID/range/resource indexes.
-      // Resolve those indexes through data.records for rendering; retain placement until refresh.
+      // Buffer complete returned domain rows; keep the API shape for rendering.
       // Forward cancellation, clip requests to applied bounds, and retain complete overlap membership.
       // Keep stable identity/range helpers outside the component; do not duplicate records per day.
       // Publish buffer error/retry with usePageMessageReporter and reconcile membership after mutations.
@@ -63,7 +60,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
       // Calendar JSX: group layout/periods, rows/selection, items/rendering,
       // item interactions, and cell actions, in that order with blank lines between groups.
       return (
-        <section aria-label="${title} calendar" data-loaded-records={Object.keys(data.records).length}>
+        <section aria-label="${title} calendar" data-loading={data.loading || undefined}>
           TODO: Connect ${title} range data to TimelineCalendar.
         </section>
       );
@@ -80,7 +77,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
     describe('${name}', () => {
       it.todo('allows domain actions only for writable records');
       it.todo('forwards the complete page filters, requested range, and AbortSignal to the API adapter');
-      it.todo('publishes complete records through the main owner and retains range membership indexes');
+      it.todo('adapts complete API rows into the calendar range buffer');
       it.todo('maps supported cell, item, move, and resize callbacks to page actions');
     });
     `,

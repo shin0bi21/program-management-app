@@ -1,5 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { sessionStore } from './sessionStore';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
@@ -85,7 +83,6 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
     onProgramSelect,
     filters,
   }: ComponentProps<typeof SessionCalendar>) {
-    const client = useQueryClient();
     return (
       <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
         <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
@@ -103,7 +100,6 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
               endsAt: '2026-07-28T23:30:00.000Z',
               description: 'Planned communication exercise',
             });
-            sessionStore.write(client, session);
             onSessionSelect(session);
           }}
         >
@@ -342,34 +338,6 @@ describe('Sessions', () => {
   });
 
   // Selection and coordination.
-  it('keeps selected-row actions open during shared record refresh and clears the dashboard after deletion', async () => {
-    const user = userEvent.setup();
-    const { queryClient } = render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
-        <Sessions />
-        <LocationProbe />
-      </MemoryRouter>,
-    );
-    await screen.findByText('Communication');
-    expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
-    const initialRequestCount = getSessions.mock.calls.length;
-
-    await user.click(screen.getByRole('button', { name: 'More actions for Communication' }));
-    act(() => sessionStore.write(queryClient, {
-      ...sessionStore.get(queryClient, 'session-1')!, program: 'Refreshed program',
-    }));
-    await screen.findByRole('cell', { name: 'Refreshed program' });
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    await user.click(screen.getByRole('button', { name: 'Confirm' }));
-
-    await waitFor(() => expect(deleteSession).toHaveBeenCalledWith('session-1'));
-    await waitFor(() => expect(screen.queryByText('Communication')).not.toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getByTestId('location')).toHaveTextContent('/programming/sessions');
-    expect(getSessions).toHaveBeenCalledTimes(initialRequestCount);
-  });
-
   it('keeps the session dashboard while a program row changes scheduling context', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);

@@ -18,7 +18,7 @@ describe('useLeadTableData', () => {
     const baseKey = ['leads', 'table', 'external'];
     const filters = { search: 'avery', statuses: ['new' as const], programIds: ['program-1'] };
     const sorting = { key: 'created' as const, direction: 'desc' as const };
-    renderHook(() => useLeadTableData(baseKey, filters, sorting, {}), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    renderHook(() => useLeadTableData(baseKey, filters, sorting), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     expect(options.queryKey).toEqual([...baseKey, filters, sorting]);
@@ -39,7 +39,7 @@ describe('useLeadTableData', () => {
 
   it('disables the query until lead filters are initialized', () => {
     const sorting = { key: 'created' as const, direction: 'desc' as const };
-    renderHook(() => useLeadTableData(['leads', 'table'], null, sorting, {}), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    renderHook(() => useLeadTableData(['leads', 'table'], null, sorting), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     expect(options.enabled).toBe(false);

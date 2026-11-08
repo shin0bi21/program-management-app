@@ -132,7 +132,7 @@ describe('Leads', () => {
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
   });
 
-  it('refreshes the selected saved lead without replacing an open edit draft', async () => {
+  it('preserves an open edit draft while the table refetches', async () => {
     const initialLead = (await getLeads()).rows[0];
     const { queryClient } = renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
@@ -144,7 +144,6 @@ describe('Leads', () => {
 
     await act(async () => queryClient.invalidateQueries({ queryKey: ['leads', 'table'] }));
 
-    expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
     expect(screen.getByLabelText('Phone Number *')).toHaveValue('416-555-0188');
     expect(getLeads).toHaveBeenCalledTimes(readsBeforeRefresh + 1);
   });

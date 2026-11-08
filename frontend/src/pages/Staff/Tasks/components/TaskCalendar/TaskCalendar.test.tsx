@@ -1,4 +1,3 @@
-import { taskData } from '../../hooks/data/useTaskData';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
@@ -31,12 +30,6 @@ const coworker: TaskResource = {
   id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true,
 };
 const task = makeTask();
-
-/** Supplies page-owned records to the real range hook. @example <CalendarWithRecords {...viewProps} /> */
-function CalendarWithRecords(props: Omit<Parameters<typeof TaskCalendar>[0], 'records'>) {
-  const records = taskData.useRecords();
-  return <TaskCalendar {...props} records={records} />;
-}
 
 /** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
 function renderCalendar({
@@ -71,7 +64,7 @@ function renderCalendar({
   const callbacks = {
     onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
   };
-  const rendered = render(<CalendarWithRecords
+  const rendered = render(<TaskCalendar
     resources={resources}
     filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
@@ -116,17 +109,16 @@ describe('TaskCalendar', () => {
     expect(calendarState.props?.rows).toEqual([resource]);
   });
 
-  it('resolves buffered IDs to current shared records after another consumer saves or deletes', async () => {
-    const { queryClient } = renderCalendar();
+  it('updates full buffered rows through mutation callbacks after saves and deletes', async () => {
+    const { calendarCacheRef } = renderCalendar();
     act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
     await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
 
     const saved = makeTask({ title: 'Saved by another consumer' });
-    act(() => taskData.write(queryClient, saved));
+    act(() => calendarCacheRef.current.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['staff-1']?.[0].title).toBe(saved.title));
-    expect(calendarState.props!.items['staff-1']![0]).toBe(taskData.get(queryClient, task.id));
 
-    act(() => taskData.remove(queryClient, task.id));
+    act(() => calendarCacheRef.current.remove(task.id));
     await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
   });
 

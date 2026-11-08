@@ -41,7 +41,7 @@ export default function Youth() {
     && permissions.includes('read:sessions');
 
   // Page data and preferences.
-  const { records, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
+  const { programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
   const controls = useYouthControls({
     role,
     programs,
@@ -64,32 +64,28 @@ export default function Youth() {
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthAttendanceSummary | null>(null);
   const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
-  const { selectedProfile, selectedProfileId, selectProfile } = useYouthSelection(records, {
+  const { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile } = useYouthSelection({
     onSelectedProfileIdChange: closeAttendanceModal,
   });
 
   // Page actions.
-  const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions();
+  const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions(updateSelectedProfile);
 
   // Profile-note actions and dialogs.
   const profileNotes = useProfileNotes(selectedProfileId);
   const openProfileNoteEditor = profileNotes.openEditor;
 
   // Youth modal.
-  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
-  let modalTarget: YouthProfile | 'new' | null = null;
-  if (modalTargetId === 'new') modalTarget = 'new';
-  else if (modalTargetId) modalTarget = records[modalTargetId] ?? null;
+  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
   const schoolModal = useSchoolModal();
   const closeYouthModal = () => {
     schoolModal.close();
-    setModalTargetId(null);
+    setModalTarget(null);
   };
 
   // Primary-contact modal.
-  const [contactTargetId, setContactTargetId] = useState<string | null>(null);
-  const contactTarget = contactTargetId ? records[contactTargetId] ?? null : null;
-  const closeContactModal = () => setContactTargetId(null);
+  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
+  const closeContactModal = () => setContactTarget(null);
 
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
@@ -104,7 +100,7 @@ export default function Youth() {
   }, [openProfileNoteEditor]);
   const { columns: youthColumns } = useYouthTable({
     canWrite,
-    onEdit: profile => setModalTargetId(profile.id),
+    onEdit: setModalTarget,
     onAddNote: addProfileNote,
   });
 
@@ -113,7 +109,7 @@ export default function Youth() {
     <>
       <PageContainer
         title="Profiles"
-        actions={canWrite ? <Button onClick={() => setModalTargetId('new')}>+ Add</Button> : undefined}
+        actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
         ariaLabel="Youth profiles"
         controls={controls}
         loadingLabel="Loading saved youth preferences…"
@@ -124,7 +120,6 @@ export default function Youth() {
           programsError,
           cyclesError,
           viewError,
-          selectedProfileId && !selectedProfile ? 'This youth profile is no longer available.' : null,
           profileNotes.error ? {
             message: profileNotes.error,
             action: { label: 'Retry', onClick: profileNotes.retry },
@@ -133,7 +128,7 @@ export default function Youth() {
         dashboard={<YouthDashboard
           profile={selectedProfile}
           canWrite={canWrite}
-          onManagePrimaryContact={profile => setContactTargetId(profile.id)}
+          onManagePrimaryContact={setContactTarget}
           canReadAttendance={canReadAttendance}
           canManageAttendance={canManageAttendance}
           onManageAttendance={setAttendanceTarget}
@@ -151,7 +146,6 @@ export default function Youth() {
           onDeleteProfileNote={profileNotes.requestDelete}
         />}
         table={<YouthTable
-          records={records}
           columns={youthColumns}
           filters={youthFilters}
           hiddenColumnKeys={table.hiddenColumns}

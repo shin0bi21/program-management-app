@@ -22,7 +22,7 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
   initialTypeRef.current = session?.sessionType;
   const sessionId = session?.id;
 
-  // Only a new target starts a draft; refreshed shared records preserve fields and the save lock.
+  // Only a new target starts a draft; refreshed session inputs preserve fields and the save lock.
   useEffect(() => {
     if (!sessionId) return;
     setStatus('idle');

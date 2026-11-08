@@ -29,7 +29,7 @@ Choose by responsibility, dependency direction, and lifecycle; file length does 
 2. Lift it to the nearest common owner only when it coordinates children, shares resources, or must survive a child's unmount.
 3. Pass parent-coordinated behavior through props.
 
-The page owns `hooks/data/use<Domain>Data` for shared main data and reference
+The page owns `hooks/data/use<Domain>Data` for shared reference
 lookups. Table, calendar, and dashboard query hooks stay with their consuming
 components. Follow the [page data flow contract](02-state-and-data.md#page-data-flow)
 for the target structure and downward data flow.

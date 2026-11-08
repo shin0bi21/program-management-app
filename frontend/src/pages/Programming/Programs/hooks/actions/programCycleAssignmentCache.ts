@@ -1,5 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { youthData } from '../../../../Youth/hooks/data/useYouthData';
 import type { ProgramCycleAssignmentChanges } from '../../api/programCycleAssignments.api';
 import type { ProgramCycleAssignment, ProgramCycleKey } from '../../types';
 
@@ -28,20 +27,15 @@ export function updateProgramCycleAssignments(
 }
 
 /**
- * Reconciles saved assignments and Youth records, then refreshes membership, roster eligibility, and attendance summaries.
+ * Reconciles saved assignments, then refreshes Youth rows, roster eligibility, and attendance summaries.
  * @param queryClient - Cache shared by program, cycle, and Youth views.
  * @param changes - Authoritative assignment changes and affected youth returned by the save.
- * @param scope - Youth account scope captured before the save begins; cleared accounts are ignored.
- * @example syncProgramCycleAssignmentChanges(client, saved, scope) // updates rows and refreshes affected views
+ * @example syncProgramCycleAssignmentChanges(client, saved) // updates rows and refreshes affected views
  */
-export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, changes: ProgramCycleAssignmentChanges, scope: symbol) {
-  if (!youthData.isScope(queryClient, scope)) return;
-
+export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, changes: ProgramCycleAssignmentChanges) {
   updateProgramCycleAssignments(queryClient, changes.updatedProgramCycles, changes.removedProgramCycles);
 
-  for (const youth of changes.updatedYouth ?? []) {
-    youthData.write(queryClient, youth);
-  }
+  void queryClient.invalidateQueries({ queryKey: ['youth', 'table'] });
 
   // Enrollment and date changes can alter eligibility in other program rosters.
   void queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY });

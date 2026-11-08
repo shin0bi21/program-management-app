@@ -1,44 +1,36 @@
 import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useDataBuffer } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type { RowItemData } from '../../../../../../common/components/TimelineCalendar/types';
-import type { RecordReference } from '../../../../../../query/createRecordStore';
 import { getHoursCalendarData } from '../../../hours.api';
-import { hoursData } from '../../../hooks/data/useHoursData';
 import type { HoursCalendarIndex, HoursFilters, HoursItem } from '../../../types';
 
-/** Identifies an entry without retaining another saved record. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */
-const getHoursItemId = (item: RecordReference) => item.id;
+/** Identifies an entry in the calendar buffer. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */
+const getHoursItemId = (item: HoursItem) => item.id;
 
 /**
- * Loads Hours ranges into main data while retaining only calendar membership and placement.
+ * Loads complete Hours rows into the calendar range buffer.
  * Registers mutation callbacks for the mounted view and removes them on teardown.
- * @param records - Current saved records supplied by the page.
  * @param filters - Applied page filters, also used to scope mutation placement.
  * @param calendarIndexRef - Page actions' link to this calendar's membership index.
- * @example const { calendar, visibleItems } = useHoursCalendarData(records, filters, calendarIndexRef)
+ * @example const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef)
  */
 export default function useHoursCalendarData(
-  records: Readonly<Record<string, HoursItem>>,
   filters: HoursFilters,
   calendarIndexRef: MutableRefObject<HoursCalendarIndex>,
 ) {
-  const client = useQueryClient();
-
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
-    const read = hoursData.beginRead(client);
-    const incoming = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
-    const rows = hoursData.finishRead(client, read, incoming, signal);
-    const index: Record<string, Record<string, RecordReference[]>> = {};
+    const rows = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
+    signal.throwIfAborted();
+    const index: Record<string, Record<string, HoursItem[]>> = {};
 
     for (const entry of rows) {
       const periods = index[entry.staffId] ??= {};
       const items = periods[entry.date] ??= [];
-      items.push({ id: entry.id });
+      items.push(entry);
     }
     return index;
-  }, [client, filters]);
+  }, [filters]);
 
   const calendar = useDataBuffer({
     load: loadRange,
@@ -47,14 +39,13 @@ export default function useHoursCalendarData(
   });
   const visibleItems = useMemo<RowItemData<HoursItem>>(() => {
     const items: Record<string, HoursItem[]> = {};
-    for (const references of Object.values(calendar.items)) {
-      for (const { id } of references ?? []) {
-        const entry = records[id];
-        if (entry) (items[entry.staffId] ??= []).push(entry);
+    for (const entries of Object.values(calendar.items)) {
+      for (const entry of entries ?? []) {
+        (items[entry.staffId] ??= []).push(entry);
       }
     }
     return items;
-  }, [calendar.items, records]);
+  }, [calendar.items]);
 
   const { upsertItem, removeItem } = calendar;
 
@@ -69,7 +60,7 @@ export default function useHoursCalendarData(
           return;
         }
 
-        upsertItem(entry.staffId, entry.date, { id: entry.id });
+        upsertItem(entry.staffId, entry.date, entry);
       },
       remove: removeItem,
     };

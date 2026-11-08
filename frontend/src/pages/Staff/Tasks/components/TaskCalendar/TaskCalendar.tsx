@@ -39,7 +39,6 @@ export interface TaskCalendarActions {
 }
 
 interface TaskCalendarProps {
-  records: Readonly<Record<string, Task>>;
   resources: TaskResource[];
   filters: TasksFilters;
   dateRange?: DateRange;
@@ -57,11 +56,10 @@ interface TaskCalendarProps {
 }
 
 /**
- * Displays shared task records using buffered IDs and inclusive date placement.
+ * Displays buffered task records and inclusive date placement.
  * @example <TaskCalendar filters={filters} {...viewProps} />
  */
 export default function TaskCalendar({
-  records,
   resources,
   filters,
   dateRange,
@@ -78,7 +76,7 @@ export default function TaskCalendar({
   onMessageChange,
 }: TaskCalendarProps) {
   const { staffIds } = filters;
-  const { calendar, visibleItems } = useTaskCalendarData(records, filters, calendarCacheRef);
+  const { calendar, visibleItems } = useTaskCalendarData(filters, calendarCacheRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
@@ -90,7 +88,7 @@ export default function TaskCalendar({
   }, [staffIds, resources]);
 
   /**
-   * Displays a shared task with actions allowed by its lifecycle and permissions.
+   * Displays a buffered task with actions allowed by its lifecycle and permissions.
    * @example buildItem(context) // task item with permitted actions
    */
   function buildItem({ data: task, calendar: itemCalendar }: BuildItemContext<TaskResource, Task>) {

@@ -85,10 +85,8 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.match(read(files[0]), /<PageContainer[\s\S]*messages={pageMessages}/);
   assert.doesNotMatch(read(files[0]), /<PageHeader|<PageBody|<PageMessageOverlay|<main/);
   assert.match(read(files[2]), /export default function useScaffoldPageData/);
-  assert.match(read(files[2]), /createRecordStore<ScaffoldPageRecord>/);
-  assert.match(read(files[2]), /return { records: scaffoldPageData.useRecords\(\) }/);
-  assert.match(read(files[2]), /Replace this ID-only scaffold with the complete domain API record type/);
-  assert.match(read(files[2]), /Supply the actual server-compatible sort projection/);
+  assert.match(read(files[2]), /return { loading: false, error: null }/);
+  assert.doesNotMatch(read(files[2]), /createRecordStore|records:/);
   assert.doesNotMatch(files.join('\n'), /Store\.ts|ReferenceData/);
   assert.match(read(files[2]), /Compose required page-wide reference hooks once/);
   assert.match(read(files[0]), /Consume the main data hook's reference results/);
@@ -115,19 +113,6 @@ test('creates a page with a colocated data owner and orchestration placeholders'
   assert.match(read(files[1]), /applies search and filters to each active data view/);
   assert.doesNotMatch(read(files[1]), /first search change|sorting|resizing|pagination/);
   files.forEach(assertParses);
-});
-
-test('isolates same-named page record and list caches across route families', () => {
-  const staffFiles = scaffoldFrontend(['page', 'Staff/Schedules']);
-  const youthFiles = scaffoldFrontend(['page', 'Youth/Schedules']);
-  const staffData = read(staffFiles[2]);
-  const youthData = read(youthFiles[2]);
-
-  assert.match(staffData, /queryKey: \['staff', 'schedules', 'records'\]/);
-  assert.match(staffData, /listKey: \['staff', 'schedules', 'table'\]/);
-  assert.match(youthData, /queryKey: \['youth', 'schedules', 'records'\]/);
-  assert.match(youthData, /listKey: \['youth', 'schedules', 'table'\]/);
-  [...staffFiles, ...youthFiles].forEach(assertParses);
 });
 
 test('creates a non-trivial modal workflow in page, family-common, and both feature owner forms', () => {
@@ -162,13 +147,12 @@ test('creates focused table, calendar, and dashboard owners under page component
   assert.equal(dashboardFiles.length, 2);
   assert.equal(tableFiles[2], 'frontend/src/pages/Temporary/Presets/components/ExampleTable/hooks/useExampleTableData.ts');
   assert.match(read(tableFiles[0]), /from '.\/hooks\/useExampleTableData'/);
-  assert.match(read(tableFiles[0]), /useExampleTableData\(data\)/);
-  assert.match(read(tableFiles[2]), /import type { PresetsData }/);
-  assert.match(read(tableFiles[2]), /RecordListIndex/);
-  assert.match(read(tableFiles[2]), /presetsData.finishRead/);
-  assert.doesNotMatch(read(tableFiles[2]), /import usePresetsData/);
-  assert.match(read(calendarFiles[0]), /Receive main records\/references through data/);
-  assert.match(read(calendarFiles[0]), /presetsData.finishRead/);
+  assert.match(read(tableFiles[0]), /useExampleTableData\(\)/);
+  assert.match(read(tableFiles[2]), /useInfiniteListQuery<ExampleRow>/);
+  assert.match(read(tableFiles[2]), /Cache complete API rows directly/);
+  assert.doesNotMatch(read(tableFiles[2]), /createRecordStore|RecordListIndex|import usePresetsData/);
+  assert.match(read(calendarFiles[0]), /Receive shared references through data/);
+  assert.match(read(calendarFiles[0]), /Buffer complete returned domain rows/);
   assert.match(read(calendarFiles[1]), /requested range, and AbortSignal/);
   assert.match(read(tableFiles[1]), /renders domain cell values/);
   assert.match(read(tableFiles[1]), /selected record and its selection event/);
@@ -251,7 +235,7 @@ test('scaffolds a calendar page with separate page, data, and calendar test owne
   ]);
   assert.deepEqual(pageFiles.map(read), pageContents);
   assert.match(read(pageFiles[1]), /shares selected context across page views/);
-  assert.match(read(pageFiles[3]), /server-compatible values/);
+  assert.match(read(pageFiles[3]), /required reference rows/);
   assert.match(read(calendarFiles[1]), /forwards the complete page filters, requested range, and AbortSignal/);
   [...pageFiles, ...calendarFiles].forEach(assertParses);
 });

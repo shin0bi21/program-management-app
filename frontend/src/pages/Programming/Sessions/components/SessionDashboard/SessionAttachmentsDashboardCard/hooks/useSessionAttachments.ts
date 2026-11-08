@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
-import { sessionStore } from '../../../../sessionStore';
 import type { ProgramSession, SessionAttachment } from '../../../../types';
 
 /**
@@ -18,7 +17,6 @@ export function useSessionAttachments({ queryKey, session, onMessageChange }: {
   onMessageChange?: PageMessageChangeHandler;
 }) {
   const client = useQueryClient();
-  const accountScope = sessionStore.getScope(client);
   const currentSessionId = useRef(session?.id);
   currentSessionId.current = session?.id;
   const [editorSessionId, setEditorSessionId] = useState<string | null>(null);
@@ -43,14 +41,13 @@ export function useSessionAttachments({ queryKey, session, onMessageChange }: {
     setEditAttachmentId(null);
     setDetailAttachmentId(null);
     setConfirmAction(null);
-  }, [session?.id, accountScope]);
+  }, [session?.id]);
 
   /**
-   * Keeps a departing session or account's async work from refreshing the active query.
-   * @example isCurrentTarget() // false after the selected session changes or the cache clears
+   * Keeps a departing session's async work from refreshing the active query.
+   * @example isCurrentTarget() // false after the selected session changes
    */
-  const isCurrentTarget = () => currentSessionId.current === session?.id
-    && sessionStore.isScope(client, accountScope);
+  const isCurrentTarget = () => currentSessionId.current === session?.id;
   const loadAttachments = async () => {
     if (!isCurrentTarget()) return;
 
