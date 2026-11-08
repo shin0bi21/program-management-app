@@ -9,9 +9,14 @@ import type { ManagedHomepageImage } from '../../../types';
 interface UseHomepageImageModalOptions {
   image: ManagedHomepageImage | null;
   isOpen: boolean;
-  onSaved: () => Promise<void>;
+  onSaved: (image: ManagedHomepageImage) => Promise<void>;
 }
 
+/**
+ * Saves an image upload or caption and waits for the owner to reconcile the returned record.
+ * @param options - Saved edit snapshot, open state, and authoritative save callback.
+ * @example useHomepageImageModal({ image, isOpen, onSaved }) // caption-edit workflow
+ */
 export default function useHomepageImageModal({
   image,
   isOpen,
@@ -31,6 +36,11 @@ export default function useHomepageImageModal({
     unlock();
   }, [image, isOpen, unlock]);
 
+  /**
+   * Saves the caption and optional upload once, forwarding the server's complete image.
+   * @param caption - Trimmed caption supplied by the rendered form.
+   * @example await submit('Community event.') // saves and reconciles before reporting success
+   */
   const submit = async (caption: string) => {
     if (!tryLock()) return;
 
@@ -38,14 +48,15 @@ export default function useHomepageImageModal({
     setStatusMessage(image ? 'Saving homepage image...' : 'Uploading homepage image...');
 
     try {
+      let savedImage: ManagedHomepageImage;
       if (image) {
-        await updateHomepageImage(image.id, { caption });
+        savedImage = await updateHomepageImage(image.id, { caption });
       } else {
         if (!selectedFile?.size) throw new Error('Choose an image to upload');
-        await createHomepageImage({ image: selectedFile, caption });
+        savedImage = await createHomepageImage({ image: selectedFile, caption });
       }
 
-      await onSaved();
+      await onSaved(savedImage);
       setStatus('success');
       setStatusMessage(image ? 'Homepage image updated.' : 'Homepage image added.');
     } catch (cause) {

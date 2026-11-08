@@ -30,7 +30,9 @@ describe('Homepage management API', () => {
     youthToken = generateToken(youth.userId, 'youth', youth.email);
 
     const [program] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE name = 'Soft Skills'
+      SELECT id
+      FROM programs
+      WHERE name = 'Soft Skills'
     `;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
@@ -94,6 +96,19 @@ describe('Homepage management API', () => {
 
     expect(created.status).toBe(201);
     uploadedImageId = created.body.id;
+    expect(created.body).toEqual({
+      id: expect.any(String),
+      altText: 'Youth workshop.',
+      caption: 'Youth workshop.',
+      displayOrder: expect.any(Number),
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String),
+      imageUrl: `/public/homepage/images/${uploadedImageId}/display`,
+      mobileUrl: `/public/homepage/images/${uploadedImageId}/mobile`,
+      thumbnailUrl: `/public/homepage/images/${uploadedImageId}/thumbnail`,
+    });
+    const createdList = await request(app).get('/api/public/homepage/images');
+    expect(createdList.body.images).toContainEqual(created.body);
 
     const updated = await request(app)
       .put(`/api/homepage/images/${uploadedImageId}`)
@@ -102,20 +117,19 @@ describe('Homepage management API', () => {
         caption: 'Youth workshop updated.',
       });
     expect(updated.status).toBe(200);
+    expect(updated.body).toEqual({
+      ...created.body,
+      altText: 'Youth workshop updated.',
+      caption: 'Youth workshop updated.',
+      updatedAt: expect.any(String),
+    });
 
     const publicContent = await request(app).get('/api/public/homepage/images');
-    expect(publicContent.body.images).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: uploadedImageId,
-          imageUrl: `/public/homepage/images/${uploadedImageId}/display`,
-          mobileUrl: `/public/homepage/images/${uploadedImageId}/mobile`,
-          thumbnailUrl: `/public/homepage/images/${uploadedImageId}/thumbnail`,
-          caption: 'Youth workshop updated.',
-          altText: 'Youth workshop updated.',
-        }),
-      ]),
-    );
+    expect(publicContent.body.images).toContainEqual(updated.body);
+    const managedContent = await request(app).get('/api/homepage')
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(managedContent.status).toBe(200);
+    expect(managedContent.body.images).toContainEqual(updated.body);
 
     const reversedImageIds = publicContent.body.images.map((image: { id: string }) => image.id).reverse();
     const reordered = await request(app)
@@ -157,19 +171,23 @@ describe('Homepage management API', () => {
 
   it('returns every program with its next three sessions in age order', async () => {
     const publicContent = await request(app).get('/api/public/homepage/programs');
-    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const [program] = await sql<{ id: string }[]>`
+      SELECT id
+      FROM programs
+      WHERE name = 'Soft Skills'
+    `;
     const orderedPrograms = await sql<{ id: string }[]>`
       SELECT id
       FROM programs
       ORDER BY min_age ASC NULLS FIRST, name
     `;
     const expected = await sql<{ id: string }[]>`
-      SELECT cs.id
-      FROM program_sessions cs
-      WHERE cs.program_id = ${program.id}
-        AND cs.ends_at >= NOW()
-        AND cs.cancelled_at IS NULL
-      ORDER BY cs.starts_at
+      SELECT session.id
+      FROM program_sessions session
+      WHERE session.program_id = ${program.id}
+        AND session.ends_at >= NOW()
+        AND session.cancelled_at IS NULL
+      ORDER BY session.starts_at
       LIMIT 3
     `;
     expect(publicContent.status).toBe(200);

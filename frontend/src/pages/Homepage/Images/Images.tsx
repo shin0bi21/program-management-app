@@ -10,17 +10,18 @@ import { useManagedHomepage } from './hooks/useManagedHomepage';
 
 import './Images.css';
 
+/**
+ * Displays homepage image management and connects permission-gated editing to saved records.
+ * @example <Images /> // managed image list and image/delete dialogs
+ */
 export default function Images() {
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:homepage');
 
-  // Data and actions.
   const homepage = useManagedHomepage();
 
-  // Modal workflows.
   const modals = useHomepageModals({ deleteImage: homepage.deleteImage });
 
-  // Render.
   return (
     <>
       <PageContainer
@@ -49,7 +50,7 @@ export default function Images() {
         image={modals.image.target}
         isOpen={modals.image.open}
         onClose={modals.image.close}
-        onSaved={homepage.refresh}
+        onSaved={homepage.saveImage}
       />}
 
       {canWrite && <ConfirmModal

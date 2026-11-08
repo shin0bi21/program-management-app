@@ -9,12 +9,22 @@ interface HomepageImageModalProps {
   image: ManagedHomepageImage | null;
   isOpen: boolean;
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (image: ManagedHomepageImage) => Promise<void>;
 }
 
+/**
+ * Edits a supplied image caption or uploads a new image, then forwards the saved record.
+ * @param props - Saved edit snapshot, dialog visibility, and close/reconciliation callbacks.
+ * @example <HomepageImageModal image={image} isOpen onClose={close} onSaved={saveImage} />
+ */
 export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: HomepageImageModalProps) {
   const workflow = useHomepageImageModal({ image, isOpen, onSaved });
 
+  /**
+   * Reads and trims the caption before submitting through the image workflow.
+   * @param event - Native form submission containing the caption draft.
+   * @example submit(event) // sends the trimmed caption without changing the saved image snapshot
+   */
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);

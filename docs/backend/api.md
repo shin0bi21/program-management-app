@@ -182,3 +182,8 @@ even when a program's session list is empty. Public intake accepts valid lead
 submissions with request validation and strict rate limiting. The signup form is
 always available; it has no runtime availability setting.
 Leads own follow-up and conversion.
+
+Public and managed image lists share the canonical image projection. Image create
+and update responses return that complete record, including variant URLs and
+display order, so management can reconcile saved images directly. Frontend API
+adapters share URL normalization for public lists, managed lists, and saved images.
