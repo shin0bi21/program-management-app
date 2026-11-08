@@ -3,8 +3,8 @@ import HoursBreakdown from './HoursBreakdown';
 
 /**
  * Shows the standard Hours card with its independently owned breakdown action.
- * @param props.loading - Replaces the standard card's data with its loading state.
- * @example <HoursSummary loading /> // title and disabled breakdown action stay visible
+ * @param props.loading - Replaces summary values with loading indicators while labels stay visible.
+ * @example <HoursSummary loading /> // labels and disabled breakdown action stay visible
  */
 export function HoursSummary({ loading = false }: { loading?: boolean }) {
   const data = loading ? null : {
@@ -18,10 +18,12 @@ export function HoursSummary({ loading = false }: { loading?: boolean }) {
     <DashboardCard
       title="Hours This Pay Period"
       loading={loading}
+      className="dashboard-card--short"
+      details={[
+        { label: 'Current Pay Period', value: data?.subtitle },
+        { label: 'Hours', value: data?.total.toFixed(2) },
+      ]}
       action={<HoursBreakdown data={data} scopeKey="staff-1:2026-10-01" disabled={loading} />}
-    >
-      <span className="dashboard-card__metric">12.00</span>
-      <p>Oct 1–14</p>
-    </DashboardCard>
+    />
   </div>;
 }

@@ -3,10 +3,11 @@ import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import './DashboardCard.css';
 
 /**
- * Keeps a card's header and fixed-height shell mounted while its data region changes.
- * Custom shells retain shared sizing/spacing and keep actions outside the scrolling data area.
- * @param props.children - Data or caller-rendered no-selection/error state; nullish uses emptyMessage or "No data available.".
- * @param props.loading - Replaces only the data region with loading status, preserving header/actions.
+ * Keeps a card's fixed-height shell and actions mounted while its data region changes.
+ * Optional details use a compact label/value layout with an accessible-only title and a fixed action beside scrolling data.
+ * @param props.children - Card content, or extra no-selection/error content below details. Without details, nullish uses emptyMessage or "No data available.".
+ * @param props.details - Optional values with unique labels for compact summaries; nullish values display an em dash. Use dashboard-card--short for 75px summaries.
+ * @param props.loading - Replaces data with loading status, preserving the header/actions or detail labels.
  * @param props.action - Caller-owned actions; disable when their required data is unavailable.
  * @param props.className - Use dashboard-card--short for shared short sizing; CSS tokens own heights.
  * @example <DashboardCard title="Notes" loading={hasTarget && query.isLoading} action={addNote}>{content}</DashboardCard>
@@ -19,6 +20,7 @@ export function DashboardCard({
   action,
   loading = false,
   loadingLabel,
+  details,
 }: {
   title?: string;
   children?: ReactNode;
@@ -27,22 +29,39 @@ export function DashboardCard({
   action?: ReactNode;
   loading?: boolean;
   loadingLabel?: string;
+  details?: ReadonlyArray<{ label: string; value: ReactNode }>;
 }) {
   return (
-    <article className={['dashboard-card', className].filter(Boolean).join(' ')} aria-busy={loading}>
-      {(title || action) && (
-        <div className="dashboard-card__header">
-          {title && <h2>{title}</h2>}
-          {action}
+    <article className={['dashboard-card', details && 'dashboard-card--details', className].filter(Boolean).join(' ')} aria-busy={loading}>
+      {details ? <>
+        {title && <h2 className="dashboard-card__accessible-title">{title}</h2>}
+        <div className="dashboard-card__compact-layout">
+          <div className="dashboard-card__content">
+            <dl className="dashboard-card__details">
+              {details.map(({ label, value }) => <div key={label}>
+                <dt>{label}</dt>
+                <dd>{loading ? <DashboardCardLoading label={`Loading ${label.toLowerCase()}…`} /> : value ?? '—'}</dd>
+              </div>)}
+            </dl>
+            {!loading && children}
+          </div>
+          {action && <div className="dashboard-card__compact-action">{action}</div>}
         </div>
-      )}
-      <div className="dashboard-card__content">
-        {loading ? (
-          <DashboardCardLoading label={loadingLabel} />
-        ) : (
-          children ?? <p className="dashboard-card__empty">{emptyMessage ?? 'No data available.'}</p>
+      </> : <>
+        {(title || action) && (
+          <div className="dashboard-card__header">
+            {title && <h2>{title}</h2>}
+            {action}
+          </div>
         )}
-      </div>
+        <div className="dashboard-card__content">
+          {loading ? (
+            <DashboardCardLoading label={loadingLabel} />
+          ) : (
+            children ?? <p className="dashboard-card__empty">{emptyMessage ?? 'No data available.'}</p>
+          )}
+        </div>
+      </>}
     </article>
   );
 }

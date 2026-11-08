@@ -44,6 +44,7 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
       // Add a private use<Domain>DashboardData only for queries shared by sibling cards.
       // Keep API calls out of this composition and avoid an empty dashboard-data wrapper.
       // Name extracted cards *DashboardCard and use the shared DashboardCard shell.
+      // For compact label/value summaries, use its details prop with dashboard-card--short.
       // Pass this fragment to PageContainer's dashboard slot; keep page-wide actions in its header.
       // Pass selectedId/data to the cards that need them; resource-summary cards may be independent.
       // Each card handles its own no-selection, missing record, loading, failure/retry, and refresh states.
