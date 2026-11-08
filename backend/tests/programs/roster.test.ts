@@ -196,12 +196,12 @@ describe('Program cycle roster eligibility', () => {
   it('returns canonical roster changes without exposing Youth rows to enrollment-only tokens', async () => {
     const token = generateToken(adminId, 'admin', undefined, ['write:enrollments']);
     const enrolled = await request(app).post(`/api/programs/${unboundedPair.programId}/cycles/${unboundedPair.cycleId}/enrollments`)
-      .set('Authorization', `Bearer ${token}`).send({ youthIds: [youth.eligible] });
+      .set('Authorization', `Bearer ${token}`).send({ youthIds: [extraYouthIds[0]] });
     expect(enrolled.status).toBe(201);
     expect(enrolled.body.programCycle).toMatchObject(unboundedPair);
     expect(enrolled.body.updatedYouth).toEqual([]);
 
-    const withdrawn = await request(app).patch(`/api/programs/${unboundedPair.programId}/cycles/${unboundedPair.cycleId}/enrollments/${youth.eligible}/withdraw`)
+    const withdrawn = await request(app).patch(`/api/programs/${unboundedPair.programId}/cycles/${unboundedPair.cycleId}/enrollments/${extraYouthIds[0]}/withdraw`)
       .set('Authorization', `Bearer ${token}`);
     expect(withdrawn.status).toBe(200);
     expect(withdrawn.body.programCycle.enrolledCount).toBe(enrolled.body.programCycle.enrolledCount - 1);

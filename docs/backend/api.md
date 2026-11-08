@@ -160,6 +160,15 @@ roster. Enrollment writes recheck eligibility inside the transaction and reject
 an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts) and
 [enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts).
 
+Youth can be enrolled in only one enrollment-based program on a calendar date.
+Membership is the intersection of the cycle's inclusive dates and the enrollment
+period: enrollment day is included and withdrawal day is excluded. Historical and
+non-overlapping memberships remain valid; multiple cycles of the same program do
+not count as different programs. Open-attendance participation does not count
+as enrollment. Roster choices exclude conflicting programs while retained members
+remain available for withdrawal. Enrollment, cycle-date, and program-mode writes
+must preserve this rule; overlapping writes return a conflict.
+
 ## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
