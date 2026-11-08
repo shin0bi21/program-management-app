@@ -6,10 +6,6 @@ import { createSession } from '../../../sessions.api';
 import useAddSessionModal from './useAddSessionModal';
 
 vi.mock('../../../sessions.api', () => ({ createSession: vi.fn() }));
-vi.mock('../../../hooks/data/useSessionTypes', () => {
-  const sessionTypes = [{ id: 'Regular', name: 'Regular' }];
-  return { useSessionTypes: () => ({ sessionTypes }) };
-});
 const programs: Program[] = [
   { id: 'p1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
     defaultDayOfWeek: 'tuesday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto' },

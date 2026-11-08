@@ -1,4 +1,5 @@
 import type { CreatedSessionResult } from '../../sessions.api';
+import type { SessionType } from '../../types';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -9,13 +10,14 @@ import useAddSessionModal from './hooks/useAddSessionModal';
 
 interface AddSessionModalProps {
   programs: Program[];
+  sessionTypes: SessionType[];
   initialProgramId?: string;
   initialDate?: string;
   onClose: () => void;
   onSaved: (result: CreatedSessionResult) => void | Promise<void>;
 }
 
-export default function AddSessionModal({ onClose, ...options }: AddSessionModalProps) {
+export default function AddSessionModal({ onClose, sessionTypes, ...options }: AddSessionModalProps) {
   const workflow = useAddSessionModal(options);
   return <Modal isOpen onClose={onClose} title="Add Session" status={workflow.status}
     statusMessage={workflow.message}
@@ -31,7 +33,7 @@ export default function AddSessionModal({ onClose, ...options }: AddSessionModal
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionType}
           onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
-          options={toFilterOptions(workflow.sessionTypes)} />
+          options={toFilterOptions(sessionTypes)} />
       </FormField>
       <FormField id="session-theme" label="Title / Theme">
         <input id="session-theme" required maxLength={160} value={workflow.draft.theme}

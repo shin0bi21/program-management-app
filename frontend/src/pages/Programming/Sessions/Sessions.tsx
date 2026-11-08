@@ -207,6 +207,7 @@ export default function Sessions() {
 
       <EditSessionModal
         session={editTarget}
+        sessionTypes={sessionTypes}
         timezone={programs.find(program => program.id === editTarget?.programId)?.timezone ?? 'America/Toronto'}
         onClose={closeEditSessionModal}
         onUpdated={actions.syncUpdatedSession}
@@ -214,6 +215,7 @@ export default function Sessions() {
 
       {addSessionTarget && <AddSessionModal
         programs={programs}
+        sessionTypes={sessionTypes}
         initialProgramId={addSessionTarget.programId}
         initialDate={addSessionTarget.date}
         onClose={closeAddSessionModal}

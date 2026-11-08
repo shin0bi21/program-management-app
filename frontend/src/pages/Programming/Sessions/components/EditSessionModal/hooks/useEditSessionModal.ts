@@ -5,7 +5,6 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { ProgramSession } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { useSessionTypes } from '../../../hooks/data/useSessionTypes';
 
 /**
  * Owns the session type draft and save lifecycle without resetting on shared record updates.
@@ -15,7 +14,6 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [sessionType, setSessionType] = useState('');
-  const { sessionTypes } = useSessionTypes();
   const { tryLock, unlock } = useSubmitLock();
 
   const initialTypeRef = useRef(session?.sessionType);
@@ -68,7 +66,6 @@ export function useEditSessionModal(session: ProgramSession | null, onUpdated: (
     submissionComplete: status === 'submitting' || status === 'success',
     sessionType,
     setSessionType,
-    sessionTypes,
     submit,
   };
 }
