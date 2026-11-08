@@ -9,7 +9,7 @@ import { sessionStore } from '../../sessionStore';
 import type { ProgramSession, SessionCalendarCache } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import { getErrorMessage } from '../../../../../http/errors';
-import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
+import { youthData } from '../../../../Youth/hooks/data/useYouthData';
 
 const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
 const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
@@ -63,7 +63,7 @@ export default function useSessionActions({
     syncSession(result.session);
     queryClient.setQueryData(['sessions', result.session.id, 'roster'], result.roster);
     for (const youth of result.updatedYouth ?? []) {
-      replaceInfiniteListRow(queryClient, ['youth', 'table'], youth);
+      youthData.write(queryClient, youth);
     }
     if (result.updatedProgramCycle) {
       syncAssignments([result.updatedProgramCycle]);

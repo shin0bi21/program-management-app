@@ -38,6 +38,8 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
      */
     export default function ${name}({ selectedId, data }: { selectedId: string | null; data: ${pageName}Data }) {
       // Cards own private summary/child queries keyed by selectedId; disable them when it is null.
+      // Flow: page selectedId -> dashboard/card data hook -> feature API request for that same ID.
+      // The data hook receives selectedId, includes it in queryKey, and passes it with signal to the API adapter.
       // Read main-record fields from supplied data; do not repeat the page's main/reference queries.
       // Add a private use<Domain>DashboardData only for queries shared by sibling cards.
       // Keep API calls out of this composition and avoid an empty dashboard-data wrapper.

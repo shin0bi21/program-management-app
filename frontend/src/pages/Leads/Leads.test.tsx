@@ -1,8 +1,13 @@
 import { renderWithQueryClient } from '../../tests/queryClientTestUtils';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Leads from './Leads';
 
+/**
+ * Renders the requested outreach collection with an isolated query cache.
+ * @param origin - Internal or external leads collection to exercise.
+ * @example renderPage('internal')
+ */
 const renderPage = (origin: 'external' | 'internal' = 'external') => (
   renderWithQueryClient(<Leads origin={origin} />)
 );
@@ -125,6 +130,23 @@ describe('Leads', () => {
 
     expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
     expect(screen.queryByText('416-555-0142')).not.toBeInTheDocument();
+  });
+
+  it('refreshes the selected saved lead without replacing an open edit draft', async () => {
+    const initialLead = (await getLeads()).rows[0];
+    const { queryClient } = renderPage();
+    fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Phone Number *'), { target: { value: '416-555-0188' } });
+    const readsBeforeRefresh = getLeads.mock.calls.length;
+    getLeads.mockResolvedValue({ rows: [{ ...initialLead, contactPhoneNumber: '416-555-0199' }], nextCursor: null });
+
+    await act(async () => queryClient.invalidateQueries({ queryKey: ['leads', 'table'] }));
+
+    expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
+    expect(screen.getByLabelText('Phone Number *')).toHaveValue('416-555-0188');
+    expect(getLeads).toHaveBeenCalledTimes(readsBeforeRefresh + 1);
   });
 
   it('keeps the selected dashboard synchronized after editing', async () => {

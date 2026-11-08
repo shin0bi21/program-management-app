@@ -63,6 +63,12 @@ const programCycle = {
 
 const queryKey = ['lead-signup-programCycles'] as const;
 
+/**
+ * Opens a sign-up workflow with an isolated assignment-query cache.
+ * @param currentLead - Initial saved target, or null for a closed workflow.
+ * @param onSuccess - Observer called with the authoritative sign-up result.
+ * @example const view = renderWorkflow(lead)
+ */
 function renderWorkflow(currentLead: Lead | null, onSuccess = vi.fn()) {
   const queryClient = createTestQueryClient();
   return renderHook(
@@ -159,6 +165,20 @@ describe('useSignUpLeadModal', () => {
     expect(result.current.visibleProgramCycles).toEqual([]);
     await act(() => result.current.submit());
     expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'general', '2000-01-01');
+  });
+
+  it('preserves the sign-up draft when the same saved lead refreshes', async () => {
+    const view = renderWorkflow(lead);
+    await waitFor(() => expect(view.result.current.loading).toBe(false));
+    act(() => {
+      view.result.current.changeDateOfBirth('2000-01-01');
+      view.result.current.selectNoteCategory('health');
+    });
+
+    view.rerender({ target: { ...lead, dateOfBirth: '2001-01-01' } });
+
+    expect(view.result.current.dateOfBirth).toBe('2000-01-01');
+    expect(view.result.current.noteCategory).toBe('health');
   });
 
   it('starts a different lead with a clean draft', async () => {

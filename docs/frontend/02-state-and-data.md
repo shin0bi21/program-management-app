@@ -90,6 +90,21 @@ Create only the hooks the page needs. Table and calendar data hooks belong to
 their components. Add a dashboard data hook when sibling cards share queries;
 otherwise each card owns its private queries.
 
+The selected-record dashboard query flows through these owners:
+
+```text
+Page selected ID
+  → Dashboard or card
+  → use<Domain>DashboardData(selectedId) or use<Card>Data(selectedId)
+  → Query keyed by selectedId
+  → Feature API request for selectedId
+```
+
+The data hook receives the selected ID, includes it in its query key, and passes
+that same ID and the query's AbortSignal to the API adapter. Enable the query
+only when its required ID is present. Each card handles its own selection and
+query states; independent summary cards can query their supplied page context.
+
 - **Main data:** Own complete saved records indexed by ID, shared reference queries, and read/write reconciliation in the page data module. Reuse `query/createRecordStore.ts` internally for revision and account-lifecycle behavior when records are shared across views.
 - **Table:** Receive main data and applied controls. Own the paginated query, loading/retry state, and ordering indexes; publish fetched records through the main data owner.
 - **Calendar:** Receive the same main data and applied controls. Own range requests and buffer setup; retain range/placement indexes and publish fetched records through the main data owner.

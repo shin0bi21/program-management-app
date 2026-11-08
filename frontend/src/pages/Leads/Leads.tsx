@@ -17,6 +17,12 @@ import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadOrigin } from '.
 import './Leads.css';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
+
+/**
+ * Displays outreach leads with current saved selection and independent edit drafts.
+ * @param props - The internal or external outreach collection to display.
+ * @example <Leads origin="external" />
+ */
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
@@ -28,8 +34,9 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Page data and preferences.
   const preferenceKey = origin === 'external' ? 'outreach-external-leads-filters' : 'outreach-internal-leads-filters';
-  const tableQueryKey = ['leads', origin, 'table'] as const;
+  const tableQueryKey = ['leads', 'table', origin] as const;
   const data = useLeadData();
+  const { records } = data;
   const preferences = useLeadPreferences(
     origin,
     preferenceKey,
@@ -49,27 +56,27 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   } : null, [origin, preferences.filters.values.programIds, preferences.filters.values.statuses, preferences.filters.values.submitterRoles, preferences.ready, preferences.search.appliedValue]);
 
   // Selection and actions.
-  const selection = useLeadSelection();
+  const selection = useLeadSelection(records);
   const actions = useLeadActions({
     tableQueryKey,
-    onLeadSynced: selection.syncSelectedLead,
     onLeadRemoved: selection.removeSelectedLead,
   });
 
   // Lead modal.
-  const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
+  const [modalTarget, setModalTarget] = useState<string | null>(null);
+  const modalLead = modalTarget ? records[modalTarget] : undefined;
   const closeLeadModal = () => setModalTarget(null);
 
   // Sign-up modal.
-  const [signUpTarget, setSignUpTarget] = useState<Lead | null>(null);
-  const requestSignUp = (lead: Lead) => setSignUpTarget(lead);
+  const [signUpTarget, setSignUpTarget] = useState<string | null>(null);
+  const requestSignUp = (lead: Lead) => setSignUpTarget(lead.id);
   const closeSignUpModal = () => setSignUpTarget(null);
 
   // Table configuration.
   const { columns } = useLeadTable({
     origin,
     canWrite,
-    onEdit: setModalTarget,
+    onEdit: lead => setModalTarget(lead.id),
     onDelete: actions.requestDelete,
     onSignUp: requestSignUp,
     onStatusChange: actions.setStatus,
@@ -95,6 +102,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
         onMessageChange={setDashboardError}
       />}
       table={<LeadTable
+        records={records}
         queryKey={tableQueryKey}
         columns={columns}
         hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -109,17 +117,17 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       />}
     />
     <LeadModal
-      isOpen={modalTarget !== null}
-      lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
+      isOpen={modalTarget === 'new' || Boolean(modalLead)}
+      lead={modalLead}
       onClose={closeLeadModal}
       onSuccess={savedLead => {
+        actions.syncLead(savedLead);
         if (modalTarget === 'new') void actions.refreshLeads();
-        else actions.syncLead(savedLead);
       }}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}
-      lead={signUpTarget}
+      lead={signUpTarget ? records[signUpTarget] ?? null : null}
       onClose={closeSignUpModal}
       onSuccess={actions.reconcileSignUp}
     />

@@ -1,3 +1,4 @@
+import { youthData } from '../../../../../Youth/hooks/data/useYouthData';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -8,9 +9,15 @@ import { getErrorMessage } from '../../../../../../http/errors';
 import { getProgramCycleAssignments } from '../../../api/programCycleAssignments.api';
 import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/programCycleAssignmentCache';
 
-// The modal is keyed by program ID, so each instance owns one program draft.
+/**
+ * Edits assigned cycles for the program draft owned by this keyed modal instance.
+ * @param programId - Program whose assignments are loaded and saved.
+ * @param cyclesReady - Whether selectable cycle reference data is available.
+ * @example useProgramCyclesModal('program-1', true) // one program's assigned-cycle draft
+ */
 export default function useProgramCyclesModal(programId: string, cyclesReady: boolean) {
   const queryClient = useQueryClient();
+  const scope = youthData.getScope(queryClient);
   const assignments = useQuery({
     queryKey: ['programs', 'cycle-assignment-editor', programId],
     queryFn: ({ signal }) => getProgramCycleAssignments(programId, { includeAllPrograms: true }, { signal }),
@@ -44,12 +51,16 @@ export default function useProgramCyclesModal(programId: string, cyclesReady: bo
 
     try {
       const saved = await setProgramCycles(programId, selectedCycleIds);
-      syncProgramCycleAssignmentChanges(queryClient, saved);
+      if (!youthData.isScope(queryClient, scope)) return;
+
+      syncProgramCycleAssignmentChanges(queryClient, saved, scope);
 
       setSelectedCycleIds(saved.cycleIds);
       setSubmitStatus('success');
       setStatusMessage('Assigned cycles saved.');
     } catch (cause) {
+      if (!youthData.isScope(queryClient, scope)) return;
+
       setStatusMessage(getErrorMessage(cause, 'Could not save assigned cycles'));
       setSubmitStatus('error');
       unlock();

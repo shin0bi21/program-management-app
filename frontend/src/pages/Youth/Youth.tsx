@@ -8,7 +8,7 @@ import YouthReportModal from '../../common/features/YouthReportModal/YouthReport
 import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from './components/YouthModal/YouthModal';
-import { YOUTH_TABLE_KEYS, type YouthFilters } from './types';
+import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthProfile } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
@@ -19,9 +19,12 @@ import { useYouthActions } from './hooks/actions/useYouthActions';
 import { useYouthSelection } from './hooks/selection/useYouthSelection';
 import { useYouthControls } from './hooks/controls/useYouthControls';
 import useYouthData from './hooks/data/useYouthData';
-import type { YouthProfile } from './types';
 import './Youth.css';
 
+/**
+ * Coordinates saved Youth selection, collection controls, and profile workflows.
+ * @example <Youth /> // selected profiles remain available when table filters change
+ */
 export default function Youth() {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
@@ -38,7 +41,7 @@ export default function Youth() {
     && permissions.includes('read:sessions');
 
   // Page data and preferences.
-  const { programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
+  const { records, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
   const controls = useYouthControls({
     role,
     programs,
@@ -61,30 +64,32 @@ export default function Youth() {
   // Selection and selection-dependent workflow synchronization.
   const [attendanceTarget, setAttendanceTarget] = useState<YouthAttendanceSummary | null>(null);
   const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
-  const { selectedProfile, selectedProfileId, selectProfile, reconcileSavedProfile } = useYouthSelection({
+  const { selectedProfile, selectedProfileId, selectProfile } = useYouthSelection(records, {
     onSelectedProfileIdChange: closeAttendanceModal,
   });
 
   // Page actions.
-  const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions({
-    onYouthReconciled: reconcileSavedProfile,
-  });
+  const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions();
 
   // Profile-note actions and dialogs.
   const profileNotes = useProfileNotes(selectedProfileId);
   const openProfileNoteEditor = profileNotes.openEditor;
 
   // Youth modal.
-  const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  let modalTarget: YouthProfile | 'new' | null = null;
+  if (modalTargetId === 'new') modalTarget = 'new';
+  else if (modalTargetId) modalTarget = records[modalTargetId] ?? null;
   const schoolModal = useSchoolModal();
   const closeYouthModal = () => {
     schoolModal.close();
-    setModalTarget(null);
+    setModalTargetId(null);
   };
 
   // Primary-contact modal.
-  const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
-  const closeContactModal = () => setContactTarget(null);
+  const [contactTargetId, setContactTargetId] = useState<string | null>(null);
+  const contactTarget = contactTargetId ? records[contactTargetId] ?? null : null;
+  const closeContactModal = () => setContactTargetId(null);
 
   // Attendance-report modal.
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
@@ -99,7 +104,7 @@ export default function Youth() {
   }, [openProfileNoteEditor]);
   const { columns: youthColumns } = useYouthTable({
     canWrite,
-    onEdit: setModalTarget,
+    onEdit: profile => setModalTargetId(profile.id),
     onAddNote: addProfileNote,
   });
 
@@ -108,7 +113,7 @@ export default function Youth() {
     <>
       <PageContainer
         title="Profiles"
-        actions={canWrite ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
+        actions={canWrite ? <Button onClick={() => setModalTargetId('new')}>+ Add</Button> : undefined}
         ariaLabel="Youth profiles"
         controls={controls}
         loadingLabel="Loading saved youth preferences…"
@@ -119,6 +124,7 @@ export default function Youth() {
           programsError,
           cyclesError,
           viewError,
+          selectedProfileId && !selectedProfile ? 'This youth profile is no longer available.' : null,
           profileNotes.error ? {
             message: profileNotes.error,
             action: { label: 'Retry', onClick: profileNotes.retry },
@@ -127,7 +133,7 @@ export default function Youth() {
         dashboard={<YouthDashboard
           profile={selectedProfile}
           canWrite={canWrite}
-          onManagePrimaryContact={setContactTarget}
+          onManagePrimaryContact={profile => setContactTargetId(profile.id)}
           canReadAttendance={canReadAttendance}
           canManageAttendance={canManageAttendance}
           onManageAttendance={setAttendanceTarget}
@@ -145,11 +151,11 @@ export default function Youth() {
           onDeleteProfileNote={profileNotes.requestDelete}
         />}
         table={<YouthTable
+          records={records}
           columns={youthColumns}
           filters={youthFilters}
           hiddenColumnKeys={table.hiddenColumns}
           selectedProfileId={selectedProfileId}
-          onSelectedProfileResolved={selectProfile}
           onRowSelect={selectProfile}
           sorting={table.sorting}
           onSortingChange={table.setSorting}

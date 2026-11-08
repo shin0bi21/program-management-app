@@ -1,6 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { youthData } from './hooks/data/useYouthData';
 import type { SchoolAction, SchoolSelection } from '../../common/features/SchoolModal/types';
 import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
@@ -20,7 +23,19 @@ const authState = vi.hoisted(() => ({
 }));
 
 vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
-  default: (filters: unknown) => mockUseYouthTableData(filters),
+  /**
+   * Publishes the test table's profiles through their record owner.
+   * @param filters - Page filters forwarded to the scenario's table mock.
+   * @example useMockYouthTableData(filters) // saved profiles available to selection
+   */
+  default: function useMockYouthTableData(_records: unknown, filters: unknown) {
+    const client = useQueryClient();
+    const result = mockUseYouthTableData(filters);
+    useEffect(() => {
+      for (const profile of result.rows) youthData.write(client, profile);
+    }, [client, result.rows]);
+    return result;
+  },
 }));
 vi.mock('./youth.api', () => youthApi);
 vi.mock('./components/YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api', () => summaryApi);
@@ -200,14 +215,15 @@ describe('Youth', () => {
   });
 
   it('reconciles an authoritative contact save into the selected dashboard', async () => {
-    render(<Youth />);
+    const { queryClient } = render(<Youth />);
     await screen.findByRole('button', { name: 'Filters' });
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     fireEvent.click(screen.getByRole('button', { name: 'Manage primary contact' }));
     fireEvent.click(screen.getByRole('button', { name: 'Complete save' }));
 
-    expect(screen.getByText('416-555-0199')).toBeInTheDocument();
+    expect(youthData.get(queryClient, 'youth-1')?.contacts?.[0].phoneNumber).toBe('416-555-0199');
+    expect(await screen.findByText('416-555-0199')).toBeInTheDocument();
   });
 
   // Commands and dialogs.

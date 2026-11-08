@@ -94,6 +94,25 @@ describe('SessionAttachmentModal', () => {
     expect(await screen.findByText('Attachment successfully updated.')).toBeInTheDocument();
   });
 
+  it('preserves edited text when the same saved attachment refreshes', async () => {
+    const props = { queryKey, onClose: vi.fn(), onSaved: vi.fn() };
+    const view = renderWithQueryClient(
+      <SessionAttachmentModal session={session} attachment={attachment} {...props} />,
+    );
+    await screen.findByLabelText('Maya Thompson');
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Draft title' } });
+    fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'Draft description' } });
+
+    view.rerender(<SessionAttachmentModal
+      session={{ ...session, theme: 'Refreshed session' }}
+      attachment={{ ...attachment, title: 'Refreshed saved title', description: 'Refreshed saved description' }}
+      {...props}
+    />);
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Draft title');
+    expect(screen.getByLabelText('Description (optional)')).toHaveValue('Draft description');
+  });
+
   it('shows an upload failure and keeps the editor open', async () => {
     const user = userEvent.setup();
     api.createSessionAttachment.mockRejectedValue(new Error('Upload failed'));
