@@ -1,4 +1,3 @@
-import { getYouthSortValue } from '../../../hooks/data/useYouthData';
 import { TABLE_PAGE_SIZE } from '../../../../../query/types';
 import { getYouth } from '../../../youth.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -46,4 +45,20 @@ export default function useYouthTableData(
     retry: query.retry,
     ...(query.refreshNotice ? { refreshNotice: query.refreshNotice } : {}),
   };
+}
+
+/**
+ * Supplies the server-compatible value for a Youth table order.
+ * @param profile - Complete saved Youth profile.
+ * @param key - Column selected for ordering.
+ * @example getYouthSortValue(profile, 'firstName') // lower-case first name
+ */
+export function getYouthSortValue(profile: YouthProfile, key: YouthSortKey) {
+  return {
+    firstName: profile.firstName.toLowerCase(),
+    lastName: profile.lastName.toLowerCase(),
+    dateOfBirth: profile.dateOfBirth ?? '',
+    school: profile.schoolName?.toLowerCase() ?? '',
+    activeProgram: profile.activeProgram?.program.toLowerCase() ?? '',
+  }[key];
 }

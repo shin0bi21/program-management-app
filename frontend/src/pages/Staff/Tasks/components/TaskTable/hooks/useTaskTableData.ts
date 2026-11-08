@@ -1,6 +1,5 @@
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getTasksTableData, type TasksFilters } from '../../../tasks.api';
-import { getTaskSortValue } from '../../../hooks/data/useTaskData';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { Task, TaskSortKey } from '../../../types';
@@ -27,4 +26,23 @@ export default function useTaskTableData(
     ),
     errorMessage: 'Unable to load tasks.',
   });
+}
+
+/**
+ * Supplies the server-compatible value for the selected task table order.
+ * @param task - Complete saved task whose fields match the server's table order.
+ * @param key - Selected table column.
+ * @example getTaskSortValue(task, 'title') // lower-case title
+ */
+export function getTaskSortValue(task: Task, key: TaskSortKey) {
+  return {
+    firstName: task.firstName.toLowerCase(),
+    lastName: task.lastName.toLowerCase(),
+    title: task.title.toLowerCase(),
+    category: task.category,
+    program: task.program?.toLowerCase() ?? '',
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    status: task.status,
+  }[key];
 }

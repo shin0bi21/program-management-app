@@ -7,9 +7,7 @@ import {
   createQueryClientWrapper,
   createTestQueryClient,
 } from '../../../../../tests/queryClientTestUtils';
-import useHoursData, { getHoursSortValue } from './useHoursData';
-import type { HoursItem, HoursSortKey } from '../../types';
-import { makeHoursItem } from '../../../../../tests/factories/hours';
+import useHoursData from './useHoursData';
 
 vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
 vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
@@ -47,26 +45,4 @@ describe('useHoursData', () => {
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });
     expect(getCycleReferences).toHaveBeenCalledOnce();
   });
-});
-
-const row = makeHoursItem({ date: '2026-10-01', firstName: 'Avery', lastName: 'Youth', name: 'Avery Youth' });
-
-const sortValues: Array<[HoursSortKey, Partial<HoursItem>, string | number]> = [
-  ['firstName', { firstName: 'Other' }, 'other'],
-  ['lastName', { lastName: 'Other' }, 'other'],
-  ['date', { date: '2026-10-02' }, '2026-10-02'],
-  ['program', { program: 'Other' }, 'other'],
-  ['cycle', { cycle: 'Other' }, 'other'],
-  ['category', { category: 'other' }, 'other'],
-  ['hours', { hours: 10.5 }, 10.5],
-  ['note', { note: 'Other' }, 'other'],
-  ['type', { type: 'task' }, 'task'],
-];
-
-it.each(sortValues)('maps %s to its canonical sort value', (key, changes, expected) => {
-  expect(getHoursSortValue({ ...row, ...changes }, key)).toEqual(expected);
-});
-
-it('sorts general time using the server’s empty program value', () => {
-  expect(getHoursSortValue(makeHoursItem({ program: null }), 'program')).toBe('');
 });

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 import type { Lead, LeadSortKey } from '../../../types';
-import { getLeadSortValue } from '../../../hooks/data/useLeadData';
+import { getLeadSortValue } from './useLeadTableData';
 
 const row: Lead = {
   id: 'lead-1', origin: 'internal', submittedByRole: 'staff', convertedYouthId: null,

@@ -3,7 +3,6 @@ import { getHoursTableData } from '../../../hours.api';
 import type { HoursFilters, HoursSortKey, HoursItem } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { getHoursSortValue } from '../../../hooks/data/useHoursData';
 
 /**
  * Loads complete Hours rows for the applied table controls.
@@ -27,4 +26,15 @@ export default function useHoursTableData(
     ),
     errorMessage: 'Could not load hours.',
   });
+}
+
+/**
+ * Supplies the server-compatible value for the selected Hours table order.
+ * @param item - Complete saved hours record.
+ * @param key - Column selected for ordering.
+ * @example getHoursSortValue(item, 'hours') // numeric hours
+ */
+export function getHoursSortValue(item: HoursItem, key: HoursSortKey) {
+  const value = item[key];
+  return typeof value === 'string' ? value.toLowerCase() : value ?? '';
 }

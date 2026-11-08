@@ -3,18 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { getHoursReferenceData } from '../../hours.api';
-import type { HoursItem, HoursSortKey } from '../../types';
-
-/**
- * Supplies the server-compatible value for the selected Hours table order.
- * @param item - Complete saved hours record.
- * @param key - Column selected for ordering.
- * @example getHoursSortValue(item, 'hours') // numeric hours
- */
-export function getHoursSortValue(item: HoursItem, key: HoursSortKey) {
-  const value = item[key];
-  return typeof value === 'string' ? value.toLowerCase() : value ?? '';
-}
 
 /**
  * Supplies shared staff, program, cycle, and hour choices.

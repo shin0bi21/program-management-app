@@ -1,21 +1,4 @@
 import { useCycleReferences, useProgramReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
-import type { YouthProfile, YouthSortKey } from '../../types';
-
-/**
- * Supplies the server-compatible value for a Youth table order.
- * @param profile - Complete saved Youth profile.
- * @param key - Column selected for ordering.
- * @example getYouthSortValue(profile, 'firstName') // lower-case first name
- */
-export function getYouthSortValue(profile: YouthProfile, key: YouthSortKey) {
-  return {
-    firstName: profile.firstName.toLowerCase(),
-    lastName: profile.lastName.toLowerCase(),
-    dateOfBirth: profile.dateOfBirth ?? '',
-    school: profile.schoolName?.toLowerCase() ?? '',
-    activeProgram: profile.activeProgram?.program.toLowerCase() ?? '',
-  }[key];
-}
 
 /**
  * Supplies the page's shared program and cycle choices.
