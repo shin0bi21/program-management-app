@@ -58,11 +58,17 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
       // 4. Load the employee's current details, email, and status.
       const existingUsers = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { email: string; status: 'invited' | 'active' | 'inactive' })[]>`
-        SELECT u.id, u.first_name, u.last_name, uc.status, uc.email
-        FROM users u
-        INNER JOIN user_roles ur ON ur.id = u.role_id
-        INNER JOIN user_credentials uc ON uc.user_id = u.id
-        WHERE u.id = ${id} AND ur.name IN ('staff', 'project_manager', 'admin')
+        SELECT
+          account_user.id,
+          account_user.first_name,
+          account_user.last_name,
+
+          credentials.email,
+          credentials.status
+        FROM users account_user
+        INNER JOIN user_roles role ON role.id = account_user.role_id
+        INNER JOIN user_credentials credentials ON credentials.user_id = account_user.id
+        WHERE account_user.id = ${id} AND role.name IN ('staff', 'project_manager', 'admin')
         LIMIT 1
       `;
       if (!existingUsers.length) throw new NotFoundError('Staff user not found');
@@ -126,7 +132,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
         // 10. Save the replacement invitation token.
         await trx`
-          INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
+          INSERT INTO user_password_reset_tokens (user_id, token_hash, expires_at)
           VALUES (${id}, ${tokenHash}, ${expiresAt})
         `;
         newInviteToken = rawToken;
@@ -189,7 +195,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
       // 18. Save the invitation token.
       await trx`
-        INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
+        INSERT INTO user_password_reset_tokens (user_id, token_hash, expires_at)
         VALUES (${userId}, ${tokenHash}, ${expiresAt})
       `;
 
@@ -235,10 +241,10 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
 
     // 3. Require an existing youth profile and read the name for the invitation email.
     const youth = await trx<{ firstName: string }[]>`
-      SELECT u.first_name
-      FROM users u
-      INNER JOIN youth_profiles yp ON yp.user_id = u.id
-      WHERE u.id = ${userId}
+      SELECT account_user.first_name
+      FROM users account_user
+      INNER JOIN youth_profiles profile ON profile.user_id = account_user.id
+      WHERE account_user.id = ${userId}
       LIMIT 1
     `;
     if (!youth.length) throw new NotFoundError('Youth profile not found');
@@ -261,7 +267,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
 
     // 6. Save the invitation token.
     await trx`
-      INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
+      INSERT INTO user_password_reset_tokens (user_id, token_hash, expires_at)
       VALUES (${userId}, ${tokenHash}, ${expiresAt})
     `;
 
@@ -305,11 +311,16 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 
     // 2. Load the current account status.
     const existingUsers = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { status: 'invited' | 'active' | 'inactive' })[]>`
-      SELECT u.id, u.first_name, u.last_name, uc.status
-      FROM users u
-      INNER JOIN user_roles ur ON ur.id = u.role_id
-      INNER JOIN user_credentials uc ON uc.user_id = u.id
-      WHERE u.id = ${userId}
+      SELECT
+        account_user.id,
+        account_user.first_name,
+        account_user.last_name,
+
+        credentials.status
+      FROM users account_user
+      INNER JOIN user_roles role ON role.id = account_user.role_id
+      INNER JOIN user_credentials credentials ON credentials.user_id = account_user.id
+      WHERE account_user.id = ${userId}
       LIMIT 1
     `;
     if (!existingUsers.length) throw new NotFoundError('Staff user not found');
@@ -368,11 +379,16 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 
     // 3. Load the account's current invitation status.
     const existingUsers = await trx<(DbRow<Pick<Users, 'id' | 'first_name' | 'last_name'>> & { status: 'invited' | 'active' | 'inactive' })[]>`
-      SELECT u.id, u.first_name, u.last_name, uc.status
-      FROM users u
-      INNER JOIN user_roles ur ON ur.id = u.role_id
-      INNER JOIN user_credentials uc ON uc.user_id = u.id
-      WHERE u.id = ${userId}
+      SELECT
+        account_user.id,
+        account_user.first_name,
+        account_user.last_name,
+
+        credentials.status
+      FROM users account_user
+      INNER JOIN user_roles role ON role.id = account_user.role_id
+      INNER JOIN user_credentials credentials ON credentials.user_id = account_user.id
+      WHERE account_user.id = ${userId}
       LIMIT 1
     `;
     if (!existingUsers.length) throw new NotFoundError('Staff user not found');
@@ -418,14 +434,14 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 /**
  * Locks the surviving user row until the transaction ends, serializing invitation and reset changes.
  * Lock before validating credential state for a write or locking reset tokens; youth credential deletion keeps this row.
- * @param transaction - Existing transaction containing the complete credential/token operation.
+ * @param trx - Existing transaction containing the complete credential/token operation.
  * @param userId - User whose invitation or password-reset state will be checked or changed.
  * @returns Whether the user still exists; missing users acquire no lock.
  * @example await lockAccountUser(trx, youthId) // blocks a competing activation until commit
  */
-export async function lockAccountUser(transaction: typeof sql, userId: string): Promise<boolean> {
+export async function lockAccountUser(trx: typeof sql, userId: string): Promise<boolean> {
   // 1. Hold the user row lock until the caller's transaction ends.
-  const users = await transaction<{ id: string }[]>`
+  const users = await trx<{ id: string }[]>`
     SELECT id
     FROM users
     WHERE id = ${userId}
@@ -442,11 +458,11 @@ export async function lockAccountUser(transaction: typeof sql, userId: string): 
 async function getAccountRole(userId: string): Promise<UserRole> {
   // 1. Read the credential-backed account's role for authorization.
   const accounts = await sql<{ role: UserRole }[]>`
-    SELECT ur.name AS role
-    FROM users u
-    INNER JOIN user_roles ur ON ur.id = u.role_id
-    INNER JOIN user_credentials uc ON uc.user_id = u.id
-    WHERE u.id = ${userId}
+    SELECT role.name AS role
+    FROM users account_user
+    INNER JOIN user_roles role ON role.id = account_user.role_id
+    INNER JOIN user_credentials credentials ON credentials.user_id = account_user.id
+    WHERE account_user.id = ${userId}
     LIMIT 1
   `;
   if (!accounts.length) throw new NotFoundError('Account not found');
@@ -479,7 +495,7 @@ async function replaceUserProgramAssignments(
   const assignablePrograms = await trx<{ id: string }[]>`
     SELECT id
     FROM programs
-    WHERE id = ANY(${sql.array(programIds)}::uuid[])
+    WHERE id = ANY(${trx.array(programIds)}::uuid[])
   `;
   if (assignablePrograms.length !== programIds.length) {
     throw new ConflictError('One or more selected programs cannot be assigned');
@@ -489,7 +505,7 @@ async function replaceUserProgramAssignments(
   await trx`
     INSERT INTO user_program_assignments (user_id, program_id, created_by)
     SELECT ${staffId}, selected.program_id, ${actorId}
-    FROM UNNEST(${sql.array(programIds)}::uuid[]) AS selected(program_id)
+    FROM UNNEST(${trx.array(programIds)}::uuid[]) AS selected(program_id)
   `;
 }
 

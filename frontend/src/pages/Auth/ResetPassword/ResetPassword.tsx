@@ -5,6 +5,10 @@ import Button from '../../../common/components/Button/Button';
 
 import { useResetPassword } from './hooks/useResetPassword';
 
+/**
+ * Displays the recovery-link password form, validation, and reset outcome.
+ * @example <ResetPassword /> // reset form for the token in the current URL
+ */
 export default function ResetPassword() {
   const { form, error, message, onSubmit, token } = useResetPassword();
   const {
@@ -36,16 +40,16 @@ export default function ResetPassword() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
           <div className="form-group">
-            <label htmlFor="password">New password</label>
+            <label htmlFor="newPassword">New password</label>
             <input
-              id="password"
+              id="newPassword"
               type="password"
               autoComplete="new-password"
               disabled={isSubmitting}
-              {...register('password')}
+              {...register('newPassword')}
             />
-            {errors.password && (
-              <span className="field-error">{errors.password.message}</span>
+            {errors.newPassword && (
+              <span className="field-error">{errors.newPassword.message}</span>
             )}
           </div>
 

@@ -41,10 +41,6 @@ const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 // Generate dummy hash at startup for timing attack protection on invalid emails
 const DUMMY_HASH = bcrypt.hashSync('dummy_password_for_timing_attack_protection', 10);
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 type LoginCredentialsRow =
   DbRow<Pick<UserCredentials, 'user_id' | 'email' | 'password_hash' | 'email_verified' | 'failed_login_attempts' | 'locked_until' | 'status'>> &
   DbRow<Pick<Users, 'first_name' | 'last_name'>> &
@@ -63,7 +59,7 @@ export interface TokenPair {
 }
 
 export type LoginResult =
-  | { type: 'requires2FA'; userId: string }
+  | { type: 'requiresVerification'; userId: string }
   | { type: 'success'; tokens: TokenPair; user: UserInfo };
 
 export interface VerifyResult {
@@ -74,9 +70,11 @@ export interface VerifyResult {
 /**
  * Checks the password and active account, then starts 2FA or returns a session for an accepted device.
  * Failed passwords update lockout state; email and persistence failures propagate.
+ * @param email - Validated account address used to find credentials.
+ * @param password - Raw password compared against the stored hash.
  * @param deviceFingerprint - Browser device identifier to compare with unexpired trusted-device records.
  * @returns A user ID awaiting verification, or the signed tokens and public user details.
- * @example loginUser('alex@example.org', password) // requires2FA unless a device/bypass is accepted
+ * @example loginUser('alex@example.org', password) // requiresVerification unless a device/bypass is accepted
  */
 export async function loginUser(
   email: string,
@@ -87,46 +85,49 @@ export async function loginUser(
   // 1. Load credentials, account status, role, and permissions.
   const credentials = await sql<LoginCredentialsRow[]>`
     SELECT
-      uc.user_id,
-      uc.email,
-      uc.status,
-      uc.password_hash,
-      uc.email_verified,
-      uc.failed_login_attempts,
-      uc.locked_until,
-      u.first_name,
-      u.last_name,
-      ur.name AS role,
+      credentials.user_id,
+      credentials.email,
+      credentials.password_hash,
+      credentials.email_verified,
+      credentials.failed_login_attempts,
+      credentials.locked_until,
+      credentials.status,
+
+      account_user.first_name,
+      account_user.last_name,
+
+      role.name AS role,
+
       COALESCE(
-        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        json_agg(permission.name) FILTER (WHERE permission.name IS NOT NULL),
         '[]'
       ) AS permissions
-    FROM user_credentials uc
-    JOIN users u ON u.id = uc.user_id
-    JOIN user_roles ur ON ur.id = u.role_id
-    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
-    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
-    WHERE uc.email = ${email}
-    GROUP BY uc.user_id, uc.email, uc.password_hash, uc.email_verified,
-             uc.failed_login_attempts, uc.locked_until, uc.status, u.first_name, u.last_name, ur.name
+    FROM user_credentials credentials
+    JOIN users account_user ON account_user.id = credentials.user_id
+    JOIN user_roles role ON role.id = account_user.role_id
+    LEFT JOIN user_role_has_permissions role_permission ON role_permission.role_id = role.id
+    LEFT JOIN user_permissions permission ON permission.id = role_permission.permission_id
+    WHERE credentials.email = ${email}
+    GROUP BY credentials.user_id, credentials.email, credentials.password_hash, credentials.email_verified,
+             credentials.failed_login_attempts, credentials.locked_until, credentials.status, account_user.first_name, account_user.last_name, role.name
     LIMIT 1
   `;
 
   // 2. Reject an account whose lockout is still active.
   if (credentials.length > 0) {
-    const cred = credentials[0];
+    const credential = credentials[0];
 
-    if (cred.lockedUntil && new Date(cred.lockedUntil) > new Date()) {
-      const minutesLeft = Math.ceil((new Date(cred.lockedUntil).getTime() - Date.now()) / 60000);
+    if (credential.lockedUntil && new Date(credential.lockedUntil) > new Date()) {
+      const minutesLeft = Math.ceil((new Date(credential.lockedUntil).getTime() - Date.now()) / 60000);
       throw new LockedError(`Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`);
     }
 
     // 3. Clear an expired lockout.
-    if (cred.lockedUntil && new Date(cred.lockedUntil) <= new Date()) {
+    if (credential.lockedUntil && new Date(credential.lockedUntil) <= new Date()) {
       await sql`
         UPDATE user_credentials
         SET failed_login_attempts = 0, locked_until = NULL
-        WHERE user_id = ${cred.userId}
+        WHERE user_id = ${credential.userId}
       `;
     }
   }
@@ -138,8 +139,8 @@ export async function loginUser(
   // 5. Record failed passwords and lock known accounts after five failures.
   if (credentials.length === 0 || !isValid) {
     if (credentials.length > 0) {
-      const cred = credentials[0];
-      const newFailedAttempts = (cred.failedLoginAttempts || 0) + 1;
+      const credential = credentials[0];
+      const newFailedAttempts = (credential.failedLoginAttempts || 0) + 1;
 
       if (newFailedAttempts >= 5) {
         const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
@@ -147,17 +148,17 @@ export async function loginUser(
         await sql`
           UPDATE user_credentials
           SET failed_login_attempts = ${newFailedAttempts}, locked_until = ${lockUntil}
-          WHERE user_id = ${cred.userId}
+          WHERE user_id = ${credential.userId}
         `;
-        await logAuthEvent({ event: 'account_locked', userId: cred.userId, email: cred.email, ipAddress, metadata: { lockedUntil: lockUntil.toISOString() } });
+        await logAuthEvent({ event: 'account_locked', userId: credential.userId, email: credential.email, ipAddress, metadata: { lockedUntil: lockUntil.toISOString() } });
         throw new LockedError('Account locked due to too many failed attempts. Try again in 15 minutes.');
       } else {
         await sql`
           UPDATE user_credentials
           SET failed_login_attempts = ${newFailedAttempts}
-          WHERE user_id = ${cred.userId}
+          WHERE user_id = ${credential.userId}
         `;
-        await logAuthEvent({ event: 'login_failure', userId: cred.userId, email: cred.email, ipAddress, metadata: { failedAttempts: newFailedAttempts } });
+        await logAuthEvent({ event: 'login_failure', userId: credential.userId, email: credential.email, ipAddress, metadata: { failedAttempts: newFailedAttempts } });
       }
     } else {
       await logAuthEvent({ event: 'login_failure', email, ipAddress });
@@ -165,23 +166,23 @@ export async function loginUser(
     throw new UnauthorizedError('Invalid email or password');
   }
 
-  const cred = credentials[0];
+  const credential = credentials[0];
 
   // 6. Clear failed attempts after a valid password.
   await sql`
     UPDATE user_credentials
     SET failed_login_attempts = 0, locked_until = NULL
-    WHERE user_id = ${cred.userId}
+    WHERE user_id = ${credential.userId}
   `;
 
   // 7. Require an active account.
-  if (cred.status !== 'active') {
+  if (credential.status !== 'active') {
     throw new ForbiddenError('Account is deactivated');
   }
 
   // 8. Allow an explicit 2FA bypass only in local development.
   if (isTwoFactorDisabled()) {
-    return completeLogin(cred, 'local_development', ipAddress);
+    return completeLogin(credential, 'local_development', ipAddress);
   }
 
   // 9. Check for an unexpired trusted device before requiring 2FA.
@@ -189,22 +190,24 @@ export async function loginUser(
     const deviceHash = hashDeviceFingerprint(deviceFingerprint);
 
     const trustedDevices = await sql<DbRow<UserTrustedDevices>[]>`
-      SELECT * FROM user_trusted_devices
-      WHERE user_id = ${cred.userId}
+      SELECT *
+      FROM user_trusted_devices
+      WHERE user_id = ${credential.userId}
         AND device_hash = ${deviceHash}
         AND expires_at > NOW()
       LIMIT 1
     `;
 
     if (trustedDevices.length > 0) {
-      return completeLogin(cred, 'trusted_device', ipAddress, deviceHash);
+      return completeLogin(credential, 'trusted_device', ipAddress, deviceHash);
     }
   }
 
   // 10. Remove expired and used verification codes.
   await sql`
-    DELETE FROM user_auth_codes
-    WHERE user_id = ${cred.userId}
+    DELETE
+    FROM user_auth_codes
+    WHERE user_id = ${credential.userId}
       AND (expires_at < NOW() OR used_at IS NOT NULL)
   `;
 
@@ -214,14 +217,14 @@ export async function loginUser(
   // 11. Save a fresh five-minute verification code.
   await sql`
     INSERT INTO user_auth_codes (user_id, code, expires_at)
-    VALUES (${cred.userId}, ${code}, ${expiresAt})
+    VALUES (${credential.userId}, ${code}, ${expiresAt})
   `;
 
   // 12. Send the code and record the verification request.
-  await send2FACode(cred.email, code, cred.firstName);
-  await logAuthEvent({ event: '2fa_sent', userId: cred.userId, email: cred.email, ipAddress });
+  await send2FACode(credential.email, code, credential.firstName);
+  await logAuthEvent({ event: '2fa_sent', userId: credential.userId, email: credential.email, ipAddress });
 
-  return { type: 'requires2FA', userId: cred.userId };
+  return { type: 'requiresVerification', userId: credential.userId };
 }
 
 /**
@@ -270,23 +273,26 @@ export async function verify2FACode(
   // 3. Load current user details, status, role, and permissions.
   const credentials = await sql<LoginCredentialsRow[]>`
     SELECT
-      uc.user_id,
-      uc.email,
-      uc.status,
-      u.first_name,
-      u.last_name,
-      ur.name AS role,
+      credentials.user_id,
+      credentials.email,
+      credentials.status,
+
+      account_user.first_name,
+      account_user.last_name,
+
+      role.name AS role,
+
       COALESCE(
-        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        json_agg(permission.name) FILTER (WHERE permission.name IS NOT NULL),
         '[]'
       ) AS permissions
-    FROM user_credentials uc
-    JOIN users u ON u.id = uc.user_id
-    JOIN user_roles ur ON ur.id = u.role_id
-    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
-    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
-    WHERE uc.user_id = ${userId}
-    GROUP BY uc.user_id, uc.email, uc.status, u.first_name, u.last_name, ur.name
+    FROM user_credentials credentials
+    JOIN users account_user ON account_user.id = credentials.user_id
+    JOIN user_roles role ON role.id = account_user.role_id
+    LEFT JOIN user_role_has_permissions role_permission ON role_permission.role_id = role.id
+    LEFT JOIN user_permissions permission ON permission.id = role_permission.permission_id
+    WHERE credentials.user_id = ${userId}
+    GROUP BY credentials.user_id, credentials.email, credentials.status, account_user.first_name, account_user.last_name, role.name
     LIMIT 1
   `;
 
@@ -294,8 +300,8 @@ export async function verify2FACode(
     throw new NotFoundError('User not found');
   }
 
-  const cred = credentials[0];
-  if (cred.status !== 'active') {
+  const credential = credentials[0];
+  if (credential.status !== 'active') {
     throw new ForbiddenError('Account is inactive');
   }
 
@@ -305,8 +311,9 @@ export async function verify2FACode(
 
     // 4. Find an existing trust record for the supplied device.
     const existingDevice = await sql<DbRow<{ id: string }>[]>`
-      SELECT id FROM user_trusted_devices
-      WHERE user_id = ${cred.userId}
+      SELECT id
+      FROM user_trusted_devices
+      WHERE user_id = ${credential.userId}
         AND device_hash = ${deviceHash}
       LIMIT 1
     `;
@@ -314,35 +321,39 @@ export async function verify2FACode(
     // 5. Renew or register the device's trust for 30 days.
     if (existingDevice.length > 0) {
       await sql`
-        UPDATE user_trusted_devices SET expires_at = ${expiresAt} WHERE id = ${existingDevice[0].id}
+        UPDATE user_trusted_devices
+        SET expires_at = ${expiresAt}
+        WHERE id = ${existingDevice[0].id}
       `;
     } else {
       await sql`
         INSERT INTO user_trusted_devices (user_id, device_hash, device_name, expires_at)
-        VALUES (${cred.userId}, ${deviceHash}, ${deviceName || 'Unknown Device'}, ${expiresAt})
+        VALUES (${credential.userId}, ${deviceHash}, ${deviceName || 'Unknown Device'}, ${expiresAt})
       `;
-      await logAuthEvent({ event: 'trusted_device_added', userId: cred.userId, email: cred.email, ipAddress, metadata: { deviceName: deviceName || 'Unknown Device' } });
+      await logAuthEvent({ event: 'trusted_device_added', userId: credential.userId, email: credential.email, ipAddress, metadata: { deviceName: deviceName || 'Unknown Device' } });
     }
   }
 
   // 6. Record the successful login time.
   await sql`
-    UPDATE user_credentials SET last_login = NOW() WHERE user_id = ${cred.userId}
+    UPDATE user_credentials
+    SET last_login = NOW()
+    WHERE user_id = ${credential.userId}
   `;
 
   // 7. Issue a token pair in a new session family.
   const tokens = await generateAndStoreTokenPair(
-    cred.userId,
-    cred.email,
-    cred.role,
-    cred.permissions,
+    credential.userId,
+    credential.email,
+    credential.role,
+    credential.permissions,
     crypto.randomUUID(),
   );
 
-  await logAuthEvent({ event: '2fa_verified', userId: cred.userId, email: cred.email, ipAddress });
+  await logAuthEvent({ event: '2fa_verified', userId: credential.userId, email: credential.email, ipAddress });
   return {
     tokens,
-    user: { id: cred.userId, firstName: cred.firstName, lastName: cred.lastName, email: cred.email },
+    user: { id: credential.userId, firstName: credential.firstName, lastName: credential.lastName, email: credential.email },
   };
 }
 
@@ -369,10 +380,14 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
     DbRow<Pick<UserCredentials, 'email' | 'status'>> &
     DbRow<Pick<Users, 'first_name'>>
   )[]>`
-    SELECT uc.email, uc.status, u.first_name
-    FROM user_credentials uc
-    JOIN users u ON u.id = uc.user_id
-    WHERE uc.user_id = ${userId}
+    SELECT
+      credentials.email,
+      credentials.status,
+
+      account_user.first_name
+    FROM user_credentials credentials
+    JOIN users account_user ON account_user.id = credentials.user_id
+    WHERE credentials.user_id = ${userId}
     LIMIT 1
   `;
 
@@ -380,14 +395,15 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
     throw new NotFoundError('User not found');
   }
 
-  const cred = credentials[0];
-  if (cred.status !== 'active') {
+  const credential = credentials[0];
+  if (credential.status !== 'active') {
     throw new ForbiddenError('Account is inactive');
   }
 
   // 3. Remove expired and used verification codes.
   await sql`
-    DELETE FROM user_auth_codes
+    DELETE
+    FROM user_auth_codes
     WHERE user_id = ${userId}
       AND (expires_at < NOW() OR used_at IS NOT NULL)
   `;
@@ -402,8 +418,8 @@ export async function resend2FACode(userId: string, ipAddress?: string): Promise
   `;
 
   // 5. Send the replacement code and record the request.
-  await send2FACode(cred.email, code, cred.firstName);
-  await logAuthEvent({ event: '2fa_resent', userId, email: cred.email, ipAddress });
+  await send2FACode(credential.email, code, credential.firstName);
+  await logAuthEvent({ event: '2fa_resent', userId, email: credential.email, ipAddress });
 }
 
 /**
@@ -436,7 +452,8 @@ export async function rotateRefreshToken(
 
   // 2. Find a matching, unexpired, unrevoked refresh token.
   const storedTokens = await sql<DbRow<UserRefreshTokens>[]>`
-    SELECT * FROM user_refresh_tokens
+    SELECT *
+    FROM user_refresh_tokens
     WHERE jti = ${decoded.jti}
       AND token_hash = ${tokenHash}
       AND expires_at > NOW()
@@ -447,13 +464,16 @@ export async function rotateRefreshToken(
   // 3. Look for a retained token family when the active token is missing.
   if (storedTokens.length === 0) {
     const familyTokens = await sql<DbRow<Pick<UserRefreshTokens, 'token_family'>>[]>`
-      SELECT token_family FROM user_refresh_tokens WHERE jti = ${decoded.jti} LIMIT 1
+      SELECT token_family
+      FROM user_refresh_tokens WHERE jti = ${decoded.jti} LIMIT 1
     `;
 
     // 4. Revoke the token family when an old token is reused.
     if (familyTokens.length > 0) {
       await sql`
-        UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE token_family = ${familyTokens[0].tokenFamily}
+        UPDATE user_refresh_tokens
+        SET revoked_at = NOW()
+        WHERE token_family = ${familyTokens[0].tokenFamily}
       `;
       await logAuthEvent({ event: 'token_reuse_detected', userId: decoded.userId, email: decoded.email, ipAddress, metadata: { tokenFamily: familyTokens[0].tokenFamily } });
       throw new ForbiddenError('Token reuse detected - all sessions revoked');
@@ -465,21 +485,23 @@ export async function rotateRefreshToken(
   const storedToken = storedTokens[0];
 
   // 5. Reload account status, role, and permissions.
-  const users = await sql<{ role: UserRole; permissions: Permission[]; status: string }[]>`
+  const users = await sql<{ status: string; role: UserRole; permissions: Permission[] }[]>`
     SELECT
-      ur.name AS role,
-      uc.status,
+      credentials.status,
+
+      role.name AS role,
+
       COALESCE(
-        json_agg(up.name) FILTER (WHERE up.name IS NOT NULL),
+        json_agg(permission.name) FILTER (WHERE permission.name IS NOT NULL),
         '[]'
       ) AS permissions
-    FROM users u
-    JOIN user_credentials uc ON uc.user_id = u.id
-    JOIN user_roles ur ON ur.id = u.role_id
-    LEFT JOIN user_role_has_permissions urhp ON urhp.role_id = ur.id
-    LEFT JOIN user_permissions up ON up.id = urhp.permission_id
-    WHERE u.id = ${decoded.userId}
-    GROUP BY u.id, ur.id, ur.name, uc.status
+    FROM users account_user
+    JOIN user_credentials credentials ON credentials.user_id = account_user.id
+    JOIN user_roles role ON role.id = account_user.role_id
+    LEFT JOIN user_role_has_permissions role_permission ON role_permission.role_id = role.id
+    LEFT JOIN user_permissions permission ON permission.id = role_permission.permission_id
+    WHERE account_user.id = ${decoded.userId}
+    GROUP BY account_user.id, role.id, role.name, credentials.status
     LIMIT 1
   `;
 
@@ -511,18 +533,18 @@ export async function rotateRefreshToken(
   const newRefreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
   const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
-  await sql.begin(async (rawTx) => {
-    const tx = asTransactionSql(rawTx);
+  await sql.begin(async (tx) => {
+    const trx = asTransactionSql(tx);
 
     // 7. Store the replacement refresh token in the same family.
-    const newTokenRows = await tx<{ id: string }[]>`
+    const newTokenRows = await trx<{ id: string }[]>`
       INSERT INTO user_refresh_tokens (user_id, jti, token_hash, token_family, expires_at)
       VALUES (${decoded.userId}, ${newRefreshJTI}, ${newTokenHash}, ${storedToken.tokenFamily}, ${newRefreshExpiresAt})
       RETURNING id
     `;
 
     // 8. Revoke the previous token in the same transaction.
-    await tx`
+    await trx`
       UPDATE user_refresh_tokens
       SET revoked_at = NOW(), replaced_by = ${newTokenRows[0].id}
       WHERE jti = ${decoded.jti}
@@ -540,7 +562,8 @@ export async function rotateRefreshToken(
 export async function requestPasswordReset(email: string, ipAddress?: string): Promise<void> {
   // 1. Find the account without revealing whether the address exists.
   const [account] = await sql<{ userId: string }[]>`
-    SELECT user_id FROM user_credentials
+    SELECT user_id
+    FROM user_credentials
     WHERE email = ${email}
     LIMIT 1
   `;
@@ -548,37 +571,42 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
   if (!account) return;
 
   // 2. Prepare a one-hour reset token.
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
 
-  const cred = await sql.begin(async rawTx => {
-    const tx = asTransactionSql(rawTx);
+  const credential = await sql.begin(async tx => {
+    const trx = asTransactionSql(tx);
 
     // 3. Lock the user while checking credentials and issuing the token.
-    const accountExists = await lockAccountUser(tx, account.userId);
+    const accountExists = await lockAccountUser(trx, account.userId);
     if (!accountExists) return undefined;
 
     // 4. Recheck the address and credentials after acquiring the lock.
-    const [current] = await tx<{ userId: string; email: string; firstName: string }[]>`
-      SELECT uc.user_id, uc.email, u.first_name
-      FROM user_credentials uc JOIN users u ON u.id = uc.user_id
-      WHERE uc.user_id = ${account.userId} AND uc.email = ${email}
+    const [current] = await trx<{ userId: string; email: string; firstName: string }[]>`
+      SELECT
+        credentials.user_id,
+        credentials.email,
+
+        account_user.first_name
+      FROM user_credentials credentials
+      JOIN users account_user ON account_user.id = credentials.user_id
+      WHERE credentials.user_id = ${account.userId} AND credentials.email = ${email}
     `;
     if (!current) return undefined;
 
     // 5. Store the reset token for the current credentials.
-    await tx`
-      INSERT INTO user_password_reset_tokens (user_id, token, expires_at)
+    await trx`
+      INSERT INTO user_password_reset_tokens (user_id, token_hash, expires_at)
       VALUES (${current.userId}, ${tokenHash}, ${expiresAt})
     `;
     return current;
   });
-  if (!cred) return;
+  if (!credential) return;
 
   // 6. Build the reset email with an escaped recipient name.
-  const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
-  const safeFirstName = escapeHtml(cred.firstName);
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${rawToken}`;
+  const safeFirstName = escapeHtml(credential.firstName);
   const emailHtml = `
     <h2>Password Reset Request</h2>
     <p>Hi ${safeFirstName},</p>
@@ -589,46 +617,47 @@ export async function requestPasswordReset(email: string, ipAddress?: string): P
   `;
 
   // 7. Send the email and record the request after commit.
-  await sendEmail(cred.email, 'Password Reset Request', emailHtml);
-  await logAuthEvent({ event: 'password_reset_requested', userId: cred.userId, email: cred.email, ipAddress });
+  await sendEmail(credential.email, 'Password Reset Request', emailHtml);
+  await logAuthEvent({ event: 'password_reset_requested', userId: credential.userId, email: credential.email, ipAddress });
 }
 
 /**
  * Consumes a valid reset link under the account lock, sets its password, and revokes refresh sessions.
  * Invited credentials become active; other statuses stay unchanged. Missing credentials or stale links are 400.
- * @param token - Raw emailed secret; only its hash is queried/stored.
+ * @param rawToken - Raw emailed secret; only its hash is queried/stored.
  * @param newPassword - Validated replacement password, hashed before acquiring transaction locks.
  * @example await resetUserPassword(invitationToken, password) // activates that invitation once
  */
-export async function resetUserPassword(token: string, newPassword: string, ipAddress?: string): Promise<void> {
+export async function resetUserPassword(rawToken: string, newPassword: string, ipAddress?: string): Promise<void> {
   // 1. Hash the token and replacement password before acquiring database locks.
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
-  const resetUserId = await sql.begin(async (rawTx) => {
-    const tx = asTransactionSql(rawTx);
+  const resetUserId = await sql.begin(async (tx) => {
+    const trx = asTransactionSql(tx);
 
     // 2. Find an unexpired, unused reset token.
-    const [candidate] = await tx<DbRow<Pick<UserPasswordResetTokens, 'id' | 'user_id'>>[]>`
-      SELECT id, user_id FROM user_password_reset_tokens
-      WHERE token = ${tokenHash} AND expires_at > NOW() AND used_at IS NULL
+    const [candidate] = await trx<DbRow<Pick<UserPasswordResetTokens, 'id' | 'user_id'>>[]>`
+      SELECT id, user_id
+      FROM user_password_reset_tokens
+      WHERE token_hash = ${tokenHash} AND expires_at > NOW() AND used_at IS NULL
       ORDER BY created_at DESC
       LIMIT 1
     `;
     if (!candidate) throw new BadRequestError('Invalid or expired reset token');
 
     // 3. Lock the user so revocation and password reset run in sequence.
-    const accountExists = await lockAccountUser(tx, candidate.userId);
+    const accountExists = await lockAccountUser(trx, candidate.userId);
     if (!accountExists) {
       throw new BadRequestError('Invalid or expired reset token');
     }
 
     // 4. Claim the token only if it remains valid after the lock wait.
-    const consumedTokens = await tx<{ userId: string }[]>`
+    const consumedTokens = await trx<{ userId: string }[]>`
       UPDATE user_password_reset_tokens
       SET used_at = NOW()
-      WHERE id = ${candidate.id} AND token = ${tokenHash}
+      WHERE id = ${candidate.id} AND token_hash = ${tokenHash}
         AND expires_at > NOW() AND used_at IS NULL
       RETURNING user_id
     `;
@@ -638,10 +667,13 @@ export async function resetUserPassword(token: string, newPassword: string, ipAd
     }
 
     // 5. Save the password and activate invited credentials.
-    const updated = await tx<{ userId: string }[]>`
+    const updated = await trx<{ userId: string }[]>`
       UPDATE user_credentials
       SET password_hash = ${passwordHash},
-          status = CASE WHEN status = 'invited' THEN 'active' ELSE status END,
+          status = CASE
+            WHEN status = 'invited' THEN 'active'
+            ELSE status
+          END,
           updated_at = NOW()
       WHERE user_id = ${candidate.userId}
       RETURNING user_id
@@ -649,7 +681,11 @@ export async function resetUserPassword(token: string, newPassword: string, ipAd
     if (!updated.length) throw new BadRequestError('Invalid or expired reset token');
 
     // 6. Revoke existing refresh sessions in the same transaction.
-    await tx`UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE user_id = ${candidate.userId} AND revoked_at IS NULL`;
+    await trx`
+      UPDATE user_refresh_tokens
+      SET revoked_at = NOW()
+      WHERE user_id = ${candidate.userId} AND revoked_at IS NULL
+    `;
     return candidate.userId;
   });
 
@@ -676,7 +712,9 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
 
     // 2. Revoke the refresh token when valid.
     await sql`
-      UPDATE user_refresh_tokens SET revoked_at = NOW() WHERE jti = ${refresh.jti}
+      UPDATE user_refresh_tokens
+      SET revoked_at = NOW()
+      WHERE jti = ${refresh.jti}
     `;
   }
 
@@ -698,38 +736,39 @@ export async function logoutUser(rawRefreshToken?: string, rawAccessToken?: stri
   await logAuthEvent({ event: 'logout', userId: logUserId, email: logEmail, ipAddress });
 }
 
-// Private helpers
-
 /**
  * Completes an already verified active login, updating last-login time and issuing a new token family.
+ * @param credential - Current account details after password, active-status, and device checks.
  * @param method - Accepted local bypass or trusted-device path recorded in the security log.
  * @example completeLogin(credentials, 'trusted_device') // success with tokens and public user details
  */
 async function completeLogin(
-  cred: LoginCredentialsRow,
+  credential: LoginCredentialsRow,
   method: 'local_development' | 'trusted_device',
   ipAddress?: string,
   deviceFingerprintHash?: string,
 ): Promise<LoginResult> {
   // 1. Record the successful login time.
   await sql`
-    UPDATE user_credentials SET last_login = NOW() WHERE user_id = ${cred.userId}
+    UPDATE user_credentials
+    SET last_login = NOW()
+    WHERE user_id = ${credential.userId}
   `;
 
   // 2. Issue a token pair in a new session family.
   const tokens = await generateAndStoreTokenPair(
-    cred.userId,
-    cred.email,
-    cred.role,
-    cred.permissions,
+    credential.userId,
+    credential.email,
+    credential.role,
+    credential.permissions,
     crypto.randomUUID(),
   );
 
   // 3. Record the accepted login method.
   await logAuthEvent({
     event: 'login_success',
-    userId: cred.userId,
-    email: cred.email,
+    userId: credential.userId,
+    email: credential.email,
     ipAddress,
     deviceFingerprintHash,
     metadata: { method },
@@ -739,16 +778,20 @@ async function completeLogin(
     type: 'success',
     tokens,
     user: {
-      id: cred.userId,
-      firstName: cred.firstName,
-      lastName: cred.lastName,
-      email: cred.email,
+      id: credential.userId,
+      firstName: credential.firstName,
+      lastName: credential.lastName,
+      email: credential.email,
     },
   };
 }
 
 /**
  * Signs a token pair and stores the refresh hash, family, and eight-hour expiry before returning.
+ * @param userId - Account receiving the new session.
+ * @param email - Current account address embedded in both tokens.
+ * @param role - Current role embedded in the access token.
+ * @param permissions - Current capabilities embedded in the access token.
  * @param tokenFamily - Logical session identifier shared by its successive refresh tokens.
  * @example generateAndStoreTokenPair(userId, email, role, permissions, family) // raw token pair
  */
