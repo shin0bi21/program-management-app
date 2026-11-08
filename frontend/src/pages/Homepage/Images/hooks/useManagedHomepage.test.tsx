@@ -62,7 +62,77 @@ describe('useManagedHomepage', () => {
     expect(getManagedHomepage).toHaveBeenCalledTimes(2);
   });
 
-  it('uses a fresh server response after save even when the cache has a positive stale time', async () => {
+  it('replaces a saved image, preserves unrelated rows and order, and appends a created image without reads', async () => {
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(result.current.images).toEqual(images));
+    const untouched = result.current.images[1];
+    const savedImage = {
+      ...images[0],
+      caption: 'Authoritative caption.',
+      altText: 'Server alt text',
+      updatedAt: '2026-02-01T00:00:00.000Z',
+    };
+
+    await act(() => result.current.saveImage(savedImage));
+
+    expect(result.current.images).toEqual([savedImage, images[1]]);
+    expect(result.current.images[1]).toBe(untouched);
+    const createdImage = { ...savedImage, id: 'image-3', displayOrder: 2 };
+    await act(() => result.current.saveImage(createdImage));
+
+    expect(result.current.images).toEqual([savedImage, images[1], createdImage]);
+    expect(result.current.images[1]).toBe(untouched);
+    expect(getManagedHomepage).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads the complete collection when an image saves before the initial read finishes', async () => {
+    let finishInitialRead!: (value: { images: typeof images }) => void;
+    vi.mocked(getManagedHomepage).mockImplementationOnce(() => new Promise(resolve => {
+      finishInitialRead = resolve;
+    }));
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(getManagedHomepage).toHaveBeenCalledTimes(1));
+    const savedImage = { ...images[0], id: 'image-3', displayOrder: 2 };
+    vi.mocked(getManagedHomepage).mockResolvedValueOnce({ images: [...images, savedImage] });
+
+    await act(() => result.current.saveImage(savedImage));
+    await act(async () => {
+      finishInitialRead({ images });
+      await Promise.resolve();
+    });
+
+    expect(result.current.images).toEqual([...images, savedImage]);
+    expect(getManagedHomepage).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels an older collection read before reconciling a saved image', async () => {
+    const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
+    await waitFor(() => expect(result.current.images).toEqual(images));
+    let finishRead!: (value: { images: typeof images }) => void;
+    let readSignal: AbortSignal | undefined;
+    vi.mocked(getManagedHomepage).mockImplementationOnce(options => {
+      readSignal = options?.signal;
+      return new Promise(resolve => { finishRead = resolve; });
+    });
+    const staleRead = queryClient.fetchQuery({
+      queryKey: ['homepage', 'managed', 'images'],
+      queryFn: ({ signal }) => getManagedHomepage({ signal }),
+    }).catch(() => undefined);
+    await waitFor(() => expect(getManagedHomepage).toHaveBeenCalledTimes(2));
+    const savedImage = { ...images[0], caption: 'Saved caption.' };
+
+    await act(() => result.current.saveImage(savedImage));
+    expect(readSignal?.aborted).toBe(true);
+    await act(async () => {
+      finishRead({ images });
+      await staleRead;
+    });
+
+    expect(result.current.images).toEqual([savedImage, images[1]]);
+    expect(getManagedHomepage).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses a fresh server response after reorder even when the cache has a positive stale time', async () => {
     queryClient.setDefaultOptions({ queries: { retry: false, staleTime: 60_000 } });
     const { result } = renderHook(useManagedHomepage, { wrapper: createQueryClientWrapper(queryClient) });
     await waitFor(() => expect(result.current.images).toEqual(images));

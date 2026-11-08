@@ -26,7 +26,8 @@ describe('useHomepageImageModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('updates an image before reconciling the page owner', async () => {
-    vi.mocked(updateHomepageImage).mockResolvedValue({ id: image.id });
+    const savedImage = { ...image, caption: 'Server caption.', updatedAt: '2026-02-01T00:00:00.000Z' };
+    vi.mocked(updateHomepageImage).mockResolvedValue(savedImage);
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image, isOpen: true, onSaved }));
 
@@ -34,6 +35,7 @@ describe('useHomepageImageModal', () => {
 
     expect(updateHomepageImage).toHaveBeenCalledWith(image.id, { caption: 'Updated caption.' });
     expect(onSaved).toHaveBeenCalledOnce();
+    expect(onSaved).toHaveBeenCalledWith(savedImage);
     expect(vi.mocked(updateHomepageImage).mock.invocationCallOrder[0]).toBeLessThan(onSaved.mock.invocationCallOrder[0]);
     expect(result.current).toMatchObject({
       status: 'success',
@@ -43,7 +45,8 @@ describe('useHomepageImageModal', () => {
 
   it('uploads the selected file and reports completion after reconciliation', async () => {
     const file = new File(['image'], 'homepage.webp', { type: 'image/webp' });
-    vi.mocked(createHomepageImage).mockResolvedValue({ id: 'image-2' });
+    const savedImage = { ...image, id: 'image-2', caption: 'Server caption.', displayOrder: 1 };
+    vi.mocked(createHomepageImage).mockResolvedValue(savedImage);
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image: null, isOpen: true, onSaved }));
 
@@ -52,6 +55,7 @@ describe('useHomepageImageModal', () => {
 
     expect(createHomepageImage).toHaveBeenCalledWith({ image: file, caption: 'New image.' });
     expect(onSaved).toHaveBeenCalledOnce();
+    expect(onSaved).toHaveBeenCalledWith(savedImage);
     expect(result.current.statusMessage).toBe('Homepage image added.');
   });
 
@@ -78,7 +82,7 @@ describe('useHomepageImageModal', () => {
   it('surfaces mutation errors and unlocks the workflow for retry', async () => {
     vi.mocked(updateHomepageImage)
       .mockRejectedValueOnce(new Error('Image update failed'))
-      .mockResolvedValueOnce({ id: image.id });
+      .mockResolvedValueOnce(image);
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image, isOpen: true, onSaved }));
 
