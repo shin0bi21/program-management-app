@@ -70,7 +70,8 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // TODO: Selection and page-spanning actions.
       // Keep selected IDs and clicked row context needed by page workflows.
       // Dashboard cards query selected IDs for summaries/children they own.
-      // Invalidate affected query prefixes after successful mutations.
+      // Reconcile saved/deleted cursor rows with existing cache helpers; retain positions and offer Refresh for changed sort order.
+      // Invalidate affected membership, references, and summary queries when they need reloading.
       // Initialize a mounted form from supplied data for editing or empty defaults for adding.
 
       // TODO: Modal and confirmation workflows.

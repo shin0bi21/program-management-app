@@ -64,7 +64,9 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
       // Cache complete API rows directly; do not create a normalized record store.
       // Forward signal/cursor and TABLE_PAGE_SIZE; server filtering/sorting precedes pagination.
       // Report initial/refresh/next-page errors with their matching retry through usePageMessageReporter.
-      // Invalidate affected query prefixes after successful mutations.
+      // Replace saved rows or remove deleted rows with the existing cursor-list cache helpers.
+      // Retain positions after sort edits; tableRefreshMessage supplies the out-of-order message and Refresh.
+      // Invalidate when creation or changed filter membership requires reloading.
       // Supply ordering and expose refreshNotice for a user-requested first-page refresh.
       const rows: ${title}Row[] = [];
       return { rows, loading: false };
