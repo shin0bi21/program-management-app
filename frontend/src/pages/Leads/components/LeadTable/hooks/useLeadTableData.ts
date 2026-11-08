@@ -1,4 +1,3 @@
-import { getLeadSortValue } from '../../../hooks/data/useLeadData';
 import { TABLE_PAGE_SIZE } from '../../../../../query/types';
 import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import { getLeads } from '../../../leads.api';
@@ -42,4 +41,21 @@ export function useLeadTableData(
     retry: query.retry,
     ...(query.refreshNotice ? { refreshNotice: query.refreshNotice } : {}),
   };
+}
+
+/**
+ * Supplies the server-compatible value for a lead's selected order.
+ * @param lead - Complete saved lead.
+ * @param key - Active table sort column.
+ * @example getLeadSortValue(lead, 'firstName') // lower-case youth first name
+ */
+export function getLeadSortValue(lead: Lead, key: LeadSortKey) {
+  return {
+    firstName: lead.youthFirstName.toLowerCase(),
+    lastName: lead.youthLastName.toLowerCase(),
+    school: lead.school.toLowerCase(),
+    program: lead.recommendedProgram?.toLowerCase() ?? '',
+    status: lead.status,
+    created: new Date(lead.createdAt),
+  }[key];
 }

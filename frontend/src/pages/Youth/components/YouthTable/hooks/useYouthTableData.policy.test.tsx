@@ -2,7 +2,7 @@
 import { expect, it } from 'vitest';
 import type { YouthProfile, YouthSortKey } from '../../../types';
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
-import { getYouthSortValue } from '../../../hooks/data/useYouthData';
+import { getYouthSortValue } from './useYouthTableData';
 
 const row = makeYouthProfile({ activeProgram: { programId: 'program-1', program: 'Skills' } });
 
