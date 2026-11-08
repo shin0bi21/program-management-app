@@ -68,18 +68,42 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 4. Key the calendar by applied filters so changes start a fresh buffer.
 5. Keep browser-local scroll position separate through `positionStorageKey`.
 
+### Page Data Flow
+
+The page calls `use<Domain>Data` once for shared main records and reference
+lookups. It manages applied controls and selected IDs, then passes the required
+data and context down to the body and dashboard. Main data is the single owner
+of saved records; do not add a separate domain store module.
+
+```text
+<Page>/
+  hooks/data/use<Domain>Data.ts
+  components/
+    <Domain>Table/hooks/use<Domain>TableData.ts
+    <Domain>Calendar/hooks/use<Domain>CalendarData.ts
+    <Domain>Dashboard/
+      hooks/use<Domain>DashboardData.ts
+      <DashboardCard>/hooks/use<Card>Data.ts
+```
+
+Create only the hooks the page needs. Table and calendar data hooks belong to
+their components. Add a dashboard data hook when sibling cards share queries;
+otherwise each card owns its private queries.
+
+- **Main data:** Own complete saved records indexed by ID, shared reference queries, and read/write reconciliation in the page data module. Reuse `query/createRecordStore.ts` internally for revision and account-lifecycle behavior when records are shared across views.
+- **Table:** Receive main data and applied controls. Own the paginated query, loading/retry state, and ordering indexes; publish fetched records through the main data owner.
+- **Calendar:** Receive the same main data and applied controls. Own range requests and buffer setup; retain range/placement indexes and publish fetched records through the main data owner.
+- **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied main records for fields already loaded.
+- **Selection and forms:** Keep selected IDs at the page. Resolve saved records through main data and keep editable drafts independent; same-ID refreshes must not reset fields or unlock pending saves.
+- **Mutations:** Write the authoritative saved record once through main data, reconcile view indexes, and update summaries separately. Protect pending work, deletion, and account clearing from late responses.
+
+View indexes preserve loaded membership and ordering until refresh. A body query
+must not call the page data hook again to duplicate shared reference requests.
+
 ### Share Records Across Views
 
-- Give records one feature-owned store, indexed by ID, when tables and calendars share them.
-- Keep IDs, cursor/order values, and date/resource membership in view caches. Resolve IDs through the shared store for rendering; derived groups hold references to those records.
-- Store selected record IDs. Keep editable form drafts separate from saved records.
-- Merge reads and saved mutations through that owner. Protect pending changes, rollback, deletion, and account cache clearing from late responses.
-- Let view indexes retain loaded membership and ordering until refresh; update aggregates separately.
-
-Hours, Tasks, and Sessions use feature-owned record stores. Tables retain
-pagination and ordering indexes; calendars retain range membership and placement
-indexes. Both resolve IDs to the same current records. Tasks and Sessions share
-the revision and account-lifecycle implementation in `query/createRecordStore.ts`.
+Tables and calendars resolve their retained IDs through the same main records.
+Derived groups hold references to those records rather than saved copies.
 
 ## Handle Request Failures
 
