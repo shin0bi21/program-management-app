@@ -10,7 +10,7 @@ import {
   updateHoursPlacement,
 } from '../../hours.api';
 
-import { taskStore } from '../../../Tasks/taskStore';
+import { taskData } from '../../../Tasks/hooks/data/useTaskData';
 import type { Task } from '../../../Tasks/types';
 import { hoursData } from '../data/useHoursData';
 
@@ -70,7 +70,7 @@ export default function useHoursActions({
   }, [queryClient, hoursQueryKey]);
 
   const syncTasks = useCallback((tasks: Task[] = []) => {
-    tasks.forEach(task => taskStore.write(queryClient, task));
+    tasks.forEach(task => taskData.write(queryClient, task));
     if (!tasks.length) return;
 
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });

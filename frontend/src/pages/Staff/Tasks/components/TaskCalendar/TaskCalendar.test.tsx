@@ -1,4 +1,4 @@
-import { taskStore } from '../../taskStore';
+import { taskData } from '../../hooks/data/useTaskData';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
@@ -32,6 +32,13 @@ const coworker: TaskResource = {
 };
 const task = makeTask();
 
+/** Supplies page-owned records to the real range hook. @example <CalendarWithRecords {...viewProps} /> */
+function CalendarWithRecords(props: Omit<Parameters<typeof TaskCalendar>[0], 'records'>) {
+  const records = taskData.useRecords();
+  return <TaskCalendar {...props} records={records} />;
+}
+
+/** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
 function renderCalendar({
   resources = [resource, coworker],
   staffIds = [] as string[],
@@ -64,7 +71,7 @@ function renderCalendar({
   const callbacks = {
     onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
   };
-  const rendered = render(<TaskCalendar
+  const rendered = render(<CalendarWithRecords
     resources={resources}
     filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
@@ -115,11 +122,11 @@ describe('TaskCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
 
     const saved = makeTask({ title: 'Saved by another consumer' });
-    act(() => taskStore.write(queryClient, saved));
+    act(() => taskData.write(queryClient, saved));
     await waitFor(() => expect(calendarState.props!.items['staff-1']?.[0].title).toBe(saved.title));
-    expect(calendarState.props!.items['staff-1']![0]).toBe(taskStore.get(queryClient, task.id));
+    expect(calendarState.props!.items['staff-1']![0]).toBe(taskData.get(queryClient, task.id));
 
-    act(() => taskStore.remove(queryClient, task.id));
+    act(() => taskData.remove(queryClient, task.id));
     await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
   });
 

@@ -1,4 +1,4 @@
-import { taskStore, getTaskSortValue } from '../../../Tasks/taskStore';
+import { taskData, getTaskSortValue } from '../../../Tasks/hooks/data/useTaskData';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,6 +22,7 @@ vi.mock('../../hours.api', () => ({
   updateHoursPlacement: vi.fn(),
 }));
 
+/** Supplies controlled async completion. @example const request = deferred<Task>() // resolve after starting the action */
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (cause: unknown) => void;
@@ -32,6 +33,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
 function renderActions() {
   const client = createTestQueryClient();
   const onItemRemoved = vi.fn();
@@ -54,6 +56,7 @@ const entry = makeHoursItem({
 const updatedTask = makeTask({ hoursLogged: 2 });
 const saved = { ...entry, updatedTasks: [updatedTask] };
 
+/** Seeds one loaded list page. @example cacheRows([row]) // one page with no next cursor */
 function cacheRows<T>(rows: T[]) {
   return { pages: [{ rows, nextCursor: null }], pageParams: [undefined] };
 }
@@ -91,7 +94,7 @@ describe('useHoursActions', () => {
     expect(hoursData.get(rendered.client, untouched.id)).toEqual(untouched);
     expect(rendered.client.getQueryData(secondKey)).toEqual(cacheRows([{ id: entry.id, sortValue: entry.hours }]));
     expect(rendered.client.getQueryData(['tasks', 'table', {}, { key: 'title', direction: 'asc' }, 'today'])).toEqual(cacheRows([{ id: updatedTask.id, sortValue: getTaskSortValue(updatedTask, 'title') }]));
-    expect(taskStore.get(rendered.client, updatedTask.id)).toEqual(updatedTask);
+    expect(taskData.get(rendered.client, updatedTask.id)).toEqual(updatedTask);
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
@@ -173,7 +176,7 @@ describe('useHoursActions', () => {
 
     expect(rendered.client.getQueryData(['hours', 'table', {}, { key: 'date', direction: 'asc' }])).toEqual(cacheRows([{ id: entry.id, sortValue: entry.date }]));
     expect(rendered.client.getQueryData(['tasks', 'table', {}, { key: 'title', direction: 'asc' }, 'today'])).toEqual(cacheRows([{ id: updatedTask.id, sortValue: getTaskSortValue(updatedTask, 'title') }]));
-    expect(taskStore.get(rendered.client, updatedTask.id)).toEqual(updatedTask);
+    expect(taskData.get(rendered.client, updatedTask.id)).toEqual(updatedTask);
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],

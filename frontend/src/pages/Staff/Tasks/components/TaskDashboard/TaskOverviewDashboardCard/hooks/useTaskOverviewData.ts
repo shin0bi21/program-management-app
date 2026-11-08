@@ -2,18 +2,22 @@ import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getTaskDashboardData } from '../../../../tasks.api';
-import { taskStore } from '../../../../taskStore';
+import type { Task } from '../../../../types';
+import { taskData } from '../../../../hooks/data/useTaskData';
 
 /**
  * Loads overview membership for a staff member and resolves current shared task records.
- * @example useTaskOverviewData(['tasks'], staffId).tasks
+ * @param taskQueryKey - Page namespace for staff overview membership.
+ * @param resourceId - Selected staff ID; an empty ID disables the request.
+ * @param records - Current saved tasks supplied by the page.
+ * @example useTaskOverviewData(['tasks'], staffId, records).tasks
  */
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],
   resourceId: string,
+  records: Readonly<Record<string, Task>>,
 ) {
   const client = useQueryClient();
-  const records = taskStore.useRecords();
   const {
     data: references,
     error,
@@ -21,10 +25,11 @@ export default function useTaskOverviewData(
     refetch,
   } = useQuery({
     queryKey: [...taskQueryKey, 'overview', resourceId],
+    enabled: Boolean(resourceId),
     queryFn: async ({ signal }) => {
-      const read = taskStore.beginRead(client);
+      const read = taskData.beginRead(client);
       const incoming = await getTaskDashboardData(resourceId, { signal });
-      const tasks = taskStore.finishRead(client, read, incoming, signal);
+      const tasks = taskData.finishRead(client, read, incoming, signal);
       return tasks.map(task => ({ id: task.id }));
     },
   });

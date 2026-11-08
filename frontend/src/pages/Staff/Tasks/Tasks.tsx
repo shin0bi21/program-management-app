@@ -28,7 +28,6 @@ import {
   type TaskModalState,
 } from './types';
 
-import { taskStore } from './taskStore';
 import './Tasks.css';
 
 // Page-owned cache contracts.
@@ -52,6 +51,7 @@ export default function Tasks() {
 
   // Page data and preferences.
   const pageData = useTaskData(TASK_REFERENCE_DATA_QUERY_KEY);
+  const records = pageData.records;
 
   const preferences = useTaskPreferences({
     referenceData: pageData.referenceData,
@@ -80,7 +80,7 @@ export default function Tasks() {
   }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
-  const selection = useTaskSelection({ resources: pageData.resources });
+  const selection = useTaskSelection({ resources: pageData.resources, records });
 
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
@@ -99,7 +99,6 @@ export default function Tasks() {
   }, [selection.selectedTaskId]);
 
   // Task modal.
-  const records = taskStore.useRecords();
   const [taskModalTarget, setTaskModalState] = useState<
     { mode: 'add'; initialValues: AddTaskModalInitialValues } | { mode: 'edit'; taskId: string } | null
   >(null);
@@ -146,6 +145,7 @@ export default function Tasks() {
 
   const taskTable = (
     <TaskTable
+      records={records}
       queryKey={TASK_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
@@ -163,6 +163,7 @@ export default function Tasks() {
 
   const taskCalendar = (
     <TaskCalendar
+      records={records}
       key={JSON.stringify(taskFilters)}
       resources={pageData.resources}
       filters={taskFilters}
@@ -221,6 +222,7 @@ export default function Tasks() {
         dashboardError,
       ]}
       dashboard={selection.selectedResource ? <TaskDashboard
+        records={records}
         queryKey={TASK_QUERY_KEY}
         resourceId={selection.selectedResource.id}
         resourceName={selection.selectedResource.name}

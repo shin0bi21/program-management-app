@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { taskStore } from '../../taskStore';
 import type { Task, TaskResource } from '../../types';
 
 interface UseTaskSelectionOptions {
   resources: TaskResource[];
+  records: Readonly<Record<string, Task>>;
 }
 
 /**
  * Keeps task/resource selection as IDs and resolves the current shared task for dashboards.
- * @example useTaskSelection({ resources }).selectedTask
+ * @param options - Current staff choices and saved tasks supplied by the page data owner.
+ * @example useTaskSelection({ resources, records }).selectedTask
  */
 export default function useTaskSelection({
   resources,
+  records,
 }: UseTaskSelectionOptions) {
   const [resourceId, setResourceId] = useState<string | null>(null);
-  const records = taskStore.useRecords();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedTask = selectedTaskId ? records[selectedTaskId] ?? null : null;
   const selectedResourceId = selectedTask?.staffId ?? resourceId;

@@ -12,76 +12,20 @@ import './TaskOverviewDashboardCard.css';
 
 const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
 
-function parseCalendarDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function currentWeekEnd(today: string) {
-  const date = parseCalendarDate(today);
-  const daysSinceMonday = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - daysSinceMonday + 6);
-  return dayKey(date);
-}
-
-function sortByDueDate(tasks: readonly Task[]) {
-  return [...tasks].sort((left, right) => (
-    left.dueDate.localeCompare(right.dueDate) || left.title.localeCompare(right.title)
-  ));
-}
-
-function groupTasksForOverview(tasks: readonly Task[], today: string) {
-  const assignedTasks = tasks.filter(task => task.state === 'open');
-  const upcomingTasks = assignedTasks.filter(task => task.status === 'upcoming');
-  const inProgressTasks = assignedTasks.filter(task => task.status === 'in_progress');
-  const overdueTasks = assignedTasks.filter(task => task.status === 'overdue');
-  const weekEnd = currentWeekEnd(today);
-  const dueThisWeekTasks = [...upcomingTasks, ...inProgressTasks]
-    .filter(task => task.dueDate >= today && task.dueDate <= weekEnd);
-
-  return {
-    assignedTasks: sortByDueDate(assignedTasks),
-    upcomingTasks: sortByDueDate(upcomingTasks),
-    inProgressTasks: sortByDueDate(inProgressTasks),
-    overdueTasks: sortByDueDate(overdueTasks),
-    dueThisWeekTasks,
-  };
-}
-
-function formatCompactDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return compactDateFormatter.format(new Date(year, month - 1, day, 12));
-}
-
-function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeekIds }: {
-  title: string;
-  tasks: readonly Task[];
-  emptyMessage: string;
-  tone?: 'neutral' | 'info' | 'warn' | 'danger';
-  dueThisWeekIds?: ReadonlySet<string>;
-}) {
-  return <section className={`task-overview-card__task-section task-overview-card__task-section--${tone}`}>
-    <h3>{title}</h3>
-    {tasks.length ? <ul>
-      {tasks.map(task => <li
-        key={task.id}
-        className={dueThisWeekIds?.has(task.id) ? 'task-overview-card__task--due-this-week' : undefined}
-      >
-        <strong>{task.title}</strong>
-        <span>{formatCompactDate(task.dueDate)}</span>
-      </li>)}
-    </ul> : <p>{emptyMessage}</p>}
-  </section>;
-}
-
-export default function TaskOverviewDashboardCard({ queryKey, resourceId, resourceName, today, onMessageChange }: {
+/**
+ * Queries the selected staff overview and displays its current page-owned tasks.
+ * @param props - Main records, staff identity, local date, and page-message reporter.
+ * @example <TaskOverviewDashboardCard records={records} {...overviewProps} />
+ */
+export default function TaskOverviewDashboardCard({ records, queryKey, resourceId, resourceName, today, onMessageChange }: {
+  records: Readonly<Record<string, Task>>;
   queryKey: readonly unknown[];
   resourceId: string;
   resourceName: string;
   today: string;
   onMessageChange?: PageMessageChangeHandler;
 }) {
-  const overviewData = useTaskOverviewData(queryKey, resourceId);
+  const overviewData = useTaskOverviewData(queryKey, resourceId, records);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
   usePageMessageReporter(onMessageChange, overviewData.error, retryAction);
 
@@ -96,6 +40,11 @@ export default function TaskOverviewDashboardCard({ queryKey, resourceId, resour
   />;
 }
 
+/**
+ * Displays a staff overview and keeps its report scoped to the current staff selection.
+ * @param props - Current tasks, query feedback, staff identity, and local reporting date.
+ * @example <TaskOverviewContent tasks={tasks} {...reportProps} />
+ */
 function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resourceName, today }: {
   tasks: readonly Task[];
   loading: boolean;
@@ -124,10 +73,10 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
       <div className="dashboard-card__compact-layout task-overview-card__layout">
         <div className="task-overview-card__data">
           <dl className="task-overview-card__metrics">
-            <div><dt>Assigned</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.assigned}</dd></div>
-            <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.upcoming}</dd></div>
-            <div className="task-overview-card__metric-in-progress"><dt>In Progress</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.inProgress}</dd></div>
-            <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{loading ? <DashboardCardLoading label="Loading task overview…" /> : error ? '—' : summary.overdue}</dd></div>
+            <div><dt>Assigned</dt><dd>{renderOverviewCount(summary.assigned, loading, error)}</dd></div>
+            <div className="task-overview-card__metric-upcoming"><dt>Upcoming</dt><dd>{renderOverviewCount(summary.upcoming, loading, error)}</dd></div>
+            <div className="task-overview-card__metric-in-progress"><dt>In Progress</dt><dd>{renderOverviewCount(summary.inProgress, loading, error)}</dd></div>
+            <div className="task-overview-card__metric-overdue"><dt>Overdue</dt><dd>{renderOverviewCount(summary.overdue, loading, error)}</dd></div>
           </dl>
           {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
         </div>
@@ -168,4 +117,110 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
       </div>
     </Modal>
   </>;
+}
+
+/**
+ * Groups open tasks by their server-derived status and identifies those due this week.
+ * @param tasks - Current saved tasks for the selected staff member.
+ * @param today - Current local calendar date used for the week boundary.
+ * @example groupTasksForOverview(tasks, '2026-08-11').overdueTasks // open overdue tasks
+ */
+function groupTasksForOverview(tasks: readonly Task[], today: string) {
+  const assignedTasks = tasks.filter(task => task.state === 'open');
+  const upcomingTasks = assignedTasks.filter(task => task.status === 'upcoming');
+  const inProgressTasks = assignedTasks.filter(task => task.status === 'in_progress');
+  const overdueTasks = assignedTasks.filter(task => task.status === 'overdue');
+  const weekEnd = currentWeekEnd(today);
+  const dueThisWeekTasks = [...upcomingTasks, ...inProgressTasks]
+    .filter(task => task.dueDate >= today && task.dueDate <= weekEnd);
+
+  return {
+    assignedTasks: sortByDueDate(assignedTasks),
+    upcomingTasks: sortByDueDate(upcomingTasks),
+    inProgressTasks: sortByDueDate(inProgressTasks),
+    overdueTasks: sortByDueDate(overdueTasks),
+    dueThisWeekTasks,
+  };
+}
+
+/**
+ * Finds the Sunday ending the current Monday-to-Sunday week.
+ * @param today - Current local calendar date in YYYY-MM-DD form.
+ * @example currentWeekEnd('2026-08-11') // '2026-08-16'
+ */
+function currentWeekEnd(today: string) {
+  const date = parseCalendarDate(today);
+  const daysSinceMonday = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - daysSinceMonday + 6);
+  return dayKey(date);
+}
+
+/**
+ * Converts an ISO calendar date to a browser-local date without UTC day shifts.
+ * @param value - A valid YYYY-MM-DD calendar date.
+ * @example parseCalendarDate('2026-08-11').getDate() // 11
+ */
+function parseCalendarDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Orders tasks by due date and then title without changing the supplied array.
+ * @example sortByDueDate(tasks) // earliest due task first
+ */
+function sortByDueDate(tasks: readonly Task[]) {
+  return [...tasks].sort((left, right) => (
+    left.dueDate.localeCompare(right.dueDate) || left.title.localeCompare(right.title)
+  ));
+}
+
+/**
+ * Shows a status count, its loading indicator, or an unavailable placeholder.
+ * @param count - Number of tasks in the status group.
+ * @param loading - Whether the current staff query is pending.
+ * @param error - Current query failure, or null when available.
+ * @example renderOverviewCount(0, false, null) // 0
+ */
+function renderOverviewCount(count: number, loading: boolean, error: string | null) {
+  if (loading) return <DashboardCardLoading label="Loading task overview…" />;
+  if (error) return '—';
+
+  return count;
+}
+
+/**
+ * Displays one status group's task titles and due dates, highlighting tasks due this week.
+ * @param props - Section heading, ordered tasks, empty wording, tone, and optional highlighted IDs.
+ * @example <TaskDueList title="Overdue" tasks={tasks} emptyMessage="No overdue tasks." />
+ */
+function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeekIds }: {
+  title: string;
+  tasks: readonly Task[];
+  emptyMessage: string;
+  tone?: 'neutral' | 'info' | 'warn' | 'danger';
+  dueThisWeekIds?: ReadonlySet<string>;
+}) {
+  return <section className={`task-overview-card__task-section task-overview-card__task-section--${tone}`}>
+    <h3>{title}</h3>
+    {tasks.length ? <ul>
+      {tasks.map(task => <li
+        key={task.id}
+        className={dueThisWeekIds?.has(task.id) ? 'task-overview-card__task--due-this-week' : undefined}
+      >
+        <strong>{task.title}</strong>
+        <span>{formatCompactDate(task.dueDate)}</span>
+      </li>)}
+    </ul> : <p>{emptyMessage}</p>}
+  </section>;
+}
+
+/**
+ * Formats an ISO calendar date as a short month and day in browser-local time.
+ * @param value - A valid YYYY-MM-DD calendar date.
+ * @example formatCompactDate('2026-08-11') // 'Aug 11'
+ */
+function formatCompactDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return compactDateFormatter.format(new Date(year, month - 1, day, 12));
 }

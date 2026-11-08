@@ -1,4 +1,4 @@
-import { taskStore } from '../../../taskStore';
+import { taskData } from '../../../hooks/data/useTaskData';
 import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook } from '@testing-library/react';
@@ -31,7 +31,7 @@ describe('useTaskTableData', () => {
     const client = createTestQueryClient();
     const task = makeTask();
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: 'next' });
-    renderHook(() => useTaskTableData(['tasks', 'table'], filters, sorting, '2026-08-11'), { wrapper: createQueryClientWrapper(client) });
+    renderHook(() => useTaskTableData(['tasks', 'table'], filters, sorting, '2026-08-11', {}), { wrapper: createQueryClientWrapper(client) });
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     const signal = new AbortController().signal;
 
@@ -40,7 +40,7 @@ describe('useTaskTableData', () => {
       const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
       expect(page).toEqual({ rows: [{ id: task.id, sortValue: task.dueDate }], nextCursor: 'next' });
     });
-    expect(taskStore.get(client, task.id)).toEqual(task);
+    expect(taskData.get(client, task.id)).toEqual(task);
     expect(getTasksTableData).toHaveBeenLastCalledWith(
       filters, { signal }, { ...sorting, cursor: undefined, limit: TABLE_PAGE_SIZE },
     );

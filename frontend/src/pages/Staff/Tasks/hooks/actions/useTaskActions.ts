@@ -9,7 +9,7 @@ import {
   updateTaskState,
 } from '../../tasks.api';
 import type { Task } from '../../types';
-import { taskStore } from '../../taskStore';
+import { taskData } from '../data/useTaskData';
 
 import type { TaskCalendarCache } from '../../types';
 
@@ -27,6 +27,7 @@ interface TaskActionHandlers {
 
 /**
  * Reconciles task actions and Hours logged from Tasks.
+ * @param options - List/summary query prefixes and the callback for removing the current selection.
  * @example actions.logHours(input) // stores Hours once and updates affected tasks
  */
 export default function useTaskActions({
@@ -35,10 +36,9 @@ export default function useTaskActions({
   hoursQueryKey,
   onTaskRemoved,
 }: TaskActionHandlers) {
-
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
-  const scope = taskStore.getScope(queryClient);
+  const scope = taskData.getScope(queryClient);
   const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
@@ -46,14 +46,14 @@ export default function useTaskActions({
 
   const startTaskAction = useCallback((taskId: string) => {
     if (pendingTaskIdsRef.current.has(taskId)) return false;
-    taskStore.setPending(queryClient, taskId, true, scope);
+    taskData.setPending(queryClient, taskId, true, scope);
     pendingTaskIdsRef.current.add(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
     return true;
   }, [queryClient, scope]);
 
   const finishTaskAction = useCallback((taskId: string) => {
-    taskStore.setPending(queryClient, taskId, false, scope);
+    taskData.setPending(queryClient, taskId, false, scope);
     pendingTaskIdsRef.current.delete(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
   }, [queryClient, scope]);
@@ -69,9 +69,9 @@ export default function useTaskActions({
   }, [queryClient, taskQueryKey]);
 
   const syncTask = useCallback((task: Task, created = false) => {
-    if (!taskStore.isScope(queryClient, scope)) return;
+    if (!taskData.isScope(queryClient, scope)) return;
 
-    taskStore.write(queryClient, task);
+    taskData.write(queryClient, task);
     if (created) {
       void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
     }
@@ -86,8 +86,8 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
-      if (!taskStore.isScope(queryClient, scope)) return;
-      taskStore.remove(queryClient, task.id);
+      if (!taskData.isScope(queryClient, scope)) return;
+      taskData.remove(queryClient, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
       refreshTaskOverview();
@@ -112,7 +112,7 @@ export default function useTaskActions({
         dueDate: nextRange.end,
         ...(staffId !== task.staffId ? { staffId } : {}),
       });
-      if (!taskStore.isScope(queryClient, scope)) return null;
+      if (!taskData.isScope(queryClient, scope)) return null;
       syncTask(updatedTask);
       return updatedTask;
     } catch {
@@ -130,7 +130,7 @@ export default function useTaskActions({
 
     try {
       const updatedTask = await updateTaskState(task.id, state);
-      if (!taskStore.isScope(queryClient, scope)) return;
+      if (!taskData.isScope(queryClient, scope)) return;
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
@@ -146,7 +146,7 @@ export default function useTaskActions({
     try {
       const hoursScope = hoursData.getScope(queryClient);
       const saved = await setHours(input);
-      if (!hoursData.isScope(queryClient, hoursScope) || !taskStore.isScope(queryClient, scope)) return;
+      if (!hoursData.isScope(queryClient, hoursScope) || !taskData.isScope(queryClient, scope)) return;
 
       const { updatedTasks, ...entry } = saved;
       hoursData.write(queryClient, entry);
