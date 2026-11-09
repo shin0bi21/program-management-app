@@ -17,8 +17,8 @@ const assignment: ProgramCycleAssignment = {
   programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
-  nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
-  attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+  nextSessionAt: null, nextSessionId: null,
+  uniqueAttendeeCount: 0,
 };
 /**
  * Supplies an isolated query cache for one roster workflow test.

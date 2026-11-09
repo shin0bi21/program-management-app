@@ -48,6 +48,7 @@ describe('useYouthActions', () => {
 
     act(() => rendered.result.current.reconcileAttendance({
       programCycle: { programId: 'program-1', cycleId: 'cycle-1', cycle: 'Summer', program: 'Skills', enrollmentRequired: true },
+      presentCount: 0, lateCount: 0, absentCount: 0,
       sessions: [], youth, updatedSessions: [session],
     }));
 
@@ -56,6 +57,9 @@ describe('useYouthActions', () => {
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', session.id, 'roster'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary', youth.id] });
+    expect(rendered.queryClient.getQueryData(['youth', 'attendance', youth.id])).toEqual({
+      programCycle: expect.objectContaining({ programId: 'program-1', cycleId: 'cycle-1' }),
+      youth: [{ id: youth.id, firstName: youth.firstName, lastName: youth.lastName, presentCount: 0, lateCount: 0, absentCount: 0, sessions: [] }],
+    });
   });
 });

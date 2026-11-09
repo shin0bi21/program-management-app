@@ -20,9 +20,16 @@ import referenceDataRoutes from '../../src/routes/referenceDataRoutes';
 import { handleError } from '../../src/middleware/errorMiddleware';
 import { requestId } from '../../src/middleware/routeMiddleware';
 
+/**
+ * Creates an isolated Express app with the production route and parser contracts.
+ * @returns An app without a listening server or shared request state.
+ * @example request(createApp()).get("/api/youth")
+ */
 export function createApp() {
   const app = express();
   app.use(requestId);
+  // Full cycle attendance is larger than ordinary command payloads.
+  app.post('/api/programs/:programId/cycles/:cycleId/reports/youth.pdf', express.json({ limit: '5mb', type: 'application/json' }));
   app.use(express.json({ limit: '20kb', type: 'application/json' }));
   app.use(cookieParser());
   app.use('/api/auth', authRoutes);

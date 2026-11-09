@@ -1,54 +1,62 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPen } from '@fortawesome/free-solid-svg-icons';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
-import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
-import type { YouthAttendanceSummary } from './youthAttendanceSummary.api';
-import useYouthAttendanceSummary from './hooks/useYouthAttendanceSummary';
-import YouthDashboardTabs from './YouthDashboardTabs/YouthDashboardTabs';
+import ViewAttendanceModal from '../../../../../common/features/Attendance/ViewAttendanceModal';
+import YouthAttendanceModal from '../../YouthAttendanceModal/YouthAttendanceModal';
+import type { YouthAttendanceResult } from '../../YouthAttendanceModal/youthAttendance.api';
+import type { YouthProfile } from '../../../types';
+import useYouthAttendanceData from './hooks/useYouthAttendanceData';
 import './YouthAttendanceDashboardCard.css';
 
-const attendanceTabs = [
-  { value: 'active', label: 'Active' },
-  { value: 'history', label: 'History' },
-] as const;
+interface AttendanceTarget {
+  type: 'edit' | 'report';
+  youthId: string;
+  programId: string;
+  cycleId: string;
+}
 
 /**
- * Loads and displays attendance totals for the selected youth, with active/history tabs.
- * @param props.youthId - Selected youth ID; null displays the no-selection message.
- * @param props.canManage - Whether to show attendance editing actions.
- * @param props.onManage - Opens attendance editing for the selected program and cycle.
- * @param props.canViewReport - Whether to show report actions.
- * @param props.onViewReport - Opens the report for the selected program and cycle.
- * @example <YouthAttendanceDashboardCard youthId={selectedProfileId} />
+ * Loads complete active-cycle attendance and shares it with its editor and PDF report.
+ * @param props - Selected youth ID/loaded row, action permissions and saved-attendance callback.
+ * @example <YouthAttendanceDashboardCard youthId={selectedProfileId} youth={selectedProfile} onSaved={reconcileAttendance} />
  */
 export default function YouthAttendanceDashboardCard({
   youthId,
+  youth = null,
   canManage = false,
-  onManage,
   canViewReport = false,
-  onViewReport,
+  onSaved,
 }: {
   youthId: string | null;
+  youth?: YouthProfile | null;
   canManage?: boolean;
-  onManage?: (programCycle: YouthAttendanceSummary) => void;
   canViewReport?: boolean;
-  onViewReport?: (programCycle: YouthAttendanceSummary) => void;
+  onSaved?: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
-  const { programCycles, loading, error, retry } = useYouthAttendanceSummary(youthId);
-  const selected = youthId !== null;
-  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
-  const today = getDateKeyInTimeZone();
-  const visibleProgramCycles = programCycles.filter(programCycle => {
-    const active = programCycle.startsOn <= today && programCycle.endsOn >= today && programCycle.withdrawnOn === null;
-    return activeTab === 'active' ? active : !active;
-  });
+  const { attendance: data, loading, error, retry } = useYouthAttendanceData(youthId);
+  const [target, setTarget] = useState<AttendanceTarget | null>(null);
+  const programCycle = data?.programCycle;
+  const participant = data?.youth.find(person => person.id === youthId);
+  const attendance = programCycle && participant ? { programCycle, sessions: participant.sessions } : null;
+  const programId = programCycle?.programId;
+  const cycleId = programCycle?.cycleId;
+  const targetMatches = target?.youthId === youthId
+    && target?.programId === programId && target?.cycleId === cycleId;
+  const isEditorOpen = targetMatches && target?.type === 'edit';
+  const isReportOpen = targetMatches && target?.type === 'report';
 
-  let emptyMessage = 'Select a row to view attendance.';
-  if (selected) {
-    emptyMessage = activeTab === 'active' ? 'No active program attendance.' : 'No historical attendance.';
-  }
+  // A different youth or active cycle ends the previous interaction.
+  useEffect(() => setTarget(null), [youthId, programId, cycleId]);
+
+  /** Opens an interaction using the already-loaded active cycle. @example open('edit') */
+  const open = (type: AttendanceTarget['type']) => {
+    if (!youthId || !programCycle) return;
+    setTarget({ type, youthId, programId: programCycle.programId, cycleId: programCycle.cycleId });
+  };
+  /** Unmounts the active editor or report. @example close() */
+  const close = () => setTarget(null);
 
   let content: ReactNode = null;
   if (error) {
@@ -56,75 +64,35 @@ export default function YouthAttendanceDashboardCard({
       <p>{error}</p>
       <Button size="sm" onClick={() => { void retry(); }}>Retry</Button>
     </div>;
-  } else if (selected && visibleProgramCycles.length > 0) {
-    content = (
-      <div className="attendance-card__cohorts">
-        {visibleProgramCycles.map(programCycle => (
-          <div className="attendance-card__cohort" key={`${programCycle.programId}:${programCycle.cycleId}`}>
-            <div className="attendance-card__cohort-header">
-              <strong>{programCycle.program} · {programCycle.cycle}</strong>
-              <div className="attendance-card__actions">
-                {canViewReport && onViewReport && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="attendance-card__view"
-                    aria-label={`View attendance report for ${programCycle.program} · ${programCycle.cycle}`}
-                    disabled={!programCycle.enrollmentRequired}
-                    title={!programCycle.enrollmentRequired ? undefined : 'View attendance report'}
-                    onClick={() => onViewReport(programCycle)}
-                  >
-                    <FontAwesomeIcon icon={faEye} aria-hidden="true" />
-                  </Button>
-                )}
-                {canManage && onManage && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="attendance-card__manage"
-                    aria-label={`Manage attendance for ${programCycle.program} · ${programCycle.cycle}`}
-                    title="Manage attendance"
-                    onClick={() => onManage(programCycle)}
-                  >
-                    <FontAwesomeIcon icon={faPen} aria-hidden="true" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            {!programCycle.enrollmentRequired ? (
-              <p className="attendance-card__breakdown">
-                {programCycle.presentCount} {programCycle.presentCount === 1 ? 'visit' : 'visits'}
-              </p>
-            ) : (
-              <p className="attendance-card__breakdown">
-                Present {programCycle.presentCount}<span aria-hidden="true"> · </span>
-                Late {programCycle.lateCount}<span aria-hidden="true"> · </span>
-                Absent {programCycle.absentCount}
-              </p>
-            )}
-          </div>
-        ))}
+  } else if (programCycle) {
+    content = <div className="attendance-card__cohort">
+      <div className="attendance-card__cohort-header">
+        <span>{programCycle.program} · {programCycle.cycle}</span>
+        <div className="attendance-card__actions">
+          {canViewReport && <Button size="sm" variant="ghost" className="attendance-card__view"
+            aria-label={`View attendance report for ${programCycle.program} · ${programCycle.cycle}`}
+            disabled={!youth} onClick={() => open('report')}>
+            <FontAwesomeIcon icon={faEye} />
+          </Button>}
+          {canManage && onSaved && <Button size="sm" variant="ghost" className="attendance-card__manage"
+            aria-label={`Manage attendance for ${programCycle.program} · ${programCycle.cycle}`}
+            disabled={!youth} onClick={() => open('edit')}>
+            <FontAwesomeIcon icon={faPen} />
+          </Button>}
+        </div>
       </div>
-    );
+      <p className="attendance-card__breakdown">Present {participant?.presentCount}<span aria-hidden="true"> · </span>
+        Late {participant?.lateCount}<span aria-hidden="true"> · </span>Absent {participant?.absentCount}</p>
+    </div>;
   }
 
-  return (
-    <DashboardCard
-      title="Attendance"
-      loading={loading}
-      loadingLabel="Loading attendance…"
-      action={(
-        <YouthDashboardTabs
-          activeTab={activeTab}
-          disabled={!selected}
-          ariaLabel="Attendance view"
-          onChange={setActiveTab}
-          options={attendanceTabs}
-        />
-      )}
-      emptyMessage={emptyMessage}
-    >
+  return <>
+    <DashboardCard title="Attendance" loading={loading} loadingLabel="Loading attendance…"
+      emptyMessage={youthId ? 'Not enrolled.' : 'Select a row to view attendance.'}>
       {content}
     </DashboardCard>
-  );
+    {isEditorOpen && youth && attendance && onSaved && <YouthAttendanceModal
+      youth={youth} attendance={attendance} refresh={retry} onClose={close} onSaved={onSaved} />}
+    {isReportOpen && data && <ViewAttendanceModal data={data} onClose={close} />}
+  </>;
 }

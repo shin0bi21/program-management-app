@@ -15,6 +15,8 @@ const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, re
 
 /**
  * Reconciles saved session rows and refreshes related attendance/program summaries.
+ * @param options.onSessionRemoved - Clears selected/open context after a confirmed deletion.
+ * @param options.onSessionSynced - Receives authoritative rows for selected-page context.
  * @example actions.moveSession(session, date) // replaces the saved row in loaded views
  */
 export default function useSessionActions({
@@ -32,11 +34,20 @@ export default function useSessionActions({
   const pendingMoves = useRef(new Set<string>());
   const [pendingSessionIds, setPendingSessionIds] = useState<string[]>([]);
 
+  /**
+   * Refreshes related cycle summaries and loaded attendance after session changes.
+   * @example refreshProgramOverviews()
+   */
   const refreshProgramOverviews = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
-    void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary'] });
+    void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-attendance'] });
+    void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance'] });
   }, [queryClient]);
 
+  /**
+   * Publishes the supplied authoritative session into loaded table, calendar and selected context.
+   * @example syncSession(savedSession)
+   */
   const syncSession = useCallback((session: ProgramSession) => {
     replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
     calendarCacheRef.current.upsert(session);
@@ -44,16 +55,28 @@ export default function useSessionActions({
     refreshProgramOverviews();
   }, [onSessionSynced, queryClient, refreshProgramOverviews]);
 
+  /**
+   * Publishes the supplied program-cycle assignment rows into loaded lists.
+   * @example syncAssignments(result.updatedProgramCycles)
+   */
   const syncAssignments = useCallback((assignments: readonly ProgramCycleAssignment[] = []) => {
     updateProgramCycleAssignments(queryClient, assignments);
   }, [queryClient]);
 
+  /**
+   * Reconciles a saved session, affected assignments and its roster query.
+   * @example syncUpdatedSession(result)
+   */
   const syncUpdatedSession = useCallback((result: UpdatedSessionResult) => {
     syncSession(result.session);
     syncAssignments(result.updatedProgramCycles);
     void queryClient.invalidateQueries({ queryKey: ['sessions', result.session.id, 'roster'] });
   }, [queryClient, syncAssignments, syncSession]);
 
+  /**
+   * Publishes saved roster data and affected session, Youth and assignment rows.
+   * @example syncAttendance(result)
+   */
   const syncAttendance = useCallback((result: SessionAttendanceResult) => {
     syncSession(result.session);
     queryClient.setQueryData(['sessions', result.session.id, 'roster'], result.roster);
@@ -63,9 +86,12 @@ export default function useSessionActions({
     if (result.updatedProgramCycle) {
       syncAssignments([result.updatedProgramCycle]);
     }
-    void queryClient.invalidateQueries({ queryKey: ['youth-program-cycle-attendance'] });
   }, [queryClient, syncAssignments, syncSession]);
 
+  /**
+   * Moves the supplied session to the requested YYYY-MM-DD date while preventing duplicate moves.
+   * @example await moveSession(session, "2026-11-20")
+   */
   const moveSession = useCallback(async (session: ProgramSession, date: string) => {
     if (pendingMoves.current.has(session.id)) return null;
 
@@ -86,6 +112,10 @@ export default function useSessionActions({
     }
   }, [syncUpdatedSession]);
 
+  /**
+   * Reloads membership after creation and publishes affected program assignments.
+   * @example await refreshCreatedSessions(result)
+   */
   const refreshCreatedSessions = useCallback(async (result: CreatedSessionResult) => {
     syncAssignments(result.updatedProgramCycles);
     // Creation cannot establish membership in every filtered collection or buffered range.
@@ -94,6 +124,10 @@ export default function useSessionActions({
     setCalendarRevision(revision => revision + 1);
   }, [queryClient, refreshProgramOverviews, syncAssignments]);
 
+  /**
+   * Opens a confirmation capturing the supplied session and its deletion reconciliation.
+   * @example requestDelete(session)
+   */
   const requestDelete = useCallback((session: ProgramSession) => setConfirmAction({
     title: 'Delete Session',
     message: `Delete the ${session.theme} session for the ${session.program} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
@@ -118,6 +152,10 @@ export default function useSessionActions({
     },
   }), [onSessionRemoved, queryClient, refreshProgramOverviews, syncAssignments]);
 
+  /**
+   * Clears the confirmation target and unmounts its feedback.
+   * @example closeConfirmation()
+   */
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 
   return {

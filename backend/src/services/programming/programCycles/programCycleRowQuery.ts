@@ -15,9 +15,6 @@ export interface ProgramCycleRow {
   enrolledCount: number;
   nextSessionAt: Date | null;
   nextSessionId: string | null;
-  averageAttendance: number | null;
-  attendanceAttendedCount: number;
-  attendanceRecordedCount: number;
   uniqueAttendeeCount: number;
   state: 'upcoming' | 'active' | 'completed';
 }
@@ -58,27 +55,6 @@ export const programCycleRowColumns = sql`
     ORDER BY cs.starts_at
     LIMIT 1
   ) AS next_session_id,
-  (
-    SELECT ROUND(
-      100.0 * COUNT(ar.id) FILTER (WHERE ar.status IN ('present', 'late'))
-      / NULLIF(COUNT(ar.id) FILTER (WHERE ar.status != 'excused'), 0), 1
-    )::float
-    FROM program_sessions cs
-    INNER JOIN attendance_records ar ON ar.session_id = cs.id
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
-  ) AS average_attendance,
-  (
-    SELECT COUNT(ar.id)::int
-    FROM program_sessions cs
-    INNER JOIN attendance_records ar ON ar.session_id = cs.id
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id AND ar.status IN ('present', 'late')
-  ) AS attendance_attended_count,
-  (
-    SELECT COUNT(ar.id)::int
-    FROM program_sessions cs
-    INNER JOIN attendance_records ar ON ar.session_id = cs.id
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id AND ar.status != 'excused'
-  ) AS attendance_recorded_count,
   (
     SELECT COUNT(DISTINCT ar.youth_id)::int
     FROM program_sessions cs

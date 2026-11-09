@@ -1,8 +1,10 @@
 import PDFDocument from 'pdfkit';
-import type { ProgramCycleYouthReport } from '../../../services/programming/programCycles/programCycleReportService';
+import type { AttendanceReportInput } from '../validation/programmingSchemas';
+import { SESSION_TYPES } from '../types/programming';
 
-type ReportYouth = ProgramCycleYouthReport['youth'][number];
-type Breakdown = ReportYouth['attendanceBreakdown']['total'];
+type ReportYouth = AttendanceReportInput['youth'][number];
+type Sessions = ReportYouth['sessions'];
+type Breakdown = Record<'present' | 'late' | 'absent' | 'excused' | 'unmarked', number>;
 
 const pageWidth = 612;
 const pageHeight = 792;
@@ -27,8 +29,13 @@ const noteStyles = {
   achievement: { label: 'Achievement', marker: 'AC', color: '#15803d' },
 } as const;
 
-export async function renderProgramCycleYouthPdf(report: ProgramCycleYouthReport) {
-  const title = `${report.programCycle.program} - ${report.programCycle.cycle} Youth Report`;
+/**
+ * Renders the supplied cycle sessions and notes directly as an attendance PDF.
+ * @param report - Validated attendance already loaded by the opening dashboard.
+ * @example renderAttendanceReportPdf(attendance) // no timeline or note-record mapping
+ */
+export async function renderAttendanceReportPdf(report: AttendanceReportInput) {
+  const title = `${report.programCycle.program} - ${report.programCycle.cycle} Attendance Report`;
   const doc = new PDFDocument({ size: 'LETTER', margin, autoFirstPage: true, info: { Title: title } });
   const chunks: Buffer[] = [];
   doc.on('data', chunk => chunks.push(Buffer.from(chunk)));
@@ -49,32 +56,63 @@ export async function renderProgramCycleYouthPdf(report: ProgramCycleYouthReport
   return { buffer: await completed, filename: `${safeFilename(title)}.pdf` };
 }
 
+/**
+ * Formats the attended share of all completed sessions, including every missed status.
+ * @param breakdown - Counts preserving present, late, absent, excused and unmarked labels.
+ * @example attendanceRate({ present: 1, late: 0, absent: 0, excused: 1, unmarked: 0 }) // 50% attendance
+ */
 function attendanceRate(breakdown: Breakdown) {
-  return breakdown.attendanceRate === null ? 'Not available' : `${breakdown.attendanceRate}% attendance`;
+  const attended = breakdown.present + breakdown.late;
+  const total = attended + breakdown.absent + breakdown.excused + breakdown.unmarked;
+  return total ? `${Math.round((attended / total) * 1000) / 10}% attendance` : 'Not available';
 }
 
+/**
+ * Starts another page when the requested height would cross the bottom margin.
+ * @param height - Vertical space required in PDF points.
+ * @example ensureSpace(doc, 51)
+ */
 function ensureSpace(doc: PDFKit.PDFDocument, height: number) {
   if (doc.y + height <= pageHeight - margin) return;
   doc.addPage();
   doc.y = margin;
 }
 
+/**
+ * Returns text positioning to the report's left margin.
+ * @example resetTextFlow(doc)
+ */
 function resetTextFlow(doc: PDFKit.PDFDocument) {
   doc.x = margin;
 }
 
-function createSessionTypeColorMap(youth: ReportYouth) {
+/** Assigns the report palette to configured session types. @example createSessionTypeColorMap().get('Regular') // blue */
+function createSessionTypeColorMap() {
   const colors = new Map<string, string>();
   let additionalColorIndex = 0;
-  youth.attendanceBreakdown.bySessionType.forEach(({ name }) => {
+  SESSION_TYPES.forEach(name => {
     const presetColor = sessionTypeColors[name as keyof typeof sessionTypeColors];
     colors.set(name, presetColor ?? additionalSessionTypeColors[additionalColorIndex++ % additionalSessionTypeColors.length]!);
   });
   return colors;
 }
 
-function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
-  const summary = youth.attendanceBreakdown.total;
+/**
+ * Draws totals and session-type attendance rates from the supplied sessions.
+ * @param sessions - Completed, noncancelled records in the youth's enrollment period.
+ * @example drawBreakdown(doc, sessions, colors) // counts unmarked and excused as missed
+ */
+function drawBreakdown(doc: PDFKit.PDFDocument, sessions: Sessions, colors: Map<string, string>) {
+  const summary: Breakdown = { present: 0, late: 0, absent: 0, excused: 0, unmarked: 0 };
+  const counts = new Map<string, Breakdown>(SESSION_TYPES.map(name => [
+    name, { present: 0, late: 0, absent: 0, excused: 0, unmarked: 0 },
+  ]));
+  for (const session of sessions) {
+    const status = session.status ?? 'unmarked';
+    summary[status] += 1;
+    const sessionTypeCounts = counts.get(session.sessionType);
+    if (sessionTypeCounts) sessionTypeCounts[status] += 1;
+  }
   const metrics = [
     ['On time', summary.present],
     ['Late', summary.late],
@@ -102,15 +140,15 @@ function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<
   resetTextFlow(doc);
   doc.y = top + 50;
 
-  youth.attendanceBreakdown.bySessionType.forEach(column => {
+  counts.forEach((column, name) => {
     ensureSpace(doc, 51);
     const sectionTop = doc.y;
-    const accentColor = colors.get(column.name) ?? muted;
+    const accentColor = colors.get(name) ?? muted;
 
     doc.save().fillOpacity(0.08).rect(margin, sectionTop, contentWidth, 44).fillColor(accentColor).fill().restore();
     doc.rect(margin, sectionTop, 4, 44).fillColor(accentColor).fill();
     doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#1f2937')
-      .text(column.name, margin + 13, sectionTop + 9, { width: 150, height: 11, ellipsis: true });
+      .text(name, margin + 13, sectionTop + 9, { width: 150, height: 11, ellipsis: true });
     doc.font('Helvetica').fontSize(6.5).fillColor(accentColor)
       .text(attendanceRate(column), margin + 13, sectionTop + 24, { width: 150 });
 
@@ -136,8 +174,13 @@ function drawBreakdown(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<
   doc.y += 5;
 }
 
-function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<string, string>) {
-  if (!youth.timeline.length) {
+/**
+ * Draws attendance and linked note markers directly from chronological sessions.
+ * @param sessions - Supplied session records; their field names and note links are retained.
+ * @example drawTimeline(doc, sessions, colors) // no intermediate timeline records
+ */
+function drawTimeline(doc: PDFKit.PDFDocument, sessions: Sessions, colors: Map<string, string>) {
+  if (!sessions.length) {
     resetTextFlow(doc);
     doc.font('Helvetica').fontSize(8).fillColor(muted)
       .text("No sessions in this youth's enrollment period.", margin, doc.y, { width: contentWidth });
@@ -152,7 +195,7 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<s
   const chartTop = top + 61;
   const chartBottom = top + 169;
   const plotHeight = chartBottom - chartTop;
-  const stepX = youth.timeline.length === 1 ? 0 : (chartRight - chartLeft) / (youth.timeline.length - 1);
+  const stepX = sessions.length === 1 ? 0 : (chartRight - chartLeft) / (sessions.length - 1);
   const pointY = (status: keyof typeof statusValues | null) => chartBottom - (((statusValues[status ?? 'unmarked'] - 1) / 4) * plotHeight);
 
   statusLabels.forEach((label, index) => {
@@ -161,22 +204,23 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<s
     doc.font('Helvetica').fontSize(6.5).fillColor(muted).text(label, margin, y - 3, { width: 50, align: 'right' });
   });
 
-  youth.timeline.forEach((point, index) => {
+  sessions.forEach((point, index) => {
     const x = chartLeft + (index * stepX);
     const y = pointY(point.status);
     if (index) {
-      const previous = youth.timeline[index - 1]!;
+      const previous = sessions[index - 1]!;
       doc.moveTo(chartLeft + ((index - 1) * stepX), pointY(previous.status)).lineTo(x, y).lineWidth(1.2).strokeColor(timelineLineColor).stroke();
     }
     doc.circle(x, y, 3.2).fillColor(colors.get(point.sessionType) ?? muted).fill();
-    point.noteCategories.forEach((category, categoryIndex) => {
+    const noteCategories = new Set(point.sessionNotes.map(note => note.category));
+    Array.from(noteCategories).forEach((category, categoryIndex) => {
       const style = noteStyles[category];
       const markerY = Math.max(chartTop + 5, y - 12 - (categoryIndex * 11));
       doc.circle(x, markerY, 4.5).fillColor(style.color).fill();
       doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 3.5 : 5).fillColor('#ffffff')
         .text(style.marker, x - 4, markerY - 2, { width: 8, align: 'center' });
     });
-    const showLabel = youth.timeline.length <= 10 || index % Math.ceil(youth.timeline.length / 10) === 0;
+    const showLabel = sessions.length <= 10 || index % Math.ceil(sessions.length / 10) === 0;
     if (showLabel) {
       const label = new Date(point.startsAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', timeZone: 'America/Toronto' });
       doc.font('Helvetica').fontSize(5.5).fillColor(muted).text(label, x - 18, chartBottom + 5, { width: 36, align: 'center' });
@@ -186,54 +230,75 @@ function drawTimeline(doc: PDFKit.PDFDocument, youth: ReportYouth, colors: Map<s
   doc.y = chartBottom + 25;
 }
 
-function drawNotes(doc: PDFKit.PDFDocument, youth: ReportYouth) {
-  if (!youth.notes.length) {
+/**
+ * Draws notes under their original session date and theme.
+ * @param sessions - Chronological session records with linked notes.
+ * @example drawNotes(doc, sessions) // reads session.sessionNotes directly
+ */
+function drawNotes(doc: PDFKit.PDFDocument, sessions: Sessions) {
+  if (!sessions.some(session => session.sessionNotes.length > 0)) {
     resetTextFlow(doc);
     doc.font('Helvetica').fontSize(8).fillColor(muted)
       .text('No notes for this youth.', margin, doc.y, { width: contentWidth });
     return;
   }
-  youth.notes.forEach(note => {
-    const detailHeight = note.details ? doc.heightOfString(note.details, { width: contentWidth }) : 0;
-    ensureSpace(doc, 34 + detailHeight);
-    const style = noteStyles[note.category];
-    const date = new Date(note.startsAt).toLocaleDateString('en-CA', {
-      month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Toronto',
-    });
-    const session = note.sessionTheme || 'Untitled session';
-    doc.circle(margin + 6, doc.y + 5, 6).fillColor(style.color).fill();
-    doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
-      .text(style.marker, margin + 1, doc.y + 2, { width: 10, align: 'center' });
-    doc.font('Helvetica').fontSize(7).fillColor(style.color).text(`${style.label} · ${date} · ${session}`, margin + 18, doc.y - 10);
-    doc.moveDown(0.3).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
-    doc.moveDown(0.5).moveTo(margin, doc.y).lineTo(pageWidth - margin, doc.y).lineWidth(0.4).strokeColor('#eef0f2').stroke();
-    doc.moveDown(0.7);
-  });
+  for (const session of sessions) {
+    for (const note of [...session.sessionNotes].sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt))) {
+      const detailHeight = note.details ? doc.heightOfString(note.details, { width: contentWidth }) : 0;
+      ensureSpace(doc, 34 + detailHeight);
+      const style = noteStyles[note.category];
+      const date = new Date(session.startsAt).toLocaleDateString('en-CA', {
+        month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Toronto',
+      });
+      const sessionTitle = session.theme || 'Untitled session';
+      doc.circle(margin + 6, doc.y + 5, 6).fillColor(style.color).fill();
+      doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
+        .text(style.marker, margin + 1, doc.y + 2, { width: 10, align: 'center' });
+      doc.font('Helvetica').fontSize(7).fillColor(style.color).text(`${style.label} · ${date} · ${sessionTitle}`, margin + 18, doc.y - 10);
+      doc.moveDown(0.3).font('Helvetica').fontSize(8).fillColor('#3f4852').text(note.details, { lineGap: 1.5 });
+      doc.moveDown(0.5).moveTo(margin, doc.y).lineTo(pageWidth - margin, doc.y).lineWidth(0.4).strokeColor('#eef0f2').stroke();
+      doc.moveDown(0.7);
+    }
+  }
 }
 
+/**
+ * Draws one youth using their completed, noncancelled session records.
+ * @param youth - Supplied profile and attendance, including original status labels and notes.
+ * @example drawYouth(doc, report.youth[0]) // breakdown, timeline and notes from the same records
+ */
 function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
-  const colors = createSessionTypeColorMap(youth);
+  const now = Date.now();
+  const sessions = youth.sessions
+    .filter(session => session.cancelledAt === null && Date.parse(session.endsAt) <= now)
+    .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt));
+  const colors = createSessionTypeColorMap();
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937')
     .text(`${youth.firstName} ${youth.lastName}`, margin, doc.y, { width: contentWidth });
   resetTextFlow(doc);
   doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
-  drawBreakdown(doc, youth, colors);
+  drawBreakdown(doc, sessions, colors);
   ensureSpace(doc, 215);
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
     .text('Attendance Timeline', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.4);
-  drawTimeline(doc, youth, colors);
+  drawTimeline(doc, sessions, colors);
   ensureSpace(doc, 45);
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')
     .text('Session Notes', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
-  drawNotes(doc, youth);
+  drawNotes(doc, sessions);
 }
 
+/**
+ * Replaces control and filename-reserved characters in a report title.
+ * @param value - Program/cycle report title used for the PDF filename.
+ * @example safeFilename("Art / Fall") // Art - Fall
+ */
 function safeFilename(value: string) {
   return value
     .split('')
@@ -244,5 +309,5 @@ function safeFilename(value: string) {
     .join('')
     .replace(/[\\/:*?"<>|]+/g, '-')
     .replace(/\s+/g, ' ')
-    .trim() || 'Youth Report';
+    .trim() || 'Attendance Report';
 }

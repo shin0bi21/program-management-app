@@ -25,10 +25,19 @@ const attendance: YouthProgramCycleAttendance = {
   }],
 };
 
+const savedAttendance = {
+  ...attendance,
+  presentCount: 1,
+  lateCount: 0,
+  absentCount: 0,
+  sessions: [{ ...attendance.sessions[0]!, status: 'present' as const }],
+  youth: makeYouthProfile(),
+};
+
 describe('useYouthAttendance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(setYouthProgramCycleAttendance).mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
+    vi.mocked(setYouthProgramCycleAttendance).mockResolvedValue(savedAttendance);
   });
 
   it('saves the selected session status from supplied attendance', async () => {
@@ -48,7 +57,7 @@ describe('useYouthAttendance', () => {
       status: 'present',
       notes: 'Existing note',
     }]);
-    expect(onSaved).toHaveBeenCalledWith({ ...attendance, youth: makeYouthProfile() });
+    expect(onSaved).toHaveBeenCalledWith(savedAttendance);
     expect(result.current.submitStatus).toBe('success');
   });
 });

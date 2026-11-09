@@ -15,7 +15,7 @@ it('reconciles saved assignments and refreshes membership, cross-program roster 
   const sameCycleOtherProgram = { ...old, programId: 'program-2' };
   const removedCycleOtherProgram = { ...removed, programId: 'program-2' };
   client.setQueryData(unrelatedKey, [sameCycleOtherProgram, removedCycleOtherProgram]);
-  const attendanceKey = ['youth', 'attendance-summary', 'youth-1'];
+  const attendanceKey = ['youth', 'attendance', 'youth-1'];
   client.setQueryData(attendanceKey, []);
   const saved = { ...old, cycle: 'Zulu' };
   const firstRosterKey = ['programs', 'roster-youth', 'program-1', 'cycle-1'];

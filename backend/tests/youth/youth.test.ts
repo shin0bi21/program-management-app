@@ -581,7 +581,7 @@ describe('Youth API', () => {
       expect(res.body).not.toHaveProperty('lastAttendedOn');
     });
 
-    it('loads attendance counts separately from the canonical profile', async () => {
+    it('loads full attendance separately from the canonical profile', async () => {
       const sessions = await sql<{ id: string; sessionDate: string }[]>`
         INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
         VALUES
@@ -619,16 +619,13 @@ describe('Youth API', () => {
         expect(res.status).toBe(200);
         expect(res.body).not.toHaveProperty('lastAttendedOn');
         expect(res.body.activeProgram).not.toHaveProperty('presentCount');
-        const summary = await request(app).get(`/api/youth/${youthId}/attendance-summary`)
+        const summary = await request(app).get(`/api/youth/${youthId}/attendance`)
           .set('Authorization', `Bearer ${adminToken}`);
         expect(summary.status).toBe(200);
-        expect(summary.body).toEqual(expect.arrayContaining([
-          expect.objectContaining({
-            programId: softSkillsProgramId, cycleId: softSkillsCycleId,
-            presentCount: 1,
-            lateCount: 0,
-            absentCount: 1,
-          }),
+        expect(summary.body.programCycle).toEqual(expect.objectContaining({ programId: softSkillsProgramId, cycleId: softSkillsCycleId }));
+        expect(summary.body.youth[0].sessions).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: sessions[0].id, status: 'present' }),
+          expect.objectContaining({ id: sessions[1].id, status: 'absent' }),
         ]));
       } finally {
         await sql`DELETE FROM attendance_records WHERE youth_id = ${youthId}`;

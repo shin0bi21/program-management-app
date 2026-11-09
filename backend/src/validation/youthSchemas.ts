@@ -46,7 +46,7 @@ export const youthSessionNotesSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid youth ID') }),
 });
 
-export const youthAttendanceSummarySchema = z.object({
+export const youthAttendanceSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid youth ID') }),
 });
 

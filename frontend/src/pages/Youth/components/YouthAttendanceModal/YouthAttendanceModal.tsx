@@ -1,14 +1,9 @@
-import type { YouthAttendanceSummary } from '../YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api';
 import type { YouthAttendanceResult } from './youthAttendance.api';
 import type { FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getErrorMessage } from '../../../../http/errors';
-import { getYouthProgramCycleAttendance } from './youthAttendance.api';
 import type { YouthProgramCycleAttendance } from './types';
 import { faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../common/components/Button/Button';
-import LoadingSpinner from '../../../../common/components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../common/components/Modal/components/ModalFormFooter';
 import type { YouthProfile } from '../../types';
@@ -18,63 +13,39 @@ import useYouthAttendance from './hooks/useYouthAttendance';
 import useYouthSessionNotes from './hooks/useYouthSessionNotes';
 import './YouthAttendanceModal.css';
 
-type AttendanceProgramCycle = Pick<YouthAttendanceSummary, 'programId' | 'cycleId' | 'program' | 'cycle' | 'enrollmentRequired'>;
-
 interface YouthAttendanceModalProps {
   youth: YouthProfile | null;
-  programCycle: AttendanceProgramCycle | null;
+  attendance: YouthProgramCycleAttendance | null;
+  refresh: () => Promise<unknown>;
   canManageSessionNotes?: boolean;
   onClose: () => void;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }
 
 /**
- * Mounts one youth/program-cycle attendance interaction while its target is open.
- * @param props - Saved youth, program-cycle summary and completion actions.
- * @example <YouthAttendanceModal youth={youth} programCycle={summary} onClose={onClose} onSaved={save} />
+ * Mounts a fresh editor with the cycle attendance already loaded by its dashboard.
+ * @param props - Supplied youth, complete cycle attendance and completion/refresh actions.
+ * @example <YouthAttendanceModal youth={youth} attendance={attendance} refresh={retry} onClose={close} onSaved={save} />
  */
-export default function YouthAttendanceModal({ youth, programCycle, ...props }: YouthAttendanceModalProps) {
-  if (!youth || !programCycle) return null;
+export default function YouthAttendanceModal({ youth, attendance, ...props }: YouthAttendanceModalProps) {
+  if (!youth || !attendance) return null;
 
-  return <AttendanceInteraction key={`${youth.id}:${programCycle.programId}:${programCycle.cycleId}`}
-    youth={youth} programCycle={programCycle} {...props} />;
+  const { programId, cycleId } = attendance.programCycle;
+  return <AttendanceForm key={`${youth.id}:${programId}:${cycleId}`}
+    youth={youth} attendance={attendance} {...props} />;
 }
 
 /**
- * Loads the session history absent from the opening dashboard's attendance summary.
- * @param props - Required saved targets and completion actions for this open interaction.
- * @example <AttendanceInteraction youth={youth} programCycle={summary} onClose={onClose} onSaved={save} />
- */
-function AttendanceInteraction({ youth, programCycle, ...props }: Omit<YouthAttendanceModalProps, 'youth' | 'programCycle'> & {
-  youth: YouthProfile; programCycle: AttendanceProgramCycle;
-}) {
-  const query = useQuery({
-    queryKey: ['youth-program-cycle-attendance', youth.id, programCycle.programId, programCycle.cycleId],
-    queryFn: ({ signal }) => getYouthProgramCycleAttendance(youth.id, { programId: programCycle.programId, cycleId: programCycle.cycleId }, { signal }),
-  });
-  const loadError = query.error ? getErrorMessage(query.error, 'Could not load youth attendance') : '';
-  if (!query.data) {
-    return <Modal isOpen title="Manage Attendance" maxWidth="720px" onClose={props.onClose}>
-      {loadError ? <p className="form-error" role="alert">{loadError} <Button onClick={() => void query.refetch()}>Retry</Button></p>
-        : <div className="youth-attendance-modal__loading" role="status"><LoadingSpinner size="sm" /><span>Loading sessions...</span></div>}
-    </Modal>;
-  }
-
-  return <AttendanceForm youth={youth} programCycle={programCycle} attendance={query.data}
-    loadError={loadError} refresh={query.refetch} {...props} />;
-}
-
-/**
- * Owns loaded attendance choices and child note dialogs until the interaction closes.
- * @param props - Loaded session history and required targets, retry and save/close actions.
+ * Owns supplied attendance choices and child note dialogs until close or save completion.
+ * @param props - Loaded cycle attendance, youth and completion/refresh actions.
  * @example <AttendanceForm {...loadedAttendanceProps} />
  */
-function AttendanceForm({ youth, programCycle, attendance, loadError, refresh, canManageSessionNotes = false, onClose, onSaved }: Omit<YouthAttendanceModalProps, 'youth' | 'programCycle'> & {
-  youth: YouthProfile; programCycle: AttendanceProgramCycle; attendance: YouthProgramCycleAttendance;
-  loadError: string; refresh: () => Promise<unknown>;
+function AttendanceForm({ youth, attendance, refresh, canManageSessionNotes = false, onClose, onSaved }: Omit<YouthAttendanceModalProps, 'youth' | 'attendance'> & {
+  youth: YouthProfile; attendance: YouthProgramCycleAttendance;
 }) {
+  const { programCycle } = attendance;
   const { selections, updateStatus, save, submitStatus, statusMessage, submissionComplete } = useYouthAttendance({
-    youthId: youth.id, attendance, unavailable: Boolean(loadError), onSaved,
+    youthId: youth.id, attendance, onSaved,
   });
   const attendanceSessions = attendance.sessions;
   const sessionNotes = useYouthSessionNotes({
@@ -83,6 +54,7 @@ function AttendanceForm({ youth, programCycle, attendance, loadError, refresh, c
     refresh,
   });
 
+  /** Saves the supplied cycle's edited attendance. @example submit(event) */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void save();
@@ -101,13 +73,13 @@ function AttendanceForm({ youth, programCycle, attendance, loadError, refresh, c
           <ModalFormFooter
             formId="youth-attendance-form"
             submitStatus={submitStatus}
-            submitDisabled={Boolean(loadError) || !attendance.sessions.length}
+            submitDisabled={!attendance.sessions.length}
             onClose={onClose}
           />
         )}
       >
         <form id="youth-attendance-form" onSubmit={submit} aria-busy={submissionComplete}>
-          <fieldset className="youth-attendance-modal__fields" disabled={submissionComplete || Boolean(loadError)}>
+          <fieldset className="youth-attendance-modal__fields" disabled={submissionComplete}>
               <div className="youth-attendance-modal__summary">
                 <p className="youth-attendance-modal__context">
                     {youth.firstName} {youth.lastName}<span aria-hidden="true"> · </span>
@@ -129,8 +101,7 @@ function AttendanceForm({ youth, programCycle, attendance, loadError, refresh, c
                 )}
               </div>
 
-              {loadError && <p className="form-error" role="alert">{loadError}</p>}
-              {!loadError && attendance.sessions.length === 0 && (
+              {attendance.sessions.length === 0 && (
                 <p className="page-empty">No sessions are available for this program and cycle.</p>
               )}
 

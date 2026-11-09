@@ -5,7 +5,6 @@ import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
 
 const api = vi.hoisted(() => ({
-  getYouthProgramCycleAttendance: vi.fn(),
   setYouthProgramCycleAttendance: vi.fn(),
 }));
 const sessionNoteApi = vi.hoisted(() => ({
@@ -28,7 +27,6 @@ const programCycle = {
   endsOn: '2026-08-31',
   enrolledOn: '2026-06-01',
   withdrawnOn: null,
-
 };
 
 const attendance = {
@@ -63,8 +61,9 @@ const attendance = {
 describe('YouthAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getYouthProgramCycleAttendance.mockResolvedValue(attendance);
-    api.setYouthProgramCycleAttendance.mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
+    api.setYouthProgramCycleAttendance.mockResolvedValue({
+      ...attendance, presentCount: 1, lateCount: 0, absentCount: 1, youth: makeYouthProfile(),
+    });
     sessionNoteApi.createSessionNote.mockResolvedValue({});
     sessionNoteApi.unlinkSessionNoteYouth.mockResolvedValue(undefined);
     sessionNoteApi.getSessionRoster.mockResolvedValue([
@@ -77,7 +76,8 @@ describe('YouthAttendanceModal', () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
+        attendance={attendance}
+        refresh={vi.fn().mockResolvedValue(undefined)}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -109,7 +109,8 @@ describe('YouthAttendanceModal', () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
+        attendance={attendance}
+        refresh={vi.fn().mockResolvedValue(undefined)}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -138,7 +139,8 @@ describe('YouthAttendanceModal', () => {
     const view = render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
+        attendance={attendance}
+        refresh={vi.fn().mockResolvedValue(undefined)}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -158,7 +160,8 @@ describe('YouthAttendanceModal', () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
+        attendance={attendance}
+        refresh={vi.fn().mockResolvedValue(undefined)}
         canManageSessionNotes
         onClose={vi.fn()}
         onSaved={vi.fn()}
@@ -174,12 +177,13 @@ describe('YouthAttendanceModal', () => {
     ));
   });
 
-  it('loads every programCycle session and saves statuses for only the selected youth', async () => {
+  it('uses supplied cycle sessions and saves statuses for only the selected youth', async () => {
     const onSaved = vi.fn();
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
+        attendance={attendance}
+        refresh={vi.fn().mockResolvedValue(undefined)}
         onClose={vi.fn()}
         onSaved={onSaved}
       />,
@@ -187,11 +191,6 @@ describe('YouthAttendanceModal', () => {
 
     expect(await screen.findByText('Teamwork')).toBeInTheDocument();
     expect(screen.getByText('Communication')).toBeInTheDocument();
-    expect(api.getYouthProgramCycleAttendance).toHaveBeenCalledWith(
-      'youth-1',
-      { programId: 'program-1', cycleId: 'cycle-1' },
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
 
     fireEvent.click(screen.getByRole('button', { name: /Attendance for Teamwork/ }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Late' }));
@@ -206,20 +205,5 @@ describe('YouthAttendanceModal', () => {
       ],
     ));
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
-  });
-
-  it('shows a load failure without enabling a destructive save', async () => {
-    api.getYouthProgramCycleAttendance.mockRejectedValue(new Error('Attendance unavailable'));
-    render(
-      <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1' })}
-        programCycle={programCycle}
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Attendance unavailable');
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 });

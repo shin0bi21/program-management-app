@@ -5,7 +5,7 @@ import { generateToken } from '../shared/tokenHelpers';
 
 const app = createApp();
 
-describe('Youth attendance summaries', () => {
+describe('Youth active-cycle attendance', () => {
   let adminId: string;
   let adminToken: string;
   let staffId: string;
@@ -34,7 +34,7 @@ describe('Youth attendance summaries', () => {
     for (const enrollmentRequired of [true, false]) {
       const [program] = await sql<{ id: string }[]>`
         INSERT INTO programs (name, enrollment_required)
-        VALUES (${`Attendance summary ${enrollmentRequired} ${Date.now()}`}, ${enrollmentRequired})
+        VALUES (${`Attendance data ${enrollmentRequired} ${Date.now()}`}, ${enrollmentRequired})
         RETURNING id
       `;
       programIds.push(program.id);
@@ -42,15 +42,15 @@ describe('Youth attendance summaries', () => {
       cycles.push(cycle);
       if (enrollmentRequired) {
         await sql`
-          INSERT INTO program_enrollments (program_id, cycle_id, youth_id)
-          VALUES (${program.id}, ${cycle.cycleId}, ${youthId})
+          INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
+          VALUES (${program.id}, ${cycle.cycleId}, ${youthId}, ${dates.startsOn})
         `;
         await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${staffId}, ${program.id})`;
       }
       for (const status of enrollmentRequired ? ['present', 'late', 'absent'] : ['present']) {
         const [session] = await sql<{ id: string }[]>`
           INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, CURRENT_DATE + TIME '12:00', CURRENT_DATE + TIME '13:00')
+          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour')
           RETURNING id
         `;
         sessionIds.push(session.id);
@@ -75,10 +75,10 @@ describe('Youth attendance summaries', () => {
   });
 
   it('requires authentication and each read capability', async () => {
-    expect((await request(app).get(`/api/youth/${youthId}/attendance-summary`)).status).toBe(401);
+    expect((await request(app).get(`/api/youth/${youthId}/attendance`)).status).toBe(401);
     for (const permissions of [['read:youth_profiles'], ['read:attendance']]) {
       const token = generateToken(adminId, 'admin', undefined, permissions);
-      const response = await request(app).get(`/api/youth/${youthId}/attendance-summary`)
+      const response = await request(app).get(`/api/youth/${youthId}/attendance`)
         .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(403);
     }
@@ -86,26 +86,28 @@ describe('Youth attendance summaries', () => {
 
   it('validates identifiers and reports missing profiles', async () => {
     for (const [id, status] of [['invalid', 400], ['00000000-0000-4000-8000-000000000000', 404]]) {
-      const response = await request(app).get(`/api/youth/${id}/attendance-summary`)
+      const response = await request(app).get(`/api/youth/${id}/attendance`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(response.status).toBe(status);
     }
   });
 
-  it('returns scoped counts and open-program visits without adding attendance to profile rows', async () => {
-    const response = await request(app).get(`/api/youth/${youthId}/attendance-summary`)
+  it('returns scoped full-cycle attendance without adding it to profile rows', async () => {
+    const response = await request(app).get(`/api/youth/${youthId}/attendance`)
       .set('Authorization', `Bearer ${adminToken}`);
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(2);
-    expect(response.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ...cycles[0], enrollmentRequired: true, presentCount: 1, lateCount: 1, absentCount: 1 }),
-      expect.objectContaining({ ...cycles[1], enrollmentRequired: false, presentCount: 1, lateCount: 0, absentCount: 0 }),
+    expect(response.body.programCycle).toEqual(expect.objectContaining({ ...cycles[0], enrollmentRequired: true }));
+    expect(response.body.youth).toEqual([expect.objectContaining({ id: youthId, presentCount: 1, lateCount: 1, absentCount: 1 })]);
+    expect(response.body.youth[0].sessions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ status: 'present', sessionNotes: [] }),
+      expect.objectContaining({ status: 'late', sessionNotes: [] }),
+      expect.objectContaining({ status: 'absent', sessionNotes: [] }),
     ]));
 
-    const scoped = await request(app).get(`/api/youth/${youthId}/attendance-summary`)
+    const scoped = await request(app).get(`/api/youth/${youthId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(scoped.status).toBe(200);
-    expect(scoped.body).toEqual([expect.objectContaining({ programId: programIds[0] })]);
+    expect(scoped.body.programCycle.programId).toBe(programIds[0]);
 
     const profile = await request(app).get(`/api/youth?id=${youthId}`)
       .set('Authorization', `Bearer ${adminToken}`);

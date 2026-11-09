@@ -1,4 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getProgramCycleAttendance } from '../../../../../common/features/Attendance/attendance.api';
+import { getErrorMessage } from '../../../../../http/errors';
 import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import Button from '../../../../../common/components/Button/Button';
@@ -8,7 +11,7 @@ import type { ProgramCycleKey } from '../../types';
 import { useProgramCycleAssignments } from '../../hooks/data/useProgramCycleAssignments';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import ManageRosterModal from '../ManageRosterModal/ManageRosterModal';
-import YouthReportModal from '../../../../../common/features/YouthReportModal/YouthReportModal';
+import ViewAttendanceModal from '../../../../../common/features/Attendance/ViewAttendanceModal';
 import './ProgramOverviewDashboardCard.css';
 
 /**
@@ -43,7 +46,6 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
     if (rosterTarget && !roster) setRosterTarget(null);
     if (reportTarget && !report) setReportTarget(null);
   }, [report, reportTarget, roster, rosterTarget]);
-  usePageMessageReporter(onMessageChange, error, program ? { label: 'Retry', onClick: query.refresh } : undefined);
 
   const loading = Boolean(program) && query.loading;
   const assignments = program ? query.assignments : [];
@@ -53,6 +55,16 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
     .sort((left, right) => right.startsOn.localeCompare(left.startsOn) || left.cycleId.localeCompare(right.cycleId))[0];
 
   const assignment = program && !error && !loading ? currentAssignment : undefined;
+  const attendanceQuery = useQuery({
+    queryKey: ['programs', 'cycle-attendance', programId, assignment?.cycleId],
+    queryFn: ({ signal }) => getProgramCycleAttendance(assignment!, { signal }),
+    enabled: Boolean(program && canViewYouthReport && assignment),
+  });
+  const reportError = attendanceQuery.error ? getErrorMessage(attendanceQuery.error, 'Could not load attendance report data.') : null;
+  usePageMessageReporter(onMessageChange, error || reportError, {
+    label: 'Retry', onClick: error ? query.refresh : attendanceQuery.refetch,
+  });
+
   const enrolled = (assignment?.enrollmentRequired ?? program?.enrollmentRequired) !== false;
   const cycle = assignment?.cycle;
   let title = 'Program Overview';
@@ -61,14 +73,18 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
     title = `${program.name}${cycleSuffix} Overview`;
   }
   const metricsLoading = Boolean(program) && loading;
+  const attendanceLoading = metricsLoading || Boolean(assignment && canViewYouthReport && attendanceQuery.isLoading);
   let enrollmentValue: ReactNode = '—';
   let attendanceValue: ReactNode = '—';
   if (metricsLoading) {
     enrollmentValue = <DashboardCardLoading label="Loading program rosters…" />;
-    attendanceValue = <DashboardCardLoading label="Loading average attendance…" />;
   } else if (assignment) {
     enrollmentValue = enrolled ? assignment.enrolledCount : assignment.uniqueAttendeeCount;
-    if (assignment.averageAttendance != null) attendanceValue = `${assignment.averageAttendance}%`;
+  }
+  if (attendanceLoading) {
+    attendanceValue = <DashboardCardLoading label="Loading average attendance…" />;
+  } else if (assignment && canViewYouthReport && attendanceQuery.data?.averageAttendance != null) {
+    attendanceValue = `${attendanceQuery.data.averageAttendance}%`;
   }
   let message: ReactNode;
   if (error) {
@@ -89,7 +105,7 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
           onClick={() => { if (assignment) setRosterTarget({ programId: assignment.programId, cycleId: assignment.cycleId }); }}
         >Manage Roster</Button>}
         {canViewYouthReport && <Button
-          size="sm" variant="secondary" disabled={!assignment || !enrolled}
+          size="sm" variant="secondary" disabled={!assignment || !enrolled || !attendanceQuery.data}
           onClick={() => { if (assignment) setReportTarget({ programId: assignment.programId, cycleId: assignment.cycleId }); }}
         >Attendance Report</Button>}
       </div>}
@@ -110,9 +126,10 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
         onSuccess={query.refresh}
       />
     )}
-    {canViewYouthReport && report && (
-      <YouthReportModal
-        programCycle={report}
+    {canViewYouthReport && report && attendanceQuery.data
+      && report.cycleId === attendanceQuery.data.programCycle.cycleId && (
+      <ViewAttendanceModal
+        data={attendanceQuery.data}
         onClose={() => setReportTarget(null)}
       />
     )}
