@@ -6,7 +6,6 @@ import { makeProgramSession } from '../../../../../tests/factories/session';
 import SessionAttendanceModal from './SessionAttendanceModal';
 
 const api = vi.hoisted(() => ({
-  getSessionRoster: vi.fn(),
   setSessionAttendance: vi.fn(),
   getAttendanceYouth: vi.fn(),
 }));
@@ -21,40 +20,13 @@ const session = makeProgramSession({
 describe('SessionAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.getSessionRoster.mockResolvedValue([{
-      youthId: 'youth-1',
-      firstName: 'Maya',
-      lastName: 'Thompson',
-      status: 'present',
-      notes: null,
-    }]);
     api.setSessionAttendance.mockResolvedValue({ roster: [], session });
     api.getAttendanceYouth.mockResolvedValue([]);
-  });
-
-  it('renders session context and roster failures', async () => {
-    api.getSessionRoster.mockRejectedValue(new Error('Roster unavailable'));
-    const openSession = { ...session, enrollmentRequired: false };
-
-    render(
-      <SessionAttendanceModal
-        session={openSession}
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
-    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
-    expect(await screen.findByRole('alert')).toHaveTextContent('Roster unavailable');
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
   it('checks in an existing youth and locks the pending attendance draft', async () => {
     const user = userEvent.setup();
     let finishSave: (value: unknown[]) => void = () => {};
-    api.getSessionRoster.mockResolvedValue([]);
     api.getAttendanceYouth.mockResolvedValue([{
       id: 'youth-2',
       firstName: 'Jordan',
@@ -69,6 +41,7 @@ describe('SessionAttendanceModal', () => {
     render(
       <SessionAttendanceModal
         session={openSession}
+        roster={[]}
         onClose={vi.fn()}
         onSaved={onSaved}
       />,
@@ -102,10 +75,8 @@ describe('SessionAttendanceModal', () => {
       lastName: String(index + 1).padStart(2, '0'),
     }));
     api.getAttendanceYouth.mockResolvedValue(youth);
-    api.getSessionRoster.mockResolvedValue([{
-      youthId: 'youth-1', firstName: 'Person', lastName: '01', status: 'present', notes: null,
-    }]);
     render(<SessionAttendanceModal session={{ ...session, enrollmentRequired: false }}
+      roster={[{ youthId: 'youth-1', firstName: 'Person', lastName: '01', status: 'present', notes: null }]}
       onClose={vi.fn()} onSaved={vi.fn()} />);
     expect(await screen.findByRole('checkbox', { name: 'Person 01' })).toBeChecked();
     expect(screen.getAllByRole('checkbox')).toHaveLength(25);
@@ -125,6 +96,7 @@ describe('SessionAttendanceModal', () => {
   it('shows a youth lookup failure and prevents saving incomplete attendance', async () => {
     api.getAttendanceYouth.mockRejectedValue(new Error('Youth unavailable'));
     render(<SessionAttendanceModal session={{ ...session, enrollmentRequired: false }}
+      roster={[]}
       onClose={vi.fn()} onSaved={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Youth unavailable');

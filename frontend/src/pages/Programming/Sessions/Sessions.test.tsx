@@ -259,7 +259,7 @@ describe('Sessions', () => {
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
     fireEvent.click(await screen.findByText('Friday Drop In'));
 
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
     expect(await screen.findByText('3 check-ins')).toBeInTheDocument();
@@ -348,7 +348,7 @@ describe('Sessions', () => {
     render(<MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
 
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
@@ -429,10 +429,10 @@ describe('Sessions', () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Item owning row' }));
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();

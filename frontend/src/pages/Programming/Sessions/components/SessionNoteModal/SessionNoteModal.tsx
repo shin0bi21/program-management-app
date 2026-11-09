@@ -5,18 +5,36 @@ import useSessionNoteModal, { type UseSessionNoteModalOptions } from './hooks/us
 import SessionYouthChecklist from './SessionYouthChecklist';
 import './SessionNoteModal.css';
 
-type SessionNoteModalProps = UseSessionNoteModalOptions & {
+type SessionNoteModalProps = Omit<UseSessionNoteModalOptions, 'session'> & {
+  session: UseSessionNoteModalOptions['session'] | null;
   onClose: () => void;
 };
 
-export default function SessionNoteModal({
+/**
+ * Mounts a note editor while its supplied session target is open.
+ * @param props - Saved note/session, optional youth context, and completion actions.
+ * @example <SessionNoteModal session={session} note={note} onClose={close} onSaved={refresh} />
+ */
+export default function SessionNoteModal({ session, ...props }: SessionNoteModalProps) {
+  if (!session) return null;
+
+  const targetKey = `${session.id}:${props.note?.id ?? 'new'}:${props.initialYouthId ?? ''}`;
+  return <SessionNoteForm key={targetKey} session={session} {...props} />;
+}
+
+/**
+ * Edits one note until close or completion of shared save feedback.
+ * @param props - Supplied draft values, selector visibility, and completion actions.
+ * @example <SessionNoteForm session={session} onClose={close} onSaved={refresh} />
+ */
+function SessionNoteForm({
   session,
   note = null,
   initialYouthId,
   hideYouthSelection = false,
   onClose,
   onSaved,
-}: SessionNoteModalProps) {
+}: UseSessionNoteModalOptions & { onClose: () => void }) {
   const workflow = useSessionNoteModal({
     session,
     note,
@@ -27,7 +45,7 @@ export default function SessionNoteModal({
 
   return (
     <NoteModal
-      isOpen={session !== null}
+      isOpen
       title={note ? 'Edit Note' : 'Add Note'}
       formId="session-note-form"
       categoryLabel="Category"
@@ -41,7 +59,7 @@ export default function SessionNoteModal({
       onSubmit={workflow.submit}
       onClose={onClose}
     >
-      {session && !hideYouthSelection && <SessionYouthChecklist
+      {!hideYouthSelection && <SessionYouthChecklist
         enrollmentRequired={session.enrollmentRequired}
         roster={workflow.roster}
         selectedYouthIds={workflow.draft.selectedYouthIds}

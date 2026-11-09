@@ -2,9 +2,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import useViewFileModal from './useViewFileModal';
 
+/**
+ * Supplies a mounted PDF viewer with optional resource-specific overrides.
+ * @param overrides - Preview inputs required by the current example.
+ * @example options().requestKey // file-1
+ */
 function options(overrides: Partial<Parameters<typeof useViewFileModal>[0]> = {}) {
   return {
-    isOpen: true,
     requestKey: 'file-1',
     title: 'Report',
     mimeType: 'application/pdf',
@@ -33,28 +37,28 @@ describe('useViewFileModal', () => {
     }));
   });
 
-  it('cancels stale loads and resets when the viewer closes', async () => {
+  it('cancels stale loads and releases the viewer request on unmount', async () => {
     let resolveFirst: ((file: Blob) => void) | undefined;
     const firstLoad = new Promise<Blob>(resolve => { resolveFirst = resolve; });
     const secondFile = new Blob(['second'], { type: 'application/pdf' });
-    const loadFile = vi.fn()
+    const loadFile = vi.fn<(signal: AbortSignal) => Promise<Blob>>()
       .mockReturnValueOnce(firstLoad)
       .mockResolvedValueOnce(secondFile);
-    const { result, rerender } = renderHook(
-      ({ requestKey, isOpen }) => useViewFileModal(options({ requestKey, isOpen, loadFile })),
-      { initialProps: { requestKey: 'file-1', isOpen: true } },
+    const { result, rerender, unmount } = renderHook(
+      ({ requestKey }) => useViewFileModal(options({ requestKey, loadFile })),
+      { initialProps: { requestKey: 'file-1' } },
     );
 
-    rerender({ requestKey: 'file-2', isOpen: true });
+    rerender({ requestKey: 'file-2' });
     expect(result.current.file).toBeNull();
 
     await waitFor(() => expect(result.current.file).toBeInstanceOf(Blob));
     act(() => resolveFirst?.(new Blob(['first'], { type: 'application/pdf' })));
     expect(result.current.file).toBe(secondFile);
 
-    rerender({ requestKey: 'file-2', isOpen: false });
-    expect(result.current.file).toBeNull();
-    expect(result.current.loading).toBe(false);
+    const signal = loadFile.mock.calls[1][0] as AbortSignal;
+    unmount();
+    expect(signal.aborted).toBe(true);
   });
 
   it('hides the previous file synchronously when the request key changes', async () => {

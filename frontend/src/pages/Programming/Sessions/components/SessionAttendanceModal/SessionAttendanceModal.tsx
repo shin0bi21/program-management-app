@@ -1,7 +1,7 @@
 import type { SessionAttendanceResult } from '../../sessions.api';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramSession } from '../../types';
+import type { ProgramSession, SessionRosterMember } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 
 import SessionAttendanceRoster from './SessionAttendanceRoster';
@@ -10,16 +10,27 @@ import useSessionAttendanceModal from './hooks/useSessionAttendanceModal';
 
 interface SessionAttendanceModalProps {
   session: ProgramSession | null;
+  roster: SessionRosterMember[];
   onClose: () => void;
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
-export default function SessionAttendanceModal({
-  session,
-  onClose,
-  onSaved,
-}: SessionAttendanceModalProps) {
-  const workflow = useSessionAttendanceModal({ session, onSaved });
+/**
+ * Mounts a fresh attendance editor from the session and roster supplied on Manage.
+ * @param props - Open session target, loaded attendance, and completion actions.
+ * @example <SessionAttendanceModal session={session} roster={roster} onClose={close} onSaved={save} />
+ */
+export default function SessionAttendanceModal({ session, ...props }: SessionAttendanceModalProps) {
+  return session ? <AttendanceForm key={session.id} session={session} {...props} /> : null;
+}
+
+/**
+ * Owns one session's attendance choices until its dialog closes or finishes saving.
+ * @param props - Saved session and attendance with close/save callbacks.
+ * @example <AttendanceForm session={session} roster={roster} onClose={close} onSaved={save} />
+ */
+function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAttendanceModalProps, 'session'> & { session: ProgramSession }) {
+  const workflow = useSessionAttendanceModal({ session, roster, onSaved });
 
   const footer = (
     <ModalFormFooter
@@ -32,7 +43,7 @@ export default function SessionAttendanceModal({
 
   return (
     <Modal
-      isOpen={session !== null}
+      isOpen
       onClose={onClose}
       title="Attendance"
       maxWidth="720px"
@@ -48,23 +59,17 @@ export default function SessionAttendanceModal({
           void workflow.submit();
         }}
       >
-        {session && (
-          <p className="attendance-modal__context">
-            {formatShortDate(session.startsAt)}
-            {session.theme ? ` · ${session.theme}` : ''}
-          </p>
-        )}
+        <p className="attendance-modal__context">
+          {formatShortDate(session.startsAt)}
+          {session.theme ? ` · ${session.theme}` : ''}
+        </p>
 
-        {workflow.rosterError && (
-          <p className="form-error" role="alert">{workflow.rosterError}</p>
-        )}
         {workflow.youthError && (
           <p className="form-error" role="alert">{workflow.youthError}</p>
         )}
 
         {workflow.isOpenRoster ? (
           <OpenAttendancePicker
-            key={session?.id}
             youth={workflow.youth}
             selectedYouthIds={workflow.selectedYouthIds}
             loading={workflow.attendanceLoading}

@@ -36,7 +36,7 @@ describe('SessionAttendanceDashboardCard', () => {
     expect(await screen.findByText('4/5')).toBeInTheDocument();
     expect(getSessionRoster).toHaveBeenCalledWith(session.id, { signal: expect.any(AbortSignal) });
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
-    expect(onManage).toHaveBeenCalledWith(session);
+    expect(onManage).toHaveBeenCalledWith(session, roster);
   });
 
   it('uses check-in language for open sessions', async () => {

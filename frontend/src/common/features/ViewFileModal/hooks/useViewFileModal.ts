@@ -3,9 +3,9 @@ import type { ViewFileModalProps } from '../ViewFileModal';
 
 interface UseViewFileModalOptions extends Omit<
   ViewFileModalProps,
-  'file' | 'loading' | 'error'
+  'file' | 'loading' | 'error' | 'isOpen'
 > {
-  requestKey: string | null;
+  requestKey: string;
   loadFile: (signal: AbortSignal) => Promise<Blob>;
   formatLoadError: (cause: unknown) => string;
 }
@@ -15,6 +15,11 @@ interface LoadedFile {
   file: Blob;
 }
 
+/**
+ * Loads preview content for a mounted viewer, cancelling unfinished loads on departure.
+ * @param options - File identity, presentation props, cancellable loader and error formatter.
+ * @example useViewFileModal({ requestKey: reportId, loadFile, formatLoadError, ...viewerProps })
+ */
 export default function useViewFileModal({
   requestKey,
   loadFile,
@@ -34,7 +39,7 @@ export default function useViewFileModal({
   formatLoadErrorRef.current = formatLoadError;
 
   useEffect(() => {
-    if (!modalProps.isOpen || !requestKey || !canPreview) {
+    if (!canPreview) {
       setLoadedFile(null);
       setLoading(false);
       setError(null);
@@ -59,10 +64,11 @@ export default function useViewFileModal({
       });
 
     return () => controller.abort();
-  }, [canPreview, modalProps.isOpen, requestKey]);
+  }, [canPreview, requestKey]);
 
   return {
     ...modalProps,
+    isOpen: true,
     file: loadedFile?.requestKey === requestKey ? loadedFile.file : null,
     loading,
     error,

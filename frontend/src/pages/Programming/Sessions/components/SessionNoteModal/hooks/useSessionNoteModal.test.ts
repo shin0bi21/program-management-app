@@ -84,7 +84,7 @@ describe('useSessionNoteModal', () => {
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.roster).toHaveLength(1));
-    act(() => result.current.updateDetails('Attendance follow-up'));
+    act(() => { result.current.updateDetails('Attendance follow-up'); result.current.updateCategory('general'); });
     await act(async () => result.current.submit());
 
     expect(createSessionNote).toHaveBeenCalledWith(session.id, {
@@ -109,53 +109,12 @@ describe('useSessionNoteModal', () => {
     expect(result.current.statusMessage).toBe('Enter a note.');
   });
 
-  it('preserves the draft when equal session and note records are recreated', () => {
-    const options = {
-      session,
-      note,
-      onSaved: vi.fn(),
-    };
-    const { result, rerender } = renderHook(
-      (props: typeof options) => useSessionNoteModal(props),
-      { initialProps: options, wrapper: wrapper() },
-    );
-
-    act(() => result.current.updateDetails('Keep this draft'));
-    rerender({ ...options, session: { ...session }, note: { ...note } });
-
-    expect(result.current.draft.details).toBe('Keep this draft');
-  });
-
-  it('keeps the draft and pending save locked when the saved note refreshes', async () => {
-    let resolveUpdate!: () => void;
-    vi.mocked(updateSessionNote).mockReturnValue(new Promise(resolve => {
-      resolveUpdate = () => resolve(note);
-    }));
-    const options = { session, note, onSaved: vi.fn() };
-    const { result, rerender } = renderHook(props => useSessionNoteModal(props), {
-      initialProps: options, wrapper: wrapper(),
-    });
-    act(() => result.current.updateDetails('Keep this pending draft'));
-    let submission!: Promise<void>;
-    act(() => { submission = result.current.submit(); });
-
-    rerender({ ...options, session: { ...session }, note: { ...note, details: 'Refreshed saved text' } });
-    expect(result.current.draft.details).toBe('Keep this pending draft');
-    expect(result.current.submitStatus).toBe('submitting');
-    act(() => { void result.current.submit(); });
-    expect(updateSessionNote).toHaveBeenCalledOnce();
-
-    resolveUpdate();
-    await act(async () => submission);
-    expect(result.current.submitStatus).toBe('success');
-  });
-
   it('does not make a saved note retryable when refresh fails', async () => {
     const { result } = renderHook(() => useSessionNoteModal({
       session,
       onSaved: vi.fn().mockRejectedValue(new Error('Refresh failed')),
     }), { wrapper: wrapper() });
-    act(() => result.current.updateDetails('Saved note'));
+    act(() => { result.current.updateDetails('Saved note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 
@@ -171,7 +130,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved,
     }), { wrapper: wrapper() });
-    act(() => result.current.updateDetails('Retry this note'));
+    act(() => { result.current.updateDetails('Retry this note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 

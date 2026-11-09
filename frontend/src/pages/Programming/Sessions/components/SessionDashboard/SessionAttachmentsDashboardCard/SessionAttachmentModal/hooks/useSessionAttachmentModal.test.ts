@@ -84,35 +84,6 @@ describe('useSessionAttachmentModal', () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
-  it('preserves youth draft and pending lock when saved targets refresh with the same IDs', async () => {
-    const session = makeProgramSession();
-    const attachment = {
-      id: 'attachment-1', sessionId: session.id, title: 'Original', description: null,
-      youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
-    } as SessionAttachment;
-    let resolveUpdate!: () => void;
-    vi.mocked(updateSessionAttachment).mockReturnValue(new Promise(resolve => {
-      resolveUpdate = () => resolve({} as never);
-    }));
-    const options = { queryKey: ['sessions'], session, attachment, onSaved: vi.fn() };
-    const { result, rerender } = renderHook(props => useSessionAttachmentModal(props), {
-      initialProps: options, wrapper: createQueryClientWrapper(createTestQueryClient()),
-    });
-    act(() => result.current.toggleYouth('youth-2'));
-    let submission!: Promise<void>;
-    act(() => { submission = result.current.submit(makeSubmitEvent()); });
-
-    rerender({ ...options, session: { ...session, theme: 'Refreshed' }, attachment: { ...attachment, youth: [] } });
-    expect(result.current.selectedYouthIds).toEqual(['youth-1', 'youth-2']);
-    expect(result.current.submitStatus).toBe('submitting');
-    act(() => { void result.current.submit(makeSubmitEvent()); });
-    expect(updateSessionAttachment).toHaveBeenCalledOnce();
-
-    resolveUpdate();
-    await act(async () => submission);
-    expect(result.current.submitStatus).toBe('success');
-  });
-
   it('reports upload failures and permits retry', async () => {
     vi.mocked(createSessionAttachment)
       .mockRejectedValueOnce(new Error('Upload failed'))
