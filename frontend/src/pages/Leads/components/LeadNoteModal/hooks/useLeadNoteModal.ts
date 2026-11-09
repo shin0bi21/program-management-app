@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import {
@@ -7,41 +7,36 @@ import {
 } from '../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../http/errors';
 
-import { createLeadNote } from '../../../leads.api';
+import { createLeadNote, updateLeadNote } from '../../../leads.api';
 import type { Lead, LeadNote } from '../../../types';
 
 interface UseLeadNoteModalOptions {
-  lead: Pick<Lead, 'id'> | null;
+  lead: Pick<Lead, 'id'>;
+  note?: LeadNote;
   onSaved: (note: LeadNote) => void;
 }
 
+/**
+ * Initializes and saves one follow-up note draft for the mounted editor.
+ * @param options - Lead to add a note to, or its saved note to edit, and the save callback.
+ * @example useLeadNoteModal({ lead, note, onSaved }) // starts with the saved note's details
+ */
 export default function useLeadNoteModal({
   lead,
+  note,
   onSaved,
 }: UseLeadNoteModalOptions) {
-  const [details, setDetails] = useState('');
+  const [details, setDetails] = useState(note?.details ?? '');
   const submitLock = useSubmitLock();
-  const isOpen = lead !== null;
-  const targetKey = lead?.id ?? 'closed';
 
   const {
     submitStatus,
     setSubmitStatus,
     error,
     setError,
-    resetStatus,
   } = useSubmitStatus();
 
-  // A different lead or note target starts a fresh editor lifecycle.
-  useEffect(() => {
-    if (!isOpen) return;
-    setDetails('');
-    resetStatus();
-  }, [isOpen, resetStatus, targetKey]);
-
   const submit = async () => {
-    if (!lead) return;
-
     const normalizedDetails = details.trim();
     if (!normalizedDetails) {
       setError('Enter a follow-up note.');
@@ -60,7 +55,9 @@ export default function useLeadNoteModal({
 
     let result: LeadNote;
     try {
-      result = await createLeadNote(lead.id, normalizedDetails);
+      result = note
+        ? await updateLeadNote(lead.id, note.id, normalizedDetails)
+        : await createLeadNote(lead.id, normalizedDetails);
     } catch (cause) {
       setError(getErrorMessage(cause, 'Could not save the follow-up note'));
       setSubmitStatus('error');
@@ -75,8 +72,8 @@ export default function useLeadNoteModal({
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
-    submitting: 'Adding follow-up note...',
-    success: 'Follow-up note added.',
+    submitting: note ? 'Saving follow-up note...' : 'Adding follow-up note...',
+    success: note ? 'Follow-up note saved.' : 'Follow-up note added.',
   });
 
   return {
