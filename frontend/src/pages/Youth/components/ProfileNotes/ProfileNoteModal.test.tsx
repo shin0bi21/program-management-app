@@ -30,6 +30,8 @@ describe('ProfileNoteModal', () => {
     render(<ProfileNoteModal youthId="youth-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText('Note *'), { target: { value: 'Pending note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'General' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(setYouthProfileNote).toHaveBeenCalledOnce());
 

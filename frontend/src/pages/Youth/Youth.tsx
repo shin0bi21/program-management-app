@@ -79,6 +79,8 @@ export default function Youth() {
 
   // Youth modal.
   const [modalTarget, setModalTarget] = useState<YouthProfile | 'new' | null>(null);
+  const isYouthModalOpen = modalTarget !== null;
+  const modalYouthData = modalTarget && modalTarget !== 'new' ? modalTarget : undefined;
   const schoolModal = useSchoolModal();
   const closeYouthModal = () => {
     schoolModal.close();
@@ -87,6 +89,7 @@ export default function Youth() {
 
   // Primary-contact modal.
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
+  const isContactModalOpen = contactTarget !== null;
   const closeContactModal = () => setContactTarget(null);
 
   // Attendance-report modal.
@@ -170,14 +173,14 @@ export default function Youth() {
         />}
       />
 
-      {modalTarget !== null && <YouthModal
-        key={modalTarget === 'new' ? 'new' : modalTarget.id}
+      <YouthModal
+        isOpen={isYouthModalOpen}
         suspended={schoolModal.action !== null}
         onManageSchool={schoolModal.open}
-        youthData={modalTarget !== 'new' ? modalTarget : undefined}
+        youthData={modalYouthData}
         onClose={closeYouthModal}
         onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
-      />}
+      />
       <SchoolModal workflow={schoolModal} />
       <YouthAttendanceModal
         youth={selectedProfile}
@@ -190,28 +193,25 @@ export default function Youth() {
         youthId={attendanceReportTarget.youthId}
         onClose={closeAttendanceReportModal}
       />}
-      {contactTarget !== null && <YouthModal
-        key={contactTarget.id}
-        youthData={contactTarget}
+      <YouthModal
+        isOpen={isContactModalOpen}
+        youthData={contactTarget ?? undefined}
         mode="contact"
         onClose={closeContactModal}
         onSuccess={reconcileSavedYouth}
-      />}
+      />
 
       <ProfileNoteDialogs
         editorTarget={profileNotes.editorTarget}
         selectedNote={profileNotes.selectedNote}
         canManage={canWrite}
-        confirmingDelete={profileNotes.confirmingDelete}
-        deleting={profileNotes.deleting}
-        deleteError={profileNotes.deleteError}
+        confirmAction={profileNotes.confirmAction}
         onCloseEditor={profileNotes.closeEditor}
         onSaved={profileNotes.handleSaved}
         onCloseDetails={profileNotes.closeDetails}
         onEdit={profileNotes.openEditor}
         onRequestDelete={profileNotes.requestDelete}
-        onCancelDelete={profileNotes.cancelDelete}
-        onConfirmDelete={profileNotes.confirmDelete}
+        onCloseConfirmation={profileNotes.closeConfirmation}
       />
     </>
   );

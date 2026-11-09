@@ -55,7 +55,7 @@ describe('useProfileNoteModal', () => {
       onSaved: vi.fn(),
     }));
 
-    act(() => result.current.updateDetails('Check in'));
+    act(() => { result.current.updateDetails('Check in'); result.current.selectCategory('general'); });
     await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).toHaveBeenCalledWith('youth-1', {
@@ -77,19 +77,6 @@ describe('useProfileNoteModal', () => {
     expect(result.current.statusMessage).toBe('Enter a note.');
   });
 
-  it('preserves the draft when the same note record is recreated', () => {
-    const options = { youthId: 'youth-1', note, onSaved: vi.fn() };
-    const { result, rerender } = renderHook(
-      (props: typeof options) => useProfileNoteModal(props),
-      { initialProps: options },
-    );
-
-    act(() => result.current.updateDetails('Keep this draft'));
-    rerender({ ...options, note: { ...note, details: 'Refreshed remotely.' } });
-
-    expect(result.current.draft.details).toBe('Keep this draft');
-  });
-
   it('reports a save failure and allows a retry', async () => {
     vi.mocked(setYouthProfileNote).mockRejectedValueOnce(new Error('Save failed'));
     const onSaved = vi.fn();
@@ -97,7 +84,7 @@ describe('useProfileNoteModal', () => {
       youthId: 'youth-1',
       onSaved,
     }));
-    act(() => result.current.updateDetails('Retry this note'));
+    act(() => { result.current.updateDetails('Retry this note'); result.current.selectCategory('general'); });
 
     await act(async () => result.current.submit());
 

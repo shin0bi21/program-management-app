@@ -44,13 +44,14 @@ vi.mock('../../auth/authContext', () => ({
 }));
 
 vi.mock('./components/YouthModal/YouthModal', () => ({
-  default: ({ suspended, onManageSchool, mode, youthData, onSuccess }: {
+  default: ({ isOpen, suspended, onManageSchool, mode, youthData, onSuccess }: {
+    isOpen: boolean;
     suspended?: boolean;
     onManageSchool?: (action: SchoolAction, selection: SchoolSelection) => void;
     mode?: string;
     youthData?: ReturnType<typeof makeYouthProfile>;
     onSuccess: (profile: ReturnType<typeof makeYouthProfile>) => void;
-  }) => !suspended
+  }) => isOpen && !suspended
     ? <div data-testid="youth-modal">
       {mode ?? 'full'}
       {onManageSchool && <button onClick={() => onManageSchool({ type: 'add' }, { schoolId: '', onChange: schoolSelectionChanged })}>Manage school</button>}
@@ -263,6 +264,8 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Note' }));
     expect(screen.getByRole('button', { name: 'Manage primary contact' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Note *'), { target: { value: 'New profile note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'General' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await screen.findByText('Profile note added.');

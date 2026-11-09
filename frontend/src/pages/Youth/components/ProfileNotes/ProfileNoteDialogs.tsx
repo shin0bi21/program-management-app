@@ -1,5 +1,7 @@
 import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
+import ConfirmModal from '../../../../common/components/ConfirmModal/ConfirmModal';
+import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import type { YouthProfileNote } from '../../types';
 import ProfileNoteDetails from './ProfileNoteDetails';
 import ProfileNoteModal from './ProfileNoteModal';
@@ -8,37 +10,37 @@ interface ProfileNoteDialogsProps {
   editorTarget: { youthId: string; note: YouthProfileNote | 'new' } | null;
   selectedNote: YouthProfileNote | null;
   canManage: boolean;
-  confirmingDelete: boolean;
-  deleting: boolean;
-  deleteError: string;
+  confirmAction: ConfirmAction | null;
   onCloseEditor: () => void;
   onSaved: (note: YouthProfileNote) => void;
   onCloseDetails: () => void;
   onEdit: (note: YouthProfileNote) => void;
   onRequestDelete: (note: YouthProfileNote) => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: () => Promise<void>;
+  onCloseConfirmation: () => void;
 }
 
+/**
+ * Composes profile-note editors, details and the shared delete confirmation.
+ * @param props - Current targets and their close/save/management actions.
+ * @example <ProfileNoteDialogs {...noteActions} />
+ */
 export default function ProfileNoteDialogs({
   editorTarget,
   selectedNote,
   canManage,
-  confirmingDelete,
-  deleting,
-  deleteError,
+  confirmAction,
   onCloseEditor,
   onSaved,
   onCloseDetails,
   onEdit,
   onRequestDelete,
-  onCancelDelete,
-  onConfirmDelete,
+  onCloseConfirmation,
 }: ProfileNoteDialogsProps) {
   let editor = null;
   if (editorTarget) {
     editor = (
       <ProfileNoteModal
+        key={`${editorTarget.youthId}:${editorTarget.note === 'new' ? 'new' : editorTarget.note.id}`}
         youthId={editorTarget.youthId}
         note={editorTarget.note === 'new' ? undefined : editorTarget.note}
         onClose={onCloseEditor}
@@ -47,28 +49,17 @@ export default function ProfileNoteDialogs({
     );
   }
 
-  return (
-    <>
-      {editor}
+  const canShowDetails = selectedNote !== null && editorTarget === null && confirmAction === null;
+  const footer = selectedNote && canManage ? <>
+    <Button onClick={() => onEdit(selectedNote)}>Edit</Button>
+    <Button variant="danger" onClick={() => onRequestDelete(selectedNote)}>Delete</Button>
+  </> : <Button variant="secondary" onClick={onCloseDetails}>Close</Button>;
 
-      <Modal
-        isOpen={selectedNote !== null}
-        onClose={onCloseDetails}
-        title={confirmingDelete ? 'Delete Profile Note' : 'Profile Note'}
-        status={deleteError ? 'error' : deleting ? 'submitting' : 'idle'}
-        statusMessage={deleteError || (deleting ? 'Deleting profile note...' : undefined)}
-        footer={selectedNote && canManage ? confirmingDelete ? <>
-          <Button variant="secondary" disabled={deleting} onClick={onCancelDelete}>Cancel</Button>
-          <Button variant="danger" disabled={deleting} onClick={() => void onConfirmDelete()}>Confirm</Button>
-        </> : <>
-          <Button onClick={() => onEdit(selectedNote)}>Edit</Button>
-          <Button variant="danger" onClick={() => onRequestDelete(selectedNote)}>Delete</Button>
-        </> : <Button variant="secondary" onClick={onCloseDetails}>Close</Button>}
-      >
-        {selectedNote && (confirmingDelete
-          ? <p>Delete this profile note? This cannot be undone.</p>
-          : <ProfileNoteDetails note={selectedNote} />)}
-      </Modal>
-    </>
-  );
+  return <>
+    {editor}
+    <Modal isOpen={canShowDetails} onClose={onCloseDetails} title="Profile Note" footer={footer}>
+      {selectedNote && <ProfileNoteDetails note={selectedNote} />}
+    </Modal>
+    <ConfirmModal action={confirmAction} onClose={onCloseConfirmation} />
+  </>;
 }

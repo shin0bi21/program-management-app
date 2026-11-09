@@ -220,6 +220,6 @@ describe('YouthAttendanceModal', () => {
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Attendance unavailable');
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 });

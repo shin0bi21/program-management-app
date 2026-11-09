@@ -11,6 +11,12 @@ interface ProfileNoteModalProps {
   onSaved: (note: YouthProfileNote) => void;
 }
 
+/**
+ * Edits supplied note values for the lifetime of its mounted dialog.
+ * The opening owner keys this editor by youth and note identity.
+ * @param props - Youth target, optional saved note and completion actions.
+ * @example <ProfileNoteModal youthId={youth.id} note={note} onClose={close} onSaved={save} />
+ */
 export default function ProfileNoteModal({
   youthId,
   note,

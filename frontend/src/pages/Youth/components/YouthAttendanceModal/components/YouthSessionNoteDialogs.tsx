@@ -1,19 +1,23 @@
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
+import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
 import type { YouthProfile } from '../../../types';
 import SessionNoteModal from '../../../../Programming/Sessions/components/SessionNoteModal/SessionNoteModal';
 import SessionNoteDetails from '../../../../Programming/Sessions/components/SessionNoteDetails/SessionNoteDetails';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
 import type { SessionNoteTarget, SessionNoteUnlinkTarget } from '../types';
 
+/**
+ * Displays the attendance interaction's supplied note targets and shared unlink confirmation.
+ * @param props - Saved youth/note context and close/save/unlink actions.
+ * @example <YouthSessionNoteDialogs {...noteTargets} />
+ */
 export default function YouthSessionNoteDialogs({
   youth,
   enrollmentRequired,
   noteTarget,
   detailTarget,
   unlinkTarget,
-  unlinking,
-  unlinkError,
   onCloseNote,
   onCloseDetails,
   onNoteSaved,
@@ -25,8 +29,6 @@ export default function YouthSessionNoteDialogs({
   noteTarget: SessionNoteTarget | null;
   detailTarget: SessionNote | null;
   unlinkTarget: SessionNoteUnlinkTarget | null;
-  unlinking: boolean;
-  unlinkError: string;
   onCloseNote: () => void;
   onCloseDetails: () => void;
   onNoteSaved: () => Promise<void>;
@@ -53,24 +55,16 @@ export default function YouthSessionNoteDialogs({
         {detailTarget && <SessionNoteDetails note={detailTarget} />}
       </Modal>
 
-      <Modal
-        isOpen={unlinkTarget !== null}
+      <ConfirmModal
+        action={unlinkTarget && youth ? {
+          title: 'Unlink Session Note',
+          message: `Unlink this note from ${youth.firstName} ${youth.lastName}? The session note will remain available and any other youth links will be unchanged.`,
+          confirmVariant: 'danger',
+          successMessage: 'Session note unlinked.',
+          onConfirm: onConfirmUnlink,
+        } : null}
         onClose={onCloseUnlink}
-        title="Unlink Session Note"
-        status={unlinkError ? 'error' : unlinking ? 'submitting' : 'idle'}
-        statusMessage={unlinkError || (unlinking ? 'Unlinking session note...' : undefined)}
-        footer={<>
-          <Button variant="secondary" disabled={unlinking} onClick={onCloseUnlink}>Cancel</Button>
-          <Button variant="danger" disabled={unlinking} onClick={() => void onConfirmUnlink()}>Confirm</Button>
-        </>}
-      >
-        {unlinkTarget && youth && (
-          <p>
-            Unlink this note from {youth.firstName} {youth.lastName}?
-            {' '}The session note will remain available and any other youth links will be unchanged.
-          </p>
-        )}
-      </Modal>
+      />
     </>
   );
 }
