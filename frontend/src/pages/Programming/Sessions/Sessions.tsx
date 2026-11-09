@@ -6,9 +6,8 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
 import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
-import AddSessionModal from './components/AddSessionModal/AddSessionModal';
+import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
-import EditSessionModal from './components/EditSessionModal/EditSessionModal';
 import SessionDashboard from './components/SessionDashboard/SessionDashboard';
 import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
@@ -93,19 +92,19 @@ export default function Sessions() {
   const [attendanceTarget, setAttendanceTarget] = useState<ProgramSession | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
-  // Single-session creation from the page or a calendar date.
-  const [addSessionTarget, setAddSessionTarget] = useState<{ programId?: string; date?: string } | null>(null);
-  const closeAddSessionModal = () => setAddSessionTarget(null);
-
-  // Edit session modal.
-  const [editTarget, setEditTarget] = useState<ProgramSession | null>(null);
-  const closeEditSessionModal = () => setEditTarget(null);
+  // Session editor with saved data or optional calendar context.
+  const [sessionModalTarget, setSessionModalTarget] = useState<{
+    session?: ProgramSession; initialProgramId?: string; initialDate?: string;
+  } | null>(null);
+  const isSessionModalOpen = sessionModalTarget !== null;
+  const closeSessionModal = () => setSessionModalTarget(null);
+  const openEditSessionModal = (session: ProgramSession) => setSessionModalTarget({ session });
 
   // Table configuration.
   const columns = useSessionTable({
     programs,
     canWriteSessions,
-    onEdit: setEditTarget,
+    onEdit: openEditSessionModal,
     onDelete: actions.requestDelete,
   });
 
@@ -158,9 +157,9 @@ export default function Sessions() {
     calendarCacheRef={actions.calendarCacheRef}
     pendingSessionIds={actions.pendingSessionIds}
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
-    onSessionEdit={canWriteSessions ? setEditTarget : undefined}
+    onSessionEdit={canWriteSessions ? openEditSessionModal : undefined}
     onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
-    onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
+    onAddSession={canWriteSessions ? (program, date) => setSessionModalTarget({ initialProgramId: program.id, initialDate: date }) : undefined}
     onMessageChange={setViewError}
   />;
 
@@ -175,7 +174,7 @@ export default function Sessions() {
         loadingSpinner
         actions={
           canWriteSessions ? (
-            <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
+            <Button onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })} disabled={!canAddSession}>
               + Add
             </Button>
           ) : undefined
@@ -205,21 +204,21 @@ export default function Sessions() {
         onSaved={actions.syncAttendance}
       />
 
-      <EditSessionModal
-        session={editTarget}
-        sessionTypes={sessionTypes}
-        timezone={programs.find(program => program.id === editTarget?.programId)?.timezone ?? 'America/Toronto'}
-        onClose={closeEditSessionModal}
-        onUpdated={actions.syncUpdatedSession}
-      />
-
-      {addSessionTarget && <AddSessionModal
+      {isSessionModalOpen && <SessionModal
+        key={sessionModalTarget?.session?.id ?? 'new'}
         programs={programs}
         sessionTypes={sessionTypes}
-        initialProgramId={addSessionTarget.programId}
-        initialDate={addSessionTarget.date}
-        onClose={closeAddSessionModal}
-        onSaved={actions.refreshCreatedSessions}
+        session={sessionModalTarget?.session}
+        initialProgramId={sessionModalTarget?.initialProgramId}
+        initialDate={sessionModalTarget?.initialDate}
+        onClose={closeSessionModal}
+        onSaved={result => {
+          if ('session' in result) {
+            actions.syncUpdatedSession(result);
+          } else {
+            return actions.refreshCreatedSessions(result);
+          }
+        }}
       />}
 
       <ConfirmModal

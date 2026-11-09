@@ -62,6 +62,7 @@ export interface CreateSessionInput {
   date?: string;
   startTime?: string;
   endTime?: string;
+  description?: string | null;
 }
 
 export type CreatedSessionResult = ProgramSession & { updatedProgramCycles?: ProgramCycleAssignment[] };
