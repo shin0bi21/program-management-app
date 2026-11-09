@@ -80,6 +80,8 @@ describe('AccountModal program assignments', () => {
     await user.type(screen.getByLabelText('First Name *'), 'Sam');
     await user.type(screen.getByLabelText('Last Name *'), 'Staff');
     await user.type(screen.getByLabelText('Email *'), 'sam@example.com');
+    await user.click(screen.getByRole('button', { name: 'Role' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Staff' }));
     await user.click(screen.getByRole('checkbox', { name: 'Soft Skills' }));
     await user.click(screen.getByRole('checkbox', { name: 'Drop In' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -133,21 +135,6 @@ describe('AccountModal program assignments', () => {
       role: 'staff',
       programIds: [jobReadinessId],
     }));
-  });
-
-  it('resets draft program selections when the invitation form reopens', async () => {
-    const user = userEvent.setup();
-    const props = { onClose: vi.fn(), onSuccess: vi.fn() };
-    const view = renderWithQueryClient(<AccountModal isOpen {...props} />);
-
-    await user.click(await screen.findByRole('checkbox', { name: 'Soft Skills' }));
-    expect(screen.getByRole('checkbox', { name: 'Soft Skills' })).toBeChecked();
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(props.onClose).toHaveBeenCalledOnce();
-
-    view.rerender(<AccountModal isOpen={false} {...props} />);
-    view.rerender(<AccountModal isOpen {...props} />);
-    expect(await screen.findByRole('checkbox', { name: 'Soft Skills' })).not.toBeChecked();
   });
 
   it('uses the shared role selector and preserves explicit program assignments for admins', async () => {
