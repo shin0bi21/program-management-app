@@ -6,12 +6,16 @@ import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
 import { useProgramCycleAssignments } from '../../hooks/data/useProgramCycleAssignments';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 
+vi.mock('@tanstack/react-query', async importOriginal => ({
+  ...await importOriginal<typeof import('@tanstack/react-query')>(),
+  useQuery: () => ({ data: { programCycle, youth: [], averageAttendance: 75 }, error: null, refetch: vi.fn() }),
+}));
 vi.mock('../../hooks/data/useProgramCycleAssignments', () => ({ useProgramCycleAssignments: vi.fn() }));
 vi.mock('../ManageRosterModal/ManageRosterModal', () => ({
   default: ({ assignment }: { assignment: ProgramCycleAssignment | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycle}`} /> : null,
 }));
-vi.mock('../../../../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ programCycle }: { programCycle: ProgramCycleAssignment }) => <div role="dialog" aria-label={`Report for ${programCycle.cycle}`} />,
+vi.mock('../../../../../common/features/Attendance/ViewAttendanceModal', () => ({
+  default: ({ data }: { data: { programCycle: ProgramCycleAssignment } }) => <div role="dialog" aria-label={`Report for ${data.programCycle.cycle}`} />,
 }));
 
 const program: Program = {
@@ -24,12 +28,11 @@ const programCycle: ProgramCycleAssignment = {
   enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
-  averageAttendance: 75, attendanceAttendedCount: 9,
-  attendanceRecordedCount: 12, uniqueAttendeeCount: 10,
+  uniqueAttendeeCount: 10,
 };
 const openProgramCycle: ProgramCycleAssignment = {
   ...programCycle, cycleId: 'cycle-2', cycle: 'Winter',
-  enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming', averageAttendance: null,
+  enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming',
 };
 /** Supplies the selected program context and permissions. @example makeProps().program.name // Art */
 const makeProps = () => ({

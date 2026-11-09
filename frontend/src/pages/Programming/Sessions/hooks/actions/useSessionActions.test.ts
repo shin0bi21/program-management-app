@@ -82,7 +82,7 @@ describe('useSessionActions', () => {
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(result.current.calendarRevision).toBe(0);
   });
@@ -96,7 +96,6 @@ describe('useSessionActions', () => {
     expect(client.getQueryData(['sessions', session.id, 'roster'])).toBe(roster);
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth-program-cycle-attendance'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 

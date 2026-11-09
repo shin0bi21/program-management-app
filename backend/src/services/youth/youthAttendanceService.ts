@@ -9,7 +9,7 @@ import { ConflictError, NotFoundError } from '../../errors';
 import { assertCanAccessProgramCycle } from '../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../types/auth';
 import type { SetYouthProgramCycleAttendanceInput } from '../../validation/youthSchemas';
-import { listSessionNotesForYouth } from '../programming/sessions/sessionNoteService';
+import { getProgramCycleAttendance } from '../attendanceService';
 
 interface YouthProgramCycleContext {
   programId: string;
@@ -34,6 +34,45 @@ interface YouthAttendanceSession {
 }
 
 /**
+ * Loads complete attendance for the youth's active enrolled program cycle.
+ * @param youthId - Selected youth; a missing profile produces a not-found error.
+ * @param actor - Signed-in user whose program scope limits the active enrollment.
+ * @returns The active cycle with session attendance and notes, or null when not enrolled.
+ * @example getYouthAttendance(youthId, actor) // full data for the attendance dashboard and editor
+ */
+export async function getYouthAttendance(youthId: string, actor: AccessTokenPayload) {
+  // 1. Require the selected youth profile.
+  const profiles = await sql`
+    SELECT profile.user_id
+    FROM youth_profiles profile
+    INNER JOIN users youth ON youth.id = profile.user_id
+    INNER JOIN user_roles role ON role.id = youth.role_id
+    WHERE profile.user_id = ${youthId} AND role.name = 'youth'
+  `;
+  if (!profiles.length) throw new NotFoundError('Youth profile not found');
+
+  // 2. Resolve the active enrolled cycle within the actor's program scope.
+  const [enrollment] = await sql<{ programId: string; cycleId: string }[]>`
+    SELECT
+      enrollment.program_id,
+      enrollment.cycle_id
+    FROM program_enrollments enrollment
+    INNER JOIN program_cycles cycle ON cycle.id = enrollment.cycle_id
+    INNER JOIN programs program ON program.id = enrollment.program_id
+    WHERE enrollment.youth_id = ${youthId}
+      AND program.enrollment_required = TRUE
+      AND enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+      AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
+      AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN cycle.starts_on AND cycle.ends_on
+      AND ${programAccessPredicate(actor, sql`program.id`)}
+  `;
+  if (!enrollment) return null;
+
+  // 3. Supply complete attendance to the dashboard and its editor.
+  return getProgramCycleAttendance(enrollment.programId, enrollment.cycleId, actor, youthId);
+}
+
+/**
  * Loads a youth's attendance and notes for a program cycle.
  * @param youthId - Youth whose attendance is needed.
  * @param programId - Program to read.
@@ -47,28 +86,20 @@ export async function getYouthProgramCycleAttendance(
   cycleId: string,
   actor: AccessTokenPayload,
 ) {
-  // 1. Check access to the program cycle.
+  // 1. Require the youth and applicable enrollment before reading shared attendance.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await getYouthProgramCycleContext(youthId, programId, cycleId);
 
-  // 2. Load attendance and session notes.
-  const programCycle = await getYouthProgramCycleContext(youthId, programId, cycleId);
-  const [sessions, sessionNotes] = await Promise.all([
-    getYouthAttendanceSessions(youthId, programId, cycleId),
-    listSessionNotesForYouth(youthId, actor, { programId, cycleId }),
-  ]);
-
-  // 3. Include notes with their sessions.
-  const notesBySession = new Map<string, Array<(typeof sessionNotes)[number]>>();
-  for (const note of sessionNotes) {
-    const sessionId = note.sessionId as string;
-    notesBySession.set(sessionId, [...(notesBySession.get(sessionId) ?? []), note]);
-  }
+  // 2. Use the cycle attendance reader with this youth's filter.
+  const attendance = await getProgramCycleAttendance(programId, cycleId, actor, youthId);
+  const [participant] = attendance.youth;
+  if (!participant) throw new NotFoundError('Youth profile not found');
   return {
-    programCycle,
-    sessions: sessions.map(session => ({
-      ...session,
-      sessionNotes: notesBySession.get(session.id) ?? [],
-    })),
+    programCycle: attendance.programCycle,
+    presentCount: participant.presentCount,
+    lateCount: participant.lateCount,
+    absentCount: participant.absentCount,
+    sessions: participant.sessions,
   };
 }
 

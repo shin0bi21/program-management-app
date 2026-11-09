@@ -1,17 +1,14 @@
-import type { YouthAttendanceSummary } from './components/YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api';
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
 import Button from '../../common/components/Button/Button';
 import { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
-import YouthReportModal from '../../common/features/YouthReportModal/YouthReportModal';
 import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from './components/YouthModal/YouthModal';
 import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthProfile } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
-import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
 import PrimaryContactDashboardCard from '../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
 import YouthAttendanceDashboardCard from './components/YouthDashboard/YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
 import YouthNotesDashboardCard from './components/YouthDashboard/YouthNotesDashboardCard/YouthNotesDashboardCard';
@@ -34,7 +31,7 @@ export default function Youth() {
   // Permissions and services.
   const { permissions, role } = useAuth();
   const canWrite = permissions.includes('write:youth_profiles');
-  const canReadAttendance = permissions.includes('read:attendance');
+  const canReadAttendance = permissions.includes('read:attendance') && permissions.includes('read:sessions');
   const canManageAttendance = canReadAttendance
     && permissions.includes('write:attendance')
     && permissions.includes('read:sessions');
@@ -64,11 +61,7 @@ export default function Youth() {
   } : null, [search.appliedValue, controlsReady, filters.values.programIds, filters.values.cycleIds]);
 
   // Selection and selection-dependent workflow synchronization.
-  const [attendanceTarget, setAttendanceTarget] = useState<YouthAttendanceSummary | null>(null);
-  const closeAttendanceModal = useCallback(() => setAttendanceTarget(null), []);
-  const { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile } = useYouthSelection({
-    onSelectedProfileIdChange: closeAttendanceModal,
-  });
+  const { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile } = useYouthSelection();
 
   // Page actions.
   const { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance } = useYouthActions(updateSelectedProfile);
@@ -91,13 +84,6 @@ export default function Youth() {
   const [contactTarget, setContactTarget] = useState<YouthProfile | null>(null);
   const isContactModalOpen = contactTarget !== null;
   const closeContactModal = () => setContactTarget(null);
-
-  // Attendance-report modal.
-  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{
-    programCycle: YouthAttendanceSummary;
-    youthId: string;
-  } | null>(null);
-  const closeAttendanceReportModal = () => setAttendanceReportTarget(null);
 
   // Table configuration.
   const addProfileNote = useCallback((youthId: string) => {
@@ -144,11 +130,9 @@ export default function Youth() {
           {canReadAttendance && <YouthAttendanceDashboardCard
             youthId={selectedProfileId}
             canManage={canManageAttendance}
-            onManage={setAttendanceTarget}
+            youth={selectedProfile}
+            onSaved={reconcileAttendance}
             canViewReport={canViewAttendanceReport}
-            onViewReport={programCycle => {
-              if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
-            }}
           />}
           <YouthNotesDashboardCard
             youthId={selectedProfileId}
@@ -182,17 +166,6 @@ export default function Youth() {
         onSuccess={modalTarget === 'new' ? reconcileCreatedYouth : reconcileSavedYouth}
       />
       <SchoolModal workflow={schoolModal} />
-      <YouthAttendanceModal
-        youth={selectedProfile}
-        programCycle={attendanceTarget}
-        onClose={closeAttendanceModal}
-        onSaved={reconcileAttendance}
-      />
-      {attendanceReportTarget && <YouthReportModal
-        programCycle={attendanceReportTarget.programCycle}
-        youthId={attendanceReportTarget.youthId}
-        onClose={closeAttendanceReportModal}
-      />}
       <YouthModal
         isOpen={isContactModalOpen}
         youthData={contactTarget ?? undefined}

@@ -155,9 +155,6 @@ describe('Sessions', () => {
         enrolledCount: 1,
         nextSessionAt: null,
         nextSessionId: null,
-        averageAttendance: null,
-        attendanceAttendedCount: 0,
-        attendanceRecordedCount: 0,
         uniqueAttendeeCount: 0,
       },
     ]);
@@ -403,7 +400,7 @@ describe('Sessions', () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     getProgramCycleAssignments.mockResolvedValue([{
       programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
-      state: 'completed', enrollmentRequired: true, enrolledCount: 0, averageAttendance: null,
+      state: 'completed', enrollmentRequired: true, enrolledCount: 0,
     }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));

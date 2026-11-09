@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
@@ -8,22 +7,19 @@ import { setYouthProgramCycleAttendance, type YouthAttendanceResult } from '../y
 import type { YouthProgramCycleAttendance } from '../types';
 
 /**
- * Edits one mounted attendance draft from the history loaded by its interaction.
- * @param options - Supplied attendance, youth identity, read availability, and saved-result callback.
+ * Edits one mounted attendance draft supplied by the dashboard.
+ * @param options - Supplied attendance, youth identity and saved-result callback.
  * @example useYouthAttendance({ youthId, attendance, onSaved }) // starts with saved statuses
  */
 export default function useYouthAttendance({
   youthId,
   attendance,
-  unavailable = false,
   onSaved,
 }: {
   youthId: string;
   attendance: YouthProgramCycleAttendance;
-  unavailable?: boolean;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
-  const queryClient = useQueryClient();
   const { tryLock, unlock } = useSubmitLock();
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
     attendance.sessions.map(session => [session.id, session.status ?? '']),
@@ -32,13 +28,21 @@ export default function useYouthAttendance({
   const [statusMessage, setStatusMessage] = useState('');
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
+  /**
+   * Changes the supplied session's draft attendance while editing is available.
+   * @example updateStatus(sessionId, "late")
+   */
   const updateStatus = (sessionId: string, status: AttendanceStatus | '') => {
-    if (submissionComplete || unavailable) return;
+    if (submissionComplete) return;
     setSelections(current => ({ ...current, [sessionId]: status }));
   };
 
+  /**
+   * Saves the complete draft once, preserving failures for retry and successful feedback until close.
+   * @example await save()
+   */
   const save = async () => {
-    if (unavailable || attendance.sessions.length === 0 || !tryLock()) return;
+    if (attendance.sessions.length === 0 || !tryLock()) return;
 
     const { programId, cycleId } = attendance.programCycle;
     setSubmitStatus('submitting');
@@ -61,9 +65,6 @@ export default function useYouthAttendance({
       return;
     }
 
-    queryClient.setQueryData<YouthProgramCycleAttendance>(
-      ['youth-program-cycle-attendance', youthId, programId, cycleId], saved,
-    );
     let message = 'Youth attendance saved.';
     try {
       await onSaved(saved);

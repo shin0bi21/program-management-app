@@ -25,6 +25,8 @@ const programsApi = vi.hoisted(() => ({
   createProgram: vi.fn(),
   updateProgram: vi.fn(),
 }));
+const attendanceApi = vi.hoisted(() => ({ getProgramCycleAttendance: vi.fn() }));
+vi.mock('../../../common/features/Attendance/attendance.api', () => attendanceApi);
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [],
 }));
@@ -39,19 +41,24 @@ vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 vi.mock('./components/ManageRosterModal/ManageRosterModal', () => ({
   default: ({ assignment }: { assignment: { cycle: string } | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycle}`} /> : null,
 }));
-vi.mock('../../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ programCycle }: { programCycle: { cycle: string } }) => <div role="dialog" aria-label={`Report for ${programCycle.cycle}`} />,
+vi.mock('../../../common/features/Attendance/ViewAttendanceModal', () => ({
+  default: ({ data }: { data: { programCycle: { cycle: string } } }) => <div role="dialog" aria-label={`Report for ${data.programCycle.cycle}`} />,
 }));
 
 describe('Programs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    attendanceApi.getProgramCycleAttendance.mockResolvedValue({
+      programCycle: { programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Fall 2026', enrollmentRequired: true },
+      youth: [],
+      averageAttendance: 75,
+    });
     auth.role = 'project_manager';
     auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
     vi.mocked(getProgramCycleAssignments).mockResolvedValue([{
       programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Fall 2026',
       startsOn: '2020-01-01', endsOn: '2100-12-31', enrollmentRequired: true, minAge: 12, maxAge: 15, state: 'active',
-      enrolledCount: 5, uniqueAttendeeCount: 0, averageAttendance: 75, attendanceAttendedCount: 3, attendanceRecordedCount: 4,
+      enrolledCount: 5, uniqueAttendeeCount: 0,
       nextSessionAt: null, nextSessionId: null,
     }]);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
@@ -106,6 +113,7 @@ describe('Programs', () => {
     expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', { includeAllPrograms: false }, { signal: expect.any(AbortSignal) });
     await user.click(screen.getByRole('button', { name: 'Manage Roster' }));
     expect(screen.getByRole('dialog', { name: 'Roster for Fall 2026' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
     expect(screen.getByRole('dialog', { name: 'Report for Fall 2026' })).toBeInTheDocument();
   });

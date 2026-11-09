@@ -3,10 +3,19 @@ import { apiClient } from './client';
 import { reAuthCoordinator } from '../auth/reauth/reAuthCoordinator';
 import { STORAGE_KEYS } from '../auth/storage';
 
+/**
+ * Creates an unsigned cache-test token with the requested expiration time.
+ * @param expiryMs - Unix expiration timestamp in milliseconds.
+ * @example tokenWithExpiry(Date.now() + 60000)
+ */
 function tokenWithExpiry(expiryMs: number): string {
   return `header.${btoa(JSON.stringify({ exp: Math.floor(expiryMs / 1000) }))}.signature`;
 }
 
+/**
+ * Creates a fetch response with the supplied status and JSON body.
+ * @example jsonResponse(200, { ok: true })
+ */
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -131,6 +140,14 @@ describe('apiClient re-authentication', () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/reports\/example$/), expect.objectContaining({
       method: 'GET',
       headers: expect.objectContaining({ Authorization: `Bearer ${token}` }),
+    }));
+
+    vi.mocked(fetch).mockResolvedValue(new Response(blob, { status: 200 }));
+    const rendered = await apiClient.postDownload('/reports/example', { attendance: [] });
+    expect(rendered.type).toContain('text/plain');
+    expect(fetch).toHaveBeenLastCalledWith(expect.stringMatching(/\/api\/reports\/example$/), expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ attendance: [] }),
+      headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
     }));
   });
   it.each(['expired', '401'] as const)('cancels one %s waiter without cancelling shared re-login', async mode => {

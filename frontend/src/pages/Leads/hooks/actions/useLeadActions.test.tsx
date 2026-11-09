@@ -57,8 +57,8 @@ it('updates signup context and invalidates affected collections', async () => {
   const programCycle: ProgramCycleAssignment = {
     programId: 'program-1', program: 'Future Ready', enrollmentRequired: true,
     minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycle: 'Summer', startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active', enrolledCount: 1,
-    nextSessionAt: null, nextSessionId: null, averageAttendance: null,
-    attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+    nextSessionAt: null, nextSessionId: null,
+    uniqueAttendeeCount: 0,
   };
   const invalidate = vi.spyOn(client, 'invalidateQueries');
   const onLeadSynced = vi.fn();

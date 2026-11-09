@@ -1,77 +1,66 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { YouthAttendanceSummary } from './youthAttendanceSummary.api';
-import useYouthAttendanceSummary from './hooks/useYouthAttendanceSummary';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import { makeYouthProfile } from '../../../../../tests/factories/youth';
+import type { AttendanceData } from '../../../../../common/features/Attendance/attendance.api';
+import useYouthAttendanceData from './hooks/useYouthAttendanceData';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard';
 
-vi.mock('./hooks/useYouthAttendanceSummary', () => ({ default: vi.fn() }));
+vi.mock('./hooks/useYouthAttendanceData', () => ({ default: vi.fn() }));
+vi.mock('../../../../../common/features/Attendance/ViewAttendanceModal', () => ({
+  default: ({ data }: { data: AttendanceData }) => <div role="dialog" aria-label="Attendance report">{data.programCycle.cycle}</div>,
+}));
 
-const enrolled: YouthAttendanceSummary = {
-  cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
-  startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
-  presentCount: 2, lateCount: 1, absentCount: 0,
+const attendance: AttendanceData = {
+  programCycle: { cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true },
+  youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 2, sessions: [{
+    id: 'session-1', sessionType: 'Regular', theme: 'Teamwork',
+    startsAt: '2026-07-21T21:00:00.000Z', endsAt: '2026-07-21T22:00:00.000Z',
+    cancelledAt: null, status: 'present', notes: null, sessionNotes: [],
+  }, {
+    id: 'session-2', sessionType: 'Regular', theme: 'Communication',
+    startsAt: '2026-07-22T21:00:00.000Z', endsAt: '2026-07-22T22:00:00.000Z',
+    cancelledAt: null, status: null, notes: null, sessionNotes: [],
+  }, {
+    id: 'session-3', sessionType: 'Regular', theme: 'Planning',
+    startsAt: '2026-07-23T21:00:00.000Z', endsAt: '2026-07-23T22:00:00.000Z',
+    cancelledAt: null, status: 'excused', notes: null, sessionNotes: [],
+  }] }],
 };
-const summary = { programCycles: [enrolled], loading: false, error: null, retry: vi.fn() };
+const loaded = { attendance, loading: false, error: null, retry: vi.fn() };
 
 describe('YouthAttendanceDashboardCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useYouthAttendanceSummary).mockReturnValue({ ...summary, programCycles: [] });
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, attendance: null });
   });
 
-  it('shows an empty state when no active attendance exists', () => {
+  it('shows not enrolled when there is no active enrolled cycle', () => {
     render(<YouthAttendanceDashboardCard youthId="youth-1" />);
-    expect(screen.getByText('No active program attendance.')).toBeInTheDocument();
+    expect(screen.getByText('Not enrolled.')).toBeInTheDocument();
   });
 
-  it('disables tabs when selection clears and restores the chosen tab', () => {
-    const view = render(<YouthAttendanceDashboardCard youthId="youth-1" />);
-    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+  it('opens editing and the report from the loaded cycle attendance', () => {
+    vi.mocked(useYouthAttendanceData).mockReturnValue(loaded);
+    render(<YouthAttendanceDashboardCard youthId="youth-1" youth={makeYouthProfile()} canManage canViewReport onSaved={vi.fn()} />);
 
-    view.rerender(<YouthAttendanceDashboardCard youthId={null} />);
-    expect(screen.getByRole('button', { name: 'History' })).toBeDisabled();
-    expect(screen.getByText('Select a row to view attendance.')).toBeInTheDocument();
-
-    view.rerender(<YouthAttendanceDashboardCard youthId="youth-1" />);
-    expect(screen.getByRole('button', { name: 'History' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('No historical attendance.')).toBeInTheDocument();
-  });
-
-  it('separates active enrollments from historical open-program visits', () => {
-    vi.mocked(useYouthAttendanceSummary).mockReturnValue({ ...summary, programCycles: [enrolled, {
-      ...enrolled, cycleId: 'past', cycle: 'Spring 2025', programId: 'program-2', program: 'Drop In',
-      enrollmentRequired: false, startsOn: '2025-01-01', endsOn: '2025-06-30', enrolledOn: null,
-      presentCount: 3, lateCount: 0,
-    }] });
-    render(<YouthAttendanceDashboardCard youthId="youth-1" />);
-
-    expect(screen.getByText('Soft Skills · Summer 2026')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'History' }));
-    expect(screen.getByText('Drop In · Spring 2025')).toBeInTheDocument();
-    expect(screen.getByText('3 visits')).toBeInTheDocument();
-    expect(screen.queryByText('Soft Skills · Summer 2026')).not.toBeInTheDocument();
-  });
-
-  it('opens attendance editing and reports with the independently loaded summary', () => {
-    vi.mocked(useYouthAttendanceSummary).mockReturnValue(summary);
-    const onManage = vi.fn();
-    const onViewReport = vi.fn();
-    render(<YouthAttendanceDashboardCard youthId="youth-1" canManage canViewReport onManage={onManage} onViewReport={onViewReport} />);
-
+    expect(screen.getByText(/Present 1.*Late 0.*Absent 2/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
+    expect(screen.getByRole('dialog', { name: 'Manage Attendance' })).toBeInTheDocument();
+    expect(screen.getByText('Teamwork')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
-    expect(onManage).toHaveBeenCalledWith(enrolled);
-    expect(onViewReport).toHaveBeenCalledWith(enrolled);
+    expect(screen.getByRole('dialog', { name: 'Attendance report' })).toHaveTextContent('Summer 2026');
   });
 
-  it('shows loading and provides retry for a failed summary request', () => {
-    vi.mocked(useYouthAttendanceSummary).mockReturnValue({ ...summary, programCycles: [], loading: true });
+  it('shows loading and provides retry for a failed attendance request', () => {
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, attendance: null, loading: true });
     const view = render(<YouthAttendanceDashboardCard youthId="youth-1" />);
     expect(screen.getByRole('status', { name: 'Loading attendance…' })).toBeInTheDocument();
 
-    vi.mocked(useYouthAttendanceSummary).mockReturnValue({ ...summary, error: 'Could not load attendance.' });
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, error: 'Could not load attendance.' });
     view.rerender(<YouthAttendanceDashboardCard youthId="youth-1" />);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(summary.retry).toHaveBeenCalledOnce();
+    expect(loaded.retry).toHaveBeenCalledOnce();
   });
 });

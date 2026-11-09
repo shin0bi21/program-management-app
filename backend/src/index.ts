@@ -1,4 +1,4 @@
-import 'dotenv/config'; 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -48,6 +48,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+// Full cycle attendance is larger than ordinary command payloads.
+app.post('/api/programs/:programId/cycles/:cycleId/reports/youth.pdf', express.json({ limit: '5mb', type: 'application/json' }));
 app.use(express.json({ limit: '20kb', type: 'application/json' }));
 app.use(cookieParser());
 

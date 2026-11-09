@@ -95,10 +95,20 @@ open-attendance participation. The [Youth filter owner](../../backend/src/servic
 preserves that cross-domain selection contract.
 
 The main Youth record includes profile fields and one active program, or null when none is active.
-The attendance dashboard loads its own summaries from `/:id/attendance-summary`,
-owned by the [attendance summary service](../../backend/src/services/youth/youthAttendanceSummaryService.ts).
-That read requires Youth and attendance read permissions and applies program scope;
-attendance counts and open-program visits are not part of profile rows.
+The attendance dashboard loads complete attendance and session notes for the active enrolled
+program cycle from `/:id/attendance`, owned by the
+[shared attendance service](../../backend/src/services/attendanceService.ts).
+It requires Youth, attendance and session read permissions and applies program scope.
+The backend supplies attendance counts with the records, which the card passes directly to its editor;
+no active enrollment returns null. Historical cycles and open-program visits are excluded
+from this dashboard. Attendance stays separate from profile rows.
+
+Programs reads the same cycle attendance without the Youth filter. Both dashboards
+supply their loaded data to the shared attendance report. Its PDF POST renders
+that data without another attendance query.
+Attendance counts and rates use completed, noncancelled sessions. Present and late
+count as attended; absent, excused and unmarked count as missed. The Programs
+consumer adds the cohort average in the backend; the frontend only displays it.
 
 ## Programming
 

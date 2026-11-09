@@ -13,7 +13,7 @@ const youthApi = vi.hoisted(() => ({
   setYouthProfileNote: vi.fn(),
   deleteYouthProfileNote: vi.fn(),
 }));
-const summaryApi = vi.hoisted(() => ({ getYouthAttendanceSummary: vi.fn() }));
+const attendanceApi = vi.hoisted(() => ({ getYouthAttendance: vi.fn() }));
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 const authState = vi.hoisted(() => ({
   permissions: ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'],
@@ -23,7 +23,7 @@ vi.mock('./components/YouthTable/hooks/useYouthTableData', () => ({
   default: (filters: unknown) => mockUseYouthTableData(filters),
 }));
 vi.mock('./youth.api', () => youthApi);
-vi.mock('./components/YouthDashboard/YouthAttendanceDashboardCard/youthAttendanceSummary.api', () => summaryApi);
+vi.mock('../../common/features/Attendance/attendance.api', () => attendanceApi);
 vi.mock('../../common/features/SchoolModal/schoolModal.api', () => ({
   createSchool: vi.fn().mockResolvedValue({ id: 'school-new', name: 'Saved School' }),
 }));
@@ -64,13 +64,13 @@ vi.mock('./components/YouthModal/YouthModal', () => ({
     : null,
 }));
 vi.mock('./components/YouthAttendanceModal/YouthAttendanceModal', () => ({
-  default: ({ programCycle }: { programCycle: { cycle: string } | null }) => programCycle
-    ? <div data-testid="youth-attendance-modal">{programCycle.cycle}</div>
+  default: ({ attendance }: { attendance: { programCycle: { cycle: string } } | null }) => attendance
+    ? <div data-testid="youth-attendance-modal">{attendance.programCycle.cycle}</div>
     : null,
 }));
-vi.mock('../../common/features/YouthReportModal/YouthReportModal', () => ({
-  default: ({ programCycle, youthId }: { programCycle: { cycle: string }; youthId?: string }) => (
-    <div data-testid="youth-report-modal">{programCycle.cycle} · {youthId}</div>
+vi.mock('../../common/features/Attendance/ViewAttendanceModal', () => ({
+  default: ({ data }: { data: { programCycle: { cycle: string }; youth: Array<{ id: string }> } }) => (
+    <div data-testid="youth-report-modal">{data.programCycle.cycle} · {data.youth[0].id}</div>
   ),
 }));
 vi.mock('../../common/components/ActionsMenu/ActionsMenu', () => ({
@@ -92,11 +92,10 @@ describe('Youth', () => {
       id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
-    summaryApi.getYouthAttendanceSummary.mockResolvedValue([{
-      cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills',
-      enrollmentRequired: true, startsOn: '2026-06-30', endsOn: '2999-12-31',
-      enrolledOn: '2026-06-30', withdrawnOn: null, presentCount: 8, lateCount: 2, absentCount: 4,
-    }]);
+    attendanceApi.getYouthAttendance.mockResolvedValue({
+      programCycle: { cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true },
+      youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 0, lateCount: 0, absentCount: 0, sessions: [] }],
+    });
     youthApi.setYouthProfileNote.mockReset();
     youthApi.deleteYouthProfileNote.mockReset();
     preferenceApi.getPreference.mockResolvedValue(null);
@@ -125,7 +124,7 @@ describe('Youth', () => {
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(summaryApi.getYouthAttendanceSummary).not.toHaveBeenCalled();
+    expect(attendanceApi.getYouthAttendance).not.toHaveBeenCalled();
   });
 
   it('keeps account invitation controls out of the Youth page', async () => {
@@ -196,7 +195,6 @@ describe('Youth', () => {
     expect(screen.getByText('416-555-0101')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Attendance' })).toBeInTheDocument();
     expect(await screen.findByText('Soft Skills · Summer 2026')).toBeInTheDocument();
-    expect(screen.getByText(/Present 8.*Late 2.*Absent 4/)).toBeInTheDocument();
     expect(screen.queryByText(/Last attended:/)).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'View profile note' })).toBeInTheDocument();
     expect(screen.queryByText('Youth profile note')).not.toBeInTheDocument();
@@ -299,5 +297,4 @@ describe('Youth', () => {
 
     expect(screen.getByTestId('youth-modal')).toHaveTextContent('contact');
   });
-
 });

@@ -52,9 +52,6 @@ const programCycle = {
   enrolledCount: 10,
   nextSessionAt: null,
   nextSessionId: null,
-  averageAttendance: null,
-  attendanceAttendedCount: 0,
-  attendanceRecordedCount: 0,
   uniqueAttendeeCount: 0,
 };
 
