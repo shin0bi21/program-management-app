@@ -88,7 +88,7 @@ describe('LeadNotesDashboardCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit follow-up note' }));
     expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: ' Reached guardian. ' } });
-    fireEvent.submit(document.getElementById('lead-note-edit-form')!);
+    fireEvent.submit(document.getElementById('lead-note-form')!);
 
     await waitFor(() => expect(api.updateLeadNote).toHaveBeenCalledWith(lead.id, existingNote.id, 'Reached guardian.'));
   });
