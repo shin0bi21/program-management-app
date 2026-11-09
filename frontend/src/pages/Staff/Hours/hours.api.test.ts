@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../http/client';
 import {
   getHoursCalendarData,
-  getHoursDashboardData,
+  getHoursPayPeriodData,
+  getHoursCycleSummaryData,
   getHoursTableData,
   getHoursReferenceData,
   getHoursSessions,
@@ -32,7 +33,9 @@ describe('hours API', () => {
       { start: '2026-08-01', end: '2026-08-31' },
       { signal: controller.signal },
     );
-    getHoursDashboardData('staff-1', 'cycle-1', { signal: controller.signal });
+    getHoursPayPeriodData('staff-1', null, { signal: controller.signal });
+    getHoursPayPeriodData('staff-1', '2026-08-19', { signal: controller.signal });
+    getHoursCycleSummaryData('staff-1', 'cycle-1', { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(
       1,
@@ -41,7 +44,18 @@ describe('hours API', () => {
     );
     expect(apiClient.get).toHaveBeenNthCalledWith(
       2,
-      '/hours/dashboard?staffId=staff-1&cycleId=cycle-1',
+      '/hours/pay-period?staffId=staff-1',
+      { signal: controller.signal },
+    );
+
+    expect(apiClient.get).toHaveBeenNthCalledWith(
+      3,
+      '/hours/pay-period?staffId=staff-1&date=2026-08-19',
+      { signal: controller.signal },
+    );
+    expect(apiClient.get).toHaveBeenNthCalledWith(
+      4,
+      '/hours/cycle-summary?staffId=staff-1&cycleId=cycle-1',
       { signal: controller.signal },
     );
   });

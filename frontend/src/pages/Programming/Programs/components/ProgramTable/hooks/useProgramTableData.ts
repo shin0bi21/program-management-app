@@ -3,8 +3,17 @@ import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQ
 import { getProgramList, type ProgramFilters } from '../../../api/programs.api';
 import type { Program } from '../../../../../../common/features/programs/types';
 
-export default function useProgramTableData(queryKey: readonly unknown[], filters: ProgramFilters) {
-  return useInfiniteListQuery<Program>({
+/**
+ * Loads complete program table rows for the supplied scope.
+ * @param queryKey - Program list-only key prefix.
+ * @param filters - Assigned-program scope applied by the page.
+ * @example useProgramTableData(['programs', 'table'], filters).rows
+ */
+export default function useProgramTableData(
+  queryKey: readonly unknown[],
+  filters: ProgramFilters,
+) {
+  const query = useInfiniteListQuery<Program>({
     ordering: { getValue: program => program.name.toLowerCase(), direction: 'asc' },
     queryKey: [...queryKey, filters],
     queryFn: ({ signal, pageParam }) => getProgramList(
@@ -14,4 +23,6 @@ export default function useProgramTableData(queryKey: readonly unknown[], filter
     ),
     errorMessage: 'Could not load programs',
   });
+
+  return query;
 }

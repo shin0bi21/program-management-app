@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { setProgramCycle, type SetCycleResult } from '../../../api/cycles.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { ProgramCycleAssignment } from '../../../types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { getProgramCycleAssignments } from '../../../api/programCycleAssignments.api';
 
 interface CycleInput {
   name: string;
@@ -15,68 +14,37 @@ interface CycleInput {
 }
 
 interface UseCycleModalOptions {
-  isOpen: boolean;
   cycle: ProgramCycle | null;
-  programs: Program[];
+  assignments: ProgramCycleAssignment[];
   programsReady?: boolean;
   onSaved: (result: SetCycleResult, operation: 'create' | 'update') => void | Promise<void>;
 }
 
-export default function useCycleModal({ isOpen, cycle, programs, programsReady = true, onSaved }: UseCycleModalOptions) {
+/**
+ * Saves one mounted cycle editor with its supplied program assignments.
+ * @param options - Saved cycle, loaded assignments, selectable-program readiness, and save callback.
+ * @example useCycleModal({ cycle, assignments, onSaved }).selectedProgramIds
+ */
+export default function useCycleModal({ cycle, assignments, programsReady = true, onSaved }: UseCycleModalOptions) {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const [selectedProgramIds, setSelectedProgramIds] = useState<string[] | null>(null);
-  const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
-  const [loadRevision, setLoadRevision] = useState(0);
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>(() =>
+    assignments.filter(assignment => assignment.cycleId === cycle?.id).map(assignment => assignment.programId),
+  );
   const { tryLock, unlock } = useSubmitLock();
-  const lifecycle = useRef<object>({});
-  const targetKey = isOpen ? cycle?.id ?? 'new' : 'closed';
-  const programsRef = useRef(programs);
-  programsRef.current = programs;
-
-  useEffect(() => {
-    const currentLifecycle = {};
-    lifecycle.current = currentLifecycle;
-    setSubmitStatus('idle');
-    setStatusMessage('');
-    setSelectedProgramIds(null);
-    setAssignmentsError(null);
-    unlock();
-    if (!isOpen || !programsReady) return () => { lifecycle.current = {}; };
-
-    if (!cycle) {
-      setSelectedProgramIds(programsRef.current.map(program => program.id));
-      return () => { lifecycle.current = {}; };
-    }
-
-    const controller = new AbortController();
-    void getProgramCycleAssignments(undefined, { includeAllPrograms: true }, { signal: controller.signal })
-      .then(programCycles => {
-        if (controller.signal.aborted) return;
-        setSelectedProgramIds(programCycles.filter(programCycle => programCycle.cycleId === cycle.id).map(programCycle => programCycle.programId));
-      })
-      .catch(cause => {
-        if (controller.signal.aborted) return;
-        setAssignmentsError(getErrorMessage(cause, 'Could not load assigned programs'));
-      });
-
-    return () => { controller.abort(); lifecycle.current = {}; };
-  }, [targetKey, isOpen, cycle?.id, programsReady, loadRevision, unlock]);
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
-  const assignmentsReady = programsReady && selectedProgramIds !== null && !assignmentsError;
+  const assignmentsReady = programsReady;
   const toggleProgram = (programId: string) => {
     if (submissionComplete || !assignmentsReady) return;
-    setSelectedProgramIds(current => current && (current.includes(programId)
+    setSelectedProgramIds(current => current.includes(programId)
       ? current.filter(id => id !== programId)
-      : [...current, programId]));
+      : [...current, programId]);
   };
 
   const submit = async (input: CycleInput) => {
-    if (!assignmentsReady || selectedProgramIds === null || !tryLock()) return;
+    if (!assignmentsReady || !tryLock()) return;
 
-    const submittedLifecycle = lifecycle.current;
-    const isCurrent = () => lifecycle.current === submittedLifecycle;
     setSubmitStatus('submitting');
     setStatusMessage(cycle ? `Updating ${input.name}...` : `Creating ${input.name}...`);
 
@@ -85,14 +53,12 @@ export default function useCycleModal({ isOpen, cycle, programs, programsReady =
       const saved = cycle ? await setProgramCycle(command, cycle.id) : await setProgramCycle(command);
       await onSaved(saved, cycle ? 'update' : 'create');
     } catch (cause) {
-      if (!isCurrent()) return;
       setStatusMessage(getErrorMessage(cause, 'Could not save cycle'));
       setSubmitStatus('error');
       unlock();
       return;
     }
 
-    if (!isCurrent()) return;
     setStatusMessage(cycle ? 'Cycle updated successfully.' : 'Cycle created successfully.');
     setSubmitStatus('success');
   };
@@ -103,8 +69,6 @@ export default function useCycleModal({ isOpen, cycle, programs, programsReady =
     submissionComplete,
     selectedProgramIds,
     assignmentsReady,
-    assignmentsError,
-    retryAssignments: () => setLoadRevision(current => current + 1),
     toggleProgram,
     submit,
   };

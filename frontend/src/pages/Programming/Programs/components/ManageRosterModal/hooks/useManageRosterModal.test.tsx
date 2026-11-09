@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enrollYouth, withdrawYouth } from '../../../api/programCycleAssignments.api';
@@ -17,9 +17,13 @@ const assignment: ProgramCycleAssignment = {
   programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
-  nextSessionAt: null, nextSessionId: null, averageAttendance: null, attendanceAttendedCount: 0,
-  attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+  nextSessionAt: null, nextSessionId: null,
+  uniqueAttendeeCount: 0,
 };
+/**
+ * Supplies an isolated query cache for one roster workflow test.
+ * @example renderHook(useWorkflow, { wrapper: wrapper() })
+ */
 const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 const youth = makeProgramRosterYouth({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
 
@@ -30,28 +34,19 @@ describe('useManageRosterModal', () => {
     vi.mocked(withdrawYouth).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
   });
 
-  it('enrolls an unchecked youth and reconciles both roster owners', async () => {
+  it('enrolls an unchecked youth and notifies the roster owner', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const client = createTestQueryClient();
     const savedProgramCycle = { ...assignment, enrolledCount: 6 };
     const savedYouth = makeYouthProfile({ id: youth.id });
     vi.mocked(enrollYouth).mockResolvedValue({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-    const programCycleKey = ['programs', 'cycle-assignments', { programId: assignment.programId }];
-    const youthKey = ['youth', 'table', 'filtered'];
-    client.setQueryData(programCycleKey, [assignment]);
-    client.setQueryData(youthKey, { pages: [{ rows: [{ ...savedYouth, firstName: 'Old' }], nextCursor: null }], pageParams: [null] });
-    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: createQueryClientWrapper(client) });
+    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: wrapper() });
 
     await act(() => result.current.addYouth(youth));
 
     expect(enrollYouth).toHaveBeenCalledWith(assignment, { youthIds: ['youth-1'] });
     expect(refresh).toHaveBeenCalledOnce();
     expect(onSuccess).toHaveBeenCalledWith({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-    expect(client.getQueryState(programCycleKey)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
-    expect(client.getQueryData(programCycleKey)).toEqual([savedProgramCycle]);
-    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
   });
 
   it('locks enrollment while a youth update is pending', async () => {
@@ -108,18 +103,4 @@ describe('useManageRosterModal', () => {
     expect(result.current.actionError).toContain('was enrolled, but the roster could not refresh');
   });
 
-  it('resets workflow state for a different assignment', async () => {
-    vi.mocked(enrollYouth).mockRejectedValue(new Error('Enrollment failed'));
-    const options = { refresh: vi.fn(), onSuccess: vi.fn() };
-    const { result, rerender } = renderHook(
-      ({ target }) => useManageRosterModal({ ...options, assignment: target }),
-      { initialProps: { target: assignment }, wrapper: wrapper() },
-    );
-
-    await act(() => result.current.addYouth(youth));
-    expect(result.current.actionError).toBe('Enrollment failed');
-
-    rerender({ target: { ...assignment, cycleId: 'assignment-2' } });
-    await waitFor(() => expect(result.current.actionError).toBe(''));
-  });
 });

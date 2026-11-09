@@ -4,6 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { getTaskReferenceData } from '../../tasks.api';
 
+/**
+ * Supplies shared staff, program, cycle, and task choices.
+ * @param referenceDataQueryKey - Cache key for task categories and lifecycle statuses.
+ * @example const { resources, cycles } = useTaskData(['task-reference-data'])
+ */
 export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   const query = useQuery({
     queryKey: referenceDataQueryKey,

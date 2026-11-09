@@ -1,14 +1,12 @@
 import { makeYouthProfile } from '../../../../../tests/factories/youth';
-// Scope: verifies youth-attendance loading, selection, and save coordination.
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../youthAttendance.api';
+import { setYouthProgramCycleAttendance } from '../youthAttendance.api';
 import type { YouthProgramCycleAttendance } from '../types';
 import useYouthAttendance from './useYouthAttendance';
 
 vi.mock('../youthAttendance.api', () => ({
-  getYouthProgramCycleAttendance: vi.fn(),
   setYouthProgramCycleAttendance: vi.fn(),
 }));
 
@@ -27,23 +25,30 @@ const attendance: YouthProgramCycleAttendance = {
   }],
 };
 
+const savedAttendance = {
+  ...attendance,
+  presentCount: 1,
+  lateCount: 0,
+  absentCount: 0,
+  sessions: [{ ...attendance.sessions[0]!, status: 'present' as const }],
+  youth: makeYouthProfile(),
+};
+
 describe('useYouthAttendance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getYouthProgramCycleAttendance).mockResolvedValue(attendance);
-    vi.mocked(setYouthProgramCycleAttendance).mockResolvedValue({ ...attendance, youth: makeYouthProfile() });
+    vi.mocked(setYouthProgramCycleAttendance).mockResolvedValue(savedAttendance);
   });
 
-  it('loads attendance and saves the selected session status', async () => {
+  it('saves the selected session status from supplied attendance', async () => {
     const onSaved = vi.fn();
     const queryClient = createTestQueryClient();
     const { result } = renderHook(() => useYouthAttendance({
       youthId: 'youth-1',
-      programId: 'program-1', cycleId: 'cycle-1',
+      attendance,
       onSaved,
     }), { wrapper: createQueryClientWrapper(queryClient) });
 
-    await waitFor(() => expect(result.current.attendance).toEqual(attendance));
     act(() => result.current.updateStatus('session-1', 'present'));
     await act(async () => result.current.save());
 
@@ -52,7 +57,7 @@ describe('useYouthAttendance', () => {
       status: 'present',
       notes: 'Existing note',
     }]);
-    expect(onSaved).toHaveBeenCalledWith({ ...attendance, youth: makeYouthProfile() });
+    expect(onSaved).toHaveBeenCalledWith(savedAttendance);
     expect(result.current.submitStatus).toBe('success');
   });
 });

@@ -10,14 +10,15 @@ import {
 import useHoursData from './useHoursData';
 
 vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
 
 describe('useHoursData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getStaffReferences).mockResolvedValue([
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-        { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
-      ]);
+      { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
+    ]);
     vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       categories: [{ value: 'meeting', label: 'Meeting' }],
@@ -45,5 +46,3 @@ describe('useHoursData', () => {
     expect(getCycleReferences).toHaveBeenCalledOnce();
   });
 });
-
-vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

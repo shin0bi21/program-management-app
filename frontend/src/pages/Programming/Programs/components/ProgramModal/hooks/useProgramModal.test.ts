@@ -38,12 +38,15 @@ describe('useProgramModal', () => {
     vi.mocked(createProgram).mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
-      isOpen: true,
       program: null,
       onSaved,
     }));
     act(() => {
       result.current.updateDraft('name', '  Job Readiness  ');
+      result.current.updateDraft('defaultDayOfWeek', 'tuesday');
+      result.current.updateDraft('defaultStartTime', '17:00');
+      result.current.updateDraft('defaultEndTime', '19:30');
+      result.current.updateDraft('enrollmentRequired', true);
       result.current.updateDraft('description', '   ');
       result.current.updateDraft('minAge', '16');
       result.current.updateDraft('maxAge', '19');
@@ -69,7 +72,6 @@ describe('useProgramModal', () => {
   it('initializes and updates an existing program', async () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
-      isOpen: true,
       program,
       onSaved,
     }));
@@ -109,7 +111,6 @@ describe('useProgramModal', () => {
     ['16', '15', 'Minimum age cannot be greater than maximum age.'],
   ])('rejects invalid age values %s and %s', async (minAge, maxAge, message) => {
     const { result } = renderHook(() => useProgramModal({
-      isOpen: true,
       program: null,
       onSaved: vi.fn(),
     }));
@@ -127,7 +128,7 @@ describe('useProgramModal', () => {
   });
 
   it('saves program-specific session defaults', async () => {
-    const { result } = renderHook(() => useProgramModal({ isOpen: true, program, onSaved: vi.fn() }));
+    const { result } = renderHook(() => useProgramModal({ program, onSaved: vi.fn() }));
     act(() => {
       result.current.updateDraft('defaultDayOfWeek', 'friday');
       result.current.updateDraft('defaultStartTime', '17:30');
@@ -145,7 +146,7 @@ describe('useProgramModal', () => {
   it.each([
     ['defaultEndTime', '16:00', 'Default end time must be after the start time.'],
   ] as const)('rejects invalid session default %s', async (field, value, message) => {
-    const { result } = renderHook(() => useProgramModal({ isOpen: true, program, onSaved: vi.fn() }));
+    const { result } = renderHook(() => useProgramModal({ program, onSaved: vi.fn() }));
     act(() => result.current.updateDraft(field, value));
 
     await act(async () => result.current.submit());
@@ -154,33 +155,19 @@ describe('useProgramModal', () => {
     expect(result.current.statusMessage).toBe(message);
   });
 
-  it('preserves the draft for the same record and resets it for a different target', () => {
-    const options = { isOpen: true, program, onSaved: vi.fn() };
-    const { result, rerender } = renderHook(
-      (props: typeof options) => useProgramModal(props),
-      { initialProps: options },
-    );
-    act(() => result.current.updateDraft('name', 'Keep this draft'));
-
-    rerender({ ...options, program: { ...program } });
-    expect(result.current.draft.name).toBe('Keep this draft');
-
-    rerender({
-      ...options,
-      program: { ...program, id: 'program-2', name: 'Job Readiness' },
-    });
-    expect(result.current.draft.name).toBe('Job Readiness');
-  });
-
   it('reports a save failure and allows retry', async () => {
     vi.mocked(createProgram).mockRejectedValueOnce(new Error('Program name already exists'));
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
-      isOpen: true,
       program: null,
       onSaved,
     }));
-    act(() => result.current.updateDraft('name', 'Soft Skills'));
+    act(() => {
+      result.current.updateDraft('name', 'Soft Skills');
+      result.current.updateDraft('defaultDayOfWeek', 'tuesday');
+      result.current.updateDraft('defaultStartTime', '17:00');
+      result.current.updateDraft('defaultEndTime', '19:30');
+    });
 
     await act(async () => result.current.submit());
     expect(result.current.submitStatus).toBe('error');

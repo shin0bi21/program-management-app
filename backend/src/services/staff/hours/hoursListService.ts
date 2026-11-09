@@ -1,5 +1,4 @@
 import { sql } from '../../../db/client';
-import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursTableQuery } from '../../../validation/hoursSchemas';
 import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
@@ -17,15 +16,14 @@ import {
  * @example getHoursList(actor, filterValues) // { rows, nextCursor }
  */
 export async function getHoursList(actor: AccessTokenPayload, filterValues: HoursTableQuery) {
-  // 1. Apply staff scope, domain filters, and inclusive dates to canonical hours rows.
+  // 1. Filter canonical hours rows by the selected values and inclusive dates.
   const appliedFilters = sql`
-    ${hoursReadScopePredicate(actor, sql`entry.staff_id`)}
-      ${buildHoursFilters(filterValues)}
-      AND ${filterValues.start && filterValues.end
-        ? sql`entry.date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date`
-        : sql`TRUE`}
+    ${buildHoursFilters(filterValues)}
+    AND ${filterValues.start && filterValues.end
+      ? sql`entry.date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date`
+      : sql`TRUE`}
   `;
-  const rowsQuery = getHoursRows(appliedFilters);
+  const rowsQuery = getHoursRows(actor, appliedFilters);
 
   // 2. Keep numeric hours order encoded as text for existing cursor compatibility.
   const sortValue = {

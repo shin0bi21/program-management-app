@@ -1,75 +1,66 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
+import { makeYouthProfile } from '../../../../../tests/factories/youth';
+import type { AttendanceData } from '../../../../../common/features/Attendance/attendance.api';
+import useYouthAttendanceData from './hooks/useYouthAttendanceData';
 import YouthAttendanceDashboardCard from './YouthAttendanceDashboardCard';
 
+vi.mock('./hooks/useYouthAttendanceData', () => ({ default: vi.fn() }));
+vi.mock('../../../../../common/features/Attendance/ViewAttendanceModal', () => ({
+  default: ({ data }: { data: AttendanceData }) => <div role="dialog" aria-label="Attendance report">{data.programCycle.cycle}</div>,
+}));
+
+const attendance: AttendanceData = {
+  programCycle: { cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true },
+  youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 2, sessions: [{
+    id: 'session-1', sessionType: 'Regular', theme: 'Teamwork',
+    startsAt: '2026-07-21T21:00:00.000Z', endsAt: '2026-07-21T22:00:00.000Z',
+    cancelledAt: null, status: 'present', notes: null, sessionNotes: [],
+  }, {
+    id: 'session-2', sessionType: 'Regular', theme: 'Communication',
+    startsAt: '2026-07-22T21:00:00.000Z', endsAt: '2026-07-22T22:00:00.000Z',
+    cancelledAt: null, status: null, notes: null, sessionNotes: [],
+  }, {
+    id: 'session-3', sessionType: 'Regular', theme: 'Planning',
+    startsAt: '2026-07-23T21:00:00.000Z', endsAt: '2026-07-23T22:00:00.000Z',
+    cancelledAt: null, status: 'excused', notes: null, sessionNotes: [],
+  }] }],
+};
+const loaded = { attendance, loading: false, error: null, retry: vi.fn() };
+
 describe('YouthAttendanceDashboardCard', () => {
-  it('shows an empty state when no active attendance exists', () => {
-    render(<YouthAttendanceDashboardCard programCycles={[]} selected />);
-    expect(screen.getByText('No active program attendance.')).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, attendance: null });
   });
 
-  it('disables tabs when selection clears and restores the chosen tab', () => {
-    const view = render(<YouthAttendanceDashboardCard programCycles={[]} selected />);
-    const active = screen.getByRole('button', { name: 'Active' });
-    const history = screen.getByRole('button', { name: 'History' });
-    fireEvent.click(history);
-
-    view.rerender(<YouthAttendanceDashboardCard selected={false} />);
-
-    expect(active).toBeDisabled();
-    expect(history).toBeDisabled();
-    expect(screen.getByText('Select a row to view attendance.')).toBeInTheDocument();
-
-    view.rerender(<YouthAttendanceDashboardCard programCycles={[]} selected />);
-
-    expect(history).toBeEnabled();
-    expect(history).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('No historical attendance.')).toBeInTheDocument();
+  it('shows not enrolled when there is no active enrolled cycle', () => {
+    render(<YouthAttendanceDashboardCard youthId="youth-1" />);
+    expect(screen.getByText('Not enrolled.')).toBeInTheDocument();
   });
 
-  it('separates active and historical attendance by program and programCycle', () => {
-    render(<YouthAttendanceDashboardCard selected programCycles={[
-      {
-        cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
-        startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
-        presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
-      },
-      {
-        cycleId: 'cycle-1', cycle: 'Spring 2025', programId: 'program-2', program: 'Drop In', enrollmentRequired: false,
-        startsOn: '2025-01-01', endsOn: '2025-06-30', enrolledOn: null, withdrawnOn: null,
-        presentCount: 3, lateCount: 0, absentCount: 0, lastAttendedOn: '2025-05-10',
-      },
-    ]} />);
+  it('opens editing and the report from the loaded cycle attendance', () => {
+    vi.mocked(useYouthAttendanceData).mockReturnValue(loaded);
+    render(<YouthAttendanceDashboardCard youthId="youth-1" youth={makeYouthProfile()} canManage canViewReport onSaved={vi.fn()} />);
 
-    expect(screen.getByText('Soft Skills · Summer 2026')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'History' }));
-    expect(screen.getByText('Drop In · Spring 2025')).toBeInTheDocument();
-    expect(screen.queryByText('Soft Skills · Summer 2026')).not.toBeInTheDocument();
-  });
-
-  it('opens youth attendance management for the selected programCycle', () => {
-    const onManage = vi.fn();
-    const programCycle = {
-      cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
-      startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
-      presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
-    };
-    render(<YouthAttendanceDashboardCard selected programCycles={[programCycle]} canManage onManage={onManage} />);
-
+    expect(screen.getByText(/Present 1.*Late 0.*Absent 2/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
-    expect(onManage).toHaveBeenCalledWith(programCycle);
+    expect(screen.getByRole('dialog', { name: 'Manage Attendance' })).toBeInTheDocument();
+    expect(screen.getByText('Teamwork')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
+    expect(screen.getByRole('dialog', { name: 'Attendance report' })).toHaveTextContent('Summer 2026');
   });
 
-  it('opens the selected youth report for an enrolled programCycle', () => {
-    const onViewReport = vi.fn();
-    const programCycle = {
-      cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
-      startsOn: '2000-01-01', endsOn: '2999-12-31', enrolledOn: '2000-01-01', withdrawnOn: null,
-      presentCount: 2, lateCount: 1, absentCount: 0, lastAttendedOn: '2026-07-21',
-    };
-    render(<YouthAttendanceDashboardCard selected programCycles={[programCycle]} canViewReport onViewReport={onViewReport} />);
+  it('shows loading and provides retry for a failed attendance request', () => {
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, attendance: null, loading: true });
+    const view = render(<YouthAttendanceDashboardCard youthId="youth-1" />);
+    expect(screen.getByRole('status', { name: 'Loading attendance…' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'View attendance report for Soft Skills · Summer 2026' }));
-    expect(onViewReport).toHaveBeenCalledWith(programCycle);
+    vi.mocked(useYouthAttendanceData).mockReturnValue({ ...loaded, error: 'Could not load attendance.' });
+    view.rerender(<YouthAttendanceDashboardCard youthId="youth-1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(loaded.retry).toHaveBeenCalledOnce();
   });
 });

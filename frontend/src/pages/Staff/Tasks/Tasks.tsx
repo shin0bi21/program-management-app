@@ -8,7 +8,8 @@ import { type ConfirmAction } from '../../../common/components/ConfirmModal/type
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import TaskCalendar from './components/TaskCalendar/TaskCalendar';
-import TaskDashboard from './components/TaskDashboard/TaskDashboard';
+import TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard';
+import TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import TaskTable from './components/TaskTable/TaskTable';
 import TaskModal from './components/TaskModal/TaskModal';
 
@@ -28,7 +29,6 @@ import {
   type TaskModalState,
 } from './types';
 
-import { taskStore } from './taskStore';
 import './Tasks.css';
 
 // Page-owned cache contracts.
@@ -38,12 +38,11 @@ const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 /**
- * Coordinates task controls, selection IDs, drafts, and shared-record views.
+ * Coordinates task controls, selected row context, drafts, and query views.
  * @example <Tasks /> // staff task route
  */
 export default function Tasks() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions } = useAuth();
@@ -87,6 +86,7 @@ export default function Tasks() {
     taskTableQueryKey: TASK_TABLE_QUERY_KEY,
     hoursQueryKey: HOURS_QUERY_KEY,
     onTaskRemoved: selection.removeSelectedTask,
+    onTaskSynced: selection.onTaskSynced,
   });
   const deleteTaskAction = actions.deleteTask;
 
@@ -99,21 +99,12 @@ export default function Tasks() {
   }, [selection.selectedTaskId]);
 
   // Task modal.
-  const records = taskStore.useRecords();
-  const [taskModalTarget, setTaskModalState] = useState<
-    { mode: 'add'; initialValues: AddTaskModalInitialValues } | { mode: 'edit'; taskId: string } | null
-  >(null);
-  let taskModalState: TaskModalState = null;
-  if (taskModalTarget?.mode === 'add') taskModalState = taskModalTarget;
-  if (taskModalTarget?.mode === 'edit') {
-    const task = records[taskModalTarget.taskId];
-    if (task) taskModalState = { mode: 'edit', task };
-  }
+  const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
   const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
     setTaskModalState({ mode: 'add', initialValues });
   };
   const openEditTaskModal = useCallback((task: Task) => {
-    setTaskModalState({ mode: 'edit', taskId: task.id });
+    setTaskModalState({ mode: 'edit', task });
   }, []);
   const closeTaskModal = () => setTaskModalState(null);
 
@@ -218,27 +209,30 @@ export default function Tasks() {
           details: 'Cycle date bounds could not be loaded.',
         } : null,
         viewError,
-        dashboardError,
       ]}
-      dashboard={selection.selectedResource ? <TaskDashboard
-        queryKey={TASK_QUERY_KEY}
-        resourceId={selection.selectedResource.id}
-        resourceName={selection.selectedResource.name}
-        today={today}
-        selectedTask={selection.selectedTask}
-        onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
-        onMessageChange={setDashboardError}
-      /> : null}
+      dashboard={selection.selectedResource ? <>
+        <TaskOverviewDashboardCard
+          queryKey={TASK_QUERY_KEY}
+          resourceId={selection.selectedResource.id}
+          resourceName={selection.selectedResource.name}
+          today={today}
+        />
+        <TaskHoursLoggedDashboardCard
+          task={selection.selectedTask}
+          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
+        />
+      </> : null}
       table={hasCycleBounds ? taskTable : viewUnavailable}
       calendar={hasCycleBounds ? taskCalendar : viewUnavailable}
     />
 
     {canWrite && taskModalState && <TaskModal
+      key={taskModalState.mode === 'edit' ? taskModalState.task.id : 'new'}
       target={taskModalState}
       resources={pageData.writableResources}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
-      onSaved={task => actions.syncTask(task, taskModalState.mode === 'add')}
+      onSaved={task => actions.syncTask(task, taskModalState.mode === 'add' ? 'create' : 'update')}
       onClose={closeTaskModal}
     />}
 
@@ -246,7 +240,7 @@ export default function Tasks() {
       isOpen
       initialSource="task"
       initialTask={hoursModalTask}
-      initialResourceId={hoursModalTask.assignee.id}
+      initialStaffId={hoursModalTask.staffId}
       canCompleteTask={canWrite}
       resources={pageData.resources}
       programs={pageData.programs}

@@ -15,8 +15,5 @@ export interface ProgramCycleAssignment extends ProgramCycleKey {
   enrolledCount: number;
   nextSessionAt: string | null;
   nextSessionId: string | null;
-  averageAttendance: number | null;
-  attendanceAttendedCount: number;
-  attendanceRecordedCount: number;
   uniqueAttendeeCount: number;
 }

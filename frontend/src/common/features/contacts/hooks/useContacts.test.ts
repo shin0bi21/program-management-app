@@ -17,16 +17,14 @@ describe('useContacts', () => {
     }]);
   });
 
-  it('initializes, edits, adds, deletes, and resets contact drafts', () => {
-    const { result } = renderHook(() => useContacts());
-
-    act(() => result.current.initialize([
-      { id: 'contact-1', phoneNumber: null, type: '' },
+  it('edits, adds, and deletes contact drafts', () => {
+    const { result } = renderHook(() => useContacts([
+      { id: 'contact-1', phoneNumber: null, type: 'sibling' },
     ]));
     expect(result.current.contacts).toEqual([{
       id: 'contact-1',
       phoneNumber: '',
-      type: 'parent',
+      type: 'sibling',
     }]);
 
     act(() => {
@@ -41,15 +39,10 @@ describe('useContacts', () => {
 
     act(() => result.current.handleDelete(0));
     expect(result.current.contacts).toEqual([{ id: '', phoneNumber: '', type: 'parent' }]);
-
-    act(() => result.current.reset());
-    expect(result.current.contacts).toEqual([{ id: '', phoneNumber: '', type: 'parent' }]);
   });
 
   it('validates persisted blank contacts and emits only trimmed populated payloads', () => {
-    const { result } = renderHook(() => useContacts());
-
-    act(() => result.current.initialize([
+    const { result } = renderHook(() => useContacts([
       { id: 'contact-1', phoneNumber: '', type: 'sibling' },
       { id: '', phoneNumber: ' 226-555-0102 ', type: 'guardian' },
     ]));

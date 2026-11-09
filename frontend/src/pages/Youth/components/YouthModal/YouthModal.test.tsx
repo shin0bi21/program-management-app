@@ -38,10 +38,15 @@ import { setYouth, setYouthContacts } from '../../youth.api';
 
 const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 
+/**
+ * Renders one open Youth form with default callbacks and the supplied scenario props.
+ * @param props - Initial profile, mode, school workflow, or callbacks for this test.
+ * @example renderModal({ youthData: profile }) // edits the supplied profile
+ */
 function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {}) {
   return render(
     <YouthModal
-      isOpen={true}
+      isOpen
       onClose={vi.fn()}
       onSuccess={vi.fn()}
       onManageSchool={vi.fn()}
@@ -50,12 +55,22 @@ function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {
   );
 }
 
+/**
+ * Enters profile names and a valid birth date before the test submits the form.
+ * @param firstName - First name to enter.
+ * @param lastName - Last name to enter.
+ * @example fillRequiredFields('Jordan', 'Smith')
+ */
 function fillRequiredFields(firstName = 'Jamie', lastName = 'Test') {
   fireEvent.change(document.getElementById('firstName')!, { target: { value: firstName } });
   fireEvent.change(document.getElementById('lastName')!, { target: { value: lastName } });
   fireEvent.change(screen.getByLabelText('Date of Birth (optional)'), { target: { value: '2012-08-19' } });
 }
 
+/**
+ * Submits the currently rendered Youth form through its validation boundary.
+ * @example submitForm() // displays validation errors or starts the profile save
+ */
 function submitForm() {
   fireEvent.submit(document.getElementById('youth-form')!);
 }
@@ -138,14 +153,14 @@ describe('YouthModal', () => {
 
     it('preserves an edited profile draft while its dialog is suspended', () => {
       const youthData = makeYouthProfile();
-      const props = { isOpen: true, youthData, onClose: vi.fn(), onSuccess: vi.fn() };
+      const props = { youthData, onClose: vi.fn(), onSuccess: vi.fn() };
       const { rerender } = renderModal(props);
       fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Unsaved name' } });
 
-      rerender(<YouthModal {...props} suspended />);
+      rerender(<YouthModal isOpen {...props} suspended />);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-      rerender(<YouthModal {...props} />);
+      rerender(<YouthModal isOpen {...props} />);
       expect(screen.getByLabelText('First Name *')).toHaveValue('Unsaved name');
     });
 
@@ -237,6 +252,7 @@ describe('YouthModal', () => {
           firstName: 'Jamie',
           lastName: 'Test',
           dateOfBirth: '2012-08-19',
+          addresses: [],
         }));
       });
     });
@@ -254,6 +270,31 @@ describe('YouthModal', () => {
           addresses: [{ address: '123 Main Street' }],
         }));
       });
+    });
+
+    it('requires saved addresses and preserves every address ID when editing', async () => {
+      renderModal({ youthData: makeYouthProfile({
+        addresses: [
+          { id: 'address-1', address: '123 Main Street' },
+          { id: 'address-2', address: '456 Queen Street' },
+        ],
+      }) });
+      const addressFields = screen.getAllByLabelText('Address (optional)');
+      fireEvent.change(addressFields[0], { target: { value: '   ' } });
+      submitForm();
+
+      expect(await screen.findByText('Street address is required')).toBeInTheDocument();
+      expect(mockSetYouth).not.toHaveBeenCalled();
+
+      fireEvent.change(addressFields[0], { target: { value: ' 789 King Street ' } });
+      submitForm();
+
+      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({
+        addresses: [
+          { id: 'address-1', address: '789 King Street' },
+          { id: 'address-2', address: '456 Queen Street' },
+        ],
+      })));
     });
 
     it('includes login email when inviting during youth creation', async () => {
@@ -337,15 +378,5 @@ describe('YouthModal', () => {
       ]));
     });
 
-    it('does not submit the programCycle-derived status when updating', async () => {
-      const profile = makeYouthProfile({ firstName: 'Jordan', lastName: 'Smith', dateOfBirth: '2012-08-19' });
-      renderModal({ youthData: profile });
-      submitForm();
-      await waitFor(() => {
-        expect(mockSetYouth).toHaveBeenCalledWith(
-          expect.not.objectContaining({ status: expect.anything() }),
-        );
-      });
-    });
   });
 });

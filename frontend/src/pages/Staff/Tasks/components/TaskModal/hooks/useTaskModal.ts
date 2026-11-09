@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
 import { setTask } from '../../../tasks.api';
 import type { TaskCategory } from '../../../types';
@@ -22,62 +22,26 @@ interface TaskDraft {
 }
 
 /**
- * Initializes an editable draft from a saved task or a new task target.
- * @example getInitialDraft(target) // independent form fields
- */
-function getInitialDraft(target: TaskModalProps['target']): TaskDraft {
-  if (target.mode === 'add') {
-    return {
-      title: '',
-      details: '',
-      category: '',
-      programId: '',
-      startDate: target.initialValues.startDate,
-      dueDate: target.initialValues.dueDate,
-      staffId: target.initialValues.staffId ?? '',
-    };
-  }
-
-  return {
-    title: target.task.title,
-    details: target.task.details ?? '',
-    category: target.task.category,
-    programId: target.task.programId ?? '',
-    startDate: target.task.startDate,
-    dueDate: target.task.dueDate,
-    staffId: target.task.assignee.id,
-  };
-}
-
-/**
- * Owns task draft fields and a submission lock for the current target identity.
+ * Owns one mounted task draft and its submission lock.
  * @example useTaskModal({ target, onSaved }) // saved record updates preserve the draft
  */
 export default function useTaskModal({
   target,
   onSaved,
 }: UseTaskModalOptions) {
-  const initialDraftRef = useRef(getInitialDraft(target));
-  initialDraftRef.current = getInitialDraft(target);
-  const targetKey = target.mode === 'edit'
-    ? `edit:${target.task.id}`
-    : `${target.initialValues.startDate}:${target.initialValues.dueDate}:${target.initialValues.staffId ?? ''}`;
+  const task = target.mode === 'edit' ? target.task : undefined;
+  const addContext = target.mode === 'add' ? target.initialValues : undefined;
+  const [draft, setDraft] = useState<TaskDraft>(() => ({
+    title: task?.title ?? '',
+    details: task?.details ?? '',
+    category: task?.category ?? '',
+    programId: task?.programId ?? '',
+    startDate: task?.startDate ?? addContext?.startDate ?? '',
+    dueDate: task?.dueDate ?? addContext?.dueDate ?? '',
+    staffId: task?.staffId ?? addContext?.staffId ?? '',
+  }));
   const submittingRef = useRef(false);
-  const [draft, setDraft] = useState(initialDraftRef.current);
-  const {
-    submitStatus,
-    setSubmitStatus,
-    error,
-    setError,
-    resetStatus,
-  } = useSubmitStatus();
-
-  // Saved-record updates must not reset an unfinished draft or unlock a completed submission.
-  useEffect(() => {
-    submittingRef.current = false;
-    setDraft(initialDraftRef.current);
-    resetStatus();
-  }, [resetStatus, targetKey]);
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
 
   const updateDraft = <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => {
     setDraft(current => ({ ...current, [key]: value }));
@@ -111,21 +75,20 @@ export default function useTaskModal({
         staffId: draft.staffId,
       };
 
-      const taskId = target.mode === 'edit' ? target.task.id : undefined;
-      const savedTask = await setTask(input, taskId);
+      const savedTask = await setTask(input, task?.id);
 
       setSubmitStatus('success');
       onSaved(savedTask);
     } catch (cause) {
       submittingRef.current = false;
-      setError(getErrorMessage(cause, target.mode === 'edit' ? 'Unable to update task' : 'Unable to create task'));
+      setError(getErrorMessage(cause, task ? 'Unable to update task' : 'Unable to create task'));
       setSubmitStatus('error');
     }
   };
 
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
-    submitting: target.mode === 'edit' ? 'Updating task…' : 'Creating task…',
-    success: target.mode === 'edit' ? 'Task updated.' : 'Task created.',
+    submitting: task ? 'Updating task…' : 'Creating task…',
+    success: task ? 'Task updated.' : 'Task created.',
   });
 
   return {

@@ -1,6 +1,5 @@
 import {
   hashKey,
-  keepPreviousData,
   useInfiniteQuery,
   useQueryClient,
   type InfiniteData,
@@ -50,6 +49,7 @@ interface InfiniteListQueryResult<T> {
 
 /**
  * Supplies a table's loaded rows, fetching another page as the user scrolls.
+ * Changing the query key starts without previous rows; unused lists are discarded immediately.
  * @param options.queryKey - Identifies the list and its search, filters, and sorting,
  * e.g. ['tasks', 'table', filters, sorting].
  * @param options.queryFn - Fetches one page using its cursor and cancellation signal;
@@ -82,7 +82,6 @@ export default function useInfiniteListQuery<T extends { id: string }>({
   const query = useInfiniteQuery({
     ...createInfiniteListQueryOptions(queryClient, queryKey, queryFn),
     enabled,
-    placeholderData: keepPreviousData,
   });
 
   /**
@@ -188,6 +187,7 @@ function createInfiniteListQueryOptions<T extends { id: string }>(
 ) {
   return {
     queryKey,
+    gcTime: 0,
     /**
      * Loads one cursor page while tracking edits that arrive before it completes.
      * @param context - TanStack request identity, page cursor, and cancellation signal.

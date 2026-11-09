@@ -20,6 +20,12 @@ export const setYouthContactsSchema = z.object({
 
 export type SetYouthContactsInput = z.infer<typeof setYouthContactsSchema.shape.body>;
 
+/**
+ * Accepts query selections as comma-separated text or repeated query parameters.
+ * @param schema - Validation to apply to each selected value, such as a program UUID.
+ * @returns A parser that defaults missing selections to an empty list and allows at most 20 values.
+ * @example commaSeparated(z.string().uuid()) // parser for a list of selected IDs
+ */
 const commaSeparated = (schema: z.ZodType<string>) => z.preprocess(value => {
   if (value === undefined) return [];
   const values = Array.isArray(value) ? value : [value];
@@ -32,11 +38,15 @@ export const youthQuerySchema = z.object({
     search: z.string().trim().max(120).optional().default(''),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
-    ...cursorListFields(['firstName', 'lastName', 'dateOfBirth', 'school', 'activePrograms', 'completedPrograms', 'status'], 'firstName', 'asc'),
+    ...cursorListFields(['firstName', 'lastName', 'dateOfBirth', 'school', 'activeProgram'], 'firstName', 'asc'),
   }),
 });
 
 export const youthSessionNotesSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid youth ID') }),
+});
+
+export const youthAttendanceSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid youth ID') }),
 });
 

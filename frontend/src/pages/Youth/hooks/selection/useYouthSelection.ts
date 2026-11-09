@@ -1,25 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { YouthProfile } from '../../types';
 
-interface UseYouthSelectionOptions {
-  onSelectedProfileIdChange: () => void;
-}
-
-export function useYouthSelection({ onSelectedProfileIdChange }: UseYouthSelectionOptions) {
+/**
+ * Keeps the selected Youth profile across table changes.
+ * @example useYouthSelection()
+ */
+export function useYouthSelection() {
   const [selectedProfile, setSelectedProfile] = useState<YouthProfile | null>(null);
   const selectedProfileId = selectedProfile?.id ?? null;
-  const reconcileSavedProfile = useCallback((savedProfile: YouthProfile) => {
-    setSelectedProfile(current => current?.id === savedProfile.id ? savedProfile : current);
+  const selectProfile = useCallback((profile: YouthProfile | null) => {
+    setSelectedProfile(profile);
+  }, []);
+  const updateSelectedProfile = useCallback((profile: YouthProfile) => {
+    setSelectedProfile(current => current?.id === profile.id ? profile : current);
   }, []);
 
-  useEffect(() => {
-    onSelectedProfileIdChange();
-  }, [onSelectedProfileIdChange, selectedProfileId]);
-
-  return {
-    selectedProfile,
-    selectedProfileId,
-    selectProfile: setSelectedProfile,
-    reconcileSavedProfile,
-  };
+  return { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile };
 }

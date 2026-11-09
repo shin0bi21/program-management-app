@@ -29,6 +29,10 @@ const note: SessionNote = {
   youth: [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson' }],
 };
 
+/**
+ * Isolates roster queries for each note workflow example.
+ * @example renderHook(useExample, { wrapper: wrapper() })
+ */
 function wrapper() {
   return createQueryClientWrapper(createTestQueryClient());
 }
@@ -80,7 +84,7 @@ describe('useSessionNoteModal', () => {
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.roster).toHaveLength(1));
-    act(() => result.current.updateDetails('Attendance follow-up'));
+    act(() => { result.current.updateDetails('Attendance follow-up'); result.current.updateCategory('general'); });
     await act(async () => result.current.submit());
 
     expect(createSessionNote).toHaveBeenCalledWith(session.id, {
@@ -105,29 +109,12 @@ describe('useSessionNoteModal', () => {
     expect(result.current.statusMessage).toBe('Enter a note.');
   });
 
-  it('preserves the draft when equal session and note records are recreated', () => {
-    const options = {
-      session,
-      note,
-      onSaved: vi.fn(),
-    };
-    const { result, rerender } = renderHook(
-      (props: typeof options) => useSessionNoteModal(props),
-      { initialProps: options, wrapper: wrapper() },
-    );
-
-    act(() => result.current.updateDetails('Keep this draft'));
-    rerender({ ...options, session: { ...session }, note: { ...note } });
-
-    expect(result.current.draft.details).toBe('Keep this draft');
-  });
-
   it('does not make a saved note retryable when refresh fails', async () => {
     const { result } = renderHook(() => useSessionNoteModal({
       session,
       onSaved: vi.fn().mockRejectedValue(new Error('Refresh failed')),
     }), { wrapper: wrapper() });
-    act(() => result.current.updateDetails('Saved note'));
+    act(() => { result.current.updateDetails('Saved note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 
@@ -143,7 +130,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved,
     }), { wrapper: wrapper() });
-    act(() => result.current.updateDetails('Retry this note'));
+    act(() => { result.current.updateDetails('Retry this note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 

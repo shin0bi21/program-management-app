@@ -115,7 +115,7 @@ describe('POST /api/auth/login', () => {
         .post('/api/auth/login')
         .send({ email: user.email, password: user.password });
       expect(res.status).toBe(200);
-      expect(res.body.requires2FA).toBe(true);
+      expect(res.body.requiresVerification).toBe(true);
       expect(res.body.userId).toBe(user.userId);
       expect(res.body.message).toMatch(/2FA code sent/i);
     });
@@ -136,7 +136,7 @@ describe('POST /api/auth/login', () => {
           .send({ email: localUser.email, password: localUser.password });
 
         expect(res.status).toBe(200);
-        expect(res.body.requires2FA).toBeUndefined();
+        expect(res.body.requiresVerification).toBeUndefined();
         expect(res.body.token).toBeDefined();
         expect(res.body.user.id).toBe(localUser.userId);
         expect(extractCookie(res.headers, 'refreshToken')).toBeDefined();
@@ -165,7 +165,7 @@ describe('POST /api/auth/login', () => {
           .send({ email: protectedUser.email, password: protectedUser.password });
 
         expect(res.status).toBe(200);
-        expect(res.body.requires2FA).toBe(true);
+        expect(res.body.requiresVerification).toBe(true);
         expect(res.body.userId).toBe(protectedUser.userId);
         expect(res.body.token).toBeUndefined();
       } finally {
@@ -236,7 +236,7 @@ describe('POST /api/auth/login', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.requires2FA).toBeUndefined();
+      expect(res.body.requiresVerification).toBeUndefined();
       expect(res.body.token).toBeDefined();
       expect(res.body.message).toMatch(/trusted device/i);
       expect(res.body.user.id).toBe(trustedUser.userId);
@@ -694,7 +694,7 @@ describe('POST /api/auth/reset-password', () => {
         .post('/api/auth/login')
         .send({ email: user.email, password: newPassword });
       expect(loginRes.status).toBe(200);
-      expect(loginRes.body.requires2FA).toBe(true);
+      expect(loginRes.body.requiresVerification).toBe(true);
 
       // Login with old password — should fail
       const oldLoginRes = await request(app)
@@ -751,7 +751,7 @@ describe('Youth account lifecycle', () => {
         .send({ email: user.email, password: user.password });
 
       expect(res.status).toBe(200);
-      expect(res.body.requires2FA).toBe(true);
+      expect(res.body.requiresVerification).toBe(true);
     } finally {
       await deleteTestUser(user.userId);
     }
@@ -788,10 +788,10 @@ describe('Youth account lifecycle', () => {
       expect(resetRes.status).toBe(200);
 
       const [states] = await sql<{ accountStatus: string }[]>`
-        SELECT uc.status AS account_status
-        FROM user_credentials uc
-        INNER JOIN youth_profiles yp ON yp.user_id = uc.user_id
-        WHERE uc.user_id = ${user.userId}
+        SELECT credentials.status AS account_status
+        FROM user_credentials credentials
+        INNER JOIN youth_profiles profile ON profile.user_id = credentials.user_id
+        WHERE credentials.user_id = ${user.userId}
       `;
       expect(states.accountStatus).toBe('active');
 
@@ -799,7 +799,7 @@ describe('Youth account lifecycle', () => {
         .post('/api/auth/login')
         .send({ email: user.email, password: newPassword });
       expect(afterLogin.status).toBe(200);
-      expect(afterLogin.body.requires2FA).toBe(true);
+      expect(afterLogin.body.requiresVerification).toBe(true);
     } finally {
       await deleteTestUser(user.userId);
     }
@@ -827,7 +827,7 @@ describe('Full Auth Flow', () => {
       .post('/api/auth/login')
       .send({ email: user.email, password: user.password });
     expect(loginRes.status).toBe(200);
-    expect(loginRes.body.requires2FA).toBe(true);
+    expect(loginRes.body.requiresVerification).toBe(true);
 
     // 2. Verify 2FA
     const code = await get2FACode(user.userId);

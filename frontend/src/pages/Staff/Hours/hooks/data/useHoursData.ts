@@ -4,6 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { getHoursReferenceData } from '../../hours.api';
 
+/**
+ * Supplies shared staff, program, cycle, and hour choices.
+ * @param referenceDataQueryKey - Cache key for hour categories and source types.
+ * @param currentUserId - Signed-in staff member used to resolve the default resource.
+ * @example const { resources, cycles } = useHoursData(['hours-reference-data'], userId)
+ */
 export default function useHoursData(
   referenceDataQueryKey: readonly unknown[],
   currentUserId?: string,

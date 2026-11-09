@@ -17,6 +17,15 @@ export interface RequestOptions {
 
 // ─── Core execute ─────────────────────────────────────────────────────────────
 
+/**
+ * Sends an authenticated request and consumes its response with cancellation and one re-login retry.
+ * @param method - HTTP method for this endpoint.
+ * @param path - API-relative endpoint path.
+ * @param consume - Reads the successful response body before cancellation/timeout cleanup.
+ * @param body - JSON or FormData request payload, when required.
+ * @param opts - Authentication, timeout in milliseconds and caller cancellation.
+ * @example sendRequest("GET", "/youth", response => response.json())
+ */
 async function sendRequest<T>(
   method: string,
   path: string,
@@ -72,6 +81,12 @@ async function sendRequest<T>(
   }
 }
 
+/**
+ * Sends a request and parses its JSON result, accepting successful empty responses.
+ * @param body - Endpoint command payload; omitted for bodyless reads.
+ * @param opts - Authentication, timeout and cancellation supplied by the caller.
+ * @example jsonRequest("GET", "/youth")
+ */
 async function jsonRequest<T>(
   method: string,
   path: string,
@@ -85,6 +100,12 @@ async function jsonRequest<T>(
   }, body, opts);
 }
 
+/**
+ * Downloads a binary response through the shared authenticated request pipeline.
+ * @param path - API-relative download endpoint.
+ * @param opts - Caller cancellation, timeout and authentication options.
+ * @example blobRequest("/files/report", { signal })
+ */
 async function blobRequest(path: string, opts?: RequestOptions): Promise<Blob> {
   return sendRequest('GET', path, res => res.blob(), undefined, opts);
 }
@@ -92,20 +113,48 @@ async function blobRequest(path: string, opts?: RequestOptions): Promise<Blob> {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export const apiClient = {
+  /**
+   * Reads endpoint JSON with the supplied request options.
+   * @example apiClient.get("/youth", { signal })
+   */
   get: <T>(path: string, opts?: RequestOptions) =>
     jsonRequest<T>('GET', path, undefined, opts),
 
+  /**
+   * Posts an endpoint command and returns its JSON result.
+   * @example apiClient.post("/tasks", fields)
+   */
   post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     jsonRequest<T>('POST', path, body, opts),
 
+  /**
+   * Replaces endpoint values and returns their JSON result.
+   * @example apiClient.put("/tasks/task-1", fields)
+   */
   put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     jsonRequest<T>('PUT', path, body, opts),
 
+  /**
+   * Applies a focused endpoint change and returns its JSON result.
+   * @example apiClient.patch("/tasks/task-1", { state: "completed" })
+   */
   patch: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     jsonRequest<T>('PATCH', path, body, opts),
 
+  /**
+   * Deletes an endpoint record and accepts JSON or an empty success response.
+   * @example apiClient.delete("/tasks/task-1")
+   */
   delete: <T>(path: string, opts?: RequestOptions) =>
     jsonRequest<T>('DELETE', path, undefined, opts),
 
   download: blobRequest,
+
+  /**
+   * Posts supplied data and consumes the binary response through the shared request pipeline.
+   * @param body - Data used to render the download.
+   * @example apiClient.postDownload("/reports/attendance.pdf", attendance, { signal })
+   */
+  postDownload: (path: string, body: unknown, opts?: RequestOptions): Promise<Blob> =>
+    sendRequest('POST', path, res => res.blob(), body, opts),
 };

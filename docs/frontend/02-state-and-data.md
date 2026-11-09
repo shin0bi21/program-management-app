@@ -42,7 +42,7 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 Use `programId` and `cycleId` for related record identifiers, with `program` and
 `cycle` for their display values. Use the same fields in backend projections,
-API responses, shared stores, tables, and calendars. A Program or Cycle record
+API responses, queries, tables, and calendars. A Program or Cycle record
 itself keeps its own `id` and `name`. Keep display labels out of identifier fields.
 
 ### API Adapters
@@ -55,10 +55,10 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 ### Cursor Tables
 
 1. Use a list-only query-key prefix; keep lookups, direct records, calendars, and aggregates on sibling keys.
-2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`.
+2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`. Keep only observed lists: discard unused lists immediately and show loading instead of previous rows when filters or sorting change.
 3. Let the server filter and sort before pagination.
 4. Supply the active server-compatible `ordering`.
-5. Display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts) when edited rows need a fresh first page.
+5. Replace saved rows in place with the existing cursor-list cache helpers. When an edit changes their sort order, display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts): “This table’s data is out of order.” with the **Refresh** action. Keep the loaded positions until the user refreshes; do not automatically reorder or refetch solely to correct sort order.
 
 ### Calendars
 
@@ -68,18 +68,51 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 4. Key the calendar by applied filters so changes start a fresh buffer.
 5. Keep browser-local scroll position separate through `positionStorageKey`.
 
-### Share Records Across Views
+### Page Data Flow
 
-- Give records one feature-owned store, indexed by ID, when tables and calendars share them.
-- Keep IDs, cursor/order values, and date/resource membership in view caches. Resolve IDs through the shared store for rendering; derived groups hold references to those records.
-- Store selected record IDs. Keep editable form drafts separate from saved records.
-- Merge reads and saved mutations through that owner. Protect pending changes, rollback, deletion, and account cache clearing from late responses.
-- Let view indexes retain loaded membership and ordering until refresh; update aggregates separately.
+The page calls `use<Domain>Data` once for shared reference lookups. It manages
+applied controls and selected context, then passes the required inputs to the
+body and dashboard. Each consuming view owns its ordinary query results or
+calendar buffer; do not add a separate normalized record store.
 
-Hours, Tasks, and Sessions use feature-owned record stores. Tables retain
-pagination and ordering indexes; calendars retain range membership and placement
-indexes. Both resolve IDs to the same current records. Tasks and Sessions share
-the revision and account-lifecycle implementation in `query/createRecordStore.ts`.
+```text
+<Page>/
+  hooks/data/use<Domain>Data.ts
+  components/
+    <Domain>Table/hooks/use<Domain>TableData.ts
+    <Domain>Calendar/hooks/use<Domain>CalendarData.ts
+    <DashboardCard>/hooks/use<Card>Data.ts
+```
+
+Create only the hooks the page needs. Table and calendar data hooks belong to
+their components. Compose independent cards directly in `PageContainer`'s
+`dashboard` slot. Add a domain dashboard owner only for shared queries or card
+coordination; private queries stay with each card.
+
+The selected-record dashboard query flows through these owners:
+
+```text
+Page selected ID
+  → Dashboard or card
+  → use<Domain>DashboardData(selectedId) or use<Card>Data(selectedId)
+  → Query keyed by selectedId
+  → Feature API request for selectedId
+```
+
+The data hook receives the selected ID, includes it in its query key, and passes
+that same ID and the query's AbortSignal to the API adapter. Enable the query
+only when its required ID is present. Each card handles its own selection and
+query states; independent summary cards can query their supplied page context.
+
+- **Main data:** Compose page-wide reference queries, including choices used by filters and selectors. Pass these results to consumers instead of repeating the main hook.
+- **Table:** Own the paginated query, complete returned rows, loading/retry state, and ordering.
+- **Calendar:** Own range requests and the buffer of complete returned rows.
+- **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied fields that are already available. Sibling cards sharing a request use one dashboard data hook; independent requests stay with their cards.
+- **Selection and forms:** Retain the selected ID and any clicked row needed as temporary UI context. Initialize a form from supplied data for editing or empty defaults for adding. Keep its draft for the mounted form's lifetime.
+- **Mutations:** Reconcile saved records with their owning queries and invalidate affected reference or summary queries. Cursor tables retain edited row positions and use the shared out-of-order notice; reload membership when filters or creation require it. Update the mounted calendar buffer or selected context when the workflow already requires it. Keep existing submission locks; do not add custom read revision or record-store synchronization machinery.
+
+Separate queries may cache overlapping records. Use TanStack Query's ordinary
+query results and targeted invalidation to refresh their server data.
 
 ## Handle Request Failures
 
@@ -106,11 +139,10 @@ the revision and account-lifecycle implementation in `query/createRecordStore.ts
 ## Reconcile Mutations
 
 1. Use one complete backend record shape across reads and mutations; do not rebuild it from form values or create separate table/calendar records.
-2. Define cancellation, serialization, or revision rules so stale work cannot replace newer state.
-3. Account for out-of-order completion, repeated edits, rollback order, reset during loading, and deletion followed by a late response.
-4. Write the saved record once, then reconcile affected view indexes and dashboards in the owning action hook; avoid whole-page refreshes.
-5. Use [cursor-list cache helpers](../../frontend/src/query/infiniteListCache.ts) for authoritative row replacements and confirmed deletes; reconcile aggregates separately.
-6. After creation, invalidate only the list prefix unless insertion membership and position are provable in every cached variant.
+2. Forward cancellation signals through reads and keep existing mutation submission locks.
+3. For loaded cursor tables, use [the existing cache helpers](../../frontend/src/query/infiniteListCache.ts) to replace saved rows or remove confirmed deletions. When edits leave loaded rows out of order, retain their positions and show the shared out-of-order message with **Refresh**; confirmed deletion does not require backfilling the page.
+4. Invalidate a table prefix when creation or changed filter membership requires a server read. Invalidate affected reference, dashboard, and related feature queries separately; do not invalidate solely to correct retained sort order.
+5. Reconcile an existing calendar buffer or selected UI context with the authoritative saved row where needed; keep editable drafts independent of background refetches.
 
 ## Keep Application Selection with Its Domain
 

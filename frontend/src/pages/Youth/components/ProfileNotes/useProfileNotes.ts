@@ -1,14 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   deleteYouthProfileNote,
-  getYouthProfileNotes,
 } from '../../youth.api';
 import type { YouthProfileNote } from '../../types';
-import { getErrorMessage } from '../../../../http/errors';
+import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 
-const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;
+/**
+ * Identifies the saved profile notes for one youth.
+ * @param youthId - Selected youth ID, or null before a selection is made.
+ * @example profileNotesQueryKey('youth-1') // ['youth-profile-notes', 'youth-1']
+ */
+export const profileNotesQueryKey = (youthId: string | null) => ['youth-profile-notes', youthId] as const;
 
+/**
+ * Owns page-spanning profile-note dialogs and saved-note cache updates.
+ * @param selectedYouthId - Current selection used by dashboard actions; row actions may supply another ID.
+ * @example useProfileNotes(selectedYouthId).openEditor('new', row.id)
+ */
 export default function useProfileNotes(selectedYouthId: string | null) {
   const queryClient = useQueryClient();
   const [editorTarget, setEditorTarget] = useState<{
@@ -16,33 +25,15 @@ export default function useProfileNotes(selectedYouthId: string | null) {
     note: YouthProfileNote | 'new';
   } | null>(null);
   const [selectedNote, setSelectedNote] = useState<YouthProfileNote | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
-
-  const query = useQuery({
-    queryKey: profileNotesQueryKey(selectedYouthId),
-    queryFn: ({ signal }) => {
-      if (!selectedYouthId) throw new Error('A selected youth profile is required to load profile notes');
-      return getYouthProfileNotes(selectedYouthId, { signal });
-    },
-    enabled: selectedYouthId !== null,
-  });
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   useEffect(() => {
     setEditorTarget(current => current?.youthId === selectedYouthId ? current : null);
     setSelectedNote(null);
-    setConfirmingDelete(false);
-    setDeleting(false);
-    setDeleteError('');
+    setConfirmAction(null);
   }, [selectedYouthId]);
 
-  const closeDetails = useCallback(() => {
-    if (deleting) return;
-    setSelectedNote(null);
-    setConfirmingDelete(false);
-    setDeleteError('');
-  }, [deleting]);
+  const closeDetails = useCallback(() => setSelectedNote(null), []);
 
   const openEditor = useCallback((note: YouthProfileNote | 'new', youthId = selectedYouthId) => {
     if (!youthId) throw new Error('A selected youth profile is required to edit profile notes');
@@ -67,51 +58,31 @@ export default function useProfileNotes(selectedYouthId: string | null) {
 
   const requestDelete = useCallback((note: YouthProfileNote) => {
     setSelectedNote(note);
-    setConfirmingDelete(true);
-    setDeleteError('');
-  }, []);
-
-  const cancelDelete = useCallback(() => {
-    setConfirmingDelete(false);
-    setDeleteError('');
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    if (!selectedNote) throw new Error('A selected profile note is required for deletion');
-    const target = selectedNote;
-    setDeleting(true);
-    setDeleteError('');
-    try {
-      await deleteYouthProfileNote(target.youthId, target.id);
-      queryClient.setQueryData<YouthProfileNote[]>(profileNotesQueryKey(target.youthId), current =>
-        current?.filter(note => note.id !== target.id) ?? [],
-      );
-      setSelectedNote(null);
-      setConfirmingDelete(false);
-    } catch (cause) {
-      setDeleteError(getErrorMessage(cause, 'Failed to delete profile note'));
-    } finally {
-      setDeleting(false);
-    }
-  }, [queryClient, selectedNote]);
+    setConfirmAction({
+      title: 'Delete Profile Note',
+      message: 'Delete this profile note? This cannot be undone.',
+      confirmVariant: 'danger',
+      successMessage: 'Profile note deleted.',
+      onConfirm: async () => {
+        await deleteYouthProfileNote(note.youthId, note.id);
+        queryClient.setQueryData<YouthProfileNote[]>(profileNotesQueryKey(note.youthId), current =>
+          current?.filter(candidate => candidate.id !== note.id) ?? [],
+        );
+        setSelectedNote(current => current?.id === note.id ? null : current);
+      },
+    });
+  }, [queryClient]);
 
   return {
-    notes: query.data ?? [],
-    loading: query.isLoading,
-    error: query.error ? 'Could not load profile notes' : null,
-    retry: query.refetch,
     editorTarget,
     selectedNote,
-    confirmingDelete,
-    deleting,
-    deleteError,
+    confirmAction,
     openEditor,
     closeEditor: () => setEditorTarget(null),
     openDetails: setSelectedNote,
     closeDetails,
     handleSaved,
     requestDelete,
-    cancelDelete,
-    confirmDelete,
+    closeConfirmation: () => setConfirmAction(null),
   };
 }

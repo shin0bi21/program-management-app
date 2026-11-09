@@ -1,4 +1,3 @@
-import { taskStore } from '../../taskStore';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
 import type { MutableRefObject } from 'react';
@@ -32,12 +31,12 @@ const coworker: TaskResource = {
 };
 const task = makeTask();
 
+/** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
 function renderCalendar({
   resources = [resource, coworker],
   staffIds = [] as string[],
   canWrite = true,
   selectedTaskId = null as string | null,
-  onMessageChange = vi.fn(),
 } = {}) {
   const actions: TaskCalendarActions = {
     isTaskPending: vi.fn(() => false),
@@ -47,14 +46,15 @@ function renderCalendar({
       currentTask,
       nextRange,
       _action,
-      staffId = currentTask.assignee.id,
+      staffId = currentTask.staffId,
     ) => ({
       ...currentTask,
       startDate: nextRange.start,
       dueDate: nextRange.end,
-      assignee: staffId === coworker.id
-        ? { id: coworker.id, firstName: coworker.firstName, lastName: coworker.lastName, name: coworker.name }
-        : currentTask.assignee,
+      staffId,
+      firstName: staffId === coworker.id ? coworker.firstName : currentTask.firstName,
+      lastName: staffId === coworker.id ? coworker.lastName : currentTask.lastName,
+      name: staffId === coworker.id ? coworker.name : currentTask.name,
     })),
   };
   const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {
@@ -72,9 +72,8 @@ function renderCalendar({
     actions={actions}
     calendarCacheRef={calendarCacheRef}
     {...callbacks}
-    onMessageChange={onMessageChange}
   />);
-  return { ...rendered, actions, calendarCacheRef, onMessageChange, ...callbacks };
+  return { ...rendered, actions, calendarCacheRef, ...callbacks };
 }
 
 describe('TaskCalendar', () => {
@@ -108,17 +107,16 @@ describe('TaskCalendar', () => {
     expect(calendarState.props?.rows).toEqual([resource]);
   });
 
-  it('resolves buffered IDs to current shared records after another consumer saves or deletes', async () => {
-    const { queryClient } = renderCalendar();
+  it('updates full buffered rows through mutation callbacks after saves and deletes', async () => {
+    const { calendarCacheRef } = renderCalendar();
     act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
     await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
 
     const saved = makeTask({ title: 'Saved by another consumer' });
-    act(() => taskStore.write(queryClient, saved));
+    act(() => calendarCacheRef.current.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['staff-1']?.[0].title).toBe(saved.title));
-    expect(calendarState.props!.items['staff-1']![0]).toBe(taskStore.get(queryClient, task.id));
 
-    act(() => taskStore.remove(queryClient, task.id));
+    act(() => calendarCacheRef.current.remove(task.id));
     await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
   });
 
@@ -150,7 +148,7 @@ describe('TaskCalendar', () => {
     }));
     expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(2, expect.objectContaining({
       startDate: '2026-08-12', dueDate: '2026-08-14',
-      assignee: expect.objectContaining({ id: 'staff-2' }),
+      staffId: 'staff-2',
     }));
     expect(rendered.onResourceSelect).not.toHaveBeenCalled();
   });
@@ -256,20 +254,16 @@ describe('TaskCalendar', () => {
     });
   });
 
-  it('removes mutation callbacks in read-only mode and reports range-load errors', async () => {
+  it('removes mutation callbacks in read-only mode and keeps failed ranges distinct from empty results', async () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
-    const { onMessageChange } = renderCalendar({ canWrite: false });
+    renderCalendar({ canWrite: false });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     expect(calendarState.props?.onItemResize).toBeUndefined();
     expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      message: 'Task request failed',
-      action: expect.objectContaining({ label: 'Retry' }),
-    })));
-    expect(screen.getByText('Task calendar unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Task calendar unavailable')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

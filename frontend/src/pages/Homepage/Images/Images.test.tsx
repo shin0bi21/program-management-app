@@ -20,6 +20,7 @@ const homepage = vi.hoisted(() => ({
   loading: false,
   error: null as string | null,
   refresh: vi.fn(),
+  saveImage: vi.fn(),
   deleteImage: vi.fn(),
   reorderImages: vi.fn(),
   reordering: false,
@@ -32,6 +33,10 @@ vi.mock('./hooks/useManagedHomepage', () => ({
   useManagedHomepage: () => homepage,
 }));
 
+/**
+ * Renders image management with the page's router context.
+ * @example renderPage() // image management with the mocked permission and saved-record owners
+ */
 const renderPage = () => render(
   <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Images />

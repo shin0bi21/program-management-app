@@ -5,8 +5,8 @@ import { hoursSearchValue } from './hoursRowQuery';
 /**
  * Builds filters for table and calendar items.
  * @param filterValues - Validated staff/category/program/type/cycle/search selections; general matches no program.
- * @returns Parameterized AND clauses against the canonical hours relationships.
- * @example buildHoursFilters(filterValues) // append after the mandatory access predicate
+ * @returns Combined SQL restrictions against the canonical hours relationships.
+ * @example buildHoursFilters(filterValues) // TRUE when no filters are selected
  */
 export function buildHoursFilters(filterValues: Pick<HoursTableQuery, 'staffIds' | 'categories' | 'programIds' | 'types' | 'cycleIds' | 'search'>) {
   // 1. Collect only the selected restrictions.
@@ -49,8 +49,8 @@ export function buildHoursFilters(filterValues: Pick<HoursTableQuery, 'staffIds'
     filters.push(sql`${entryType} = ANY(${sql.array(filterValues.types)}::text[])`);
   }
 
-  // 4. Append each filter after the caller's access restriction.
-  let appliedFilters = sql``;
+  // 4. Combine the selected restrictions.
+  let appliedFilters = sql`TRUE`;
   for (const filter of filters) {
     appliedFilters = sql`
       ${appliedFilters}

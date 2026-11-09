@@ -28,10 +28,11 @@ describe('ViewFileModal', () => {
   });
 
   it('previews an image, provides zoom controls, downloads it, and releases resources', () => {
+    const file = new Blob(['image'], { type: 'image/png' });
     const view = render(<ViewFileModal
       isOpen
       title="Workshop photo"
-      file={new Blob(['image'], { type: 'image/png' })}
+      file={file}
       mimeType="image/png"
       downloadName="workshop.png"
       onClose={vi.fn()}
@@ -47,7 +48,13 @@ describe('ViewFileModal', () => {
     expect(panzoom.zoomOut).toHaveBeenCalledWith({ animate: true });
     expect(panzoom.reset).toHaveBeenCalledWith({ animate: true });
 
-    view.unmount();
+    view.rerender(<ViewFileModal
+      isOpen={false}
+      title="Workshop photo"
+      file={file}
+      mimeType="image/png"
+      onClose={vi.fn()}
+    />);
     expect(panzoom.destroy).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:file-preview');
   });

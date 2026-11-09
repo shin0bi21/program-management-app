@@ -36,7 +36,9 @@ boundaries unless an endpoint explicitly defines a different response, such as a
 
 ## Hours and Tasks
 
-Tasks store `open`, `completed`, or `cancelled` lifecycle states. Open tasks expose
+Tasks store `open`, `completed`, or `cancelled` in `tasks.state`, exposed as
+`state` throughout task records. Staff fields match Hours: `staffId`, `firstName`,
+`lastName`, and `name`. Open tasks expose
 the date-derived status `upcoming`, `in_progress` (label “In Progress”), or
 `overdue`; list and calendar filters use those derived values. Saved task filters
 belong to the `task-preferences` key.
@@ -54,7 +56,13 @@ options, and returned entries use the same `date` field; session-linked creation
 derives it from the session. Tasks use overlap of their inclusive start/due interval.
 Date filters apply before pagination, paired bounds are required, and multi-year
 ranges are supported. Hours collection `cycleIds` match selected membership;
-an empty selection is unrestricted, while its dashboard uses a single `cycleId`.
+an empty selection is unrestricted. Dashboard cards query independently:
+`/hours/pay-period` accepts `staffId` and an optional `date` (today in Toronto by
+default), using the most recent cycle start on or before that date to anchor the
+14-day pay period. It totals all entries within that period regardless of cycle
+membership. `/hours/cycle-summary` accepts `staffId` and `cycleId` and returns the
+cycle's category totals averaged over its elapsed biweekly periods. The cycle
+selection does not restrict or move the pay-period query.
 
 ## Youth Profiles and Lead Signup
 
@@ -85,6 +93,22 @@ for the implementation.
 Program and cycle filters must match the same nonwithdrawn enrollment or
 open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthRowFilters.ts)
 preserves that cross-domain selection contract.
+
+The main Youth record includes profile fields and one active program, or null when none is active.
+The attendance dashboard loads complete attendance and session notes for the active enrolled
+program cycle from `/:id/attendance`, owned by the
+[shared attendance service](../../backend/src/services/attendanceService.ts).
+It requires Youth, attendance and session read permissions and applies program scope.
+The backend supplies attendance counts with the records, which the card passes directly to its editor;
+no active enrollment returns null. Historical cycles and open-program visits are excluded
+from this dashboard. Attendance stays separate from profile rows.
+
+Programs reads the same cycle attendance without the Youth filter. Both dashboards
+supply their loaded data to the shared attendance report. Its PDF POST renders
+that data without another attendance query.
+Attendance counts and rates use completed, noncancelled sessions. Present and late
+count as attended; absent, excused and unmarked count as missed. The Programs
+consumer adds the cohort average in the backend; the frontend only displays it.
 
 ## Programming
 
@@ -158,6 +182,15 @@ roster. Enrollment writes recheck eligibility inside the transaction and reject
 an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts) and
 [enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts).
 
+Youth can be enrolled in only one enrollment-based program on a calendar date.
+Membership is the intersection of the cycle's inclusive dates and the enrollment
+period: enrollment day is included and withdrawal day is excluded. Historical and
+non-overlapping memberships remain valid; multiple cycles of the same program do
+not count as different programs. Open-attendance participation does not count
+as enrollment. Roster choices exclude conflicting programs while retained members
+remain available for withdrawal. Enrollment, cycle-date, and program-mode writes
+must preserve this rule; overlapping writes return a conflict.
+
 ## Outreach and Public Homepage
 
 Public program content comes from program records and includes upcoming sessions,
@@ -165,3 +198,8 @@ even when a program's session list is empty. Public intake accepts valid lead
 submissions with request validation and strict rate limiting. The signup form is
 always available; it has no runtime availability setting.
 Leads own follow-up and conversion.
+
+Public and managed image lists share the canonical image projection. Image create
+and update responses return that complete record, including variant URLs and
+display order, so management can reconcile saved images directly. Frontend API
+adapters share URL normalization for public lists, managed lists, and saved images.

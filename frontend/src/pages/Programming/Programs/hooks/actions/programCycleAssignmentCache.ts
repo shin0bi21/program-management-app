@@ -5,6 +5,13 @@ import type { ProgramCycleAssignment, ProgramCycleKey } from '../../types';
 
 export const PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY = ['programs', 'cycle-assignments'] as const;
 
+/**
+ * Updates or removes assignments already present in cached program-cycle lists.
+ * @param queryClient - Cache containing the loaded assignment list variants.
+ * @param assignments - Authoritative saved assignments to replace by program and cycle IDs.
+ * @param removedPairs - Program and cycle pairs to remove from those lists.
+ * @example updateProgramCycleAssignments(client, [saved]) // replaces that pair in loaded lists
+ */
 export function updateProgramCycleAssignments(
   queryClient: QueryClient,
   assignments: readonly ProgramCycleAssignment[],
@@ -20,6 +27,12 @@ export function updateProgramCycleAssignments(
   );
 }
 
+/**
+ * Reconciles saved assignments and Youth rows, then refreshes roster eligibility and attendance summaries.
+ * @param queryClient - Cache shared by program, cycle, and Youth views.
+ * @param changes - Authoritative assignment changes and affected youth returned by the save.
+ * @example syncProgramCycleAssignmentChanges(client, saved) // updates rows and refreshes affected views
+ */
 export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, changes: ProgramCycleAssignmentChanges) {
   updateProgramCycleAssignments(queryClient, changes.updatedProgramCycles, changes.removedProgramCycles);
 
@@ -27,7 +40,9 @@ export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, chan
     replaceInfiniteListRow(queryClient, ['youth', 'table'], youth);
   }
 
-  // Refetch membership after assignments are added or removed from a program.
+  // Enrollment and date changes can alter eligibility in other program rosters.
   void queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY });
-  void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignment-editor'] });
+  void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-attendance'] });
+  void queryClient.invalidateQueries({ queryKey: ['programs', 'roster-youth'] });
+  void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance'] });
 }

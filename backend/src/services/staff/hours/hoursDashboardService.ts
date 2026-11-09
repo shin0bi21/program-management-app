@@ -1,120 +1,118 @@
 import { sql } from '../../../db/client';
 import { InternalServerError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type { HoursCategory, HoursDashboardQuery } from '../../../validation/hoursSchemas';
+import type { HoursCategory, HoursCycleSummaryQuery, HoursPayPeriodQuery } from '../../../validation/hoursSchemas';
 import { getStaffReferenceData } from '../../referenceData/staffReferenceData';
 import { getHoursCategoryLabel } from './hoursReferenceData';
 import { getBiweeklyPayPeriod } from './payPeriodUtils';
 
-/**
- * Summarizes accessible staff hours for a pay period and cycle.
- * @param actor - Actor whose staff access is enforced.
- * @param query - Staff member and selected cycle.
- * @example getHoursDashboardData(actor, query) // totals and category breakdowns
- */
-export async function getHoursDashboardData(actor: AccessTokenPayload, query: HoursDashboardQuery) {
-  // 1. Check access to the staff member.
-  const readableStaff = await getStaffReferenceData(actor, 'hours');
-  if (!readableStaff.some(resource => resource.id === query.staffId)) {
-    throw new NotFoundError('Hours overview not found');
-  }
+interface HoursCategoryTotal {
+  category: HoursCategory;
+  hours: string;
+}
 
-  // 2. Find the current pay period.
-  const [payPeriodCycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
-    SELECT starts_on::text AS starts_on,
-      (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
+/**
+ * Summarizes accessible staff hours for the pay period containing the requested date.
+ * @param actor - Actor whose staff access is enforced.
+ * @param query - Staff member and optional date; omission uses today's Toronto date.
+ * @example getHoursPayPeriodData(actor, { staffId }) // current pay-period total and breakdown
+ */
+export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: HoursPayPeriodQuery) {
+  // 1. Check access to the staff member.
+  await assertReadableStaff(actor, query.staffId);
+
+  // 2. Find the pay period independently of the dashboard's selected cycle.
+  const [payPeriodCycle] = await sql<Array<{ startsOn: string; requestedDate: string }>>`
+    SELECT
+      starts_on::text AS starts_on,
+      COALESCE(${query.date ?? null}::date, (NOW() AT TIME ZONE 'America/Toronto')::date)::text AS requested_date
     FROM program_cycles
-    WHERE starts_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+    WHERE starts_on <= COALESCE(${query.date ?? null}::date, (NOW() AT TIME ZONE 'America/Toronto')::date)
     ORDER BY starts_on DESC, id
     LIMIT 1
   `;
   if (!payPeriodCycle) {
-    throw new InternalServerError('Expected a program cycle to have started before the current pay period.');
+    if (query.date) throw new NotFoundError('Hours pay period not found');
+
+    throw new InternalServerError('Expected a program cycle to have started before the requested pay period.');
   }
-  const payPeriod = getBiweeklyPayPeriod(payPeriodCycle.startsOn, payPeriodCycle.currentDate);
+  const payPeriod = getBiweeklyPayPeriod(payPeriodCycle.startsOn, payPeriodCycle.requestedDate);
 
-  // 3. Load the hours totals.
-  const rows = await sql<Array<{
-    periodStart: string;
-    periodEnd: string;
-    periodCount: number;
-    category: HoursCategory | null;
-    periodHours: string;
-    cycleHours: string;
-  }>>`
-    WITH current_period AS (
-      SELECT
-        ${payPeriod.periodStart}::date AS period_start,
-        ${payPeriod.periodEnd}::date AS period_end
-    ), selected_cycle AS (
-      SELECT id, starts_on, ends_on,
-        GREATEST(
-          starts_on,
-          LEAST(ends_on, (NOW() AT TIME ZONE 'America/Toronto')::date)
-        ) AS effective_date
-      FROM program_cycles
-      WHERE id = ${query.cycleId}
-    ), selected_cycle_summary AS (
-      SELECT id,
-        ((effective_date - starts_on) / 14) + 1 AS period_count
-      FROM selected_cycle
-    ), categories AS (
-      SELECT DISTINCT entry.category
-      FROM time_entries entry, current_period period
-      WHERE entry.staff_id = ${query.staffId}
-        AND (
-          entry.date BETWEEN period.period_start AND period.period_end
-          OR entry.cycle_id = (
-            SELECT id
-            FROM selected_cycle
-          )
-        )
-    )
-    SELECT
-      period.period_start::text AS period_start,
-      period.period_end::text AS period_end,
-      selected.period_count,
-      category.category,
-      COALESCE((
-        SELECT SUM(entry.hours)
-        FROM time_entries entry
-        WHERE entry.staff_id = ${query.staffId}
-          AND entry.category = category.category
-          AND entry.date BETWEEN period.period_start AND period.period_end
-      ), 0)::text AS period_hours,
-      COALESCE((
-        SELECT SUM(entry.hours)
-        FROM time_entries entry
-        WHERE entry.staff_id = ${query.staffId}
-          AND entry.cycle_id = selected.id
-          AND entry.category = category.category
-      ), 0)::text AS cycle_hours
-    FROM current_period period
-    CROSS JOIN selected_cycle_summary selected
-    LEFT JOIN categories category ON TRUE
-    ORDER BY category.category
+  // 3. Summarize every entry within the pay period, regardless of cycle membership.
+  const rows = await sql<HoursCategoryTotal[]>`
+    SELECT category, SUM(hours)::text AS hours
+    FROM time_entries
+    WHERE staff_id = ${query.staffId}
+      AND date BETWEEN ${payPeriod.periodStart}::date AND ${payPeriod.periodEnd}::date
+    GROUP BY category
   `;
-  if (!rows.length) throw new NotFoundError('Hours overview not found');
-
-  // 4. Build the category breakdowns.
-  const payPeriodBreakdown = rows.flatMap(row => row.category && Number(row.periodHours) > 0
-    ? [{ label: getHoursCategoryLabel(row.category), hours: Number(row.periodHours) }]
-    : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
-  const periodCount = Number(rows[0].periodCount);
-  const biweeklyBreakdown = rows.flatMap(row => row.category && Number(row.cycleHours) > 0
-    ? [{ label: getHoursCategoryLabel(row.category), hours: Number(row.cycleHours) / periodCount }]
-    : []).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
+  const breakdown = buildBreakdown(rows);
   return {
-    payPeriod: {
-      periodStart: rows[0].periodStart,
-      periodEnd: rows[0].periodEnd,
-      totalHours: payPeriodBreakdown.reduce((total, item) => total + item.hours, 0),
-      breakdown: payPeriodBreakdown,
-    },
-    biweeklyAverage: {
-      periodCount,
-      averageHours: biweeklyBreakdown.reduce((total, item) => total + item.hours, 0),
-      breakdown: biweeklyBreakdown,
-    },
+    ...payPeriod,
+    totalHours: breakdown.reduce((total, item) => total + item.hours, 0),
+    breakdown,
   };
+}
+
+/**
+ * Summarizes accessible staff hours as a biweekly average for one cycle.
+ * @param actor - Actor whose staff access is enforced.
+ * @param query - Staff member and cycle whose entries contribute to the average.
+ * @example getHoursCycleSummaryData(actor, { staffId, cycleId }) // cycle average and breakdown
+ */
+export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query: HoursCycleSummaryQuery) {
+  // 1. Check access to the staff member before exposing cycle data.
+  await assertReadableStaff(actor, query.staffId);
+
+  // 2. Count elapsed pay periods, capped at the cycle's inclusive end date.
+  const [cycle] = await sql<Array<{ periodCount: number }>>`
+    SELECT ((GREATEST(
+      starts_on,
+      LEAST(ends_on, (NOW() AT TIME ZONE 'America/Toronto')::date)
+    ) - starts_on) / 14) + 1 AS period_count
+    FROM program_cycles
+    WHERE id = ${query.cycleId}
+  `;
+  if (!cycle) throw new NotFoundError('Hours cycle summary not found');
+
+  // 3. Average the cycle's category totals over its elapsed periods.
+  const rows = await sql<HoursCategoryTotal[]>`
+    SELECT category, SUM(hours)::text AS hours
+    FROM time_entries
+    WHERE staff_id = ${query.staffId}
+      AND cycle_id = ${query.cycleId}
+    GROUP BY category
+  `;
+  const breakdown = buildBreakdown(rows, cycle.periodCount);
+  return {
+    periodCount: cycle.periodCount,
+    averageHours: breakdown.reduce((total, item) => total + item.hours, 0),
+    breakdown,
+  };
+}
+
+/**
+ * Conceals summaries for staff resources outside the actor's Hours visibility.
+ * @param actor - Actor whose readable staff resources determine access.
+ * @param staffId - Requested staff resource ID.
+ * @example await assertReadableStaff(actor, staffId) // throws 404 for an unrelated resource
+ */
+async function assertReadableStaff(actor: AccessTokenPayload, staffId: string) {
+  const readableStaff = await getStaffReferenceData(actor, 'hours');
+  if (!readableStaff.some(resource => resource.id === staffId)) {
+    throw new NotFoundError('Hours overview not found');
+  }
+}
+
+/**
+ * Labels positive category totals and orders the largest contribution first.
+ * @param rows - Database category totals in hours.
+ * @param periodCount - Positive elapsed-period count; omit for unaveraged totals.
+ * @example buildBreakdown([{ category: 'meeting', hours: '4' }], 2) // [{ label: 'Meeting', hours: 2 }]
+ */
+function buildBreakdown(rows: HoursCategoryTotal[], periodCount = 1) {
+  return rows
+    .filter(row => Number(row.hours) > 0)
+    .map(row => ({ label: getHoursCategoryLabel(row.category), hours: Number(row.hours) / periodCount }))
+    .sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
 }

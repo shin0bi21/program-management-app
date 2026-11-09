@@ -7,6 +7,7 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
 /**
  * Parses at most 20 filter values from comma-separated strings or repeated query parameters.
+ * @param schema - Validation applied to each supplied filter value.
  * @example commaSeparated(z.string()).parse('a,b') // ['a', 'b']
  */
 const commaSeparated = <T extends z.ZodType>(schema: T) => z.preprocess(value => {
@@ -54,9 +55,46 @@ export const updateCycleSchema = z.object({
 export const deleteCycleSchema = z.object({
   params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
 });
-export const programCycleYouthReportSchema = z.object({
+export const programCycleAttendanceSchema = z.object({
   params: programCycleParams,
-  query: z.object({ youthId: z.string().uuid('Invalid youth ID').optional() }),
+});
+
+export const attendanceReportSchema = z.object({
+  params: programCycleParams,
+  body: z.object({
+    programCycle: z.object({
+      ...programCycleParams.shape,
+      program: z.string().min(1),
+      cycle: z.string().min(1),
+      enrollmentRequired: z.boolean(),
+    }),
+    youth: z.array(z.object({
+      id: z.string().uuid('Invalid youth ID'),
+      firstName: z.string().min(1),
+      lastName: z.string().min(1),
+      sessions: z.array(z.object({
+        id: z.string().uuid('Invalid session ID'),
+        sessionType: z.enum(SESSION_TYPES),
+        theme: z.string(),
+        startsAt: z.string().datetime({ offset: true }),
+        endsAt: z.string().datetime({ offset: true }),
+        cancelledAt: z.string().datetime({ offset: true }).nullable(),
+        status: z.enum(['present', 'late', 'absent', 'excused']).nullable(),
+        sessionNotes: z.array(z.object({
+          id: z.string().uuid('Invalid note ID'),
+          category: z.enum(['general', 'attendance', 'behaviour', 'achievement']),
+          details: z.string().max(5000),
+          createdAt: z.string().datetime({ offset: true }),
+        })),
+      })),
+    })),
+  }),
+}).refine(data => (
+  data.body.programCycle.programId === data.params.programId
+  && data.body.programCycle.cycleId === data.params.cycleId
+), {
+  message: 'Report data must match the requested program and cycle',
+  path: ['body', 'programCycle'],
 });
 
 export const programRosterSchema = z.object({
@@ -91,6 +129,7 @@ const createSessionBodySchema = z.object({
 
 /**
  * Requires supplied end times to follow start times; omitted values use program defaults later.
+ * @param data - Optional start and end times in HH:MM format.
  * @example validSessionTimes({ startTime: '17:00', endTime: '18:00' }) // true
  */
 const validSessionTimes = (data: { startTime?: string; endTime?: string }) => (
@@ -264,7 +303,7 @@ export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type ProgramCycleQuery = z.infer<typeof programCycleQuerySchema.shape.query>;
-export type ProgramCycleYouthReportQuery = z.infer<typeof programCycleYouthReportSchema.shape.query>;
+export type AttendanceReportInput = z.infer<typeof attendanceReportSchema>['body'];
 export type SetAttendanceInput = z.infer<typeof saveAttendanceSchema.shape.body>;
 export type CreateSessionNoteInput = z.infer<typeof createSessionNoteSchema.shape.body>;
 export type UpdateSessionNoteInput = z.infer<typeof updateSessionNoteSchema.shape.body>;

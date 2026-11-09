@@ -27,7 +27,7 @@ describe('publicHomepage API', () => {
       images: [{
         id: 'image-1',
         imageUrl: '/public/image.webp',
-        mobileUrl: '/public/image-mobile.webp',
+        mobileUrl: 'https://cdn.example.test/image-mobile.webp',
         thumbnailUrl: '/public/image-thumbnail.webp',
         altText: 'Youth event',
         caption: 'Youth event.',
@@ -40,7 +40,17 @@ describe('publicHomepage API', () => {
     const result = await getPublicHomepageImages();
 
     expect(get).toHaveBeenCalledWith('/public/homepage/images', { auth: false });
-    expect(result.images[0].imageUrl).toBe('https://api.example.test/public/image.webp');
+    expect(result.images[0]).toEqual({
+      id: 'image-1',
+      imageUrl: 'https://api.example.test/public/image.webp',
+      mobileUrl: 'https://cdn.example.test/image-mobile.webp',
+      thumbnailUrl: 'https://api.example.test/public/image-thumbnail.webp',
+      altText: 'Youth event',
+      caption: 'Youth event.',
+      displayOrder: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
   });
 
   it('loads public programs and submits expressions of interest without authentication', () => {

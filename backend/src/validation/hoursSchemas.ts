@@ -18,6 +18,11 @@ export const hoursParamsSchema = z.object({
   params: z.object({ id: z.string().uuid('Invalid time entry ID') }),
 });
 
+/**
+ * Parses a comma-separated query value as validated selections; omission selects nothing.
+ * @param schema - Validation applied to each supplied selection.
+ * @example commaSeparated(z.string().uuid()) // accepts a comma-separated list of UUIDs
+ */
 const commaSeparated = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(value => (
   typeof value === 'string' && value ? value.split(',') : []
 ), z.array(schema));
@@ -67,10 +72,17 @@ export const hoursSessionQuerySchema = z.object({
   }),
 });
 
-export const hoursDashboardQuerySchema = z.object({
+export const hoursCycleSummaryQuerySchema = z.object({
   query: z.object({
     staffId: z.string().uuid('Invalid staff ID'),
     cycleId: z.string().uuid('Invalid cycle ID'),
+  }),
+});
+
+export const hoursPayPeriodQuerySchema = z.object({
+  query: z.object({
+    staffId: z.string().uuid('Invalid staff ID'),
+    date: dateSchema.optional(),
   }),
 });
 
@@ -110,7 +122,8 @@ export const updateHoursPlacementSchema = z.object({
 
 export type HoursCalendarQuery = z.infer<typeof hoursCalendarQuerySchema.shape.query>;
 export type HoursTableQuery = z.infer<typeof hoursTableQuerySchema.shape.query>;
-export type HoursDashboardQuery = z.infer<typeof hoursDashboardQuerySchema.shape.query>;
+export type HoursCycleSummaryQuery = z.infer<typeof hoursCycleSummaryQuerySchema.shape.query>;
+export type HoursPayPeriodQuery = z.infer<typeof hoursPayPeriodQuerySchema.shape.query>;
 export type HoursSessionQuery = z.infer<typeof hoursSessionQuerySchema.shape.query>;
 export type SetHoursInput = z.infer<typeof setHoursSchema.shape.body>;
 export type UpdateHoursPlacementInput = z.infer<typeof updateHoursPlacementSchema.shape.body>;

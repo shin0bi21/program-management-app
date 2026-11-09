@@ -1,7 +1,8 @@
-import { getYouthRowsByIds } from '../../youth/youthRowQuery';
+import { getYouthRows, type YouthRow } from '../../youth/youthRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertAssignmentUnused } from '../programCycles/assignmentService';
+import { rethrowEnrollmentConflict } from '../programCycles/enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramCycleInput } from '../../../validation/programmingSchemas';
 import { getCycleRow } from './cycleRowQuery';
@@ -193,14 +194,19 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     const affectedProgramCycles = [...retained, ...created];
 
     // 6. Return the saved cycle and affected rows.
+    let updatedYouth: YouthRow[] = [];
+    if (actor.permissions.includes('read:youth_profiles')) {
+      const youthIds = await getProgramCycleYouthIds(trx, affectedProgramCycles);
+      updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
+    }
+
     return {
       cycle: await requireCycleRow(trx, id),
       updatedProgramCycles: actor.permissions.includes('read:programs')
         ? await getProgramCycleRowsByKeys(trx, actor, affectedProgramCycles) : [],
       createdProgramCycles: created,
       removedProgramCycles: removed,
-      updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, await getProgramCycleYouthIds(trx, affectedProgramCycles)) : [],
+      updatedYouth,
     };
   }).catch(rethrowCycleConflict);
 }
@@ -219,7 +225,8 @@ async function requireCycleRow(trx: typeof sql, id: string) {
 }
 
 /**
- * Rethrows cycle-name duplicates as 409 with their cause, leaving other failures unchanged.
+ * Reports duplicate cycle names and overlapping enrolled programs as conflicts.
+ * Other failures retain their original identity.
  * @example rethrowCycleConflict(new Error('Disconnected')) // throws the same Error instance
  */
 function rethrowCycleConflict(error: unknown): never {
@@ -227,5 +234,5 @@ function rethrowCycleConflict(error: unknown): never {
   if (isUniqueViolation(error, 'program_cycles_name_key')) {
     throw Object.assign(new ConflictError('A cycle with this name already exists'), { cause: error });
   }
-  throw error;
+  rethrowEnrollmentConflict(error);
 }

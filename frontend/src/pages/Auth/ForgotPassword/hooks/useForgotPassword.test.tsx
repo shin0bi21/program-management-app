@@ -9,27 +9,31 @@ vi.mock('../../../../auth/auth.api', () => ({ forgotPassword: vi.fn() }));
 describe('useForgotPassword', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('submits the email and exposes the neutral success response', async () => {
+  it('submits the email and completes its request form', async () => {
     vi.mocked(forgotPassword).mockResolvedValue({});
-    const { result } = renderHook(() => useForgotPassword());
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useForgotPassword(onSuccess));
 
     await act(() => result.current.onSubmit({ email: 'test@example.com' }));
 
     expect(forgotPassword).toHaveBeenCalledWith('test@example.com');
-    expect(result.current.message).toBe('Password reset email sent');
+    expect(onSuccess).toHaveBeenCalledOnce();
     expect(result.current.error).toBe('');
   });
 
-  it('exposes request failures and clears an earlier success', async () => {
+  it('preserves failure feedback until a retry succeeds', async () => {
     vi.mocked(forgotPassword)
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error('Email service unavailable'));
-    const { result } = renderHook(() => useForgotPassword());
+      .mockRejectedValueOnce(new Error('Email service unavailable'))
+      .mockResolvedValueOnce({});
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useForgotPassword(onSuccess));
 
     await act(() => result.current.onSubmit({ email: 'test@example.com' }));
-    await act(() => result.current.onSubmit({ email: 'test@example.com' }));
-
-    expect(result.current.message).toBe('');
     expect(result.current.error).toBe('Email service unavailable');
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    await act(() => result.current.onSubmit({ email: 'test@example.com' }));
+    expect(result.current.error).toBe('');
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 });

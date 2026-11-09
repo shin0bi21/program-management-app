@@ -201,6 +201,10 @@ export interface ProgramEnrollments {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
+  /**
+   * Trigger-maintained enrollment/cycle date intersection; empty for open-attendance programs.
+   */
+  effective_period: Generated<string>;
   enrolled_on: Generated<Timestamp>;
   id: Generated<string>;
   program_id: string;
@@ -315,7 +319,7 @@ export interface Tasks {
   program_id: string | null;
   staff_id: string;
   start_date: Timestamp;
-  status: Generated<string>;
+  state: Generated<string>;
   title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -389,7 +393,7 @@ export interface UserPasswordResetTokens {
   created_at: Generated<Timestamp | null>;
   expires_at: Timestamp;
   id: Generated<string>;
-  token: string;
+  token_hash: string;
   used_at: Timestamp | null;
   user_id: string;
 }

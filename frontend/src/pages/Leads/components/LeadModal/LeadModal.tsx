@@ -4,12 +4,28 @@ import OutreachFormFields from '../../../../common/features/OutreachForm/Outreac
 import type { Lead } from '../../types';
 import { useLeadModal } from './useLeadModal';
 
-export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
+interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (lead: Lead) => void;
   lead?: Lead;
-}) {
+}
+
+/**
+ * Mounts a fresh lead editor for the supplied open target.
+ * @param props - Visibility, optional saved lead, and close/save actions.
+ * @example <LeadModal isOpen lead={lead} onClose={close} onSuccess={sync} />
+ */
+export default function LeadModal({ isOpen, ...props }: LeadModalProps) {
+  return isOpen ? <LeadForm key={props.lead?.id ?? 'new'} {...props} /> : null;
+}
+
+/**
+ * Edits one supplied lead or an empty intake form until close or save completion.
+ * @param props - Initial saved values and completion actions.
+ * @example <LeadForm onClose={close} onSuccess={sync} />
+ */
+function LeadForm({ onClose, onSuccess, lead }: Omit<LeadModalProps, 'isOpen'>) {
   const isEdit = lead !== undefined;
   const {
     register,
@@ -19,8 +35,7 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
     onValid,
     submitStatus,
     error,
-    handleClose,
-  } = useLeadModal({ isOpen, onClose, onSuccess, lead });
+  } = useLeadModal({ onSuccess, lead });
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
   let statusMessage: string | undefined;
@@ -35,14 +50,14 @@ export default function LeadModal({ isOpen, onClose, onSuccess, lead }: {
     <ModalFormFooter
       formId="lead-form"
       submitStatus={submitStatus}
-      onClose={handleClose}
+      onClose={onClose}
     />
   );
 
   return (
     <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
+      isOpen
+      onClose={onClose}
       title={isEdit ? 'Edit Lead' : 'Create Lead'}
       footer={footer}
       status={submitStatus}

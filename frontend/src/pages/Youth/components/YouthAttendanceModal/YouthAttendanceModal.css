@@ -190,3 +190,10 @@
     margin-left: 0;
   }
 }
+
+.youth-attendance-modal__fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}

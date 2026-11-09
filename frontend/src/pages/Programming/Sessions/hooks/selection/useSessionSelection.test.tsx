@@ -4,7 +4,6 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { makeProgramSession } from '../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { sessionStore } from '../../sessionStore';
 import useSessionSelection from './useSessionSelection';
 
 function renderSelection() {
@@ -18,31 +17,31 @@ function renderSelection() {
 }
 
 describe('useSessionSelection', () => {
-  it('resolves a restored URL when either view loads the shared record and follows subsequent saves', async () => {
-    const { client, result } = renderSelection();
+  it('receives the loaded URL target and follows subsequent saves', async () => {
+    const { result } = renderSelection();
     expect(result.current.selection.selectedSession).toBeNull();
     const session = makeProgramSession();
-    act(() => sessionStore.write(client, session));
+    act(() => result.current.selection.syncSelectedSession(session));
     await waitFor(() => expect(result.current.selection.selectedSession).toEqual(session));
 
     const saved = makeProgramSession({ theme: 'Updated theme' });
-    act(() => sessionStore.write(client, saved));
+    act(() => result.current.selection.syncSelectedSession(saved));
     await waitFor(() => expect(result.current.selection.selectedSession).toEqual(saved));
     expect(result.current.selection.selectedSessionId).toBe(session.id);
   });
 
-  it('stores only the clicked ID and resolves its record from the shared owner', async () => {
-    const { client, result } = renderSelection();
+  it('keeps the clicked row as selection context', async () => {
+    const { result } = renderSelection();
     const next = makeProgramSession({ id: 'session-2' });
-    act(() => { sessionStore.write(client, next); result.current.selection.selectSession(next); });
+    act(() => { result.current.selection.selectSession(next); });
     await waitFor(() => expect(result.current.selection.selectedSession).toEqual(next));
     expect(result.current.selection.selectedSessionId).toBe(next.id);
   });
 
-  it('removes a deleted selection from the URL and shared resolution', async () => {
-    const { client, result } = renderSelection();
-    act(() => sessionStore.write(client, makeProgramSession()));
-    act(() => { sessionStore.remove(client, 'session-1'); result.current.selection.removeSelectedSession('session-1'); });
+  it('removes a deleted selection from the URL', async () => {
+    const { result } = renderSelection();
+    act(() => result.current.selection.syncSelectedSession(makeProgramSession()));
+    act(() => { result.current.selection.removeSelectedSession('session-1'); });
     await waitFor(() => expect(result.current.selection.selectedSession).toBeNull());
     expect(result.current.selection.selectedSessionId).toBe('');
   });

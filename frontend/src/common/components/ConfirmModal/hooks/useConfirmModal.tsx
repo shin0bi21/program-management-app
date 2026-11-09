@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -14,28 +13,26 @@ export interface UseConfirmModalResult {
   footer: ReactNode;
 }
 
+/**
+ * Confirms one mounted action and exposes its feedback until dismissal.
+ * @param options - Supplied active action and callback that unmounts the interaction.
+ * @example useConfirmModal({ action: deleteAction, onClose: clearAction })
+ */
 export function useConfirmModal({
   action,
   onClose,
 }: {
-  action: ConfirmAction | null;
+  action: ConfirmAction;
   onClose: () => void;
 }): UseConfirmModalResult {
-  const isOpen = action !== null;
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState('');
   const [confirmSuccess, setConfirmSuccess] = useState(false);
   const confirmingRef = useRef(false);
 
-  useEffect(() => {
-    confirmingRef.current = false;
-    setConfirming(false);
-    setConfirmError('');
-    setConfirmSuccess(false);
-  }, [isOpen]);
-
+  /** Executes the action once and keeps failure available for retry. @example await handleConfirm() */
   const handleConfirm = async () => {
-    if (!action || confirmingRef.current) return;
+    if (confirmingRef.current) return;
 
     confirmingRef.current = true;
     setConfirming(true);
@@ -61,8 +58,8 @@ export function useConfirmModal({
   else if (confirming) status = 'submitting';
   else if (confirmError) status = 'error';
 
-  const confirmVariant = action?.confirmVariant ?? 'primary';
-  const successMessage = action?.successMessage;
+  const confirmVariant = action.confirmVariant ?? 'primary';
+  const successMessage = action.successMessage;
 
   const statusMessage = confirmSuccess
     ? successMessage
@@ -70,7 +67,7 @@ export function useConfirmModal({
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose} disabled={confirming}>Cancel</Button>
+      <Button variant="secondary" onClick={onClose} disabled={confirming || confirmSuccess}>Cancel</Button>
       <Button variant={confirmVariant} onClick={handleConfirm} disabled={confirming || confirmSuccess}>
         Confirm
       </Button>

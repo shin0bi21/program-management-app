@@ -1,5 +1,5 @@
 import { sql } from '../../../db/client';
-import { canWriteTaskFor } from '../../../policies/taskPolicy';
+import { canWriteTaskFor, taskReadScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetTaskInput } from '../../../validation/taskSchemas';
 import {
@@ -14,61 +14,54 @@ export interface TaskRow {
   details: string | null;
   category: SetTaskInput['category'];
   staffId: string;
-  staffFirstName: string;
-  staffLastName: string;
-  staffName: string;
+  firstName: string;
+  lastName: string;
+  name: string;
   programId: string | null;
   program: string | null;
-  status: 'open' | 'completed' | 'cancelled';
+  state: 'open' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
   hoursLogged: number;
   completedAt: string | null;
 }
 
-/** Canonical task fields shared by collection and direct-record reads. */
-export const taskRowColumns = sql`
-  task.id,
-  task.title,
-  task.details,
-  task.category,
-  task.staff_id,
-  staff.first_name AS staff_first_name,
-  staff.last_name AS staff_last_name,
-  CONCAT(staff.first_name, ' ', staff.last_name) AS staff_name,
-  task.program_id,
-  program.name AS program,
-  task.status,
-  task.start_date::text,
-  task.due_date::text,
-  task.completed_at::text,
-  (
-    SELECT COALESCE(SUM(entry.hours), 0)::float
-    FROM time_entries entry
-    WHERE entry.task_id = task.id
-  ) AS hours_logged
-`;
-
-/** Canonical task relationships shared by collection and direct-record reads. */
-export const taskRowFrom = sql`
-  FROM tasks task
-  INNER JOIN users staff ON staff.id = task.staff_id
-  LEFT JOIN programs program ON program.id = task.program_id
-`;
-
 interface LoggedHoursRow { taskId: string; date: string; hours: number }
 
 /**
- * Builds rows for table and calendar items.
+ * Builds canonical task rows within the actor's readable staff scope.
+ * @param actor - Actor whose resource scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
- * @example getTaskRows(appliedFilters, trx)
+ * @example getTaskRows(actor, appliedFilters, trx)
  */
-export function getTaskRows(appliedFilters = sql`TRUE`, query = sql) {
+export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
   return query<TaskRow[]>`
-    SELECT ${taskRowColumns}
-    ${taskRowFrom}
-    WHERE ${appliedFilters}
+    SELECT
+      task.id,
+      task.title,
+      task.details,
+      task.category,
+      task.staff_id,
+      staff.first_name,
+      staff.last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
+      task.program_id,
+      program.name AS program,
+      task.state,
+      task.start_date::text,
+      task.due_date::text,
+      task.completed_at::text,
+      (
+        SELECT COALESCE(SUM(entry.hours), 0)::float
+        FROM time_entries entry
+        WHERE entry.task_id = task.id
+      ) AS hours_logged
+    FROM tasks task
+    INNER JOIN users staff ON staff.id = task.staff_id
+    LEFT JOIN programs program ON program.id = task.program_id
+    WHERE ${taskReadScopePredicate(actor, query`task.staff_id`)}
+      AND (${appliedFilters})
   `;
 }
 
@@ -113,17 +106,10 @@ export function attachTaskDetails<TRow extends TaskRow>(
     const status = getTaskStatus(row);
     return {
       ...row,
-      state: row.status,
       categoryLabel: getTaskCategoryLabel(row.category),
       status,
       statusLabel: getTaskStatusLabel(status),
       loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
-      assignee: {
-        id: row.staffId,
-        firstName: row.staffFirstName,
-        lastName: row.staffLastName,
-        name: row.staffName,
-      },
       writable: canWriteTaskFor(actor, row.staffId),
     };
   });

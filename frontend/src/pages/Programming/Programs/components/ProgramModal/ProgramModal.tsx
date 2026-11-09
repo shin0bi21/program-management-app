@@ -13,12 +13,26 @@ interface ProgramModalProps {
   onSaved: (result: ProgramMutationResult, operation: 'create' | 'update') => void;
 }
 
-export default function ProgramModal({ isOpen, program, onClose, onSaved }: ProgramModalProps) {
-  const workflow = useProgramModal({ isOpen, program, onSaved });
+/**
+ * Mounts a fresh program editor for each open target.
+ * @param props - Visibility, supplied saved program and completion actions.
+ * @example <ProgramModal isOpen program={program} onClose={close} onSaved={save} />
+ */
+export default function ProgramModal({ isOpen, ...props }: ProgramModalProps) {
+  return isOpen ? <ProgramForm key={props.program?.id ?? 'new'} {...props} /> : null;
+}
+
+/**
+ * Edits one program for the lifetime of its open dialog.
+ * @param props - Saved values or an empty add target, with close/save callbacks.
+ * @example <ProgramForm program={null} onClose={close} onSaved={save} />
+ */
+function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isOpen'>) {
+  const workflow = useProgramModal({ program, onSaved });
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={program ? 'Edit Program' : 'Add Program'}
       status={workflow.submitStatus}

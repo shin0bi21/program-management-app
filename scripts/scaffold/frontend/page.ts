@@ -1,9 +1,16 @@
+/**
+ * Builds collection-page source outlines in memory; this module does not write files.
+ * Flow:
+ * 1. Validate page segments and derive the page/data destinations.
+ * 2. Format route, page data owner, and test outlines.
+ * 3. Return the plan for the CLI's shared conflict checks and publication.
+ */
 import { join } from 'node:path';
 
 import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
 
 /**
- * Plans a collection page, its reference-data hook, and their test outlines without writing files.
+ * Plans a collection page, its reference data owner, and their test outlines without writing files.
  * Rejects paths deeper than one route family or segments that are not PascalCase.
  * @param pagePath - A page name, optionally prefixed by a route family, such as Staff/Schedules.
  * @returns Four formatted source files keyed by their destination paths under pages/.
@@ -33,14 +40,20 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import type { PageMessageValue } from '${context.relativeImport(directory, join(context.frontendRoot, 'common/components/PageMessageOverlay/PageMessageOverlay'))}';
     import ${hookName} from './hooks/data/${hookName}';
 
+    /**
+     * Composes the ${name} collection route around its reference data owner.
+     * @example <${name} /> // page controls, views, and selected-record workflows
+     */
     export default function ${name}() {
-      // TODO: Page-local message state.
+      // TODO: Page-owned messages. Descendants report through usePageMessageReporter without callbacks.
 
       // TODO: Permissions and application services.
 
       // Page data.
-      ${hookName}();
-      // TODO: Pass loaded options to preferences and page children.
+      const data = ${hookName}();
+      // TODO: Pass data to table/calendar components and dashboard cards through props or context.
+      // Each view owns its ordinary query results; do not call this hook again in descendants.
+      // Consume the main data hook's reference results before restoring preferences.
 
       // TODO: Saved preferences, when this page has durable controls.
       // Use a page hook backed by usePreferences; follow docs/frontend/03-preferences.md.
@@ -55,12 +68,18 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // Define one named stable object from applied search and filters; children add only view inputs.
 
       // TODO: Selection and page-spanning actions.
+      // Keep selected IDs and clicked row context needed by page workflows.
+      // Dashboard cards query selected IDs for summaries/children they own.
+      // Reconcile saved/deleted cursor rows with existing cache helpers; retain positions and offer Refresh for changed sort order.
+      // Invalidate affected membership, references, and summary queries when they need reloading.
+      // Initialize a mounted form from supplied data for editing or empty defaults for adding.
 
       // TODO: Modal and confirmation workflows.
 
       // TODO: Table, calendar, and dashboard configuration.
+      // Pass dashboard cards directly to PageContainer; it collects their messages and supplies the grid.
       const dashboard = <p>${name} dashboard</p>;
-      const primaryView = <p>${name} content</p>;
+      const primaryView = <p data-loading={data.loading || undefined}>${name} content</p>;
 
       // TODO: Derived messages and presentation state.
       const pageMessages: PageMessageValue[] = [];
@@ -85,13 +104,15 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import { describe, it } from 'vitest';
 
     // Follow docs/workflows/delivery/testing.md for test ownership and assertions.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     describe('${name}', () => {
       // Entry and readiness.
       it.todo('shows only the page actions allowed by the current permissions');
       it.todo('waits for domain reference dependencies before restoring saved controls');
 
       // Rendered states.
-      it.todo('reports page-owned failures through the shared message overlay');
+      it.todo('connects a page-owned failure to its domain recovery action');
 
       // Controls and views.
       it.todo('applies search and filters to each active data view');
@@ -111,11 +132,21 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
   const hook = context.sourceFile(
     join(directory, `hooks/data/${hookName}.ts`),
     `
-    export default function ${hookName}() {
-      // TODO: Group page-wide reference queries and existing domain hooks here.
-      // Preserve each query's key, cancellation, loading, and error state.
-      // Table and calendar collection queries stay with their view owners.
-      return {};
+    export interface ${name}Data {
+      loading: boolean;
+      error: Error | null;
+      // TODO: Add shared reference rows when this page needs them.
+    }
+
+    /**
+     * Supplies shared ${name} reference lookups used by page controls and children.
+     * Descendants receive reference context; each view owns its query results.
+     * @example const { loading, error } = ${hookName}()
+     */
+    export default function ${hookName}(): ${name}Data {
+      // TODO: Compose required page-wide reference hooks once, preserving loading/error/cancellation.
+      // Add a separate reference hook only when that composition has a distinct reusable responsibility.
+      return { loading: false, error: null };
     }
     `,
   );
@@ -125,9 +156,9 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import { describe, it } from 'vitest';
 
     describe('${hookName}', () => {
-      it.todo('builds page reference query keys and honors enabled conditions');
-      it.todo('forwards request inputs and AbortSignal to the API adapters');
-      it.todo('exposes each reference source and its loading and error state');
+      // Keep cases only for reference sources this page actually composes.
+      it.todo('exposes required reference rows with their loading and error states');
+      it.todo('applies domain inputs and enabled gates to composed reference hooks');
     });
     `,
   );

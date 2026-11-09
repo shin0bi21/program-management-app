@@ -7,7 +7,8 @@ import UnavailableState from '../../../../../../common/components/UnavailableSta
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 
 /**
- * Loads the selected session's attendance summary and provides its optional Manage action.
+ * Loads attendance for the selected session and supplies that roster to its Manage action.
+ * @param props - Selected session, write access, loaded-roster callback, and page message reporter.
  * @example <SessionAttendanceDashboardCard session={session} canWrite onManage={openAttendance} />
  */
 export default function SessionAttendanceDashboardCard({
@@ -15,7 +16,7 @@ export default function SessionAttendanceDashboardCard({
 }: {
   session: ProgramSession | null;
   canWrite: boolean;
-  onManage: (session: ProgramSession) => void;
+  onManage: (session: ProgramSession, roster: SessionRosterMember[]) => void;
   onMessageChange?: PageMessageChangeHandler;
 }) {
   const query = useSessionRoster(session?.id);
@@ -39,9 +40,9 @@ export default function SessionAttendanceDashboardCard({
     action={canWrite ? <Button
       size="sm"
       variant="secondary"
-      disabled={!session}
+      disabled={!session || !query.data || query.isLoading || Boolean(query.error)}
       aria-label="Manage attendance"
-      onClick={() => { if (session) onManage(session); }}
+      onClick={() => { if (session && query.data) onManage(session, query.data); }}
     >Manage</Button> : undefined}
   >
     {content}
@@ -51,6 +52,8 @@ export default function SessionAttendanceDashboardCard({
 /**
  * Shows attended/marked counts for enrolled sessions and check-ins for open sessions.
  * Returns null when no roster member has a recorded status.
+ * @param roster - Loaded session attendees and their recorded statuses.
+ * @param enrollmentRequired - Whether to display attended/marked counts instead of check-ins.
  * @example An enrolled session with 4 attendees and 5 marked records returns '4/5'.
  */
 function getAttendanceSummary(roster: readonly SessionRosterMember[], enrollmentRequired: boolean) {

@@ -10,6 +10,11 @@ interface UseCycleTableOptions {
   onDelete: (cycle: ProgramCycle) => void;
 }
 
+/**
+ * Builds cycle columns and delegates edit/delete actions with the selected saved cycle.
+ * @param options - Callbacks for the table's permitted cycle management actions.
+ * @example useCycleTable({ onEdit, onDelete }).columns
+ */
 export default function useCycleTable({ onEdit, onDelete }: UseCycleTableOptions) {
   const columns = useMemo<TableColumnDef<ProgramCycle>[]>(() => [
     { id: 'name', header: 'Cycle', accessorFn: cycle => cycle.name },

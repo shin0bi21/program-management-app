@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   handleGetYouth,
+  handleGetYouthAttendance,
   handleGetYouthSessionNotes,
   handleInviteYouth,
   handleSetYouth,
@@ -19,6 +20,7 @@ import {
   setYouthSchema,
   setYouthContactsSchema,
   youthQuerySchema,
+  youthAttendanceSchema,
   youthSessionNotesSchema,
   youthProgramCycleAttendanceSchema,
   setYouthProgramCycleAttendanceSchema,
@@ -28,6 +30,7 @@ import { createYouthProfileNoteSchema, deleteYouthProfileNoteSchema, updateYouth
 const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthQuerySchema), asyncHandler(handleGetYouth));
+router.get('/:id/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(youthAttendanceSchema), asyncHandler(handleGetYouthAttendance));
 router.get('/:id/session-notes', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), generalLimiter, validateRequest(youthSessionNotesSchema), asyncHandler(handleGetYouthSessionNotes));
 router.get('/:id/programs/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(youthProgramCycleAttendanceSchema), asyncHandler(handleGetYouthProgramCycleAttendance));
 router.put('/:id/programs/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('write:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(setYouthProgramCycleAttendanceSchema), asyncHandler(handleSetYouthProgramCycleAttendance));

@@ -166,7 +166,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect(missing.status).toBe(404);
   });
 
-
   it('keeps the full program cycle lookup available for Youth profile filters', async () => {
     const [jobReadiness] = await sql<{ id: string }[]>`
       SELECT id FROM programs WHERE name = 'Job Readiness'
@@ -663,7 +662,6 @@ describe('Program cycle sessions and attendance API', () => {
         enrollmentRequired: false,
         enrolledCount: 0,
         uniqueAttendeeCount: 1,
-        attendanceRecordedCount: 2,
       }),
     ]));
 
@@ -672,19 +670,6 @@ describe('Program cycle sessions and attendance API', () => {
       WHERE session_id = ${openSessionId} AND youth_id = ${youthId}
     `;
 
-    const profile = await request(app)
-      .get(`/api/youth?id=${secondYouthId}`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(profile.status).toBe(200);
-    expect(profile.body.programCycles).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        programId: openProgramId, cycleId: mainCycleId,
-        program: 'Drop In',
-        enrollmentRequired: false,
-        enrolledOn: null,
-        presentCount: 1,
-      }),
-    ]));
   });
 
   it('returns enrolled youth on the session roster and saves attendance', async () => {
@@ -710,7 +695,7 @@ describe('Program cycle sessions and attendance API', () => {
     expect(saved.status).toBe(200);
     expect(saved.body.session).toMatchObject({ id: sessionId, programId, cycleId: mainCycleId });
     expect(saved.body.session.cycle).toEqual(expect.any(String));
-    expect(saved.body.updatedProgramCycle).toMatchObject({ programId, cycleId: mainCycleId, averageAttendance: 100 });
+    expect(saved.body.updatedProgramCycle).toMatchObject({ programId, cycleId: mainCycleId, });
     expect(saved.body.updatedYouth).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: youthId }), expect.objectContaining({ id: secondYouthId }),
     ]));
@@ -742,7 +727,6 @@ describe('Program cycle sessions and attendance API', () => {
         programId, cycleId: mainCycleId,
         nextSessionId: sessionId,
         nextSessionAt: expect.any(String),
-        averageAttendance: 100,
         minAge: 12,
         maxAge: 15,
       }),
@@ -995,8 +979,7 @@ describe('Program cycle sessions and attendance API', () => {
       expect.objectContaining({ youthId: secondYouthId, status: null }),
     ]));
   });
-
-  it('returns a program-scoped youth report with attendance timelines and note-category counts', async () => {
+  it('loads scoped cycle attendance and renders that supplied data as a PDF', async () => {
     await sql`UPDATE program_cycles SET starts_on = ${addDays(today, -2)} WHERE id = ${mainCycleId}`;
     await sql`
       UPDATE program_sessions
@@ -1004,69 +987,38 @@ describe('Program cycle sessions and attendance API', () => {
           ends_at = ${addDays(today, -1) + 'T18:00:00.000Z'}
       WHERE id = ${sessionId}
     `;
+    await sql`
+      UPDATE program_enrollments
+      SET enrolled_on = ${addDays(today, -2)}
+      WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}
+    `;
     const response = await request(app)
-      .get(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth`)
+      .get(`/api/programs/${programId}/cycles/${mainCycleId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(response.status).toBe(200);
     expect(response.body.programCycle).toEqual(expect.objectContaining({ programId, cycleId: mainCycleId, cycle: expect.any(String) }));
     expect(response.body.youth).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: youthId,
-        attendanceBreakdown: {
-          bySessionType: expect.arrayContaining([
-            expect.objectContaining({
-              name: 'Guest Speaker', present: 1, late: 0, absent: 0, excused: 0, unmarked: 0,
-              attendedCount: 1, countedCount: 1, attendanceRate: 100,
-            }),
-            expect.objectContaining({ name: 'Regular', countedCount: 0, attendanceRate: null }),
-            expect.objectContaining({ name: 'Field Trip', countedCount: 0, attendanceRate: null }),
-          ]),
-          total: {
-            name: 'Total', present: 1, late: 0, absent: 0, excused: 0, unmarked: 0,
-            attendedCount: 1, countedCount: 1, attendanceRate: 100,
-          },
-        },
-        timeline: expect.arrayContaining([expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', status: 'present' })]),
-      }),
-      expect.objectContaining({
-        id: secondYouthId,
-        attendanceBreakdown: {
-          bySessionType: expect.arrayContaining([
-            expect.objectContaining({
-              name: 'Guest Speaker', present: 0, late: 0, absent: 0, excused: 0, unmarked: 1,
-              attendedCount: 0, countedCount: 1, attendanceRate: 0,
-            }),
-          ]),
-          total: {
-            name: 'Total', present: 0, late: 0, absent: 0, excused: 0, unmarked: 1,
-            attendedCount: 0, countedCount: 1, attendanceRate: 0,
-          },
-        },
-        notes: expect.arrayContaining([
+      expect.objectContaining({ id: youthId, sessions: expect.arrayContaining([
+        expect.objectContaining({ id: sessionId, sessionType: 'Guest Speaker', theme: 'Communication', status: 'present' }),
+      ]) }),
+      expect.objectContaining({ id: secondYouthId, sessions: expect.arrayContaining([
+        expect.objectContaining({ id: sessionId, sessionNotes: expect.arrayContaining([
           expect.objectContaining({ category: 'behaviour', details: 'Updated details.' }),
-        ]),
-        timeline: expect.arrayContaining([
-          expect.objectContaining({ sessionId, sessionType: 'Guest Speaker', sessionTheme: 'Communication', noteCategories: ['behaviour'] }),
-        ]),
-      }),
+        ]) }),
+      ]) }),
     ]));
-    expect(response.body.youth.find((person: { id: string }) => person.id === youthId).timeline).toHaveLength(1);
 
     const filteredResponse = await request(app)
-      .get(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth?youthId=${youthId}`)
+      .get(`/api/youth/${youthId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(filteredResponse.status).toBe(200);
     expect(filteredResponse.body.youth).toHaveLength(1);
     expect(filteredResponse.body.youth[0]).toEqual(expect.objectContaining({ id: youthId }));
 
-    const invalidFilter = await request(app)
-      .get(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth?youthId=invalid`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(invalidFilter.status).toBe(400);
-
     const pdfResponse = await request(app)
-      .get(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth.pdf`)
+      .post(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth.pdf`)
+      .send(response.body)
       .set('Authorization', `Bearer ${staffToken}`)
       .buffer(true);
     expect(pdfResponse.status).toBe(200);
@@ -1079,21 +1031,23 @@ describe('Program cycle sessions and attendance API', () => {
 
     await sql`UPDATE program_sessions SET cancelled_at = NOW() WHERE id = ${sessionId}`;
     const cancelledSessionReport = await request(app)
-      .get(`/api/programs/${programId}/cycles/${mainCycleId}/reports/youth`)
+      .get(`/api/programs/${programId}/cycles/${mainCycleId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`);
     const youthWithCancelledSession = cancelledSessionReport.body.youth.find(
       (person: { id: string }) => person.id === secondYouthId,
     );
-    expect(youthWithCancelledSession.timeline).toEqual([]);
-    expect(youthWithCancelledSession.notes).toEqual([]);
+    expect(youthWithCancelledSession.sessions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: sessionId, cancelledAt: expect.any(String) }),
+    ]));
     await sql`UPDATE program_sessions SET cancelled_at = NULL WHERE id = ${sessionId}`;
 
     const denied = await request(app)
-      .get(`/api/programs/${unassignedProgramId}/cycles/${mainCycleId}/reports/youth`)
+      .get(`/api/programs/${unassignedProgramId}/cycles/${mainCycleId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(denied.status).toBe(403);
     const deniedPdf = await request(app)
-      .get(`/api/programs/${unassignedProgramId}/cycles/${mainCycleId}/reports/youth.pdf`)
+      .post(`/api/programs/${unassignedProgramId}/cycles/${mainCycleId}/reports/youth.pdf`)
+      .send({ ...response.body, programCycle: { ...response.body.programCycle, programId: unassignedProgramId } })
       .set('Authorization', `Bearer ${staffToken}`);
     expect(deniedPdf.status).toBe(403);
   });

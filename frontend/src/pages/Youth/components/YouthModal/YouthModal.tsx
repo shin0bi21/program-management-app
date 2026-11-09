@@ -23,8 +23,23 @@ interface YouthModalProps {
   onManageSchool?: (action: SchoolAction, selection: SchoolSelection) => void;
 }
 
-export default function YouthModal({
-  isOpen,
+/**
+ * Mounts one Youth profile or contact editor while its target is open.
+ * Suspension hides the dialog while keeping the mounted draft for school management.
+ * @param props - Visibility, supplied profile, save actions, and optional school workflow.
+ * @example <YouthModal isOpen youthData={profile} onClose={close} onSuccess={save} />
+ */
+export default function YouthModal({ isOpen, ...props }: YouthModalProps) {
+  const targetKey = `${props.mode ?? 'full'}:${props.youthData?.id ?? 'new'}`;
+  return isOpen ? <YouthForm key={targetKey} {...props} /> : null;
+}
+
+/**
+ * Owns supplied profile values and contact fields until close or save completion.
+ * @param props - Initial values, editor mode, suspension, and completion actions.
+ * @example <YouthForm youthData={profile} onClose={close} onSuccess={save} />
+ */
+function YouthForm({
   onClose,
   onSuccess,
   youthData,
@@ -32,7 +47,7 @@ export default function YouthModal({
   mode = 'full',
   suspended = false,
   onManageSchool,
-}: YouthModalProps) {
+}: Omit<YouthModalProps, 'isOpen'>) {
   const { permissions } = useAuth();
   const canManageSchools = permissions.includes('write:schools') && !!onManageSchool;
   const {
@@ -46,13 +61,12 @@ export default function YouthModal({
     schoolId,
     setSchoolId,
     addresses,
-    handleAddressChange,
     contacts,
     handleContactChange,
     submitStatus,
     error,
     handleClose,
-  } = useYouthModal({ isOpen, youthData, onClose, onSuccess, inviteYouth, mode });
+  } = useYouthModal({ youthData, onClose, onSuccess, inviteYouth, mode });
 
   const contactOnly = mode === 'contact';
   const birthDateBounds = getDateOfBirthBounds();
@@ -71,13 +85,11 @@ export default function YouthModal({
 
   let modalStatusMessage: string | undefined;
   if (submitStatus === 'submitting') {
-    modalStatusMessage = contactOnly
-      ? 'Saving primary contact...'
-      : youthData ? 'Updating youth profile...' : 'Creating youth profile...';
+    modalStatusMessage = youthData ? 'Updating youth profile...' : 'Creating youth profile...';
+    if (contactOnly) modalStatusMessage = 'Saving primary contact...';
   } else if (submitStatus === 'success') {
-    modalStatusMessage = contactOnly
-      ? 'Primary contact saved successfully!'
-      : youthData ? 'Youth profile updated successfully!' : 'Youth profile created successfully!';
+    modalStatusMessage = youthData ? 'Youth profile updated successfully!' : 'Youth profile created successfully!';
+    if (contactOnly) modalStatusMessage = 'Primary contact saved successfully!';
   } else if (submitStatus === 'error') {
     modalStatusMessage = error;
   }
@@ -95,7 +107,7 @@ export default function YouthModal({
 
   return (
     <Modal
-      isOpen={isOpen && !suspended}
+      isOpen={!suspended}
       onClose={handleClose}
       title={title}
       footer={footer}
@@ -155,15 +167,19 @@ export default function YouthModal({
               />
             </FormField>
 
-            {addresses.map((address, index) => (
-              <FormField key={index} id={`address-${index}`} label="Address (optional)">
+            {addresses.map((_, index) => (
+              <FormField
+                key={index}
+                id={`address-${index}`}
+                label="Address (optional)"
+                error={errors.addresses?.[index]?.address?.message}
+              >
                 <input
                   id={`address-${index}`}
                   type="text"
-                  value={address.address}
-                  onChange={event => handleAddressChange(index, 'address', event.target.value)}
                   placeholder="123 Main Street"
                   disabled={submissionComplete}
+                  {...register(`addresses.${index}.address`)}
                 />
               </FormField>
             ))}

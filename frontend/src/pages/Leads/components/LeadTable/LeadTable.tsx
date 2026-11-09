@@ -20,6 +20,11 @@ interface LeadTableProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays paginated lead rows and their loading and retry states.
+ * @param props - Applied filters, table controls, selection, and page callbacks.
+ * @example <LeadTable {...tableProps} filters={{ statuses: ['new'] }} />
+ */
 export default function LeadTable({
   queryKey, columns, hiddenColumnKeys, filters, sorting, columnWidths,
   selectedLeadId, onLeadSelect, onSortingChange, onColumnWidthsChange, onMessageChange,

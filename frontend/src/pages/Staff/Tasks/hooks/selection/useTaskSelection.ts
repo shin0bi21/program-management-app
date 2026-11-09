@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { taskStore } from '../../taskStore';
 import type { Task, TaskResource } from '../../types';
 
 interface UseTaskSelectionOptions {
@@ -8,17 +7,16 @@ interface UseTaskSelectionOptions {
 }
 
 /**
- * Keeps task/resource selection as IDs and resolves the current shared task for dashboards.
+ * Keeps the clicked task as temporary selection context for dashboards.
+ * @param options - Current staff choices supplied by the page.
  * @example useTaskSelection({ resources }).selectedTask
  */
 export default function useTaskSelection({
   resources,
 }: UseTaskSelectionOptions) {
   const [resourceId, setResourceId] = useState<string | null>(null);
-  const records = taskStore.useRecords();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = selectedTaskId ? records[selectedTaskId] ?? null : null;
-  const selectedResourceId = selectedTask?.assignee.id ?? resourceId;
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const selectedResourceId = selectedTask?.staffId ?? resourceId;
 
   const selectedResource = useMemo(
     () => resources.find(resource => resource.id === selectedResourceId) ?? null,
@@ -37,24 +35,26 @@ export default function useTaskSelection({
       ?? null;
 
     setResourceId(fallbackResourceId);
-    setSelectedTaskId(current => (
-      current && records[current]?.assignee.id === fallbackResourceId ? current : null
-    ));
-  }, [records, resourceId, resources, selectedResourceId]);
+    setSelectedTask(current => current?.staffId === fallbackResourceId ? current : null);
+  }, [resourceId, resources, selectedResourceId]);
 
   // Selection transitions.
   const selectTask = useCallback((task: Task) => {
-    setResourceId(task.assignee.id);
-    setSelectedTaskId(task.id);
+    setResourceId(task.staffId);
+    setSelectedTask(task);
   }, []);
 
   const selectResource = useCallback((resourceId: string) => {
     setResourceId(resourceId);
-    setSelectedTaskId(null);
+    setSelectedTask(null);
   }, []);
 
   const removeSelectedTask = useCallback((taskId: string) => {
-    setSelectedTaskId(current => current === taskId ? null : current);
+    setSelectedTask(current => current?.id === taskId ? null : current);
+  }, []);
+
+  const onTaskSynced = useCallback((task: Task) => {
+    setSelectedTask(current => current?.id === task.id ? task : current);
   }, []);
 
   return {
@@ -65,5 +65,6 @@ export default function useTaskSelection({
     selectTask,
     selectResource,
     removeSelectedTask,
+    onTaskSynced,
   };
 }

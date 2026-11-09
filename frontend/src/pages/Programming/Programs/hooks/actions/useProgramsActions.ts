@@ -17,6 +17,11 @@ interface UseProgramsActionsOptions {
   onCycleDeleted: (cycleId: string) => void;
 }
 
+/**
+ * Reconciles saved programs and cycles with their loaded queries.
+ * @param options - Table cache key and callbacks for saved programs and removed cycles.
+ * @example useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted })
+ */
 export default function useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted }: UseProgramsActionsOptions) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -62,6 +67,7 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
       successMessage: 'Cycle deleted',
       onConfirm: async () => {
         await deleteProgramCycle(cycle.id);
+
         removeInfiniteListRow(queryClient, CYCLE_TABLE_QUERY_KEY, cycle.id);
         onCycleDeleted(cycle.id);
       },

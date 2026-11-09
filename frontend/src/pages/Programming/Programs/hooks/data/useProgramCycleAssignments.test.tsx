@@ -24,9 +24,6 @@ describe('useProgramCycleAssignments', () => {
       enrolledCount: 10,
       nextSessionAt: null,
       nextSessionId: null,
-      averageAttendance: null,
-      attendanceAttendedCount: 0,
-      attendanceRecordedCount: 0,
       uniqueAttendeeCount: 0,
     }]);
   });
@@ -38,7 +35,7 @@ describe('useProgramCycleAssignments', () => {
     });
 
     await waitFor(() => expect(result.current.assignments).toHaveLength(1));
-    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', {}, {
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', { includeAllPrograms: false }, {
       signal: expect.any(AbortSignal),
     });
     expect(result.current.error).toBe('');

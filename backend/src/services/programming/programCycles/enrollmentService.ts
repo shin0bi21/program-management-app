@@ -1,14 +1,16 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
 import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
-import { lockAssignmentProgram } from './assignmentService';
+import { lockAssignmentCycle, lockAssignmentProgram } from './assignmentService';
+import { rethrowEnrollmentConflict } from './enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { EnrollYouthInput } from '../../../validation/programmingSchemas';
 import { getProgramCycleRowsByKeys } from './programCycleRowQuery';
-import { getYouthRowsByIds } from '../../youth/youthRowQuery';
+import { getYouthRows } from '../../youth/youthRowQuery';
 
 /**
- * Enrolls the selected youth and returns affected rows.
+ * Enrolls the selected youth in one program at a time and returns affected rows.
+ * Conflicting enrollment periods reject the entire batch.
  * @param programId - Enrollment program.
  * @param cycleId - Assigned cycle.
  * @param data - Validated youth IDs.
@@ -24,20 +26,22 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     // 2. Lock and check the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
 
-    const programCycles = await trx<{
+    await lockAssignmentCycle(trx, cycleId);
+
+    const [programCycle] = await trx<{
       programId: string;
       enrollmentRequired: boolean;
       minAge: number | null;
       maxAge: number | null;
     }[]>`
-      SELECT pc.program_id, p.enrollment_required, p.min_age, p.max_age
-      FROM program_cycle_assignments pc
-      INNER JOIN programs p ON p.id = pc.program_id
-      WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
-      FOR UPDATE OF pc
+      SELECT assignment.program_id, program.enrollment_required, program.min_age, program.max_age
+      FROM program_cycle_assignments assignment
+      INNER JOIN programs program ON program.id = assignment.program_id
+      WHERE assignment.program_id = ${programId} AND assignment.cycle_id = ${cycleId}
+      FOR UPDATE OF assignment
     `;
-    if (!programCycles.length) throw new NotFoundError('Program cycle not found');
-    if (!programCycles[0].enrollmentRequired) {
+    if (!programCycle) throw new NotFoundError('Program cycle not found');
+    if (!programCycle.enrollmentRequired) {
       throw new ConflictError('Open attendance programs do not use enrollment');
     }
 
@@ -55,8 +59,8 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     }
 
     const outsideAgeRange = youth.some(({ age: youthAge }) => (
-      (programCycles[0].minAge !== null && (youthAge === null || youthAge < programCycles[0].minAge))
-      || (programCycles[0].maxAge !== null && (youthAge === null || youthAge > programCycles[0].maxAge))
+      (programCycle.minAge !== null && (youthAge === null || youthAge < programCycle.minAge))
+      || (programCycle.maxAge !== null && (youthAge === null || youthAge > programCycle.maxAge))
     ));
     if (outsideAgeRange) {
       throw new ConflictError('One or more youth profiles do not meet this program age range');
@@ -73,6 +77,7 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
         ${actor.userId},
         ${actor.userId}
       FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
+      ORDER BY selected.youth_id
       ON CONFLICT (program_id, cycle_id, youth_id) DO UPDATE SET
         withdrawn_on = NULL,
         enrolled_on = EXCLUDED.enrolled_on,
@@ -89,14 +94,14 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     `;
 
     // 5. Return the affected rows.
-    const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
+    const [updatedProgramCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
     return {
       enrollments,
-      programCycle: programCycle,
+      programCycle: updatedProgramCycle,
       updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, data.youthIds) : [],
+        ? await getYouthRows(trx`youth.id = ANY(${trx.array(data.youthIds)}::uuid[])`, trx) : [],
     };
-  });
+  }).catch(rethrowEnrollmentConflict);
 }
 
 /**
@@ -119,6 +124,7 @@ export async function withdrawYouth(
 
     // 2. Lock the program assignment.
     await lockAssignmentProgram(trx, programId, actor);
+    await lockAssignmentCycle(trx, cycleId);
     await trx`
       SELECT program_id
       FROM program_cycle_assignments
@@ -135,15 +141,15 @@ export async function withdrawYouth(
       RETURNING id, program_id, cycle_id, youth_id, enrolled_on::text AS enrolled_on,
         withdrawn_on::text AS withdrawn_on, created_at, updated_at
     `;
-    if (!enrollment) throw new NotFoundError('Active programCycle enrollment not found');
+    if (!enrollment) throw new NotFoundError('Active program enrollment not found');
 
-    // 5. Return the affected rows.
+    // 4. Return the affected rows.
     const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
     return {
       enrollment,
-      programCycle: programCycle,
+      programCycle,
       updatedYouth: actor.permissions.includes('read:youth_profiles')
-        ? await getYouthRowsByIds(trx, [youthId]) : [],
+        ? await getYouthRows(trx`youth.id = ${youthId}`, trx) : [],
     };
-  });
+  }).catch(rethrowEnrollmentConflict);
 }

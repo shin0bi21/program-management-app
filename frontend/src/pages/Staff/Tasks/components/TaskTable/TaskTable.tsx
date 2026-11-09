@@ -23,6 +23,11 @@ interface TaskTableProps {
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays complete filtered task rows.
+ * @param props - table controls, selection, and page-message reporting.
+ * @example <TaskTable {...tableProps} />
+ */
 export default function TaskTable({
   queryKey, columns, hiddenColumnKeys, filters, today, sorting, columnWidths,
   selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onMessageChange,

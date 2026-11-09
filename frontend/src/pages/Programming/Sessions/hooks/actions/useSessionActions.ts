@@ -1,22 +1,23 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import { deleteSession, moveSessionDate, type CreatedSessionResult, type UpdatedSessionResult, type SessionAttendanceResult } from '../../sessions.api';
 import type { ProgramCycleAssignment } from '../../../Programs/types';
 import { updateProgramCycleAssignments } from '../../../Programs/hooks/actions/programCycleAssignmentCache';
-import { sessionStore } from '../../sessionStore';
 import type { ProgramSession, SessionCalendarCache } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import { getErrorMessage } from '../../../../../http/errors';
-import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
 const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
 
 /**
- * Reconciles shared sessions, view indexes, and related attendance/program summaries.
- * @example actions.moveSession(session, date) // both views resolve the saved session
+ * Reconciles saved session rows and refreshes related attendance/program summaries.
+ * @param options.onSessionRemoved - Clears selected/open context after a confirmed deletion.
+ * @param options.onSessionSynced - Receives authoritative rows for selected-page context.
+ * @example actions.moveSession(session, date) // replaces the saved row in loaded views
  */
 export default function useSessionActions({
   onSessionRemoved,
@@ -26,7 +27,6 @@ export default function useSessionActions({
   onSessionSynced?: (session: ProgramSession) => void;
 }) {
   const queryClient = useQueryClient();
-  const scope = sessionStore.getScope(queryClient);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRevision, setCalendarRevision] = useState(0);
   const calendarCacheRef = useRef<SessionCalendarCache>(EMPTY_CALENDAR_CACHE);
@@ -34,31 +34,50 @@ export default function useSessionActions({
   const pendingMoves = useRef(new Set<string>());
   const [pendingSessionIds, setPendingSessionIds] = useState<string[]>([]);
 
+  /**
+   * Refreshes related cycle summaries and loaded attendance after session changes.
+   * @example refreshProgramOverviews()
+   */
   const refreshProgramOverviews = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
+    void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-attendance'] });
+    void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance'] });
   }, [queryClient]);
 
+  /**
+   * Publishes the supplied authoritative session into loaded table, calendar and selected context.
+   * @example syncSession(savedSession)
+   */
   const syncSession = useCallback((session: ProgramSession) => {
-    if (!sessionStore.isScope(queryClient, scope)) return;
-    sessionStore.write(queryClient, session);
+    replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
     calendarCacheRef.current.upsert(session);
     onSessionSynced?.(session);
     refreshProgramOverviews();
-  }, [onSessionSynced, queryClient, refreshProgramOverviews, scope]);
+  }, [onSessionSynced, queryClient, refreshProgramOverviews]);
 
+  /**
+   * Publishes the supplied program-cycle assignment rows into loaded lists.
+   * @example syncAssignments(result.updatedProgramCycles)
+   */
   const syncAssignments = useCallback((assignments: readonly ProgramCycleAssignment[] = []) => {
     updateProgramCycleAssignments(queryClient, assignments);
   }, [queryClient]);
 
+  /**
+   * Reconciles a saved session, affected assignments and its roster query.
+   * @example syncUpdatedSession(result)
+   */
   const syncUpdatedSession = useCallback((result: UpdatedSessionResult) => {
-    if (!sessionStore.isScope(queryClient, scope)) return;
     syncSession(result.session);
     syncAssignments(result.updatedProgramCycles);
     void queryClient.invalidateQueries({ queryKey: ['sessions', result.session.id, 'roster'] });
-  }, [queryClient, scope, syncAssignments, syncSession]);
+  }, [queryClient, syncAssignments, syncSession]);
 
+  /**
+   * Publishes saved roster data and affected session, Youth and assignment rows.
+   * @example syncAttendance(result)
+   */
   const syncAttendance = useCallback((result: SessionAttendanceResult) => {
-    if (!sessionStore.isScope(queryClient, scope)) return;
     syncSession(result.session);
     queryClient.setQueryData(['sessions', result.session.id, 'roster'], result.roster);
     for (const youth of result.updatedYouth ?? []) {
@@ -67,43 +86,48 @@ export default function useSessionActions({
     if (result.updatedProgramCycle) {
       syncAssignments([result.updatedProgramCycle]);
     }
-    void queryClient.invalidateQueries({ queryKey: ['youth-program-cycle-attendance'] });
-  }, [queryClient, scope, syncAssignments, syncSession]);
+  }, [queryClient, syncAssignments, syncSession]);
 
+  /**
+   * Moves the supplied session to the requested YYYY-MM-DD date while preventing duplicate moves.
+   * @example await moveSession(session, "2026-11-20")
+   */
   const moveSession = useCallback(async (session: ProgramSession, date: string) => {
     if (pendingMoves.current.has(session.id)) return null;
 
-    sessionStore.setPending(queryClient, session.id, true, scope);
     pendingMoves.current.add(session.id);
     setPendingSessionIds([...pendingMoves.current]);
     setMoveError(null);
 
     try {
       const saved = await moveSessionDate(session.id, date);
-      if (!sessionStore.isScope(queryClient, scope)) return null;
       syncUpdatedSession(saved);
       return saved.session;
     } catch (cause) {
       setMoveError(getErrorMessage(cause, 'Could not move session'));
       return null;
     } finally {
-      sessionStore.setPending(queryClient, session.id, false, scope);
       pendingMoves.current.delete(session.id);
       setPendingSessionIds([...pendingMoves.current]);
     }
-  }, [queryClient, scope, syncUpdatedSession]);
+  }, [syncUpdatedSession]);
 
+  /**
+   * Reloads membership after creation and publishes affected program assignments.
+   * @example await refreshCreatedSessions(result)
+   */
   const refreshCreatedSessions = useCallback(async (result: CreatedSessionResult) => {
-    if (!sessionStore.isScope(queryClient, scope)) return;
-    const { updatedProgramCycles, ...session } = result;
-    sessionStore.write(queryClient, session);
-    syncAssignments(updatedProgramCycles);
+    syncAssignments(result.updatedProgramCycles);
     // Creation cannot establish membership in every filtered collection or buffered range.
     await queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
     refreshProgramOverviews();
     setCalendarRevision(revision => revision + 1);
-  }, [queryClient, refreshProgramOverviews, scope, syncAssignments]);
+  }, [queryClient, refreshProgramOverviews, syncAssignments]);
 
+  /**
+   * Opens a confirmation capturing the supplied session and its deletion reconciliation.
+   * @example requestDelete(session)
+   */
   const requestDelete = useCallback((session: ProgramSession) => setConfirmAction({
     title: 'Delete Session',
     message: `Delete the ${session.theme} session for the ${session.program} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
@@ -111,26 +135,27 @@ export default function useSessionActions({
     successMessage: 'Session deleted',
     onConfirm: async () => {
       if (pendingMoves.current.has(session.id)) throw new Error('Session is being updated. Try again.');
-      sessionStore.setPending(queryClient, session.id, true, scope);
       pendingMoves.current.add(session.id);
       setPendingSessionIds([...pendingMoves.current]);
       try {
         const saved = await deleteSession(session.id);
-        if (!sessionStore.isScope(queryClient, scope)) return;
 
         syncAssignments(saved.updatedProgramCycles);
-        sessionStore.remove(queryClient, session.id);
+        removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
         calendarCacheRef.current.remove(session.id);
         onSessionRemoved(session.id);
         refreshProgramOverviews();
       } finally {
-        sessionStore.setPending(queryClient, session.id, false, scope);
         pendingMoves.current.delete(session.id);
         setPendingSessionIds([...pendingMoves.current]);
       }
     },
-  }), [onSessionRemoved, queryClient, refreshProgramOverviews, scope, syncAssignments]);
+  }), [onSessionRemoved, queryClient, refreshProgramOverviews, syncAssignments]);
 
+  /**
+   * Clears the confirmation target and unmounts its feedback.
+   * @example closeConfirmation()
+   */
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 
   return {

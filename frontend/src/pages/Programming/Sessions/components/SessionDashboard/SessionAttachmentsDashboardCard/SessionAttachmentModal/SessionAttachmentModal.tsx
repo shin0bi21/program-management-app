@@ -5,27 +5,38 @@ import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
 import type { ProgramSession, SessionAttachment } from '../../../../types';
 import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
+import { getErrorMessage } from '../../../../../../../http/errors';
 import './SessionAttachmentModal.css';
 
-export default function SessionAttachmentModal({
-  queryKey,
-  session,
-  attachment = null,
-  onClose,
-  onSaved,
-}: {
+interface SessionAttachmentModalProps {
   queryKey: readonly unknown[];
   session: ProgramSession | null;
   attachment?: SessionAttachment | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
-}) {
+}
+
+/**
+ * Mounts one attachment draft for the supplied open session and saved attachment.
+ * @param props - Saved targets, roster query scope, and close/save actions.
+ * @example <SessionAttachmentModal queryKey={['sessions']} session={session} onClose={close} onSaved={refresh} />
+ */
+export default function SessionAttachmentModal({ session, ...props }: SessionAttachmentModalProps) {
+  return session ? <AttachmentForm key={`${session.id}:${props.attachment?.id ?? 'new'}`} session={session} {...props} /> : null;
+}
+
+/**
+ * Owns attachment fields and upload selection until close or successful completion.
+ * @param props - Saved session/attachment and completion actions.
+ * @example <AttachmentForm queryKey={['sessions']} session={session} onClose={close} onSaved={refresh} />
+ */
+function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved }: Omit<SessionAttachmentModalProps, 'session'> & { session: ProgramSession }) {
   const workflow = useSessionAttachmentModal({ queryKey, session, attachment, onSaved });
   const { roster, rosterQuery, selectedYouthIds, setSelectedFile, submitStatus, statusMessage, submissionComplete, toggleYouth, submit } = workflow;
 
   return (
     <Modal
-      isOpen={session !== null}
+      isOpen
       onClose={onClose}
       title={attachment ? 'Edit Attachment' : 'Add Attachment'}
       status={submitStatus}
@@ -34,7 +45,7 @@ export default function SessionAttachmentModal({
     >
       <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
         <FormField id="session-attachment-title" label="Title">
-          <input key={`${attachment?.id ?? 'new'}-title`} id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
+          <input id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
         </FormField>
         {!attachment && <FormField id="session-attachment-file" label="File">
           <input
@@ -48,16 +59,16 @@ export default function SessionAttachmentModal({
           />
         </FormField>}
         <FormField id="session-attachment-description" label="Description (optional)">
-          <textarea key={`${attachment?.id ?? 'new'}-description`} id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
+          <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
         </FormField>
         <FormFieldGroup label="Link youth" className="session-attachment-youth" disabled={submissionComplete}>
-          {rosterQuery.isLoading ? <p>Loading youth…</p> : rosterQuery.error ? (
+          {rosterQuery.isLoading && <p>Loading youth…</p>}
+          {!rosterQuery.isLoading && rosterQuery.error && (
             <p className="form-error" role="alert">
-              {rosterQuery.error instanceof Error
-                ? rosterQuery.error.message
-                : 'Could not load session roster'}
+              {getErrorMessage(rosterQuery.error, 'Could not load session roster')}
             </p>
-          ) : roster.length ? (
+          )}
+          {!rosterQuery.isLoading && !rosterQuery.error && roster.length > 0 && (
             <Checklist
               variant="form"
               ariaLabel="Link youth"
@@ -66,7 +77,8 @@ export default function SessionAttachmentModal({
               onToggle={toggleYouth}
               disabled={submissionComplete}
             />
-          ) : <p>{session && !session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cycle.'}</p>}
+          )}
+          {!rosterQuery.isLoading && !rosterQuery.error && roster.length === 0 && <p>{!session.enrollmentRequired ? 'No youth have checked into this session yet.' : 'No youth are enrolled in this cycle.'}</p>}
         </FormFieldGroup>
       </form>
     </Modal>

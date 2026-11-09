@@ -27,7 +27,7 @@ describe('useTaskOverviewData', () => {
       'staff-1',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    expect(client.getQueryData(['tasks', 'overview', 'staff-1'])).toEqual([{ id: task.id }]);
+    expect(client.getQueryData(['tasks', 'overview', 'staff-1'])).toEqual([task]);
   });
 
   it('owns the overview error message', async () => {

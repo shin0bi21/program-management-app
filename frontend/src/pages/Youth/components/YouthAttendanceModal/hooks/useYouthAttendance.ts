@@ -1,81 +1,79 @@
-import type { YouthAttendanceResult } from '../youthAttendance.api';
-import { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
-import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
+import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../http/errors';
-import { getYouthProgramCycleAttendance, setYouthProgramCycleAttendance } from '../youthAttendance.api';
+import { setYouthProgramCycleAttendance, type YouthAttendanceResult } from '../youthAttendance.api';
 import type { YouthProgramCycleAttendance } from '../types';
 
+/**
+ * Edits one mounted attendance draft supplied by the dashboard.
+ * @param options - Supplied attendance, youth identity and saved-result callback.
+ * @example useYouthAttendance({ youthId, attendance, onSaved }) // starts with saved statuses
+ */
 export default function useYouthAttendance({
   youthId,
-  programId,
-  cycleId,
+  attendance,
   onSaved,
 }: {
-  youthId: string | null;
-  programId: string | null;
-  cycleId: string | null;
+  youthId: string;
+  attendance: YouthProgramCycleAttendance;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
-  const queryClient = useQueryClient();
-  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-  const queryKey = ['youth-program-cycle-attendance', youthId, programId, cycleId];
-  const query = useQuery({
-    queryKey,
-    queryFn: ({ signal }) => getYouthProgramCycleAttendance(youthId!, { programId: programId!, cycleId: cycleId! }, { signal }),
-    enabled: Boolean(youthId && programId && cycleId),
-  });
+  const { tryLock, unlock } = useSubmitLock();
+  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
+    attendance.sessions.map(session => [session.id, session.status ?? '']),
+  ));
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
+  const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
 
-  useEffect(() => {
-    resetStatus();
-    setSelections({});
-  }, [programId, cycleId, resetStatus, youthId]);
-
-  useEffect(() => {
-    if (!query.data) return;
-    setSelections(Object.fromEntries(
-      query.data.sessions.map(session => [session.id, session.status ?? '']),
-    ));
-  }, [query.data]);
-
+  /**
+   * Changes the supplied session's draft attendance while editing is available.
+   * @example updateStatus(sessionId, "late")
+   */
   const updateStatus = (sessionId: string, status: AttendanceStatus | '') => {
+    if (submissionComplete) return;
     setSelections(current => ({ ...current, [sessionId]: status }));
   };
 
+  /**
+   * Saves the complete draft once, preserving failures for retry and successful feedback until close.
+   * @example await save()
+   */
   const save = async () => {
-    if (!youthId || !programId || !cycleId || !query.data) return;
+    if (attendance.sessions.length === 0 || !tryLock()) return;
+
+    const { programId, cycleId } = attendance.programCycle;
     setSubmitStatus('submitting');
-    setError('');
+    setStatusMessage('Saving youth attendance...');
+    let saved: YouthAttendanceResult;
     try {
-      const saved = await setYouthProgramCycleAttendance(
+      saved = await setYouthProgramCycleAttendance(
         youthId,
         { programId, cycleId },
-        query.data.sessions.map(session => ({
+        attendance.sessions.map(session => ({
           sessionId: session.id,
           status: selections[session.id] || null,
           notes: session.notes,
         })),
       );
-      queryClient.setQueryData<YouthProgramCycleAttendance>(queryKey, saved);
-      await onSaved(saved);
-      setSubmitStatus('success');
     } catch (cause) {
-      setError(getErrorMessage(cause, 'Could not save youth attendance'));
+      setStatusMessage(getErrorMessage(cause, 'Could not save youth attendance'));
       setSubmitStatus('error');
+      unlock();
+      return;
     }
+
+    let message = 'Youth attendance saved.';
+    try {
+      await onSaved(saved);
+    } catch {
+      message = 'Attendance was saved, but the page could not refresh. Reload to see it.';
+    }
+    setStatusMessage(message);
+    setSubmitStatus('success');
   };
 
-  return {
-    attendance: query.data,
-    loading: query.isLoading,
-    loadError: query.error ? getErrorMessage(query.error, 'Could not load youth attendance') : '',
-    refresh: query.refetch,
-    selections,
-    updateStatus,
-    save,
-    submitStatus,
-    error,
-  };
+  return { selections, updateStatus, save, submitStatus, statusMessage, submissionComplete };
 }

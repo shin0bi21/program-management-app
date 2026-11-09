@@ -159,6 +159,14 @@ Choose the narrowest owner for each assertion:
   invokes the correct mutation. Omit incidental heading, input, or menu checks
   when the domain outcome already proves the interaction.
 
+Page message behavior belongs to the shared `PageContainer`,
+`usePageMessageReporter`, and `PageMessageOverlay` suites. Test aggregation,
+source cleanup, readiness and view transitions, isolation, dismissal, severity,
+and action state there. Remove those assertions from page, dashboard, table,
+and calendar suites when adopting the shared reporter. Consumers cover their
+own message selection, permissions, request inputs, and domain recovery actions;
+do not repeat the shared message lifecycle through callback spies.
+
 Shared UI, query, preference, and policy behavior stays with its shared owner;
 consumers verify domain inputs and added decisions. SQL semantics belong to backend
 queries/services, with representative API checks. Database preservation and recovery

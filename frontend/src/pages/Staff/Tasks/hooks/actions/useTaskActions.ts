@@ -1,15 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
-import { getHoursScope, isHoursScope, writeHoursItem } from '../../../Hours/hoursItemStore';
 import {
   deleteTask,
   updateTaskPlacement,
   updateTaskState,
 } from '../../tasks.api';
 import type { Task } from '../../types';
-import { taskStore } from '../../taskStore';
 
 import type { TaskCalendarCache } from '../../types';
 
@@ -22,23 +21,24 @@ interface TaskActionHandlers {
   taskQueryKey: readonly unknown[];
   taskTableQueryKey: readonly unknown[];
   hoursQueryKey: readonly unknown[];
+  onTaskSynced?: (task: Task) => void;
   onTaskRemoved?: (taskId: string) => void;
 }
 
 /**
  * Reconciles task actions and Hours logged from Tasks.
- * @example actions.logHours(input) // stores Hours once and updates affected tasks
+ * @param options - Query prefixes and callbacks that update temporary selection context.
+ * @example actions.logHours(input) // saves Hours and refreshes affected task and Hours views
  */
 export default function useTaskActions({
   taskQueryKey,
   taskTableQueryKey,
   hoursQueryKey,
   onTaskRemoved,
+  onTaskSynced,
 }: TaskActionHandlers) {
-
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
-  const scope = taskStore.getScope(queryClient);
   const [actionError, setActionError] = useState('');
   const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
@@ -46,17 +46,15 @@ export default function useTaskActions({
 
   const startTaskAction = useCallback((taskId: string) => {
     if (pendingTaskIdsRef.current.has(taskId)) return false;
-    taskStore.setPending(queryClient, taskId, true, scope);
     pendingTaskIdsRef.current.add(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
     return true;
-  }, [queryClient, scope]);
+  }, []);
 
   const finishTaskAction = useCallback((taskId: string) => {
-    taskStore.setPending(queryClient, taskId, false, scope);
     pendingTaskIdsRef.current.delete(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
-  }, [queryClient, scope]);
+  }, []);
 
   const isTaskPending = useCallback(
     (taskId: string) => pendingTaskIds.has(taskId),
@@ -68,17 +66,18 @@ export default function useTaskActions({
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'overview'] });
   }, [queryClient, taskQueryKey]);
 
-  const syncTask = useCallback((task: Task, created = false) => {
-    if (!taskStore.isScope(queryClient, scope)) return;
-
-    taskStore.write(queryClient, task);
-    if (created) {
+  const syncTask = useCallback((task: Task, operation: 'create' | 'update' = 'update') => {
+    if (operation === 'create') {
       void queryClient.invalidateQueries({ queryKey: taskTableQueryKey });
+    } else {
+      replaceInfiniteListRow(queryClient, taskTableQueryKey, task);
     }
+
+    onTaskSynced?.(task);
 
     calendarCacheRef.current.upsert(task);
     refreshTaskOverview();
-  }, [queryClient, refreshTaskOverview, scope, taskTableQueryKey]);
+  }, [onTaskSynced, queryClient, refreshTaskOverview, taskTableQueryKey]);
 
   // User-triggered task actions.
   const deleteTaskAction = useCallback(async (task: Task) => {
@@ -86,21 +85,20 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
-      if (!taskStore.isScope(queryClient, scope)) return;
-      taskStore.remove(queryClient, task.id);
+      removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
       refreshTaskOverview();
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, scope, startTaskAction]);
+  }, [finishTaskAction, onTaskRemoved, queryClient, refreshTaskOverview, startTaskAction, taskTableQueryKey]);
 
   const setTaskRange = useCallback(async (
     task: Task,
     nextRange: { start: string; end: string },
     action: 'move' | 'resize',
-    staffId = task.assignee.id,
+    staffId = task.staffId,
   ) => {
     setActionError('');
 
@@ -110,9 +108,8 @@ export default function useTaskActions({
       const updatedTask = await updateTaskPlacement(task.id, {
         startDate: nextRange.start,
         dueDate: nextRange.end,
-        ...(staffId !== task.assignee.id ? { staffId } : {}),
+        ...(staffId !== task.staffId ? { staffId } : {}),
       });
-      if (!taskStore.isScope(queryClient, scope)) return null;
       syncTask(updatedTask);
       return updatedTask;
     } catch {
@@ -121,7 +118,7 @@ export default function useTaskActions({
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, startTaskAction, syncTask]);
 
   const setState = useCallback(async (task: Task, state: Task['state']) => {
     setActionError('');
@@ -130,26 +127,21 @@ export default function useTaskActions({
 
     try {
       const updatedTask = await updateTaskState(task.id, state);
-      if (!taskStore.isScope(queryClient, scope)) return;
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
     } finally {
       finishTaskAction(task.id);
     }
-  }, [finishTaskAction, queryClient, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, startTaskAction, syncTask]);
 
   const logHours = useCallback(async (input: SetHoursInput) => {
     const taskId = input.source === 'task' ? input.taskId : undefined;
     if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
     try {
-      const hoursScope = getHoursScope(queryClient);
       const saved = await setHours(input);
-      if (!isHoursScope(queryClient, hoursScope) || !taskStore.isScope(queryClient, scope)) return;
-
-      const { updatedTasks, ...entry } = saved;
-      writeHoursItem(queryClient, entry, [...hoursQueryKey, 'table']);
+      const { updatedTasks } = saved;
       setActionError('');
 
       if (input.source === 'task') {
@@ -172,7 +164,7 @@ export default function useTaskActions({
     } finally {
       if (taskId) finishTaskAction(taskId);
     }
-  }, [finishTaskAction, queryClient, hoursQueryKey, refreshTaskOverview, scope, startTaskAction, syncTask]);
+  }, [finishTaskAction, queryClient, hoursQueryKey, refreshTaskOverview, startTaskAction, syncTask]);
 
   return {
     actionError,

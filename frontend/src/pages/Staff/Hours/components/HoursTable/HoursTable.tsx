@@ -22,7 +22,7 @@ interface HoursTableProps {
 }
 
 /**
- * Displays filtered Hours records resolved from their shared owner.
+ * Displays filtered Hours rows from the table query.
  * @example <HoursTable filters={filters} {...tableProps} />
  */
 export default function HoursTable({

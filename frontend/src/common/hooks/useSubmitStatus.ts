@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 export type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -7,6 +7,13 @@ interface SubmitStatusMessages {
   success?: string;
 }
 
+/**
+ * Selects the message for a form's current submission phase.
+ * @param submitStatus - Current phase; idle has no message.
+ * @param error - Failure message, shown only for the error phase.
+ * @param messages - Pending message and optional successful-completion message.
+ * @example getSubmitStatusMessage('success', '', { submitting: 'Saving', success: 'Saved' }) // Saved
+ */
 export function getSubmitStatusMessage(
   submitStatus: SubmitStatus,
   error: string,
@@ -18,14 +25,13 @@ export function getSubmitStatusMessage(
   return undefined;
 }
 
+/**
+ * Holds submission feedback for one mounted form interaction.
+ * @example useSubmitStatus().submitStatus // idle when the form mounts
+ */
 export function useSubmitStatus() {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [error, setError] = useState('');
 
-  const resetStatus = useCallback(() => {
-    setSubmitStatus('idle');
-    setError('');
-  }, []);
-
-  return { submitStatus, setSubmitStatus, error, setError, resetStatus };
+  return { submitStatus, setSubmitStatus, error, setError };
 }

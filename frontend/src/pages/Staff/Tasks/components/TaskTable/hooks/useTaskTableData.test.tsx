@@ -1,4 +1,3 @@
-import { taskStore } from '../../../taskStore';
 import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook } from '@testing-library/react';
@@ -38,9 +37,8 @@ describe('useTaskTableData', () => {
     expect(options.queryKey).toEqual(['tasks', 'table', filters, sorting, '2026-08-11']);
     await act(async () => {
       const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
-      expect(page).toEqual({ rows: [{ id: task.id, sortValue: task.dueDate }], nextCursor: 'next' });
+      expect(page).toEqual({ rows: [task], nextCursor: 'next' });
     });
-    expect(taskStore.get(client, task.id)).toEqual(task);
     expect(getTasksTableData).toHaveBeenLastCalledWith(
       filters, { signal }, { ...sorting, cursor: undefined, limit: TABLE_PAGE_SIZE },
     );

@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import HoursCalendar from './HoursCalendar';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getHoursItem, writeHoursItem } from '../../hoursItemStore';
 
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type {
@@ -81,7 +80,6 @@ function renderCalendar({
   onDelete = vi.fn(),
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
-  onMessageChange = vi.fn(),
 }: {
   data?: HoursItem[];
   resources?: StaffResource[];
@@ -94,7 +92,6 @@ function renderCalendar({
   onDelete?: ReturnType<typeof vi.fn>;
   onStaffSelect?: ReturnType<typeof vi.fn>;
   onMove?: ReturnType<typeof vi.fn>;
-  onMessageChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
   const calendarIndexRef: MutableRefObject<HoursCalendarIndex> = {
@@ -113,7 +110,6 @@ function renderCalendar({
         onDelete={onDelete}
         onAdd={onAdd}
         onMove={onMove}
-        onMessageChange={onMessageChange}
       />
   );
   return {
@@ -124,7 +120,6 @@ function renderCalendar({
     onDelete,
     onStaffSelect,
     onMove,
-    onMessageChange,
   };
 }
 
@@ -149,14 +144,13 @@ describe('HoursCalendar', () => {
     expect(signal?.aborted).toBe(true);
   });
 
-  it('removes a moved or saved entry when its resolved cycle is outside the active selection', () => {
-    const { calendarIndexRef, queryClient } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
+  it('removes a moved or saved entry when its resolved cycle is outside the active selection', async () => {
+    const { calendarIndexRef } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
     const item = buildItem({ cycleId: 'cycle-1', date: '2026-08-10' });
     act(() => {
-      writeHoursItem(queryClient, item, ['hours', 'table']);
       calendarIndexRef.current.upsert(item);
     });
-    expect(calendarState.props!.items).toEqual({ 'staff-1': [item] });
+    await waitFor(() => expect(calendarState.props!.items).toEqual({ 'staff-1': [item] }));
 
     act(() => calendarIndexRef.current.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
     expect(calendarState.props!.items).toEqual({});
@@ -191,7 +185,7 @@ describe('HoursCalendar', () => {
     });
     actions?.find(action => action.id === 'regular')?.onSelect();
     expect(onAdd).toHaveBeenCalledWith({
-      resourceId: 'staff-1',
+      staffId: 'staff-1',
       date: periods[1].key,
       source: 'regular',
     });
@@ -221,17 +215,18 @@ describe('HoursCalendar', () => {
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
   });
 
-  it('resolves a changed record from the shared owner without replacing calendar membership', async () => {
+  it('updates a buffered row through the mounted calendar callback', async () => {
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
     const item = buildItem({ date: periods[1].key });
-    const { queryClient } = renderCalendar({ data: [item] });
+    const { calendarIndexRef } = renderCalendar({ data: [item] });
     await initializeCalendar(periods);
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
 
-    act(() => writeHoursItem(queryClient, { ...item, note: 'Edited from table', hours: 3 }, ['hours', 'table']));
+    const saved = { ...item, note: 'Edited from table', hours: 3 };
+    act(() => calendarIndexRef.current.upsert(saved));
 
     await waitFor(() => expect(calendarState.props!.items!['staff-1']![0].note).toBe('Edited from table'));
-    expect(calendarState.props!.items!['staff-1']![0]).toBe(getHoursItem(queryClient, item.id));
+    expect(calendarState.props!.items!['staff-1']![0]).toEqual(saved);
     expect(getHoursCalendarData).toHaveBeenCalledOnce();
   });
 
@@ -288,17 +283,12 @@ describe('HoursCalendar', () => {
     vi.mocked(getHoursCalendarData)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([]);
-    const { onMessageChange } = renderCalendar();
+    renderCalendar();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      message: 'offline',
-      action: expect.objectContaining({ label: 'Retry' }),
-    })));
-    const reportedError = onMessageChange.mock.calls[onMessageChange.mock.calls.length - 1]?.[0];
-    act(() => reportedError.action.onClick());
+    expect(await screen.findByText('Hours calendar unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(null));
   });
 });

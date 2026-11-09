@@ -1,5 +1,4 @@
 import { sql } from '../../../db/client';
-import { taskReadScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
 import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
@@ -24,16 +23,15 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
   const dateFilter = range
     ? sql`task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date`
     : sql`FALSE`;
-  const rowsQuery = getTaskRows(sql`
-    ${taskReadScopePredicate(actor, sql`task.staff_id`)}
-    AND ${appliedFilters}
+  const rowsQuery = getTaskRows(actor, sql`
+    ${appliedFilters}
     AND ${dateFilter}
   `);
 
   // 2. Choose the order and load the page.
   const sortValue = {
-    firstName: sql`LOWER("row".staff_first_name)`,
-    lastName: sql`LOWER("row".staff_last_name)`,
+    firstName: sql`LOWER("row".first_name)`,
+    lastName: sql`LOWER("row".last_name)`,
     title: sql`LOWER("row".title)`,
     category: sql`"row".category::text`,
     program: sql`LOWER(COALESCE("row".program, ''))`,

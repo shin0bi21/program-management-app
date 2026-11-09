@@ -1,4 +1,3 @@
-import { useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { inviteAccount, updateAccount } from '../../accounts.api';
@@ -8,52 +7,42 @@ import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import type { User } from '../../types';
 import { accountSchema, type AccountFormData } from './accountSchema';
 
-const defaultValues: AccountFormData = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  role: 'staff',
-  programIds: [],
-};
-
 interface AccountModalControllerProps {
-  isOpen: boolean;
-  onClose: () => void;
   onSuccess: (account: User) => void;
   account?: User;
 }
 
-export function useAccountModal({ isOpen, onClose, onSuccess, account }: AccountModalControllerProps) {
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+/**
+ * Initializes one mounted account invitation or edit form and saves validated fields.
+ * @param props.account - Saved non-youth account to edit; omit it to invite staff.
+ * @param props.onSuccess - Receives the authoritative account returned after saving.
+ * @returns Form controls, validation messages, and submission feedback.
+ * @example useAccountModal({ account, onSuccess }) // edits the supplied staff account
+ */
+export function useAccountModal({ onSuccess, account }: AccountModalControllerProps) {
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const { tryLock, unlock } = useSubmitLock();
   const {
     register,
     control,
     handleSubmit,
-    reset,
     formState: { errors },
-  } = useForm<AccountFormData>({ resolver: zodResolver(accountSchema), defaultValues });
+  } = useForm<AccountFormData>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: {
+      firstName: account?.firstName ?? '',
+      lastName: account?.lastName ?? '',
+      email: account?.email ?? '',
+      role: account ? accountSchema.shape.role.parse(account.role) : undefined,
+      programIds: account?.programIds ?? [],
+    },
+  });
 
-  const handleClose = useCallback(() => {
-    reset(defaultValues);
-    resetStatus();
-    unlock();
-    onClose();
-  }, [onClose, reset, resetStatus, unlock]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    reset(account ? {
-      firstName: account.firstName,
-      lastName: account.lastName,
-      email: account.email,
-      role: accountSchema.shape.role.parse(account.role),
-      programIds: account.programIds ?? [],
-    } : defaultValues);
-    resetStatus();
-    unlock();
-  }, [account, isOpen, reset, resetStatus, unlock]);
-
+  /**
+   * Saves the form and reports the account returned by the server.
+   * @param data - Validated name, email, role, and selected program IDs from the form.
+   * @example onValid(data) // calls onSuccess after an invitation or update
+   */
   const onValid = async (data: AccountFormData) => {
     if (!tryLock()) return;
 
@@ -72,8 +61,8 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
       savedAccount = account
         ? await updateAccount({ id: account.id, ...payload })
         : await inviteAccount(payload);
-    } catch (err) {
-      setError(getErrorMessage(err, account ? 'Failed to update account' : 'Failed to send invitation'));
+    } catch (error) {
+      setError(getErrorMessage(error, account ? 'Failed to update account' : 'Failed to send invitation'));
       setSubmitStatus('error');
       unlock();
       return;
@@ -90,6 +79,5 @@ export function useAccountModal({ isOpen, onClose, onSuccess, account }: Account
     onSubmit: handleSubmit(onValid),
     submitStatus,
     error,
-    handleClose,
   };
 }

@@ -1,5 +1,4 @@
 import tableRefreshMessage from '../../../../common/components/Table/tableRefreshMessage';
-import { useEffect } from 'react';
 import Table from '../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../common/components/Table/Table.types';
@@ -15,28 +14,27 @@ interface YouthTableProps {
   sorting: ListSort<YouthSortKey>;
   columnWidths: Record<string, number>;
   selectedProfileId: string | null;
-  onSelectedProfileResolved: (profile: YouthProfile | null) => void;
   onRowSelect: (profile: YouthProfile) => void;
   onSortingChange: (sorting: ListSort<YouthSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
+/**
+ * Displays loaded Youth profiles and emits selection without owning the selected record.
+ * @param props - Applied filters, layout controls, selected ID, and page callbacks.
+ * @example <YouthTable {...tableProps} selectedProfileId={selectedId} />
+ */
 export default function YouthTable({
   columns, filters,
   hiddenColumnKeys, sorting, columnWidths, selectedProfileId,
-  onSelectedProfileResolved, onRowSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
+  onRowSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
 }: YouthTableProps) {
   const tableData = useYouthTableData(filters, sorting);
-  const selectedProfile = tableData.rows.find(profile => profile.id === selectedProfileId) ?? null;
   const hasFilters = Boolean(
     filters?.search || filters?.programIds?.length || filters?.cycleIds?.length,
   );
   usePageMessageReporter(onMessageChange, tableData.error || tableData.nextPageError, { label: 'Retry', onClick: tableData.nextPageError ? tableData.retryNextPage : tableData.retry }, tableRefreshMessage(tableData.refreshNotice));
-
-  useEffect(() => {
-    if (!tableData.loading) onSelectedProfileResolved(selectedProfile);
-  }, [onSelectedProfileResolved, selectedProfile, tableData.loading]);
 
   return <Table
     enableColumnResizing

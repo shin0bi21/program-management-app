@@ -1,4 +1,3 @@
-import { sessionStore } from '../../../sessionStore';
 import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { act, renderHook } from '@testing-library/react';
@@ -40,9 +39,8 @@ it('keys every session control and forwards cancellation, page size, and cursor'
 
   await act(async () => {
     const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
-    expect(page).toEqual({ rows: [{ id: session.id, sortValue: new Date(session.startsAt) }], nextCursor: 'next' });
+    expect(page).toEqual({ rows: [session], nextCursor: 'next' });
   });
-  expect(sessionStore.get(client, session.id)).toEqual(session);
   await act(async () => { await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]); });
 
   expect(getSessions).toHaveBeenNthCalledWith(1, filters, { signal },

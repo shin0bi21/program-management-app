@@ -11,11 +11,17 @@ The `page` preset targets authenticated collection routes using
 
 | Command after `npm run scaffold:frontend --` | Generated files |
 |---|---|
-| `page <PagePath>` | Route component, page-data hook, and their tests |
-| `table <owner-path> <NameTable>` | Table component, collection-data hook, and their tests |
+| `page <PagePath>` | Route component, page reference-data owner, and their tests |
+| `table <owner-path> <NameTable>` | Table component, component-owned table-data hook, and their tests |
 | `modal <owner-path> <NameModal>` | Form component, workflow hook, and their tests |
-| `calendar <owner-path> <NameCalendar>` | Calendar component and its test |
+| `calendar <owner-path> <NameCalendar>` | Calendar range/buffer adapter and its test |
 | `dashboard <owner-path> <NameDashboard>` | Dashboard component and its test |
+
+Compose independent dashboard cards directly in `PageContainer`'s `dashboard`
+slot. Use the `dashboard` preset only when cards share queries or need additional
+coordination. Descendants report page feedback through `usePageMessageReporter`;
+keep page-owned failures in the container's `messages` prop. See the source
+contracts linked from the frontend overview for reporting inputs and lifecycle.
 
 ### Path and Name Requirements
 
@@ -35,9 +41,10 @@ The `page` preset targets authenticated collection routes using
    ```
 
 2. Check the listed paths, then remove `--dry-run` to generate the files.
-3. Replace reference-query placeholders in the page-data hook. Remove the hook and its test if no page-wide reference data is needed.
-4. Add table, calendar, dashboard, or modal presets only as needed.
-5. Connect generated components to their parent and register the route; presets do neither.
+3. Compose required page-wide reference lookups in `hooks/data/use<Domain>Data.ts`, including their loading and error states.
+4. Pass required reference context down to views and dashboard cards. Descendant data hooks own their ordinary query results and consume supplied references instead of repeating page reference queries.
+5. Add table, calendar, dashboard, or modal presets only as needed.
+6. Connect generated components to their parent and register the route; presets do neither.
 
 Every preset refuses to overwrite existing files. If a destination exists, choose a new name or edit the existing owner.
 
@@ -67,10 +74,11 @@ pages/Youth/Placements/
 ## Complete Generated Outlines
 
 1. Replace applicable prompts with domain APIs, permission rules, and record types; remove unused phases.
-2. For calendars, complete the range-loading, buffer, error, cache, display, and interaction prompts.
-3. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
-4. Complete generated `it.todo` outlines following [Testing](../workflows/delivery/testing.md#scaffold-implementation-and-tests-together).
-5. Document completed functions using the [design recipe](../workflows/documentation.md).
+2. Implement table requests in the component's `hooks/use<Domain>TableData` hook using the supplied page context. Keep the calendar range adapter and buffer with its component, extracting a private data hook when needed. Keep complete API rows in table query results and calendar buffers. Use existing cursor-list helpers for saved/deleted rows and show the shared out-of-order message with Refresh when edits leave loaded rows out of order. Invalidate membership and related queries when their data needs reloading.
+3. Pass selected IDs to dashboard cards for their focused summary or child queries. Supply already loaded display fields as props when needed. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
+4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
+5. Complete generated `it.todo` outlines following [Testing](../workflows/delivery/testing.md#scaffold-implementation-and-tests-together).
+6. Document completed functions using the [design recipe](../workflows/documentation.md).
 
 ## Maintain the Pattern
 

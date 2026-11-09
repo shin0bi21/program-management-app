@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
-import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
-import AddSessionModal from './components/AddSessionModal/AddSessionModal';
+import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember, type SessionListFilters } from './types';
+import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
-import EditSessionModal from './components/EditSessionModal/EditSessionModal';
-import SessionDashboard from './components/SessionDashboard/SessionDashboard';
+import SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
+import SessionNotesDashboardCard from './components/SessionDashboard/SessionNotesDashboardCard/SessionNotesDashboardCard';
+import SessionAttachmentsDashboardCard from './components/SessionDashboard/SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
@@ -17,19 +18,17 @@ import useSessionActions from './hooks/actions/useSessionActions';
 import useSessionData from './hooks/data/useSessionData';
 import useSessionSelection from './hooks/selection/useSessionSelection';
 import { useSessionControls } from './hooks/useSessionControls';
-import { sessionStore } from './sessionStore';
 import './Sessions.css';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 
 /**
- * Coordinates session controls, selection IDs, dialogs, and shared-record views.
+ * Coordinates session controls, selection, dialogs, and collection views.
  * @example <Sessions /> // programming sessions route
  */
 export default function Sessions() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardErrors, setDashboardErrors] = useState<PageMessageValue[]>([]);
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
@@ -65,7 +64,6 @@ export default function Sessions() {
 
   // Selection and actions.
   const selection = useSessionSelection();
-  const records = sessionStore.useRecords();
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   useEffect(() => {
     if (!referencesLoading && !referencesError && selectedProgramId
@@ -79,7 +77,7 @@ export default function Sessions() {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
-  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession });
+  const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
   const applyFilter = (category: string, selected: string[]) => {
     selection.clearSelectedSession();
     setSelectedProgramId(null);
@@ -92,31 +90,22 @@ export default function Sessions() {
   };
 
   // Attendance modal.
-  const [attendanceTargetId, setAttendanceTargetId] = useState<string | null>(null);
-  const attendanceTarget = attendanceTargetId ? records[attendanceTargetId] ?? null : null;
-  const setAttendanceTarget = useCallback((session: ProgramSession | null) => {
-    setAttendanceTargetId(session?.id ?? null);
-  }, []);
+  const [attendanceTarget, setAttendanceTarget] = useState<{ session: ProgramSession; roster: SessionRosterMember[] } | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
-  // Single-session creation from the page or a calendar date.
-  const [addSessionTarget, setAddSessionTarget] = useState<{ programId?: string; date?: string } | null>(null);
-  const closeAddSessionModal = () => setAddSessionTarget(null);
-
-  // Edit session modal.
-  const [editTargetId, setEditTargetId] = useState<string | null>(null);
-  const editTarget = editTargetId ? records[editTargetId] ?? null : null;
-  // Keep table action cells mounted when shared records or reference data update.
-  const setEditTarget = useCallback((session: ProgramSession | null) => {
-    setEditTargetId(session?.id ?? null);
-  }, []);
-  const closeEditSessionModal = () => setEditTarget(null);
+  // Session editor with saved data or optional calendar context.
+  const [sessionModalTarget, setSessionModalTarget] = useState<{
+    session?: ProgramSession; initialProgramId?: string; initialDate?: string;
+  } | null>(null);
+  const isSessionModalOpen = sessionModalTarget !== null;
+  const closeSessionModal = () => setSessionModalTarget(null);
+  const openEditSessionModal = (session: ProgramSession) => setSessionModalTarget({ session });
 
   // Table configuration.
   const columns = useSessionTable({
     programs,
     canWriteSessions,
-    onEdit: setEditTarget,
+    onEdit: openEditSessionModal,
     onDelete: actions.requestDelete,
   });
 
@@ -125,15 +114,15 @@ export default function Sessions() {
 
   const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
   const canAddSession = !referencesLoading && programs.length > 0;
-  const dashboard = <SessionDashboard
-    sessionQueryKey={SESSION_QUERY_KEY}
-    session={selectedSession}
-    canReadAttendance={canReadAttendance}
-    canWriteAttendance={canWriteAttendance}
-    canWriteSessions={canWriteSessions}
-    onAddAttendance={setAttendanceTarget}
-    onErrorsChange={setDashboardErrors}
-  />;
+  const dashboard = <>
+    {canReadAttendance && <SessionAttendanceDashboardCard
+      session={selectedSession}
+      canWrite={canWriteAttendance}
+      onManage={(session, roster) => setAttendanceTarget({ session, roster })}
+    />}
+    <SessionNotesDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+    <SessionAttachmentsDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+  </>;
 
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
@@ -143,6 +132,7 @@ export default function Sessions() {
     sorting={tableControls.sorting}
     columnWidths={tableControls.columnWidths}
     selectedSessionId={selection.selectedSessionId}
+    onSelectedSessionLoaded={selection.syncSelectedSession}
     onSessionSelect={selectSession}
     onSortingChange={tableControls.setSorting}
     onColumnWidthsChange={tableControls.setColumnWidths}
@@ -160,6 +150,7 @@ export default function Sessions() {
     onProgramSelect={selectProgram}
     filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
+    onSelectedSessionLoaded={selection.syncSelectedSession}
     onSessionSelect={session => {
       setSelectedProgramId(session.programId);
       selection.selectSession(session);
@@ -167,9 +158,9 @@ export default function Sessions() {
     calendarCacheRef={actions.calendarCacheRef}
     pendingSessionIds={actions.pendingSessionIds}
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
-    onSessionEdit={canWriteSessions ? setEditTarget : undefined}
+    onSessionEdit={canWriteSessions ? openEditSessionModal : undefined}
     onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
-    onAddSession={canWriteSessions ? (program, date) => setAddSessionTarget({ programId: program.id, date }) : undefined}
+    onAddSession={canWriteSessions ? (program, date) => setSessionModalTarget({ initialProgramId: program.id, initialDate: date }) : undefined}
     onMessageChange={setViewError}
   />;
 
@@ -184,7 +175,7 @@ export default function Sessions() {
         loadingSpinner
         actions={
           canWriteSessions ? (
-            <Button onClick={() => setAddSessionTarget({ programId: selectedProgram?.id })} disabled={!canAddSession}>
+            <Button onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })} disabled={!canAddSession}>
               + Add
             </Button>
           ) : undefined
@@ -201,7 +192,6 @@ export default function Sessions() {
           referencesError,
           cyclesError,
           viewError,
-          ...dashboardErrors,
         ]}
         dashboard={dashboard}
         table={hasCycleBounds ? table : cycleState}
@@ -209,24 +199,27 @@ export default function Sessions() {
       />
 
       <SessionAttendanceModal
-        session={attendanceTarget}
+        session={attendanceTarget?.session ?? null}
+        roster={attendanceTarget?.roster ?? []}
         onClose={closeSessionAttendanceModal}
         onSaved={actions.syncAttendance}
       />
 
-      <EditSessionModal
-        session={editTarget}
-        timezone={programs.find(program => program.id === editTarget?.programId)?.timezone ?? 'America/Toronto'}
-        onClose={closeEditSessionModal}
-        onUpdated={actions.syncUpdatedSession}
-      />
-
-      {addSessionTarget && <AddSessionModal
+      {isSessionModalOpen && <SessionModal
+        key={sessionModalTarget?.session?.id ?? 'new'}
         programs={programs}
-        initialProgramId={addSessionTarget.programId}
-        initialDate={addSessionTarget.date}
-        onClose={closeAddSessionModal}
-        onSaved={actions.refreshCreatedSessions}
+        sessionTypes={sessionTypes}
+        session={sessionModalTarget?.session}
+        initialProgramId={sessionModalTarget?.initialProgramId}
+        initialDate={sessionModalTarget?.initialDate}
+        onClose={closeSessionModal}
+        onSaved={result => {
+          if ('session' in result) {
+            actions.syncUpdatedSession(result);
+          } else {
+            return actions.refreshCreatedSessions(result);
+          }
+        }}
       />}
 
       <ConfirmModal

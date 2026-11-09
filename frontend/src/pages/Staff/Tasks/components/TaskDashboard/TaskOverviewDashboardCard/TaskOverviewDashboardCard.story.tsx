@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TaskOverviewDashboardCard from './TaskOverviewDashboardCard';
 
+/** Displays an empty staff summary from a seeded query. @example <TaskSummary /> */
 export function TaskSummary() {
   const [client] = useState(() => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });

@@ -10,6 +10,7 @@ import useTaskData from './useTaskData';
 vi.mock('../../tasks.api', () => ({
   getTaskReferenceData: vi.fn(),
 }));
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
 
 const resources = [
   { id: 'staff-read', firstName: 'Read', lastName: 'Only', name: 'Read Only', role: 'staff', writable: false },
@@ -52,5 +53,3 @@ describe('useTaskData', () => {
     expect(result.current.cyclesError).toBe('');
   });
 });
-
-vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

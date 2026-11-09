@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { setYouthProfileNote } from '../../../youth.api';
 import {
@@ -10,7 +10,7 @@ import type { YouthProfileNote, YouthProfileNoteCategory } from '../../../types'
 import { getErrorMessage } from '../../../../../http/errors';
 
 interface ProfileNoteDraft {
-  category: YouthProfileNoteCategory;
+  category: YouthProfileNoteCategory | '';
   details: string;
 }
 
@@ -20,36 +20,27 @@ export interface UseProfileNoteModalOptions {
   onSaved: (note: YouthProfileNote) => void;
 }
 
-function buildDraft(note?: YouthProfileNote | null): ProfileNoteDraft {
-  return {
-    category: note?.category ?? 'general',
-    details: note?.details ?? '',
-  };
-}
-
+/**
+ * Owns one mounted profile-note draft and saves its supplied youth/note target.
+ * @param options - Youth ID, optional saved note, and authoritative save callback.
+ * @example useProfileNoteModal({ youthId, note, onSaved }) // edits supplied note values
+ */
 export default function useProfileNoteModal({
   youthId,
   note,
   onSaved,
 }: UseProfileNoteModalOptions) {
-  const [draft, setDraft] = useState(() => buildDraft(note));
-  const initialDraftRef = useRef(buildDraft(note));
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
-  const targetKey = `${youthId}:${note?.id ?? 'new'}`;
+  const [draft, setDraft] = useState<ProfileNoteDraft>(() => ({
+    category: note?.category ?? '',
+    details: note?.details ?? '',
+  }));
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const submitLock = useSubmitLock();
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
     submitting: 'Saving note...',
     success: note ? 'Profile note updated.' : 'Profile note added.',
   });
-  initialDraftRef.current = buildDraft(note);
-
-  // A new create or edit target starts a fresh form lifecycle.
-  useEffect(() => {
-    setDraft(initialDraftRef.current);
-    resetStatus();
-  }, [resetStatus, targetKey]);
-
   // Draft events.
   const selectCategory = (category: YouthProfileNoteCategory) => {
     setDraft(current => ({ ...current, category }));
@@ -63,6 +54,12 @@ export default function useProfileNoteModal({
     const details = draft.details.trim();
     if (!details) {
       setError('Enter a note.');
+      setSubmitStatus('error');
+      return;
+    }
+
+    if (!draft.category) {
+      setError('Choose a category.');
       setSubmitStatus('error');
       return;
     }
@@ -90,7 +87,6 @@ export default function useProfileNoteModal({
     }
 
     setSubmitStatus('success');
-    submitLock.unlock();
     onSaved(saved);
   };
 

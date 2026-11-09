@@ -13,6 +13,10 @@ vi.mock('../../../../../sessions.api', () => ({
   updateSessionAttachment: vi.fn(),
 }));
 
+/**
+ * Supplies the metadata form submitted by attachment workflow examples.
+ * @example makeSubmitEvent().currentTarget // form containing title and description
+ */
 function makeSubmitEvent() {
   const form = document.createElement('form');
   for (const [name, value] of [['title', ' Workshop photo '], ['description', '']]) {

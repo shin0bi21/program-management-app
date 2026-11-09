@@ -9,19 +9,34 @@ import useHoursModal, { type UseHoursModalOptions } from './hooks/useHoursModal'
 import './HoursModal.css';
 
 interface HoursModalProps extends UseHoursModalOptions {
+  isOpen: boolean;
   onClose: () => void;
   staffLocked?: boolean;
   categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
 }
 
-export default function HoursModal({
-  isOpen,
+/**
+ * Mounts an Hours form only while its add/edit interaction is open.
+ * @param props - Visibility, supplied entry/context, page references and save/close callbacks.
+ * @example <HoursModal isOpen initialItem={entry} {...options} />
+ */
+export default function HoursModal({ isOpen, ...props }: HoursModalProps) {
+  if (!isOpen) return null;
+
+  let targetKey = 'new';
+  if (props.initialTask) targetKey = `task:${props.initialTask.id}`;
+  if (props.initialItem) targetKey = `entry:${props.initialItem.id}`;
+  return <HoursForm key={targetKey} {...props} />;
+}
+
+/** Owns the mounted Hours form and its draft. @example <HoursForm {...options} /> */
+function HoursForm({
   resources,
   programs,
   loadTasks,
   onClose,
   onAdd,
-  initialResourceId,
+  initialStaffId,
   initialDate,
   initialSource = 'regular',
   staffLocked = false,
@@ -29,14 +44,13 @@ export default function HoursModal({
   initialItem,
   canCompleteTask = false,
   categories,
-}: HoursModalProps) {
+}: Omit<HoursModalProps, 'isOpen'>) {
   const workflow = useHoursModal({
-    isOpen,
     resources,
     programs,
     loadTasks,
     onAdd,
-    initialResourceId,
+    initialStaffId,
     initialDate,
     initialSource,
     initialTask,
@@ -45,6 +59,14 @@ export default function HoursModal({
   });
   const { draft } = workflow;
   const submissionComplete = workflow.submitting || workflow.submitStatus === 'success';
+  const isTaskEntry = draft.source === 'task';
+  const isSessionEntry = draft.source === 'session';
+  const isRegularEntry = draft.source === 'regular';
+  const sessionDateLocked = isSessionEntry && Boolean(initialItem || initialDate);
+  const sourceMissing = (isTaskEntry && !draft.taskId) || (isSessionEntry && !draft.sessionId);
+  const submitDisabled = submissionComplete || !resources.length || sourceMissing;
+  let sessionPlaceholder = workflow.sessionOptions.length ? 'Select session' : 'No sessions on this date';
+  if (workflow.sessionsLoading) sessionPlaceholder = 'Loading sessions…';
 
   const statusMessage = getSubmitStatusMessage(
     workflow.submitStatus,
@@ -62,11 +84,7 @@ export default function HoursModal({
     <Button
       type="submit"
       form="hours-form"
-      disabled={submissionComplete || !resources.length || (
-        draft.source === 'task'
-          ? !draft.taskId
-          : draft.source === 'session' ? !draft.sessionId : false
-      )}
+      disabled={submitDisabled}
     >
       Save
     </Button>
@@ -74,7 +92,7 @@ export default function HoursModal({
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={initialItem ? 'Edit Logged Hours' : 'Log Hours'}
       maxWidth="620px"
@@ -87,9 +105,9 @@ export default function HoursModal({
           <FormField id="hours-staff" label="Staff member">
             <FloatingSelect
               id="hours-staff"
-              value={draft.resourceId}
+              value={draft.staffId}
               options={toFilterOptions(resources)}
-              onChange={workflow.selectResource}
+              onChange={workflow.selectStaff}
               placeholder="Select staff member"
               ariaLabel="Staff member"
               disabled={submissionComplete
@@ -100,7 +118,7 @@ export default function HoursModal({
           </FormField>
         </div>
 
-        {draft.source === 'task' && (
+        {isTaskEntry && (
           <div className="hours-form__source">
             <FormField
               id="hours-assigned-task"
@@ -120,7 +138,7 @@ export default function HoursModal({
           </div>
         )}
 
-        {draft.source === 'task' && !initialItem && canCompleteTask && (
+        {isTaskEntry && !initialItem && canCompleteTask && (
           <label className="hours-form__complete-task">
             <input
               type="checkbox"
@@ -132,7 +150,7 @@ export default function HoursModal({
           </label>
         )}
 
-        {draft.source === 'session' && (
+        {isSessionEntry && (
           <div className="hours-form__source">
             <FormField id="hours-session" label="Session *" error={workflow.sessionsError}>
               <FloatingSelect
@@ -143,11 +161,7 @@ export default function HoursModal({
                   label: session.label,
                 }))}
                 onChange={workflow.selectSession}
-                placeholder={workflow.sessionsLoading
-                  ? 'Loading sessions…'
-                  : !workflow.sessionOptions.length
-                    ? 'No sessions on this date'
-                    : 'Select session'}
+                placeholder={sessionPlaceholder}
                 ariaLabel="Session"
                 disabled={submissionComplete || workflow.sessionsLoading}
               />
@@ -155,7 +169,7 @@ export default function HoursModal({
           </div>
         )}
 
-        {draft.source === 'regular' && <>
+        {isRegularEntry && <>
           <FormField id="hours-program" label="Program (optional)">
             <FloatingSelect
               id="hours-program"
@@ -192,7 +206,7 @@ export default function HoursModal({
             value={draft.date}
             onChange={event => workflow.updateDate(event.target.value)}
             required
-            disabled={submissionComplete || (draft.source === 'session' && Boolean(initialDate))}
+            disabled={submissionComplete || sessionDateLocked}
           />
         </FormField>
 

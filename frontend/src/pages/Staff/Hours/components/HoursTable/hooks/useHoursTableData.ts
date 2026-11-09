@@ -1,14 +1,11 @@
-import { useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getHoursTableData } from '../../../hours.api';
-import type { HoursFilters, HoursSortKey } from '../../../types';
+import type { HoursFilters, HoursSortKey, HoursItem } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { beginHoursRead, finishHoursRead, getHoursSortValue, useHoursItems, type HoursListIndex } from '../../../hoursItemStore';
 
 /**
- * Loads table page IDs and resolves them through the shared Hours records.
+ * Loads complete Hours rows for the applied table controls.
  * @param queryKey - Hours list-only key prefix.
  * @param filters - Applied page filters.
  * @param sorting - Server table order.
@@ -19,29 +16,25 @@ export default function useHoursTableData(
   filters: HoursFilters,
   sorting: ListSort<HoursSortKey>,
 ) {
-  const client = useQueryClient();
-  const records = useHoursItems();
-  const query = useInfiniteListQuery<HoursListIndex>({
-    ordering: { direction: sorting.direction, getValue: index => index.sortValue },
+  return useInfiniteListQuery<HoursItem>({
+    ordering: { direction: sorting.direction, getValue: item => getHoursSortValue(item, sorting.key) },
     queryKey: [...queryKey, filters, sorting],
-    queryFn: async ({ signal, pageParam }) => {
-      const read = beginHoursRead(client);
-      const page = await getHoursTableData(
-        filters,
-        { signal },
-        { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
-      );
-      const rows = finishHoursRead(client, read, page.rows, signal);
-      return {
-        nextCursor: page.nextCursor,
-        rows: rows.map(entry => ({ id: entry.id, sortValue: getHoursSortValue(entry, sorting.key) })),
-      };
-    },
+    queryFn: ({ signal, pageParam }) => getHoursTableData(
+      filters,
+      { signal },
+      { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
+    ),
     errorMessage: 'Could not load hours.',
   });
-  const rows = useMemo(() => (
-    query.rows.flatMap(({ id }) => records[id] ? [records[id]] : [])
-  ), [records, query.rows]);
+}
 
-  return { ...query, rows };
+/**
+ * Supplies the server-compatible value for the selected Hours table order.
+ * @param item - Complete saved hours record.
+ * @param key - Column selected for ordering.
+ * @example getHoursSortValue(item, 'hours') // numeric hours
+ */
+export function getHoursSortValue(item: HoursItem, key: HoursSortKey) {
+  const value = item[key];
+  return typeof value === 'string' ? value.toLowerCase() : value ?? '';
 }

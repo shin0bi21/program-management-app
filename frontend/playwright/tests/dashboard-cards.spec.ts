@@ -8,7 +8,7 @@ for (const width of [1280, 390]) {
     for (const { story, height } of [
       { story: 'DashboardCard/LoadingAndOverflow', height: '125px' },
       { story: 'pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
-      { story: 'HoursDashboardCard/HoursSummary', height: '75px' },
+      { story: 'HoursBreakdown/HoursSummary', height: '75px' },
     ]) {
       test(`${story} retains the standard height while loading`, async ({ page, mount }) => {
         const component = await mount(story);
@@ -42,9 +42,8 @@ for (const width of [1280, 390]) {
     });
 
     for (const { story, dataClass } of [
-      { story: 'HoursDashboardCard/HoursSummary', dataClass: '.hours-overview-card__data' },
-      { story: 'TaskOverviewDashboardCard/TaskSummary', dataClass: '.task-overview-card__data' },
-      { story: 'TaskHoursLoggedDashboardCard/LoggedHours', dataClass: '.task-hours-breakdown__data' },
+      { story: 'TaskOverviewDashboardCard/TaskSummary', dataClass: '.dashboard-card__content' },
+      { story: 'TaskHoursLoggedDashboardCard/LoggedHours', dataClass: '.dashboard-card__content' },
     ]) {
       test(`${story} scrolls data while its actions stay fixed`, async ({ mount }) => {
         const component = await mount(story);

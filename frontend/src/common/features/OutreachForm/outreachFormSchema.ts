@@ -22,20 +22,3 @@ export const publicOutreachFormSchema = outreachFormSchema.extend({
 });
 
 export type PublicOutreachFormValues = z.infer<typeof publicOutreachFormSchema>;
-
-export const outreachFormDefaultValues: OutreachFormValues = {
-  youthFirstName: '',
-  youthLastName: '',
-  dateOfBirth: '',
-  school: '',
-  contactPhoneNumber: '',
-  contactRelationship: 'parent',
-  discoverySource: 'online',
-  notes: '',
-};
-
-export const publicOutreachFormDefaultValues: PublicOutreachFormValues = {
-  ...outreachFormDefaultValues,
-  submittedByRole: 'parent',
-  website: '',
-};

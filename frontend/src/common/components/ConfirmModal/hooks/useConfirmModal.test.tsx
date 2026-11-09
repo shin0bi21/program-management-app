@@ -16,7 +16,7 @@ function ConfirmHarness({
   action,
   onClose,
 }: {
-  action: ConfirmAction | null;
+  action: ConfirmAction;
   onClose: () => void;
 }) {
   const confirmation = useConfirmModal({ action, onClose });

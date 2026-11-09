@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
@@ -8,13 +8,16 @@ import type { ManagedHomepageImage } from '../../../types';
 
 interface UseHomepageImageModalOptions {
   image: ManagedHomepageImage | null;
-  isOpen: boolean;
-  onSaved: () => Promise<void>;
+  onSaved: (image: ManagedHomepageImage) => Promise<void>;
 }
 
+/**
+ * Saves an image upload or caption and waits for the owner to reconcile the returned record.
+ * @param options - Saved edit snapshot and authoritative save callback for the mounted form.
+ * @example useHomepageImageModal({ image, onSaved }) // caption-edit workflow
+ */
 export default function useHomepageImageModal({
   image,
-  isOpen,
   onSaved,
 }: UseHomepageImageModalOptions) {
   const [status, setStatus] = useState<SubmitStatus>('idle');
@@ -22,37 +25,40 @@ export default function useHomepageImageModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { tryLock, unlock } = useSubmitLock();
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    setStatus('idle');
-    setStatusMessage('');
-    setSelectedFile(null);
-    unlock();
-  }, [image, isOpen, unlock]);
-
+  /**
+   * Saves the caption and optional upload once, forwarding the server's complete image.
+   * @param caption - Trimmed caption supplied by the rendered form.
+   * @example await submit('Community event.') // saves and reconciles before reporting success
+   */
   const submit = async (caption: string) => {
     if (!tryLock()) return;
 
     setStatus('submitting');
     setStatusMessage(image ? 'Saving homepage image...' : 'Uploading homepage image...');
 
+    let savedImage: ManagedHomepageImage;
     try {
       if (image) {
-        await updateHomepageImage(image.id, { caption });
+        savedImage = await updateHomepageImage(image.id, { caption });
       } else {
         if (!selectedFile?.size) throw new Error('Choose an image to upload');
-        await createHomepageImage({ image: selectedFile, caption });
+        savedImage = await createHomepageImage({ image: selectedFile, caption });
       }
-
-      await onSaved();
-      setStatus('success');
-      setStatusMessage(image ? 'Homepage image updated.' : 'Homepage image added.');
     } catch (cause) {
       setStatus('error');
       setStatusMessage(getErrorMessage(cause, 'Could not save homepage image'));
       unlock();
+      return;
     }
+
+    let message = image ? 'Homepage image updated.' : 'Homepage image added.';
+    try {
+      await onSaved(savedImage);
+    } catch {
+      message = 'Homepage image was saved, but the page could not refresh. Reload to see it.';
+    }
+    setStatus('success');
+    setStatusMessage(message);
   };
 
   return {

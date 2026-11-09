@@ -1,80 +1,27 @@
-.task-overview-card__metrics,
-.task-overview-card__report {
-  margin: 0;
-}
-
-.dashboard-card.task-overview-card {
-  position: relative;
-  justify-content: flex-start;
-}
-
-.task-overview-card__accessible-title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.task-overview-card__layout {
-  flex: 1;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.task-overview-card__data {
-  align-self: stretch;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-.task-overview-card__metrics {
-  display: grid;
+.task-overview-card.dashboard-card--details .dashboard-card__details {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-.task-overview-card__metrics div {
-  min-width: 0;
-}
-
-.task-overview-card__metrics dt {
-  color: var(--color-muted);
-  font-size: var(--dashboard-card-label-size);
-  line-height: 1.15;
-}
-
-.task-overview-card__metrics dd {
-  margin: var(--dashboard-card-value-gap) 0 0;
-  color: var(--color-ink);
-  font-size: var(--dashboard-card-value-size);
-  font-weight: 750;
-  line-height: 1;
-}
-
-.task-overview-card__metric-upcoming dt,
-.task-overview-card__metric-upcoming dd {
+/* The shared details API retains Assigned, Upcoming, In Progress, and Overdue in this order. */
+.task-overview-card .dashboard-card__details > div:nth-child(2) dt,
+.task-overview-card .dashboard-card__details > div:nth-child(2) dd {
   color: var(--color-info);
 }
 
-.task-overview-card__metric-in-progress dt,
-.task-overview-card__metric-in-progress dd {
+.task-overview-card .dashboard-card__details > div:nth-child(3) dt,
+.task-overview-card .dashboard-card__details > div:nth-child(3) dd {
   color: var(--color-status-warn);
 }
 
-.task-overview-card__metric-overdue dt,
-.task-overview-card__metric-overdue dd {
+.task-overview-card .dashboard-card__details > div:nth-child(4) dt,
+.task-overview-card .dashboard-card__details > div:nth-child(4) dd {
   color: var(--color-danger-dark);
 }
 
 .task-overview-card__report {
   display: grid;
+  margin: 0;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-5);
 }
@@ -222,11 +169,7 @@
 }
 
 @media (max-width: 520px) {
-  .dashboard-card.task-overview-card {
-    align-items: stretch;
-  }
-
-  .task-overview-card__metrics {
+  .task-overview-card.dashboard-card--details .dashboard-card__details {
     grid-template-columns: 1fr;
   }
 

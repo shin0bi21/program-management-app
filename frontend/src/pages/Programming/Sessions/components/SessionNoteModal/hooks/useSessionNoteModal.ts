@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -14,30 +14,27 @@ import type {
   SessionRosterMember,
 } from '../../../types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
+import { getErrorMessage } from '../../../../../../http/errors';
 
 interface SessionNoteDraft {
-  category: SessionNoteCategory;
+  category: SessionNoteCategory | '';
   details: string;
   selectedYouthIds: string[];
 }
 
 export interface UseSessionNoteModalOptions {
-  session: Pick<ProgramSession, 'id' | 'enrollmentRequired'> | null;
+  session: Pick<ProgramSession, 'id' | 'enrollmentRequired'>;
   note?: SessionNote | null;
   initialYouthId?: string;
   hideYouthSelection?: boolean;
   onSaved: () => void | Promise<void>;
 }
 
-function buildDraft(note: SessionNote | null, initialYouthId?: string): SessionNoteDraft {
-  return {
-    category: note?.category ?? 'general',
-    details: note?.details ?? '',
-    selectedYouthIds: note?.youth.map(youth => youth.youthId)
-      ?? (initialYouthId ? [initialYouthId] : []),
-  };
-}
-
+/**
+ * Owns one mounted note draft from supplied values and loads optional youth choices.
+ * @param options - Saved session/note, optional youth context, and completion action.
+ * @example useSessionNoteModal({ session, note, onSaved }) // edits the supplied note
+ */
 export default function useSessionNoteModal({
   session,
   note = null,
@@ -45,31 +42,20 @@ export default function useSessionNoteModal({
   hideYouthSelection = false,
   onSaved,
 }: UseSessionNoteModalOptions) {
-  const [draft, setDraft] = useState(() => buildDraft(note, initialYouthId));
+  const [draft, setDraft] = useState<SessionNoteDraft>(() => ({
+    category: note?.category ?? '',
+    details: note?.details ?? '',
+    selectedYouthIds: note?.youth.map(youth => youth.youthId) ?? (initialYouthId ? [initialYouthId] : []),
+  }));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const initialDraftRef = useRef(buildDraft(note, initialYouthId));
-  const targetKey = session
-    ? `${session.id}:${note?.id ?? 'new'}:${initialYouthId ?? ''}`
-    : 'closed';
-  const isOpen = session !== null;
   const submitLock = useSubmitLock();
-  initialDraftRef.current = buildDraft(note, initialYouthId);
-
-  // A new session or note target starts a fresh editor lifecycle.
-  useEffect(() => {
-    if (isOpen) {
-      setDraft(initialDraftRef.current);
-      setSubmitStatus('idle');
-      setStatusMessage('');
-    }
-  }, [isOpen, targetKey]);
 
   // Youth links are optional, so roster loading does not block note submission.
   const rosterQuery = useQuery<SessionRosterMember[]>({
-    queryKey: ['sessions', session?.id, 'roster'],
-    queryFn: ({ signal }) => getSessionRoster(session!.id, { signal }),
-    enabled: session !== null && !hideYouthSelection,
+    queryKey: ['sessions', session.id, 'roster'],
+    queryFn: ({ signal }) => getSessionRoster(session.id, { signal }),
+    enabled: !hideYouthSelection,
   });
 
   const updateCategory = (category: SessionNoteCategory) => {
@@ -88,11 +74,16 @@ export default function useSessionNoteModal({
   };
 
   const submit = async () => {
-    if (!session) return;
     const details = draft.details.trim();
     if (!details) {
       setSubmitStatus('error');
       setStatusMessage('Enter a note.');
+      return;
+    }
+
+    if (!draft.category) {
+      setSubmitStatus('error');
+      setStatusMessage('Choose a category.');
       return;
     }
 
@@ -126,20 +117,17 @@ export default function useSessionNoteModal({
       refreshFailed = true;
     }
 
-    setStatusMessage(refreshFailed
-      ? 'Session note was saved, but the page could not refresh. Reload to see it.'
-      : note ? 'Session note successfully updated.' : 'Session note successfully added.');
+    let message = note ? 'Session note successfully updated.' : 'Session note successfully added.';
+    if (refreshFailed) message = 'Session note was saved, but the page could not refresh. Reload to see it.';
+    setStatusMessage(message);
     setSubmitStatus('success');
-    submitLock.unlock();
   };
 
   return {
     draft,
     roster: rosterQuery.data ?? [],
     rosterLoading: rosterQuery.isLoading,
-    rosterError: rosterQuery.error instanceof Error
-      ? rosterQuery.error.message
-      : rosterQuery.error ? 'Could not load session roster' : undefined,
+    rosterError: rosterQuery.error ? getErrorMessage(rosterQuery.error, 'Could not load session roster') : undefined,
     submitStatus,
     statusMessage: statusMessage || undefined,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',

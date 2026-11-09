@@ -6,7 +6,8 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from './components/HoursModal/HoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
-import HoursDashboard from './components/HoursDashboard/HoursDashboard';
+import HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
+import HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
 import HoursTable from './components/HoursTable/HoursTable';
 
 import { useAuth } from '../../../auth/authContext';
@@ -18,21 +19,20 @@ import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
-import { useHoursItems } from './hoursItemStore';
 import { getTaskDashboardData } from '../Tasks/tasks.api';
 import { HOURS_TABLE_KEYS, type HoursItem, type HoursFilters } from './types';
 
 import './Hours.css';
 
 type HoursAddTarget = {
-  resourceId?: string;
+  staffId?: string;
   date?: string;
   source?: 'regular' | 'task' | 'session';
 };
 
 type HoursModalState =
   | { mode: 'add'; initialValues: HoursAddTarget }
-  | { mode: 'edit'; itemId: string }
+  | { mode: 'edit'; item: HoursItem }
   | null;
 
 // Page-owned cache contracts.
@@ -41,9 +41,12 @@ const HOURS_QUERY_KEY = ['hours'] as const;
 const HOURS_TABLE_QUERY_KEY = [...HOURS_QUERY_KEY, 'table'] as const;
 const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
 
+/**
+ * Composes page-owned Hours choices with independent body and dashboard queries.
+ * @example <Hours /> // table/calendar rows with staff summaries
+ */
 export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions, role } = useAuth();
@@ -91,13 +94,12 @@ export default function Hours() {
     preferences.search.appliedValue,
   ]);
 
-  const records = useHoursItems();
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
   // Keep table action cells mounted when preferences or page data refresh.
   const closeRemovedItem = useCallback((itemId: string) => {
     setHoursModalState(current => (
-      current?.mode === 'edit' && current.itemId === itemId ? null : current
+      current?.mode === 'edit' && current.item.id === itemId ? null : current
     ));
   }, []);
 
@@ -114,7 +116,8 @@ export default function Hours() {
     onItemRemoved: closeRemovedItem,
   });
 
-  const editedItem = hoursModalState?.mode === 'edit' ? records[hoursModalState.itemId] : undefined;
+  const editedItem = hoursModalState?.mode === 'edit' ? hoursModalState.item : undefined;
+  const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.initialValues : undefined;
 
   // Hours modal.
   const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
@@ -122,17 +125,12 @@ export default function Hours() {
   }, []);
 
   const openEditHoursModal = useCallback((target: HoursItem) => {
-    setHoursModalState({ mode: 'edit', itemId: target.id });
+    setHoursModalState({ mode: 'edit', item: target });
   }, []);
 
   const closeHoursModal = useCallback(() => setHoursModalState(null), []);
 
-  const submitHours = (input: SetHoursInput) => (
-    actions.saveHours(
-      input,
-      hoursModalState?.mode === 'edit' ? hoursModalState.itemId : undefined,
-    )
-  );
+  const submitHours = (input: SetHoursInput) => actions.saveHours(input, editedItem?.id);
 
   // Table configuration.
   const table = useHoursTable({
@@ -220,14 +218,11 @@ export default function Hours() {
         preferences.error,
         actions.moveError,
         viewError,
-        dashboardError,
       ]}
-      dashboard={<HoursDashboard
-        queryKey={HOURS_QUERY_KEY}
-        staff={selection.selectedStaff}
-        cycle={overviewCycle}
-        onMessageChange={setDashboardError}
-      />}
+      dashboard={<>
+        <HoursPayPeriodDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} />
+        <HoursCycleSummaryDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} cycle={overviewCycle} />
+      </>}
       table={hasCycleBounds ? hoursTable : viewUnavailable}
       calendar={hasCycleBounds ? hoursCalendar : viewUnavailable}
     />
@@ -240,19 +235,12 @@ export default function Hours() {
       loadTasks={getTaskDashboardData}
       onClose={closeHoursModal}
       onAdd={submitHours}
-      initialResourceId={hoursModalState?.mode === 'edit'
-        ? editedItem?.staffId
-        : hoursModalState?.initialValues.resourceId ?? currentUserId}
-      initialDate={hoursModalState?.mode === 'edit'
-        ? editedItem?.date
-        : hoursModalState?.initialValues.date}
-      initialSource={hoursModalState?.mode === 'add'
-        ? hoursModalState.initialValues.source
-        : undefined}
+      initialStaffId={addHoursContext?.staffId ?? currentUserId}
+      initialDate={addHoursContext?.date}
+      initialSource={addHoursContext?.source}
       canCompleteTask={canCompleteTask}
-      staffLocked={hoursModalState?.mode === 'edit'
-        || Boolean(hoursModalState?.initialValues.resourceId)}
-      initialItem={hoursModalState?.mode === 'edit' ? editedItem : undefined}
+      staffLocked={Boolean(editedItem || addHoursContext?.staffId)}
+      initialItem={editedItem}
     />
 
     <ConfirmModal

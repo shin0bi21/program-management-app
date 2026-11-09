@@ -1,44 +1,27 @@
-import { useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { getTaskDashboardData } from '../../../../tasks.api';
-import { taskStore } from '../../../../taskStore';
 
 /**
- * Loads overview membership for a staff member and resolves current shared task records.
+ * Loads complete overview tasks for the selected staff member.
+ * @param taskQueryKey - Page namespace for staff overview queries.
+ * @param resourceId - Selected staff ID; an empty ID disables the request.
  * @example useTaskOverviewData(['tasks'], staffId).tasks
  */
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],
   resourceId: string,
 ) {
-  const client = useQueryClient();
-  const records = taskStore.useRecords();
-  const {
-    data: references,
-    error,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const query = useQuery({
     queryKey: [...taskQueryKey, 'overview', resourceId],
-    queryFn: async ({ signal }) => {
-      const read = taskStore.beginRead(client);
-      const incoming = await getTaskDashboardData(resourceId, { signal });
-      const tasks = taskStore.finishRead(client, read, incoming, signal);
-      return tasks.map(task => ({ id: task.id }));
-    },
+    enabled: Boolean(resourceId),
+    queryFn: ({ signal }) => getTaskDashboardData(resourceId, { signal }),
   });
 
-  const tasks = useMemo(() => (
-    (references ?? []).flatMap(({ id }) => records[id] ? [records[id]] : [])
-  ), [references, records]);
-
   return {
-    tasks,
-    loading: isLoading,
-    error: error
-      ? 'Unable to load task overview.'
-      : null,
-    retry: refetch,
+    tasks: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? 'Unable to load task overview.' : null,
+    retry: query.refetch,
   };
 }

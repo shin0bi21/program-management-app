@@ -7,9 +7,10 @@ export interface ProgramCycleRosterYouthRow {
   id: string;
   firstName: string;
   lastName: string;
+  /** Calendar date in YYYY-MM-DD format, or null when unknown. */
   dateOfBirth: string | null;
-  age: number | null;
   schoolName: string | null;
+  age: number | null;
   programCycles: Array<{
     programId: string;
     cycleId: string;
@@ -17,59 +18,80 @@ export interface ProgramCycleRosterYouthRow {
   }>;
 }
 
+/**
+ * Lists age-eligible youth available for this enrollment period and retained members.
+ * @param programId - Enrollment-based program whose roster is being edited.
+ * @param cycleId - Assigned cycle that bounds a new enrollment.
+ * @param actor - Actor whose program access must be checked.
+ * @returns Available candidates and retained youth, with date-only birth dates and ages in years.
+ * @throws ConflictError when the program does not use enrollment.
+ * @example getProgramRosterYouth(programId, cycleId, actor) // excludes conflicting programs
+ */
 export async function getProgramRosterYouth(programId: string, cycleId: string, actor: AccessTokenPayload) {
+  // 1. Check the selected enrollment-based program and cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
 
-  const age = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, yp.date_of_birth))::int`;
-  const programCycles = await sql<Array<{
+  const ageInYears = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, profile.date_of_birth))::int`;
+  const [programCycle] = await sql<Array<{
     enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
+    startsOn: string;
+    endsOn: string;
   }>>`
     SELECT
-      p.enrollment_required,
-      p.min_age,
-      p.max_age
-    FROM program_cycle_assignments pc
-    INNER JOIN programs p ON p.id = pc.program_id
-    WHERE pc.program_id = ${programId} AND pc.cycle_id = ${cycleId}
+      program.enrollment_required,
+      program.min_age,
+      program.max_age,
+      cycle.starts_on::text,
+      cycle.ends_on::text
+    FROM program_cycle_assignments assignment
+    INNER JOIN programs program ON program.id = assignment.program_id
+    INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
+    WHERE assignment.program_id = ${programId} AND assignment.cycle_id = ${cycleId}
   `;
 
-  if (!programCycles.length) throw new NotFoundError('Program cycle not found');
-  const programCycle = programCycles[0];
+  if (!programCycle) throw new NotFoundError('Program cycle not found');
   if (!programCycle.enrollmentRequired) {
     throw new ConflictError('Open attendance programs do not use enrollment');
   }
 
+  // 2. Keep retained members and available candidates for a new enrollment today.
+  const enrollmentPeriod = sql`daterange((NOW() AT TIME ZONE 'America/Toronto')::date, NULL, '[)')
+    * daterange(${programCycle.startsOn}::date, ${programCycle.endsOn}::date, '[]')`;
+
   return sql<ProgramCycleRosterYouthRow[]>`
     SELECT
-      u.id,
-      u.first_name,
-      u.last_name,
-      yp.date_of_birth,
-      ${age} AS age,
-      s.name AS school_name,
+      youth.id,
+      youth.first_name,
+      youth.last_name,
+
+      profile.date_of_birth::text AS date_of_birth,
+
+      school.name AS school_name,
+
+      ${ageInYears} AS age,
       COALESCE((
         SELECT json_agg(json_build_object(
-          'programId', ce.program_id,
-          'cycleId', ce.cycle_id,
-          'withdrawnOn', ce.withdrawn_on
+          'programId', enrollment.program_id,
+          'cycleId', enrollment.cycle_id,
+          'withdrawnOn', enrollment.withdrawn_on
         ))
-        FROM program_enrollments ce
-        WHERE ce.program_id = ${programId} AND ce.cycle_id = ${cycleId}
-          AND ce.youth_id = u.id
+        FROM program_enrollments enrollment
+        WHERE enrollment.program_id = ${programId} AND enrollment.cycle_id = ${cycleId}
+          AND enrollment.youth_id = youth.id
       ), '[]'::json) AS program_cycles
-    FROM youth_profiles yp
-    INNER JOIN users u ON u.id = yp.user_id
-    INNER JOIN user_roles ur ON ur.id = u.role_id
-    LEFT JOIN schools s ON s.id = yp.school_id
-    WHERE ur.name = 'youth'
+    FROM users youth
+    INNER JOIN youth_profiles profile ON profile.user_id = youth.id
+    INNER JOIN user_roles role ON role.id = youth.role_id
+    LEFT JOIN schools school ON school.id = profile.school_id
+    WHERE role.name = 'youth'
       AND (
         EXISTS (
           SELECT 1
           FROM program_enrollments active_enrollment
           WHERE active_enrollment.program_id = ${programId} AND active_enrollment.cycle_id = ${cycleId}
-            AND active_enrollment.youth_id = u.id
+            AND active_enrollment.youth_id = youth.id
             AND active_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
             AND (
               active_enrollment.withdrawn_on IS NULL
@@ -77,10 +99,17 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
             )
         )
         OR (
-          (${age} >= ${programCycle.minAge} OR ${programCycle.minAge}::int IS NULL)
-          AND (${age} <= ${programCycle.maxAge} OR ${programCycle.maxAge}::int IS NULL)
+          (${ageInYears} >= ${programCycle.minAge} OR ${programCycle.minAge}::int IS NULL)
+          AND (${ageInYears} <= ${programCycle.maxAge} OR ${programCycle.maxAge}::int IS NULL)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM program_enrollments other_enrollment
+            WHERE other_enrollment.youth_id = youth.id
+              AND other_enrollment.program_id <> ${programId}
+              AND other_enrollment.effective_period && (${enrollmentPeriod})
+          )
         )
       )
-    ORDER BY LOWER(u.first_name), LOWER(u.last_name), u.id
+    ORDER BY LOWER(youth.first_name), LOWER(youth.last_name), youth.id
   `;
 }

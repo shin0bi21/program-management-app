@@ -4,7 +4,9 @@ import Button from '../../common/components/Button/Button';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
 import ConfirmModal from '../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
-import LeadDashboard from './components/LeadDashboard/LeadDashboard';
+import PrimaryContactDashboardCard from '../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
+import IntakeInformationDashboardCard from './components/LeadDashboard/IntakeInformationDashboardCard';
+import LeadNotesDashboardCard from './components/LeadDashboard/LeadNotesDashboardCard/LeadNotesDashboardCard';
 import LeadTable from './components/LeadTable/LeadTable';
 import useLeadTable from './components/LeadTable/hooks/useLeadTable';
 import LeadModal from './components/LeadModal/LeadModal';
@@ -17,10 +19,15 @@ import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadOrigin } from '.
 import './Leads.css';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
+
+/**
+ * Displays outreach leads with current saved selection and independent edit drafts.
+ * @param props - The internal or external outreach collection to display.
+ * @example <Leads origin="external" />
+ */
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions } = useAuth();
@@ -28,7 +35,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
 
   // Page data and preferences.
   const preferenceKey = origin === 'external' ? 'outreach-external-leads-filters' : 'outreach-internal-leads-filters';
-  const tableQueryKey = ['leads', origin, 'table'] as const;
+  const tableQueryKey = ['leads', 'table', origin] as const;
   const data = useLeadData();
   const preferences = useLeadPreferences(
     origin,
@@ -52,12 +59,13 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const selection = useLeadSelection();
   const actions = useLeadActions({
     tableQueryKey,
-    onLeadSynced: selection.syncSelectedLead,
     onLeadRemoved: selection.removeSelectedLead,
+    onLeadSynced: selection.updateSelectedLead,
   });
 
   // Lead modal.
   const [modalTarget, setModalTarget] = useState<Lead | 'new' | null>(null);
+  const modalLead = modalTarget && modalTarget !== 'new' ? modalTarget : undefined;
   const closeLeadModal = () => setModalTarget(null);
 
   // Sign-up modal.
@@ -69,7 +77,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
   const { columns } = useLeadTable({
     origin,
     canWrite,
-    onEdit: setModalTarget,
+    onEdit: lead => setModalTarget(lead),
     onDelete: actions.requestDelete,
     onSignUp: requestSignUp,
     onStatusChange: actions.setStatus,
@@ -88,12 +96,15 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
       search={{ label: 'Search leads', placeholder: 'Search youth or school' }}
       columns={columns}
-      messages={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]}
-      dashboard={<LeadDashboard
-        lead={selection.selectedLead}
-        canWrite={canWrite}
-        onMessageChange={setDashboardError}
-      />}
+      messages={[preferences.error, data.programsError, actions.actionError, viewError]}
+      dashboard={<>
+        <PrimaryContactDashboardCard contact={selection.selectedLead ? {
+          phoneNumber: selection.selectedLead.contactPhoneNumber,
+          relationship: selection.selectedLead.contactRelationship,
+        } : null} selected={selection.selectedLead !== null} />
+        <IntakeInformationDashboardCard notes={selection.selectedLead?.notes} selected={selection.selectedLead !== null} />
+        <LeadNotesDashboardCard lead={selection.selectedLead} canWrite={canWrite} />
+      </>}
       table={<LeadTable
         queryKey={tableQueryKey}
         columns={columns}
@@ -109,13 +120,10 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       />}
     />
     <LeadModal
-      isOpen={modalTarget !== null}
-      lead={modalTarget !== 'new' && modalTarget !== null ? modalTarget : undefined}
+      isOpen={modalTarget === 'new' || Boolean(modalLead)}
+      lead={modalLead}
       onClose={closeLeadModal}
-      onSuccess={savedLead => {
-        if (modalTarget === 'new') void actions.refreshLeads();
-        else actions.syncLead(savedLead);
-      }}
+      onSuccess={lead => actions.syncLead(lead, modalTarget === 'new' ? 'create' : 'update')}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}

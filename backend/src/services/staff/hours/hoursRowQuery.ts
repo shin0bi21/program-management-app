@@ -1,4 +1,6 @@
 import { sql } from '../../../db/client';
+import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
+import type { AccessTokenPayload } from '../../../types/auth';
 import { getHoursCategoryLabel } from './hoursReferenceData';
 import type { HoursCategory } from '../../../validation/hoursSchemas';
 
@@ -25,44 +27,6 @@ export interface HoursRow {
   type: 'task' | 'session' | 'regular';
 }
 
-/** Canonical hours fields shared by collection and direct-record reads. */
-export const hoursRowColumns = sql`
-  entry.id,
-  entry.staff_id,
-  staff.first_name,
-  staff.last_name,
-  CONCAT(staff.first_name, ' ', staff.last_name) AS name,
-  entry.program_id,
-  program.name AS program,
-  cycle.id AS cycle_id,
-  cycle.name AS cycle,
-  cycle.starts_on::text AS cycle_starts_on,
-  cycle.ends_on::text AS cycle_ends_on,
-  entry.category,
-  entry.task_id,
-  task.title AS task_title,
-  entry.session_id,
-  session.theme AS session_label,
-  entry.date::text,
-  entry.hours::text,
-  entry.note,
-  CASE
-    WHEN entry.task_id IS NOT NULL THEN 'task'
-    WHEN entry.session_id IS NOT NULL THEN 'session'
-    ELSE 'regular'
-  END AS type
-`;
-
-/** Canonical hours relationships shared by collection and direct-record reads. */
-export const hoursRowFrom = sql`
-  FROM time_entries entry
-  INNER JOIN users staff ON staff.id = entry.staff_id
-  LEFT JOIN programs program ON program.id = entry.program_id
-  INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
-  LEFT JOIN tasks task ON task.id = entry.task_id
-  LEFT JOIN program_sessions session ON session.id = entry.session_id
-`;
-
 /** Searchable hours values shared by calendar and table collection reads. */
 export const hoursSearchValue = sql`CONCAT_WS(' ',
   staff.first_name,
@@ -77,16 +41,47 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
 )`;
 
 /**
- * Builds rows for table and calendar items.
+ * Builds canonical hours rows within the actor's readable staff scope.
+ * @param actor - Actor whose resource scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
- * @example getHoursRows(appliedFilters, trx)
+ * @example getHoursRows(actor, appliedFilters, trx)
  */
-export function getHoursRows(appliedFilters = sql`TRUE`, query = sql) {
+export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
   return query<HoursRow[]>`
-    SELECT ${hoursRowColumns}
-    ${hoursRowFrom}
-    WHERE ${appliedFilters}
+    SELECT
+      entry.id,
+      entry.staff_id,
+      staff.first_name,
+      staff.last_name,
+      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
+      entry.program_id,
+      program.name AS program,
+      cycle.id AS cycle_id,
+      cycle.name AS cycle,
+      cycle.starts_on::text AS cycle_starts_on,
+      cycle.ends_on::text AS cycle_ends_on,
+      entry.category,
+      entry.task_id,
+      task.title AS task_title,
+      entry.session_id,
+      session.theme AS session_label,
+      entry.date::text,
+      entry.hours::text,
+      entry.note,
+      CASE
+        WHEN entry.task_id IS NOT NULL THEN 'task'
+        WHEN entry.session_id IS NOT NULL THEN 'session'
+        ELSE 'regular'
+      END AS type
+    FROM time_entries entry
+    INNER JOIN users staff ON staff.id = entry.staff_id
+    LEFT JOIN programs program ON program.id = entry.program_id
+    INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
+    LEFT JOIN tasks task ON task.id = entry.task_id
+    LEFT JOIN program_sessions session ON session.id = entry.session_id
+    WHERE ${hoursReadScopePredicate(actor, query`entry.staff_id`)}
+      AND (${appliedFilters})
   `;
 }
 
@@ -104,12 +99,13 @@ export function toHoursItem(row: HoursRow) {
 }
 
 /**
- * Loads one hours row.
+ * Loads one hours row within the actor's resource scope.
+ * @param actor - Actor whose resource scope is always enforced.
  * @param id - Hours entry to load.
- * @param trx - Transaction for the read.
- * @example getHoursRow(id, trx)
+ * @param query - Database client; pass trx inside a transaction.
+ * @example getHoursRow(actor, id, trx)
  */
-export async function getHoursRow(id: string, trx: typeof sql) {
-  const [row] = await getHoursRows(trx`entry.id = ${id}`, trx);
+export async function getHoursRow(actor: AccessTokenPayload, id: string, query = sql) {
+  const [row] = await getHoursRows(actor, query`entry.id = ${id}`, query);
   return row;
 }

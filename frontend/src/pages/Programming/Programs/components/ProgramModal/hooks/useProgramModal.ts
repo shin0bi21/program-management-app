@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { createProgram, updateProgram, type CreateProgramInput, type ProgramMutationResult } from '../../../api/programs.api';
 import type { Program, ProgramWeekday } from '../../../../../../common/features/programs/types';
@@ -12,84 +12,41 @@ interface ProgramDraft {
   enrollmentRequired: boolean;
   minAge: string;
   maxAge: string;
-  defaultDayOfWeek: ProgramWeekday;
+  defaultDayOfWeek: ProgramWeekday | '';
   defaultStartTime: string;
   defaultEndTime: string;
   timezone: Program['timezone'];
 }
 
 interface UseProgramModalOptions {
-  isOpen: boolean;
   program: Program | null;
   onSaved: (result: ProgramMutationResult, operation: 'create' | 'update') => void;
-}
-
-function buildDraft(program: Program | null): ProgramDraft {
-  return {
-    defaultDayOfWeek: program?.defaultDayOfWeek ?? 'tuesday',
-    defaultStartTime: program?.defaultStartTime ?? '17:00',
-    defaultEndTime: program?.defaultEndTime ?? '19:30',
-    timezone: program?.timezone ?? 'America/Toronto',
-    name: program?.name ?? '',
-    description: program?.description ?? '',
-    enrollmentRequired: program?.enrollmentRequired ?? true,
-    minAge: program?.minAge === null || program?.minAge === undefined
-      ? ''
-      : String(program.minAge),
-    maxAge: program?.maxAge === null || program?.maxAge === undefined
-      ? ''
-      : String(program.maxAge),
-  };
 }
 
 type ParsedAges =
   | { error: string }
   | { minAge: number | null; maxAge: number | null };
 
-function parseAges(draft: ProgramDraft): ParsedAges {
-  const hasMinAge = draft.minAge !== '';
-  const hasMaxAge = draft.maxAge !== '';
-  if (hasMinAge !== hasMaxAge) {
-    return { error: 'Minimum and maximum age must both be provided.' };
-  }
-  if (!hasMinAge) return { minAge: null, maxAge: null };
-
-  const minAge = Number(draft.minAge);
-  const maxAge = Number(draft.maxAge);
-  if (
-    !Number.isInteger(minAge)
-    || !Number.isInteger(maxAge)
-    || minAge < 0
-    || minAge > 30
-    || maxAge < 0
-    || maxAge > 30
-  ) {
-    return { error: 'Ages must be whole numbers from 0 to 30.' };
-  }
-  if (minAge > maxAge) {
-    return { error: 'Minimum age cannot be greater than maximum age.' };
-  }
-  return { minAge, maxAge };
-}
-
-export default function useProgramModal({ isOpen, program, onSaved }: UseProgramModalOptions) {
-  const initialDraftRef = useRef(buildDraft(program));
-  const [draft, setDraft] = useState(initialDraftRef.current);
+/**
+ * Owns one mounted program editor and saves its supplied record or a new program.
+ * @param options - Saved program, if editing, and authoritative save callback.
+ * @example useProgramModal({ program: null, onSaved }) // empty new-program draft
+ */
+export default function useProgramModal({ program, onSaved }: UseProgramModalOptions) {
+  const [draft, setDraft] = useState<ProgramDraft>(() => ({
+    name: program?.name ?? '',
+    description: program?.description ?? '',
+    enrollmentRequired: program?.enrollmentRequired ?? false,
+    minAge: program?.minAge == null ? '' : String(program.minAge),
+    maxAge: program?.maxAge == null ? '' : String(program.maxAge),
+    defaultDayOfWeek: program?.defaultDayOfWeek ?? '',
+    defaultStartTime: program?.defaultStartTime ?? '',
+    defaultEndTime: program?.defaultEndTime ?? '',
+    timezone: program?.timezone ?? 'America/Toronto',
+  }));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
-  initialDraftRef.current = buildDraft(program);
-
-  const targetKey = isOpen ? program?.id ?? 'new' : 'closed';
-
-  // A different program target starts a fresh editor lifecycle.
-  useEffect(() => {
-    if (!isOpen) return;
-    setDraft(initialDraftRef.current);
-    setSubmitStatus('idle');
-    setStatusMessage('');
-    unlock();
-  }, [isOpen, targetKey, unlock]);
 
   const updateDraft = <Key extends keyof ProgramDraft>(
     key: Key,
@@ -115,6 +72,12 @@ export default function useProgramModal({ isOpen, program, onSaved }: UseProgram
     if (!draft.defaultStartTime || !draft.defaultEndTime || draft.defaultEndTime <= draft.defaultStartTime) {
       setSubmitStatus('error');
       setStatusMessage('Default end time must be after the start time.');
+      return;
+    }
+
+    if (!draft.defaultDayOfWeek) {
+      setSubmitStatus('error');
+      setStatusMessage('Default session day is required.');
       return;
     }
 
@@ -162,4 +125,35 @@ export default function useProgramModal({ isOpen, program, onSaved }: UseProgram
     updateDraft,
     submit,
   };
+}
+
+/**
+ * Validates the optional paired age limits as whole years from zero through thirty.
+ * @param draft - The form's minimum and maximum age text.
+ * @example parseAges({ minAge: '', maxAge: '' }) // no age limits
+ */
+function parseAges(draft: Pick<ProgramDraft, 'minAge' | 'maxAge'>): ParsedAges {
+  const hasMinAge = draft.minAge !== '';
+  const hasMaxAge = draft.maxAge !== '';
+  if (hasMinAge !== hasMaxAge) {
+    return { error: 'Minimum and maximum age must both be provided.' };
+  }
+  if (!hasMinAge) return { minAge: null, maxAge: null };
+
+  const minAge = Number(draft.minAge);
+  const maxAge = Number(draft.maxAge);
+  if (
+    !Number.isInteger(minAge)
+    || !Number.isInteger(maxAge)
+    || minAge < 0
+    || minAge > 30
+    || maxAge < 0
+    || maxAge > 30
+  ) {
+    return { error: 'Ages must be whole numbers from 0 to 30.' };
+  }
+  if (minAge > maxAge) {
+    return { error: 'Minimum age cannot be greater than maximum age.' };
+  }
+  return { minAge, maxAge };
 }

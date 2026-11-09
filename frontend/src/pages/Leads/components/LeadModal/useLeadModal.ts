@@ -1,9 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
-  outreachFormDefaultValues,
   outreachFormSchema,
   type OutreachFormValues,
 } from '../../../../common/features/OutreachForm/outreachFormSchema';
@@ -13,32 +11,30 @@ import { getErrorMessage } from '../../../../http/errors';
 import { createLead, updateLead } from '../../leads.api';
 import type { Lead } from '../../types';
 
-export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
-  isOpen: boolean;
-  onClose: () => void;
+/**
+ * Initializes one mounted lead editor from supplied values and saves normalized fields.
+ * @param options - Saved target, if editing, and authoritative save callback.
+ * @example useLeadModal({ lead, onSuccess }) // starts from the supplied lead
+ */
+export function useLeadModal({ onSuccess, lead }: {
   onSuccess: (lead: Lead) => void;
   lead?: Lead;
 }) {
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const { tryLock, unlock } = useSubmitLock();
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<OutreachFormValues>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<OutreachFormValues>({
     resolver: zodResolver(outreachFormSchema),
-    defaultValues: outreachFormDefaultValues,
+    defaultValues: {
+      youthFirstName: lead?.youthFirstName ?? '',
+      youthLastName: lead?.youthLastName ?? '',
+      dateOfBirth: lead?.dateOfBirth ?? '',
+      school: lead?.school ?? '',
+      contactPhoneNumber: lead?.contactPhoneNumber ?? '',
+      contactRelationship: lead?.contactRelationship,
+      discoverySource: lead?.discoverySource,
+      notes: lead?.notes ?? '',
+    },
   });
-
-  useEffect(() => {
-    if (isOpen) reset(valuesForLead(lead));
-  }, [isOpen, lead, reset]);
-
-  const resetForm = () => {
-    reset(outreachFormDefaultValues);
-    resetStatus();
-    unlock();
-  };
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
 
   const onValid = async (data: OutreachFormValues) => {
     if (!tryLock()) return;
@@ -70,21 +66,5 @@ export function useLeadModal({ isOpen, onClose, onSuccess, lead }: {
     onSuccess(savedLead);
   };
 
-  return { register, control, errors, handleSubmit, onValid, submitStatus, error, handleClose };
+  return { register, control, errors, handleSubmit, onValid, submitStatus, error };
 }
-
-/** Initializes an edit draft from the saved DOB, leaving legacy dates blank. */
-const valuesForLead = (lead?: Lead): OutreachFormValues => (
-  lead
-    ? {
-        youthFirstName: lead.youthFirstName,
-        youthLastName: lead.youthLastName,
-        dateOfBirth: lead.dateOfBirth ?? '',
-        school: lead.school,
-        contactPhoneNumber: lead.contactPhoneNumber,
-        contactRelationship: lead.contactRelationship,
-        discoverySource: lead.discoverySource,
-        notes: lead.notes ?? '',
-      }
-    : outreachFormDefaultValues
-);

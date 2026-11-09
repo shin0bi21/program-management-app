@@ -29,6 +29,11 @@ Choose by responsibility, dependency direction, and lifecycle; file length does 
 2. Lift it to the nearest common owner only when it coordinates children, shares resources, or must survive a child's unmount.
 3. Pass parent-coordinated behavior through props.
 
+The page owns `hooks/data/use<Domain>Data` for shared reference
+lookups. Table, calendar, and dashboard query hooks stay with their consuming
+components. Follow the [page data flow contract](02-state-and-data.md#page-data-flow)
+for the target structure and downward data flow.
+
 Do not collect descendant hooks at a parent merely because it renders those descendants.
 
 ## Place Types and Utilities
@@ -53,6 +58,29 @@ Do not create hooks merely to rename state or forward props.
 - Separate unrelated lifecycles.
 - Coordinate global registrations at the narrowest shared owner; keep instance resources with their instance.
 - Pair listeners, observers, timers, subscriptions, and external instances with cleanup on completion, cancellation, dependency changes, and unmount.
+
+### Modal and Form Lifetimes
+
+- Mount each modal interaction's content on open and unmount it on close or
+  successful completion. This includes forms, viewers, reports, details, and confirmations.
+- Keep the open target with the page or interaction owner. A form's draft,
+  validation, feedback, and submission lock belong to its mounted instance.
+- Keep an explicit `isOpen` interface when the modal uses one. A thin modal owner
+  can conditionally mount its state-owning content without another visibility state.
+- Initialize once from supplied edit data or add defaults. Pass records already
+  loaded by the opening view; do not fetch them again to initialize the draft.
+- Close or successful completion clears the target and unmounts the interaction.
+  Preserve the shared dialog's success feedback until its close callback runs.
+- Reopening starts a fresh instance. Key the form by target identity if the target
+  can change without closing. Background record refreshes do not replace drafts.
+- Do not clear drafts on close or simulate mounting with reset effects or draft refs.
+  Keep option loading and resource cleanup separate from draft initialization.
+- Preview URLs, zoom controls, and modal-owned requests follow the same lifetime;
+  unmounting releases resources and cancels unfinished loads.
+- A related child dialog can suspend its parent while keeping that parent mounted.
+  Closing the parent interaction discards both forms.
+- Inline and route forms follow their interaction's lifetime: completion or
+  navigation unmounts the editor; starting another entry mounts a fresh instance.
 
 ## Add Sidebar Navigation
 

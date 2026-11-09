@@ -3,23 +3,17 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { YouthProfile } from '../../types';
 import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
-
-import { sessionStore } from '../../../Programming/Sessions/sessionStore';
 import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
 
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
-interface UseYouthActionsOptions {
-  onYouthReconciled: (youth: YouthProfile) => void;
-}
-
 /**
- * Reconciles saved youth and attendance projections with their feature-owned records.
- * @example actions.reconcileAttendance(saved) // updates youth, shared sessions, and summaries
+ * Reconciles saved Youth and session rows and updates loaded cycle attendance.
+ * @param onYouthSynced - Updates the selected profile when its saved response arrives.
+ * @example useYouthActions(updateSelectedProfile)
  */
-export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
+export function useYouthActions(onYouthSynced?: (profile: YouthProfile) => void) {
   const queryClient = useQueryClient();
-  const sessionScope = sessionStore.getScope(queryClient);
 
   const reconcileCreatedYouth = useCallback((_savedYouth: YouthProfile) => {
     void queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY });
@@ -27,21 +21,31 @@ export function useYouthActions({ onYouthReconciled }: UseYouthActionsOptions) {
 
   const reconcileSavedYouth = useCallback((savedYouth: YouthProfile) => {
     replaceInfiniteListRow(queryClient, YOUTH_TABLE_QUERY_KEY, savedYouth);
-    onYouthReconciled(savedYouth);
-  }, [onYouthReconciled, queryClient]);
+    onYouthSynced?.(savedYouth);
+  }, [queryClient, onYouthSynced]);
 
   const reconcileAttendance = useCallback((saved: YouthAttendanceResult) => {
-    if (!sessionStore.isScope(queryClient, sessionScope)) return;
     reconcileSavedYouth(saved.youth);
-    for (const session of saved.updatedSessions ?? []) {
-      sessionStore.write(queryClient, session);
-      void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
+    queryClient.setQueryData(['youth', 'attendance', saved.youth.id], {
+      programCycle: saved.programCycle,
+      youth: [{
+        id: saved.youth.id, firstName: saved.youth.firstName, lastName: saved.youth.lastName,
+        presentCount: saved.presentCount, lateCount: saved.lateCount, absentCount: saved.absentCount,
+        sessions: saved.sessions,
+      }],
+    });
+    if (saved.updatedSessions?.length) {
+      for (const session of saved.updatedSessions) {
+        replaceInfiniteListRow(queryClient, ['sessions', 'table'], session);
+        void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
+      }
     }
     if (saved.updatedProgramCycle) {
       updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
     void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignments'] });
-  }, [queryClient, reconcileSavedYouth, sessionScope]);
+    void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-attendance'] });
+  }, [queryClient, reconcileSavedYouth]);
 
   return { reconcileCreatedYouth, reconcileSavedYouth, reconcileAttendance };
 }

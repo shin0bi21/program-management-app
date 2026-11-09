@@ -146,16 +146,4 @@ describe('SessionAttachmentModal', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
   });
 
-  it('renders selection and fields for a different attachment target', async () => {
-    const props = { queryKey, onClose: vi.fn(), onSaved: vi.fn() };
-    const view = renderWithQueryClient(
-      <SessionAttachmentModal session={session} {...props} />,
-    );
-
-    view.rerender(<SessionAttachmentModal session={null} {...props} />);
-    view.rerender(<SessionAttachmentModal session={session} attachment={attachment} {...props} />);
-
-    expect(await screen.findByLabelText('Maya Thompson')).toBeChecked();
-    expect(screen.getByLabelText('Title')).toHaveValue('Workshop photo');
-  });
 });

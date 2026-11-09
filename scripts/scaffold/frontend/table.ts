@@ -1,3 +1,10 @@
+/**
+ * Builds table and component-owned data outlines in memory without writing files.
+ * Flow:
+ * 1. Validate the page component owner and table name.
+ * 2. Format component, table data hook, and test outlines.
+ * 3. Return component and component-hook destinations for shared publication.
+ */
 import { join } from 'node:path';
 
 import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
@@ -17,11 +24,12 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
   const directory = context.componentOwner(owner, name, 'Table', 'Table');
   const hookName = `use${name}Data`;
   const title = name.replace(/Table$/, '');
+  const dataDirectory = join(directory, 'hooks');
   // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
-    import ${hookName} from './hooks/${hookName}';
+    import ${hookName} from '${context.relativeImport(directory, join(dataDirectory, hookName))}';
 
     /**
      * Displays a placeholder for the ${title} collection until shared Table wiring is implemented.
@@ -40,24 +48,29 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
   );
   // 3. Format the companion sources and colocated test outlines.
   const hook = context.sourceFile(
-    join(directory, `hooks/${hookName}.ts`),
+    join(dataDirectory, `${hookName}.ts`),
     `
+    // TODO: Replace this outline with the complete domain API row type.
+    interface ${title}Row { id: string }
+
     /**
-     * Supplies empty ${title} rows until the domain cursor query is implemented.
+     * Supplies complete ${title} rows for the table's applied controls.
      * @returns An empty row list with loading disabled; no request is made yet.
      * @example ${hookName}() returns { rows: [], loading: false }.
      */
     export default function ${hookName}() {
-      // TODO: Own the domain query key, inputs, row shaping, and cursor adapter here.
-      // Use useInfiniteListQuery under a table-only prefix, separate from lookups/aggregates.
+      // TODO: Use useInfiniteListQuery<${title}Row> under a table-only query prefix.
+      // Receive applied filters/sorting and any required page reference context as arguments.
+      // Cache complete API rows directly; do not create a normalized record store.
       // Forward signal/cursor and TABLE_PAGE_SIZE; server filtering/sorting precedes pagination.
       // Report initial/refresh/next-page errors with their matching retry through usePageMessageReporter.
-      // Reconcile authoritative edits/deletes with infiniteListCache; keep edited rows in place.
+      // Under PageContainer, pass undefined as its callback argument to use automatic page reporting.
+      // Replace saved rows or remove deleted rows with the existing cursor-list cache helpers.
+      // Retain positions after sort edits; tableRefreshMessage supplies the out-of-order message and Refresh.
+      // Invalidate when creation or changed filter membership requires reloading.
       // Supply ordering and expose refreshNotice for a user-requested first-page refresh.
-      return {
-        rows: [],
-        loading: false,
-      };
+      const rows: ${title}Row[] = [];
+      return { rows, loading: false };
     }
     `,
   );
@@ -67,6 +80,8 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     // Test domain cells, actions, and selection wiring here; shared Table owns rendering,
     // sorting controls, resizing, and scroll triggers. The query hook owns page fetching.
     // Pure policies own eligibility matrices.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     import { describe, it } from 'vitest';
 
     describe('${name}', () => {
@@ -77,7 +92,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     `,
   );
   const hookTest = context.sourceFile(
-    join(directory, `hooks/${hookName}.test.ts`),
+    join(dataDirectory, `${hookName}.test.ts`),
     `
     // This hook owns adapter inputs, query identity, and domain row shaping.
     // useInfiniteListQuery owns accumulation, loading, refresh, and retry mechanics.
@@ -86,7 +101,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     describe('${hookName}', () => {
       it.todo('builds the complete domain query key and honors enabled gates');
       it.todo('forwards filters, sorting, page size, cursor, and AbortSignal to the API adapter');
-      it.todo('returns only domain-specific row shaping added by this hook');
+      it.todo('returns complete domain rows from the query');
     });
     `,
   );
@@ -96,8 +111,8 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     files: new Map([
       [join(directory, `${name}.tsx`), component],
       [join(directory, `${name}.test.tsx`), test],
-      [join(directory, `hooks/${hookName}.ts`), hook],
-      [join(directory, `hooks/${hookName}.test.ts`), hookTest],
+      [join(dataDirectory, `${hookName}.ts`), hook],
+      [join(dataDirectory, `${hookName}.test.ts`), hookTest],
     ]),
   };
 }
