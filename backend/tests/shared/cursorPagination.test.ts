@@ -4,7 +4,6 @@ import { cursorPage, decodeCursor, encodeCursor, paginateQuery } from '../../src
 
 const firstId = '00000000-0000-4000-8000-000000000001';
 const secondId = '00000000-0000-4000-8000-000000000002';
-const thirdId = '00000000-0000-4000-8000-000000000003';
 
 describe('shared cursor pagination', () => {
   it('encodes and decodes text and numeric cursors', () => {
@@ -43,46 +42,50 @@ describe('shared cursor pagination', () => {
 
   it.each(['asc', 'desc'] as const)('pages numeric SQL rows in %s order without losing tied values', async direction => {
     const rowsQuery = sql<{ id: string; hours: number }[]>`
-      SELECT * FROM (VALUES
-        (${thirdId}::uuid, 10::double precision),
-        (${secondId}::uuid, 2.5::double precision),
-        (${firstId}::uuid, 2.5::double precision)
-      ) fixture(id, hours)
+      SELECT ('00000000-0000-4000-8000-' || LPAD(number::text, 12, '0'))::uuid AS id,
+        ((number - 1) / 3)::double precision + 0.5 AS hours
+      FROM generate_series(1, 101) AS number
     `;
-    const options = { sortValue: sql`"row".hours`, direction, limit: 1 };
-    const expectedIds = direction === 'asc' ? [firstId, secondId, thirdId] : [thirdId, secondId, firstId];
+    const options = { sortValue: sql`"row".hours`, direction };
+    const expected = Array.from({ length: 101 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      hours: Math.floor(index / 3) + 0.5,
+    }));
+    if (direction === 'desc') expected.reverse();
     const visibleIds: string[] = [];
     let cursor: string | undefined;
 
-    for (const expectedId of expectedIds) {
+    for (let offset = 0; offset < expected.length; offset += 50) {
       const page = await paginateQuery(rowsQuery, { ...options, cursor });
 
-      expect(page.rows).toEqual([{ id: expectedId, hours: expectedId === thirdId ? 10 : 2.5 }]);
+      expect(page.rows).toEqual(expected.slice(offset, offset + 50));
       visibleIds.push(...page.rows.map(row => row.id));
       cursor = page.nextCursor ?? undefined;
-      expect(Boolean(cursor)).toBe(visibleIds.length < expectedIds.length);
+      expect(Boolean(cursor)).toBe(visibleIds.length < expected.length);
     }
 
-    expect(visibleIds).toEqual(expectedIds);
+    expect(visibleIds).toEqual(expected.map(row => row.id));
   });
 
   it('bounds rows and strips internal cursor values', async () => {
     const page = await paginateQuery(paginationRows(), {
-      sortValue: sql`"row".name`, direction: 'asc', limit: 2,
+      sortValue: sql`"row".name`, direction: 'asc',
     });
 
-    expect(page.rows).toEqual([
-      { id: firstId, name: 'alpha' },
-      { id: secondId, name: 'alpha' },
-    ]);
-    expect(decodeCursor(page.nextCursor!)).toEqual({ value: 'alpha', id: secondId });
+    expect(page.rows).toEqual(Array.from({ length: 50 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      name: 'alpha',
+    })));
+    expect(decodeCursor(page.nextCursor!)).toEqual({
+      value: 'alpha', id: '00000000-0000-4000-8000-000000000050',
+    });
   });
 
   it('returns an empty terminal page when the filtered query has no rows', async () => {
     const rowsQuery = sql<{ id: string; name: string }[]>`SELECT * FROM (${paginationRows()}) filtered WHERE FALSE`;
 
     const page = await paginateQuery(rowsQuery, {
-      sortValue: sql`"row".name`, direction: 'asc', limit: 2,
+      sortValue: sql`"row".name`, direction: 'asc',
     });
 
     expect(page).toEqual({ rows: [], nextCursor: null });
@@ -92,16 +95,19 @@ describe('shared cursor pagination', () => {
 /**
  * Builds filtered SQL fixtures with equal sort values and an excluded row.
  * @returns An unexecuted query requiring no persistent fixture records.
- * @example await paginationRows() // two alpha rows and one beta row
+ * @example await paginationRows() // 50 alpha rows and one beta row
  */
 function paginationRows() {
   return sql<{ id: string; name: string }[]>`
-    SELECT * FROM (VALUES
-      (${thirdId}::uuid, 'beta'),
-      (${secondId}::uuid, 'alpha'),
-      (${firstId}::uuid, 'alpha'),
-      ('00000000-0000-4000-8000-000000000004'::uuid, 'hidden')
-    ) fixture(id, name)
+    SELECT * FROM (
+      SELECT ('00000000-0000-4000-8000-' || LPAD(number::text, 12, '0'))::uuid AS id,
+        CASE
+          WHEN number <= 50 THEN 'alpha'
+          WHEN number = 51 THEN 'beta'
+          ELSE 'hidden'
+        END AS name
+      FROM generate_series(1, 52) AS number
+    ) fixture
     WHERE name <> 'hidden'
   `;
 }

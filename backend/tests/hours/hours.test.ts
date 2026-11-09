@@ -261,7 +261,7 @@ describe('Hours API', () => {
     expect(unmatched.body).toEqual([]);
   });
 
-  it('cursor-paginates the filtered hours list', async () => {
+  it('returns filtered hours in table order', async () => {
     const marker = `Paginated hours ${firstStaffId}`;
     for (const hours of [1, 2]) {
       const created = await request(app)
@@ -271,21 +271,15 @@ describe('Hours API', () => {
       expect(created.status).toBe(201);
     }
 
-    const first = await request(app)
-      .get(`/api/hours/table?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1`)
+    const response = await request(app)
+      .get(`/api/hours/table?search=${encodeURIComponent(marker)}&sort=hours&direction=asc`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(first.status).toBe(200);
-    expect(first.body).toEqual({
-      rows: [expect.objectContaining({ staffId: firstStaffId, hours: 1, note: `${marker} 1` })],
-      nextCursor: expect.any(String),
-    });
-
-    const second = await request(app)
-      .get(`/api/hours/table?search=${encodeURIComponent(marker)}&sort=hours&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(second.status).toBe(200);
-    expect(second.body).toEqual({
-      rows: [expect.objectContaining({ hours: 2, note: `${marker} 2` })],
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      rows: [
+        expect.objectContaining({ staffId: firstStaffId, hours: 1, note: `${marker} 1` }),
+        expect.objectContaining({ staffId: firstStaffId, hours: 2, note: `${marker} 2` }),
+      ],
       nextCursor: null,
     });
   });
@@ -302,20 +296,13 @@ describe('Hours API', () => {
       ids.push(created.body.id);
     }
 
-    const query = `start=${linkedDate}&end=${placementDate}&search=${encodeURIComponent(marker)}&sort=date&direction=asc&limit=1`;
-    const first = await request(app)
+    const query = `start=${linkedDate}&end=${placementDate}&search=${encodeURIComponent(marker)}&sort=date&direction=asc`;
+    const response = await request(app)
       .get(`/api/hours/table?${query}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(first.status).toBe(200);
-    expect(first.body.rows.map((row: { id: string }) => row.id)).toEqual([ids[1]]);
-    expect(first.body.nextCursor).toEqual(expect.any(String));
-
-    const second = await request(app)
-      .get(`/api/hours/table?${query}&cursor=${encodeURIComponent(first.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(second.status).toBe(200);
-    expect(second.body.rows.map((row: { id: string }) => row.id)).toEqual([ids[2]]);
-    expect(second.body.nextCursor).toBeNull();
+    expect(response.status).toBe(200);
+    expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual(ids.slice(1));
+    expect(response.body.nextCursor).toBeNull();
 
     const calendar = await request(app)
       .get(`/api/hours/calendar?start=${linkedDate}&end=${placementDate}&search=${encodeURIComponent(marker)}`)

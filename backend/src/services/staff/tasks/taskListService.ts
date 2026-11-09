@@ -1,7 +1,7 @@
 import { sql } from '../../../db/client';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
-import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery } from '../../shared/cursorPagination';
 import { getTaskRows } from './taskRowQuery';
 import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
 
@@ -35,10 +35,10 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
     dueDate: sql`"row".due_date`,
     status: sql`"row".status`,
   }[filterValues.sort]!;
+
   return paginateQuery(rowsQuery, {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit ?? BATCH_SIZE,
   });
 }

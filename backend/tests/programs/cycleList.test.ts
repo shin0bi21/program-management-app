@@ -44,7 +44,7 @@ describe('Cycle table list', () => {
     expect(second.body.rows[0]).not.toHaveProperty('cursorValue');
   });
 
-  it.each([{ cursor: 'bad' }, { limit: 51 }, { sort: 'invalid' }, { direction: 'sideways' }])('rejects invalid cursor-list inputs %j', async query => {
+  it.each([{ cursor: 'bad' }, { limit: 1 }, { sort: 'invalid' }, { direction: 'sideways' }])('rejects invalid cursor-list inputs %j', async query => {
     expect((await list().query(query)).status).toBe(400);
   });
 

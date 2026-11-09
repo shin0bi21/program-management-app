@@ -304,7 +304,7 @@ describe('Leads API', () => {
     ]));
   });
 
-  it('sorts independently by first and last name and cursor-paginates without a total count', async () => {
+  it('sorts the table independently by first and last name', async () => {
     const marker = `Cursor${Date.now()}`;
     for (const leadName of [
       { youthFirstName: `${marker}B`, youthLastName: `${marker}A` },
@@ -317,31 +317,21 @@ describe('Leads API', () => {
       expect(created.status).toBe(201);
     }
 
-    const first = await request(app)
-      .get(`/api/leads?search=${marker}&sort=firstName&direction=asc&limit=1`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(first.status).toBe(200);
-    expect(first.body).toEqual({
-      rows: [expect.objectContaining({ youthFirstName: `${marker}A`, youthLastName: `${marker}B` })],
-      nextCursor: expect.any(String),
-    });
-
-    const second = await request(app)
-      .get(`/api/leads?search=${marker}&sort=firstName&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(second.status).toBe(200);
-    expect(second.body).toEqual({
-      rows: [expect.objectContaining({ youthFirstName: `${marker}B`, youthLastName: `${marker}A` })],
-      nextCursor: null,
-    });
-
-    const byLastName = await request(app)
-      .get(`/api/leads?search=${marker}&sort=lastName&direction=asc&limit=1`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    expect(byLastName.status).toBe(200);
-    expect(byLastName.body.rows).toEqual([
-      expect.objectContaining({ youthFirstName: `${marker}B`, youthLastName: `${marker}A` }),
-    ]);
+    for (const sort of ['firstName', 'lastName']) {
+      const response = await request(app)
+        .get(`/api/leads?search=${marker}&sort=${sort}&direction=asc&limit=50`)
+        .set('Authorization', `Bearer ${staffToken}`);
+      expect(response.status).toBe(200);
+      const names = [
+        { youthFirstName: `${marker}A`, youthLastName: `${marker}B` },
+        { youthFirstName: `${marker}B`, youthLastName: `${marker}A` },
+      ];
+      if (sort === 'lastName') names.reverse();
+      expect(response.body).toEqual({
+        rows: names.map(name => expect.objectContaining(name)),
+        nextCursor: null,
+      });
+    }
   });
 
   it('filters leads by status and youth or school search', async () => {
