@@ -42,7 +42,6 @@ export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, chan
 
   // Enrollment and date changes can alter eligibility in other program rosters.
   void queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY });
-  void queryClient.invalidateQueries({ queryKey: ['programs', 'cycle-assignment-editor'] });
   void queryClient.invalidateQueries({ queryKey: ['programs', 'roster-youth'] });
   void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary'] });
 }

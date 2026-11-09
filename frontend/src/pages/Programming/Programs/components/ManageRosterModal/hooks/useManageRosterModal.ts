@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/programCycleAssignmentCache';
 
@@ -10,7 +10,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 
 interface UseManageRosterModalOptions {
-  assignment: ProgramCycleAssignment | null;
+  assignment: ProgramCycleAssignment;
   refresh: () => Promise<void>;
   onSuccess: (result: RosterMutationResult) => void | Promise<void>;
 }
@@ -26,15 +26,6 @@ export function useManageRosterModal({ assignment, refresh, onSuccess }: UseMana
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [pendingYouthId, setPendingYouthId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
-  const programId = assignment?.programId;
-  const cycleId = assignment?.cycleId;
-
-  useEffect(() => {
-    setConfirmAction(null);
-    setPendingYouthId(null);
-    setActionError('');
-    unlock();
-  }, [programId, cycleId, unlock]);
 
   const reconcileRoster = async (completedAction: string, result: RosterMutationResult) => {
     syncProgramCycleAssignmentChanges(queryClient, { updatedProgramCycles: [result.programCycle], updatedYouth: result.updatedYouth, createdProgramCycles: [], removedProgramCycles: [] });
@@ -47,7 +38,7 @@ export function useManageRosterModal({ assignment, refresh, onSuccess }: UseMana
   };
 
   const addYouth = async (profile: ProgramRosterYouth) => {
-    if (!assignment || !tryLock()) return;
+    if (!tryLock()) return;
 
     setPendingYouthId(profile.id);
     setActionError('');
@@ -68,8 +59,6 @@ export function useManageRosterModal({ assignment, refresh, onSuccess }: UseMana
   };
 
   const requestWithdrawal = (profile: ProgramRosterYouth) => {
-    if (!assignment) return;
-
     setActionError('');
     setConfirmAction({
       title: 'Withdraw Youth',

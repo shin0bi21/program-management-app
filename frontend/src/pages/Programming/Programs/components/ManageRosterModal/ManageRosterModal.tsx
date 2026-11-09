@@ -18,7 +18,21 @@ interface ManageRosterModalProps {
   onSuccess: (result: RosterMutationResult) => void | Promise<void>;
 }
 
-export default function ManageRosterModal({ assignment, onClose, onSuccess }: ManageRosterModalProps) {
+/**
+ * Mounts the selected roster interaction and discards its state when closed.
+ * @param props - Loaded assignment and roster completion actions.
+ * @example <ManageRosterModal assignment={assignment} onClose={close} onSuccess={sync} />
+ */
+export default function ManageRosterModal({ assignment, ...props }: ManageRosterModalProps) {
+  return assignment ? <Roster key={`${assignment.programId}:${assignment.cycleId}`} assignment={assignment} {...props} /> : null;
+}
+
+/**
+ * Keeps roster search mounted while a withdrawal confirmation suspends the dialog.
+ * @param props - Assignment being managed and its completion actions.
+ * @example <Roster assignment={assignment} onClose={close} onSuccess={sync} />
+ */
+function Roster({ assignment, onClose, onSuccess }: Omit<ManageRosterModalProps, 'assignment'> & { assignment: ProgramCycleAssignment }) {
   const {
     youth, search, setSearch, appliedSearch, applySearch, clearSearch,
     filterYouth, loading, error, refresh,
@@ -27,15 +41,15 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
   const workflow = useManageRosterModal({ assignment, refresh, onSuccess });
 
   const isEnrolled = (profile: typeof youth[number]) => profile.programCycles.some(
-    enrollment => enrollment.programId === assignment?.programId && enrollment.cycleId === assignment?.cycleId && enrollment.withdrawnOn === null,
+    enrollment => enrollment.programId === assignment.programId && enrollment.cycleId === assignment.cycleId && enrollment.withdrawnOn === null,
   );
 
   return (
     <>
       <Modal
-        isOpen={assignment !== null && workflow.confirmAction === null}
+        isOpen={workflow.confirmAction === null}
         onClose={onClose}
-        title={assignment ? `${assignment.program} - ${assignment.cycle} Roster` : ''}
+        title={`${assignment.program} - ${assignment.cycle} Roster`}
         disableClose={workflow.pendingYouthId !== null}
         footer={<Button
           variant="secondary"
@@ -65,7 +79,7 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
                 <input
                   id="roster-minimum-age"
                   type="number"
-                  value={assignment?.minAge ?? ''}
+                  value={assignment.minAge ?? ''}
                   placeholder="Any"
                   readOnly
                   disabled
@@ -76,7 +90,7 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
                 <input
                   id="roster-maximum-age"
                   type="number"
-                  value={assignment?.maxAge ?? ''}
+                  value={assignment.maxAge ?? ''}
                   placeholder="Any"
                   readOnly
                   disabled
@@ -89,9 +103,8 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
           </fieldset>
         </div>
         <div className="manage-roster-list" aria-label="Program cycle roster">
-          {loading ? (
-            <p className="page-empty">Loading youth…</p>
-          ) : visibleYouth.length ? visibleYouth.map(profile => (
+          {loading && <p className="page-empty">Loading youth…</p>}
+          {!loading && visibleYouth.map(profile => (
             <label key={profile.id} className="manage-roster-list__item">
               <input
                 type="checkbox"
@@ -113,7 +126,8 @@ export default function ManageRosterModal({ assignment, onClose, onSuccess }: Ma
                 </small>
               </span>
             </label>
-          )) : !error && (
+          ))}
+          {!loading && visibleYouth.length === 0 && !error && (
             <p className="page-empty">{youth.length ? 'No youth match your search.' : 'No eligible youth found.'}</p>
           )}
         </div>

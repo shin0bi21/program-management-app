@@ -40,7 +40,7 @@ describe('ProgramOverviewDashboardCard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-27T16:00:00Z'));
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [programCycle, openProgramCycle], loading: false, error: '', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [programCycle, openProgramCycle], loading: false, ready: true, error: '', refresh: vi.fn() });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -52,13 +52,13 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.getByText('Select a program to view its current cycle.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
 
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, ready: false, error: '', refresh: vi.fn() });
     rerender(<ProgramOverviewDashboardCard {...props} />);
     expect(screen.getByRole('status', { name: 'Loading program rosters…' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage Roster' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
 
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: '', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, ready: true, error: '', refresh: vi.fn() });
     rerender(<ProgramOverviewDashboardCard {...props} />);
     expect(screen.getByRole('heading', { name: `${program.name} Overview` })).toBeInTheDocument();
     expect(screen.queryByText(program.description!)).not.toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('ProgramOverviewDashboardCard', () => {
   it('preserves a failed program-cycle load as unavailable and offers recovery', () => {
     const props = makeProps();
     const onRetry = vi.fn();
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: 'Request failed', refresh: onRetry });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, ready: true, error: 'Request failed', refresh: onRetry });
     render(<ProgramOverviewDashboardCard {...props} />);
 
     expect(screen.getByText('Program rosters unavailable')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('ProgramOverviewDashboardCard', () => {
   it('shows an empty state when only past and upcoming programCycles exist', () => {
     vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [
       { ...programCycle, startsOn: '2026-01-01', endsOn: '2026-06-30', state: 'completed' }, openProgramCycle,
-    ], loading: false, error: '', refresh: vi.fn() });
+    ], loading: false, ready: true, error: '', refresh: vi.fn() });
     render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
@@ -118,7 +118,7 @@ describe('ProgramOverviewDashboardCard', () => {
   it('keeps the current drop-in report disabled', () => {
     vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [
       { ...openProgramCycle, startsOn: programCycle.startsOn, endsOn: programCycle.endsOn, state: 'active' },
-    ], loading: false, error: '', refresh: vi.fn() });
+    ], loading: false, ready: true, error: '', refresh: vi.fn() });
     render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('ProgramOverviewDashboardCard', () => {
     const props = makeProps();
     const view = render(<ProgramOverviewDashboardCard {...props} />);
 
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, ready: false, error: '', refresh: vi.fn() });
     view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} />);
 
     expect(screen.getByText('Enrollment')).toBeInTheDocument();
@@ -153,10 +153,10 @@ describe('ProgramOverviewDashboardCard', () => {
 
   it('keeps metrics and disabled actions when a pending program load fails', () => {
     const props = makeProps();
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, error: '', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, ready: false, error: '', refresh: vi.fn() });
     const view = render(<ProgramOverviewDashboardCard {...props} />);
 
-    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, error: 'Unavailable', refresh: vi.fn() });
+    vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, ready: true, error: 'Unavailable', refresh: vi.fn() });
     view.rerender(<ProgramOverviewDashboardCard {...props} />);
 
     expect(screen.getByText('Enrollment')).toBeInTheDocument();

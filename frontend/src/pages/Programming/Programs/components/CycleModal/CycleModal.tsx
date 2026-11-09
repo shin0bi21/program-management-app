@@ -1,3 +1,4 @@
+import type { ProgramCycleAssignment } from '../../types';
 import { type FormEvent } from 'react';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import Button from '../../../../../common/components/Button/Button';
@@ -14,6 +15,10 @@ interface CycleModalProps {
   isOpen: boolean;
   cycle: ProgramCycle | null;
   programs: ProgramReference[];
+  assignments: ProgramCycleAssignment[];
+  assignmentsReady: boolean;
+  assignmentsError: string;
+  onRetryAssignments: () => void;
   programsReady?: boolean;
   programsError?: string | null;
   onRetryPrograms?: () => void;
@@ -26,8 +31,27 @@ interface CycleModalProps {
  * @param props - Open/edit target, program choices and readiness, close action, and saved-result callback.
  * @example <CycleModal isOpen cycle={cycle} programs={programs} {...actions} />
  */
-export default function CycleModal({ isOpen, cycle, programs, programsReady = true, programsError, onRetryPrograms, onClose, onSaved }: CycleModalProps) {
-  const workflow = useCycleModal({ isOpen, cycle, programs, programsReady, onSaved });
+export default function CycleModal({ isOpen, ...props }: CycleModalProps) {
+  if (!isOpen) return null;
+
+  if (!props.assignmentsReady) {
+    return <Modal isOpen title={props.cycle ? 'Edit Cycle' : 'Add Cycle'} onClose={props.onClose}>
+      {props.assignmentsError
+        ? <div role="alert">{props.assignmentsError} <Button onClick={props.onRetryAssignments}>Retry assignments</Button></div>
+        : <p role="status">Loading assigned programs...</p>}
+    </Modal>;
+  }
+
+  return <CycleForm key={props.cycle?.id ?? 'new'} {...props} />;
+}
+
+/**
+ * Owns one cycle's fields and assignment choices until its editor closes.
+ * @param props - Saved cycle and assignments, program choices, and save/close actions.
+ * @example <CycleForm {...loadedCycleProps} />
+ */
+function CycleForm({ cycle, programs, assignments, programsReady = true, programsError, onRetryPrograms, onClose, onSaved }: Omit<CycleModalProps, 'isOpen'>) {
+  const workflow = useCycleModal({ cycle, assignments, programsReady, onSaved });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,7 +65,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={cycle ? 'Edit Cycle' : 'Add Cycle'}
       status={workflow.submitStatus}
@@ -49,7 +73,6 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
       footer={<ModalFormFooter formId="cycle-form" submitStatus={workflow.submitStatus} submitDisabled={!workflow.assignmentsReady} onClose={onClose} />}
     >
       <form
-        key={cycle?.id ?? 'new'}
         id="cycle-form"
         aria-busy={workflow.submissionComplete}
         onSubmit={(event) => void submit(event)}
@@ -66,9 +89,8 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
           </FormField>
         </div>
         {programsError && <div role="alert">{programsError} <Button onClick={onRetryPrograms}>Retry programs</Button></div>}
-        {workflow.assignmentsError && <div role="alert">{workflow.assignmentsError} <Button onClick={workflow.retryAssignments}>Retry assignments</Button></div>}
-        {!workflow.assignmentsReady && !workflow.assignmentsError && !programsError && <p role="status">Loading assigned programs...</p>}
-        {workflow.selectedProgramIds !== null && <FormFieldGroup label="Assigned programs">
+        {!workflow.assignmentsReady && !programsError && <p role="status">Loading programs...</p>}
+        <FormFieldGroup label="Assigned programs">
           <Checklist
             variant="form"
             ariaLabel="Assigned programs"
@@ -78,7 +100,7 @@ export default function CycleModal({ isOpen, cycle, programs, programsReady = tr
             disabled={workflow.submissionComplete || !workflow.assignmentsReady}
           />
           {programs.length === 0 && <p>No programs yet.</p>}
-        </FormFieldGroup>}
+        </FormFieldGroup>
       </form>
     </Modal>
   );

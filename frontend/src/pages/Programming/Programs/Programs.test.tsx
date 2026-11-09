@@ -103,7 +103,7 @@ describe('Programs', () => {
     await user.click(await screen.findByText('Soft Skills'));
     expect(await screen.findByRole('heading', { name: 'Soft Skills - Fall 2026 Overview' })).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
-    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', {}, { signal: expect.any(AbortSignal) });
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', { includeAllPrograms: false }, { signal: expect.any(AbortSignal) });
     await user.click(screen.getByRole('button', { name: 'Manage Roster' }));
     expect(screen.getByRole('dialog', { name: 'Roster for Fall 2026' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
@@ -179,6 +179,10 @@ describe('Programs', () => {
 
     await user.click(screen.getByRole('button', { name: '+ Add Program' }));
     await user.type(screen.getByRole('textbox', { name: 'Program Name' }), 'Job Readiness');
+    await user.click(screen.getByRole('button', { name: 'Default Session Day' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Tuesday' }));
+    await user.type(screen.getByLabelText('Default Start Time'), '17:00');
+    await user.type(screen.getByLabelText('Default End Time'), '19:30');
     await user.type(screen.getByRole('spinbutton', { name: 'Minimum Age' }), '16');
     await user.type(screen.getByRole('spinbutton', { name: 'Maximum Age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Save' }));

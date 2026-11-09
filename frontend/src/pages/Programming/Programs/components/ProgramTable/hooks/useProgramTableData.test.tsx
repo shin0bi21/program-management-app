@@ -7,7 +7,6 @@ import useProgramTableData from './useProgramTableData';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({ default: vi.fn(() => ({ rows: [] })) }));
 vi.mock('../../../api/programs.api', () => ({ getProgramList: vi.fn() }));
-vi.mock('../../../hooks/data/useProgramCycleAssignments', () => ({ useProgramCycleAssignments: () => ({ assignments: [], loading: false, error: '', refresh: vi.fn() }) }));
 
 const program: Program = {
   id: 'program-1', name: 'Skills', enrollmentRequired: true, minAge: null, maxAge: null,

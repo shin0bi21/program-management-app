@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { enrollYouth, withdrawYouth } from '../../../api/programCycleAssignments.api';
@@ -103,18 +103,4 @@ describe('useManageRosterModal', () => {
     expect(result.current.actionError).toContain('was enrolled, but the roster could not refresh');
   });
 
-  it('resets workflow state for a different assignment', async () => {
-    vi.mocked(enrollYouth).mockRejectedValue(new Error('Enrollment failed'));
-    const options = { refresh: vi.fn(), onSuccess: vi.fn() };
-    const { result, rerender } = renderHook(
-      ({ target }) => useManageRosterModal({ ...options, assignment: target }),
-      { initialProps: { target: assignment }, wrapper: wrapper() },
-    );
-
-    await act(() => result.current.addYouth(youth));
-    expect(result.current.actionError).toBe('Enrollment failed');
-
-    rerender({ target: { ...assignment, cycleId: 'assignment-2' } });
-    await waitFor(() => expect(result.current.actionError).toBe(''));
-  });
 });

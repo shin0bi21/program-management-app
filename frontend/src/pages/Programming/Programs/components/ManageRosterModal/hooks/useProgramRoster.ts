@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProgramRosterYouth } from '../../../api/programCycleAssignments.api';
 import type { ProgramRosterYouth } from '../../../api/programCycleAssignments.api';
@@ -7,22 +7,21 @@ import { getErrorMessage } from '../../../../../../http/errors';
 
 const noYouth: ProgramRosterYouth[] = [];
 
-export function useProgramRoster(assignment: ProgramCycleAssignment | null) {
+/**
+ * Loads selectable youth for one mounted roster and owns its search controls.
+ * @param assignment - Loaded program-cycle assignment being managed.
+ * @example useProgramRoster(assignment).youth // eligible roster choices
+ */
+export function useProgramRoster(assignment: ProgramCycleAssignment) {
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const programId = assignment?.programId;
-  const cycleId = assignment?.cycleId;
+  const programId = assignment.programId;
+  const cycleId = assignment.cycleId;
   const query = useQuery({
     queryKey: ['programs', 'roster-youth', programId, cycleId],
-    queryFn: ({ signal }) => getProgramRosterYouth({ programId: programId!, cycleId: cycleId! }, { signal }),
-    enabled: assignment !== null,
+    queryFn: ({ signal }) => getProgramRosterYouth({ programId, cycleId }, { signal }),
   });
   const youth = query.data ?? noYouth;
-
-  useEffect(() => {
-    setSearch('');
-    setAppliedSearch('');
-  }, [programId, cycleId]);
 
   const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
   const clearSearch = useCallback(() => {
