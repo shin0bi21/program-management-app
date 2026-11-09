@@ -24,7 +24,7 @@ describe('useHomepageModals', () => {
     expect(result.current.image).toMatchObject({ open: true, target: image });
 
     act(() => result.current.image.close());
-    expect(result.current.image.open).toBe(false);
+    expect(result.current.image).toMatchObject({ open: false, target: null });
 
     act(() => result.current.image.openNew());
     expect(result.current.image).toMatchObject({ open: true, target: null });

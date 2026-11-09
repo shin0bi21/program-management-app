@@ -13,12 +13,21 @@ interface HomepageImageModalProps {
 }
 
 /**
- * Edits a supplied image caption or uploads a new image, then forwards the saved record.
+ * Mounts a supplied caption editor or empty upload form while the dialog is open.
  * @param props - Saved edit snapshot, dialog visibility, and close/reconciliation callbacks.
  * @example <HomepageImageModal image={image} isOpen onClose={close} onSaved={saveImage} />
  */
-export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: HomepageImageModalProps) {
-  const workflow = useHomepageImageModal({ image, isOpen, onSaved });
+export default function HomepageImageModal({ isOpen, ...props }: HomepageImageModalProps) {
+  return isOpen ? <ImageForm key={props.image?.id ?? 'new'} {...props} /> : null;
+}
+
+/**
+ * Owns one supplied caption or empty upload until close or completed save feedback.
+ * @param props - Saved image, if editing, and close/reconciliation callbacks.
+ * @example <ImageForm image={image} onClose={close} onSaved={saveImage} />
+ */
+function ImageForm({ image, onClose, onSaved }: Omit<HomepageImageModalProps, 'isOpen'>) {
+  const workflow = useHomepageImageModal({ image, onSaved });
 
   /**
    * Reads and trims the caption before submitting through the image workflow.
@@ -34,7 +43,7 @@ export default function HomepageImageModal({ image, isOpen, onClose, onSaved }: 
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title="Manage Images"
       status={workflow.status}

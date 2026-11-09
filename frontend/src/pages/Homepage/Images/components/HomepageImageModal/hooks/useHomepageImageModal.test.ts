@@ -29,7 +29,7 @@ describe('useHomepageImageModal', () => {
     const savedImage = { ...image, caption: 'Server caption.', updatedAt: '2026-02-01T00:00:00.000Z' };
     vi.mocked(updateHomepageImage).mockResolvedValue(savedImage);
     const onSaved = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useHomepageImageModal({ image, isOpen: true, onSaved }));
+    const { result } = renderHook(() => useHomepageImageModal({ image, onSaved }));
 
     await act(() => result.current.submit('Updated caption.'));
 
@@ -48,7 +48,7 @@ describe('useHomepageImageModal', () => {
     const savedImage = { ...image, id: 'image-2', caption: 'Server caption.', displayOrder: 1 };
     vi.mocked(createHomepageImage).mockResolvedValue(savedImage);
     const onSaved = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useHomepageImageModal({ image: null, isOpen: true, onSaved }));
+    const { result } = renderHook(() => useHomepageImageModal({ image: null, onSaved }));
 
     act(() => result.current.setSelectedFile(file));
     await act(() => result.current.submit('New image.'));
@@ -61,10 +61,7 @@ describe('useHomepageImageModal', () => {
 
   it('keeps the modal open with an actionable error when no file is selected', async () => {
     const onSaved = vi.fn();
-    const { result, rerender } = renderHook(
-      ({ isOpen }) => useHomepageImageModal({ image: null, isOpen, onSaved }),
-      { initialProps: { isOpen: true } },
-    );
+    const { result } = renderHook(() => useHomepageImageModal({ image: null, onSaved }));
 
     await act(() => result.current.submit('New image.'));
 
@@ -74,9 +71,6 @@ describe('useHomepageImageModal', () => {
       statusMessage: 'Choose an image to upload',
     });
 
-    rerender({ isOpen: false });
-    rerender({ isOpen: true });
-    expect(result.current).toMatchObject({ status: 'idle', statusMessage: '' });
   });
 
   it('surfaces mutation errors and unlocks the workflow for retry', async () => {
@@ -84,7 +78,7 @@ describe('useHomepageImageModal', () => {
       .mockRejectedValueOnce(new Error('Image update failed'))
       .mockResolvedValueOnce(image);
     const onSaved = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useHomepageImageModal({ image, isOpen: true, onSaved }));
+    const { result } = renderHook(() => useHomepageImageModal({ image, onSaved }));
 
     await act(() => result.current.submit('Updated caption.'));
     expect(result.current).toMatchObject({ status: 'error', statusMessage: 'Image update failed' });

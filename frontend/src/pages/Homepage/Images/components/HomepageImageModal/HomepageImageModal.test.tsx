@@ -38,7 +38,7 @@ describe('HomepageImageModal', () => {
     const onSaved = vi.fn();
     const view = render(<HomepageImageModal image={image} isOpen onClose={vi.fn()} onSaved={onSaved} />);
 
-    expect(useHomepageImageModal).toHaveBeenCalledWith({ image, isOpen: true, onSaved });
+    expect(useHomepageImageModal).toHaveBeenCalledWith({ image, onSaved });
     const caption = screen.getByLabelText('Caption');
     expect(caption).toHaveValue('Original caption.');
     expect(caption).toHaveAttribute('maxlength', '500');
