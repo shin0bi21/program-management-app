@@ -31,5 +31,6 @@ describe('ForgotPassword', () => {
     fireEvent.submit(screen.getByRole('button', { name: 'Send reset link' }).closest('form')!);
 
     expect(await screen.findByRole('status')).toHaveTextContent('Password reset email sent');
+    expect(screen.queryByLabelText('Email address')).not.toBeInTheDocument();
   });
 });
