@@ -26,6 +26,7 @@ const task = makeTask();
 function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {}) {
   const props: ComponentProps<typeof HoursModal> = {
     isOpen: true,
+    initialStaffId: 'staff-1',
     resources,
     programs,
     categories,
@@ -135,8 +136,6 @@ describe('HoursModal', () => {
 
   it('renders initialized edit values', () => {
     renderModal({
-      initialDate: '2026-08-18',
-      initialStaffId: 'staff-1',
       initialItem: makeHoursItem({
         id: 'entry-1',
         category: 'meeting',
@@ -164,7 +163,10 @@ describe('HoursModal', () => {
     let resolve!: () => void;
     const onAdd = vi.fn(() => new Promise<void>(done => { resolve = done; }));
     const onClose = vi.fn();
-    renderModal({ onAdd, onClose });
+    renderModal({ onAdd, onClose, initialDate: '2026-08-19' });
+    fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Meeting' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     submitForm();
 
