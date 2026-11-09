@@ -18,8 +18,21 @@ export interface ViewFileModalProps {
   maxWidth?: string;
 }
 
-export default function ViewFileModal({
-  isOpen,
+/**
+ * Mounts file preview controls and resources only while the viewer is open.
+ * @param props - Visibility, supplied file, loading state, and viewer callbacks.
+ * @example <ViewFileModal isOpen={isOpen} file={file} mimeType="application/pdf" title="Report" onClose={close} />
+ */
+export default function ViewFileModal({ isOpen, ...props }: ViewFileModalProps) {
+  return isOpen ? <FilePreview {...props} /> : null;
+}
+
+/**
+ * Owns preview URLs and image zoom for one mounted viewer interaction.
+ * @param props - Supplied file and the display/download controls for it.
+ * @example <FilePreview file={file} mimeType="application/pdf" title="Report" onClose={close} />
+ */
+function FilePreview({
   title,
   file,
   mimeType,
@@ -30,7 +43,7 @@ export default function ViewFileModal({
   onDownload,
   onClose,
   maxWidth = '900px',
-}: ViewFileModalProps) {
+}: Omit<ViewFileModalProps, 'isOpen'>) {
   const preview = useFilePreview(file, mimeType);
   const { imageRef, previewUrl, isImage, canPreview } = preview;
 
@@ -41,7 +54,7 @@ export default function ViewFileModal({
   ) : null;
 
   return <Modal
-    isOpen={isOpen}
+    isOpen
     onClose={onClose}
     title={title}
     maxWidth={maxWidth}

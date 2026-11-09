@@ -1,49 +1,116 @@
-import { type FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import Button from '../../components/Button/Button';
 import FormField from '../../components/FormField/FormField';
 import Modal from '../../components/Modal/Modal';
+import useSubmitLock from '../../hooks/useSubmitLock';
+import { getErrorMessage } from '../../../http/errors';
 import type { SchoolModalState } from './hooks/useSchoolModal';
+import { useSchools } from './hooks/useSchools';
+import { createSchool, deleteSchool, setSchool } from './schoolModal.api';
+import type { SchoolAction, SchoolSelection } from './types';
 
 interface Props {
   workflow: SchoolModalState;
 }
 
+/**
+ * Mounts a school form only while its selector has an active action.
+ * @param props.workflow - Active action, supplied selector, and close callback.
+ * @example <SchoolModal workflow={schoolModal} />
+ */
 export default function SchoolModal({ workflow }: Props) {
-  if (!workflow.action) return null;
+  if (!workflow.session) return null;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void workflow.submit();
+  const { action, selection } = workflow.session;
+  const targetKey = action.type === 'add' ? 'add' : `${action.type}:${action.school.id}`;
+  return <SchoolForm key={targetKey} action={action} selection={selection} onClose={workflow.close} />;
+}
+
+/**
+ * Owns and saves one mounted school draft.
+ * @param props - Supplied action/selection and the callback that unmounts this form.
+ * @example <SchoolForm action={{ type: 'edit', school }} selection={selection} onClose={close} />
+ */
+function SchoolForm({ action, selection, onClose }: {
+  action: SchoolAction;
+  selection: SchoolSelection;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(action.type === 'edit' ? action.school.name : '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const { tryLock, unlock } = useSubmitLock();
+  // The parent selector already owns loading; saving only updates its cache.
+  const { upsertSchool, removeSchool } = useSchools({ enabled: false });
+  const deleting = action.type === 'delete';
+
+  /** Saves the selected school action, then unmounts on success. @example await submit() */
+  const submit = async () => {
+    const trimmedName = name.trim();
+    if ((!deleting && !trimmedName) || !tryLock()) return;
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      if (action.type === 'delete') {
+        await deleteSchool(action.school.id);
+        removeSchool(action.school.id);
+        if (selection.schoolId === action.school.id) selection.onChange('');
+      } else {
+        const savedSchool = action.type === 'edit'
+          ? await setSchool({ id: action.school.id, name: trimmedName })
+          : await createSchool(trimmedName);
+        upsertSchool(savedSchool);
+        if (action.type === 'add') selection.onChange(savedSchool.id);
+      }
+    } catch (cause) {
+      setError(getErrorMessage(cause, deleting ? 'Failed to delete school' : 'Failed to save school'));
+      setSubmitting(false);
+      unlock();
+      return;
+    }
+
+    onClose();
   };
 
-  const title = workflow.deleting ? 'Delete School' : workflow.editing ? 'Edit School' : 'Add School';
-  const submitLabel = workflow.deleting ? 'Confirm' : 'Save';
+  /** Prevents native navigation before saving this draft. @example handleSubmit(event) */
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submit();
+  };
+
+  let title = 'Add School';
+  if (action.type === 'edit') title = 'Edit School';
+  if (deleting) title = 'Delete School';
+  const pendingMessage = deleting ? 'Deleting school...' : 'Saving school...';
+  const submissionStatus = submitting ? 'submitting' : 'idle';
 
   return (
     <Modal
       isOpen
-      onClose={workflow.close}
+      onClose={onClose}
       title={title}
-      status={workflow.error ? 'error' : workflow.submitting ? 'submitting' : 'idle'}
-      statusMessage={workflow.error || (workflow.submitting ? (workflow.deleting ? 'Deleting school...' : 'Saving school...') : undefined)}
+      status={error ? 'error' : submissionStatus}
+      statusMessage={error || (submitting ? pendingMessage : undefined)}
       footer={(
         <>
-          <Button variant="secondary" onClick={workflow.close} disabled={workflow.submitting}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
           <Button
-            type={workflow.deleting ? 'button' : 'submit'}
-            form={workflow.deleting ? undefined : 'school-action-form'}
-            variant={workflow.deleting ? 'danger' : 'primary'}
-            onClick={workflow.deleting ? () => void workflow.submit() : undefined}
-            disabled={workflow.submitting || (!workflow.deleting && !workflow.name.trim())}
+            type={deleting ? 'button' : 'submit'}
+            form={deleting ? undefined : 'school-action-form'}
+            variant={deleting ? 'danger' : 'primary'}
+            onClick={deleting ? () => void submit() : undefined}
+            disabled={submitting || (!deleting && !name.trim())}
           >
-            {submitLabel}
+            {deleting ? 'Confirm' : 'Save'}
           </Button>
         </>
       )}
     >
-      {workflow.deleting ? (
-        <p>Delete {workflow.school?.name}? Schools assigned to youth profiles cannot be deleted.</p>
+      {action.type === 'delete' ? (
+        <p>Delete {action.school.name}? Schools assigned to youth profiles cannot be deleted.</p>
       ) : (
         <form id="school-action-form" onSubmit={handleSubmit}>
           <FormField id="school-name" label="School Name *">
@@ -51,9 +118,9 @@ export default function SchoolModal({ workflow }: Props) {
               id="school-name"
               autoFocus
               required
-              value={workflow.name}
-              onChange={event => workflow.setName(event.target.value)}
-              disabled={workflow.submitting}
+              value={name}
+              onChange={event => setName(event.target.value)}
+              disabled={submitting}
             />
           </FormField>
         </form>

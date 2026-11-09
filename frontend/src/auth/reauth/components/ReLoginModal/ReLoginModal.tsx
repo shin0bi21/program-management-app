@@ -9,12 +9,26 @@ interface ReLoginModalProps {
   onReAuthenticated: () => void;
 }
 
+/**
+ * Mounts a fresh re-authentication form while login is required.
+ * @param props - Visibility and the callback that releases waiting requests after login.
+ * @example <ReLoginModal isOpen={prompting} onReAuthenticated={complete} />
+ */
 export default function ReLoginModal({ isOpen, onReAuthenticated }: ReLoginModalProps) {
+  return isOpen ? <ReLoginForm onReAuthenticated={onReAuthenticated} /> : null;
+}
+
+/**
+ * Owns the password and verification drafts until re-authentication completes.
+ * @param props.onReAuthenticated - Closes this interaction after credentials are stored.
+ * @example <ReLoginForm onReAuthenticated={complete} />
+ */
+function ReLoginForm({ onReAuthenticated }: Pick<ReLoginModalProps, 'onReAuthenticated'>) {
   const reLogin = useReLogin({ onReAuthenticated });
 
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       onClose={() => undefined}
       title="Session Expired"
       dismissible={false}

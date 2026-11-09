@@ -16,6 +16,12 @@ interface YouthReportModalProps {
   onClose: () => void;
 }
 
+/**
+ * Loads and previews a report for the supplied program/cycle and optional youth.
+ * The opening view mounts this interaction and unmounts it on close, cancelling its load.
+ * @param props - Report selection and the callback that clears the opening view's target.
+ * @example <YouthReportModal programCycle={assignment} youthId={youth.id} onClose={closeReport} />
+ */
 export default function YouthReportModal({ programCycle, youthId, onClose }: YouthReportModalProps) {
   const filename = `${programCycle.program} - ${programCycle.cycle} Youth Report.pdf`
     .replace(/[\\/:*?"<>|]+/g, '-')

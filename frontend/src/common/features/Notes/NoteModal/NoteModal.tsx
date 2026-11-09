@@ -24,6 +24,12 @@ interface NoteModalProps {
   onClose: () => void;
 }
 
+/**
+ * Displays a caller-owned note draft with shared submission feedback.
+ * The caller's mounted form owns initialization and the draft's lifetime.
+ * @param props - Visibility, controlled fields, submission state, and form callbacks.
+ * @example <NoteModal isOpen={isOpen} {...noteFields} onClose={close} />
+ */
 export default function NoteModal({
   isOpen,
   title,

@@ -49,7 +49,6 @@ describe('useReLogin', () => {
     expect(login).toHaveBeenCalledWith('test@example.com', 'correct-password', 'device-fingerprint');
     expect(setAuthData).toHaveBeenCalledWith('fresh-token', storedUser);
     expect(onReAuthenticated).toHaveBeenCalledOnce();
-    expect(result.current.password).toBe('');
   });
 
   it('resends and verifies a pending user before completing re-authentication', async () => {
@@ -72,7 +71,6 @@ describe('useReLogin', () => {
     );
     expect(setAuthData).toHaveBeenCalledWith('verified-token', storedUser);
     expect(onReAuthenticated).toHaveBeenCalledOnce();
-    expect(result.current.code).toBe('');
     expect(resend2FA).toHaveBeenCalledWith('verification-user-1');
     expect(result.current.error).toBe('');
     expect(result.current.resending).toBe(false);
