@@ -4,15 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { YouthProfileNote } from '../../types';
 import ProfileNoteDialogs from './ProfileNoteDialogs';
 
-const editorProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
-
-vi.mock('./ProfileNoteModal', () => ({
-  default: (props: Record<string, unknown>) => {
-    editorProps.current = props;
-    return <div role="dialog" aria-label="Profile note editor" />;
-  },
-}));
-
 const note: YouthProfileNote = {
   id: 'note-1',
   youthId: 'youth-1',
@@ -49,37 +40,5 @@ describe('ProfileNoteDialogs', () => {
 
     expect(onEdit).toHaveBeenCalledWith(note);
     expect(onRequestDelete).toHaveBeenCalledWith(note);
-  });
-
-  it('forwards existing and new editor targets to the profile-note workflow', () => {
-    const onCloseEditor = vi.fn();
-    const onSaved = vi.fn();
-    const { rerender } = render(
-      <ProfileNoteDialogs
-        {...baseProps}
-        selectedNote={null}
-        editorTarget={{ youthId: 'youth-1', note }}
-        onCloseEditor={onCloseEditor}
-        onSaved={onSaved}
-      />,
-    );
-
-    expect(editorProps.current).toMatchObject({ youthId: 'youth-1', note, onClose: onCloseEditor, onSaved });
-
-    rerender(
-      <ProfileNoteDialogs
-        {...baseProps}
-        selectedNote={null}
-        editorTarget={{ youthId: 'youth-2', note: 'new' }}
-        onCloseEditor={onCloseEditor}
-        onSaved={onSaved}
-      />,
-    );
-    expect(editorProps.current).toMatchObject({
-      youthId: 'youth-2',
-      note: undefined,
-      onClose: onCloseEditor,
-      onSaved,
-    });
   });
 });

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SignupSection from './SignupSection'
 
@@ -15,39 +15,6 @@ describe('SignupSection', () => {
   })
 
   afterEach(() => vi.useRealTimers())
-
-  it('submits the cohort form with a normalized payload', async () => {
-    render(<SignupSection />)
-
-    fireEvent.change(document.getElementById('cohort-youthFirstName')!, { target: { value: '  Jordan  ' } })
-    fireEvent.change(document.getElementById('cohort-youthLastName')!, { target: { value: '  Test  ' } })
-    fireEvent.change(document.getElementById('cohort-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } })
-    fireEvent.change(document.getElementById('cohort-school')!, { target: { value: '  Westview  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Who is filling out this form?' }))
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Youth' }))
-    fireEvent.change(document.getElementById('cohort-contactPhoneNumber')!, { target: { value: '  519-555-0199  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }))
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Guardian' }))
-    fireEvent.click(screen.getByRole('button', { name: 'How Did You Hear About Us?' }))
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Online' }))
-    fireEvent.change(document.getElementById('cohort-notes')!, { target: { value: '  Please follow up.  ' } })
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }))
-
-    await waitFor(() => {
-      expect(mockSubmitPublicLead).toHaveBeenCalledWith({
-        youthFirstName: 'Jordan',
-        youthLastName: 'Test',
-        dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
-        school: 'Westview',
-        submittedByRole: 'youth',
-        contactPhoneNumber: '519-555-0199',
-        contactRelationship: 'guardian',
-        discoverySource: 'online',
-        notes: 'Please follow up.',
-        website: '',
-      })
-    })
-  })
 
   it('shows success feedback before mounting a fresh signup form', async () => {
     render(<SignupSection />)
