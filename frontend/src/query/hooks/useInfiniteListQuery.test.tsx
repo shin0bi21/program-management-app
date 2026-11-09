@@ -7,6 +7,11 @@ import useInfiniteListQuery from './useInfiniteListQuery';
 
 interface Row { id: string; name: string }
 
+/**
+ * Holds a test response until its request should complete.
+ * @returns A promise and the function that supplies its eventual value.
+ * @example response.resolve(page) // completes response.promise with page
+ */
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(next => { resolve = next; });
@@ -62,12 +67,12 @@ describe('useInfiniteListQuery', () => {
     ]));
   });
 
-  it('keeps existing rows while a changed query key refreshes', async () => {
+  it('discards the previous list when the query key changes and the current list on unmount', async () => {
     const first = deferred<{ rows: Row[]; nextCursor: null }>();
     const second = deferred<{ rows: Row[]; nextCursor: null }>();
     const client = createTestQueryClient();
     const wrapper = createQueryClientWrapper(client);
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ order }) => useInfiniteListQuery<Row>({
         queryKey: ['rows', order],
         queryFn: () => order === 'first' ? first.promise : second.promise,
@@ -80,12 +85,16 @@ describe('useInfiniteListQuery', () => {
     await waitFor(() => expect(result.current.rows).toEqual([{ id: '1', name: 'First' }]));
 
     rerender({ order: 'second' });
-    await waitFor(() => expect(result.current.refreshing).toBe(true));
-    expect(result.current.rows).toEqual([{ id: '1', name: 'First' }]);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.rows).toEqual([]);
+    await waitFor(() => expect(client.getQueryState(['rows', 'first'])).toBeUndefined());
 
     act(() => second.resolve({ rows: [{ id: '2', name: 'Second' }], nextCursor: null }));
     await waitFor(() => expect(result.current.rows).toEqual([{ id: '2', name: 'Second' }]));
     expect(result.current.refreshing).toBe(false);
+
+    unmount();
+    await waitFor(() => expect(client.getQueryState(['rows', 'second'])).toBeUndefined());
   });
 
   it('maps a failed request and retries successfully', async () => {
@@ -253,6 +262,11 @@ describe('out-of-order refresh notice', () => {
   const secondPage = { rows: [third], nextCursor: null };
   const ordering = { getValue: (row: typeof first) => row.name.toLowerCase(), direction: 'asc' as const };
 
+  /**
+   * Mounts an ordered list with isolated cache state and two available cursor pages.
+   * @returns Hook controls, cache identity, and the mocked page loader.
+   * @example renderList().result.current.loadNextPage() // requests the second page
+   */
   function renderList() {
     const client = createTestQueryClient();
     const key = ['refreshable-rows'];

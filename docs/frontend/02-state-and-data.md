@@ -55,7 +55,7 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 ### Cursor Tables
 
 1. Use a list-only query-key prefix; keep lookups, direct records, calendars, and aggregates on sibling keys.
-2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`.
+2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with `TABLE_PAGE_SIZE`. Keep only observed lists: discard unused lists immediately and show loading instead of previous rows when filters or sorting change.
 3. Let the server filter and sort before pagination.
 4. Supply the active server-compatible `ordering`.
 5. Replace saved rows in place with the existing cursor-list cache helpers. When an edit changes their sort order, display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts): “This table’s data is out of order.” with the **Refresh** action. Keep the loaded positions until the user refreshes; do not automatically reorder or refetch solely to correct sort order.
