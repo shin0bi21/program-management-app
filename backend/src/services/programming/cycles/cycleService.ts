@@ -5,7 +5,7 @@ import { assertAssignmentUnused } from '../programCycles/assignmentService';
 import { rethrowEnrollmentConflict } from '../programCycles/enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramCycleInput } from '../../../validation/programmingSchemas';
-import { getCycleRow } from './cycleRowQuery';
+import { getCycleRows } from './cycleRowQuery';
 import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKey } from '../programCycles/programCycleRowQuery';
 
 export { getCycleReferenceData as getProgramCycles } from '../../referenceData/cycleReferenceData';
@@ -219,7 +219,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
  */
 async function requireCycleRow(trx: typeof sql, id: string) {
   // 1. Load the saved cycle.
-  const cycle = await getCycleRow(id, trx);
+  const [cycle] = await getCycleRows(trx`cycle.id = ${id}`, trx);
   if (!cycle) throw new InternalServerError('Saved cycle record is unavailable');
   return cycle;
 }

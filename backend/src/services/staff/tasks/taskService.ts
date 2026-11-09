@@ -5,12 +5,7 @@ import { ConflictError, NotFoundError, InternalServerError } from '../../../erro
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
 import { assertCanAssignTaskTo, taskWriteScopePredicate } from '../../../policies/taskPolicy';
-import {
-  attachTaskDetails,
-  loadTaskLoggedHours,
-  getTaskRows,
-  type TaskRow,
-} from './taskRowQuery';
+import { getTaskRows, type TaskRow } from './taskRowQuery';
 import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
 
 /**
@@ -25,8 +20,7 @@ export async function getTask(id: string, actor: AccessTokenPayload, query = sql
   const rows = await getTaskRows(actor, query`task.id = ${id}`, query);
   if (!rows.length) throw new NotFoundError('Task not found');
 
-  // 2. Include logged hours and access.
-  return attachTaskDetails(rows, await loadTaskLoggedHours([id], query), actor)[0];
+  return rows[0];
 }
 
 /**
@@ -37,17 +31,21 @@ export async function getTask(id: string, actor: AccessTokenPayload, query = sql
  */
 export async function getOpenTasks(actor: AccessTokenPayload, query: OpenTaskQuery) {
   // 1. Load accessible open tasks.
-  const rows = await sql<TaskRow[]>`
+  return sql<TaskRow[]>`
     ${getTaskRows(actor, sql`
       ${query.staffId ? sql`task.staff_id = ${query.staffId}` : sql`TRUE`}
       AND task.state = 'open'
     `)}
     ORDER BY task.start_date, task.due_date, task.title, task.id
   `;
+}
 
-  // 2. Include logged hours and access.
-  const taskIds = rows.map(row => row.id);
-  return attachTaskDetails(rows, await loadTaskLoggedHours(taskIds), actor);
+/**
+ * Lists task categories and displayed statuses.
+ * @example getTaskReferenceData() // categories and statuses
+ */
+export function getTaskReferenceData() {
+  return { categories: TASK_CATEGORY_OPTIONS, statuses: TASK_STATUS_OPTIONS };
 }
 
 /**
@@ -88,7 +86,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
     await audit(trx, actor.userId, transactionId, 'tasks', created.id, 'INSERT', null, { ...created });
 
     // 5. Return the complete saved task before commit.
-    return attachTaskDetails([created], await loadTaskLoggedHours([created.id], trx), actor)[0];
+    return created;
   });
 }
 
@@ -151,7 +149,7 @@ export async function updateTaskPlacement(
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', { ...existing }, { ...updated });
 
     // 6. Return the complete saved task before commit.
-    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+    return updated;
   });
 }
 
@@ -213,7 +211,7 @@ export async function updateTaskState(id: string, state: 'open' | 'completed' | 
       { ...existingRows[0] }, { ...updated });
 
     // 5. Return the complete saved task before commit.
-    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+    return updated;
   });
 }
 
@@ -241,9 +239,11 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
 
     // 2. Check for logged hours.
     const linkedEntries = await trx<{ exists: boolean }[]>`
-      SELECT EXISTS (SELECT 1
-      FROM time_entries
-      WHERE task_id = ${id}) AS exists
+      SELECT EXISTS (
+        SELECT 1
+        FROM time_entries
+        WHERE task_id = ${id}
+      ) AS exists
     `;
     if (linkedEntries[0].exists) {
       throw new ConflictError('Tasks with logged time cannot be deleted');
@@ -258,14 +258,6 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'DELETE',
       { ...existingRows[0] }, null);
   });
-}
-
-/**
- * Lists task categories and displayed statuses.
- * @example getTaskReferenceData() // categories and statuses
- */
-export function getTaskReferenceData() {
-  return { categories: TASK_CATEGORY_OPTIONS, statuses: TASK_STATUS_OPTIONS };
 }
 
 /**
@@ -323,7 +315,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
     await audit(trx, actor.userId, transactionId, 'tasks', id, 'UPDATE', { ...existingRows[0] }, { ...updated });
 
     // 6. Return the complete saved task before commit.
-    return attachTaskDetails([updated], await loadTaskLoggedHours([id], trx), actor)[0];
+    return updated;
   });
 }
 
@@ -344,11 +336,12 @@ function isTerminalTask(task: TaskRow) {
  */
 async function assertActiveStaffResource(staffId: string, trx: typeof sql) {
   const staff = await trx<{ id: string }[]>`
-    SELECT u.id
-    FROM users u
-    INNER JOIN user_roles role ON role.id = u.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
-    WHERE u.id = ${staffId}
+    SELECT
+      employee.id
+    FROM users employee
+    INNER JOIN user_roles role ON role.id = employee.role_id
+    INNER JOIN user_credentials credentials ON credentials.user_id = employee.id
+    WHERE employee.id = ${staffId}
       AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
   `;

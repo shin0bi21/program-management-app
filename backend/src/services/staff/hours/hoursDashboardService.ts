@@ -8,7 +8,7 @@ import { getBiweeklyPayPeriod } from './payPeriodUtils';
 
 interface HoursCategoryTotal {
   category: HoursCategory;
-  hours: string;
+  hours: number;
 }
 
 /**
@@ -40,7 +40,9 @@ export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: Ho
 
   // 3. Summarize every entry within the pay period, regardless of cycle membership.
   const rows = await sql<HoursCategoryTotal[]>`
-    SELECT category, SUM(hours)::text AS hours
+    SELECT
+      category,
+      SUM(hours)::double precision AS hours
     FROM time_entries
     WHERE staff_id = ${query.staffId}
       AND date BETWEEN ${payPeriod.periodStart}::date AND ${payPeriod.periodEnd}::date
@@ -77,7 +79,9 @@ export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query:
 
   // 3. Average the cycle's category totals over its elapsed periods.
   const rows = await sql<HoursCategoryTotal[]>`
-    SELECT category, SUM(hours)::text AS hours
+    SELECT
+      category,
+      SUM(hours)::double precision AS hours
     FROM time_entries
     WHERE staff_id = ${query.staffId}
       AND cycle_id = ${query.cycleId}
@@ -108,11 +112,11 @@ async function assertReadableStaff(actor: AccessTokenPayload, staffId: string) {
  * Labels positive category totals and orders the largest contribution first.
  * @param rows - Database category totals in hours.
  * @param periodCount - Positive elapsed-period count; omit for unaveraged totals.
- * @example buildBreakdown([{ category: 'meeting', hours: '4' }], 2) // [{ label: 'Meeting', hours: 2 }]
+ * @example buildBreakdown([{ category: 'meeting', hours: 4 }], 2) // [{ label: 'Meeting', hours: 2 }]
  */
 function buildBreakdown(rows: HoursCategoryTotal[], periodCount = 1) {
   return rows
-    .filter(row => Number(row.hours) > 0)
-    .map(row => ({ label: getHoursCategoryLabel(row.category), hours: Number(row.hours) / periodCount }))
+    .filter(row => row.hours > 0)
+    .map(row => ({ label: getHoursCategoryLabel(row.category), hours: row.hours / periodCount }))
     .sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label));
 }

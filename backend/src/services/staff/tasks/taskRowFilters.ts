@@ -2,6 +2,7 @@ import { sql } from '../../../db/client';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
 import { resolveCycleDateRange } from '../../programming/cycles/cycleDateRange';
 import { TASK_CATEGORY_OPTIONS } from './taskReferenceData';
+import { taskStatus } from './taskRowQuery';
 
 type TaskFilters = Pick<
   TaskListQuery,
@@ -11,21 +12,11 @@ type TaskFilters = Pick<
 /**
  * Builds filters for table and calendar items.
  * @param filterValues - Validated staff, program, category, status, and search selections.
- * @example buildTaskFilters(filterValues) // applied filters and displayed status
+ * @returns Combined SQL restrictions using the canonical task status.
+ * @example buildTaskFilters(filterValues) // TRUE when no filters are selected
  */
 export function buildTaskFilters(filterValues: TaskFilters) {
-  // 1. Work out the displayed task status.
-  const today = sql`(NOW() AT TIME ZONE 'America/Toronto')::date`;
-  const status = sql`
-    CASE
-      WHEN "row".state = 'open' AND "row".start_date::date > ${today} THEN 'upcoming'
-      WHEN "row".state = 'open' AND "row".due_date::date < ${today} THEN 'overdue'
-      WHEN "row".state = 'open' THEN 'in_progress'
-      ELSE "row".state
-    END
-  `;
-
-  // 2. Collect the selected filters.
+  // 1. Collect the selected filters.
   const filters = [];
   if (filterValues.staffIds.length) {
     filters.push(sql`task.staff_id = ANY(${sql.array(filterValues.staffIds)}::uuid[])`);
@@ -45,13 +36,7 @@ export function buildTaskFilters(filterValues: TaskFilters) {
     filters.push(sql`task.category::text = ANY(${sql.array(filterValues.categories)}::text[])`);
   }
   if (filterValues.statuses.length) {
-    filters.push(sql`(
-      (${filterValues.statuses.includes('upcoming')} AND task.state = 'open' AND task.start_date > ${today})
-      OR (${filterValues.statuses.includes('in_progress')} AND task.state = 'open' AND task.start_date <= ${today} AND task.due_date >= ${today})
-      OR (${filterValues.statuses.includes('overdue')} AND task.state = 'open' AND task.due_date < ${today})
-      OR (${filterValues.statuses.includes('completed')} AND task.state = 'completed')
-      OR (${filterValues.statuses.includes('cancelled')} AND task.state = 'cancelled')
-    )`);
+    filters.push(sql`${taskStatus} = ANY(${sql.array(filterValues.statuses)}::text[])`);
   }
   if (filterValues.search) {
     const search = `%${filterValues.search}%`;
@@ -62,12 +47,12 @@ export function buildTaskFilters(filterValues: TaskFilters) {
     )`);
   }
 
-  // 3. Apply the selected filters.
+  // 2. Apply the selected filters.
   let appliedFilters = sql`TRUE`;
   for (const filter of filters) {
     appliedFilters = sql`${appliedFilters} AND ${filter}`;
   }
-  return { status, appliedFilters };
+  return appliedFilters;
 }
 
 /**
