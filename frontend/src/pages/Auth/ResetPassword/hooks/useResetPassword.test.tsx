@@ -1,141 +1,50 @@
-import { StrictMode, type PropsWithChildren } from 'react';
-import { MemoryRouter } from 'react-router-dom';
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetPassword } from '../../../../auth/auth.api';
 import { useResetPassword } from './useResetPassword';
 
-const navigate = vi.hoisted(() => vi.fn());
-
 vi.mock('../../../../auth/auth.api', () => ({ resetPassword: vi.fn() }));
-vi.mock('react-router-dom', async () => ({
-  ...await vi.importActual<typeof import('react-router-dom')>('react-router-dom'),
-  useNavigate: () => navigate,
-}));
 
-/**
- * Mounts the reset workflow with a recovery URL and Strict Mode cleanup checks.
- * @param path - Route and optional reset-token query parameter for the test.
- * @example renderResetPassword('/reset-password') // workflow without a token
- */
-function renderResetPassword(path = '/reset-password?token=reset-token') {
-  /**
-   * Supplies the test route while exercising the workflow's effect cleanup.
-   * @param children - Hook test rendered inside the router.
-   * @example wrapper({ children }) // routed Strict Mode test content
-   */
-  function wrapper({ children }: PropsWithChildren) {
-    return <StrictMode><MemoryRouter
-      initialEntries={[path]}
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >{children}</MemoryRouter></StrictMode>;
-  }
-
-  return renderHook(() => useResetPassword(), { wrapper });
-}
+const passwords = { newPassword: 'new-password', confirmPassword: 'new-password' };
 
 describe('useResetPassword', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => vi.useRealTimers());
+  beforeEach(() => vi.clearAllMocks());
 
   it('rejects submission when the route has no reset token', async () => {
-    const { result } = renderResetPassword('/reset-password');
-
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
+    const { result } = renderHook(() => useResetPassword('', vi.fn()));
+    await act(() => result.current.onSubmit(passwords));
 
     expect(result.current.error).toBe('Invalid or missing reset token');
     expect(resetPassword).not.toHaveBeenCalled();
   });
 
-  it('resets the password and returns to login after the success delay', async () => {
+  it('completes an accepted reset once and leaves navigation to its route', async () => {
     vi.mocked(resetPassword).mockResolvedValue({});
-    const { result } = renderResetPassword();
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useResetPassword('reset-token', onSuccess));
 
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
+    await act(() => result.current.onSubmit(passwords));
+    await act(() => result.current.onSubmit(passwords));
 
+    expect(resetPassword).toHaveBeenCalledOnce();
     expect(resetPassword).toHaveBeenCalledWith('reset-token', 'new-password');
-    expect(result.current.message).toBe('Password reset successful');
-    expect(navigate).not.toHaveBeenCalled();
-
-    act(() => vi.advanceTimersByTime(1000));
-    expect(navigate).toHaveBeenCalledWith('/login');
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 
-  it('cancels the delayed redirect when the reset flow unmounts', async () => {
-    vi.mocked(resetPassword).mockResolvedValue({});
-    const { result, unmount } = renderResetPassword();
+  it('exposes reset failures and permits retry with the retained password', async () => {
+    vi.mocked(resetPassword).mockRejectedValueOnce(new Error('Reset link expired')).mockResolvedValueOnce({});
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useResetPassword('reset-token', onSuccess));
+    act(() => result.current.form.setValue('newPassword', passwords.newPassword));
 
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
-    unmount();
-    act(() => vi.runAllTimers());
-
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('cancels an earlier success redirect when a resubmission fails', async () => {
-    vi.mocked(resetPassword)
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error('Reset link expired'));
-    const { result } = renderResetPassword();
-
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
-    act(() => vi.runAllTimers());
-
+    await act(() => result.current.onSubmit(passwords));
     expect(result.current.error).toBe('Reset link expired');
-    expect(navigate).not.toHaveBeenCalled();
-  });
+    expect(result.current.form.getValues('newPassword')).toBe(passwords.newPassword);
+    expect(onSuccess).not.toHaveBeenCalled();
 
-  it('does not redirect when a pending reset finishes after unmount', async () => {
-    let resolveReset!: (value: object) => void;
-    vi.mocked(resetPassword).mockReturnValue(new Promise(resolve => { resolveReset = resolve; }));
-    const { result, unmount } = renderResetPassword();
-    let submission!: Promise<void>;
-
-    act(() => {
-      submission = result.current.onSubmit({ newPassword: 'new-password', confirmPassword: 'new-password' });
-    });
-    unmount();
-    await act(async () => {
-      resolveReset({});
-      await submission;
-    });
-    act(() => vi.runAllTimers());
-
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('exposes reset failures without scheduling navigation', async () => {
-    vi.mocked(resetPassword).mockRejectedValue(new Error('Reset link expired'));
-    const { result } = renderResetPassword();
-
-    await act(() => result.current.onSubmit({
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
-    }));
-
-    expect(result.current.error).toBe('Reset link expired');
-    act(() => vi.runAllTimers());
-    expect(navigate).not.toHaveBeenCalled();
+    await act(() => result.current.onSubmit(passwords));
+    expect(result.current.error).toBe('');
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 });

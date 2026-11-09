@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { resetPassword } from '../../../../auth/auth.api';
+import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../http/errors';
 
 interface ResetPasswordFormData {
@@ -21,70 +21,42 @@ const resetPasswordSchema = z.object({
 }) satisfies z.ZodType<ResetPasswordFormData, ResetPasswordFormData>;
 
 /**
- * Validates a replacement password and resets it using the token in the current URL.
- * Returns form state and submission feedback, then redirects to login after success.
- * @example const { form, onSubmit } = useResetPassword(); // bind the recovery form
+ * Validates and saves one mounted password draft using the supplied recovery token.
+ * @param token - Recovery token; an empty token cannot submit.
+ * @param onSuccess - Ends the editor and starts the route's completion feedback.
+ * @example useResetPassword(token, finishReset) // initializes empty password fields
  */
-export const useResetPassword = () => {
+export function useResetPassword(token: string, onSuccess: () => void) {
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const activeRef = useRef(false);
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  const token = searchParams.get('token') || '';
-
+  const { tryLock, unlock } = useSubmitLock();
   const form = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { newPassword: '', confirmPassword: '' },
   });
 
-  // A pending reset may finish after cleanup, before any redirect timer exists.
-  useEffect(() => {
-    activeRef.current = true;
-
-    return () => {
-      activeRef.current = false;
-      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
-    };
-  }, []);
-
   /**
-   * Saves the validated replacement password and schedules login after success.
-   * @param data - Matching replacement and confirmation values from the form resolver.
-   * @example await onSubmit({ newPassword: 'replacement', confirmPassword: 'replacement' })
+   * Saves the validated replacement once, retaining failed values for correction.
+   * @param data - Matching password values accepted by the form resolver.
+   * @example onSubmit({ newPassword: 'replacement', confirmPassword: 'replacement' })
    */
   const onSubmit = async (data: ResetPasswordFormData) => {
-    if (navigationTimerRef.current) {
-      clearTimeout(navigationTimerRef.current);
-      navigationTimerRef.current = undefined;
-    }
-    setError('');
-    setMessage('');
-
     if (!token) {
       setError('Invalid or missing reset token');
       return;
     }
+    if (!tryLock()) return;
 
+    setError('');
     try {
       await resetPassword(token, data.newPassword);
-      if (!activeRef.current) return;
-
-      setMessage('Password reset successful');
-      navigationTimerRef.current = setTimeout(() => navigate('/login'), 1000);
-    } catch (err: unknown) {
-      if (!activeRef.current) return;
-
-      setError(getErrorMessage(err, 'Failed to reset password'));
+    } catch (cause) {
+      setError(getErrorMessage(cause, 'Failed to reset password'));
+      unlock();
+      return;
     }
+
+    onSuccess();
   };
 
-  return {
-    form,
-    error,
-    message,
-    onSubmit,
-    token,
-  };
-};
+  return { form, error, onSubmit };
+}
