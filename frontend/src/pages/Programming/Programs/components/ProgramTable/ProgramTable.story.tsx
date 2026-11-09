@@ -1,5 +1,4 @@
 import { CYCLE_TABLE_QUERY_KEY } from '../CycleTable/queryKeys';
-import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY } from '../../hooks/actions/programCycleAssignmentCache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
@@ -27,13 +26,6 @@ export function ManagementTables() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     queryClient.setQueryData([...PROGRAM_TABLE_QUERY_KEY, { assignedOnly: true }], { pages: [{ rows: [program], nextCursor: null }], pageParams: [null] });
     queryClient.setQueryData([...CYCLE_TABLE_QUERY_KEY, { key: 'startsOn', direction: 'desc' }], { pages: [{ rows: [cycle], nextCursor: null }], pageParams: [null] });
-    queryClient.setQueryData([...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: undefined }], [{
-      programId: program.id, program: program.name, cycleId: cycle.id, cycle: cycle.name,
-      startsOn: cycle.startsOn, endsOn: cycle.endsOn, state: cycle.state,
-      enrollmentRequired: true, minAge: null, maxAge: null, enrolledCount: 0,
-      nextSessionAt: null, nextSessionId: null, averageAttendance: null,
-      attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
-    }]);
     return queryClient;
   });
 
@@ -43,6 +35,16 @@ export function ManagementTables() {
       ariaLabel="Program management"
       actions={<Button onClick={() => setCyclesOpen(true)}>Manage Cycles</Button>}
       table={<ProgramTable
+        assignments={{
+          assignments: [{
+            programId: program.id, program: program.name, cycleId: cycle.id, cycle: cycle.name,
+            startsOn: cycle.startsOn, endsOn: cycle.endsOn, state: cycle.state,
+            enrollmentRequired: true, minAge: null, maxAge: null, enrolledCount: 0,
+            nextSessionAt: null, nextSessionId: null, averageAttendance: null,
+            attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
+          }],
+          loading: false, ready: true, error: '', refresh: async () => {},
+        }}
         queryKey={PROGRAM_TABLE_QUERY_KEY}
         filters={{ assignedOnly: true }}
         canWrite onEdit={() => {}} onManageCycles={() => {}}

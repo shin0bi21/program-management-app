@@ -32,7 +32,7 @@ export default function Programs() {
   const canManageRoster = permissions.includes('write:enrollments') && permissions.includes('read:youth_profiles');
   const canViewYouthReport = permissions.includes('read:attendance') && permissions.includes('read:sessions');
 
-  const data = useProgramsData();
+  const data = useProgramsData(canWritePrograms);
 
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const actions = useProgramsActions({
@@ -69,6 +69,7 @@ export default function Programs() {
       }
       table={
         <ProgramTable
+          assignments={data.assignments}
           canWrite={canWritePrograms}
           onEdit={modals.program.open}
           onManageCycles={modals.assignments.open}
@@ -104,6 +105,10 @@ export default function Programs() {
         <ProgramCyclesModal
           key={modals.assignments.target.id}
           program={modals.assignments.target}
+          assignments={data.assignments.assignments}
+          assignmentsReady={data.assignments.ready}
+          assignmentsError={data.assignments.error}
+          onRetryAssignments={data.assignments.refresh}
           cycles={data.cycles}
           cyclesLoading={data.cyclesLoading}
           cyclesError={data.cyclesError}
@@ -115,6 +120,10 @@ export default function Programs() {
       <CycleModal
         isOpen={modals.cycle.target !== undefined}
         cycle={modals.cycle.target ?? null}
+        assignments={data.assignments.assignments}
+        assignmentsReady={data.assignments.ready}
+        assignmentsError={data.assignments.error}
+        onRetryAssignments={data.assignments.refresh}
         programs={data.programs}
         programsReady={!data.programsLoading && !data.programsError}
         programsError={data.programsError}

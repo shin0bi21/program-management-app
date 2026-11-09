@@ -38,7 +38,7 @@ describe('useProgramCycleAssignments', () => {
     });
 
     await waitFor(() => expect(result.current.assignments).toHaveLength(1));
-    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', {}, {
+    expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', { includeAllPrograms: false }, {
       signal: expect.any(AbortSignal),
     });
     expect(result.current.error).toBe('');

@@ -22,8 +22,17 @@ interface CycleTableProps {
  * @param props - Management-session state, and permitted edit/delete actions.
  * @example <CycleTable {...managementProps} />
  */
-export default function CycleTable({ onEdit, onDelete, isOpen, enabled, onClose, onAdd, onMessageChange }: CycleTableProps) {
-  const query = useCycleTableData(enabled);
+export default function CycleTable({ enabled, ...props }: CycleTableProps) {
+  return enabled ? <CycleManagement {...props} /> : null;
+}
+
+/**
+ * Keeps the cycle query mounted while an edit or confirmation suspends its dialog.
+ * @param props - Management visibility and actions for the active session.
+ * @example <CycleManagement {...managementProps} />
+ */
+function CycleManagement({ onEdit, onDelete, isOpen, onClose, onAdd, onMessageChange }: Omit<CycleTableProps, 'enabled'>) {
+  const query = useCycleTableData(true);
   const { columns } = useCycleTable({ onEdit, onDelete });
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, {
     label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry,

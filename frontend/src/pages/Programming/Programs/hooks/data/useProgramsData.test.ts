@@ -1,3 +1,4 @@
+import { getProgramCycleAssignments } from '../../api/programCycleAssignments.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,8 @@ vi.mock('../../../../../common/features/referenceData/referenceData.api', () => 
   getProgramReferences: vi.fn(),
 }));
 
+vi.mock('../../api/programCycleAssignments.api', () => ({ getProgramCycleAssignments: vi.fn() }));
+
 const cycle = {
   id: 'cycle-1',
   name: 'Fall 2026',
@@ -21,6 +24,7 @@ const cycle = {
 describe('useProgramsData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getProgramCycleAssignments).mockResolvedValue([]);
     vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getCycleReferences).mockResolvedValue([cycle]);
   });

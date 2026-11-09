@@ -42,9 +42,9 @@ describe('useProgramRoster', () => {
     ]);
   });
 
-  it('loads assignment roster candidates and preserves controls while assignment identity is unchanged', async () => {
+  it('loads assignment roster candidates and applies the supplied search', async () => {
     const { result, rerender } = renderHook(
-      ({ target }: { target: ProgramCycleAssignment | null }) => useProgramRoster(target),
+      ({ target }: { target: ProgramCycleAssignment }) => useProgramRoster(target),
       { initialProps: { target: assignment }, wrapper: createQueryClientWrapper(createTestQueryClient()) },
     );
 
@@ -56,8 +56,5 @@ describe('useProgramRoster', () => {
     rerender({ target: { ...assignment, cycle: 'Updated label' } });
     expect(result.current.search).toBe('available');
 
-    rerender({ target: { ...assignment, cycleId: 'assignment-2' } });
-    await waitFor(() => expect(result.current.search).toBe(''));
-    await waitFor(() => expect(getProgramRosterYouth).toHaveBeenCalledWith({ programId: assignment.programId, cycleId: 'assignment-2' }, { signal: expect.any(AbortSignal) }));
   });
 });

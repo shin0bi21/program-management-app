@@ -1,15 +1,20 @@
+import { useProgramCycleAssignments } from './useProgramCycleAssignments';
 import { useCycleReferences, useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
 /**
- * Supplies shared program and cycle choices for page filters and forms.
- * Tables and dashboard cards own their complete query results.
+ * Supplies shared choices and assignment rows used by program statuses and editors.
+ * The table owns program rows; the dashboard owns its selected-program summary.
+ * @param canWritePrograms - Loads the full assignment collection for editors when permitted.
  * @example const { programs, cycles } = useProgramsData()
  */
-export default function useProgramsData() {
+export default function useProgramsData(canWritePrograms = false) {
   const programs = useProgramReferences({ assignedOnly: true });
   const cycles = useCycleReferences();
 
+  const assignments = useProgramCycleAssignments(undefined, true, canWritePrograms);
+
   return {
+    assignments,
     programs: programs.rows,
     programsLoading: programs.loading,
     programsError: programs.error,

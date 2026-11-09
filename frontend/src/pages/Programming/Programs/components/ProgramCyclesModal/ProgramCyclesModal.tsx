@@ -1,3 +1,4 @@
+import type { ProgramCycleAssignment } from '../../types';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Button from '../../../../../common/components/Button/Button';
@@ -9,6 +10,10 @@ import useProgramCyclesModal from './hooks/useProgramCyclesModal';
 
 interface ProgramCyclesModalProps {
   program: Program;
+  assignments: ProgramCycleAssignment[];
+  assignmentsReady: boolean;
+  assignmentsError: string;
+  onRetryAssignments: () => void;
   cycles: ProgramCycle[];
   cyclesLoading: boolean;
   cyclesError: string | null;
@@ -16,10 +21,32 @@ interface ProgramCyclesModalProps {
   onClose: () => void;
 }
 
-export default function ProgramCyclesModal({
-  program, cycles, cyclesLoading, cyclesError, onRetryCycles, onClose,
+/**
+ * Edits a program's assigned cycles from the collection already loaded by the page.
+ * @param props - Saved program, assignment rows and choices, load recovery, and close action.
+ * @example <ProgramCyclesModal {...loadedProgramProps} />
+ */
+export default function ProgramCyclesModal(props: ProgramCyclesModalProps) {
+  if (!props.assignmentsReady) {
+    return <Modal isOpen title={`Assigned Cycles — ${props.program.name}`} onClose={props.onClose}>
+      {props.assignmentsError
+        ? <div role="alert">{props.assignmentsError} <Button onClick={props.onRetryAssignments}>Retry assignments</Button></div>
+        : <p role="status">Loading assigned cycles...</p>}
+    </Modal>;
+  }
+
+  return <ProgramCyclesForm key={props.program.id} {...props} />;
+}
+
+/**
+ * Owns one program's assigned-cycle draft while its editor is mounted.
+ * @param props - Supplied assignments, current cycle choices, and close action.
+ * @example <ProgramCyclesForm {...loadedProgramProps} />
+ */
+function ProgramCyclesForm({
+  program, assignments, cycles, cyclesLoading, cyclesError, onRetryCycles, onClose,
 }: ProgramCyclesModalProps) {
-  const workflow = useProgramCyclesModal(program.id, !cyclesLoading && !cyclesError);
+  const workflow = useProgramCyclesModal(program.id, assignments, !cyclesLoading && !cyclesError);
 
   return <Modal
     isOpen
@@ -37,11 +64,10 @@ export default function ProgramCyclesModal({
     <form id="program-cycles-form" onSubmit={event => {
       event.preventDefault();
       void workflow.submit();
-    }} aria-busy={workflow.loading || cyclesLoading || workflow.locked}>
+    }} aria-busy={cyclesLoading || workflow.locked}>
       {cyclesError && <div role="alert">{cyclesError} <Button onClick={onRetryCycles}>Retry cycles</Button></div>}
-      {workflow.error && <div role="alert">{workflow.error} <Button onClick={workflow.retry}>Retry assignments</Button></div>}
-      {(workflow.loading || cyclesLoading) && <p role="status">Loading assigned cycles...</p>}
-      {workflow.selectedCycleIds !== null && <FormFieldGroup label="Assigned cycles">
+      {cyclesLoading && <p role="status">Loading cycles...</p>}
+      <FormFieldGroup label="Assigned cycles">
         <Checklist
           variant="form"
           ariaLabel="Assigned cycles"
@@ -50,7 +76,7 @@ export default function ProgramCyclesModal({
           onToggle={workflow.toggleCycle}
           disabled={!workflow.ready || workflow.locked}
         />
-      </FormFieldGroup>}
+      </FormFieldGroup>
       {!cyclesLoading && !cyclesError && cycles.length === 0 && <p>No cycles yet. Add a cycle from Manage Cycles first.</p>}
     </form>
   </Modal>;
