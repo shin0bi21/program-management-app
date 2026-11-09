@@ -66,7 +66,6 @@ export default function useLeadNoteModal({
     }
 
     setSubmitStatus('success');
-    submitLock.unlock();
     onSaved(result);
   };
 

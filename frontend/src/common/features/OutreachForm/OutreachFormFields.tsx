@@ -20,6 +20,11 @@ const discoverySourceOptions = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+/**
+ * Displays intake fields with supplied form registration, validation, and submission locking.
+ * @param props - Form controls, ID namespace, optional program choice, and locked state.
+ * @example <OutreachFormFields idPrefix="lead" register={register} control={control} errors={errors} disabled />
+ */
 export default function OutreachFormFields<T extends OutreachFormValues & FieldValues>({ idPrefix, register, control, errors, programField, disabled = false }: {
   idPrefix: string;
   register: UseFormRegister<T>;
@@ -28,7 +33,9 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
   programField?: ReactNode;
   disabled?: boolean;
 }) {
+  /** Namespaces a field's DOM ID. @example id('school') // lead-school */
   const id = (field: keyof OutreachFormValues) => `${idPrefix}-${field}`;
+  /** Restricts registration to intake fields shared by the supplied form. @example field('school') // school */
   const field = (name: keyof OutreachFormValues) => name as Path<T>;
 
   return <>
@@ -48,7 +55,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
     <section className="outreach-form-section" aria-labelledby={`${idPrefix}-contact-title`}>
       <h3 id={`${idPrefix}-contact-title`} className="outreach-form-section-title">Primary Contact</h3>
       <div className="form-row">
-        <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message as string | undefined}><input id={id('contactPhoneNumber')} type="tel" {...register(field('contactPhoneNumber'))} /></FormField>
+        <FormField id={id('contactPhoneNumber')} label="Phone Number *" error={errors.contactPhoneNumber?.message as string | undefined}><input id={id('contactPhoneNumber')} type="tel" disabled={disabled} {...register(field('contactPhoneNumber'))} /></FormField>
         <Controller
           name={field('contactRelationship')}
           control={control}

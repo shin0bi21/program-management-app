@@ -33,8 +33,6 @@ describe('useLeadModal', () => {
     vi.mocked(createLead).mockResolvedValue(lead);
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useLeadModal({
-      isOpen: true,
-      onClose: vi.fn(),
       onSuccess,
     }));
 
@@ -59,9 +57,7 @@ describe('useLeadModal', () => {
     vi.mocked(updateLead).mockResolvedValue(saved);
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useLeadModal({
-      isOpen: true,
       lead,
-      onClose: vi.fn(),
       onSuccess,
     }));
 
@@ -77,8 +73,6 @@ describe('useLeadModal', () => {
     vi.mocked(createLead).mockRejectedValue(new Error('Could not create lead'));
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useLeadModal({
-      isOpen: true,
-      onClose: vi.fn(),
       onSuccess,
     }));
 

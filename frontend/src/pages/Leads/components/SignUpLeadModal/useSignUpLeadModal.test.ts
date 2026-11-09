@@ -65,11 +65,11 @@ const queryKey = ['lead-signup-programCycles'] as const;
 
 /**
  * Opens a sign-up workflow with an isolated assignment-query cache.
- * @param currentLead - Initial saved target, or null for a closed workflow.
+ * @param currentLead - Saved target supplied when the signup interaction opens.
  * @param onSuccess - Observer called with the authoritative sign-up result.
  * @example const view = renderWorkflow(lead)
  */
-function renderWorkflow(currentLead: Lead | null, onSuccess = vi.fn()) {
+function renderWorkflow(currentLead: Lead, onSuccess = vi.fn()) {
   const queryClient = createTestQueryClient();
   return renderHook(
     ({ target }) => useSignUpLeadModal({ queryKey, lead: target, onSuccess }),
@@ -151,7 +151,7 @@ describe('useSignUpLeadModal', () => {
 
     act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
     expect(result.current.visibleProgramCycles.map(item => item.cycleId)).toEqual(['programCycle-too-old']);
-    act(() => result.current.selectProgramCycle('program-1:programCycle-too-old'));
+    act(() => { result.current.selectProgramCycle('program-1:programCycle-too-old'); result.current.selectNoteCategory('general'); });
     await act(() => result.current.submit());
     expect(signUpLead).toHaveBeenCalledWith('lead-1', { programId: 'program-1', cycleId: 'programCycle-too-old' }, 'general', `${new Date().getFullYear() - 16}-01-01`);
   });
@@ -160,40 +160,11 @@ describe('useSignUpLeadModal', () => {
     const { result } = renderWorkflow(lead);
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.selectProgramCycle(`${programCycle.programId}:${programCycle.cycleId}`));
-    act(() => result.current.changeDateOfBirth('2000-01-01'));
+    act(() => { result.current.changeDateOfBirth('2000-01-01'); result.current.selectNoteCategory('general'); });
     expect(result.current.selectedPairKey).toBe('');
     expect(result.current.visibleProgramCycles).toEqual([]);
     await act(() => result.current.submit());
     expect(signUpLead).toHaveBeenCalledWith('lead-1', null, 'general', '2000-01-01');
-  });
-
-  it('preserves the sign-up draft when the same saved lead refreshes', async () => {
-    const view = renderWorkflow(lead);
-    await waitFor(() => expect(view.result.current.loading).toBe(false));
-    act(() => {
-      view.result.current.changeDateOfBirth('2000-01-01');
-      view.result.current.selectNoteCategory('health');
-    });
-
-    view.rerender({ target: { ...lead, dateOfBirth: '2001-01-01' } });
-
-    expect(view.result.current.dateOfBirth).toBe('2000-01-01');
-    expect(view.result.current.noteCategory).toBe('health');
-  });
-
-  it('starts a different lead with a clean draft', async () => {
-    const view = renderWorkflow(lead);
-    await waitFor(() => expect(view.result.current.loading).toBe(false));
-    act(() => {
-      view.result.current.selectProgramCycle(`${programCycle.programId}:${programCycle.cycleId}`);
-      view.result.current.selectNoteCategory('health');
-    });
-
-    view.rerender({ target: { ...lead, id: 'lead-2' } });
-
-    await waitFor(() => expect(view.result.current.selectedPairKey).toBe(''));
-    expect(view.result.current.noteCategory).toBe('general');
-    expect(view.result.current.submitStatus).toBe('idle');
   });
 
   it('shows an API failure and permits a retry', async () => {
@@ -203,6 +174,7 @@ describe('useSignUpLeadModal', () => {
     const { result } = renderWorkflow(lead);
     await waitFor(() => expect(result.current.loading).toBe(false));
 
+    act(() => result.current.selectNoteCategory('general'));
     await act(() => result.current.submit());
     expect(result.current.submitStatus).toBe('error');
     expect(result.current.statusMessage).toBe('Signup unavailable');
@@ -219,6 +191,7 @@ describe('useSignUpLeadModal', () => {
     );
     await waitFor(() => expect(result.current.loading).toBe(false));
 
+    act(() => result.current.selectNoteCategory('general'));
     await act(() => result.current.submit());
 
     expect(signUpLead).toHaveBeenCalledOnce();

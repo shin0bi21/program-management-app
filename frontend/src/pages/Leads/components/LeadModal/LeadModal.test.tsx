@@ -39,6 +39,10 @@ describe('LeadModal', () => {
     fireEvent.change(document.getElementById('lead-dateOfBirth')!, { target: { value: `${new Date().getFullYear() - 14}-01-01` } });
     fireEvent.change(document.getElementById('lead-school')!, { target: { value: ' Test School ' } });
     fireEvent.change(document.getElementById('lead-contactPhoneNumber')!, { target: { value: ' 416-555-0142 ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Relationship' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Parent' }));
+    fireEvent.click(screen.getByRole('button', { name: 'How Did You Hear About Us?' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Online' }));
     fireEvent.submit(document.getElementById('lead-form')!);
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ id: 'lead-1' }));
