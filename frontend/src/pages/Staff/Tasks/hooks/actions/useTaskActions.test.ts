@@ -134,7 +134,7 @@ describe('useTaskActions', () => {
     expect(deleteTask).toHaveBeenCalledWith('task-1');
     expect(rendered.onTaskRemoved).toHaveBeenCalledWith('task-1');
     expect(rendered.removeCalendarTask).toHaveBeenCalledWith('task-1');
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
   });
 
   it('does not reconcile failed status or deletion actions', async () => {
@@ -182,7 +182,7 @@ describe('useTaskActions', () => {
     expect(setHours).toHaveBeenCalledWith(input);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
@@ -202,11 +202,11 @@ describe('useTaskActions', () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it('invalidates task queries after a saved task', () => {
+  it('invalidates task queries after a created task', () => {
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
 
-    act(() => rendered.result.current.syncTask(task));
+    act(() => rendered.result.current.syncTask(task, 'create'));
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });

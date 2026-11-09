@@ -229,7 +229,7 @@ export default function Tasks() {
       resources={pageData.writableResources}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
-      onSaved={actions.syncTask}
+      onSaved={task => actions.syncTask(task, taskModalState.mode === 'add' ? 'create' : 'update')}
       onClose={closeTaskModal}
     />}
 

@@ -2,12 +2,13 @@ import type { YouthAttendanceResult } from '../../components/YouthAttendanceModa
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { YouthProfile } from '../../types';
+import { replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 import { updateProgramCycleAssignments } from '../../../Programming/Programs/hooks/actions/programCycleAssignmentCache';
 
 const YOUTH_TABLE_QUERY_KEY = ['youth', 'table'] as const;
 
 /**
- * Refreshes Youth queries after saves and attendance changes.
+ * Reconciles saved Youth and session rows and refreshes attendance summaries.
  * @param onYouthSynced - Updates the selected profile when its saved response arrives.
  * @example useYouthActions(updateSelectedProfile)
  */
@@ -19,16 +20,16 @@ export function useYouthActions(onYouthSynced?: (profile: YouthProfile) => void)
   }, [queryClient]);
 
   const reconcileSavedYouth = useCallback((savedYouth: YouthProfile) => {
+    replaceInfiniteListRow(queryClient, YOUTH_TABLE_QUERY_KEY, savedYouth);
     onYouthSynced?.(savedYouth);
-    void queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY });
   }, [queryClient, onYouthSynced]);
 
   const reconcileAttendance = useCallback((saved: YouthAttendanceResult) => {
     reconcileSavedYouth(saved.youth);
     void queryClient.invalidateQueries({ queryKey: ['youth', 'attendance-summary', saved.youth.id] });
     if (saved.updatedSessions?.length) {
-      void queryClient.invalidateQueries({ queryKey: ['sessions', 'table'] });
       for (const session of saved.updatedSessions) {
+        replaceInfiniteListRow(queryClient, ['sessions', 'table'], session);
         void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
       }
     }

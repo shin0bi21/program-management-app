@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { makeProgramSession } from '../../../../../tests/factories/session';
+import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import type { UpdatedSessionResult } from '../../sessions.api';
 import useSessionActions from './useSessionActions';
 
@@ -54,8 +55,8 @@ describe('useSessionActions', () => {
 
     await act(async () => { finish({ session: saved }); await first; });
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, other], nextCursor: 'next' }] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [saved, other], nextCursor: 'next' }] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
     expect(result.current.pendingSessionIds).toEqual([]);
@@ -77,7 +78,7 @@ describe('useSessionActions', () => {
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it('invalidates deleted rows without rebuilding the calendar buffer', async () => {
+  it('removes deleted rows without rebuilding the calendar buffer', async () => {
     const session = makeProgramSession();
     const { result, client, invalidate, calendar, onSessionRemoved, other } = renderActions(session);
     api.deleteSession.mockResolvedValue({ id: session.id });
@@ -85,25 +86,31 @@ describe('useSessionActions', () => {
     act(() => result.current.requestDelete(session));
     await act(() => result.current.confirmAction!.onConfirm());
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, other], nextCursor: 'next' }] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [other], nextCursor: 'next' }] });
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'attendance-summary'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 
-  it('updates the attendance query and invalidates affected collections', () => {
-    const { result, client, invalidate } = renderActions();
+  it('updates saved session and Youth rows alongside the attendance query', () => {
+    const { result, client, invalidate, other } = renderActions();
     const session = makeProgramSession({ theme: 'Saved attendance session' });
     const roster = [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Lee', status: 'present' as const, notes: null }];
+    const youth = makeYouthProfile();
+    const savedYouth = { ...youth, activeProgram: { programId: session.programId, program: session.program } };
+    const youthKey = ['youth', 'table', {}, { key: 'firstName', direction: 'asc' }];
+    client.setQueryData(youthKey, { pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
 
-    act(() => result.current.syncAttendance({ session, roster }));
+    act(() => result.current.syncAttendance({ session, roster, updatedYouth: [savedYouth] }));
 
     expect(client.getQueryData(['sessions', session.id, 'roster'])).toBe(roster);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
+    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, other] }] });
+    expect(client.getQueryData(youthKey)).toMatchObject({ pages: [{ rows: [savedYouth] }] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth-program-cycle-attendance'] });
     expect(result.current.calendarRevision).toBe(0);
   });

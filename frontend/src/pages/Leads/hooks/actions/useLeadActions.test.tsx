@@ -37,7 +37,7 @@ function setup() {
 
 beforeEach(() => vi.clearAllMocks());
 
-it('invalidates the lead table and updates selected context after a status save', async () => {
+it('updates the saved lead row and selected context after a status save', async () => {
   const { client, wrapper } = setup();
   seedVariant(client, [lead, otherLead]);
   const invalidate = vi.spyOn(client, 'invalidateQueries');
@@ -49,11 +49,11 @@ it('invalidates the lead table and updates selected context after a status save'
   await act(async () => result.current.setStatus(lead, 'contacted'));
 
   expect(onLeadSynced).toHaveBeenCalledWith(savedLead);
-  expect(invalidate).toHaveBeenCalledWith({ queryKey: tableKey });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: tableKey });
   expect(updateLeadStatus).toHaveBeenCalledWith(lead.id, 'contacted');
 });
 
-it('invalidates the lead table and clears selected context after a confirmed delete', async () => {
+it('removes the lead row and clears selected context after a confirmed delete', async () => {
   const { client, wrapper } = setup();
   seedVariant(client, [lead, otherLead]);
   const invalidate = vi.spyOn(client, 'invalidateQueries');
@@ -65,7 +65,7 @@ it('invalidates the lead table and clears selected context after a confirmed del
 
   expect(deleteLead).toHaveBeenCalledWith(lead.id);
   expect(onLeadRemoved).toHaveBeenCalledWith(lead.id);
-  expect(invalidate).toHaveBeenCalledWith({ queryKey: tableKey });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: tableKey });
 });
 
 it('updates signup context and invalidates affected collections', async () => {
@@ -91,6 +91,6 @@ it('updates signup context and invalidates affected collections', async () => {
   expect(client.getQueryData<ProgramCycleAssignment[]>(programCycleVariant)).toEqual([programCycle, untouched]);
   expect(client.getQueryData<ProgramCycleAssignment[]>(programCycleVariant)?.[1]).toBe(untouched);
   expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-    tableKey, ['youth', 'table'], ['programs', 'cycle-assignments'],
+    ['youth', 'table'], ['programs', 'cycle-assignments'],
   ]);
 });

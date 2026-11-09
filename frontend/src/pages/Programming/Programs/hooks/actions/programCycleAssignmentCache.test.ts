@@ -30,7 +30,7 @@ it('reconciles saved assignments and refreshes membership, cross-program roster 
 
   syncProgramCycleAssignmentChanges(client, { updatedProgramCycles: [saved], removedProgramCycles: [removed], createdProgramCycles: [], updatedYouth: [youth] });
 
-  expect(client.getQueryState(youthKey)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
 
   expect(client.getQueryData(key)).toEqual([saved, other]);
   expect(client.getQueryData<ProgramCycleAssignment[]>(key)?.[1]).toBe(other);

@@ -119,7 +119,7 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       isOpen={modalTarget === 'new' || Boolean(modalLead)}
       lead={modalLead}
       onClose={closeLeadModal}
-      onSuccess={actions.syncLead}
+      onSuccess={lead => actions.syncLead(lead, modalTarget === 'new' ? 'create' : 'update')}
     />
     <SignUpLeadModal
       queryKey={LEAD_SIGNUP_COHORTS_QUERY_KEY}

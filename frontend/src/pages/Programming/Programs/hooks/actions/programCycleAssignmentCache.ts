@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 import type { ProgramCycleAssignmentChanges } from '../../api/programCycleAssignments.api';
 import type { ProgramCycleAssignment, ProgramCycleKey } from '../../types';
 
@@ -27,7 +28,7 @@ export function updateProgramCycleAssignments(
 }
 
 /**
- * Reconciles saved assignments, then refreshes Youth rows, roster eligibility, and attendance summaries.
+ * Reconciles saved assignments and Youth rows, then refreshes roster eligibility and attendance summaries.
  * @param queryClient - Cache shared by program, cycle, and Youth views.
  * @param changes - Authoritative assignment changes and affected youth returned by the save.
  * @example syncProgramCycleAssignmentChanges(client, saved) // updates rows and refreshes affected views
@@ -35,7 +36,9 @@ export function updateProgramCycleAssignments(
 export function syncProgramCycleAssignmentChanges(queryClient: QueryClient, changes: ProgramCycleAssignmentChanges) {
   updateProgramCycleAssignments(queryClient, changes.updatedProgramCycles, changes.removedProgramCycles);
 
-  void queryClient.invalidateQueries({ queryKey: ['youth', 'table'] });
+  for (const youth of changes.updatedYouth ?? []) {
+    replaceInfiniteListRow(queryClient, ['youth', 'table'], youth);
+  }
 
   // Enrollment and date changes can alter eligibility in other program rosters.
   void queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY });

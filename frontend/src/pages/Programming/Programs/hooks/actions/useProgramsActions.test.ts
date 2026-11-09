@@ -66,9 +66,9 @@ describe('useProgramsActions', () => {
     [assignedKey, allKey].forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
     expect(onProgramSynced).toHaveBeenCalledWith(saved);
     expect(client.getQueryData(['programs', 'cycle-assignments', { programId: program.id }])).toEqual([programCycle]);
-    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
+    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
     expect(client.getQueryState(['programs', 'cycle-assignments', { programId: program.id }])?.isInvalidated).toBe(true);
-    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
 
     derivedKeys.forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
   });

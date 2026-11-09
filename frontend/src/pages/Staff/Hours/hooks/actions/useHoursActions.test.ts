@@ -62,7 +62,7 @@ function cacheRows<T>(rows: T[]) {
 describe('useHoursActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('refreshes Hours and related Task queries after creation or editing', async () => {
+  it('refreshes creation membership and replaces saved rows after editing', async () => {
     vi.mocked(setHours).mockResolvedValue(saved);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -74,7 +74,7 @@ describe('useHoursActions', () => {
     expect(setHours).toHaveBeenLastCalledWith(input);
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      ['hours', 'table'], ['tasks', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
+      ['hours', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
     invalidate.mockClear();
 
@@ -83,11 +83,11 @@ describe('useHoursActions', () => {
     expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      ['hours', 'table'], ['tasks', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
+      ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
   });
 
-  it('owns confirmation, calendar removal, and query invalidation together', async () => {
+  it('owns confirmation, calendar removal, and related summary refreshes together', async () => {
     vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted', updatedTasks: [updatedTask] });
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -100,7 +100,7 @@ describe('useHoursActions', () => {
     expect(rendered.remove).toHaveBeenCalledWith('entry-1');
     expect(rendered.onItemRemoved).toHaveBeenCalledWith('entry-1');
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      ['hours', 'table'], ['hours', 'dashboard'], ['tasks', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'],
+      ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
     ]);
   });
 
@@ -140,7 +140,7 @@ describe('useHoursActions', () => {
     expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', { date: '2026-08-19' });
   });
 
-  it('updates calendar placement from the saved row and refreshes affected queries', async () => {
+  it('updates saved placement and refreshes related summaries', async () => {
     vi.mocked(updateHoursPlacement).mockResolvedValue(saved);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
@@ -156,7 +156,7 @@ describe('useHoursActions', () => {
       [entry],
     ]);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      ['hours', 'table'], ['tasks', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
+      ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
   });
 

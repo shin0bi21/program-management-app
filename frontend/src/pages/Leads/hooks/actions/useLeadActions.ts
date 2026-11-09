@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../query/infiniteListCache';
 import type { ConfirmAction } from '../../../../common/components/ConfirmModal/types';
 import { deleteLead, updateLeadStatus, type LeadSignUpResult } from '../../leads.api';
 import type { EditableLeadStatus, Lead } from '../../types';
@@ -15,9 +16,9 @@ interface UseLeadActionsOptions {
 }
 
 /**
- * Saves lead actions and invalidates affected queries.
+ * Updates saved lead rows and refreshes related signup data.
  * @param options - Lead table scope and selected-row update callbacks.
- * @example actions.setStatus(lead, 'contacted') // refreshes loaded leads
+ * @example actions.setStatus(lead, 'contacted') // updates the loaded lead row
  */
 export default function useLeadActions({
   tableQueryKey,
@@ -32,23 +33,26 @@ export default function useLeadActions({
     await queryClient.invalidateQueries({ queryKey: tableQueryKey });
   }, [tableQueryKey, queryClient]);
 
-  const syncLead = useCallback((lead: Lead) => {
+  const syncLead = useCallback((lead: Lead, operation: 'create' | 'update' = 'update') => {
     setActionError('');
     onLeadSynced?.(lead);
-    void refreshLeads();
-  }, [onLeadSynced, refreshLeads]);
+    if (operation === 'create') {
+      void refreshLeads();
+    } else {
+      replaceInfiniteListRow(queryClient, tableQueryKey, lead);
+    }
+  }, [onLeadSynced, queryClient, refreshLeads, tableQueryKey]);
 
   const setStatus = useCallback(async (lead: Lead, status: EditableLeadStatus) => {
     setActionError('');
 
     try {
       const savedLead = await updateLeadStatus(lead.id, status);
-      onLeadSynced?.(savedLead);
-      await refreshLeads();
+      syncLead(savedLead);
     } catch {
       setActionError('Unable to update lead status.');
     }
-  }, [onLeadSynced, refreshLeads]);
+  }, [syncLead]);
 
   const requestDelete = useCallback((lead: Lead) => setConfirmAction({
     title: 'Delete Lead',
@@ -57,23 +61,22 @@ export default function useLeadActions({
     successMessage: 'Lead deleted',
     onConfirm: async () => {
       await deleteLead(lead.id);
+      removeInfiniteListRow(queryClient, tableQueryKey, lead.id);
       onLeadRemoved?.(lead.id);
-      await refreshLeads();
     },
-  }), [onLeadRemoved, refreshLeads]);
+  }), [onLeadRemoved, queryClient, tableQueryKey]);
 
   const reconcileSignUp = useCallback(async (saved: LeadSignUpResult) => {
     setActionError('');
-    onLeadSynced?.(saved.lead);
+    syncLead(saved.lead);
     if (saved.updatedProgramCycle) {
       updateProgramCycleAssignments(queryClient, [saved.updatedProgramCycle]);
     }
     await Promise.all([
-      refreshLeads(),
       queryClient.invalidateQueries({ queryKey: YOUTH_TABLE_QUERY_KEY }),
       queryClient.invalidateQueries({ queryKey: PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY }),
     ]);
-  }, [onLeadSynced, queryClient, refreshLeads]);
+  }, [queryClient, syncLead]);
 
   return {
     confirmAction,

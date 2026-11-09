@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
 import { deleteSession, moveSessionDate, type CreatedSessionResult, type UpdatedSessionResult, type SessionAttendanceResult } from '../../sessions.api';
@@ -13,8 +14,8 @@ const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
 const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
 
 /**
- * Refreshes session queries, calendar rows, and related attendance/program summaries.
- * @example actions.moveSession(session, date) // refreshes rows after saving
+ * Reconciles saved session rows and refreshes related attendance/program summaries.
+ * @example actions.moveSession(session, date) // replaces the saved row in loaded views
  */
 export default function useSessionActions({
   onSessionRemoved,
@@ -37,7 +38,7 @@ export default function useSessionActions({
   }, [queryClient]);
 
   const syncSession = useCallback((session: ProgramSession) => {
-    void queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+    replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
     calendarCacheRef.current.upsert(session);
     onSessionSynced?.(session);
     refreshProgramOverviews();
@@ -56,7 +57,9 @@ export default function useSessionActions({
   const syncAttendance = useCallback((result: SessionAttendanceResult) => {
     syncSession(result.session);
     queryClient.setQueryData(['sessions', result.session.id, 'roster'], result.roster);
-    void queryClient.invalidateQueries({ queryKey: ['youth', 'table'] });
+    for (const youth of result.updatedYouth ?? []) {
+      replaceInfiniteListRow(queryClient, ['youth', 'table'], youth);
+    }
     if (result.updatedProgramCycle) {
       syncAssignments([result.updatedProgramCycle]);
     }
@@ -104,7 +107,7 @@ export default function useSessionActions({
         const saved = await deleteSession(session.id);
 
         syncAssignments(saved.updatedProgramCycles);
-        void queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+        removeInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session.id);
         calendarCacheRef.current.remove(session.id);
         onSessionRemoved(session.id);
         refreshProgramOverviews();
