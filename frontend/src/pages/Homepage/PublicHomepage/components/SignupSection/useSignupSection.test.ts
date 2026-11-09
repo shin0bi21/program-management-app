@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { submitPublicLead } from '../../publicHomepage.api';
 import { useSignupSection } from './useSignupSection';
@@ -10,7 +10,8 @@ describe('useSignupSection', () => {
 
   it('owns the successful submission lifecycle and normalized API payload', async () => {
     vi.mocked(submitPublicLead).mockResolvedValue({ message: 'ok' });
-    const { result } = renderHook(useSignupSection);
+    const onSuccess = vi.fn();
+    const { result } = renderHook(() => useSignupSection(onSuccess));
 
     await act(async () => result.current.onValid({
       youthFirstName: ' Jamie ',
@@ -37,6 +38,6 @@ describe('useSignupSection', () => {
       notes: 'Call after school.',
       website: '',
     });
-    await waitFor(() => expect(result.current.submitStatus).toBe('success'));
+    expect(onSuccess).toHaveBeenCalledOnce();
   });
 });

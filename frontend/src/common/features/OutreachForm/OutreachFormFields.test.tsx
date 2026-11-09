@@ -5,12 +5,15 @@ import { useForm } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
 import { getDateOfBirthBounds } from '../youth/dateOfBirth';
 import OutreachFormFields from './OutreachFormFields';
-import { outreachFormDefaultValues, type OutreachFormValues } from './outreachFormSchema';
+import type { OutreachFormValues } from './outreachFormSchema';
 
+/**
+ * Displays intake controls with an optional relationship error for accessibility examples.
+ * @param props - Whether to supply the controlled field's validation message.
+ * @example <TestForm showRelationshipError /> // associates the message with its trigger
+ */
 function TestForm({ showRelationshipError = false }: { showRelationshipError?: boolean }) {
-  const { control, formState: { errors }, register, setError } = useForm<OutreachFormValues>({
-    defaultValues: outreachFormDefaultValues,
-  });
+  const { control, formState: { errors }, register, setError } = useForm<OutreachFormValues>();
 
   useEffect(() => {
     if (showRelationshipError) {
