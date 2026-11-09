@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';
@@ -28,7 +27,7 @@ interface HoursDraft {
   source: HoursSource;
   programId: string;
   date: string;
-  category: Exclude<HoursCategory, 'program_delivery'>;
+  category: HoursCategory | '';
   taskId: string;
   completeTask: boolean;
   sessionId: string;
@@ -37,7 +36,6 @@ interface HoursDraft {
 }
 
 export interface UseHoursModalOptions {
-  isOpen: boolean;
   resources: readonly StaffResource[];
   programs: readonly HoursProgram[];
   loadTasks: (
@@ -53,55 +51,7 @@ export interface UseHoursModalOptions {
   canCompleteTask?: boolean;
 }
 
-type InitialDraftOptions = Pick<UseHoursModalOptions,
-  | 'resources'
-  | 'programs'
-  | 'initialStaffId'
-  | 'initialDate'
-  | 'initialSource'
-  | 'initialTask'
-  | 'initialItem'>;
-
-function buildInitialDraft({
-  resources,
-  programs,
-  initialStaffId,
-  initialDate,
-  initialSource = 'regular',
-  initialTask,
-  initialItem,
-}: InitialDraftOptions): HoursDraft {
-  const preferredStaffId = initialTask?.staffId ?? initialStaffId;
-  const staffId = preferredStaffId
-    && resources.some(resource => resource.id === preferredStaffId)
-    ? preferredStaffId
-    : resources[0]?.id ?? '';
-  const programId = initialItem?.programId
-    && programs.some(program => program.id === initialItem.programId)
-    ? initialItem.programId
-    : '';
-  const source = initialTask || initialItem?.taskId
-    ? 'task'
-    : initialItem?.sessionId
-      ? 'session'
-      : initialSource;
-
-  return {
-    staffId,
-    source,
-    programId,
-    date: initialDate ?? dayKey(new Date()),
-    category: initialItem?.category && initialItem.category !== 'program_delivery'
-      ? initialItem.category
-      : 'planning_prep',
-    taskId: initialTask?.id ?? initialItem?.taskId ?? '',
-    completeTask: false,
-    sessionId: initialItem?.sessionId ?? '',
-    hours: initialItem ? String(initialItem.hours) : '1',
-    note: initialItem?.note ?? '',
-  };
-}
-
+/** Validates the command fields before saving. @example getDraftError(draft) // empty when valid */
 function getDraftError(draft: HoursDraft) {
   if (!draft.staffId) return 'Select a staff member.';
   if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
@@ -115,64 +65,41 @@ function getDraftError(draft: HoursDraft) {
   return '';
 }
 
+/**
+ * Owns one mounted Hours draft, its selector choices and save feedback.
+ * @param options - Supplied edit row or add context and the page's save callback.
+ * @example useHoursModal({ ...options, initialItem }) // initializes the edit draft once
+ */
 export default function useHoursModal(options: UseHoursModalOptions) {
-  const {
-    isOpen,
-    resources,
-    programs,
-    loadTasks,
-    onAdd,
-    initialStaffId,
-    initialDate,
-    initialSource = 'regular',
-    initialTask,
-    initialItem,
-    canCompleteTask = false,
-  } = options;
-  const initialDraft = useMemo(() => buildInitialDraft({
-    resources,
-    programs,
-    initialStaffId,
-    initialDate,
-    initialSource,
-    initialTask,
-    initialItem,
-  }), [
-    initialDate,
-    initialItem,
-    initialStaffId,
-    initialSource,
-    initialTask,
-    programs,
-    resources,
-  ]);
-  const initialDraftRef = useRef(initialDraft);
-  const [draft, setDraft] = useState(initialDraft);
-  const { submitStatus, setSubmitStatus, error, setError, resetStatus } = useSubmitStatus();
+  const { loadTasks, onAdd, initialTask, initialItem, canCompleteTask = false } = options;
+  const [draft, setDraft] = useState<HoursDraft>(() => {
+    let source = options.initialSource ?? 'regular';
+    if (initialItem?.sessionId) source = 'session';
+    if (initialTask || initialItem?.taskId) source = 'task';
+
+    return {
+      staffId: initialItem?.staffId ?? initialTask?.staffId ?? options.initialStaffId ?? '',
+      source,
+      programId: initialItem?.programId ?? '',
+      date: initialItem?.date ?? options.initialDate ?? '',
+      category: initialItem?.category ?? '',
+      taskId: initialTask?.id ?? initialItem?.taskId ?? '',
+      completeTask: false,
+      sessionId: initialItem?.sessionId ?? '',
+      hours: initialItem ? String(initialItem.hours) : '',
+      note: initialItem?.note ?? '',
+    };
+  });
+  const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const taskLocked = Boolean(initialTask);
   const submitting = submitStatus === 'submitting';
-  const targetKey = initialItem
-    ? `entry:${initialItem.id}`
-    : initialTask
-      ? `task:${initialTask.id}`
-      : `new:${initialSource}:${initialStaffId ?? ''}:${initialDate ?? ''}`;
-  const initializationKey = `${targetKey}:${initialDraft.staffId}:${initialDraft.programId}`;
   const submitLock = useSubmitLock();
-  initialDraftRef.current = initialDraft;
-
-  // Reopening or changing the target starts a fresh form lifecycle.
-  useEffect(() => {
-    if (isOpen) {
-      setDraft(initialDraftRef.current);
-      resetStatus();
-    }
-  }, [initializationKey, isOpen, resetStatus]);
 
   // Source-specific remote options.
   const taskQuery = useQuery({
     queryKey: ['tasks', 'hours-options', draft.staffId],
     queryFn: ({ signal }) => loadTasks(draft.staffId, { signal }),
-    enabled: isOpen && draft.source === 'task' && Boolean(draft.staffId) && !taskLocked,
+    enabled: draft.source === 'task' && Boolean(draft.staffId) && !taskLocked,
   });
   const taskOptions = initialTask
     ? [initialTask]
@@ -181,7 +108,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   const sessionQuery = useQuery({
     queryKey: ['hours-sessions', draft.staffId, draft.date],
     queryFn: ({ signal }) => getHoursSessions(draft.staffId, draft.date, signal),
-    enabled: isOpen && draft.source === 'session' && Boolean(draft.staffId) && Boolean(draft.date),
+    enabled: draft.source === 'session' && Boolean(draft.staffId) && Boolean(draft.date),
   });
   const sessionOptions = sessionQuery.data ?? [];
 
@@ -234,34 +161,41 @@ export default function useHoursModal(options: UseHoursModalOptions) {
       return;
     }
 
-    if (!submitLock.tryLock()) return;
-
-    setSubmitStatus('submitting');
-    setError('');
     const shared = {
       staffId: draft.staffId,
       hours: Number(draft.hours),
       note: draft.note.trim(),
     };
-
-    try {
-      const input: SetHoursInput = draft.source === 'task'
-        ? {
-          ...shared,
-          source: 'task',
-          date: draft.date,
-          taskId: draft.taskId,
-          completeTask: canCompleteTask && draft.completeTask,
-        }
-        : draft.source === 'session'
-          ? { ...shared, source: 'session', sessionId: draft.sessionId }
-          : {
-            ...shared,
-            source: 'regular',
-            date: draft.date,
-            programId: draft.programId || null,
-            category: draft.category,
+    let input: SetHoursInput;
+    if (draft.source === 'task') {
+      input = {
+        ...shared,
+        source: 'task',
+        date: draft.date,
+        taskId: draft.taskId,
+        completeTask: canCompleteTask && draft.completeTask,
       };
+    } else if (draft.source === 'session') {
+      input = { ...shared, source: 'session', sessionId: draft.sessionId };
+    } else {
+      if (!draft.category || draft.category === 'program_delivery') {
+        setError('Select a category.');
+        setSubmitStatus('error');
+        return;
+      }
+      input = {
+        ...shared,
+        source: 'regular',
+        date: draft.date,
+        programId: draft.programId || null,
+        category: draft.category,
+      };
+    }
+    if (!submitLock.tryLock()) return;
+
+    setSubmitStatus('submitting');
+    setError('');
+    try {
       await onAdd(input);
       setSubmitStatus('success');
     } catch (cause) {

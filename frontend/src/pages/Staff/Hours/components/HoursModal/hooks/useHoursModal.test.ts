@@ -19,11 +19,11 @@ const programs = [{ id: 'program-1', name: 'Soft Skills' }];
 
 function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
   const options: UseHoursModalOptions = {
-    isOpen: true,
     resources,
     programs,
     loadTasks,
     onAdd: vi.fn().mockResolvedValue(undefined),
+    initialStaffId: 'staff-1',
     initialDate: '2026-08-19',
     ...overrides,
   };
@@ -85,6 +85,7 @@ describe('useHoursModal', () => {
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
       result.current.selectTask(task.id);
+      result.current.updateHours('1');
       result.current.setCompleteTask(true);
       result.current.updateNote('Prepared materials');
     });
@@ -110,6 +111,7 @@ describe('useHoursModal', () => {
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
       result.current.selectTask(task.id);
+      result.current.updateHours('1');
       result.current.setCompleteTask(true);
       result.current.updateNote('Logged without completion permission');
     });
@@ -136,6 +138,7 @@ describe('useHoursModal', () => {
     await waitFor(() => expect(result.current.sessionOptions).toHaveLength(1));
     act(() => {
       result.current.selectSession('session-1');
+      result.current.updateHours('1');
       result.current.updateNote('Led session');
     });
     await act(async () => result.current.submit(submitEvent()));
@@ -169,32 +172,4 @@ describe('useHoursModal', () => {
     expect(onAdd).not.toHaveBeenCalled();
     expect(result.current.error).toBe('Hours must be between 0.25 and 24.');
   });
-
-  it('preserves the draft when equal target data is recreated', () => {
-    const options: UseHoursModalOptions = {
-      isOpen: true,
-      resources,
-      programs,
-      loadTasks,
-      onAdd: vi.fn().mockResolvedValue(undefined),
-      initialDate: '2026-08-19',
-    };
-    const { result, rerender } = renderHook(
-      (props: UseHoursModalOptions) => useHoursModal(props),
-      {
-        initialProps: options,
-        wrapper: createQueryClientWrapper(createTestQueryClient()),
-      },
-    );
-
-    act(() => result.current.updateNote('Keep this draft'));
-    rerender({
-      ...options,
-      resources: resources.map(resource => ({ ...resource })),
-      programs: programs.map(program => ({ ...program })),
-    });
-
-    expect(result.current.draft.note).toBe('Keep this draft');
-  });
-
 });

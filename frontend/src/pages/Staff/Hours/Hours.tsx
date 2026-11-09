@@ -117,6 +117,7 @@ export default function Hours() {
   });
 
   const editedItem = hoursModalState?.mode === 'edit' ? hoursModalState.item : undefined;
+  const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.initialValues : undefined;
 
   // Hours modal.
   const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
@@ -129,12 +130,7 @@ export default function Hours() {
 
   const closeHoursModal = useCallback(() => setHoursModalState(null), []);
 
-  const submitHours = (input: SetHoursInput) => (
-    actions.saveHours(
-      input,
-      hoursModalState?.mode === 'edit' ? hoursModalState.item.id : undefined,
-    )
-  );
+  const submitHours = (input: SetHoursInput) => actions.saveHours(input, editedItem?.id);
 
   // Table configuration.
   const table = useHoursTable({
@@ -239,19 +235,12 @@ export default function Hours() {
       loadTasks={getTaskDashboardData}
       onClose={closeHoursModal}
       onAdd={submitHours}
-      initialStaffId={hoursModalState?.mode === 'edit'
-        ? editedItem?.staffId
-        : hoursModalState?.initialValues.staffId ?? currentUserId}
-      initialDate={hoursModalState?.mode === 'edit'
-        ? editedItem?.date
-        : hoursModalState?.initialValues.date}
-      initialSource={hoursModalState?.mode === 'add'
-        ? hoursModalState.initialValues.source
-        : undefined}
+      initialStaffId={addHoursContext?.staffId ?? currentUserId}
+      initialDate={addHoursContext?.date}
+      initialSource={addHoursContext?.source}
       canCompleteTask={canCompleteTask}
-      staffLocked={hoursModalState?.mode === 'edit'
-        || Boolean(hoursModalState?.initialValues.staffId)}
-      initialItem={hoursModalState?.mode === 'edit' ? editedItem : undefined}
+      staffLocked={Boolean(editedItem || addHoursContext?.staffId)}
+      initialItem={editedItem}
     />
 
     <ConfirmModal
