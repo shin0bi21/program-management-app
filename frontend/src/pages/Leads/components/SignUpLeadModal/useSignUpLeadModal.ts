@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
@@ -21,13 +21,13 @@ const noProgramCycles: ProgramCycleAssignment[] = [];
 
 interface UseSignUpLeadModalOptions {
   queryKey: readonly unknown[];
-  lead: Lead | null;
+  lead: Lead;
   onSuccess: (result: LeadSignUpResult) => void | Promise<void>;
 }
 
 /**
  * Owns a lead's enrollment draft and creates a youth profile after validating its birth date.
- * Saved-record refreshes preserve the draft until the target identity changes.
+ * The opening modal mounts a new instance for each lead.
  * @param options - Current lead, assignment query key, and authoritative save callback.
  * @example useSignUpLeadModal({ queryKey, lead, onSuccess })
  */
@@ -37,22 +37,17 @@ export default function useSignUpLeadModal({
   onSuccess,
 }: UseSignUpLeadModalOptions) {
   const [selectedPairKey, setSelectedPairKey] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState(lead?.dateOfBirth ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(lead.dateOfBirth ?? '');
   const age = calculateAge(dateOfBirth);
-  const [noteCategory, setNoteCategory] = useState<LeadNoteCategory>('general');
+  const [noteCategory, setNoteCategory] = useState<LeadNoteCategory | ''>('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);
   const submitLock = useSubmitLock();
-  const leadId = lead?.id;
-  const leadRef = useRef(lead);
-  leadRef.current = lead;
-
   const {
     submitStatus,
     setSubmitStatus,
     error,
     setError,
-    resetStatus,
   } = useSubmitStatus();
 
   const {
@@ -62,24 +57,12 @@ export default function useSignUpLeadModal({
   } = useQuery({
     queryKey: [...queryKey, 'all-programs'],
     queryFn: ({ signal }) => getProgramCycleAssignments(undefined, {}, { signal }),
-    enabled: Boolean(lead),
     select: rows => rows.filter(programCycle => (
       programCycle.state !== 'completed' && programCycle.enrollmentRequired
     )),
   });
 
-  // A different lead starts with a clean enrollment and note draft.
-  useEffect(() => {
-    setSelectedPairKey('');
-    setDateOfBirth(leadRef.current?.dateOfBirth ?? '');
-    setNoteCategory('general');
-    setSuccessMessage('');
-    setShowAllPrograms(false);
-    resetStatus();
-  }, [leadId, resetStatus]);
-
   const visibleProgramCycles = useMemo(() => {
-    if (!lead) return programCycles;
     if (!dateOfBirthSchema.safeParse(dateOfBirth).success) return [];
 
     const ageEligible = programCycles.filter(programCycle => (
@@ -93,15 +76,18 @@ export default function useSignUpLeadModal({
   }, [programCycles, lead, showAllPrograms, age, dateOfBirth]);
 
   const submit = async () => {
-    if (!lead || !submitLock.tryLock()) return;
-
     const birthDateResult = dateOfBirthSchema.safeParse(dateOfBirth);
     if (!birthDateResult.success) {
       setError(birthDateResult.error.issues[0].message);
       setSubmitStatus('error');
-      submitLock.unlock();
       return;
     }
+    if (lead.notes?.trim() && !noteCategory) {
+      setError('Choose a type for the intake note.');
+      setSubmitStatus('error');
+      return;
+    }
+    if (!submitLock.tryLock()) return;
 
     const selectedProgramCycle = visibleProgramCycles.find(programCycle => `${programCycle.programId}:${programCycle.cycleId}` === selectedPairKey);
     const youthName = `${lead.youthFirstName} ${lead.youthLastName}`;
@@ -111,9 +97,11 @@ export default function useSignUpLeadModal({
 
     let saved: LeadSignUpResult;
     try {
-      saved = lead.notes?.trim()
-        ? await signUpLead(lead.id, selectedProgramCycle ? { programId: selectedProgramCycle.programId, cycleId: selectedProgramCycle.cycleId } : null, noteCategory, dateOfBirth)
-        : await signUpLead(lead.id, selectedProgramCycle ? { programId: selectedProgramCycle.programId, cycleId: selectedProgramCycle.cycleId } : null, undefined, dateOfBirth);
+      const enrollment = selectedProgramCycle
+        ? { programId: selectedProgramCycle.programId, cycleId: selectedProgramCycle.cycleId }
+        : null;
+      const intakeNoteCategory = lead.notes?.trim() && noteCategory ? noteCategory : undefined;
+      saved = await signUpLead(lead.id, enrollment, intakeNoteCategory, dateOfBirth);
     } catch (cause) {
       setError(getErrorMessage(cause, 'Unable to create youth profile'));
       setSubmitStatus('error');
@@ -138,14 +126,11 @@ export default function useSignUpLeadModal({
 
     setSuccessMessage(nextSuccessMessage);
     setSubmitStatus('success');
-    submitLock.unlock();
   };
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
-    submitting: lead
-      ? `Creating youth profile for ${lead.youthFirstName} ${lead.youthLastName}...`
-      : 'Creating youth profile...',
+    submitting: `Creating youth profile for ${lead.youthFirstName} ${lead.youthLastName}...`,
     success: successMessage,
   });
 

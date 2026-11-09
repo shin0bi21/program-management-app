@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../common/components/DashboardCard/DashboardCard';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -30,6 +30,28 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange
     ? `Notes (${notes.notes.length})`
     : 'Notes';
   usePageMessageReporter(onMessageChange, notes.error ? 'Could not load follow-up notes.' : null, retryAction);
+  let content: ReactNode;
+  if (!lead) {
+    content = <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>;
+  } else if (notes.error) {
+    content = <UnavailableState compact title="Follow-up notes unavailable" onRetry={notes.retry} />;
+  } else if (notes.notes.length === 0) {
+    content = <p className="dashboard-card__empty">No follow-up notes recorded.</p>;
+  } else {
+    content = <div className="note-list">
+      {notes.notes.map(note => <NoteRow
+        key={note.id}
+        ariaLabel="follow-up note"
+        compact
+        categoryLabel={<NoteCategoryLabel category="follow_up" label="Follow-up" />}
+        date={note.createdAt}
+        onView={() => notes.openDetails(note)}
+        onEdit={canWrite ? () => notes.openEditor(note) : undefined}
+        onDelete={canWrite ? () => notes.requestDelete(note) : undefined}
+      />)}
+    </div>;
+  }
+
   return <>
     <DashboardCard
       title={title}
@@ -37,28 +59,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange
       loadingLabel="Loading follow-up notes…"
       action={canWrite ? <Button size="sm" variant="secondary" aria-label="Add follow-up note" disabled={!lead} onClick={notes.openCreate}>+ Add</Button> : undefined}
     >
-      {!lead ? (
-        <p className="dashboard-card__empty">Select a lead to view follow-up notes.</p>
-      ) : notes.error ? (
-        <UnavailableState compact title="Follow-up notes unavailable" onRetry={notes.retry} />
-      ) : notes.notes.length ? (
-        <div className="note-list">
-          {notes.notes.map(note => (
-            <NoteRow
-              key={note.id}
-              ariaLabel="follow-up note"
-              compact
-              categoryLabel={<NoteCategoryLabel category="follow_up" label="Follow-up" />}
-              date={note.createdAt}
-              onView={() => notes.openDetails(note)}
-              onEdit={canWrite ? () => notes.openEditor(note) : undefined}
-              onDelete={canWrite ? () => notes.requestDelete(note) : undefined}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="dashboard-card__empty">No follow-up notes recorded.</p>
-      )}
+      {content}
     </DashboardCard>
     <Modal
       isOpen={notes.selectedNote !== null}
@@ -74,7 +75,7 @@ export default function LeadNotesDashboardCard({ lead, canWrite, onMessageChange
       />}
     </Modal>
     {lead && isNoteModalOpen && <LeadNoteModal
-      key={notes.editorTarget?.id ?? 'new'}
+      key={`${lead.id}:${notes.editorTarget?.id ?? 'new'}`}
       lead={lead}
       note={notes.editorTarget ?? undefined}
       onClose={notes.creating ? notes.closeCreate : notes.closeEditor}
