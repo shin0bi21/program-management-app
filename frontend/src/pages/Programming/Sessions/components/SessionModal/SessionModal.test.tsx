@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { updateSession } from '../../sessions.api';
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import EditSessionModal from './EditSessionModal';
+import SessionModal from './SessionModal';
 
 vi.mock('../../sessions.api', () => ({
   updateSession: vi.fn(),
@@ -17,21 +17,22 @@ const sessionTypes = [
   { id: 'Guest Speaker', name: 'Guest Speaker' },
 ];
 
-describe('EditSessionModal', () => {
+describe('SessionModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders session fields and submits edits with success feedback', async () => {
     vi.mocked(updateSession).mockResolvedValue({ session });
-    const onUpdated = vi.fn().mockResolvedValue(undefined);
+    const onSaved = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderWithQueryClient(
-      <EditSessionModal
+      <SessionModal
+        programs={[]}
         sessionTypes={sessionTypes}
         session={session}
         onClose={vi.fn()}
-        onUpdated={onUpdated}
+        onSaved={onSaved}
       />,
     );
 
@@ -43,37 +44,38 @@ describe('EditSessionModal', () => {
     await user.clear(screen.getByRole('textbox', { name: 'Title / Theme' }));
     await user.type(screen.getByRole('textbox', { name: 'Title / Theme' }), 'Career Stories');
     await user.clear(screen.getByRole('textbox', { name: 'Description' }));
-    fireEvent.submit(document.getElementById('edit-session-form')!);
+    fireEvent.submit(document.getElementById('session-form')!);
 
-    await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(screen.getByText('Session updated successfully.')).toBeInTheDocument();
   });
 
   it('keeps the session open and reports update failures', async () => {
     vi.mocked(updateSession).mockRejectedValue(new Error('Session overlaps another session'));
     renderWithQueryClient(
-      <EditSessionModal
+      <SessionModal
+        programs={[]}
         sessionTypes={sessionTypes}
         session={session}
         onClose={vi.fn()}
-        onUpdated={vi.fn()}
+        onSaved={vi.fn()}
       />,
     );
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
-    fireEvent.submit(document.getElementById('edit-session-form')!);
+    fireEvent.submit(document.getElementById('session-form')!);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Session overlaps another session');
     expect(screen.getByRole('dialog', { name: 'Edit Session' })).toBeInTheDocument();
   });
 
   it('renders fields for a different session target', async () => {
-    const props = { sessionTypes, onClose: vi.fn(), onUpdated: vi.fn() };
-    const view = renderWithQueryClient(<EditSessionModal session={session} {...props} />);
+    const props = { programs: [], sessionTypes, onClose: vi.fn(), onSaved: vi.fn() };
+    const view = renderWithQueryClient(<SessionModal session={session} {...props} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
-    view.rerender(<EditSessionModal session={null} {...props} />);
-    view.rerender(<EditSessionModal
+    view.rerender(<></>);
+    view.rerender(<SessionModal
       session={{ ...session, id: 'session-2', sessionType: 'Guest Speaker', theme: 'Career Stories' }}
       {...props}
     />);
