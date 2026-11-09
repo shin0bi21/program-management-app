@@ -13,6 +13,7 @@ import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBi
 import './YouthModal.css';
 
 interface YouthModalProps {
+  isOpen: boolean;
   onClose: () => void;
   onSuccess: (youthData: YouthProfile) => void;
   youthData?: YouthProfile;
@@ -23,12 +24,22 @@ interface YouthModalProps {
 }
 
 /**
- * Edits one Youth profile or its primary contact for a single open form.
- * Mount when opened and unmount on close. Suspension hides the dialog while keeping its draft.
- * @param props - Initial profile, save callbacks, and optional school workflow.
- * @example <YouthModal youthData={profile} onClose={close} onSuccess={save} />
+ * Mounts one Youth profile or contact editor while its target is open.
+ * Suspension hides the dialog while keeping the mounted draft for school management.
+ * @param props - Visibility, supplied profile, save actions, and optional school workflow.
+ * @example <YouthModal isOpen youthData={profile} onClose={close} onSuccess={save} />
  */
-export default function YouthModal({
+export default function YouthModal({ isOpen, ...props }: YouthModalProps) {
+  const targetKey = `${props.mode ?? 'full'}:${props.youthData?.id ?? 'new'}`;
+  return isOpen ? <YouthForm key={targetKey} {...props} /> : null;
+}
+
+/**
+ * Owns supplied profile values and contact fields until close or save completion.
+ * @param props - Initial values, editor mode, suspension, and completion actions.
+ * @example <YouthForm youthData={profile} onClose={close} onSuccess={save} />
+ */
+function YouthForm({
   onClose,
   onSuccess,
   youthData,
@@ -36,7 +47,7 @@ export default function YouthModal({
   mode = 'full',
   suspended = false,
   onManageSchool,
-}: YouthModalProps) {
+}: Omit<YouthModalProps, 'isOpen'>) {
   const { permissions } = useAuth();
   const canManageSchools = permissions.includes('write:schools') && !!onManageSchool;
   const {
@@ -74,13 +85,11 @@ export default function YouthModal({
 
   let modalStatusMessage: string | undefined;
   if (submitStatus === 'submitting') {
-    modalStatusMessage = contactOnly
-      ? 'Saving primary contact...'
-      : youthData ? 'Updating youth profile...' : 'Creating youth profile...';
+    modalStatusMessage = youthData ? 'Updating youth profile...' : 'Creating youth profile...';
+    if (contactOnly) modalStatusMessage = 'Saving primary contact...';
   } else if (submitStatus === 'success') {
-    modalStatusMessage = contactOnly
-      ? 'Primary contact saved successfully!'
-      : youthData ? 'Youth profile updated successfully!' : 'Youth profile created successfully!';
+    modalStatusMessage = youthData ? 'Youth profile updated successfully!' : 'Youth profile created successfully!';
+    if (contactOnly) modalStatusMessage = 'Primary contact saved successfully!';
   } else if (submitStatus === 'error') {
     modalStatusMessage = error;
   }

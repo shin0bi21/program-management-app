@@ -1,35 +1,29 @@
 import { useState } from 'react';
 import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
-import { getErrorMessage } from '../../../../../http/errors';
 import type { SessionNoteTarget, SessionNoteUnlinkTarget, YouthAttendanceSession } from '../types';
 
+/**
+ * Coordinates note targets and expansion within one mounted attendance interaction.
+ * @param options - Selected youth, loaded session notes and history refresh action.
+ * @example useYouthSessionNotes({ youthId, sessions, refresh }).addNote(session)
+ */
 export default function useYouthSessionNotes({
   youthId,
   sessions,
   refresh,
 }: {
-  youthId: string | null;
+  youthId: string;
   sessions: YouthAttendanceSession[];
   refresh: () => Promise<unknown>;
 }) {
   const [noteTarget, setNoteTarget] = useState<SessionNoteTarget | null>(null);
   const [detailTarget, setDetailTarget] = useState<SessionNote | null>(null);
   const [unlinkTarget, setUnlinkTarget] = useState<SessionNoteUnlinkTarget | null>(null);
-  const [unlinking, setUnlinking] = useState(false);
-  const [unlinkError, setUnlinkError] = useState('');
   const [collapsedSessionIds, setCollapsedSessionIds] = useState<Set<string>>(() => new Set());
   const sessionsWithNotes = sessions.filter(session => session.sessionNotes.length > 0);
   const allExpanded = sessionsWithNotes.length > 0
     && sessionsWithNotes.every(session => !collapsedSessionIds.has(session.id));
-
-  const reset = () => {
-    setNoteTarget(null);
-    setDetailTarget(null);
-    setUnlinkTarget(null);
-    setUnlinkError('');
-    setCollapsedSessionIds(new Set());
-  };
 
   const toggleAll = () => {
     setCollapsedSessionIds(allExpanded
@@ -62,40 +56,24 @@ export default function useYouthSessionNotes({
   };
 
   const requestUnlink = (session: YouthAttendanceSession, note: SessionNote) => {
-    setUnlinkError('');
     setUnlinkTarget({ session, note });
   };
-  const closeUnlink = () => {
-    if (unlinking) return;
-    setUnlinkTarget(null);
-    setUnlinkError('');
-  };
+  const closeUnlink = () => setUnlinkTarget(null);
   const confirmUnlink = async () => {
-    if (!unlinkTarget || !youthId) return;
-    setUnlinking(true);
-    setUnlinkError('');
-    try {
-      await unlinkSessionNoteYouth(unlinkTarget.session.id, unlinkTarget.note.id, youthId);
-      await refresh();
-      setUnlinkTarget(null);
-    } catch (cause) {
-      setUnlinkError(getErrorMessage(cause, 'Failed to unlink session note'));
-    } finally {
-      setUnlinking(false);
-    }
+    if (!unlinkTarget) return;
+
+    await unlinkSessionNoteYouth(unlinkTarget.session.id, unlinkTarget.note.id, youthId);
+    await refresh();
   };
 
   return {
     noteTarget,
     detailTarget,
     unlinkTarget,
-    unlinking,
-    unlinkError,
     sessionsWithNotes,
     allExpanded,
     isChildOpen: Boolean(noteTarget || detailTarget || unlinkTarget),
     isExpanded: (sessionId: string) => !collapsedSessionIds.has(sessionId),
-    reset,
     toggleAll,
     toggleSession,
     addNote,

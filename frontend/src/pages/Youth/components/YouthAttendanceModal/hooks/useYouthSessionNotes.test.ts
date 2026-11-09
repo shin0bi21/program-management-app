@@ -58,7 +58,8 @@ describe('useYouthSessionNotes', () => {
 
     expect(unlinkSessionNoteYouth).toHaveBeenCalledWith('session-1', 'note-1', 'youth-1');
     expect(refresh).toHaveBeenCalledOnce();
+    expect(result.current.unlinkTarget).not.toBeNull();
+    act(() => result.current.closeUnlink());
     expect(result.current.unlinkTarget).toBeNull();
-    expect(result.current.unlinking).toBe(false);
   });
 });

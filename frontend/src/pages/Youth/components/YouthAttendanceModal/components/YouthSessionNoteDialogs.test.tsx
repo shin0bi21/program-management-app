@@ -37,8 +37,6 @@ describe('YouthSessionNoteDialogs', () => {
       }}
       detailTarget={null}
       unlinkTarget={null}
-      unlinking={false}
-      unlinkError=""
       onCloseNote={onCloseNote}
       onCloseDetails={vi.fn()}
       onNoteSaved={onNoteSaved}

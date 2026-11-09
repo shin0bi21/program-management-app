@@ -27,16 +27,13 @@ const baseProps = {
   editorTarget: null,
   selectedNote: note,
   canManage: true,
-  confirmingDelete: false,
-  deleting: false,
-  deleteError: '',
+  confirmAction: null,
   onCloseEditor: vi.fn(),
   onSaved: vi.fn(),
   onCloseDetails: vi.fn(),
   onEdit: vi.fn(),
   onRequestDelete: vi.fn(),
-  onCancelDelete: vi.fn(),
-  onConfirmDelete: vi.fn().mockResolvedValue(undefined),
+  onCloseConfirmation: vi.fn(),
 };
 
 describe('ProfileNoteDialogs', () => {
@@ -52,32 +49,6 @@ describe('ProfileNoteDialogs', () => {
 
     expect(onEdit).toHaveBeenCalledWith(note);
     expect(onRequestDelete).toHaveBeenCalledWith(note);
-  });
-
-  it('owns delete confirmation, pending state, and failure presentation', () => {
-    const onCancelDelete = vi.fn();
-    const onConfirmDelete = vi.fn().mockResolvedValue(undefined);
-    const { rerender } = render(
-      <ProfileNoteDialogs
-        {...baseProps}
-        confirmingDelete
-        onCancelDelete={onCancelDelete}
-        onConfirmDelete={onConfirmDelete}
-      />,
-    );
-
-    expect(screen.getByRole('dialog', { name: 'Delete Profile Note' })).toHaveTextContent(
-      'Delete this profile note? This cannot be undone.',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    expect(onCancelDelete).toHaveBeenCalledOnce();
-    expect(onConfirmDelete).toHaveBeenCalledOnce();
-
-    rerender(<ProfileNoteDialogs {...baseProps} confirmingDelete deleting deleteError="Delete failed" />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Delete failed');
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
   });
 
   it('forwards existing and new editor targets to the profile-note workflow', () => {

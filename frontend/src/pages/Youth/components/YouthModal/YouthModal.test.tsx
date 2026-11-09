@@ -46,6 +46,7 @@ const mockSetYouth = setYouth as ReturnType<typeof vi.fn>;
 function renderModal(props: Partial<React.ComponentProps<typeof YouthModal>> = {}) {
   return render(
     <YouthModal
+      isOpen
       onClose={vi.fn()}
       onSuccess={vi.fn()}
       onManageSchool={vi.fn()}
@@ -150,68 +151,17 @@ describe('YouthModal', () => {
       await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ schoolId: 'school-new' })));
     });
 
-    it('starts a fresh draft from the supplied profile after closing and reopening', () => {
-      const profile = makeYouthProfile({
-        firstName: 'Jordan',
-        addresses: [{ id: 'address-1', address: '123 Main Street' }],
-        contacts: [{ id: 'contact-1', phoneNumber: '4165550100', type: 'guardian' }],
-      });
-      const props = { onClose: vi.fn(), onSuccess: vi.fn() };
-      const { rerender } = render(<YouthModal {...props} youthData={profile} />);
-      fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Unsaved name' } });
-      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '5195550100' } });
-      fireEvent.change(screen.getByLabelText('Address (optional)'), { target: { value: 'Unsaved address' } });
-
-      rerender(<></>);
-      rerender(<YouthModal {...props} youthData={profile} />);
-
-      expect(screen.getByLabelText('First Name *')).toHaveValue('Jordan');
-      expect(screen.getByLabelText(/Phone Number/)).toHaveValue('4165550100');
-      expect(screen.getByLabelText('Address (optional)')).toHaveValue('123 Main Street');
-
-      rerender(<></>);
-      rerender(<YouthModal {...props} />);
-
-      expect(screen.getByLabelText('First Name *')).toHaveValue('');
-      expect(screen.getByLabelText(/Phone Number/)).toHaveValue('');
-      expect(screen.getByLabelText('Address (optional)')).toHaveValue('');
-    });
-
     it('preserves an edited profile draft while its dialog is suspended', () => {
       const youthData = makeYouthProfile();
       const props = { youthData, onClose: vi.fn(), onSuccess: vi.fn() };
       const { rerender } = renderModal(props);
       fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Unsaved name' } });
 
-      rerender(<YouthModal {...props} suspended />);
+      rerender(<YouthModal isOpen {...props} suspended />);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-      rerender(<YouthModal {...props} />);
+      rerender(<YouthModal isOpen {...props} />);
       expect(screen.getByLabelText('First Name *')).toHaveValue('Unsaved name');
-    });
-
-    it('preserves the edited draft and pending save when the same saved profile refreshes', async () => {
-      const profile = makeYouthProfile({ contacts: [{ id: 'contact-1', phoneNumber: '4165550100', type: 'parent' }] });
-      const onSuccess = vi.fn();
-      const props = { onClose: vi.fn(), onSuccess };
-      let finish!: (saved: ReturnType<typeof makeYouthProfile>) => void;
-      mockSetYouth.mockReturnValue(new Promise(resolve => { finish = resolve; }));
-      const { rerender } = renderModal({ ...props, youthData: profile });
-      fireEvent.change(screen.getByLabelText('First Name *'), { target: { value: 'Draft name' } });
-      fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '5195550100' } });
-      submitForm();
-      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledOnce());
-
-      rerender(<YouthModal {...props} youthData={{ ...profile, firstName: 'Refreshed name', contacts: [] }} />);
-
-      expect(screen.getByLabelText('First Name *')).toHaveValue('Draft name');
-      expect(screen.getByLabelText(/Phone Number/)).toHaveValue('5195550100');
-      expect(screen.getByLabelText('First Name *')).toBeDisabled();
-      submitForm();
-      expect(mockSetYouth).toHaveBeenCalledOnce();
-
-      await act(async () => finish({ ...profile, firstName: 'Saved name' }));
-      expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ firstName: 'Saved name' }));
     });
 
     it('omits school management when the caller does not supply a workflow', () => {

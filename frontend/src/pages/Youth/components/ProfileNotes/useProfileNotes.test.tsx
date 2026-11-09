@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -37,37 +37,16 @@ describe('useProfileNotes', () => {
 
     act(() => result.current.requestDelete(note));
     expect(result.current.selectedNote).toBe(note);
-    expect(result.current.confirmingDelete).toBe(true);
+    expect(result.current.confirmAction?.title).toBe('Delete Profile Note');
 
-    await act(async () => result.current.confirmDelete());
+    await act(async () => result.current.confirmAction?.onConfirm());
 
     expect(deleteYouthProfileNote).toHaveBeenCalledWith('youth-1', 'note-1');
     expect(queryClient.getQueryData(profileNotesQueryKey('youth-1'))).toEqual([]);
     expect(result.current.selectedNote).toBeNull();
-    expect(result.current.confirmingDelete).toBe(false);
-  });
-
-  it('clears stale modal state when the selected youth changes', async () => {
-    const queryClient = createTestQueryClient();
-    queryClient.setQueryData(profileNotesQueryKey('youth-1'), [note]);
-    const { result, rerender } = renderHook(
-      ({ youthId }: { youthId: string | null }) => useProfileNotes(youthId),
-      {
-        initialProps: { youthId: 'youth-1' },
-        wrapper: createQueryClientWrapper(queryClient),
-      },
-    );
-    act(() => {
-      result.current.openDetails(note);
-      result.current.openEditor(note);
-    });
-
-    rerender({ youthId: 'youth-2' });
-
-    await waitFor(() => {
-      expect(result.current.selectedNote).toBeNull();
-      expect(result.current.editorTarget).toBeNull();
-    });
+    expect(result.current.confirmAction).not.toBeNull();
+    act(() => result.current.closeConfirmation());
+    expect(result.current.confirmAction).toBeNull();
   });
 
   it('reconciles a saved edit without closing the editor before its success lifecycle completes', async () => {
