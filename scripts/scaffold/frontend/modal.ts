@@ -37,11 +37,19 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
      * @example <${name} isOpen onClose={closeModal} />
      */
     export default function ${name}({ isOpen, onClose }: ${name}Props) {
+      return isOpen ? <${name}Form onClose={onClose} /> : null;
+    }
+
+    /**
+     * Owns one mounted ${name} draft until close or successful save completion.
+     * @example <${name}Form onClose={closeModal} />
+     */
+    function ${name}Form({ onClose }: Pick<${name}Props, 'onClose'>) {
       const workflow = ${hookName}();
 
       return (
         <Modal
-          isOpen={isOpen}
+          isOpen
           title="${name.replace(/Modal$/, '')}"
           status={workflow.submitStatus}
           statusMessage={workflow.statusMessage}
@@ -62,10 +70,13 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
      * @example ${hookName}() // { submitStatus: 'idle', statusMessage: undefined }
      */
     export default function ${hookName}() {
-      // TODO: Own initialization, draft state, validation, submission, and recovery here.
+      // TODO: Initialize once from the supplied edit record or add defaults.
+      // This form mounts while open; close/save completion unmounts its draft and feedback.
+      // Keep validation, submission, and recovery with this mounted instance.
       // Represent mutually exclusive add/edit targets with a discriminated state plus null for closed.
       // Apply entry-context defaults/locks; align optional/derived fields with API validation.
-      // Query only missing data while its context exists; forward inputs and cancellation.
+      // Load only selector choices not already supplied; forward inputs and cancellation.
+      // Do not fetch an already-loaded edit record again to initialize the draft.
       // Block same-tick duplicate submit and all dismissal paths while locked.
       // Return authoritative saved records; the owning page action reconciles its views.
       // Use FormField/FormFieldGroup and ModalFormFooter; inherit Modal's success delay.
@@ -94,7 +105,7 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     import { describe, it } from 'vitest';
 
     describe('${hookName}', () => {
-      it.todo('initializes and resets add/edit drafts with contextual locks');
+      it.todo('initializes supplied edit data or add defaults with contextual locks');
       it.todo('validates and submits the exact command with same-tick locking');
       it.todo('orders authoritative success, retry, failure recovery, and cleanup');
     });

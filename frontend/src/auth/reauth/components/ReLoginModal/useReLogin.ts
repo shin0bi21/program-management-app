@@ -10,6 +10,11 @@ interface UseReLoginOptions {
   onReAuthenticated: () => void;
 }
 
+/**
+ * Owns the credentials and verification step for one mounted login interaction.
+ * @param options.onReAuthenticated - Releases waiting requests and unmounts the form after login.
+ * @example useReLogin({ onReAuthenticated: complete }) // starts with an empty password
+ */
 export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
   const [step, setStep] = useState<ReLoginStep>('password');
   const [userId, setUserId] = useState('');
@@ -22,20 +27,18 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
   const storedUser = getUser();
   const email = storedUser?.email ?? '';
 
-  const reset = () => {
-    setStep('password');
-    setUserId('');
-    setPassword('');
-    setCode('');
-    setError('');
-  };
-
+  /**
+   * Stores the new credentials and completes the mounted interaction.
+   * @param token - Fresh access token returned by authentication.
+   * @param user - Authenticated account returned with the token.
+   * @example complete(token, user) // resumes requests waiting for login
+   */
   const complete = (token: string, user: NonNullable<typeof storedUser>) => {
     setAuthData(token, user);
-    reset();
     onReAuthenticated();
   };
 
+  /** Checks the password and opens verification when required. @example await submitPassword() */
   const submitPassword = async () => {
     setError('');
     setSubmitting(true);
@@ -55,6 +58,7 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
     }
   };
 
+  /** Verifies the code and completes login. @example await submitVerification() */
   const submitVerification = async () => {
     setError('');
     setSubmitting(true);
@@ -75,6 +79,7 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
     }
   };
 
+  /** Requests another code for the active verification step. @example await resendVerification() */
   const resendVerification = async () => {
     if (resending || !userId) return;
 

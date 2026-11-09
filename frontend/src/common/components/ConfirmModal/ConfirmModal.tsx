@@ -15,16 +15,25 @@ interface ConfirmModalProps {
  * @example <ConfirmModal action={{ title: 'Delete task', message: 'Delete this task?', onConfirm: deleteTask }} onClose={clearAction} />
  */
 export default function ConfirmModal({ action, onClose }: ConfirmModalProps) {
+  return action ? <Confirmation action={action} onClose={onClose} /> : null;
+}
+
+/**
+ * Owns feedback and submission for one mounted confirmation.
+ * @param props - Active action and the callback that clears it to unmount this interaction.
+ * @example <Confirmation action={deleteAction} onClose={clearAction} />
+ */
+function Confirmation({ action, onClose }: { action: ConfirmAction; onClose: () => void }) {
   const confirmation = useConfirmModal({ action, onClose });
 
   return <Modal
-    isOpen={action !== null}
+    isOpen
     onClose={onClose}
-    title={action?.title ?? ''}
+    title={action.title}
     status={confirmation.status}
     statusMessage={confirmation.statusMessage}
     footer={confirmation.footer}
   >
-    {action && <p>{action.message}</p>}
+    <p>{action.message}</p>
   </Modal>;
 }
