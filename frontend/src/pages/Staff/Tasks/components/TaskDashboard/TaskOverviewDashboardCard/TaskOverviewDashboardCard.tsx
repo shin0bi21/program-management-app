@@ -54,7 +54,8 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
 }) {
   const [openResourceId, setOpenResourceId] = useState<string | null>(null);
 
-  useEffect(() => setOpenResourceId(null), [resourceId]);
+  const unavailable = loading || Boolean(error);
+  useEffect(() => setOpenResourceId(null), [resourceId, unavailable]);
 
   const overview = useMemo(() => groupTasksForOverview(tasks, today), [tasks, today]);
   const summary = {
@@ -80,13 +81,13 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
         size="sm"
         variant="secondary"
         aria-haspopup="dialog"
-        disabled={loading || Boolean(error)}
+        disabled={unavailable}
         onClick={() => setOpenResourceId(resourceId)}
       >See Breakdown</Button>}
     >
       {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
     </DashboardCard>
-    <Modal isOpen={openResourceId === resourceId && !loading && !error} onClose={() => setOpenResourceId(null)} title={resourceName} maxWidth="560px">
+    <Modal isOpen={openResourceId === resourceId && !unavailable} onClose={() => setOpenResourceId(null)} title={resourceName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
         <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>

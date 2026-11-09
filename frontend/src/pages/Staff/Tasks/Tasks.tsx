@@ -227,6 +227,7 @@ export default function Tasks() {
     />
 
     {canWrite && taskModalState && <TaskModal
+      key={taskModalState.mode === 'edit' ? taskModalState.task.id : 'new'}
       target={taskModalState}
       resources={pageData.writableResources}
       programs={pageData.programs}
