@@ -5,7 +5,7 @@ import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
-import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
+import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember, type SessionListFilters } from './types';
 import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
@@ -90,7 +90,7 @@ export default function Sessions() {
   };
 
   // Attendance modal.
-  const [attendanceTarget, setAttendanceTarget] = useState<ProgramSession | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<{ session: ProgramSession; roster: SessionRosterMember[] } | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
   // Session editor with saved data or optional calendar context.
@@ -118,7 +118,7 @@ export default function Sessions() {
     {canReadAttendance && <SessionAttendanceDashboardCard
       session={selectedSession}
       canWrite={canWriteAttendance}
-      onManage={setAttendanceTarget}
+      onManage={(session, roster) => setAttendanceTarget({ session, roster })}
     />}
     <SessionNotesDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
     <SessionAttachmentsDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
@@ -199,7 +199,8 @@ export default function Sessions() {
       />
 
       <SessionAttendanceModal
-        session={attendanceTarget}
+        session={attendanceTarget?.session ?? null}
+        roster={attendanceTarget?.roster ?? []}
         onClose={closeSessionAttendanceModal}
         onSaved={actions.syncAttendance}
       />

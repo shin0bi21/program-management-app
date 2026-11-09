@@ -122,6 +122,8 @@ describe('YouthAttendanceModal', () => {
     expect(screen.queryByRole('group', { name: 'Link youth' })).not.toBeInTheDocument();
     expect(sessionNoteApi.getSessionRoster).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Good teamwork' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'General' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(sessionNoteApi.createSessionNote).toHaveBeenCalledWith(

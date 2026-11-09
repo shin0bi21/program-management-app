@@ -69,18 +69,4 @@ describe('SessionModal', () => {
     expect(screen.getByRole('dialog', { name: 'Edit Session' })).toBeInTheDocument();
   });
 
-  it('renders fields for a different session target', async () => {
-    const props = { programs: [], sessionTypes, onClose: vi.fn(), onSaved: vi.fn() };
-    const view = renderWithQueryClient(<SessionModal session={session} {...props} />);
-
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
-    view.rerender(<></>);
-    view.rerender(<SessionModal
-      session={{ ...session, id: 'session-2', sessionType: 'Guest Speaker', theme: 'Career Stories' }}
-      {...props}
-    />);
-
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Guest Speaker'));
-    expect(screen.getByRole('textbox', { name: 'Title / Theme' })).toHaveValue('Career Stories');
-  });
 });

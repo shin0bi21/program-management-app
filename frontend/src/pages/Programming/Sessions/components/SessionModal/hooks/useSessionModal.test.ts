@@ -20,12 +20,13 @@ describe('single session creation', () => {
 
   it('uses program times and preserves a supplied calendar date when changing programs', async () => {
     const onSaved = vi.fn();
-    const { result } = renderHook(() => useSessionModal({ programs, initialDate: '2026-11-04', onSaved }));
+    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', initialDate: '2026-11-04', onSaved }));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '17:30', endTime: '19:30' });
     act(() => result.current.selectProgram('p2'));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '16:00', endTime: '18:00' });
     act(() => {
       result.current.updateDraft('theme', ' Music ');
+      result.current.updateDraft('sessionType', 'Regular');
       result.current.updateDraft('description', ' Practice session ');
     });
     await act(() => result.current.submit());
@@ -45,8 +46,8 @@ describe('single session creation', () => {
 
   it('shows cycle resolution errors from the server without retrying another assignment', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('No assigned cycle covers this session date.'));
-    const { result } = renderHook(() => useSessionModal({ programs, onSaved: vi.fn() }));
-    act(() => result.current.updateDraft('theme', 'Art'));
+    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved: vi.fn() }));
+    act(() => { result.current.updateDraft('theme', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     expect(result.current.message).toContain('No assigned cycle');
@@ -56,8 +57,8 @@ describe('single session creation', () => {
   it('locks duplicate submissions, retains success if refresh fails, and permits retry after API failure', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce(makeProgramSession());
     const onSaved = vi.fn().mockRejectedValue(new Error('Refresh failed'));
-    const { result } = renderHook(() => useSessionModal({ programs, onSaved }));
-    act(() => result.current.updateDraft('theme', 'Art'));
+    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved }));
+    act(() => { result.current.updateDraft('theme', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     await act(async () => { await Promise.all([result.current.submit(), result.current.submit()]); });

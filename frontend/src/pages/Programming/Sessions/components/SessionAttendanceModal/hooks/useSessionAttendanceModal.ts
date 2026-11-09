@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -13,76 +13,47 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import type { AttendanceStatus } from '../../../../../../common/features/AttendanceStatusSelect/types';
 import type { ProgramSession, SessionRosterMember } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
-import useSessionRoster from '../../../hooks/data/useSessionRoster';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 
 interface UseSessionAttendanceModalOptions {
-  session: ProgramSession | null;
+  session: ProgramSession;
+  roster: SessionRosterMember[];
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }
 
 /**
- * Edits attendance for one session, with a fresh draft when the session changes.
- * Open sessions check youth in as present; enrolled sessions edit each roster member's status.
- * Initial roster loading/failure and open-session youth loading/failure block editing and saving.
- * Open-session saves replace attendance with checked youth and preserve their saved notes.
- * @param options.session - Session whose attendance is being edited; null disables roster loading.
- * Keep the target unchanged while submitting; a target change resets the draft but does not cancel a write.
- * @param options.onSaved - Receives saved attendance before success is shown; a callback failure
- * reports that the save succeeded but page refresh failed.
- * @returns Draft values, request feedback, editing guards, and actions for the modal.
- * @example Checking one new youth enables Save without modifying the loaded roster or youth records.
+ * Edits attendance supplied by the opening dashboard for one mounted session form.
+ * Open sessions check youth in as present; enrolled sessions edit roster statuses.
+ * @param options.session - Saved session whose attendance is being edited.
+ * @param options.roster - Already-loaded attendance supplied when the form opens.
+ * @param options.onSaved - Reconciles saved attendance before success feedback appears.
+ * @example Checking a new youth enables Save without changing supplied attendance.
  */
 export default function useSessionAttendanceModal({
   session,
+  roster,
   onSaved,
 }: UseSessionAttendanceModalOptions) {
-  const draftDirtyRef = useRef(false);
   const { tryLock, unlock } = useSubmitLock();
-  const sessionId = session?.id;
-
-  const [roster, setRoster] = useState<SessionRosterMember[]>([]);
-  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>([]);
-  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>({});
+  const [selectedYouthIds, setSelectedYouthIds] = useState(() => roster.map(member => member.youthId));
+  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
+    roster.map(member => [member.youthId, member.status ?? '']),
+  ));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
-  const isOpenRoster = session !== null && !session.enrollmentRequired;
+  const isOpenRoster = !session.enrollmentRequired;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
-
-  // A different session starts a fresh attendance draft and submission lifecycle.
-  useEffect(() => {
-    draftDirtyRef.current = false;
-    unlock();
-    setRoster([]);
-    setSelectedYouthIds([]);
-    setSelections({});
-    setSubmitStatus('idle');
-    setStatusMessage('');
-  }, [sessionId, unlock]);
-
-  const rosterQuery = useSessionRoster(sessionId);
-
-  useEffect(() => {
-    if (!rosterQuery.data || draftDirtyRef.current) return;
-
-    setRoster(rosterQuery.data);
-    setSelectedYouthIds(rosterQuery.data.map(member => member.youthId));
-    setSelections(Object.fromEntries(
-      rosterQuery.data.map(member => [member.youthId, member.status ?? '']),
-    ));
-  }, [rosterQuery.data, sessionId]);
 
   const youthQuery = useQuery<AttendanceYouth[]>({
     queryKey: [...SESSION_QUERY_KEY, 'attendance-youth'],
     queryFn: ({ signal }) => getAttendanceYouth({ signal }),
     enabled: isOpenRoster,
   });
-  const rosterUnavailable = Boolean(rosterQuery.error && !rosterQuery.data);
   const youthUnavailable = isOpenRoster && Boolean(youthQuery.error);
-  const attendanceLoading = rosterQuery.isLoading || (isOpenRoster && youthQuery.isLoading);
-  const attendanceUnavailable = rosterUnavailable || youthUnavailable;
+  const attendanceLoading = isOpenRoster && youthQuery.isLoading;
+  const attendanceUnavailable = youthUnavailable;
   const controlsDisabled = submissionComplete || attendanceLoading || attendanceUnavailable;
 
   const youth = [...(youthQuery.data ?? [])];
@@ -112,7 +83,6 @@ export default function useSessionAttendanceModal({
 
     if (!youth.some(profile => profile.id === youthId)) return;
 
-    draftDirtyRef.current = true;
     setSelectedYouthIds(current => current.includes(youthId)
       ? current.filter(id => id !== youthId)
       : [...current, youthId]);
@@ -127,7 +97,6 @@ export default function useSessionAttendanceModal({
   const updateAttendanceStatus = (youthId: string, status: AttendanceStatus | '') => {
     if (controlsDisabled) return;
 
-    draftDirtyRef.current = true;
     setSelections(current => ({ ...current, [youthId]: status }));
   };
 
@@ -138,7 +107,7 @@ export default function useSessionAttendanceModal({
    * @example An unchecked open roster saves [] only when it differs from saved attendance.
    */
   const submit = async () => {
-    if (!session || submitDisabled || !tryLock()) return;
+    if (submitDisabled || !tryLock()) return;
 
     const sessionName = session.theme || `${session.program} session`;
     const attendance: SessionAttendanceRecord[] = [];
@@ -198,10 +167,6 @@ export default function useSessionAttendanceModal({
     controlsDisabled,
     submitDisabled,
     youthUnavailable,
-    rosterError: rosterQuery.error
-      ? getErrorMessage(rosterQuery.error, 'Could not load session roster')
-      : null,
-    rosterUnavailable,
     youthError: isOpenRoster && youthQuery.error
       ? getErrorMessage(youthQuery.error, 'Could not load youth profiles')
       : null,

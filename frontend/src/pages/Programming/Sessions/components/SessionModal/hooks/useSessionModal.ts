@@ -4,7 +4,7 @@ import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { createSession, updateSession, type CreatedSessionResult, type UpdatedSessionResult } from '../../../sessions.api';
-import { DEFAULT_SESSION_TYPE, type ProgramSession } from '../../../types';
+import { type ProgramSession } from '../../../types';
 import { nextSessionDate, sessionDateTime, sessionInstant } from '../../../utils/sessionSchedule';
 
 /**
@@ -19,14 +19,14 @@ export default function useSessionModal({ programs, session, initialProgramId, i
   initialDate?: string;
   onSaved: (result: CreatedSessionResult | UpdatedSessionResult) => void | Promise<void>;
 }) {
-  const [programId, setProgramId] = useState(session?.programId ?? initialProgramId ?? programs[0]?.id ?? '');
+  const [programId, setProgramId] = useState(session?.programId ?? initialProgramId ?? '');
   const program = programs.find(candidate => candidate.id === programId);
   const timezone = program?.timezone ?? 'America/Toronto';
   const [draft, setDraft] = useState(() => {
     const startsAt = session ? sessionDateTime(session.startsAt, timezone) : null;
     const endsAt = session ? sessionDateTime(session.endsAt, timezone) : null;
     return {
-      sessionType: session?.sessionType ?? DEFAULT_SESSION_TYPE,
+      sessionType: session?.sessionType ?? '',
       theme: session?.theme ?? '',
       date: startsAt?.date ?? initialDate ?? (program ? nextSessionDate(program) : ''),
       startTime: startsAt?.time ?? program?.defaultStartTime ?? '',

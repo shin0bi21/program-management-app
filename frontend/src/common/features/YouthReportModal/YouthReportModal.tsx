@@ -29,7 +29,6 @@ export default function YouthReportModal({ programCycle, youthId, onClose }: You
     .trim();
 
   const viewFileModal = useViewFileModal({
-    isOpen: true,
     requestKey: `${programCycle.programId}:${programCycle.cycleId}:${youthId ?? 'all'}`,
     title: `${programCycle.cycle} Youth Report`,
     maxWidth: '1100px',

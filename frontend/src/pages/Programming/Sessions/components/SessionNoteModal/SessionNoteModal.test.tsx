@@ -93,6 +93,8 @@ describe('SessionNoteModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), {
       target: { value: 'Pending note' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Category' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'General' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledOnce());
 
