@@ -3,10 +3,7 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursTableQuery } from '../../../validation/hoursSchemas';
 import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
 import { buildHoursFilters } from './hoursRowFilters';
-import {
-  getHoursRows,
-  toHoursItem,
-} from './hoursRowQuery';
+import { getHoursRows, toHoursItem } from './hoursRowQuery';
 
 /**
  * Lists matching hours entries.
@@ -25,7 +22,7 @@ export async function getHoursList(actor: AccessTokenPayload, filterValues: Hour
   `;
   const rowsQuery = getHoursRows(actor, appliedFilters);
 
-  // 2. Keep numeric hours order encoded as text for existing cursor compatibility.
+  // 2. Sort matching entries by the selected field.
   const sortValue = {
     firstName: sql`LOWER("row".first_name)`,
     lastName: sql`LOWER("row".last_name)`,
@@ -33,10 +30,11 @@ export async function getHoursList(actor: AccessTokenPayload, filterValues: Hour
     program: sql`LOWER(COALESCE("row".program, ''))`,
     cycle: sql`LOWER("row".cycle)`,
     category: sql`"row".category::text`,
-    hours: sql`TO_CHAR("row".hours::numeric, 'FM0000000000.0000')`,
+    hours: sql`"row".hours::numeric`,
     note: sql`LOWER("row".note)`,
     type: sql`"row".type`,
   }[filterValues.sort]!;
+
   const page = await paginateQuery(rowsQuery, {
     sortValue,
     direction: filterValues.direction,

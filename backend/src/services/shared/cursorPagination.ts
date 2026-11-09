@@ -7,12 +7,12 @@ export const BATCH_SIZE = 50;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ListCursor {
-  value: string;
+  value: string | number;
   id: string;
 }
 
 interface QueryPagination {
-  /** Trusted, non-null SQL text expression against the query's `row` alias. */
+  /** Trusted, non-null SQL text or finite numeric expression against the query's `row` alias. */
   sortValue: PendingQuery<Row[]>;
   direction: 'asc' | 'desc';
   cursor?: string;
@@ -29,6 +29,8 @@ interface QueryPage<T> {
  * Executes an already scoped and filtered query with consistent cursor pagination.
  * Rows must have UUID IDs; sort expressions reference the `row` alias. Nullable
  * sort values must be normalized by the caller, and `cursor_value` is reserved.
+ * Cursor values retain the driver's strings or finite numbers without conversion;
+ * exact decimals outside JavaScript precision must remain strings.
  * @param rowsQuery - Unexecuted canonical rows with domain access and filters already applied.
  * @param pagination - Trusted sort expression, direction, optional cursor, and validated limit.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
@@ -52,7 +54,7 @@ export async function paginateQuery<T extends { id: string }>(
   }
 
   // 2. Fetch one extra row to determine whether another page exists.
-  const rows = await query<Array<T & { cursorValue: string }>>`
+  const rows = await query<Array<T & { cursorValue: ListCursor['value'] }>>`
     SELECT "row".*, ${sortValue} AS cursor_value
     FROM (${rowsQuery}) "row"
     WHERE ${cursorFilter}
@@ -66,7 +68,7 @@ export async function paginateQuery<T extends { id: string }>(
 
 /**
  * Encodes a sort value and UUID tie-breaker for the next page.
- * @param cursor - Boundary of the last visible row.
+ * @param cursor - Last visible row's text or finite numeric sort value and UUID.
  * @example encodeCursor({ value: 'alpha', id }) // base64url JSON cursor
  */
 export function encodeCursor(cursor: ListCursor) {
@@ -90,7 +92,9 @@ export function decodeCursor(cursor?: string): ListCursor | null {
     }
 
     const { value, id } = parsed as Partial<ListCursor>;
-    if (typeof value !== 'string') {
+    const isText = typeof value === 'string';
+    const isFiniteNumber = typeof value === 'number' && Number.isFinite(value);
+    if (!isText && !isFiniteNumber) {
       throw new Error('Invalid cursor');
     }
 
@@ -114,7 +118,7 @@ export function decodeCursor(cursor?: string): ListCursor | null {
  * @param limit - Validated positive page size.
  * @example cursorPage([], 50) // { rows: [], nextCursor: null }
  */
-export function cursorPage<T extends { id: string; cursorValue: string }>(rows: T[], limit: number) {
+export function cursorPage<T extends { id: string; cursorValue: ListCursor['value'] }>(rows: T[], limit: number) {
   const hasMore = rows.length > limit;
   const visible = hasMore ? rows.slice(0, limit) : rows;
   const pageRows = visible.map(({ cursorValue: _cursorValue, ...row }) => row);
