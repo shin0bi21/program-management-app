@@ -16,7 +16,10 @@ export const cycleState = sql`
   END
 `;
 export const cycleRowColumns = sql`
-  cycle.id, cycle.name, cycle.starts_on::text AS starts_on, cycle.ends_on::text AS ends_on,
+  cycle.id,
+  cycle.name,
+  cycle.starts_on::text AS starts_on,
+  cycle.ends_on::text AS ends_on,
   ${cycleState} AS state
 `;
 
@@ -32,16 +35,4 @@ export function getCycleRows(appliedFilters = sql`TRUE`, query = sql) {
     FROM program_cycles cycle
     WHERE ${appliedFilters}
   `;
-}
-
-/**
- * Loads one cycle with its current state.
- * @param id - Cycle to load.
- * @param query - Defaults to the shared client; pass trx for a transaction.
- * @example getCycleRow(cycleId, trx) // saved cycle, or undefined
- */
-export async function getCycleRow(id: string, query = sql) {
-  // 1. Load the cycle.
-  const [cycle] = await getCycleRows(query`cycle.id = ${id}`, query);
-  return cycle;
 }

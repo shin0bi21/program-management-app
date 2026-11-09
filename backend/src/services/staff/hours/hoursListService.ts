@@ -3,10 +3,7 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursTableQuery } from '../../../validation/hoursSchemas';
 import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
 import { buildHoursFilters } from './hoursRowFilters';
-import {
-  getHoursRows,
-  toHoursItem,
-} from './hoursRowQuery';
+import { getHoursRows } from './hoursRowQuery';
 
 /**
  * Lists matching hours entries.
@@ -15,7 +12,7 @@ import {
  * @returns A bounded page with numeric hours and canonical entry details.
  * @example getHoursList(actor, filterValues) // { rows, nextCursor }
  */
-export async function getHoursList(actor: AccessTokenPayload, filterValues: HoursTableQuery) {
+export function getHoursList(actor: AccessTokenPayload, filterValues: HoursTableQuery) {
   // 1. Filter canonical hours rows by the selected values and inclusive dates.
   const appliedFilters = sql`
     ${buildHoursFilters(filterValues)}
@@ -25,7 +22,7 @@ export async function getHoursList(actor: AccessTokenPayload, filterValues: Hour
   `;
   const rowsQuery = getHoursRows(actor, appliedFilters);
 
-  // 2. Keep numeric hours order encoded as text for existing cursor compatibility.
+  // 2. Sort and paginate the complete rows using the selected field.
   const sortValue = {
     firstName: sql`LOWER("row".first_name)`,
     lastName: sql`LOWER("row".last_name)`,
@@ -33,17 +30,15 @@ export async function getHoursList(actor: AccessTokenPayload, filterValues: Hour
     program: sql`LOWER(COALESCE("row".program, ''))`,
     cycle: sql`LOWER("row".cycle)`,
     category: sql`"row".category::text`,
-    hours: sql`TO_CHAR("row".hours::numeric, 'FM0000000000.0000')`,
+    hours: sql`"row".hours`,
     note: sql`LOWER("row".note)`,
     type: sql`"row".type`,
   }[filterValues.sort]!;
-  const page = await paginateQuery(rowsQuery, {
+
+  return paginateQuery(rowsQuery, {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
     limit: filterValues.limit ?? BATCH_SIZE,
   });
-
-  // 3. Shape visible entries without changing the SQL-derived continuation cursor.
-  return { ...page, rows: page.rows.map(toHoursItem) };
 }

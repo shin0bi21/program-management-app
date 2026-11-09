@@ -1,31 +1,40 @@
 import { sql } from '../../../db/client';
 import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
-import { getHoursCategoryLabel } from './hoursReferenceData';
+import { HOURS_CATEGORY_OPTIONS } from './hoursReferenceData';
 import type { HoursCategory } from '../../../validation/hoursSchemas';
 
 export interface HoursRow {
   id: string;
   staffId: string;
+  programId: string | null;
+  category: HoursCategory;
+  date: string;
+  hours: number;
+  note: string;
+  taskId: string | null;
+  sessionId: string | null;
+
   firstName: string;
   lastName: string;
-  name: string;
-  programId: string | null;
+
   program: string | null;
+
   cycleId: string;
   cycle: string;
   cycleStartsOn: string;
   cycleEndsOn: string;
-  category: HoursCategory;
-  taskId: string | null;
+
   taskTitle: string | null;
-  sessionId: string | null;
+
   sessionLabel: string | null;
-  date: string;
-  hours: string;
-  note: string;
+
+  name: string;
+  categoryLabel: string;
   type: 'task' | 'session' | 'regular';
 }
+
+const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
 
 /** Searchable hours values shared by calendar and table collection reads. */
 export const hoursSearchValue = sql`CONCAT_WS(' ',
@@ -45,30 +54,39 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
  * @param actor - Actor whose resource scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
+ * @returns Complete rows with category labels and numeric hours; storage allows more than 0 and at most 24 hours with two decimal places.
  * @example getHoursRows(actor, appliedFilters, trx)
  */
 export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
+  // 1. Build complete hours rows within the actor’s staff scope.
   return query<HoursRow[]>`
     SELECT
       entry.id,
       entry.staff_id,
+      entry.program_id,
+      entry.category,
+      entry.date::text,
+      entry.hours::double precision,
+      entry.note,
+      entry.task_id,
+      entry.session_id,
+
       staff.first_name,
       staff.last_name,
-      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
-      entry.program_id,
+
       program.name AS program,
+
       cycle.id AS cycle_id,
       cycle.name AS cycle,
       cycle.starts_on::text AS cycle_starts_on,
       cycle.ends_on::text AS cycle_ends_on,
-      entry.category,
-      entry.task_id,
+
       task.title AS task_title,
-      entry.session_id,
+
       session.theme AS session_label,
-      entry.date::text,
-      entry.hours::text,
-      entry.note,
+
+      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
+      ${query.json(categoryLabels)}::jsonb ->> entry.category AS category_label,
       CASE
         WHEN entry.task_id IS NOT NULL THEN 'task'
         WHEN entry.session_id IS NOT NULL THEN 'session'
@@ -83,29 +101,4 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
     WHERE ${hoursReadScopePredicate(actor, query`entry.staff_id`)}
       AND (${appliedFilters})
   `;
-}
-
-/**
- * Shapes an hours row for all entry views.
- * @param row - Loaded hours row.
- * @example toHoursItem(row) // complete entry with numeric hours
- */
-export function toHoursItem(row: HoursRow) {
-  return {
-    ...row,
-    categoryLabel: getHoursCategoryLabel(row.category),
-    hours: Number(row.hours),
-  };
-}
-
-/**
- * Loads one hours row within the actor's resource scope.
- * @param actor - Actor whose resource scope is always enforced.
- * @param id - Hours entry to load.
- * @param query - Database client; pass trx inside a transaction.
- * @example getHoursRow(actor, id, trx)
- */
-export async function getHoursRow(actor: AccessTokenPayload, id: string, query = sql) {
-  const [row] = await getHoursRows(actor, query`entry.id = ${id}`, query);
-  return row;
 }

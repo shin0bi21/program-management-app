@@ -7,16 +7,18 @@ const secondId = '00000000-0000-4000-8000-000000000002';
 const thirdId = '00000000-0000-4000-8000-000000000003';
 
 describe('shared cursor pagination', () => {
-  it('encodes and decodes a cursor', () => {
-    const cursor = { value: 'alpha', id: firstId };
+  it('encodes and decodes text and numeric cursors', () => {
+    for (const value of ['alpha', 2.5]) {
+      const cursor = { value, id: firstId };
 
-    expect(decodeCursor(encodeCursor(cursor))).toEqual(cursor);
+      expect(decodeCursor(encodeCursor(cursor))).toEqual(cursor);
+    }
     expect(decodeCursor()).toBeNull();
   });
 
   it.each([
     'not-json',
-    Buffer.from(JSON.stringify({ value: 1, id: firstId })).toString('base64url'),
+    Buffer.from(`{"value":1e400,"id":"${firstId}"}`).toString('base64url'),
     Buffer.from(JSON.stringify({ value: 'alpha', id: 'invalid' })).toString('base64url'),
   ])('rejects an invalid cursor', cursor => {
     expect(() => decodeCursor(cursor)).toThrow(BadRequestError);
@@ -39,9 +41,15 @@ describe('shared cursor pagination', () => {
     expect(cursorPage([], 1)).toEqual({ rows: [], nextCursor: null });
   });
 
-  it.each(['asc', 'desc'] as const)('pages filtered SQL rows in %s order without losing tied values', async direction => {
-    const rowsQuery = paginationRows();
-    const options = { sortValue: sql`"row".name`, direction, limit: 1 };
+  it.each(['asc', 'desc'] as const)('pages numeric SQL rows in %s order without losing tied values', async direction => {
+    const rowsQuery = sql<{ id: string; hours: number }[]>`
+      SELECT * FROM (VALUES
+        (${thirdId}::uuid, 10::double precision),
+        (${secondId}::uuid, 2.5::double precision),
+        (${firstId}::uuid, 2.5::double precision)
+      ) fixture(id, hours)
+    `;
+    const options = { sortValue: sql`"row".hours`, direction, limit: 1 };
     const expectedIds = direction === 'asc' ? [firstId, secondId, thirdId] : [thirdId, secondId, firstId];
     const visibleIds: string[] = [];
     let cursor: string | undefined;
@@ -49,7 +57,7 @@ describe('shared cursor pagination', () => {
     for (const expectedId of expectedIds) {
       const page = await paginateQuery(rowsQuery, { ...options, cursor });
 
-      expect(page.rows).toEqual([{ id: expectedId, name: expectedId === thirdId ? 'beta' : 'alpha' }]);
+      expect(page.rows).toEqual([{ id: expectedId, hours: expectedId === thirdId ? 10 : 2.5 }]);
       visibleIds.push(...page.rows.map(row => row.id));
       cursor = page.nextCursor ?? undefined;
       expect(Boolean(cursor)).toBe(visibleIds.length < expectedIds.length);

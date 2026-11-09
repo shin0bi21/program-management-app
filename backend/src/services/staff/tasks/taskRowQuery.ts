@@ -1,11 +1,11 @@
 import { sql } from '../../../db/client';
-import { canWriteTaskFor, taskReadScopePredicate } from '../../../policies/taskPolicy';
+import { taskReadScopePredicate, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetTaskInput } from '../../../validation/taskSchemas';
 import {
-  getTaskCategoryLabel,
-  getTaskStatus,
-  getTaskStatusLabel,
+  TASK_CATEGORY_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  type TaskStatus,
 } from './taskReferenceData';
 
 export interface TaskRow {
@@ -13,104 +13,96 @@ export interface TaskRow {
   title: string;
   details: string | null;
   category: SetTaskInput['category'];
-  staffId: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  programId: string | null;
-  program: string | null;
   state: 'open' | 'completed' | 'cancelled';
   startDate: string;
   dueDate: string;
-  hoursLogged: number;
+  staffId: string;
+  programId: string | null;
   completedAt: string | null;
+
+  firstName: string;
+  lastName: string;
+
+  program: string | null;
+
+  name: string;
+  categoryLabel: string;
+  status: TaskStatus;
+  statusLabel: string;
+  hoursLogged: number;
+  loggedHoursByDate: Array<{ date: string; hours: number }>;
+  writable: boolean;
 }
 
-interface LoggedHoursRow { taskId: string; date: string; hours: number }
+const categoryLabels = Object.fromEntries(TASK_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
+const statusLabels = Object.fromEntries(TASK_STATUS_OPTIONS.map(option => [option.value, option.label]));
+
+/** Displayed task status shared by the canonical projection, filters, and sorting. */
+export const taskStatus = sql`
+  CASE
+    WHEN task.state <> 'open' THEN task.state
+    WHEN task.start_date > (NOW() AT TIME ZONE 'America/Toronto')::date THEN 'upcoming'
+    WHEN task.due_date < (NOW() AT TIME ZONE 'America/Toronto')::date THEN 'overdue'
+    ELSE 'in_progress'
+  END
+`;
 
 /**
  * Builds canonical task rows within the actor's readable staff scope.
  * @param actor - Actor whose resource scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
+ * @returns Complete rows with labels, numeric totals, date-ordered daily hours, and policy-derived write access.
  * @example getTaskRows(actor, appliedFilters, trx)
  */
 export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
+  // 1. Read complete task records within the actor's staff scope.
   return query<TaskRow[]>`
     SELECT
       task.id,
       task.title,
       task.details,
       task.category,
-      task.staff_id,
-      staff.first_name,
-      staff.last_name,
-      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
-      task.program_id,
-      program.name AS program,
       task.state,
       task.start_date::text,
       task.due_date::text,
+      task.staff_id,
+      task.program_id,
       task.completed_at::text,
+
+      staff.first_name,
+      staff.last_name,
+
+      program.name AS program,
+
+      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
+      ${query.json(categoryLabels)}::jsonb ->> task.category AS category_label,
+      ${taskStatus} AS status,
+      ${query.json(statusLabels)}::jsonb ->> (${taskStatus}) AS status_label,
       (
-        SELECT COALESCE(SUM(entry.hours), 0)::float
+        SELECT COALESCE(SUM(entry.hours), 0)::double precision
         FROM time_entries entry
         WHERE entry.task_id = task.id
-      ) AS hours_logged
+      ) AS hours_logged,
+      (
+        SELECT COALESCE(json_agg(
+          json_build_object('date', daily.date::text, 'hours', daily.hours)
+          ORDER BY daily.date
+        ), '[]'::json)
+        FROM (
+          SELECT
+            entry.date,
+            SUM(entry.hours)::double precision AS hours
+          FROM time_entries entry
+          WHERE entry.task_id = task.id
+          GROUP BY entry.date
+        ) daily
+      ) AS logged_hours_by_date,
+      ${taskWriteScopePredicate(actor, query`task.staff_id`)} AS writable
     FROM tasks task
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
     WHERE ${taskReadScopePredicate(actor, query`task.staff_id`)}
       AND (${appliedFilters})
   `;
-}
-
-/**
- * Loads daily logged hours for the selected tasks.
- * @param taskIds - Tasks to load.
- * @param query - Database client; pass trx inside a transaction.
- * @example loadTaskLoggedHours([taskId])
- */
-export async function loadTaskLoggedHours(taskIds: string[], query: typeof sql = sql) {
-  if (!taskIds.length) return [];
-  return query<LoggedHoursRow[]>`
-    SELECT task_id, date::text, SUM(hours)::float AS hours
-    FROM time_entries
-    WHERE task_id IN ${query(taskIds)}
-    GROUP BY task_id, date
-    ORDER BY date, task_id
-  `;
-}
-
-/**
- * Adds logged hours, labels, and access to task rows.
- * @param rows - Task rows to shape.
- * @param loggedHours - Daily totals for those tasks.
- * @param actor - User viewing the tasks.
- * @example attachTaskDetails(rows, loggedHours, actor)
- */
-export function attachTaskDetails<TRow extends TaskRow>(
-  rows: TRow[],
-  loggedHours: LoggedHoursRow[],
-  actor: AccessTokenPayload,
-) {
-  const loggedHoursByTask = new Map<string, Array<{ date: string; hours: number }>>();
-  loggedHours.forEach(entry => {
-    const taskHours = loggedHoursByTask.get(entry.taskId);
-    const dailyHours = { date: entry.date, hours: entry.hours };
-    if (taskHours) taskHours.push(dailyHours);
-    else loggedHoursByTask.set(entry.taskId, [dailyHours]);
-  });
-
-  return rows.map(row => {
-    const status = getTaskStatus(row);
-    return {
-      ...row,
-      categoryLabel: getTaskCategoryLabel(row.category),
-      status,
-      statusLabel: getTaskStatusLabel(status),
-      loggedHoursByDate: loggedHoursByTask.get(row.id) ?? [],
-      writable: canWriteTaskFor(actor, row.staffId),
-    };
-  });
 }
