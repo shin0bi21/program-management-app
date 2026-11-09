@@ -17,25 +17,42 @@ interface AccountModalProps {
   account?: User;
 }
 
-export default function AccountModal(props: AccountModalProps) {
-  const { account } = props;
+/**
+ * Mounts a fresh staff-account editor for each open target.
+ * @param props - Visibility, supplied account values, and completion actions.
+ * @example <AccountModal isOpen account={account} onClose={close} onSuccess={sync} />
+ */
+export default function AccountModal({ isOpen, ...props }: AccountModalProps) {
+  return isOpen ? <AccountForm key={props.account?.id ?? 'new'} {...props} /> : null;
+}
+
+/**
+ * Owns staff-account fields and selector choices until close or save completion.
+ * @param props - Optional saved non-youth account and close/save actions.
+ * @example <AccountForm onClose={close} onSuccess={sync} />
+ */
+function AccountForm({ account, onClose, onSuccess }: Omit<AccountModalProps, 'isOpen'>) {
   const { rows: programs, loading: programsLoading } = useProgramReferences();
-  const { register, control, errors, onSubmit, submitStatus, error, handleClose } = useAccountModal(props);
+  const { register, control, errors, onSubmit, submitStatus, error } = useAccountModal({ account, onSuccess });
   const isEdit = account !== undefined;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
+  let statusMessage: string | undefined;
+  if (submitStatus === 'submitting') {
+    statusMessage = isEdit ? 'Updating account...' : 'Sending invitation...';
+  } else if (submitStatus === 'success') {
+    statusMessage = isEdit ? 'Account updated!' : 'Invitation sent!';
+  } else if (submitStatus === 'error') {
+    statusMessage = error;
+  }
 
   return (
     <Modal
-      isOpen={props.isOpen}
-      onClose={handleClose}
+      isOpen
+      onClose={onClose}
       title={isEdit ? 'Edit Account' : 'Invite Staff Account'}
       status={submitStatus}
-      statusMessage={
-        submitStatus === 'submitting' ? (isEdit ? 'Updating account...' : 'Sending invitation...') :
-        submitStatus === 'success' ? (isEdit ? 'Account updated!' : 'Invitation sent!') :
-        submitStatus === 'error' ? error : undefined
-      }
-      footer={<ModalFormFooter formId="account-form" submitStatus={submitStatus} onClose={handleClose} />}
+      statusMessage={statusMessage}
+      footer={<ModalFormFooter formId="account-form" submitStatus={submitStatus} onClose={onClose} />}
     >
       <form id="account-form" onSubmit={onSubmit}>
         <div className="form-row">
@@ -58,7 +75,7 @@ export default function AccountModal(props: AccountModalProps) {
                 <FloatingSelect
                   id="role"
                   ariaLabel="Role"
-                  value={field.value}
+                  value={field.value ?? ''}
                   options={[
                     { value: 'staff', label: 'Staff' },
                     { value: 'project_manager', label: 'Project Manager' },

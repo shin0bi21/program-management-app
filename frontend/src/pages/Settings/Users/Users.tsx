@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
@@ -19,6 +19,10 @@ import './Users.css';
 
 const ACCOUNTS_TABLE_QUERY_KEY = ['accounts', 'table'] as const;
 
+/**
+ * Composes account controls, permitted invitation actions, and mounted editors.
+ * @example <Users /> // account records and invitation workflows
+ */
 export default function Users() {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
@@ -62,7 +66,25 @@ export default function Users() {
     onToggleStatus: modals.confirmation.requestStatusToggle,
   });
 
-  // Render.
+  const canManageStaff = isAdmin && canWrite;
+  const isAccountModalOpen = canManageStaff && modals.account.target !== null;
+  const accountTarget = modals.account.target;
+  const editedAccount = accountTarget && accountTarget !== 'new' ? accountTarget : undefined;
+  let addAction: ReactNode = null;
+  if (canManageStaff && canInviteYouth) {
+    addAction = <ActionsMenu
+      triggerLabel="+ Add"
+      items={[
+        { id: 'invite-staff', label: 'Invite Staff', onClick: modals.account.openNew },
+        { id: 'invite-youth', label: 'Invite Youth', onClick: modals.youthInvite.show },
+      ]}
+    />;
+  } else if (canInviteYouth) {
+    addAction = <Button onClick={modals.youthInvite.show}>+ Add</Button>;
+  } else if (canManageStaff) {
+    addAction = <Button onClick={modals.account.openNew}>+ Add</Button>;
+  }
+
   return (
     <>
       <PageContainer
@@ -71,23 +93,7 @@ export default function Users() {
         ariaLabel="Account records"
         controls={controls}
         loadingLabel="Loading saved account preferences…"
-        actions={(
-          <div className="users-actions">
-            {isAdmin && canWrite && canInviteYouth ? (
-              <ActionsMenu
-                triggerLabel="+ Add"
-                items={[
-                  { id: 'invite-staff', label: 'Invite Staff', onClick: modals.account.openNew },
-                  { id: 'invite-youth', label: 'Invite Youth', onClick: modals.youthInvite.show },
-                ]}
-              />
-            ) : canInviteYouth ? (
-              <Button onClick={modals.youthInvite.show}>+ Add</Button>
-            ) : isAdmin && canWrite ? (
-              <Button onClick={modals.account.openNew}>+ Add</Button>
-            ) : null}
-          </div>
-        )}
+        actions={<div className="users-actions">{addAction}</div>}
         search={{
           label: 'Search accounts',
           placeholder: 'Search by name or email',
@@ -107,25 +113,21 @@ export default function Users() {
         />}
       />
 
-      {isAdmin && canWrite && modals.account.target !== null && (
-        <AccountModal
-          isOpen
-          account={modals.account.target !== 'new' ? modals.account.target : undefined}
-          onClose={modals.account.close}
-          onSuccess={savedAccount => syncSavedAccount(savedAccount, modals.account.target === 'new')}
-        />
-      )}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        account={editedAccount}
+        onClose={modals.account.close}
+        onSuccess={savedAccount => syncSavedAccount(savedAccount, accountTarget === 'new')}
+      />
 
-      {modals.youthInvite.open && (
-        <YouthModal
-          isOpen
-          inviteYouth
-          suspended={schoolModal.action !== null}
-          onManageSchool={schoolModal.open}
-          onClose={closeYouthInvite}
-          onSuccess={syncYouthInvitation}
-        />
-      )}
+      <YouthModal
+        isOpen={modals.youthInvite.open}
+        inviteYouth
+        suspended={schoolModal.action !== null}
+        onManageSchool={schoolModal.open}
+        onClose={closeYouthInvite}
+        onSuccess={syncYouthInvitation}
+      />
 
       <SchoolModal workflow={schoolModal} />
       <ConfirmModal
