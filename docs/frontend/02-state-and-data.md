@@ -81,14 +81,13 @@ calendar buffer; do not add a separate normalized record store.
   components/
     <Domain>Table/hooks/use<Domain>TableData.ts
     <Domain>Calendar/hooks/use<Domain>CalendarData.ts
-    <Domain>Dashboard/
-      hooks/use<Domain>DashboardData.ts
-      <DashboardCard>/hooks/use<Card>Data.ts
+    <DashboardCard>/hooks/use<Card>Data.ts
 ```
 
 Create only the hooks the page needs. Table and calendar data hooks belong to
-their components. Add a dashboard data hook when sibling cards share queries;
-otherwise each card owns its private queries.
+their components. Compose independent cards directly in `PageContainer`'s
+`dashboard` slot. Add a domain dashboard owner only for shared queries or card
+coordination; private queries stay with each card.
 
 The selected-record dashboard query flows through these owners:
 

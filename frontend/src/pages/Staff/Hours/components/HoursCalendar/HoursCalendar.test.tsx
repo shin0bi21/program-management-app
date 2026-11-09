@@ -80,7 +80,6 @@ function renderCalendar({
   onDelete = vi.fn(),
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
-  onMessageChange = vi.fn(),
 }: {
   data?: HoursItem[];
   resources?: StaffResource[];
@@ -93,7 +92,6 @@ function renderCalendar({
   onDelete?: ReturnType<typeof vi.fn>;
   onStaffSelect?: ReturnType<typeof vi.fn>;
   onMove?: ReturnType<typeof vi.fn>;
-  onMessageChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
   const calendarIndexRef: MutableRefObject<HoursCalendarIndex> = {
@@ -112,7 +110,6 @@ function renderCalendar({
         onDelete={onDelete}
         onAdd={onAdd}
         onMove={onMove}
-        onMessageChange={onMessageChange}
       />
   );
   return {
@@ -123,7 +120,6 @@ function renderCalendar({
     onDelete,
     onStaffSelect,
     onMove,
-    onMessageChange,
   };
 }
 
@@ -287,17 +283,12 @@ describe('HoursCalendar', () => {
     vi.mocked(getHoursCalendarData)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([]);
-    const { onMessageChange } = renderCalendar();
+    renderCalendar();
 
     act(() => calendarState.props?.onInitialPeriods?.(periods));
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      message: 'offline',
-      action: expect.objectContaining({ label: 'Retry' }),
-    })));
-    const reportedError = onMessageChange.mock.calls[onMessageChange.mock.calls.length - 1]?.[0];
-    act(() => reportedError.action.onClick());
+    expect(await screen.findByText('Hours calendar unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith(null));
   });
 });

@@ -8,7 +8,8 @@ import { type ConfirmAction } from '../../../common/components/ConfirmModal/type
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import TaskCalendar from './components/TaskCalendar/TaskCalendar';
-import TaskDashboard from './components/TaskDashboard/TaskDashboard';
+import TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard';
+import TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import TaskTable from './components/TaskTable/TaskTable';
 import TaskModal from './components/TaskModal/TaskModal';
 
@@ -42,7 +43,6 @@ const HOURS_QUERY_KEY = ['hours'] as const;
  */
 export default function Tasks() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions } = useAuth();
@@ -209,17 +209,19 @@ export default function Tasks() {
           details: 'Cycle date bounds could not be loaded.',
         } : null,
         viewError,
-        dashboardError,
       ]}
-      dashboard={selection.selectedResource ? <TaskDashboard
-        queryKey={TASK_QUERY_KEY}
-        resourceId={selection.selectedResource.id}
-        resourceName={selection.selectedResource.name}
-        today={today}
-        selectedTask={selection.selectedTask}
-        onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
-        onMessageChange={setDashboardError}
-      /> : null}
+      dashboard={selection.selectedResource ? <>
+        <TaskOverviewDashboardCard
+          queryKey={TASK_QUERY_KEY}
+          resourceId={selection.selectedResource.id}
+          resourceName={selection.selectedResource.name}
+          today={today}
+        />
+        <TaskHoursLoggedDashboardCard
+          task={selection.selectedTask}
+          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
+        />
+      </> : null}
       table={hasCycleBounds ? taskTable : viewUnavailable}
       calendar={hasCycleBounds ? taskCalendar : viewUnavailable}
     />

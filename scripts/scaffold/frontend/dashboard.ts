@@ -45,7 +45,9 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
       // Keep API calls out of this composition and avoid an empty dashboard-data wrapper.
       // Name extracted cards *DashboardCard and use the shared DashboardCard shell.
       // For compact label/value summaries, use its details prop with dashboard-card--short.
-      // Pass this fragment to PageContainer's dashboard slot; keep page-wide actions in its header.
+      // Prefer cards directly in PageContainer's dashboard slot; keep a dashboard owner only for shared queries or coordination.
+      // Cards use usePageMessageReporter without callbacks; PageContainer collects messages automatically.
+      // Keep page-wide actions in the page header.
       // Pass selectedId/data to the cards that need them; resource-summary cards may be independent.
       // Each card handles its own no-selection, missing record, loading, failure/retry, and refresh states.
 
@@ -63,6 +65,8 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
     join(directory, `${name}.test.tsx`),
     `
     // Cards own private queries and actions; test only coordination added by the dashboard.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     import { describe, it } from 'vitest';
 
     describe('${name}', () => {

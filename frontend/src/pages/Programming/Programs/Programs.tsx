@@ -27,7 +27,6 @@ export default function Programs() {
   const [cycleTableError, setCycleTableError] = useState<PageMessageValue>(null);
   const [tableError, setTableError] = useState<PageMessageValue>(null);
   const [assignmentsError, setAssignmentsError] = useState<PageMessageValue>(null);
-  const [overviewError, setOverviewError] = useState<PageMessageValue>(null);
   const { permissions } = useAuth();
   const canWritePrograms = permissions.includes('write:programs');
   const canManageRoster = permissions.includes('write:enrollments') && permissions.includes('read:youth_profiles');
@@ -60,12 +59,10 @@ export default function Programs() {
         data.programsError ? { message: data.programsError, action: { label: 'Retry', onClick: data.retryPrograms } } : null,
         data.cyclesError ? { message: data.cyclesError, action: { label: 'Retry', onClick: data.retryCycles } } : null,
         assignmentsError,
-        overviewError,
       ]}
       dashboard={
         <ProgramOverviewDashboardCard
           program={selectedProgram}
-          onMessageChange={setOverviewError}
           canManageRoster={canManageRoster}
           canViewYouthReport={canViewYouthReport}
         />

@@ -122,6 +122,9 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
+    expect(summaryApi.getYouthAttendanceSummary).not.toHaveBeenCalled();
   });
 
   it('keeps account invitation controls out of the Youth page', async () => {

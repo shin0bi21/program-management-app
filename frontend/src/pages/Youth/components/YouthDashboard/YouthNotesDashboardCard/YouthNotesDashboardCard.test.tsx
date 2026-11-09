@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { getYouthProfileNotes } from '../../../youth.api';
@@ -29,20 +29,19 @@ describe('YouthNotesDashboardCard', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('reports a query error to the page and renders a neutral unavailable state', async () => {
-    vi.mocked(getYouthProfileNotes).mockRejectedValue(new Error('Unavailable'));
-    const onMessageChange = vi.fn();
+  it('retries notes for the selected profile after its query fails', async () => {
+    vi.mocked(getYouthProfileNotes)
+      .mockRejectedValueOnce(new Error('Unavailable'))
+      .mockResolvedValueOnce([]);
     renderWithQueryClient(<YouthNotesDashboardCard
       youthId="youth-1"
-      onMessageChange={onMessageChange}
       onSelectProfileNote={vi.fn()}
     />);
 
     expect(await screen.findByText('Profile notes unavailable')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    await waitFor(() => expect(onMessageChange).toHaveBeenLastCalledWith({
-      message: 'Could not load profile notes',
-      action: { label: 'Retry', onClick: expect.any(Function) },
-    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('No profile notes recorded.')).toBeInTheDocument();
+    expect(getYouthProfileNotes).toHaveBeenLastCalledWith('youth-1', { signal: expect.any(AbortSignal) });
   });
 });

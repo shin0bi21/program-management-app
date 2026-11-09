@@ -6,7 +6,8 @@ import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from './components/HoursModal/HoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
-import HoursDashboard from './components/HoursDashboard/HoursDashboard';
+import HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
+import HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
 import HoursTable from './components/HoursTable/HoursTable';
 
 import { useAuth } from '../../../auth/authContext';
@@ -46,7 +47,6 @@ const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
  */
 export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions.
   const { permissions, role } = useAuth();
@@ -222,14 +222,11 @@ export default function Hours() {
         preferences.error,
         actions.moveError,
         viewError,
-        dashboardError,
       ]}
-      dashboard={<HoursDashboard
-        queryKey={HOURS_QUERY_KEY}
-        staff={selection.selectedStaff}
-        cycle={overviewCycle}
-        onMessageChange={setDashboardError}
-      />}
+      dashboard={<>
+        <HoursPayPeriodDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} />
+        <HoursCycleSummaryDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} cycle={overviewCycle} />
+      </>}
       table={hasCycleBounds ? hoursTable : viewUnavailable}
       calendar={hasCycleBounds ? hoursCalendar : viewUnavailable}
     />

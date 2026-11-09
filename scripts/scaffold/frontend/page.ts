@@ -45,7 +45,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
      * @example <${name} /> // page controls, views, and selected-record workflows
      */
     export default function ${name}() {
-      // TODO: Page-local message state.
+      // TODO: Page-owned messages. Descendants report through usePageMessageReporter without callbacks.
 
       // TODO: Permissions and application services.
 
@@ -77,6 +77,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // TODO: Modal and confirmation workflows.
 
       // TODO: Table, calendar, and dashboard configuration.
+      // Pass dashboard cards directly to PageContainer; it collects their messages and supplies the grid.
       const dashboard = <p>${name} dashboard</p>;
       const primaryView = <p data-loading={data.loading || undefined}>${name} content</p>;
 
@@ -103,13 +104,15 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import { describe, it } from 'vitest';
 
     // Follow docs/workflows/delivery/testing.md for test ownership and assertions.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     describe('${name}', () => {
       // Entry and readiness.
       it.todo('shows only the page actions allowed by the current permissions');
       it.todo('waits for domain reference dependencies before restoring saved controls');
 
       // Rendered states.
-      it.todo('reports page-owned failures through the shared message overlay');
+      it.todo('connects a page-owned failure to its domain recovery action');
 
       // Controls and views.
       it.todo('applies search and filters to each active data view');

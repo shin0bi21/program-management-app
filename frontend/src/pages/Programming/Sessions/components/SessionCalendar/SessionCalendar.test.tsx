@@ -32,7 +32,7 @@ const period = buildDayPeriod(new Date(2026, 7, 10));
 function renderCalendar(filters: SessionListFilters = {}, editable = true) {
   const callbacks = {
     onSessionSelect: vi.fn(), onSessionEdit: vi.fn(), onSessionDelete: vi.fn(),
-    onAddSession: vi.fn(), onProgramSelect: vi.fn(), onMessageChange: vi.fn(),
+    onAddSession: vi.fn(), onProgramSelect: vi.fn(),
   };
   const calendarCacheRef = { current: { upsert: vi.fn(), remove: vi.fn() } as SessionCalendarCache };
   const rendered = render(<SessionCalendar
@@ -173,15 +173,12 @@ describe('SessionCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
   });
 
-  it('reports load failure and retries the range through the page error owner', async () => {
+  it('retries the failed session range and restores its items', async () => {
     api.getSessions.mockRejectedValueOnce(new Error('Could not load sessions'));
-    const rendered = renderCalendar();
+    renderCalendar();
     act(() => calendarState.props!.onInitialPeriods!([period]));
 
     expect(await screen.findByText('Sessions calendar unavailable')).toBeInTheDocument();
-    await waitFor(() => expect(rendered.onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      message: 'Could not load sessions', action: expect.objectContaining({ label: 'Retry' }),
-    })));
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([session]));
     expect(screen.queryByText('Sessions calendar unavailable')).not.toBeInTheDocument();

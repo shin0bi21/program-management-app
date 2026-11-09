@@ -95,17 +95,12 @@ describe('TaskOverviewDashboardCard', () => {
     ]);
     expect(within(overdueSection).getAllByRole('listitem').map(item => item.textContent)).toEqual(['OverdueAug 9']);
   });
-  it('reports its query error and wires retry into the unavailable card', () => {
-    const onMessageChange = vi.fn();
-    const { rerender } = render(<TaskOverviewDashboardCard {...cardProps} onMessageChange={onMessageChange} />);
+  it('disables the report when its query fails and retries the overview', () => {
+    const { rerender } = render(<TaskOverviewDashboardCard {...cardProps} />);
 
     vi.mocked(useTaskOverviewData).mockReturnValue({ ...overviewData, error: 'Unable to load task overview.' });
-    rerender(<TaskOverviewDashboardCard {...cardProps} onMessageChange={onMessageChange} />);
+    rerender(<TaskOverviewDashboardCard {...cardProps} />);
 
-    expect(onMessageChange).toHaveBeenLastCalledWith({
-      message: 'Unable to load task overview.',
-      action: { label: 'Retry', onClick: overviewData.retry },
-    });
     expect(screen.getByText('Task overview unavailable')).toBeInTheDocument();
     expect(screen.getByText('Assigned')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();

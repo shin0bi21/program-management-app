@@ -212,6 +212,11 @@ describe('Sessions', () => {
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify({
       start: '2026-07-01', end: '2026-12-01',
     }));
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
+    await waitFor(() => expect(getSessionNotes).toHaveBeenCalledWith(expect.any(String), expect.anything()));
+    expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
+    expect(getSessionRoster).not.toHaveBeenCalled();
+
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
     expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();

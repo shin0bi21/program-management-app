@@ -1,7 +1,7 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { StaffResource } from '../../../types';
-import type { PageMessageItem } from '../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
+import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { formatShortDateRange } from '../../../../../../common/utils/date';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
@@ -10,27 +10,17 @@ import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
 
 /**
  * Loads and displays the selected staff member's current pay period, independent of cycle selection.
- * @param props - Staff selection, query namespace, and this card's error slot.
- * @example <HoursPayPeriodDashboardCard queryKey={['hours']} staff={staff} onErrorChange={report} />
+ * @param props - Staff selection and query namespace.
+ * @example <HoursPayPeriodDashboardCard queryKey={['hours']} staff={staff} />
  */
-export default function HoursPayPeriodDashboardCard({ queryKey, staff, onErrorChange }: {
+export default function HoursPayPeriodDashboardCard({ queryKey, staff }: {
   queryKey: readonly unknown[];
   staff: StaffResource | null;
-  onErrorChange: (message: PageMessageItem | null) => void;
 }) {
   const state = useHoursPayPeriodData(queryKey, staff?.id ?? null);
   const error = state.status === 'error' ? state.message : null;
   const retry = state.status === 'error' ? state.retry : undefined;
-  const message = useMemo(() => {
-    if (!error || !retry) return null;
-
-    return { message: error, action: { label: 'Retry', onClick: retry } };
-  }, [error, retry]);
-
-  useEffect(() => {
-    onErrorChange(message);
-    return () => onErrorChange(null);
-  }, [message, onErrorChange]);
+  usePageMessageReporter(undefined, error, retry ? { label: 'Retry', onClick: retry } : undefined);
 
   const payPeriod = state.status === 'ready' ? state.data : null;
   const payPeriodLabel = payPeriod ? formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd) : null;

@@ -8,7 +8,9 @@ import type { Program } from '../../../common/features/programs/types';
 import { SESSION_TABLE_KEYS, type ProgramSession, type SessionListFilters } from './types';
 import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
-import SessionDashboard from './components/SessionDashboard/SessionDashboard';
+import SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
+import SessionNotesDashboardCard from './components/SessionDashboard/SessionNotesDashboardCard/SessionNotesDashboardCard';
+import SessionAttachmentsDashboardCard from './components/SessionDashboard/SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
 import SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import SessionTable from './components/SessionTable/SessionTable';
 import useSessionTable from './components/SessionTable/hooks/useSessionTable';
@@ -27,7 +29,6 @@ const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
  */
 export default function Sessions() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardErrors, setDashboardErrors] = useState<PageMessageValue[]>([]);
 
   // Permissions and application services.
   const { permissions, role } = useAuth();
@@ -113,15 +114,15 @@ export default function Sessions() {
 
   const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
   const canAddSession = !referencesLoading && programs.length > 0;
-  const dashboard = <SessionDashboard
-    sessionQueryKey={SESSION_QUERY_KEY}
-    session={selectedSession}
-    canReadAttendance={canReadAttendance}
-    canWriteAttendance={canWriteAttendance}
-    canWriteSessions={canWriteSessions}
-    onAddAttendance={setAttendanceTarget}
-    onErrorsChange={setDashboardErrors}
-  />;
+  const dashboard = <>
+    {canReadAttendance && <SessionAttendanceDashboardCard
+      session={selectedSession}
+      canWrite={canWriteAttendance}
+      onManage={setAttendanceTarget}
+    />}
+    <SessionNotesDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+    <SessionAttachmentsDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+  </>;
 
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
@@ -191,7 +192,6 @@ export default function Sessions() {
           referencesError,
           cyclesError,
           viewError,
-          ...dashboardErrors,
         ]}
         dashboard={dashboard}
         table={hasCycleBounds ? table : cycleState}

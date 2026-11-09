@@ -64,6 +64,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
       // Cache complete API rows directly; do not create a normalized record store.
       // Forward signal/cursor and TABLE_PAGE_SIZE; server filtering/sorting precedes pagination.
       // Report initial/refresh/next-page errors with their matching retry through usePageMessageReporter.
+      // Under PageContainer, pass undefined as its callback argument to use automatic page reporting.
       // Replace saved rows or remove deleted rows with the existing cursor-list cache helpers.
       // Retain positions after sort edits; tableRefreshMessage supplies the out-of-order message and Refresh.
       // Invalidate when creation or changed filter membership requires reloading.
@@ -79,6 +80,8 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     // Test domain cells, actions, and selection wiring here; shared Table owns rendering,
     // sorting controls, resizing, and scroll triggers. The query hook owns page fetching.
     // Pure policies own eligibility matrices.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     import { describe, it } from 'vitest';
 
     describe('${name}', () => {
