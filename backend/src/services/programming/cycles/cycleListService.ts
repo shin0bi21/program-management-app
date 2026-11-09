@@ -1,11 +1,11 @@
 import { sql } from '../../../db/client';
 import type { CycleListQuery } from '../../../validation/programmingSchemas';
-import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery } from '../../shared/cursorPagination';
 import { getCycleRows } from './cycleRowQuery';
 
 /**
  * Lists complete cycle rows ordered by name or start date, with UUID tie-breaking.
- * @param filterValues - Validated sorting and cursor options; an omitted limit uses 50 rows.
+ * @param filterValues - Validated sorting and cursor options; pages always contain up to 50 rows.
  * @returns A bounded cursor page; callers enforce the cycle-read capability.
  * @example listCycles(filterValues) // { rows, nextCursor }
  */
@@ -22,6 +22,5 @@ export function listCycles(filterValues: CycleListQuery) {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit ?? BATCH_SIZE,
   });
 }

@@ -1,7 +1,7 @@
 import { sql } from '../../../db/client';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { ProgramListQuery } from '../../../validation/programSchemas';
-import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery } from '../../shared/cursorPagination';
 import { getProgramRows } from './programRowQuery';
 import { buildProgramFilters } from './programRowFilters';
 
@@ -22,6 +22,5 @@ export function getProgramList(actor: AccessTokenPayload, filterValues: ProgramL
     sortValue: sql`LOWER("row".name)`,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit ?? BATCH_SIZE,
   });
 }

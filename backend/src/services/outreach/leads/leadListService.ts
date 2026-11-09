@@ -7,7 +7,7 @@ import { buildLeadFilters } from './leadRowFilters';
 /**
  * Lists matching leads.
  * @param filterValues - Validated origin, submitter, status, program, search, and optional cursor inputs.
- * @returns A cursor page when limited, otherwise all matching canonical lead rows.
+ * @returns A page of up to 50 rows when limit=50, otherwise all matching canonical lead rows.
  * @example getLeads(filterValues) // { rows, nextCursor } when filterValues.limit is set
  */
 export function getLeads(filterValues: LeadQuery) {
@@ -39,6 +39,5 @@ export function getLeads(filterValues: LeadQuery) {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit,
   });
 }

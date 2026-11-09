@@ -9,7 +9,7 @@ import { getAccountRows, type AccountRow } from './accountRowQuery';
  * Lists matching accounts.
  * @param actor - Actor whose role determines account visibility; callers enforce route permissions.
  * @param filterValues - Validated role/status/search, sorting, and optional cursor-page inputs.
- * @returns A cursor page when limited, otherwise all matching rows in the requested order.
+ * @returns A page of up to 50 rows when limit=50, otherwise all matching rows in the requested order.
  * @example listAccounts(actor, filterValues) // { rows, nextCursor } when filterValues.limit is set
  */
 export function listAccounts(actor: AccessTokenPayload, filterValues: AccountQuery) {
@@ -40,6 +40,5 @@ export function listAccounts(actor: AccessTokenPayload, filterValues: AccountQue
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit,
   });
 }

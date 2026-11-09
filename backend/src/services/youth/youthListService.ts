@@ -7,7 +7,7 @@ import { getYouthRows, type YouthRow } from './youthRowQuery';
 /**
  * Lists matching youth profiles.
  * @param filterValues - Selected programs, cycles, search text, and sorting after request validation; limit requests a page.
- * @returns A cursor page when limited, otherwise all matching youth rows in the requested order.
+ * @returns A page of up to 50 rows when limit=50, otherwise all matching youth rows in the requested order.
  * @example listYouth(filterValues) // { rows, nextCursor } when filterValues.limit is set
  */
 export function listYouth(filterValues: YouthQuery) {
@@ -38,6 +38,5 @@ export function listYouth(filterValues: YouthQuery) {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit,
   });
 }

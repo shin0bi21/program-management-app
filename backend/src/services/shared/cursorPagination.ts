@@ -16,8 +16,6 @@ interface QueryPagination {
   sortValue: PendingQuery<Row[]>;
   direction: 'asc' | 'desc';
   cursor?: string;
-  /** Validated positive page size, at most BATCH_SIZE. */
-  limit: number;
 }
 
 interface QueryPage<T> {
@@ -26,16 +24,16 @@ interface QueryPage<T> {
 }
 
 /**
- * Executes an already scoped and filtered query with consistent cursor pagination.
+ * Returns up to 50 rows from an already scoped and filtered query.
  * Rows must have UUID IDs; sort expressions reference the `row` alias. Nullable
  * sort values must be normalized by the caller, and `cursor_value` is reserved.
  * Cursor values retain the driver's strings or finite numbers without conversion;
  * exact decimals outside JavaScript precision must remain strings.
  * @param rowsQuery - Unexecuted canonical rows with domain access and filters already applied.
- * @param pagination - Trusted sort expression, direction, optional cursor, and validated limit.
+ * @param pagination - Trusted sort expression, direction, optional cursor.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @returns A bounded cursor page without internal cursor values.
- * @example paginateQuery(rows, { sortValue: sql`LOWER("row".name)`, direction: 'asc', limit: 50 })
+ * @example paginateQuery(rows, { sortValue: sql`LOWER("row".name)`, direction: 'asc' })
  */
 export async function paginateQuery<T extends { id: string }>(
   rowsQuery: PendingQuery<T[]>,
@@ -44,7 +42,7 @@ export async function paginateQuery<T extends { id: string }>(
 ): Promise<QueryPage<T>> {
   // 1. Match the cursor boundary to the selected sort and UUID tie-breaker.
   const cursor = decodeCursor(pagination.cursor);
-  const { sortValue, direction, limit } = pagination;
+  const { sortValue, direction } = pagination;
   const sortDirection = direction === 'asc' ? query`ASC` : query`DESC`;
   let cursorFilter = query`TRUE`;
   if (cursor) {
@@ -59,11 +57,11 @@ export async function paginateQuery<T extends { id: string }>(
     FROM (${rowsQuery}) "row"
     WHERE ${cursorFilter}
     ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
-    LIMIT ${limit + 1}
+    LIMIT ${BATCH_SIZE + 1}
   `;
 
   // 3. Remove the extra row and derive the next cursor.
-  return cursorPage(rows, limit);
+  return cursorPage(rows, BATCH_SIZE);
 }
 
 /**

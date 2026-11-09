@@ -1,7 +1,7 @@
 import { sql } from '../../../db/client';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursTableQuery } from '../../../validation/hoursSchemas';
-import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
+import { paginateQuery } from '../../shared/cursorPagination';
 import { buildHoursFilters } from './hoursRowFilters';
 import { getHoursRows } from './hoursRowQuery';
 
@@ -39,6 +39,5 @@ export function getHoursList(actor: AccessTokenPayload, filterValues: HoursTable
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit ?? BATCH_SIZE,
   });
 }

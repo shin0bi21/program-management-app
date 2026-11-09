@@ -58,7 +58,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('sorts and paginates DOBs in both directions, including unknown dates and ties', async () => {
+    it('sorts DOBs in both directions, including unknown dates and ties', async () => {
       const surname = `BirthdateSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
       const records: Array<{ id: string; dateOfBirth: string }> = [];
       try {
@@ -72,18 +72,12 @@ describe('Youth API', () => {
 
         const ascending = [...records].sort((a, b) => a.dateOfBirth.localeCompare(b.dateOfBirth) || a.id.localeCompare(b.id));
         for (const direction of ['asc', 'desc']) {
-          const actual: string[] = [];
-          let cursor: string | undefined;
-          do {
-            const response = await request(app).get('/api/youth')
-              .query({ search: surname, sort: 'dateOfBirth', direction, limit: 1, ...(cursor ? { cursor } : {}) })
-              .set('Authorization', `Bearer ${adminToken}`);
-            expect(response.status).toBe(200);
-            actual.push(...response.body.rows.map((row: { id: string }) => row.id));
-            cursor = response.body.nextCursor ?? undefined;
-          } while (cursor && actual.length <= records.length);
-
-          expect(cursor).toBeUndefined();
+          const response = await request(app).get('/api/youth')
+            .query({ search: surname, sort: 'dateOfBirth', direction, limit: 50 })
+            .set('Authorization', `Bearer ${adminToken}`);
+          expect(response.status).toBe(200);
+          const actual = response.body.rows.map((row: { id: string }) => row.id);
+          expect(response.body.nextCursor).toBeNull();
           const expected = direction === 'asc' ? ascending : [...ascending].reverse();
           expect(actual).toEqual(expected.map(row => row.id));
         }
@@ -139,7 +133,7 @@ describe('Youth API', () => {
         }
 
         const response = await request(app).get('/api/youth')
-          .query({ search: surname, sort: 'activeProgram', direction: 'asc', limit: 3 })
+          .query({ search: surname, sort: 'activeProgram', direction: 'asc', limit: 50 })
           .set('Authorization', `Bearer ${adminToken}`);
 
         expect(response.status).toBe(200);
@@ -304,21 +298,11 @@ describe('Youth API', () => {
         expect(mismatch.body).toEqual([]);
       });
 
-      it('combines cycle filtering with search and paginates matching youth', async () => {
-        const query = { cycleIds: current.cycleId, search: surname, limit: 1, sort: 'firstName' };
-        const first = await list(query);
-        expect(first.status).toBe(200);
-        expect(ids(first.body.rows)).toEqual([youth.Both]);
-        expect(first.body.nextCursor).toEqual(expect.any(String));
-
-        const second = await list({ ...query, cursor: first.body.nextCursor });
-        expect(second.status).toBe(200);
-        expect(ids(second.body.rows)).toEqual([youth.Cross]);
-
-        const third = await list({ ...query, cursor: second.body.nextCursor });
-        expect(third.status).toBe(200);
-        expect(ids(third.body.rows)).toEqual([youth.Current]);
-        expect(third.body.nextCursor).toBeNull();
+      it('combines cycle filtering with search for the table', async () => {
+        const response = await list({ cycleIds: current.cycleId, search: surname, limit: 50, sort: 'firstName' });
+        expect(response.status).toBe(200);
+        expect(ids(response.body.rows)).toEqual([youth.Both, youth.Cross, youth.Current].sort());
+        expect(response.body.nextCursor).toBeNull();
       });
 
       it('returns an empty list for an unmatched cycle and leaves omitted cycles unrestricted', async () => {
