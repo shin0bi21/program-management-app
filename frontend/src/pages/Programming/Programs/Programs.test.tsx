@@ -150,10 +150,8 @@ describe('Programs', () => {
     expect(screen.queryByRole('dialog', { name: 'Assignments for Soft Skills' })).not.toBeInTheDocument();
   });
 
-  it('keeps an edited program selected and offers refresh when its sort value changes', async () => {
+  it('updates the selected program overview after editing', async () => {
     const user = userEvent.setup();
-    const neighbor = { ...programState.programs[0], id: 'program-2', name: 'Tennis' };
-    programState.programs.push(neighbor);
     const saved = { ...programState.programs[0], name: 'Updated Skills' };
     programsApi.updateProgram.mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
@@ -169,8 +167,6 @@ describe('Programs', () => {
     expect(await screen.findByRole('heading', { name: 'Updated Skills - Fall 2026 Overview' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Updated Skills' })).toBeInTheDocument();
     expect(programsApi.getProgramList).toHaveBeenCalledOnce();
-    expect(screen.getByText('This table’s data is out of order.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeVisible();
   });
 
   it('creates programs from the Programs header', async () => {

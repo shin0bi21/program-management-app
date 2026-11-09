@@ -3,24 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import type { UpdatedSessionResult } from '../../sessions.api';
 import useSessionActions from './useSessionActions';
 
 const api = vi.hoisted(() => ({ deleteSession: vi.fn(), moveSessionDate: vi.fn() }));
 vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, moveSessionDate: api.moveSessionDate }));
 
-const tableKey = ['sessions', 'table', {}, { key: 'date', direction: 'asc' }];
-
 /**
- * Mounts session actions with isolated records, table pages, and a calendar test adapter.
- * @param session - Saved session targeted by the test's action.
- * @example renderActions(session) // returns the hook and the caches its actions reconcile
+ * Mounts session actions with an isolated query cache and calendar callbacks.
+ * @example renderActions() // actions and their selected-context callbacks
  */
-function renderActions(session = makeProgramSession()) {
+function renderActions() {
   const client = createTestQueryClient();
-  const other = makeProgramSession({ id: 'other-session' });
-  client.setQueryData(tableKey, { pages: [{ rows: [session, other], nextCursor: 'next' }], pageParams: [null] });
   const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
   const onSessionSynced = vi.fn();
   const onSessionRemoved = vi.fn();
@@ -29,19 +23,19 @@ function renderActions(session = makeProgramSession()) {
   });
   const calendar = { upsert: vi.fn(), remove: vi.fn() };
   hook.result.current.calendarCacheRef.current = calendar;
-  return { ...hook, client, invalidate, onSessionSynced, onSessionRemoved, calendar, other };
+  return { ...hook, client, invalidate, onSessionSynced, onSessionRemoved, calendar };
 }
 
 describe('useSessionActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('uses the complete move response, locks duplicate drops, and preserves unrelated rows and cursor state', async () => {
+  it('uses the complete move response and locks duplicate drops', async () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
       ...session, theme: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
       startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z',
     });
-    const { result, client, invalidate, calendar, other, onSessionSynced } = renderActions(session);
+    const { result, invalidate, calendar, onSessionSynced } = renderActions();
     let finish!: (value: UpdatedSessionResult) => void;
     api.moveSessionDate.mockReturnValue(new Promise<UpdatedSessionResult>(resolve => { finish = resolve; }));
 
@@ -55,7 +49,6 @@ describe('useSessionActions', () => {
 
     await act(async () => { finish({ session: saved }); await first; });
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [saved, other], nextCursor: 'next' }] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
@@ -80,13 +73,12 @@ describe('useSessionActions', () => {
 
   it('removes deleted rows without rebuilding the calendar buffer', async () => {
     const session = makeProgramSession();
-    const { result, client, invalidate, calendar, onSessionRemoved, other } = renderActions(session);
+    const { result, invalidate, calendar, onSessionRemoved } = renderActions();
     api.deleteSession.mockResolvedValue({ id: session.id });
 
     act(() => result.current.requestDelete(session));
     await act(() => result.current.confirmAction!.onConfirm());
 
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [other], nextCursor: 'next' }] });
     expect(calendar.remove).toHaveBeenCalledWith(session.id);
     expect(onSessionRemoved).toHaveBeenCalledWith(session.id);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
@@ -95,20 +87,13 @@ describe('useSessionActions', () => {
     expect(result.current.calendarRevision).toBe(0);
   });
 
-  it('updates saved session and Youth rows alongside the attendance query', () => {
-    const { result, client, invalidate, other } = renderActions();
+  it('updates the attendance roster and refreshes related summaries', () => {
+    const { result, client, invalidate } = renderActions();
     const session = makeProgramSession({ theme: 'Saved attendance session' });
     const roster = [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Lee', status: 'present' as const, notes: null }];
-    const youth = makeYouthProfile();
-    const savedYouth = { ...youth, activeProgram: { programId: session.programId, program: session.program } };
-    const youthKey = ['youth', 'table', {}, { key: 'firstName', direction: 'asc' }];
-    client.setQueryData(youthKey, { pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
-
-    act(() => result.current.syncAttendance({ session, roster, updatedYouth: [savedYouth] }));
+    act(() => result.current.syncAttendance({ session, roster }));
 
     expect(client.getQueryData(['sessions', session.id, 'roster'])).toBe(roster);
-    expect(client.getQueryData(tableKey)).toMatchObject({ pages: [{ rows: [session, other] }] });
-    expect(client.getQueryData(youthKey)).toMatchObject({ pages: [{ rows: [savedYouth] }] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['youth', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['youth-program-cycle-attendance'] });

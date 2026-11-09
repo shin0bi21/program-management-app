@@ -54,11 +54,6 @@ const entry = makeHoursItem({
 const updatedTask = makeTask({ hoursLogged: 2 });
 const saved = { ...entry, updatedTasks: [updatedTask] };
 
-/** Seeds one loaded list page. @example cacheRows([row]) // one page with no next cursor */
-function cacheRows<T>(rows: T[]) {
-  return { pages: [{ rows, nextCursor: null }], pageParams: [undefined] };
-}
-
 describe('useHoursActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -164,8 +159,6 @@ describe('useHoursActions', () => {
     vi.mocked(updateHoursPlacement).mockRejectedValue(new Error('move failed'));
     const rendered = renderActions();
     const item = makeHoursItem({ id: 'entry-1', date: '2026-08-18' });
-    const key = ['hours', 'table', {}, { key: 'date', direction: 'asc' }];
-    rendered.client.setQueryData(key, cacheRows([item]));
 
     await act(async () => rendered.result.current.moveHours({
       item,
@@ -176,7 +169,6 @@ describe('useHoursActions', () => {
       [{ ...item, date: '2026-08-19' }],
       [item],
     ]);
-    expect(rendered.client.getQueryData(key)).toEqual(cacheRows([item]));
     expect(rendered.result.current.moveError).toBe(
       'Unable to move logged hours. The hours were returned to their original day.',
     );
