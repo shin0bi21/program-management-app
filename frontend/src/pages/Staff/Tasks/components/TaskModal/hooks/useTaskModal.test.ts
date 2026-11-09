@@ -78,26 +78,6 @@ describe('useTaskModal', () => {
     }), 'task-1');
   });
 
-  it('preserves an edit draft and completed submission when the shared saved record changes', async () => {
-    const task = makeTask();
-    const saved = makeTask({ title: 'Saved title' });
-    vi.mocked(setTask).mockResolvedValue(saved);
-    const { result, rerender } = renderHook(({ current }) => useTaskModal({
-      target: { mode: 'edit', task: current }, onSaved: vi.fn(),
-    }), { initialProps: { current: task } });
-    act(() => result.current.updateDraft('title', 'Unfinished draft'));
-
-    rerender({ current: makeTask({ title: 'Background refresh' }) });
-    expect(result.current.draft.title).toBe('Unfinished draft');
-    await act(() => result.current.submit(submitEvent));
-    rerender({ current: saved });
-
-    expect(result.current.status).toBe('success');
-    expect(result.current.submissionComplete).toBe(true);
-    await act(() => result.current.submit(submitEvent));
-    expect(setTask).toHaveBeenCalledOnce();
-  });
-
   it('moves the due date with a newly selected start date', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {

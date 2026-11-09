@@ -19,6 +19,11 @@ export interface TaskModalProps {
   onClose: () => void;
 }
 
+/**
+ * Displays one mounted task editor using its supplied row or add context.
+ * @param props - Edit/add target, page reference choices, and close/save callbacks.
+ * @example <TaskModal target={{ mode: 'edit', task }} {...options} />
+ */
 export default function TaskModal(props: TaskModalProps) {
   const {
     target,
@@ -59,6 +64,7 @@ export default function TaskModal(props: TaskModalProps) {
             value={modal.draft.title}
             onChange={event => modal.updateDraft('title', event.target.value)}
             maxLength={255}
+            disabled={modal.submissionComplete}
             required
           />
         </FormField>
@@ -131,6 +137,7 @@ export default function TaskModal(props: TaskModalProps) {
             onChange={event => modal.updateDraft('details', event.target.value)}
             rows={4}
             maxLength={2000}
+            disabled={modal.submissionComplete}
           />
         </FormField>
       </form>
