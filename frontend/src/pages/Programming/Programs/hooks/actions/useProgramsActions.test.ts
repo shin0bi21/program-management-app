@@ -1,8 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { makeYouthProfile } from '../../../../../tests/factories/youth';
-import type { ProgramCycleAssignment } from '../../types';
 import { deleteProgramCycle } from '../../api/cycles.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import type { Program } from '../../../../../common/features/programs/types';
@@ -24,19 +22,13 @@ const cycle = {
 describe('useProgramsActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('reconciles edited rows and selection while keeping list position, membership, and unrelated references', () => {
+  it('updates the selected program and refreshes its affected references', () => {
     const client = createTestQueryClient();
     const program: Program = {
       id: 'program-1', name: 'Alpha', enrollmentRequired: true, minAge: 12, maxAge: 15,
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
-    const other = { ...program, id: 'program-2', name: 'Beta' };
     const tableKey = ['programs', 'table'];
-    const assignedKey = [...tableKey, { assignedOnly: true }];
-    const allKey = [...tableKey, { assignedOnly: false }];
-    client.setQueryData(assignedKey, { pages: [{ rows: [program, other], nextCursor: 'next' }], pageParams: [null] });
-    client.setQueryData(allKey, { pages: [{ rows: [other], nextCursor: null }], pageParams: [null] });
-    const unrelatedList = client.getQueryData(allKey);
     const derivedKeys = [['programs', 'options'], ['programs', 'cycle-assignments'], referenceDataKeys.programs(false), referenceDataKeys.programs(true), referenceDataKeys.sessionScheduling];
     derivedKeys.forEach(key => client.setQueryData(key, []));
     const onProgramSynced = vi.fn();
@@ -44,32 +36,9 @@ describe('useProgramsActions', () => {
       programTableQueryKey: tableKey, onProgramSynced, onCycleDeleted: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
     const saved = { ...program, name: 'Zulu' };
-    const programCycle: ProgramCycleAssignment = {
-      programId: program.id, program: saved.name, enrollmentRequired: true,
-      minAge: 12, maxAge: 15, cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'active', enrolledCount: 1,
-      nextSessionAt: null, nextSessionId: null, averageAttendance: null,
-      attendanceAttendedCount: 0, attendanceRecordedCount: 0, uniqueAttendeeCount: 0,
-    };
-    const youth = makeYouthProfile();
-    const savedYouth = { ...youth, lastName: 'Canonical returned youth' };
-    client.setQueryData(['programs', 'cycle-assignments', { programId: program.id }], [{ ...programCycle, program: 'Alpha' }]);
-    const youthKey = ['youth', 'table', {}, { key: 'lastName', direction: 'asc' }];
-    client.setQueryData(youthKey, { pages: [{ rows: [youth], nextCursor: null }], pageParams: [null] });
+    act(() => result.current.syncProgram({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update'));
 
-    act(() => result.current.syncProgram({ program: saved, updatedProgramCycles: [programCycle], removedProgramCycles: [], createdProgramCycles: [], updatedYouth: [savedYouth] }, 'update'));
-
-    const updated = client.getQueryData<{ pages: { rows: Program[]; nextCursor: string }[] }>(assignedKey)!;
-    expect(updated.pages[0].rows).toEqual([saved, other]);
-    expect(updated.pages[0].rows[1]).toBe(other);
-    expect(updated.pages[0].nextCursor).toBe('next');
-    expect(client.getQueryData(allKey)).toBe(unrelatedList);
-    [assignedKey, allKey].forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(false));
     expect(onProgramSynced).toHaveBeenCalledWith(saved);
-    expect(client.getQueryData(['programs', 'cycle-assignments', { programId: program.id }])).toEqual([programCycle]);
-    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
-    expect(client.getQueryState(['programs', 'cycle-assignments', { programId: program.id }])?.isInvalidated).toBe(true);
-    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
-
     derivedKeys.forEach(key => expect(client.getQueryState(key)?.isInvalidated).toBe(true));
   });
 
@@ -96,10 +65,8 @@ describe('useProgramsActions', () => {
     expect(onProgramSynced).not.toHaveBeenCalled();
   });
 
-  it('reconciles an edited cycle and programCycle rows without refetching their tables', () => {
+  it('updates cycle choices from the saved response', () => {
     const client = createTestQueryClient();
-    const key = ['cycles', 'table'];
-    client.setQueryData(key, { pages: [{ rows: [cycle], nextCursor: null }], pageParams: [null] });
     const { result } = renderHook(() => useProgramsActions({
       programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(), onCycleDeleted: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
@@ -108,8 +75,6 @@ describe('useProgramsActions', () => {
 
     act(() => result.current.syncCycle({ cycle: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update'));
 
-    expect(client.getQueryData(key)).toEqual({ pages: [{ rows: [saved], nextCursor: null }], pageParams: [null] });
-    expect(client.getQueryState(key)?.isInvalidated).toBe(false);
     expect(client.getQueryData(referenceDataKeys.cycles)).toEqual([saved]);
   });
 

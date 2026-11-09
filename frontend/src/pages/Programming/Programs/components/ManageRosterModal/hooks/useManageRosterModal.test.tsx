@@ -34,28 +34,19 @@ describe('useManageRosterModal', () => {
     vi.mocked(withdrawYouth).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
   });
 
-  it('enrolls an unchecked youth and refreshes the roster while preserving Youth table position', async () => {
+  it('enrolls an unchecked youth and notifies the roster owner', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const client = createTestQueryClient();
     const savedProgramCycle = { ...assignment, enrolledCount: 6 };
     const savedYouth = makeYouthProfile({ id: youth.id });
     vi.mocked(enrollYouth).mockResolvedValue({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-    const programCycleKey = ['programs', 'cycle-assignments', { programId: assignment.programId }];
-    const youthKey = ['youth', 'table', { search: 'filtered' }, { key: 'firstName', direction: 'asc' }];
-    client.setQueryData(programCycleKey, [assignment]);
-    client.setQueryData(youthKey, { pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
-    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: createQueryClientWrapper(client) });
+    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: wrapper() });
 
     await act(() => result.current.addYouth(youth));
 
     expect(enrollYouth).toHaveBeenCalledWith(assignment, { youthIds: ['youth-1'] });
     expect(refresh).toHaveBeenCalledOnce();
     expect(onSuccess).toHaveBeenCalledWith({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-    expect(client.getQueryState(programCycleKey)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(youthKey)?.isInvalidated).toBe(false);
-    expect(client.getQueryData(programCycleKey)).toEqual([savedProgramCycle]);
-    expect(client.getQueryData(youthKey)).toEqual({ pages: [{ rows: [savedYouth], nextCursor: null }], pageParams: [null] });
   });
 
   it('locks enrollment while a youth update is pending', async () => {

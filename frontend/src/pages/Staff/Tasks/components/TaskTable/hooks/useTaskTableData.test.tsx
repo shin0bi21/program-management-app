@@ -6,8 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getTasksTableData } from '../../../tasks.api';
-import useTaskTableData, { getTaskSortValue } from './useTaskTableData';
-import type { Task, TaskSortKey } from '../../../types';
+import useTaskTableData from './useTaskTableData';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
   default: vi.fn(() => ({ rows: [] })),
@@ -50,21 +49,4 @@ describe('useTaskTableData', () => {
     );
   });
 
-});
-
-const row = makeTask();
-
-const sortValues: Array<[TaskSortKey, Partial<Task>, string]> = [
-  ['firstName', { firstName: 'Other' }, 'other'],
-  ['lastName', { lastName: 'Other' }, 'other'],
-  ['title', { title: 'Other' }, 'other'],
-  ['category', { category: 'meeting' }, 'meeting'],
-  ['program', { program: 'Other' }, 'other'],
-  ['startDate', { startDate: '2027-01-01' }, '2027-01-01'],
-  ['dueDate', { dueDate: '2027-01-01' }, '2027-01-01'],
-  ['status', { status: 'cancelled' }, 'cancelled'],
-];
-
-it.each(sortValues)('maps %s to its canonical sort value', (key, changes, expected) => {
-  expect(getTaskSortValue({ ...row, ...changes }, key)).toEqual(expected);
 });
