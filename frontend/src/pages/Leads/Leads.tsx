@@ -4,7 +4,9 @@ import Button from '../../common/components/Button/Button';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
 import ConfirmModal from '../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../common/components/PageMessageOverlay/PageMessageOverlay';
-import LeadDashboard from './components/LeadDashboard/LeadDashboard';
+import PrimaryContactDashboardCard from '../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
+import IntakeInformationDashboardCard from './components/LeadDashboard/IntakeInformationDashboardCard';
+import LeadNotesDashboardCard from './components/LeadDashboard/LeadNotesDashboardCard/LeadNotesDashboardCard';
 import LeadTable from './components/LeadTable/LeadTable';
 import useLeadTable from './components/LeadTable/hooks/useLeadTable';
 import LeadModal from './components/LeadModal/LeadModal';
@@ -26,7 +28,6 @@ const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
 export default function Leads({ origin }: { origin: LeadOrigin }) {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [dashboardError, setDashboardError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions } = useAuth();
@@ -95,12 +96,15 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       actions={canWrite && origin === 'internal' ? <Button onClick={() => setModalTarget('new')}>+ Add</Button> : undefined}
       search={{ label: 'Search leads', placeholder: 'Search youth or school' }}
       columns={columns}
-      messages={[preferences.error, data.programsError, actions.actionError, viewError, dashboardError]}
-      dashboard={<LeadDashboard
-        lead={selection.selectedLead}
-        canWrite={canWrite}
-        onMessageChange={setDashboardError}
-      />}
+      messages={[preferences.error, data.programsError, actions.actionError, viewError]}
+      dashboard={<>
+        <PrimaryContactDashboardCard contact={selection.selectedLead ? {
+          phoneNumber: selection.selectedLead.contactPhoneNumber,
+          relationship: selection.selectedLead.contactRelationship,
+        } : null} selected={selection.selectedLead !== null} />
+        <IntakeInformationDashboardCard notes={selection.selectedLead?.notes} selected={selection.selectedLead !== null} />
+        <LeadNotesDashboardCard lead={selection.selectedLead} canWrite={canWrite} />
+      </>}
       table={<LeadTable
         queryKey={tableQueryKey}
         columns={columns}

@@ -12,7 +12,9 @@ import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthProfile } from './types'
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import YouthAttendanceModal from './components/YouthAttendanceModal/YouthAttendanceModal';
-import YouthDashboard from './components/YouthDashboard/YouthDashboard';
+import PrimaryContactDashboardCard from '../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
+import YouthAttendanceDashboardCard from './components/YouthDashboard/YouthAttendanceDashboardCard/YouthAttendanceDashboardCard';
+import YouthNotesDashboardCard from './components/YouthDashboard/YouthNotesDashboardCard/YouthNotesDashboardCard';
 import YouthTable from './components/YouthTable/YouthTable';
 import useYouthTable from './components/YouthTable/hooks/useYouthTable';
 import { useYouthActions } from './hooks/actions/useYouthActions';
@@ -28,7 +30,6 @@ import './Youth.css';
 export default function Youth() {
   // Page-local errors.
   const [viewError, setViewError] = useState<PageMessageValue>(null);
-  const [notesError, setNotesError] = useState<PageMessageValue>(null);
 
   // Permissions and services.
   const { permissions, role } = useAuth();
@@ -121,25 +122,40 @@ export default function Youth() {
           programsError,
           cyclesError,
           viewError,
-          notesError,
         ]}
-        dashboard={<YouthDashboard
-          profile={selectedProfile}
-          canWrite={canWrite}
-          onManagePrimaryContact={setContactTarget}
-          canReadAttendance={canReadAttendance}
-          canManageAttendance={canManageAttendance}
-          onManageAttendance={setAttendanceTarget}
-          canViewAttendanceReport={canViewAttendanceReport}
-          onViewAttendanceReport={programCycle => {
-            if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
-          }}
-          onNotesMessageChange={setNotesError}
-          onSelectProfileNote={profileNotes.openDetails}
-          onAddProfileNote={() => profileNotes.openEditor('new')}
-          onEditProfileNote={profileNotes.openEditor}
-          onDeleteProfileNote={profileNotes.requestDelete}
-        />}
+        dashboard={<>
+          <PrimaryContactDashboardCard
+            contact={selectedProfile?.contacts?.[0] ? {
+              phoneNumber: selectedProfile.contacts[0].phoneNumber,
+              relationship: selectedProfile.contacts[0].type,
+            } : null}
+            selected={selectedProfile !== null}
+            action={canWrite ? <Button
+              size="sm"
+              variant="secondary"
+              disabled={!selectedProfile}
+              aria-label="Manage primary contact"
+              onClick={() => { if (selectedProfile) setContactTarget(selectedProfile); }}
+            >Manage</Button> : undefined}
+          />
+          {canReadAttendance && <YouthAttendanceDashboardCard
+            youthId={selectedProfileId}
+            canManage={canManageAttendance}
+            onManage={setAttendanceTarget}
+            canViewReport={canViewAttendanceReport}
+            onViewReport={programCycle => {
+              if (selectedProfile) setAttendanceReportTarget({ programCycle, youthId: selectedProfile.id });
+            }}
+          />}
+          <YouthNotesDashboardCard
+            youthId={selectedProfileId}
+            canManageProfileNotes={canWrite}
+            onSelectProfileNote={profileNotes.openDetails}
+            onAddProfileNote={() => profileNotes.openEditor('new')}
+            onEditProfileNote={profileNotes.openEditor}
+            onDeleteProfileNote={profileNotes.requestDelete}
+          />
+        </>}
         table={<YouthTable
           columns={youthColumns}
           filters={youthFilters}

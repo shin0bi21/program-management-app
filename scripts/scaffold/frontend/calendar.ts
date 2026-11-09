@@ -46,6 +46,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
       // Forward cancellation, clip requests to applied bounds, and retain complete overlap membership.
       // Keep stable identity/range helpers outside the component; do not duplicate records per day.
       // Publish buffer error/retry with usePageMessageReporter and reconcile membership after mutations.
+      // Under PageContainer, pass undefined as its callback argument to use automatic page reporting.
       // A private data hook receives this same context instead of repeating page reference queries.
 
       // Display data: derive visibleResources (or visiblePrograms) and visibleItems only when needed.
@@ -72,6 +73,8 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
     join(directory, `${name}.test.tsx`),
     `
     // Shared TimelineCalendar tests retain generic rendering, geometry, pointer, focus, and cleanup mechanics.
+    // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
+    // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     import { describe, it } from 'vitest';
 
     describe('${name}', () => {

@@ -1,19 +1,22 @@
-import { useEffect } from 'react';
+import { useContext, useEffect, useId } from 'react';
 
 import type { PageMessageItem, PageMessageValue } from './PageMessageOverlay';
+import { PageMessageContext } from './pageMessageContext';
 
 export type PageMessageChangeHandler = (value: PageMessageValue) => void;
 
 /**
- * Reports a child view's error and optional notice to the page, clearing the previous
- * report before changed inputs are reported and when the view unmounts.
+ * Reports a child view's error and optional notice, replacing its own report on changes
+ * and clearing it on unmount. PageContainer collects reports automatically.
  * @param onMessageChange - Updates this view's message slot in the page; keep the callback stable.
- * Omit it to disable reporting.
+ * An explicit callback overrides automatic reporting. Without either a callback or
+ * a surrounding PageContainer, reporting is disabled.
  * @param message - Error text; null or empty text clears the error without clearing a notice.
  * @param action - Error action, included only with a nonempty label and callback. The caller
  * owns the request and disabled state; keep action callbacks stable across unchanged renders.
  * @param notice - Additional message, such as a warning that edited rows are out of order.
- * @example usePageMessageReporter(onMessageChange, error, { label: 'Retry', onClick: retry });
+ * @example usePageMessageReporter(undefined, error, { label: 'Retry', onClick: retry }); // inside PageContainer
+ * @example usePageMessageReporter(onMessageChange, error); // explicit destination outside PageContainer
  */
 export default function usePageMessageReporter(
   onMessageChange: PageMessageChangeHandler | undefined,
@@ -21,6 +24,8 @@ export default function usePageMessageReporter(
   action?: PageMessageItem['action'],
   notice?: PageMessageItem | null,
 ) {
+  const reportMessage = useContext(PageMessageContext);
+  const source = useId();
   const actionLabel = action?.label;
   const onAction = action?.onClick;
   const actionDisabled = action?.disabled;
@@ -32,7 +37,7 @@ export default function usePageMessageReporter(
   const noticeActionDisabled = notice?.action?.disabled;
 
   useEffect(() => {
-    if (!onMessageChange) return undefined;
+    if (!onMessageChange && !reportMessage) return;
 
     const items: PageMessageItem[] = [];
     if (message) {
@@ -59,14 +64,17 @@ export default function usePageMessageReporter(
       });
     }
 
-    onMessageChange(items.length > 1 ? items : items[0] ?? null);
-    return () => onMessageChange(null);
+    const value = items.length > 1 ? items : items[0] ?? null;
+    if (onMessageChange) onMessageChange(value);
+    else reportMessage?.(source, value);
   }, [
     actionDisabled,
     actionLabel,
     message,
     onAction,
     onMessageChange,
+    reportMessage,
+    source,
     noticeMessage,
     noticeSeverity,
     noticeDetails,
@@ -74,4 +82,9 @@ export default function usePageMessageReporter(
     noticeOnAction,
     noticeActionDisabled,
   ]);
+
+  useEffect(() => () => {
+    if (onMessageChange) onMessageChange(null);
+    else reportMessage?.(source, null);
+  }, [onMessageChange, reportMessage, source]);
 }

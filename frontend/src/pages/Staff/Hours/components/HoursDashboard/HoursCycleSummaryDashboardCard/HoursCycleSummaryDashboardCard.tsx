@@ -1,8 +1,8 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { StaffResource } from '../../../types';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
-import type { PageMessageItem } from '../../../../../../common/components/PageMessageOverlay/PageMessageOverlay';
+import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
@@ -10,28 +10,18 @@ import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
 
 /**
  * Loads and displays the selected staff member's cycle average, independent of the pay-period query.
- * @param props - Staff/cycle selections, query namespace, and this card's error slot.
- * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycle={cycle} onErrorChange={report} />
+ * @param props - Staff/cycle selections and query namespace.
+ * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycle={cycle} />
  */
-export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle, onErrorChange }: {
+export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle }: {
   queryKey: readonly unknown[];
   staff: StaffResource | null;
   cycle: ProgramCycle | null;
-  onErrorChange: (message: PageMessageItem | null) => void;
 }) {
   const state = useHoursCycleSummaryData(queryKey, staff?.id ?? null, cycle?.id ?? null);
   const error = state.status === 'error' ? state.message : null;
   const retry = state.status === 'error' ? state.retry : undefined;
-  const message = useMemo(() => {
-    if (!error || !retry) return null;
-
-    return { message: error, action: { label: 'Retry', onClick: retry } };
-  }, [error, retry]);
-
-  useEffect(() => {
-    onErrorChange(message);
-    return () => onErrorChange(null);
-  }, [message, onErrorChange]);
+  usePageMessageReporter(undefined, error, retry ? { label: 'Retry', onClick: retry } : undefined);
 
   const summary = state.status === 'ready' ? state.data : null;
   const breakdownData = summary ? {

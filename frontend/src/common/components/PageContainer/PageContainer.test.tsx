@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { StrictMode, useState } from 'react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TableColumnDef } from '../Table/Table.types';
 import PageContainer from './PageContainer';
+import usePageMessageReporter from '../PageMessageOverlay/usePageMessageReporter';
+import type { PageMessageItem } from '../PageMessageOverlay/PageMessageOverlay';
 
 const columns: TableColumnDef<{ name: string; status: string }>[] = [
   { id: 'name', header: 'Name', accessorKey: 'name' },
@@ -140,5 +142,139 @@ describe('PageContainer', () => {
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
     expect(filters.apply).toHaveBeenCalledWith('statuses', []);
+  });
+});
+
+/**
+ * Reports nested child feedback without route-owned callback wiring.
+ * @param props - Current failure, recovery action, and optional additional notice.
+ * @example <MessageReporter message="Notes unavailable" />
+ */
+function MessageReporter({ message, action, notice }: {
+  message: string | null;
+  action?: PageMessageItem['action'];
+  notice?: PageMessageItem;
+}) {
+  usePageMessageReporter(undefined, message, action, notice);
+  return null;
+}
+
+describe('PageContainer child messages', () => {
+  it('combines nested dashboard and body messages with page messages and clears only the departing source', () => {
+    function Page({ first, showSecond }: { first: string | null; showSecond: boolean }) {
+      return <PageContainer
+        title="Records"
+        ariaLabel="Records"
+        messages={['Reference options unavailable']}
+        dashboard={<section><MessageReporter message={first} /></section>}
+        table={showSecond ? <MessageReporter message="Records unavailable" /> : null}
+      />;
+    }
+    const view = render(<StrictMode><Page first="Notes unavailable" showSecond /></StrictMode>);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Reference options unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Notes unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Records unavailable');
+
+    view.rerender(<StrictMode><Page first="Attendance unavailable" showSecond /></StrictMode>);
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Notes unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Attendance unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Records unavailable');
+
+    view.rerender(<StrictMode><Page first={null} showSecond /></StrictMode>);
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Attendance unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Records unavailable');
+
+    view.rerender(<StrictMode><Page first={null} showSecond={false} /></StrictMode>);
+    expect(screen.getByRole('alert')).toHaveTextContent('Reference options unavailable');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Records unavailable');
+  });
+
+  it('preserves warnings, details, recovery actions, and pending changes through the overlay', () => {
+    const retry = vi.fn();
+    function Page({ error, pending }: { error: string | null; pending: boolean }) {
+      return <PageContainer title="Records" ariaLabel="Records" table={null} dashboard={<MessageReporter
+        message={error}
+        action={{ label: 'Retry', onClick: retry, disabled: pending }}
+        notice={{ message: 'Order changed', severity: 'warning', details: 'Refresh to reorder records.' }}
+      />} />;
+    }
+    const view = render(<Page error="Notes unavailable" pending={false} />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Refresh to reorder records.');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    view.rerender(<Page error="Notes unavailable" pending />);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled();
+
+    view.rerender(<Page error={null} pending={false} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Order changed');
+  });
+
+  it('keeps dismissal across unchanged reports and shows a failure again after it clears', () => {
+    function Page({ message }: { message: string | null }) {
+      return <PageContainer title="Records" ariaLabel="Records" table={null} dashboard={<MessageReporter message={message} />} />;
+    }
+    const view = render(<Page message="Notes unavailable" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss page messages' }));
+
+    view.rerender(<Page message="Notes unavailable" />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    view.rerender(<Page message={null} />);
+    view.rerender(<Page message="Notes unavailable" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Notes unavailable');
+  });
+
+  it('clears dashboard and active-view reports when saved controls become unready', () => {
+    function Page({ ready, view }: { ready: boolean; view: 'table' | 'calendar' }) {
+      return <PageContainer
+        title="Records"
+        ariaLabel="Records"
+        controls={{ ready, view, setView: vi.fn() }}
+        messages={['Page error']}
+        dashboard={<MessageReporter message="Dashboard error" />}
+        table={<MessageReporter message="Table error" />}
+        calendar={<MessageReporter message="Calendar error" />}
+      />;
+    }
+    const view = render(<Page ready view="table" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Table error');
+
+    view.rerender(<Page ready view="calendar" />);
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Table error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Calendar error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Dashboard error');
+
+    view.rerender(<Page ready={false} view="calendar" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Page error');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Calendar error');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Dashboard error');
+  });
+
+  it('isolates nested pages and gives explicit callbacks sole ownership of their reports', () => {
+    const onMessageChange = vi.fn();
+    function CallbackReporter() {
+      usePageMessageReporter(onMessageChange, 'Callback-owned error');
+      return null;
+    }
+    render(<PageContainer
+      title="Outer"
+      ariaLabel="Outer"
+      dashboard={<><MessageReporter message="Outer error" /><CallbackReporter /></>}
+      table={<PageContainer title="Inner" ariaLabel="Inner" table={<MessageReporter message="Inner error" />} />}
+    />);
+
+    const outer = screen.getByRole('main', { name: 'Outer' });
+    const inner = screen.getByRole('main', { name: 'Inner' });
+    expect(within(inner).getByRole('alert')).toHaveTextContent('Inner error');
+    expect(within(inner).getByRole('alert')).not.toHaveTextContent('Outer error');
+    const outerAlert = within(outer).getAllByRole('alert').find(alert => !inner.contains(alert));
+    expect(outerAlert).toHaveTextContent('Outer error');
+    expect(outerAlert).not.toHaveTextContent('Inner error');
+    expect(screen.queryByText('Callback-owned error')).not.toBeInTheDocument();
+    expect(onMessageChange).toHaveBeenLastCalledWith(expect.objectContaining({ message: 'Callback-owned error' }));
   });
 });

@@ -17,6 +17,12 @@ The `page` preset targets authenticated collection routes using
 | `calendar <owner-path> <NameCalendar>` | Calendar range/buffer adapter and its test |
 | `dashboard <owner-path> <NameDashboard>` | Dashboard component and its test |
 
+Compose independent dashboard cards directly in `PageContainer`'s `dashboard`
+slot. Use the `dashboard` preset only when cards share queries or need additional
+coordination. Descendants report page feedback through `usePageMessageReporter`;
+keep page-owned failures in the container's `messages` prop. See the source
+contracts linked from the frontend overview for reporting inputs and lifecycle.
+
 ### Path and Name Requirements
 
 - Page paths contain a PascalCase page name, optionally preceded by one PascalCase route family.
