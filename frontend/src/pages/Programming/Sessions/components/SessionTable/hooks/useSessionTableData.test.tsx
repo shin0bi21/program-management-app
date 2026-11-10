@@ -35,5 +35,5 @@ it('keys every session control and forwards the domain request', async () => {
 
   expect(getSessions).toHaveBeenCalledWith(
     filters, { signal },
-    { ...sorting, cursor: 'cursor-2', limit: 50 });
+    { ...sorting, cursor: 'cursor-2' });
 });

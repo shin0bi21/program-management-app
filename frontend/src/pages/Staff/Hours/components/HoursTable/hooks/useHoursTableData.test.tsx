@@ -2,7 +2,6 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getHoursTableData } from '../../../hours.api';
 import useHoursTableData from './useHoursTableData';
 
@@ -31,7 +30,7 @@ describe('useHoursTableData', () => {
     expect(options.queryKey).toEqual(['hours', 'table', filters, sorting]);
     await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getHoursTableData).toHaveBeenLastCalledWith(
-      filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: TABLE_PAGE_SIZE },
+      filters, { signal }, { ...sorting, cursor: 'cursor-2' },
     );
   });
 });

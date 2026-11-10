@@ -1,6 +1,6 @@
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
+import type { CursorPage, CursorRequest } from '../../../query/types';
 import type { Task, TaskCategory, TaskStatus } from './types';
 
 export interface TasksFilters {
@@ -30,7 +30,7 @@ interface TaskPlacementInput {
 
 export function getTasksTableData(filters: TasksFilters, opts: RequestOptions | undefined, pagination: CursorRequest) {
   const params = new URLSearchParams({
-    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
+    sort: pagination.key, direction: pagination.direction,
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyTaskFilters(params, filters);

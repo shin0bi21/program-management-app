@@ -2,7 +2,6 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getTasksTableData } from '../../../tasks.api';
 import useTaskTableData from './useTaskTableData';
 
@@ -32,7 +31,7 @@ describe('useTaskTableData', () => {
     expect(options.queryKey).toEqual(['tasks', 'table', filters, sorting, '2026-08-11']);
     await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getTasksTableData).toHaveBeenLastCalledWith(
-      filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: TABLE_PAGE_SIZE },
+      filters, { signal }, { ...sorting, cursor: 'cursor-2' },
     );
   });
 });

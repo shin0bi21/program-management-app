@@ -1,7 +1,7 @@
 import { intersectDateRanges } from '../../../common/utils/dateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
+import type { CursorPage, CursorRequest } from '../../../query/types';
 import type { Task } from '../Tasks/types';
 import type {
   HoursCategory,
@@ -82,7 +82,7 @@ export function getHoursReferenceData(opts?: RequestOptions) {
  * Loads one filtered, sorted Hours page.
  * @param filters - Applied restrictions shared with the calendar.
  * @param opts - Request cancellation options.
- * @param pagination - Server sort field, direction, cursor, and page size.
+ * @param pagination - Server sort field, direction, and optional continuation cursor.
  * @example getHoursTableData(filters, { signal }, pagination)
  */
 export function getHoursTableData(
@@ -91,7 +91,7 @@ export function getHoursTableData(
   pagination: CursorRequest,
 ) {
   const params = new URLSearchParams({
-    sort: pagination.key, direction: pagination.direction, limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
+    sort: pagination.key, direction: pagination.direction,
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyHoursFilters(params, filters);

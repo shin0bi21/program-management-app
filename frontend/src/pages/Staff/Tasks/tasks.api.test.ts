@@ -84,7 +84,7 @@ describe('tasks API', () => {
     getTasksCalendarData(filters, { start: '2026-07-15', end: '2026-09-15' }, { signal: controller.signal });
 
     expect(apiClient.get).toHaveBeenNthCalledWith(1,
-      '/tasks/list?sort=startDate&direction=asc&limit=50&cycleIds=cycle-1%2Ccycle-2', { signal: controller.signal });
+      '/tasks/list?sort=startDate&direction=asc&cycleIds=cycle-1%2Ccycle-2', { signal: controller.signal });
     expect(apiClient.get).toHaveBeenNthCalledWith(2,
       '/tasks/calendar?start=2026-07-15&end=2026-09-15&cycleIds=cycle-1%2Ccycle-2', { signal: controller.signal });
   });
@@ -110,12 +110,11 @@ describe('tasks API', () => {
     }, undefined, {
       key: 'dueDate',
       direction: 'desc',
-      limit: 50,
       cursor: 'cursor-1',
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/tasks/list?sort=dueDate&direction=desc&limit=50&cursor=cursor-1&cycleIds=cycle-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
+      '/tasks/list?sort=dueDate&direction=desc&cursor=cursor-1&cycleIds=cycle-1&staffIds=staff-1&programIds=program-1&categories=planning_prep&statuses=in_progress%2Coverdue&search=workshop+prep',
       undefined,
     );
   });

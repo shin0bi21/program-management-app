@@ -122,12 +122,12 @@ describe('Accounts API', () => {
 
       const res = await request(app)
         .get('/api/accounts')
-        .query({ search: filteredUser.email, roles: 'staff', statuses: 'active' })
+        .query({ search: filteredUser.email, roles: 'staff', statuses: 'active', paginate: 'true' })
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(1);
-      expect(res.body[0]).toMatchObject({ id: filteredUser.userId, role: 'staff', status: 'active' });
+      expect(res.body.rows).toHaveLength(1);
+      expect(res.body.rows[0]).toMatchObject({ id: filteredUser.userId, role: 'staff', status: 'active' });
 
       await deleteTestUser(filteredUser.userId);
     });

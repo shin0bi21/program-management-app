@@ -1,6 +1,6 @@
 import type { ProgramCycleAssignmentChanges } from './programCycleAssignments.api';
 import { apiClient, type RequestOptions } from '../../../../http/client';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../../query/types';
+import type { CursorPage, CursorRequest } from '../../../../query/types';
 import type { Program, ProgramWeekday } from '../../../../common/features/programs/types';
 
 export interface CreateProgramInput {
@@ -44,7 +44,6 @@ export function getProgramList(filters: ProgramFilters, pagination: CursorReques
   const params = new URLSearchParams({
     sort: pagination.key,
     direction: pagination.direction,
-    limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
   });
   if (filters.assignedOnly) params.set('scope', 'assigned');
   if (pagination.cursor) params.set('cursor', pagination.cursor);

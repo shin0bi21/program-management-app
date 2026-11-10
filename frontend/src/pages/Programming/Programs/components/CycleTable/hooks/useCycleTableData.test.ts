@@ -28,5 +28,5 @@ it('keys and gates the cycle list and forwards the domain request', async () => 
   await options.queryFn({ signal, pageParam: 'next-page' } as Parameters<typeof options.queryFn>[0]);
 
   expect(getCycleList).toHaveBeenCalledWith(
-    { key: 'startsOn', direction: 'desc', limit: 50, cursor: 'next-page' }, { signal });
+    { key: 'startsOn', direction: 'desc', cursor: 'next-page' }, { signal });
 });

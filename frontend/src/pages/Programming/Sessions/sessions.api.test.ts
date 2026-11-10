@@ -59,7 +59,7 @@ describe('session API', () => {
     getSessions({}, undefined, { key: 'date', direction: 'asc' });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/sessions?sort=date&direction=asc&limit=50',
+      '/sessions?sort=date&direction=asc&paginate=true',
     );
   });
 
@@ -67,7 +67,7 @@ describe('session API', () => {
     const options = { signal: new AbortController().signal };
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], programIds: ['program-1'] }, options, { key: 'date', direction: 'asc' });
     expect(apiClient.get).toHaveBeenLastCalledWith(
-      '/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&limit=50', options,
+      '/sessions?programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=date&direction=asc&paginate=true', options,
     );
 
     getSessions({ cycleIds: ['cycle-1', 'cycle-2'], start: '2026-07-01', end: '2026-08-01' }, options);
@@ -114,7 +114,7 @@ describe('session API', () => {
 describe('session date-range filtering', () => {
   it('uses the same inclusive local days for table requests across DST', () => {
     getSessions({ dateRange: { start: '2026-03-08', end: '2026-03-08' } }, undefined,
-      { key: 'date', direction: 'asc', limit: 50 });
+      { key: 'date', direction: 'asc' });
     const path = vi.mocked(apiClient.get).mock.calls[vi.mocked(apiClient.get).mock.calls.length - 1]?.[0];
     const url = new URL(String(path), 'http://localhost');
     expect(url.searchParams.get('start')).toBe('2026-03-08T05:00:00Z');

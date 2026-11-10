@@ -114,7 +114,7 @@ describe('Programs API', () => {
       expect(saved.status).toBe(200);
       const programCycles = await request(app).get('/api/programs/cycle-assignments').query({ programId: program.id })
         .set('Authorization', `Bearer ${adminToken}`);
-      const youthRows = await request(app).get('/api/youth').query({ search: 'Envelope Youth', limit: 50 })
+      const youthRows = await request(app).get('/api/youth').query({ search: 'Envelope Youth', paginate: 'true' })
         .set('Authorization', `Bearer ${adminToken}`);
       expect(programCycles.status).toBe(200);
       expect(youthRows.status).toBe(200);

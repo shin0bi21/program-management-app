@@ -72,12 +72,11 @@ describe('hours API', () => {
     }, undefined, {
       key: 'date',
       direction: 'desc',
-      limit: 50,
       cursor: 'cursor-1',
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/hours/table?sort=date&direction=desc&limit=50&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleIds=cycle-1%2Ccycle-2&search=follow+up&start=2026-02-01&end=2026-04-30',
+      '/hours/table?sort=date&direction=desc&cursor=cursor-1&staffIds=staff-1&categories=outreach&programIds=program-1&types=task&cycleIds=cycle-1%2Ccycle-2&search=follow+up&start=2026-02-01&end=2026-04-30',
       undefined,
     );
   });

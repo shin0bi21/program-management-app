@@ -261,7 +261,7 @@ describe('Tasks', () => {
     await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
       expect.objectContaining({ staffIds: ['staff-2'] }),
       expect.anything(),
-      expect.objectContaining({ limit: 50 }),
+      expect.anything(),
     ));
     await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
 

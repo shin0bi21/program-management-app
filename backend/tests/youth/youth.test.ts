@@ -105,7 +105,7 @@ describe('Youth API', () => {
         }
 
         const response = await request(app).get('/api/youth')
-          .query({ search: surname, limit: 50 })
+          .query({ search: surname, paginate: 'true' })
           .set('Authorization', `Bearer ${adminToken}`);
 
         expect(response.status).toBe(200);
@@ -274,7 +274,7 @@ describe('Youth API', () => {
       });
 
       it('combines cycle filtering with search for the table', async () => {
-        const response = await list({ cycleIds: current.cycleId, search: surname, limit: 50, sort: 'firstName' });
+        const response = await list({ cycleIds: current.cycleId, search: surname, paginate: 'true', sort: 'firstName' });
         expect(response.status).toBe(200);
         expect(ids(response.body.rows)).toEqual([youth.Both, youth.Cross, youth.Current].sort());
         expect(response.body.nextCursor).toBeNull();
@@ -1006,7 +1006,7 @@ describe('Youth API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(response.body.youth).toEqual(profile.body);
       const listedSessions = await request(app).get('/api/sessions')
-        .set('Authorization', `Bearer ${adminToken}`).query({ limit: 50 });
+        .set('Authorization', `Bearer ${adminToken}`).query({ paginate: 'true' });
       expect(response.body.updatedSessions).toEqual(expect.arrayContaining([
         listedSessions.body.rows.find((session: { id: string }) => session.id === firstSessionId),
       ]));

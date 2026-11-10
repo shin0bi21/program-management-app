@@ -86,7 +86,7 @@ describe('Programs table list', () => {
       .send({ name: program.name, description: 'Edited table row', enrollmentRequired: false, minAge: 12, maxAge: 16 });
     expect(updated.status).toBe(200);
 
-    const response = await list().query({ scope: 'assigned', limit: 50 });
+    const response = await list().query({ scope: 'assigned' });
     expect(response.status).toBe(200);
     expect(response.body.rows.find((row: ListedProgram) => row.id === program.id)).toEqual(updated.body.program);
     expect(updated.body.program).toEqual(expect.objectContaining({
@@ -102,7 +102,7 @@ describe('Programs table list', () => {
   });
 
   it.each([
-    { limit: 0 }, { limit: 51 }, { limit: 'invalid' }, { cursor: 'not-a-cursor' },
+    { cursor: 'not-a-cursor' },
     { sort: 'unsupported' }, { direction: 'sideways' }, { scope: 'all' },
   ])('rejects malformed pagination and scope %j', async query => {
     expect((await list().query(query)).status).toBe(400);
