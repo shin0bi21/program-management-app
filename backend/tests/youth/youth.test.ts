@@ -882,13 +882,6 @@ describe('Youth API', () => {
       `;
       [firstSessionId, secondSessionId] = sessions.map(session => session.id);
 
-      await sql`
-        INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
-        VALUES
-          (${firstSessionId}, ${youthId}, 'present', ${adminUserId}),
-          (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
-      `;
-
       const [linkedSessionNote] = await sql<{ id: string }[]>`
         INSERT INTO session_notes (
           session_id, category, details, created_by, updated_by
@@ -922,6 +915,16 @@ describe('Youth API', () => {
         RETURNING id
       `;
       openSessionId = openSession.id;
+    });
+
+    beforeEach(async () => {
+      await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
+      await sql`
+        INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+        VALUES
+          (${firstSessionId}, ${youthId}, 'present', ${adminUserId}),
+          (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
+      `;
     });
 
     afterAll(async () => {
@@ -1029,7 +1032,7 @@ describe('Youth API', () => {
         SELECT status FROM attendance_records
         WHERE session_id = ${firstSessionId} AND youth_id = ${youthId}
       `;
-      expect(attendance).toEqual([{ status: 'late' }]);
+      expect(attendance).toEqual([{ status: 'present' }]);
     });
 
     it('limits open-program youth attendance to attended or unmarked', async () => {

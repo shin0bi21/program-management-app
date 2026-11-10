@@ -19,7 +19,7 @@
 - Test status transitions, assignment changes, and relationship changes independently from broad full-update happy paths.
 - Verify database constraints and linked historical records after delete, archive, or deactivation behavior.
 - Add malformed path-parameter tests, boundary dates, duplicate identifiers, concurrent or stale mutations, and failure injection when the changed contract makes them relevant.
-- For focused mutations, first change an unrelated field through its authoritative workflow, then issue the focused command and assert that unrelated data survives. Keep this as a named regression test rather than hiding it inside a broad happy path.
+- When testing focused mutations, first change an unrelated field through its authoritative workflow, then issue the focused command and assert that unrelated data survives. Keep the preservation assertion with the focused command's existing coverage.
 
 ## Run the Owned Runners
 

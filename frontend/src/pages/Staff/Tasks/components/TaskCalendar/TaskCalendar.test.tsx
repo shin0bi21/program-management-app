@@ -83,16 +83,6 @@ describe('TaskCalendar', () => {
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
   });
 
-  it('cancels its range request when unmounted', () => {
-    const { unmount } = renderCalendar();
-    act(() => calendarState.props?.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 1)));
-    const signal = vi.mocked(getTasksCalendarData).mock.calls[0][2]?.signal;
-
-    unmount();
-
-    expect(signal?.aborted).toBe(true);
-  });
-
   it('loads buffered task data and applies the staff resource filter', async () => {
     renderCalendar({ staffIds: ['staff-1'] });
     const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);

@@ -142,8 +142,9 @@ Choose the narrowest owner for each assertion:
 | Route component | Entry context, readiness, domain eligibility, and coordination |
 | Integration/API | Behavior across its boundary, including permissions and persistence |
 
-- Each case must detect a meaningful regression in its owner's contract. Add
-  cases for distinct behavior or failure risks, not merely more input values.
+- A code change alone does not require a new test or test file. Reuse existing
+  coverage; add cases only for distinct behavior or meaningful failure risks in
+  the owner's contract, not merely more input values.
 - Keep page-specific filters, permissions, and record presentation or projection
   checks with the feature owner: those decisions vary by domain. Test shared
   text/numeric sorting, pagination, and component/query processes once at their
