@@ -33,6 +33,23 @@ describe('list ordering', () => {
     expect(hasMisplacedListRows([...rows].reverse(), new Set(['b']), { direction: 'desc', getValue: row => row.value })).toBe(true);
   });
 
+  it.each(['asc', 'desc'] as const)('keeps nulls last and detects edits across the null boundary in %s order', direction => {
+    const ordering: ListOrdering<{ id: string; value: number | null }> = { direction, getValue: row => row.value };
+    const populated = [{ id: 'a', value: 1 }, { id: 'b', value: 2 }];
+    const missing = [{ id: 'c', value: null }, { id: 'd', value: null }];
+    if (direction === 'desc') {
+      populated.reverse();
+      missing.reverse();
+    }
+    const rows = [...populated, ...missing];
+    const editedIds = new Set(rows.map(row => row.id));
+
+    expect(hasMisplacedListRows(rows, editedIds, ordering)).toBe(false);
+    expect(hasMisplacedListRows(rows.map((row, index) => index === 0 ? { ...row, value: null } : row), editedIds, ordering)).toBe(true);
+    expect(hasMisplacedListRows(rows.map((row, index) => index === rows.length - 1 ? { ...row, value: 3 } : row), editedIds, ordering)).toBe(true);
+    expect(hasMisplacedListRows([...populated, ...missing.reverse()], editedIds, ordering)).toBe(true);
+  });
+
   it('does not infer unseen neighbors or inspect pairs without an edited row', () => {
     const ordering = { direction: 'asc' as const, getValue: (row: { value: number }) => row.value };
     expect(hasMisplacedListRows([{ id: 'a', value: 9 }], new Set(['a']), ordering)).toBe(false);

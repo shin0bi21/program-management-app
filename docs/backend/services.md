@@ -41,6 +41,11 @@ Delegate pagination to the shared
 Request schemas own accepted inputs; source contracts own limits, cursor behavior,
 and response shapes. Keep those details with their implementation.
 
+Pass nullable sort values directly to pagination without empty-string or fake-date
+fallbacks. Shared pagination keeps nulls last in both directions, supports null
+cursors, and orders equal values by UUID in the selected direction. Complete
+unpaged reads use the same `NULLS LAST` ordering.
+
 Keep complete selector and calendar reads explicit. Mutation responses return the
 same canonical rows as their lists, including server-derived fields. Cross-domain
 commands return the affected rows in an endpoint-specific envelope.

@@ -35,5 +35,5 @@ export default function useHoursTableData(
  */
 export function getHoursSortValue(item: HoursItem, key: HoursSortKey) {
   const value = item[key];
-  return typeof value === 'string' ? value.toLowerCase() : value ?? '';
+  return typeof value === 'string' ? value.toLowerCase() : value;
 }

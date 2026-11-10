@@ -7,12 +7,12 @@ export const BATCH_SIZE = 50;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ListCursor {
-  value: string | number;
+  value: string | number | null;
   id: string;
 }
 
 interface QueryPagination {
-  /** Trusted, non-null SQL text or finite numeric expression against the query's `row` alias. */
+  /** Trusted nullable SQL text, date, or finite numeric expression against the query's `row` alias. */
   sortValue: PendingQuery<Row[]>;
   direction: 'asc' | 'desc';
   cursor?: string;
@@ -25,10 +25,11 @@ interface QueryPage<T> {
 
 /**
  * Returns up to 50 rows from an already scoped and filtered query.
- * Rows must have UUID IDs; sort expressions reference the `row` alias. Nullable
- * sort values must be normalized by the caller, and `cursor_value` is reserved.
- * Cursor values retain the driver's strings or finite numbers without conversion;
- * exact decimals outside JavaScript precision must remain strings.
+ * Rows must have UUID IDs; sort expressions reference the `row` alias and
+ * `cursor_value` is reserved. Nulls sort last in both directions, with UUID ties
+ * following the selected direction. Cursor values retain the driver's strings,
+ * finite numbers, or null without conversion. Exact decimals outside JavaScript
+ * precision must remain strings.
  * @param rowsQuery - Unexecuted canonical rows with domain access and filters already applied.
  * @param pagination - Trusted sort expression, direction, optional cursor.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
@@ -44,11 +45,15 @@ export async function paginateQuery<T extends { id: string }>(
   const cursor = decodeCursor(pagination.cursor);
   const { sortValue, direction } = pagination;
   const sortDirection = direction === 'asc' ? query`ASC` : query`DESC`;
+  const comparison = direction === 'asc' ? query`>` : query`<`;
   let cursorFilter = query`TRUE`;
   if (cursor) {
-    cursorFilter = direction === 'asc'
-      ? query`(${sortValue}, "row".id) > (${cursor.value}, ${cursor.id}::uuid)`
-      : query`(${sortValue}, "row".id) < (${cursor.value}, ${cursor.id}::uuid)`;
+    if (cursor.value === null) {
+      cursorFilter = query`${sortValue} IS NULL AND "row".id ${comparison} ${cursor.id}::uuid`;
+    } else {
+      cursorFilter = query`(${sortValue} IS NULL
+        OR (${sortValue}, "row".id) ${comparison} (${cursor.value}, ${cursor.id}::uuid))`;
+    }
   }
 
   // 2. Fetch one extra row to determine whether another page exists.
@@ -56,7 +61,7 @@ export async function paginateQuery<T extends { id: string }>(
     SELECT "row".*, ${sortValue} AS cursor_value
     FROM (${rowsQuery}) "row"
     WHERE ${cursorFilter}
-    ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
+    ORDER BY ${sortValue} ${sortDirection} NULLS LAST, "row".id ${sortDirection}
     LIMIT ${BATCH_SIZE + 1}
   `;
 
@@ -66,7 +71,7 @@ export async function paginateQuery<T extends { id: string }>(
 
 /**
  * Encodes a sort value and UUID tie-breaker for the next page.
- * @param cursor - Last visible row's text or finite numeric sort value and UUID.
+ * @param cursor - Last visible row's text, finite numeric, or null sort value and UUID.
  * @example encodeCursor({ value: 'alpha', id }) // base64url JSON cursor
  */
 export function encodeCursor(cursor: ListCursor) {
@@ -92,7 +97,7 @@ export function decodeCursor(cursor?: string): ListCursor | null {
     const { value, id } = parsed as Partial<ListCursor>;
     const isText = typeof value === 'string';
     const isFiniteNumber = typeof value === 'number' && Number.isFinite(value);
-    if (!isText && !isFiniteNumber) {
+    if (value !== null && !isText && !isFiniteNumber) {
       throw new Error('Invalid cursor');
     }
 

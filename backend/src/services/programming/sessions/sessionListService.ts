@@ -21,7 +21,7 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
   const sortValue = {
     program: sql`LOWER("row".program)`,
     cycle: sql`LOWER("row".cycle)`,
-    theme: sql`LOWER(COALESCE("row".theme, ''))`,
+    theme: sql`LOWER("row".theme)`,
     date: sql`"row".date`,
     time: sql`"row".start_time`,
     type: sql`LOWER("row".session_type::text)`,
@@ -34,7 +34,7 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
     return sql<SessionRow[]>`
       SELECT "row".*
       FROM (${filteredRows}) "row"
-      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
+      ORDER BY ${sortValue} ${sortDirection} NULLS LAST, "row".id ${sortDirection}
     `;
   }
 

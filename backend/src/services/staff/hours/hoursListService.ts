@@ -27,7 +27,7 @@ export function getHoursList(actor: AccessTokenPayload, filterValues: HoursTable
     firstName: sql`LOWER("row".first_name)`,
     lastName: sql`LOWER("row".last_name)`,
     date: sql`"row".date`,
-    program: sql`LOWER(COALESCE("row".program, ''))`,
+    program: sql`LOWER("row".program)`,
     cycle: sql`LOWER("row".cycle)`,
     category: sql`"row".category::text`,
     hours: sql`"row".hours`,
