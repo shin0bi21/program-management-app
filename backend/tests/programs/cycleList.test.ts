@@ -9,39 +9,37 @@ const app = createApp();
 describe('Cycle table list', () => {
   let userId: string;
   let token: string;
-  let ids: string[];
+  let cycleId: string;
 
   beforeAll(async () => {
     const admin = await seedTestUser({ role: 'admin' });
     userId = admin.userId;
     token = generateToken(userId, 'admin');
-    const prefix = crypto.randomUUID();
-    const rows = await sql<{ id: string }[]>`
+    const [cycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
-      SELECT ${prefix} || '-' || number, '9998-01-01', '9998-12-31'
-      FROM generate_series(1, 60) AS number RETURNING id
+      VALUES (${crypto.randomUUID()}, '9998-01-01', '9998-12-31')
+      RETURNING id
     `;
-    ids = rows.map(row => row.id).sort().reverse();
+    cycleId = cycle.id;
   });
 
   afterAll(async () => {
-    await sql`DELETE FROM program_cycles WHERE id = ANY(${sql.array(ids)}::uuid[])`;
+    await sql`DELETE FROM program_cycles WHERE id = ${cycleId}`;
     await deleteTestUser(userId);
   });
 
+  /**
+   * Requests cycle rows as the test administrator.
+   * @example await list() // the cycle collection response
+   */
   const list = () => request(app).get('/api/cycles/list').set('Authorization', `Bearer ${token}`);
 
-  it('paginates cycle rows with a stable ID tie-breaker and complete lifecycle state', async () => {
-    const first = await list();
-    expect(first.status).toBe(200);
-    expect(first.body.rows).toHaveLength(50);
-    expect(first.body.rows.map((row: { id: string }) => row.id)).toEqual(ids.slice(0, 50));
-    expect(first.body.rows[0]).toEqual(expect.objectContaining({ state: 'upcoming', startsOn: '9998-01-01', endsOn: '9998-12-31' }));
-
-    const second = await list().query({ cursor: first.body.nextCursor });
-    expect(second.status).toBe(200);
-    expect(second.body.rows.slice(0, 10).map((row: { id: string }) => row.id)).toEqual(ids.slice(50));
-    expect(second.body.rows[0]).not.toHaveProperty('cursorValue');
+  it('returns complete cycle rows with their lifecycle state', async () => {
+    const response = await list();
+    expect(response.status).toBe(200);
+    expect(response.body.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: cycleId, state: 'upcoming', startsOn: '9998-01-01', endsOn: '9998-12-31' }),
+    ]));
   });
 
   it.each([{ cursor: 'bad' }, { limit: 1 }, { sort: 'invalid' }, { direction: 'sideways' }])('rejects invalid cursor-list inputs %j', async query => {

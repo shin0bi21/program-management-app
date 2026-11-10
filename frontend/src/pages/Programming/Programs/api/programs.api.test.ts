@@ -16,8 +16,8 @@ describe('programs API', () => {
     const page = { rows: [], nextCursor: 'next' };
     vi.mocked(apiClient.get).mockResolvedValueOnce(page);
 
-    expect(await getProgramList({ assignedOnly: true }, { key: 'name', direction: 'asc', cursor: 'previous', limit: 25 }, { signal })).toBe(page);
-    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=name&direction=asc&limit=25&scope=assigned&cursor=previous', { signal });
+    expect(await getProgramList({ assignedOnly: true }, { key: 'name', direction: 'asc', cursor: 'previous', limit: 50 }, { signal })).toBe(page);
+    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=name&direction=asc&limit=50&scope=assigned&cursor=previous', { signal });
 
     getProgramList({}, { key: 'name', direction: 'desc' });
     expect(apiClient.get).toHaveBeenLastCalledWith('/programs/list?sort=name&direction=desc&limit=50', undefined);

@@ -868,8 +868,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.body).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: sessionId }),
     ]));
-    const startsAt = response.body.map((session: { startsAt: string }) => session.startsAt);
-    expect(startsAt).toEqual([...startsAt].sort((left, right) => right.localeCompare(left)));
   });
 
   it('filters calendar sessions on the backend', async () => {

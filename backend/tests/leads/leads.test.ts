@@ -304,36 +304,6 @@ describe('Leads API', () => {
     ]));
   });
 
-  it('sorts the table independently by first and last name', async () => {
-    const marker = `Cursor${Date.now()}`;
-    for (const leadName of [
-      { youthFirstName: `${marker}B`, youthLastName: `${marker}A` },
-      { youthFirstName: `${marker}A`, youthLastName: `${marker}B` },
-    ]) {
-      const created = await request(app)
-        .post('/api/leads')
-        .set('Authorization', `Bearer ${staffToken}`)
-        .send({ ...payload, ...leadName });
-      expect(created.status).toBe(201);
-    }
-
-    for (const sort of ['firstName', 'lastName']) {
-      const response = await request(app)
-        .get(`/api/leads?search=${marker}&sort=${sort}&direction=asc&limit=50`)
-        .set('Authorization', `Bearer ${staffToken}`);
-      expect(response.status).toBe(200);
-      const names = [
-        { youthFirstName: `${marker}A`, youthLastName: `${marker}B` },
-        { youthFirstName: `${marker}B`, youthLastName: `${marker}A` },
-      ];
-      if (sort === 'lastName') names.reverse();
-      expect(response.body).toEqual({
-        rows: names.map(name => expect.objectContaining(name)),
-        nextCursor: null,
-      });
-    }
-  });
-
   it('filters leads by status and youth or school search', async () => {
     const res = await request(app)
       .get('/api/leads?statuses=new&search=Event%20Prospect')

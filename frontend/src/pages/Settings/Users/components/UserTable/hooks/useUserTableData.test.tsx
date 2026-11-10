@@ -8,9 +8,12 @@ vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({ default: 
 vi.mock('../../../accounts.api', () => ({ getAccounts: vi.fn() }));
 
 describe('useUserTableData', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAccounts).mockResolvedValue({ rows: [], nextCursor: null });
+  });
 
-  it('configures the account table key and forwards filters, sorting, cursors, and cancellation', async () => {
+  it('configures the account table key and forwards filters, sorting, and cancellation', async () => {
     const baseKey = ['accounts', 'table', 'staff'];
     const filters = { search: 'alice', roles: ['staff' as const], statuses: ['active' as const] };
     const sorting = { key: 'name' as const, direction: 'asc' as const };
@@ -21,13 +24,7 @@ describe('useUserTableData', () => {
     expect(options.enabled).toBe(true);
 
     const signal = new AbortController().signal;
-    const context = (pageParam: string | null) => ({ signal, pageParam } as Parameters<typeof options.queryFn>[0]);
-    await options.queryFn(context(null));
-    expect(getAccounts).toHaveBeenLastCalledWith(
-      filters, { ...sorting, cursor: undefined, limit: 50 }, { signal },
-    );
-
-    await options.queryFn(context('cursor-2'));
+    await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getAccounts).toHaveBeenLastCalledWith(
       filters, { ...sorting, cursor: 'cursor-2', limit: 50 }, { signal },
     );

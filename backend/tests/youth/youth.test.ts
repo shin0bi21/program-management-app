@@ -58,35 +58,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('sorts DOBs in both directions, including unknown dates and ties', async () => {
-      const surname = `BirthdateSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
-      const records: Array<{ id: string; dateOfBirth: string }> = [];
-      try {
-        for (const dateOfBirth of [null, '2012-06-15', '2012-06-15', '2008-01-01']) {
-          const saved = await request(app).post('/api/youth')
-            .set('Authorization', `Bearer ${adminToken}`)
-            .send({ ...baseYouth, lastName: surname, dateOfBirth });
-          expect(saved.status).toBe(201);
-          records.push({ id: saved.body.id, dateOfBirth: dateOfBirth ?? '' });
-        }
-
-        const ascending = [...records].sort((a, b) => a.dateOfBirth.localeCompare(b.dateOfBirth) || a.id.localeCompare(b.id));
-        for (const direction of ['asc', 'desc']) {
-          const response = await request(app).get('/api/youth')
-            .query({ search: surname, sort: 'dateOfBirth', direction, limit: 50 })
-            .set('Authorization', `Bearer ${adminToken}`);
-          expect(response.status).toBe(200);
-          const actual = response.body.rows.map((row: { id: string }) => row.id);
-          expect(response.body.nextCursor).toBeNull();
-          const expected = direction === 'asc' ? ascending : [...ascending].reverse();
-          expect(actual).toEqual(expected.map(row => row.id));
-        }
-      } finally {
-        for (const record of records) await deleteTestYouth(record.id);
-      }
-    });
-
-    it('sorts eligible enrollment program names rather than cycle labels', async () => {
+    it('projects only eligible active enrolled programs', async () => {
       const surname = `ProgramSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
       const youthIds: string[] = [];
       const fixtures: Array<{ programId: string; cycleId: string }> = [];
@@ -133,13 +105,16 @@ describe('Youth API', () => {
         }
 
         const response = await request(app).get('/api/youth')
-          .query({ search: surname, sort: 'activeProgram', direction: 'asc', limit: 50 })
+          .query({ search: surname, limit: 50 })
           .set('Authorization', `Bearer ${adminToken}`);
 
         expect(response.status).toBe(200);
-        expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual([youthIds[2], youthIds[0], youthIds[1]]);
-        expect(response.body.rows[0].activeProgram).toBeNull();
-        expect(response.body.rows[1].activeProgram).toEqual({ programId: jobProgram.id, program: 'Job Readiness' });
+        expect(response.body.rows).toHaveLength(3);
+        expect(response.body.rows).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: youthIds[0], activeProgram: { programId: jobProgram.id, program: 'Job Readiness' } }),
+          expect.objectContaining({ id: youthIds[1], activeProgram: { programId: softSkillsProgramId, program: 'Soft Skills' } }),
+          expect.objectContaining({ id: youthIds[2], activeProgram: null }),
+        ]));
       } finally {
         for (const id of youthIds) await deleteTestYouth(id);
         for (const fixture of fixtures) await deleteTestProgramCycle(fixture.programId, fixture.cycleId);

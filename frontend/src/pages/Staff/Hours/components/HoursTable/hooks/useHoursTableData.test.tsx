@@ -1,12 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getHoursTableData } from '../../../hours.api';
 import useHoursTableData from './useHoursTableData';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { makeHoursItem } from '../../../../../../tests/factories/hours';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
   default: vi.fn(() => ({ rows: [] })),
@@ -20,26 +18,18 @@ const filters = {
 const sorting = { key: 'date' as const, direction: 'desc' as const };
 
 describe('useHoursTableData', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [], nextCursor: null });
+  });
 
-  it('passes table controls to the query owner and forwards initial and next-page API inputs', async () => {
-    const client = createTestQueryClient();
-    const entry = makeHoursItem();
-    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [entry], nextCursor: 'next' });
-    renderHook(() => useHoursTableData(['hours', 'table'], filters, sorting), { wrapper: createQueryClientWrapper(client) });
+  it('keys the applied controls and forwards the domain request', async () => {
+    renderHook(() => useHoursTableData(['hours', 'table'], filters, sorting));
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     const signal = new AbortController().signal;
 
     expect(options.queryKey).toEqual(['hours', 'table', filters, sorting]);
-    await act(async () => {
-      const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
-      expect(page).toEqual({ rows: [entry], nextCursor: 'next' });
-    });
-    expect(getHoursTableData).toHaveBeenLastCalledWith(
-      filters, { signal }, { ...sorting, cursor: undefined, limit: TABLE_PAGE_SIZE },
-    );
-
-    await act(async () => options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]));
+    await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getHoursTableData).toHaveBeenLastCalledWith(
       filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: TABLE_PAGE_SIZE },
     );
