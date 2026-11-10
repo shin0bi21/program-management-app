@@ -96,12 +96,13 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     `
     // This hook owns adapter inputs, query identity, and domain row shaping.
     // useInfiniteListQuery owns accumulation, loading, refresh, and retry mechanics.
+    // Mock that shared owner and invoke its request callback for domain inputs.
+    // Keep shaping checks only when this hook transforms values; omit unchanged row passthrough.
     import { describe, it } from 'vitest';
 
     describe('${hookName}', () => {
       it.todo('builds the complete domain query key and honors enabled gates');
       it.todo('forwards filters, sorting, cursor, and AbortSignal to the API adapter');
-      it.todo('returns complete domain rows from the query');
     });
     `,
   );
