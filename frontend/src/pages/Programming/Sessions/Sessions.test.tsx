@@ -96,8 +96,8 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
               theme: 'Communication',
               programId: 'program-1',
               program: 'Soft Skills',
-              startsAt: '2026-07-28T21:00:00.000Z',
-              endsAt: '2026-07-28T23:30:00.000Z',
+              date: '2026-07-28', startTime: '17:00',
+              endTime: '19:30',
               description: 'Planned communication exercise',
             });
             onSessionSelect(session);
@@ -153,7 +153,7 @@ describe('Sessions', () => {
         endsOn: '2100-12-31',
         state: 'active',
         enrolledCount: 1,
-        nextSessionAt: null,
+        nextSessionDate: null,
         nextSessionId: null,
         uniqueAttendeeCount: 0,
       },
@@ -163,8 +163,8 @@ describe('Sessions', () => {
       theme: 'Communication',
       programId: 'program-1',
       program: 'Soft Skills',
-      startsAt: '2026-07-28T21:00:00.000Z',
-      endsAt: '2026-07-28T23:30:00.000Z',
+      date: '2026-07-28', startTime: '17:00',
+      endTime: '19:30',
       description: 'Planned communication exercise',
     })], nextCursor: null });
     getSessionRoster.mockResolvedValue([
@@ -241,8 +241,8 @@ describe('Sessions', () => {
       programId: 'drop-in',
       program: 'Drop In',
       enrollmentRequired: false,
-      startsAt: '2026-07-31T21:00:00.000Z',
-      endsAt: '2026-07-31T23:00:00.000Z',
+      date: '2026-07-31', startTime: '17:00',
+      endTime: '19:00',
     })], nextCursor: null });
 
     render(

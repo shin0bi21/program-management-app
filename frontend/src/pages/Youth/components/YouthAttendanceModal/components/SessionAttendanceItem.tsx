@@ -9,6 +9,11 @@ import AttendanceStatusSelect from '../../../../../common/features/AttendanceSta
 import type { YouthAttendanceSession } from '../types';
 import SessionNoteCard from './SessionNoteCard';
 
+/**
+ * Displays attendance and linked notes on the saved Session date.
+ * @param props - Session data, draft attendance, note capabilities, and editor actions.
+ * @example <SessionAttendanceItem {...props} /> // cancellation disables attendance and note creation
+ */
 export default function SessionAttendanceItem({
   session,
   enrollmentRequired,
@@ -42,7 +47,7 @@ export default function SessionAttendanceItem({
       <div className="youth-attendance-modal__session-overview">
         <div className="youth-attendance-modal__session-details">
           <strong>{sessionLabel}</strong>
-          <span>{formatShortDate(session.startsAt)}</span>
+          <span>{formatShortDate(session.date)}</span>
           {session.cancelledAt && (
             <Label tone="negative">Cancelled</Label>
           )}
@@ -50,7 +55,7 @@ export default function SessionAttendanceItem({
         <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionLabel}`}>
           <AttendanceStatusSelect
             id={`youth-attendance-${session.id}`}
-            ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.startsAt)}`}
+            ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.date)}`}
             enrollmentRequired={enrollmentRequired}
             value={status}
             disabled={Boolean(session.cancelledAt)}

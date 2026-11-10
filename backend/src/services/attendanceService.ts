@@ -9,8 +9,10 @@ type YouthRow = { id: string; firstName: string; lastName: string };
 interface AttendanceSessionRow {
   id: string;
   theme: string;
-  startsAt: string;
-  endsAt: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  completed: boolean;
   cancelledAt: string | null;
   sessionType: string;
 
@@ -89,8 +91,10 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
     SELECT
       session.id,
       session.theme,
-      session.starts_at,
-      session.ends_at,
+      session.date::text,
+      to_char(session.start_time, 'HH24:MI') AS start_time,
+      to_char(session.end_time, 'HH24:MI') AS end_time,
+      (session.date + session.end_time) <= (NOW() AT TIME ZONE 'America/Toronto') AS completed,
       session.cancelled_at,
       session.session_type,
 
@@ -104,8 +108,8 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
       SELECT enrollment.youth_id
       FROM program_enrollments enrollment
       WHERE enrollment.program_id = session.program_id AND enrollment.cycle_id = session.cycle_id
-        AND enrollment.enrolled_on <= (session.starts_at AT TIME ZONE 'America/Toronto')::date
-        AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > (session.starts_at AT TIME ZONE 'America/Toronto')::date)
+        AND enrollment.enrolled_on <= session.date
+        AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > session.date)
       UNION
       SELECT record.youth_id
       FROM attendance_records record
@@ -119,7 +123,7 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
     WHERE session.program_id = ${programId} AND session.cycle_id = ${cycleId}
       AND (${youthId ?? null}::uuid IS NULL OR roster.youth_id = ${youthId ?? null})
       AND (program.enrollment_required = TRUE OR attendance.id IS NOT NULL OR ${youthId ?? null}::uuid IS NOT NULL)
-    ORDER BY session.starts_at DESC, session.id DESC, roster.youth_id
+    ORDER BY session.date DESC, session.start_time DESC, session.id DESC, roster.youth_id
   `;
   const sessionNotes = await sql<SessionNoteRow[]>`
     SELECT
@@ -177,12 +181,11 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
   }
 
   // 5. Include each youth's counts for completed, noncancelled sessions.
-  const now = Date.now();
   const participants = youth.map(person => {
     const youthSessions = sessionsByYouth.get(person.id) ?? [];
     const counts = { presentCount: 0, lateCount: 0, absentCount: 0 };
     for (const session of youthSessions) {
-      if (session.cancelledAt !== null || new Date(session.endsAt).getTime() > now) continue;
+      if (session.cancelledAt !== null || !session.completed) continue;
       if (session.status === 'present') counts.presentCount += 1;
       else if (session.status === 'late') counts.lateCount += 1;
       else counts.absentCount += 1;

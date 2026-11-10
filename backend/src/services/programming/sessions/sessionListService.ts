@@ -22,8 +22,8 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
     program: sql`LOWER("row".program)`,
     cycle: sql`LOWER("row".cycle)`,
     theme: sql`LOWER(COALESCE("row".theme, ''))`,
-    date: sql`"row".starts_at::text`,
-    time: sql`"row".starts_at::text`,
+    date: sql`"row".date`,
+    time: sql`"row".start_time`,
     type: sql`LOWER("row".session_type::text)`,
     status: sql`"row".state`,
   }[filterValues.sort]!;

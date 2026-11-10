@@ -16,6 +16,7 @@ describe('Homepage management API', () => {
   let programId: string;
   let cycleId: string;
   let uploadedImageId: string | undefined;
+  let sessionIds: string[];
 
   beforeAll(async () => {
     pngFixture = await sharp({
@@ -45,15 +46,16 @@ describe('Homepage management API', () => {
       name: `Homepage Test ${Date.now()}`,
     }));
 
-    await sql`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
+    const sessions = await sql<{ id: string; theme: string }[]>`
+      INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
       SELECT
         ${programId}, ${cycleId},
         'Homepage Session ' || day_number,
-        NOW() + (day_number || ' days')::interval,
-        NOW() + (day_number || ' days')::interval + interval '2 hours'
+        (NOW() AT TIME ZONE 'America/Toronto')::date + day_number, TIME '17:00', TIME '19:00'
       FROM generate_series(1, 4) AS day_number
+      RETURNING id, theme
     `;
+    sessionIds = sessions.sort((first, second) => first.theme.localeCompare(second.theme)).map(session => session.id);
   });
 
   afterAll(async () => {
@@ -176,23 +178,15 @@ describe('Homepage management API', () => {
       FROM programs
       WHERE name = 'Soft Skills'
     `;
-    const orderedPrograms = await sql<{ id: string }[]>`
-      SELECT id
+    const programs = await sql<{ id: string; name: string }[]>`
+      SELECT id, name
       FROM programs
-      ORDER BY min_age ASC NULLS FIRST, name
     `;
-    const expected = await sql<{ id: string }[]>`
-      SELECT session.id
-      FROM program_sessions session
-      WHERE session.program_id = ${program.id}
-        AND session.ends_at >= NOW()
-        AND session.cancelled_at IS NULL
-      ORDER BY session.starts_at
-      LIMIT 3
-    `;
+    const programIdsByName = new Map(programs.map(item => [item.name, item.id]));
+    const expectedProgramIds = ['Drop In', 'Soft Skills', 'Job Readiness'].map(name => programIdsByName.get(name));
     expect(publicContent.status).toBe(200);
     expect(publicContent.body.programs.map((item: { id: string }) => item.id))
-      .toEqual(orderedPrograms.map(item => item.id));
+      .toEqual(expectedProgramIds);
     const softSkills = publicContent.body.programs.find(
       (item: { id: string }) => item.id === program.id,
     );
@@ -203,7 +197,7 @@ describe('Homepage management API', () => {
       maxAge: 15,
     }));
     expect(softSkills.sessions.map((session: { id: string }) => session.id))
-      .toEqual(expected.map(session => session.id));
+      .toEqual(sessionIds.slice(0, 3));
     expect(publicContent.body.programs).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Job Readiness', sessions: expect.any(Array) }),
     ]));

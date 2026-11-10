@@ -49,16 +49,16 @@ export function useSessionTableData(queryKey: readonly unknown[], {
 }
 
 /**
- * Supplies server-compatible text or timestamp instants for the selected session order.
- * @example getSessionSortValue(session, 'date') // Date representing startsAt
+ * Supplies server-compatible date, time, or label strings for the selected session order.
+ * @example getSessionSortValue(session, 'date') // saved date string
  */
 export function getSessionSortValue(session: ProgramSession, key: SessionSortKey) {
   return {
     program: session.program.toLowerCase(),
     cycle: session.cycle.toLowerCase(),
     theme: session.theme.toLowerCase(),
-    date: new Date(session.startsAt),
-    time: new Date(session.startsAt),
+    date: session.date,
+    time: session.startTime,
     type: session.sessionType.toLowerCase(),
     status: session.state,
   }[key];

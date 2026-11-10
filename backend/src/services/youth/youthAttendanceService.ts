@@ -24,8 +24,10 @@ interface YouthProgramCycleContext {
 interface YouthAttendanceSession {
   id: string;
   theme: string;
-  startsAt: Date;
-  endsAt: Date;
+  date: string;
+  startTime: string;
+  endTime: string;
+  completed: boolean;
   cancelledAt: Date | null;
   sessionType: string;
 
@@ -278,8 +280,10 @@ function getYouthAttendanceSessions(
     SELECT
       session.id,
       session.theme,
-      session.starts_at,
-      session.ends_at,
+      session.date::text,
+      to_char(session.start_time, 'HH24:MI') AS start_time,
+      to_char(session.end_time, 'HH24:MI') AS end_time,
+      (session.date + session.end_time) <= (NOW() AT TIME ZONE 'America/Toronto') AS completed,
       session.cancelled_at,
       session.session_type,
 
@@ -299,14 +303,14 @@ function getYouthAttendanceSessions(
           FROM program_enrollments enrollment
           WHERE enrollment.program_id = session.program_id AND enrollment.cycle_id = session.cycle_id
             AND enrollment.youth_id = ${youthId}
-            AND enrollment.enrolled_on <= (session.starts_at AT TIME ZONE 'America/Toronto')::date
+            AND enrollment.enrolled_on <= session.date
             AND (
               enrollment.withdrawn_on IS NULL
-              OR enrollment.withdrawn_on > (session.starts_at AT TIME ZONE 'America/Toronto')::date
+              OR enrollment.withdrawn_on > session.date
             )
         )
       )
-    ORDER BY session.starts_at DESC, session.id DESC
+    ORDER BY session.date DESC, session.start_time DESC, session.id DESC
     ${lock ? query`FOR UPDATE OF session` : query``}
   `;
 }

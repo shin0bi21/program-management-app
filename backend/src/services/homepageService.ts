@@ -38,7 +38,9 @@ interface HomepageProgramRow {
   maxAge: number | null;
   sessionId: string | null;
   sessionTheme: string | null;
-  sessionStartsAt: string | null;
+  sessionDate: string | null;
+  sessionStartTime: string | null;
+  sessionEndTime: string | null;
 }
 
 export type PublicLeadInput = {
@@ -335,13 +337,15 @@ async function readHomepagePrograms() {
         session.program_id,
         session.id AS session_id,
         session.theme AS session_theme,
-        session.starts_at AS session_starts_at,
+        session.date::text AS session_date,
+        to_char(session.start_time, 'HH24:MI') AS session_start_time,
+        to_char(session.end_time, 'HH24:MI') AS session_end_time,
         ROW_NUMBER() OVER (
           PARTITION BY session.program_id
-          ORDER BY session.starts_at, session.id
+          ORDER BY session.date, session.start_time, session.id
         ) AS program_session_order
       FROM program_sessions session
-      WHERE session.ends_at >= NOW()
+      WHERE (session.date + session.end_time) >= (NOW() AT TIME ZONE 'America/Toronto')
         AND session.cancelled_at IS NULL
     )
     SELECT
@@ -354,7 +358,7 @@ async function readHomepagePrograms() {
 
       ranked.session_id,
       ranked.session_theme,
-      ranked.session_starts_at
+      ranked.session_date, ranked.session_start_time, ranked.session_end_time
     FROM programs program
     LEFT JOIN ranked_sessions ranked
       ON ranked.program_id = program.id
@@ -362,7 +366,8 @@ async function readHomepagePrograms() {
     ORDER BY
       program.min_age ASC NULLS FIRST,
       program.name,
-      ranked.session_starts_at,
+      ranked.session_date,
+      ranked.session_start_time,
       ranked.session_id
   `;
 
@@ -374,7 +379,7 @@ async function readHomepagePrograms() {
     enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
-    sessions: Array<{ id: string; theme: string; startsAt: string }>;
+    sessions: Array<{ id: string; theme: string; date: string; startTime: string; endTime: string }>;
   }>();
 
   for (const row of rows) {
@@ -393,14 +398,16 @@ async function readHomepagePrograms() {
     }
 
     if (row.sessionId === null) continue;
-    if (row.sessionTheme === null || row.sessionStartsAt === null) {
+    if (row.sessionTheme === null || row.sessionDate === null || row.sessionStartTime === null || row.sessionEndTime === null) {
       throw new Error(`Homepage session ${row.sessionId} is missing required data`);
     }
 
     program.sessions.push({
       id: row.sessionId,
       theme: row.sessionTheme,
-      startsAt: row.sessionStartsAt,
+      date: row.sessionDate,
+      startTime: row.sessionStartTime,
+      endTime: row.sessionEndTime,
     });
   }
 

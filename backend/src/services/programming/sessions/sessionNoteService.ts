@@ -194,7 +194,7 @@ export async function listSessionNotesForYouth(
     SELECT
       sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
-      cs.theme AS session_theme, cs.starts_at, cs.cycle_id,
+      cs.theme AS session_theme, cs.date::text, cs.cycle_id,
       cycle.name AS cycle, p.id AS program_id, p.name AS program, p.enrollment_required,
       COALESCE(
         JSON_AGG(
@@ -218,7 +218,7 @@ export async function listSessionNotesForYouth(
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
       AND ${programCycle ? sql`cs.program_id = ${programCycle.programId} AND cs.cycle_id = ${programCycle.cycleId}` : sql`TRUE`}
     GROUP BY sn.id, author.id, cs.id, cycle.id, p.id
-    ORDER BY cs.starts_at DESC, sn.created_at DESC
+    ORDER BY cs.date DESC, cs.start_time DESC, sn.created_at DESC
   `;
 }
 
@@ -243,10 +243,10 @@ async function assertYouthEligibility(
         INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
         WHERE cs.id = ${sessionId}
           AND ce.youth_id = ANY(${sql.array(youthIds)}::uuid[])
-          AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+          AND ce.enrolled_on <= cs.date
           AND (
             ce.withdrawn_on IS NULL
-            OR ce.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+            OR ce.withdrawn_on > cs.date
           )
       `;
   if (eligibleYouth.length !== youthIds.length) {

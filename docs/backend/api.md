@@ -128,7 +128,7 @@ Attendance, notes, and attachments remain session-owned. Assignment edits replac
 the checked set atomically while preserving retained pairs and all linked history. Removing a
 relationship with sessions, enrollment history (including withdrawals), or
 logged hours rejects the entire request. Deleting a referenced cycle also fails.
-Program defaults affect future session creation, not existing timestamps.
+Program defaults affect future session creation, not existing session dates or times.
 
 [Assignment service](../../backend/src/services/programming/programCycles/assignmentService.ts)
 and [cycle service](../../backend/src/services/programming/cycles/cycleService.ts)
@@ -144,8 +144,12 @@ A program's `enrollmentRequired` flag controls enrollment versus open attendance
 it does not grant staff program access. Sessions use program scheduling defaults
 and the program timezone (`America/Toronto`). Missing dates resolve the next
 default weekday, including today only before the default start time. Supplied
-dates remain unchanged. Local times are stored and returned as UTC instants;
-skipped or repeated daylight-saving times are rejected.
+dates remain unchanged. Sessions store `date` as `DATE` and `start_time` /
+`end_time` as `TIME WITHOUT TIME ZONE`. Requests and rows use `date`
+(`YYYY-MM-DD`), `startTime`, and `endTime` (`HH:mm` clock strings). End time must follow start time on the same
+date; overnight sessions are unsupported. Skipped or repeated daylight-saving
+times are rejected. Eastern time is used only for current-time rules; stored
+clock values are not converted for display.
 
 Program-based creation resolves exactly one allowed cycle from the local date
 inside the assignment-locking transaction; missing or overlapping matches conflict.
@@ -157,14 +161,14 @@ Session types are fixed enum values: `Regular`, `Guest Speaker`, and `Field Trip
 Session requests and rows use `sessionType`; list filters use `sessionTypes`.
 
 Session queries combine cycle, program, type, status, search, and date
-filters while preserving program access. Paired timestamps use an exclusive end;
+filters while preserving program access. Paired date bounds are inclusive;
 multi-year ranges and real calendar dates in years 0001–9999 are supported.
 See the [session list service](../../backend/src/services/programming/sessions/sessionListService.ts).
 
 #### Move a Future Session Date
 
-The focused date command preserves the program and local start/end times,
-including overnight day spans. Both the source and destination must be future,
+The focused date command changes only the saved date and resolved cycle,
+preserving the program and both clock times. Both the source and destination must be future,
 the source must not be cancelled, and exactly one assigned cycle must contain the
 complete moved session. Recorded attendance, notes, attachments, or session-linked
 hours prevent moving to another cycle. Ambiguous DST times conflict; unrelated

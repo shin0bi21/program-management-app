@@ -5,7 +5,7 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import { getErrorMessage } from '../../../../../../http/errors';
 import { createSession, updateSession, type CreatedSessionResult, type UpdatedSessionResult } from '../../../sessions.api';
 import { type ProgramSession } from '../../../types';
-import { nextSessionDate, sessionDateTime, sessionInstant } from '../../../utils/sessionSchedule';
+import { nextSessionDate } from '../../../utils/sessionSchedule';
 
 /**
  * Initializes one session draft from a saved session or the selected program's defaults.
@@ -21,16 +21,13 @@ export default function useSessionModal({ programs, session, initialProgramId, i
 }) {
   const [programId, setProgramId] = useState(session?.programId ?? initialProgramId ?? '');
   const program = programs.find(candidate => candidate.id === programId);
-  const timezone = program?.timezone ?? 'America/Toronto';
   const [draft, setDraft] = useState(() => {
-    const startsAt = session ? sessionDateTime(session.startsAt, timezone) : null;
-    const endsAt = session ? sessionDateTime(session.endsAt, timezone) : null;
     return {
       sessionType: session?.sessionType ?? '',
       theme: session?.theme ?? '',
-      date: startsAt?.date ?? initialDate ?? (program ? nextSessionDate(program) : ''),
-      startTime: startsAt?.time ?? program?.defaultStartTime ?? '',
-      endTime: endsAt?.time ?? program?.defaultEndTime ?? '',
+      date: session?.date ?? initialDate ?? (program ? nextSessionDate(program) : ''),
+      startTime: session?.startTime ?? program?.defaultStartTime ?? '',
+      endTime: session?.endTime ?? program?.defaultEndTime ?? '',
       description: session?.description ?? '',
     };
   });
@@ -70,16 +67,13 @@ export default function useSessionModal({ programs, session, initialProgramId, i
         sessionType: draft.sessionType,
         theme: draft.theme.trim(),
         description: draft.description.trim() || null,
+        date: draft.date,
+        startTime: draft.startTime,
+        endTime: draft.endTime,
       };
       saved = session
-        ? await updateSession(session.id, {
-          ...fields,
-          startsAt: sessionInstant(draft.date, draft.startTime, timezone),
-          endsAt: sessionInstant(draft.date, draft.endTime, timezone),
-        })
-        : await createSession({
-          ...fields, programId, date: draft.date, startTime: draft.startTime, endTime: draft.endTime,
-        });
+        ? await updateSession(session.id, fields)
+        : await createSession({ ...fields, programId });
     } catch (cause) {
       setStatus('error');
       setMessage(getErrorMessage(cause, session ? 'Could not update session' : 'Could not add session'));

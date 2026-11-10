@@ -63,6 +63,13 @@ Choose deletion behavior for the actual domain; cascading is appropriate only wh
 - Do not weaken current constraints for a hypothetical future workflow. Model a materially different backlog, draft, or unassigned lifecycle only when that workflow is approved.
 - Choose cascade, restrict, set-null, archive, or soft-delete behavior from the product's historical-record contract rather than convenience.
 
+## Business Dates and Clock Times
+
+Follow [Dates and Times](../workflows/date-and-time.md) for value types, precision,
+inclusive bounds, serialization, date arithmetic, and timezone boundaries.
+Enforce Session date bounds, same-day time ordering, and whole-minute Session /
+program default times with database checks as well as request validation.
+
 ## Update Enumerated Fields
 
 An enumerated application field has one contract spread across the database constraint, backend validation and labels, frontend types and options, tests, and seeds. Update all of those owners together; changing only the displayed label leaves an obsolete value in the API and database.

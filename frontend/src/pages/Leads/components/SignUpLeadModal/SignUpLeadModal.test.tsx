@@ -50,7 +50,7 @@ const programCycle = {
   endsOn: '2026-08-31',
   state: 'active' as const,
   enrolledCount: 10,
-  nextSessionAt: null,
+  nextSessionDate: null,
   nextSessionId: null,
   uniqueAttendeeCount: 0,
 };

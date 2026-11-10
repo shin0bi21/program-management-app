@@ -4,7 +4,7 @@ import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
 const program = { id: 'program-1', name: 'Soft Skills' };
-const session = makeProgramSession({ startsAt: '2026-08-09T21:30:00Z', endsAt: '2026-08-09T23:30:00Z' });
+const session = makeProgramSession({ date: '2026-08-09', startTime: '17:30', endTime: '19:30' });
 
 export function InteractiveSessionItem() {
   const [action, setAction] = useState('');

@@ -13,7 +13,7 @@ export interface ProgramCycleRow {
   startsOn: string;
   endsOn: string;
   enrolledCount: number;
-  nextSessionAt: Date | null;
+  nextSessionDate: string | null;
   nextSessionId: string | null;
   uniqueAttendeeCount: number;
   state: 'upcoming' | 'active' | 'completed';
@@ -44,15 +44,19 @@ export const programCycleRowColumns = sql`
       AND (ce.withdrawn_on IS NULL OR ce.withdrawn_on > CURRENT_DATE)
   ) AS enrolled_count,
   (
-    SELECT MIN(cs.starts_at)
+    SELECT MIN(cs.date)::text
     FROM program_sessions cs
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id AND cs.starts_at >= NOW() AND cs.cancelled_at IS NULL
-  ) AS next_session_at,
+    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
+      AND (cs.date + cs.start_time) >= (NOW() AT TIME ZONE 'America/Toronto')
+      AND cs.cancelled_at IS NULL
+  ) AS next_session_date,
   (
     SELECT cs.id
     FROM program_sessions cs
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id AND cs.starts_at >= NOW() AND cs.cancelled_at IS NULL
-    ORDER BY cs.starts_at
+    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
+      AND (cs.date + cs.start_time) >= (NOW() AT TIME ZONE 'America/Toronto')
+      AND cs.cancelled_at IS NULL
+    ORDER BY cs.date, cs.start_time
     LIMIT 1
   ) AS next_session_id,
   (

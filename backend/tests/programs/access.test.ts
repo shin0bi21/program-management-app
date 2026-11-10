@@ -32,8 +32,8 @@ describe('Program authorization before missing-record responses', () => {
     const pair = await seedTestProgramCycle({ programId });
     cycleId = pair.cycleId;
     const [session] = await sql`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-      VALUES (${programId}, ${cycleId}, 'Access checks', '2026-06-01T14:00:00Z', '2026-06-01T15:00:00Z')
+      INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+      VALUES (${programId}, ${cycleId}, 'Access checks', '2026-06-01', '10:00:00', '11:00:00')
       RETURNING id
     `;
     sessionId = session.id;

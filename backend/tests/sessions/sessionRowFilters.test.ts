@@ -36,8 +36,8 @@ function sessionRows() {
     SELECT
       fixture.id,
       fixture.theme,
-      NOW() + INTERVAL '1 day' AS starts_at,
-      NOW() + INTERVAL '1 day 1 hour' AS ends_at,
+      (CURRENT_DATE + 1)::text AS date,
+      '17:00'::text AS start_time, '19:00'::text AS end_time,
       NULL::timestamptz AS cancelled_at,
       NULL::text AS description,
       '00000000-0000-4000-8000-000000000001'::uuid AS cycle_id,
@@ -49,7 +49,8 @@ function sessionRows() {
       'Program'::text AS program,
       TRUE AS enrollment_required,
 
-      'upcoming'::text AS state
+      'upcoming'::text AS state,
+      TRUE AS movable
     FROM (VALUES
       (${firstId}::uuid, 'Alpha', 'Regular'::session_type),
       (${secondId}::uuid, 'Beta', 'Guest Speaker'::session_type)

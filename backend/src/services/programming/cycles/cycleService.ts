@@ -159,8 +159,8 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
       FROM program_sessions session
       JOIN programs program ON program.id = session.program_id
       WHERE session.cycle_id = ${id}
-        AND ((session.starts_at AT TIME ZONE program.timezone::text)::date < ${data.startsOn}::date
-          OR (session.ends_at AT TIME ZONE program.timezone::text)::date > ${data.endsOn}::date)
+        AND (session.date < ${data.startsOn}::date
+          OR session.date > ${data.endsOn}::date)
       LIMIT 1
     `;
     if (sessionsOutsideDates.length) throw new ConflictError('Cycle dates must contain all existing sessions');

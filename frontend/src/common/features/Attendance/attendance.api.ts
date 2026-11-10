@@ -18,8 +18,10 @@ export interface AttendanceData {
       id: string;
       sessionType: string;
       theme: string;
-      startsAt: string;
-      endsAt: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      completed: boolean;
       cancelledAt: string | null;
       status: 'present' | 'late' | 'absent' | 'excused' | null;
       notes: string | null;

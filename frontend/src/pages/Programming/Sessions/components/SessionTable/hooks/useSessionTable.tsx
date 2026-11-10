@@ -5,20 +5,20 @@ import StatusLabel from '../../../../../../common/components/StatusLabel/StatusL
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { ProgramSession } from '../../../types';
-import type { Program } from '../../../../../../common/features/programs/types';
-import { sessionDateTime } from '../../../utils/sessionSchedule';
+import { formatSessionTime } from '../../../utils/sessionSchedule';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
 
-const noPrograms: Program[] = [];
-
+/**
+ * Builds session columns using saved dates and clock times, with permitted write actions.
+ * @param options - Write capability and page-owned edit/delete callbacks.
+ * @example useSessionTable({ canWriteSessions: false, onEdit, onDelete }) // columns without actions
+ */
 export default function useSessionTable({
-  programs = noPrograms,
   canWriteSessions,
   onEdit,
   onDelete,
 }: {
-  programs?: Program[];
   canWriteSessions: boolean;
   onEdit: (session: ProgramSession) => void;
   onDelete: (session: ProgramSession) => void;
@@ -29,20 +29,13 @@ export default function useSessionTable({
     { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
     {
       id: 'date', header: 'Date', size: 135,
-      accessorFn: session => {
-        const timezone = programs.find(program => program.id === session.programId)?.timezone ?? 'America/Toronto';
-        return formatShortDate(sessionDateTime(session.startsAt, timezone).date);
-      },
+      accessorFn: session => formatShortDate(session.date),
     },
     {
       id: 'time',
       header: 'Time',
       size: 165,
-      accessorFn: session => {
-        const timezone = programs.find(program => program.id === session.programId)?.timezone ?? 'America/Toronto';
-        const timeFormatter = new Intl.DateTimeFormat('en-CA', { hour: 'numeric', minute: '2-digit', timeZone: timezone });
-        return `${timeFormatter.format(new Date(session.startsAt))} – ${timeFormatter.format(new Date(session.endsAt))}`;
-      },
+      accessorFn: session => `${formatSessionTime(session.startTime)} – ${formatSessionTime(session.endTime)}`,
     },
     {
       id: 'type',
@@ -72,5 +65,5 @@ export default function useSessionTable({
         ]}
       />,
     }] : []),
-  ], [programs, canWriteSessions, onDelete, onEdit]);
+  ], [canWriteSessions, onDelete, onEdit]);
 }

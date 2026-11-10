@@ -22,6 +22,7 @@ const sessionTypeColors = {
 const additionalSessionTypeColors = ['#7e22ce', '#be123c', '#0f766e', '#c2410c', '#4338ca'];
 const statusValues = { unmarked: 1, absent: 2, late: 3, excused: 4, present: 5 } as const;
 const statusLabels = ['Unmarked', 'Absent', 'Late', 'Excused', 'On time'];
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const noteStyles = {
   general: { label: 'General', marker: 'G', color: '#59636e' },
   attendance: { label: 'Attendance', marker: 'AT', color: '#2563a6' },
@@ -222,7 +223,7 @@ function drawTimeline(doc: PDFKit.PDFDocument, sessions: Sessions, colors: Map<s
     });
     const showLabel = sessions.length <= 10 || index % Math.ceil(sessions.length / 10) === 0;
     if (showLabel) {
-      const label = new Date(point.startsAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', timeZone: 'America/Toronto' });
+      const label = formatReportDate(point.date);
       doc.font('Helvetica').fontSize(5.5).fillColor(muted).text(label, x - 18, chartBottom + 5, { width: 36, align: 'center' });
     }
   });
@@ -247,9 +248,7 @@ function drawNotes(doc: PDFKit.PDFDocument, sessions: Sessions) {
       const detailHeight = note.details ? doc.heightOfString(note.details, { width: contentWidth }) : 0;
       ensureSpace(doc, 34 + detailHeight);
       const style = noteStyles[note.category];
-      const date = new Date(session.startsAt).toLocaleDateString('en-CA', {
-        month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Toronto',
-      });
+      const date = formatReportDate(session.date, true);
       const sessionTitle = session.theme || 'Untitled session';
       doc.circle(margin + 6, doc.y + 5, 6).fillColor(style.color).fill();
       doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
@@ -268,10 +267,9 @@ function drawNotes(doc: PDFKit.PDFDocument, sessions: Sessions) {
  * @example drawYouth(doc, report.youth[0]) // breakdown, timeline and notes from the same records
  */
 function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
-  const now = Date.now();
   const sessions = youth.sessions
-    .filter(session => session.cancelledAt === null && Date.parse(session.endsAt) <= now)
-    .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt));
+    .filter(session => session.cancelledAt === null && session.completed)
+    .sort((first, second) => first.date.localeCompare(second.date) || first.startTime.localeCompare(second.startTime));
   const colors = createSessionTypeColorMap();
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(16).fillColor('#1f2937')
@@ -292,6 +290,18 @@ function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
     .text('Session Notes', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
   drawNotes(doc, sessions);
+}
+
+/**
+ * Formats a validated business date directly for the report's English labels.
+ * @param date - Saved YYYY-MM-DD calendar date, without a time or timezone.
+ * @param includeYear - Includes the year in note headings; timeline labels omit it.
+ * @example formatReportDate('2026-11-10', true) // 'Nov 10, 2026'
+ */
+function formatReportDate(date: string, includeYear = false) {
+  const [year, month, day] = date.split('-');
+  const label = `${monthNames[Number(month) - 1]} ${Number(day)}`;
+  return includeYear ? `${label}, ${Number(year)}` : label;
 }
 
 /**

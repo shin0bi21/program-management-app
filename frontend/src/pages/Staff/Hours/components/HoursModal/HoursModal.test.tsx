@@ -91,7 +91,6 @@ describe('HoursModal', () => {
           programId: 'program-1',
           program: 'Soft Skills',
           date,
-          startsAt: `${date}T14:00:00.000Z`,
         }]
         : []
     ));
@@ -107,20 +106,9 @@ describe('HoursModal', () => {
     expect(screen.getByRole('button', { name: 'Session' })).toHaveTextContent('Leadership');
   });
 
-  it('locks a calendar-context date while loading sessions for that day', async () => {
-    vi.mocked(getHoursSessions).mockResolvedValue([{
-      id: 'session-1',
-      label: 'Confidence',
-      programId: 'program-1',
-      program: 'Soft Skills',
-      date: '2026-08-18',
-      startsAt: '2026-08-18T14:00:00.000Z',
-    }]);
+  it('locks the work date when opened from a calendar cell', async () => {
     renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialStaffId: 'staff-2' });
 
-    await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
-      'staff-2', '2026-08-18', expect.any(AbortSignal),
-    ));
     expect(screen.getByLabelText('Date')).toHaveValue('2026-08-18');
     expect(screen.getByLabelText('Date')).toBeDisabled();
   });

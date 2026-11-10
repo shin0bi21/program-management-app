@@ -40,12 +40,12 @@ const attendance = {
   sessions: [
     {
       id: 'session-2', sessionType: 'Workshop', theme: 'Teamwork',
-      startsAt: '2026-07-21T21:00:00.000Z', endsAt: '2026-07-21T22:00:00.000Z',
+      date: '2026-07-21', startTime: '17:00', endTime: '18:00', completed: true,
       cancelledAt: null, status: null, notes: null, sessionNotes: [],
     },
     {
       id: 'session-1', sessionType: 'Workshop', theme: 'Communication',
-      startsAt: '2026-07-14T21:00:00.000Z', endsAt: '2026-07-14T22:00:00.000Z',
+      date: '2026-07-14', startTime: '17:00', endTime: '18:00', completed: true,
       cancelledAt: null, status: 'present' as const, notes: 'Participated fully',
       sessionNotes: [{
         id: 'note-1', sessionId: 'session-1', category: 'achievement' as const,
