@@ -808,7 +808,7 @@ describe('Program cycle sessions and attendance API', () => {
           search: 'Other cycle session',
           start: `${today}T00:00:00Z`,
           end: `${addDays(today, 3)}T00:00:00Z`,
-          limit: 50,
+          paginate: 'true',
         })
         .set('Authorization', `Bearer ${staffToken}`);
 
@@ -820,7 +820,7 @@ describe('Program cycle sessions and attendance API', () => {
 
       const programPage = await request(app)
         .get('/api/sessions')
-        .query({ cycleIds: selectedCycles, programIds: openProgramId, limit: 50 })
+        .query({ cycleIds: selectedCycles, programIds: openProgramId, paginate: 'true' })
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(programPage.status).toBe(200);

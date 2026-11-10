@@ -14,7 +14,7 @@ import type {
   SessionSortKey,
   SessionType,
 } from './types';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../query/types';
+import type { CursorPage, CursorRequest } from '../../../query/types';
 
 interface SessionCalendarFilters extends SessionListFilters {
   start: string;
@@ -115,7 +115,7 @@ export function getSessions(
   if (pagination) {
     query.set('sort', pagination.key);
     query.set('direction', pagination.direction);
-    query.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
+    query.set('paginate', 'true');
     if (pagination.cursor) query.set('cursor', pagination.cursor);
   }
   const suffix = query.toString();

@@ -26,12 +26,12 @@ describe('leads API', () => {
 
     getLeads(
       { search: ' Avery ', statuses: ['new', 'eligible'], programIds: ['program-1'], submitterRoles: ['parent', 'youth'] },
-      { key: 'created', direction: 'desc', limit: 50, cursor: 'cursor-2' },
+      { key: 'created', direction: 'desc', cursor: 'cursor-2' },
       options,
     );
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/leads?search=Avery&statuses=new%2Celigible&programIds=program-1&submitterRoles=parent%2Cyouth&sort=created&direction=desc&limit=50&cursor=cursor-2',
+      '/leads?search=Avery&statuses=new%2Celigible&programIds=program-1&submitterRoles=parent%2Cyouth&sort=created&direction=desc&paginate=true&cursor=cursor-2',
       options,
     );
   });

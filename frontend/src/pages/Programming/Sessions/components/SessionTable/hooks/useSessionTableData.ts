@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getSessions } from '../../../sessions.api';
 import type { ProgramSession, SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
@@ -28,7 +27,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     ordering: { direction: sorting.direction, getValue: session => getSessionSortValue(session, sorting.key) },
     queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, {
-      ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE,
+      ...sorting, cursor: pageParam ?? undefined,
     }),
     errorMessage: 'Could not load sessions',
     enabled,

@@ -295,11 +295,11 @@ describe('Leads API', () => {
 
   it('lists leads for staff', async () => {
     const res = await request(app)
-      .get('/api/leads')
+      .get('/api/leads').query({ paginate: 'true' })
       .set('Authorization', `Bearer ${staffToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(expect.arrayContaining([
+    expect(res.body.rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ contactPhoneNumber: payload.contactPhoneNumber, origin: 'internal' }),
     ]));
   });

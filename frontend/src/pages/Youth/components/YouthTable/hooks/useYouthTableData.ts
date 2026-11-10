@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../query/types';
 import { getYouth } from '../../../youth.api';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { YouthFilters, YouthSortKey, YouthProfile } from '../../../types';
@@ -25,7 +24,7 @@ export default function useYouthTableData(
         undefined,
         filters,
         { signal },
-        { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
+        { ...sorting, cursor: pageParam ?? undefined },
       );
     },
     errorMessage: 'Failed to load youth profiles',

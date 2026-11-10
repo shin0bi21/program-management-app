@@ -26,7 +26,7 @@ describe('useLeadTableData', () => {
     const signal = new AbortController().signal;
     await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getLeads).toHaveBeenLastCalledWith(
-      filters, { ...sorting, cursor: 'cursor-2', limit: 50 }, { signal },
+      filters, { ...sorting, cursor: 'cursor-2' }, { signal },
     );
   });
 

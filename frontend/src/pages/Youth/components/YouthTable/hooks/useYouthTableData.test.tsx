@@ -25,7 +25,7 @@ describe('useYouthTableData', () => {
     const signal = new AbortController().signal;
     await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getYouth).toHaveBeenLastCalledWith(
-      undefined, filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: 50 },
+      undefined, filters, { signal }, { ...sorting, cursor: 'cursor-2' },
     );
   });
 

@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../query/types';
 import useInfiniteListQuery from '../../../../../query/hooks/useInfiniteListQuery';
 import { getLeads } from '../../../leads.api';
 import type { Lead, LeadFilters, LeadSortKey } from '../../../types';
@@ -22,7 +21,7 @@ export function useLeadTableData(
     queryFn: async ({ signal, pageParam }) => {
       if (filters === null) throw new Error('Lead filters must be initialized before loading leads.');
 
-      return getLeads(filters, { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE }, { signal });
+      return getLeads(filters, { ...sorting, cursor: pageParam ?? undefined }, { signal });
     },
     errorMessage: 'Failed to load leads',
     enabled: filters !== null,

@@ -9,13 +9,13 @@ import { buildSessionFilters } from './sessionRowFilters';
  * Lists matching sessions.
  * @param actor - Actor whose program access scopes the rows; callers enforce route permissions.
  * @param filterValues - Validated list filters; unpaged calendar ranges default to ascending order.
- * @returns A page of up to 50 rows when limit=50, otherwise the complete matching rows.
- * @example listSessions(actor, filterValues) // { rows, nextCursor } when filterValues.limit is set
+ * @returns A page of up to 50 rows when paginate=true, otherwise the complete matching rows.
+ * @example listSessions(actor, filterValues) // { rows, nextCursor } when filterValues.paginate is set
  */
 export function listSessions(actor: AccessTokenPayload, filterValues: SessionListQuery) {
   // 1. Filter the canonical, access-scoped session rows.
   const filteredRows = buildSessionFilters(getSessionRows(actor), filterValues);
-  const direction = filterValues.limit === undefined && filterValues.start ? 'asc' : filterValues.direction;
+  const direction = filterValues.paginate === undefined && filterValues.start ? 'asc' : filterValues.direction;
 
   // 2. Choose the session sort and delegate cursor execution and response shaping.
   const sortValue = {
@@ -29,7 +29,7 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
   }[filterValues.sort]!;
 
   // 3. Keep complete lookups separate from bounded cursor pages.
-  if (filterValues.limit === undefined) {
+  if (filterValues.paginate === undefined) {
     const sortDirection = direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<SessionRow[]>`
       SELECT "row".*
