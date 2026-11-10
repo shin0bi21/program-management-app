@@ -56,8 +56,8 @@ export function getYouthSortValue(profile: YouthProfile, key: YouthSortKey) {
   return {
     firstName: profile.firstName.toLowerCase(),
     lastName: profile.lastName.toLowerCase(),
-    dateOfBirth: profile.dateOfBirth ?? '',
-    school: profile.schoolName?.toLowerCase() ?? '',
-    activeProgram: profile.activeProgram?.program.toLowerCase() ?? '',
+    dateOfBirth: profile.dateOfBirth,
+    school: profile.schoolName?.toLowerCase() ?? null,
+    activeProgram: profile.activeProgram?.program.toLowerCase() ?? null,
   }[key];
 }

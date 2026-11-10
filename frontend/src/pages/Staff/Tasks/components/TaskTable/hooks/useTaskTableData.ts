@@ -39,7 +39,7 @@ export function getTaskSortValue(task: Task, key: TaskSortKey) {
     lastName: task.lastName.toLowerCase(),
     title: task.title.toLowerCase(),
     category: task.category,
-    program: task.program?.toLowerCase() ?? '',
+    program: task.program?.toLowerCase() ?? null,
     startDate: task.startDate,
     dueDate: task.dueDate,
     status: task.status,
