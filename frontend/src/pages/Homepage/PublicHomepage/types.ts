@@ -1,7 +1,9 @@
 export interface HomepageSession {
   id: string;
   theme: string;
-  startsAt: string;
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface HomepageProgram {

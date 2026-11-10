@@ -40,6 +40,9 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 ### Record Field Names
 
+Follow [Dates and Times](../workflows/date-and-time.md) for business-date and
+clock-time shapes, input values, formatting, and event-timestamp boundaries.
+
 Use `programId` and `cycleId` for related record identifiers, with `program` and
 `cycle` for their display values. Use the same fields in backend projections,
 API responses, queries, tables, and calendars. A Program or Cycle record

@@ -130,7 +130,7 @@ export default function useSessionActions({
    */
   const requestDelete = useCallback((session: ProgramSession) => setConfirmAction({
     title: 'Delete Session',
-    message: `Delete the ${session.theme} session for the ${session.program} program on ${formatShortDate(session.startsAt)}? This cannot be undone.`,
+    message: `Delete the ${session.theme} session for the ${session.program} program on ${formatShortDate(session.date)}? This cannot be undone.`,
     confirmVariant: 'danger',
     successMessage: 'Session deleted',
     onConfirm: async () => {

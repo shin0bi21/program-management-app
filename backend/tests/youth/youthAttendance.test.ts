@@ -49,8 +49,8 @@ describe('Youth active-cycle attendance', () => {
       }
       for (const status of enrollmentRequired ? ['present', 'late', 'absent'] : ['present']) {
         const [session] = await sql<{ id: string }[]>`
-          INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour')
+          INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, (NOW() AT TIME ZONE 'America/Toronto')::date, TIME '00:00', TIME '00:01')
           RETURNING id
         `;
         sessionIds.push(session.id);

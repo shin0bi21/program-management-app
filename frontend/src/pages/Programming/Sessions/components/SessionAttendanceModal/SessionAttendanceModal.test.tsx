@@ -13,8 +13,8 @@ const api = vi.hoisted(() => ({
 vi.mock('../../sessions.api', () => api);
 
 const session = makeProgramSession({
-  startsAt: '2026-07-28T21:00:00.000Z',
-  endsAt: '2026-07-28T23:30:00.000Z',
+  date: '2026-07-28', startTime: '17:00',
+  endTime: '19:30',
 });
 
 describe('SessionAttendanceModal', () => {

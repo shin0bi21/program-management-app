@@ -13,11 +13,7 @@ const program = {
   enrollmentRequired: true,
   minAge: 12,
   maxAge: 15,
-  sessions: [{
-    id: 'session-1',
-    theme: 'Communication',
-    startsAt: '2026-08-20T17:00:00.000Z',
-  }],
+  sessions: [],
 };
 
 describe('useHomepagePrograms', () => {

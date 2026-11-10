@@ -15,6 +15,8 @@
 - During implementation and review, follow the affected frontend or backend owner guides and applicable scaffolds; use [Script Structure](docs/workflows/scripts.md) for scripts.
 - Review every changed file in full against current standards, including unchanged functions and helpers. Bring the whole file into alignment when fixes are authorized, preserving behavior; do not limit the pass to diff hunks.
 - Follow [Code Readability](docs/workflows/readability.md) for names, expressions, control flow, and spacing, and [Code Documentation](docs/workflows/documentation.md) for function design recipes and comments.
+- Follow [Data Shapes and Boundaries](docs/workflows/readability.md#data-shapes-and-boundaries) for consistent contracts across layers and for raising concerns before adding conversion or compatibility layers.
+- Follow [Dates and Times](docs/workflows/date-and-time.md) for business dates, clock times, event timestamps, date arithmetic, and timezone boundaries.
 - For shipping, use [01-map-changes](.agents/skills/01-map-changes/SKILL.md) → [03-update-repo](.agents/skills/03-update-repo/SKILL.md) preparation → [02-review-changes](.agents/skills/02-review-changes/SKILL.md) → 03-update-repo delivery → [04-complete-changes](.agents/skills/04-complete-changes/SKILL.md). Finish one concern before starting the next.
 - Individual phase requests invoke only that skill. Follow each skill's procedure.
 - Respect the requested stopping point. Implementation or review does not authorize shipping; deployment requires separate authorization.

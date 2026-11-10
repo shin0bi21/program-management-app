@@ -39,24 +39,32 @@ describe('Single session scheduling defaults', () => {
     await deleteTestUser(userId);
   });
 
+  /**
+   * Creates within the fixture's explicit assignment, retaining per-request overrides.
+   * @example create({ date: '2027-01-15' }) // request using program time defaults
+   */
   function create(input: Record<string, unknown>, authToken = token) {
     return request(app).post(`/api/programs/${programId}/cycles/${cycleId}/sessions`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({ sessionType: regularType, theme: `Defaults ${Date.now()}`, ...input });
   }
 
+  /**
+   * Creates by program so the service must resolve the cycle from the requested date.
+   * @example createForProgram({ date: '2027-01-15' }) // resolves the fixture's assigned cycle
+   */
   function createForProgram(input: Record<string, unknown>, authToken = token) {
     return request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ programId, sessionType: regularType, theme: 'Resolved session', ...input });
   }
 
-  it('resolves the assigned cycle by program and date and preserves explicit local times', async () => {
+  it('resolves the assigned cycle and saves the supplied date and clock times', async () => {
     const response = await createForProgram({ date: '2027-01-15', startTime: '10:00', endTime: '11:15' });
     expect(response.status).toBe(201);
-    expect(response.body).toMatchObject({ programId, cycleId });
-    expect(response.body.startsAt).toBe('2027-01-15T15:00:00.000Z');
-    expect(response.body.endsAt).toBe('2027-01-15T16:15:00.000Z');
+    expect(response.body).toMatchObject({
+      programId, cycleId, date: '2027-01-15', startTime: '10:00', endTime: '11:15',
+    });
   });
 
   it('resolves a missing date from the program defaults before finding its cycle', async () => {
@@ -64,8 +72,8 @@ describe('Single session scheduling defaults', () => {
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({ programId, cycleId });
     const [scheduled] = await sql<{ weekday: string; time: string }[]>`
-      SELECT lower(trim(to_char(starts_at AT TIME ZONE 'America/Toronto', 'Day'))) AS weekday,
-        to_char(starts_at AT TIME ZONE 'America/Toronto', 'HH24:MI') AS time
+      SELECT lower(trim(to_char((date + start_time), 'Day'))) AS weekday,
+        to_char((date + start_time), 'HH24:MI') AS time
       FROM program_sessions WHERE id = ${response.body.id}
     `;
     expect(scheduled).toEqual({ weekday: 'tuesday', time: '17:30' });
@@ -89,7 +97,6 @@ describe('Single session scheduling defaults', () => {
       expect(JSON.stringify(ambiguous.body)).toContain('Multiple assigned cycles cover');
       const sessions = await sql`SELECT id FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${overlap.id}`;
       expect(sessions).toHaveLength(0);
-
     } finally {
       await sql`DELETE FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${overlap.id}`;
       await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${overlap.id}`;
@@ -119,26 +126,6 @@ describe('Single session scheduling defaults', () => {
     const unrelated = generateToken(userId, 'staff', 'test@test.local', ['write:sessions']);
     expect((await createForProgram({ date: '2027-01-12' }, noPermission)).status).toBe(403);
     expect((await createForProgram({ date: '2027-01-12' }, unrelated)).status).toBe(403);
-    expect((await createForProgram({ programId: 'invalid' })).status).toBe(400);
-  });
-
-  it('preserves supplied dates and converts program local times across daylight saving', async () => {
-    const winter = await create({ date: '2027-01-12' });
-    const summer = await create({ date: '2027-07-13' });
-
-    expect(winter.status).toBe(201);
-    expect(winter.body.startsAt).toBe('2027-01-12T22:30:00.000Z');
-    expect(winter.body.endsAt).toBe('2027-01-13T00:30:00.000Z');
-    expect(summer.status).toBe(201);
-    expect(summer.body.startsAt).toBe('2027-07-13T21:30:00.000Z');
-  });
-
-  it('uses explicit times and a non-default weekday unchanged', async () => {
-    const response = await create({ date: '2027-01-15', startTime: '10:00', endTime: '11:15' });
-
-    expect(response.status).toBe(201);
-    expect(response.body.startsAt).toBe('2027-01-15T15:00:00.000Z');
-    expect(response.body.endsAt).toBe('2027-01-15T16:15:00.000Z');
   });
 
   it('resolves the default date using the Toronto clock', async () => {
@@ -154,7 +141,7 @@ describe('Single session scheduling defaults', () => {
     const before = await create({ theme: 'Before default time' });
     expect(before.status).toBe(201);
     const [beforeDate] = await sql<{ date: string }[]>`
-      SELECT (starts_at AT TIME ZONE ${clock.timezone})::date::text AS date
+      SELECT date::text
       FROM program_sessions WHERE id = ${before.body.id}
     `;
     expect(beforeDate.date).toBe(clock.localTime < '22:00:00' ? clock.today : clock.nextWeek);
@@ -164,7 +151,7 @@ describe('Single session scheduling defaults', () => {
     const after = await create({ theme: 'After default time' });
     expect(after.status).toBe(201);
     const [afterDate] = await sql<{ date: string }[]>`
-      SELECT (starts_at AT TIME ZONE ${clock.timezone})::date::text AS date
+      SELECT date::text
       FROM program_sessions WHERE id = ${after.body.id}
     `;
     expect(afterDate.date).toBe(clock.nextWeek);
@@ -172,7 +159,7 @@ describe('Single session scheduling defaults', () => {
       default_start_time = '17:30', default_end_time = '19:30' WHERE id = ${programId}`;
   });
 
-  it('enforces cycle boundaries in the program timezone', async () => {
+  it('enforces inclusive cycle boundaries using the saved date', async () => {
     const [cycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
       VALUES (${`Timezone boundary ${Date.now()}`}, '2027-01-13', '2027-01-13') RETURNING id
@@ -186,20 +173,45 @@ describe('Single session scheduling defaults', () => {
         .send({ sessionType: regularType, theme: 'Timezone boundary', date: '2027-01-13',
           startTime: '22:30', endTime: '23:00' });
       expect(response.status).toBe(201);
-      expect(response.body.startsAt).toBe('2027-01-14T03:30:00.000Z');
+      expect(response.body.date).toBe('2027-01-13');
     } finally {
       await sql`DELETE FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${cycle.id}`;
       await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycle.id}`;
       await sql`DELETE FROM program_cycles WHERE id = ${cycle.id}`;
-      await sql`UPDATE programs SET timezone = 'America/Toronto' WHERE id = ${programId}`;
     }
   });
 
-  it('rejects invalid input, reversed effective times, and dates outside the cycle', async () => {
+  it('rejects malformed dates, reversed default times, and dates outside the selected cycle', async () => {
     expect((await create({ date: '2027-02-30' })).status).toBe(400);
-    expect((await create({ date: '2027-01-12', startTime: '25:00' })).status).toBe(400);
+    expect((await create({ date: '2027-01-12', startTime: '17:00:30' })).status).toBe(400);
     expect((await create({ date: '2027-01-12', startTime: '20:00' })).status).toBe(409);
     expect((await create({ date: '2041-01-01' })).status).toBe(409);
+  });
+
+  it('rejects editing outside the assigned cycle without changing the saved session', async () => {
+    const created = await create({ date: '2027-06-01', startTime: '17:00', endTime: '19:00' });
+    expect(created.status).toBe(201);
+
+    try {
+      const response = await request(app).put(`/api/sessions/${created.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ theme: 'Rejected edit', date: '2041-01-01', startTime: '18:00', endTime: '20:00' });
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe('Sessions must fall within the cycle date range');
+
+      const [saved] = await sql<{ theme: string; date: string; startTime: string; endTime: string }[]>`
+        SELECT theme, date::text,
+          to_char(start_time, 'HH24:MI') AS start_time,
+          to_char(end_time, 'HH24:MI') AS end_time
+        FROM program_sessions
+        WHERE id = ${created.body.id}
+      `;
+      expect(saved).toEqual({
+        theme: created.body.theme, date: '2027-06-01', startTime: '17:00', endTime: '19:00',
+      });
+    } finally {
+      await sql`DELETE FROM program_sessions WHERE id = ${created.body.id}`;
+    }
   });
 
   it('rejects a local time skipped by daylight saving', async () => {

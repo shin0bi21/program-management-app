@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { formatHours, formatShortDate, formatShortDateRange, getDateKeyInTimeZone } from './date';
 
@@ -21,6 +22,11 @@ describe('formatShortDate', () => {
   it('keeps date-only values on their calendar day', () => {
     expect(formatShortDate('2026-07-01')).toBe('Jul 1, 2026');
   });
+
+  it('preserves business-date years below 100', () => {
+    expect(formatShortDate('0001-01-01')).toBe('Jan 1, 1');
+    expect(formatShortDateRange('0099-12-30', '0100-01-02')).toBe('Dec 30, 99 – Jan 2, 100');
+  });
 });
 
 describe('formatShortDateRange', () => {
@@ -37,4 +43,3 @@ describe('getDateKeyInTimeZone', () => {
     )).toBe('2026-08-06');
   });
 });
-// @vitest-environment node

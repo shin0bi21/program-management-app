@@ -130,7 +130,6 @@ describe('useHoursModal', () => {
       programId: 'program-1',
       program: 'Soft Skills',
       date: '2026-08-20',
-      startsAt: '2026-08-20T14:00:00.000Z',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({ initialSource: 'session', onAdd });

@@ -36,14 +36,12 @@ describe('useSessionTable', () => {
     expect(result.current.some(column => column.id === 'actions')).toBe(false);
   });
 
-  it('formats dates and hours in the program timezone', () => {
+  it('formats the saved date and clock times', () => {
     const { result } = renderHook(() => useSessionTable({
-      programs: [{ id: 'program-1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
-        defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' }],
       canWriteSessions: false,
       onEdit: vi.fn(), onDelete: vi.fn(),
     }));
-    const session = makeProgramSession({ startsAt: '2026-08-10T02:00:00Z', endsAt: '2026-08-10T03:00:00Z' });
+    const session = makeProgramSession({ date: '2026-08-09', startTime: '22:00', endTime: '23:00' });
     const dateColumn = result.current.find(column => column.id === 'date')!;
     const timeColumn = result.current.find(column => column.id === 'time')!;
     if (!('accessorFn' in dateColumn) || !('accessorFn' in timeColumn)) throw new Error('Missing accessors');

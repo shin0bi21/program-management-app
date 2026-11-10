@@ -103,7 +103,6 @@ export default function Sessions() {
 
   // Table configuration.
   const columns = useSessionTable({
-    programs,
     canWriteSessions,
     onEdit: openEditSessionModal,
     onDelete: actions.requestDelete,

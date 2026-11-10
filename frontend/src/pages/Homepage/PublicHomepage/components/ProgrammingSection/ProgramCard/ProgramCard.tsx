@@ -1,16 +1,50 @@
+import { Temporal } from 'temporal-polyfill';
+import { getDateKeyInTimeZone } from '../../../../../../common/utils/date';
 import type { HomepageProgram, HomepageSession } from '../../../types';
 
-const monthFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short' });
-const millisecondsPerDay = 86_400_000;
-
-function daysUntil(startsAt: string) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const sessionDate = new Date(startsAt);
-  sessionDate.setHours(0, 0, 0, 0);
-  return Math.round((sessionDate.getTime() - today.getTime()) / millisecondsPerDay);
+interface ProgramCardProps {
+  program: HomepageProgram;
 }
 
+/**
+ * Displays one public program with its age range and upcoming Session dates.
+ * @example <ProgramCard program={program} /> // program description and upcoming days
+ */
+export default function ProgramCard({ program }: ProgramCardProps) {
+  const dropIn = !program.enrollmentRequired;
+
+  return (
+    <article className="program-card">
+      <header className="program-card-head">
+        <h3 className="program-title">{program.name}</h3>
+        <p className="program-age">{formatAgeRange(program.minAge, program.maxAge)}</p>
+      </header>
+      <div className="program-copy-block">
+        {program.description && <p className="program-copy">{program.description}</p>}
+      </div>
+      <div className="program-sessions">
+        <p className="program-sessions-label">Upcoming</p>
+        <UpcomingSessions sessions={program.sessions} dropIn={dropIn} />
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Formats inclusive age bounds or an unrestricted label when either bound is absent.
+ * @example formatAgeRange(12, 15) // 'Ages 12–15'
+ */
+function formatAgeRange(minAge: number | null, maxAge: number | null) {
+  if (minAge === null || maxAge === null) return 'All Ages';
+  if (minAge === maxAge) return `Age ${minAge}`;
+  return `Ages ${minAge}–${maxAge}`;
+}
+
+/**
+ * Lists the saved upcoming dates and relative day labels for one program.
+ * @param props - Ordered sessions and whether the program uses open attendance.
+ * @example <UpcomingSessions sessions={[]} dropIn /> // no upcoming drop-in message
+ */
 function UpcomingSessions({
   sessions,
   dropIn,
@@ -31,16 +65,16 @@ function UpcomingSessions({
   return (
     <ul className="upcoming-rows" aria-label={dropIn ? 'Upcoming drop-in days' : 'Upcoming sessions'}>
       {sessions.map((session, index) => {
-        const date = new Date(session.startsAt);
-        const days = daysUntil(session.startsAt);
+        const date = Temporal.PlainDate.from(session.date);
+        const days = daysUntil(session.date);
         return (
           <li
             key={session.id}
             className={`next-session${index === 0 ? ' next-session--featured' : ''}`}
           >
-            <time className="next-session-date" dateTime={session.startsAt}>
-              <span className="next-session-day">{date.getDate()}</span>
-              <span className="next-session-month">{monthFormatter.format(date)}</span>
+            <time className="next-session-date" dateTime={session.date}>
+              <span className="next-session-day">{date.day}</span>
+              <span className="next-session-month">{date.toLocaleString('en-CA', { month: 'short' })}</span>
             </time>
             <div className="next-session-body">
               <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.theme}</p>
@@ -55,32 +89,11 @@ function UpcomingSessions({
   );
 }
 
-interface ProgramCardProps {
-  program: HomepageProgram;
-}
-
-function formatAgeRange(minAge: number | null, maxAge: number | null) {
-  if (minAge === null || maxAge === null) return 'All Ages';
-  if (minAge === maxAge) return `Age ${minAge}`;
-  return `Ages ${minAge}–${maxAge}`;
-}
-
-export default function ProgramCard({ program }: ProgramCardProps) {
-  const dropIn = !program.enrollmentRequired;
-
-  return (
-    <article className="program-card">
-      <header className="program-card-head">
-        <h3 className="program-title">{program.name}</h3>
-        <p className="program-age">{formatAgeRange(program.minAge, program.maxAge)}</p>
-      </header>
-      <div className="program-copy-block">
-        {program.description && <p className="program-copy">{program.description}</p>}
-      </div>
-      <div className="program-sessions">
-        <p className="program-sessions-label">Upcoming</p>
-        <UpcomingSessions sessions={program.sessions} dropIn={dropIn} />
-      </div>
-    </article>
-  );
+/**
+ * Counts calendar days from Eastern today to the saved Session date.
+ * @param date - Saved YYYY-MM-DD business date.
+ * @example On November 10, daysUntil('2026-11-11') returns 1.
+ */
+function daysUntil(date: string) {
+  return Temporal.PlainDate.from(getDateKeyInTimeZone()).until(date).days;
 }

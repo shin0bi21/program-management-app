@@ -27,7 +27,7 @@ const programCycle: ProgramCycleAssignment = {
   programId: program.id, program: program.name,
   enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
-  enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
+  enrolledCount: 12, nextSessionDate: null, nextSessionId: null,
   uniqueAttendeeCount: 10,
 };
 const openProgramCycle: ProgramCycleAssignment = {

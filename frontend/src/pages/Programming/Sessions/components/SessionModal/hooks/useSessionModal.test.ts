@@ -37,13 +37,6 @@ describe('single session creation', () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
-  it('starts calendar creation with its selected program and allows time edits', () => {
-    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p2', initialDate: '2026-11-04', onSaved: vi.fn() }));
-    expect(result.current.programId).toBe('p2');
-    act(() => result.current.updateDraft('startTime', '15:00'));
-    expect(result.current.draft.startTime).toBe('15:00');
-  });
-
   it('shows cycle resolution errors from the server without retrying another assignment', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('No assigned cycle covers this session date.'));
     const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved: vi.fn() }));

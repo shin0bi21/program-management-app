@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+/**
+ * Accepts real Gregorian dates in years 0001–9999 using the canonical date-only shape.
+ * @param value - Calendar date to validate without timezone interpretation.
+ * @example isCalendarDate('2026-02-30') // false
+ */
 export function isCalendarDate(value: string) {
   if (!/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
@@ -7,34 +12,13 @@ export function isCalendarDate(value: string) {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+/**
+ * Builds validation for a required calendar date with field-specific messages.
+ * @param label - Field name shown in validation errors.
+ * @example calendarDateSchema('Work date').parse('2026-11-10') // '2026-11-10'
+ */
 export function calendarDateSchema(label = 'Date') {
   return z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} must use YYYY-MM-DD`)
     .refine(isCalendarDate, `${label} must be a valid calendar date`);
-}
-
-// Gregorian era parts are consistent across the host and Docker Node/ICU builds.
-const torontoDate = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Toronto', calendar: 'gregory', numberingSystem: 'latn',
-  year: 'numeric', month: '2-digit', day: '2-digit', era: 'short',
-});
-
-function torontoDateKey(timestamp: number) {
-  const parts = torontoDate.formatToParts(new Date(timestamp));
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(value => value.type === type)?.value;
-  if (part('era') !== 'AD') return null;
-
-  const key = `${part('year')?.padStart(4, '0')}-${part('month')}-${part('day')}`;
-  return isCalendarDate(key) ? key : null;
-}
-
-export function sessionRangeCalendarDates(start: string, end: string) {
-  const startTime = Date.parse(start);
-  const endTime = Date.parse(end);
-  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || startTime >= endTime) return null;
-
-  // The API end is exclusive; count Toronto calendar days rather than elapsed 24-hour blocks.
-  const firstDate = torontoDateKey(startTime);
-  const lastDate = torontoDateKey(endTime - 1);
-  return firstDate && lastDate ? { start: firstDate, end: lastDate } : null;
 }

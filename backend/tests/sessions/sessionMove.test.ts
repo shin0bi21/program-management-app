@@ -35,8 +35,8 @@ describe('Future session date moves', () => {
 
   beforeEach(async () => {
     const [session] = await sql<{ id: string }[]>`INSERT INTO program_sessions
-      (program_id, cycle_id, session_type, theme, starts_at, ends_at, description)
-      VALUES (${programId}, ${cycleId}, ${regularType}, 'Keep my theme', '2030-03-03T22:30:00Z', '2030-03-04T00:30:00Z', 'Keep my description') RETURNING id`;
+      (program_id, cycle_id, session_type, theme, date, start_time, end_time, description)
+      VALUES (${programId}, ${cycleId}, ${regularType}, 'Keep my theme', '2030-03-03', '17:30:00', '19:30:00', 'Keep my description') RETURNING id`;
     sessionId = session.id;
   });
   afterEach(async () => {
@@ -50,37 +50,33 @@ describe('Future session date moves', () => {
     await deleteTestUser(userId);
   });
 
+  /**
+   * Requests a date move as the authorized fixture actor unless a scoped token is supplied.
+   * @example move('2030-03-10') // keeps the current session's clock times
+   */
   const move = (date: string, authToken = token) => request(app).put(`/api/sessions/${sessionId}/date`)
     .set('Authorization', `Bearer ${authToken}`).send({ date });
 
-  it('preserves local times across DST and leaves unrelated session fields unchanged', async () => {
+  it('preserves clock times and newer session details across date moves', async () => {
+    const edited = await request(app).put(`/api/sessions/${sessionId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ theme: 'Latest theme', description: 'Latest description', date: '2030-03-03',
+        startTime: '17:45', endTime: '19:15' });
+    expect(edited.status).toBe(200);
+
     const response = await move('2030-03-10');
     expect(response.status).toBe(200);
     expect(response.body.session).toMatchObject({ id: sessionId, programId, cycleId,
-      startsAt: '2030-03-10T21:30:00.000Z', endsAt: '2030-03-10T23:30:00.000Z' });
+      date: '2030-03-10', startTime: '17:45', endTime: '19:15',
+      theme: 'Latest theme', description: 'Latest description', movable: true });
     const [session] = await sql`SELECT theme, description, session_type FROM program_sessions WHERE id = ${sessionId}`;
-    expect(session).toMatchObject({ theme: 'Keep my theme', description: 'Keep my description', sessionType: regularType });
-  });
-
-  it('returns the canonical session row with fields changed after an earlier client read', async () => {
-    await sql`UPDATE program_sessions SET theme = 'Latest authoritative theme', description = 'Latest description'
-      WHERE id = ${sessionId}`;
-
-    const response = await move('2030-03-10');
-
-    expect(response.status).toBe(200);
-    expect(response.body.session).toMatchObject({
-      id: sessionId, programId, cycleId, sessionType: regularType,
-      theme: 'Latest authoritative theme', description: 'Latest description',
-      enrollmentRequired: true, state: 'upcoming',
-    });
-    expect(response.body.session.program).toEqual(expect.any(String));
+    expect(session).toMatchObject({ theme: 'Latest theme', description: 'Latest description', sessionType: regularType });
   });
 
   it('returns canonical rows after full edits and deletion without stale next-session metadata', async () => {
     const edited = await request(app).put(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ sessionType: regularType, theme: 'Edited theme', startsAt: '2030-03-03T22:30:00Z', endsAt: '2030-03-04T00:30:00Z', description: 'Edited description' });
+      .send({ sessionType: regularType, theme: 'Edited theme', date: '2030-03-03', startTime: '17:45', endTime: '19:15', description: 'Edited description' });
 
     expect(edited.status).toBe(200);
     expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId });
@@ -107,18 +103,16 @@ describe('Future session date moves', () => {
     expect(response.body).not.toHaveProperty('updatedProgramCycles');
   });
 
-  it('preserves the local day span of an overnight session across DST', async () => {
-    await sql`UPDATE program_sessions SET ends_at = '2030-03-04T09:00:00Z' WHERE id = ${sessionId}`;
-    const response = await move('2030-03-09');
-    expect(response.status).toBe(200);
-    expect(response.body.session).toMatchObject({ startsAt: '2030-03-09T22:30:00.000Z', endsAt: '2030-03-10T08:00:00.000Z' });
+  it('enforces ordered whole-minute schedules in the database', async () => {
+    await expect(sql`UPDATE program_sessions SET end_time = start_time WHERE id = ${sessionId}`)
+      .rejects.toMatchObject({ code: '23514' });
+    await expect(sql`UPDATE program_sessions SET start_time = start_time + INTERVAL '1 second' WHERE id = ${sessionId}`)
+      .rejects.toMatchObject({ code: '23514' });
   });
 
-  it('rejects nonexistent and repeated destination wall-clock times', async () => {
-    await sql`UPDATE program_sessions SET starts_at = '2030-03-03T07:30:00Z', ends_at = '2030-03-03T09:00:00Z' WHERE id = ${sessionId}`;
+  it('revalidates the saved clock times at the destination date', async () => {
+    await sql`UPDATE program_sessions SET start_time = '02:30', end_time = '04:00' WHERE id = ${sessionId}`;
     expect((await move('2030-03-10')).status).toBe(409);
-    await sql`UPDATE program_sessions SET starts_at = '2030-03-03T06:30:00Z', ends_at = '2030-03-03T08:00:00Z' WHERE id = ${sessionId}`;
-    expect((await move('2030-11-03')).status).toBe(409);
   });
 
   it('resolves another assigned cycle for an unrecorded session', async () => {
@@ -135,7 +129,7 @@ describe('Future session date moves', () => {
     expect((await move('2025-03-01')).status).toBe(409);
     await sql`UPDATE program_sessions SET cancelled_at = NOW() WHERE id = ${sessionId}`;
     expect((await move('2030-03-11')).status).toBe(409);
-    await sql`UPDATE program_sessions SET cancelled_at = NULL, starts_at = '2025-01-01', ends_at = '2025-01-02' WHERE id = ${sessionId}`;
+    await sql`UPDATE program_sessions SET cancelled_at = NULL, date = '2025-01-01' WHERE id = ${sessionId}`;
     expect((await move('2030-03-11')).status).toBe(409);
   });
 
@@ -146,8 +140,8 @@ describe('Future session date moves', () => {
     try {
       await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${programId}, ${cycle.id})`;
       expect((await move('2030-03-11')).status).toBe(409);
-      const [session] = await sql`SELECT starts_at FROM program_sessions WHERE id = ${sessionId}`;
-      expect(new Date(session.startsAt).toISOString()).toBe('2030-03-03T22:30:00.000Z');
+      const [session] = await sql`SELECT date::text FROM program_sessions WHERE id = ${sessionId}`;
+      expect(session.date).toBe('2030-03-03');
     } finally {
       await sql`DELETE FROM program_cycle_assignments WHERE cycle_id = ${cycle.id}`;
       await sql`DELETE FROM program_cycles WHERE id = ${cycle.id}`;

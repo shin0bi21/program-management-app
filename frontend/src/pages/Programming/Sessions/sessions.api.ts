@@ -1,7 +1,6 @@
 import type { YouthProfile } from '../../Youth/types';
 import type { ProgramCycleAssignment } from '../Programs/types';
 import type { Program } from '../../../common/features/programs/types';
-import { getSessionRequestRange } from './utils/sessionDateRange';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
@@ -38,8 +37,9 @@ interface UpdateSessionAttachmentInput {
 interface UpdateSessionInput {
   sessionType: string;
   theme: string;
-  startsAt: string;
-  endsAt: string;
+  date: string;
+  startTime: string;
+  endTime: string;
   description?: string | null;
 }
 
@@ -101,7 +101,7 @@ export function getSessions(
 ) {
   const query = new URLSearchParams();
   if (pagination && filters.dateRange) {
-    const range = getSessionRequestRange(filters.dateRange.start, filters.dateRange.end);
+    const range = filters.dateRange;
     query.set('start', range.start);
     query.set('end', range.end);
   }

@@ -33,7 +33,7 @@ describe('useSessionActions', () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
       ...session, theme: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
-      startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z',
+      date: '2027-01-12', startTime: '13:00', endTime: '15:00',
     });
     const { result, invalidate, calendar, onSessionSynced } = renderActions();
     let finish!: (value: UpdatedSessionResult) => void;

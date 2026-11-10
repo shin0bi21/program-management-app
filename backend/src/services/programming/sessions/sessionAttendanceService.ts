@@ -183,10 +183,10 @@ async function readSessionRoster(sessionId: string, query = sql) {
       SELECT enrollment.youth_id
       FROM program_enrollments enrollment
       WHERE enrollment.program_id = session.program_id AND enrollment.cycle_id = session.cycle_id
-        AND enrollment.enrolled_on <= (session.starts_at AT TIME ZONE 'America/Toronto')::date
+        AND enrollment.enrolled_on <= session.date
         AND (
           enrollment.withdrawn_on IS NULL
-          OR enrollment.withdrawn_on > (session.starts_at AT TIME ZONE 'America/Toronto')::date
+          OR enrollment.withdrawn_on > session.date
         )
       UNION
       SELECT recorded_attendance.youth_id

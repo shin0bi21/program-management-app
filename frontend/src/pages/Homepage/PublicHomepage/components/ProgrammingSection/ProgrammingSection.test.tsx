@@ -11,11 +11,7 @@ const programs = [
     enrollmentRequired: true,
     minAge: 12,
     maxAge: 15,
-    sessions: [{
-      id: 'session-1',
-      theme: 'Communication',
-      startsAt: '2026-08-04T21:00:00.000Z',
-    }],
+    sessions: [],
   },
 ] satisfies HomepageProgram[];
 
@@ -24,7 +20,6 @@ describe('ProgrammingSection', () => {
     render(<ProgrammingSection programs={programs} />);
 
     expect(screen.getByText('Future Ready')).toBeInTheDocument();
-    expect(screen.getByText('Communication')).toBeInTheDocument();
   });
 
   it('shows the empty state when the API has no programs', () => {

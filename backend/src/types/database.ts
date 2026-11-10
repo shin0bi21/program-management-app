@@ -232,12 +232,13 @@ export interface ProgramSessions {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
+  date: Timestamp;
   description: string | null;
-  ends_at: Timestamp;
+  end_time: string;
   id: Generated<string>;
   program_id: string;
   session_type: Generated<SessionType>;
-  starts_at: Timestamp;
+  start_time: string;
   theme: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
