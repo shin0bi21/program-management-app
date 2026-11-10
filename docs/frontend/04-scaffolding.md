@@ -77,7 +77,7 @@ pages/Youth/Placements/
 2. Implement table requests in the component's `hooks/use<Domain>TableData` hook using the supplied page context. Keep the calendar range adapter and buffer with its component, extracting a private data hook when needed. Keep complete API rows in table query results and calendar buffers. Use existing cursor-list helpers for saved/deleted rows and show the shared out-of-order message with Refresh when edits leave loaded rows out of order. Invalidate membership and related queries when their data needs reloading.
 3. Pass selected IDs to dashboard cards for their focused summary or child queries. Supply already loaded display fields as props when needed. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
 4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
-5. Complete generated `it.todo` outlines following [Testing](../workflows/delivery/testing.md#scaffold-implementation-and-tests-together).
+5. Keep generated `it.todo` outlines only for behavior the feature owns, following [Test Ownership](../workflows/delivery/testing.md#test-ownership).
 6. Document completed functions using the [design recipe](../workflows/documentation.md).
 
 ## Maintain the Pattern

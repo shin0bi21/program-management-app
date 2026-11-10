@@ -2,6 +2,7 @@
 
 ## Own Tests by Domain
 
+- Apply the shared [test ownership contract](../workflows/delivery/testing.md#test-ownership) to domain filters, permissions, and canonical row projections.
 - Give each non-trivial backend domain a focused test directory and runner. Add its package command when the runner delegates to one, related-test selection follows Jest's import graph without registering domain paths.
 - Keep domain behavior owned by that suite. Cross-domain suites should retain only integration assertions at their boundary, not duplicate another domain's CRUD, policy, validation, and audit matrix.
 - Use the shared test application and database helpers so route composition, authentication, errors, and cleanup follow repository conventions.
