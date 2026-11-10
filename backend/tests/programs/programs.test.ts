@@ -14,6 +14,7 @@ describe('Programs API', () => {
   let adminToken: string;
   let softSkillsProgramId: string;
   let createdProgramId: string;
+  let editableProgramId: string;
   const createdName = `Leadership ${Date.now()}`;
 
   beforeAll(async () => {
@@ -35,10 +36,15 @@ describe('Programs API', () => {
       INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${staffUserId}, ${softSkillsProgramId})
     `;
+    const [editableProgram] = await sql<{ id: string }[]>`
+      INSERT INTO programs (name) VALUES (${`Editable ${createdName}`}) RETURNING id
+    `;
+    editableProgramId = editableProgram.id;
   });
 
   afterAll(async () => {
     if (createdProgramId) await sql`DELETE FROM programs WHERE id = ${createdProgramId}`;
+    if (editableProgramId) await sql`DELETE FROM programs WHERE id = ${editableProgramId}`;
     await deleteTestUser(adminUserId);
     await deleteTestUser(youthUserId);
     await deleteTestUser(staffUserId);
@@ -76,10 +82,10 @@ describe('Programs API', () => {
 
   it('allows admins to edit a program', async () => {
     const res = await request(app)
-      .put(`/api/programs/${createdProgramId}`)
+      .put(`/api/programs/${editableProgramId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        name: createdName,
+        name: `Edited ${createdName}`,
         description: 'Updated program description',
         enrollmentRequired: true,
         minAge: 15,
@@ -88,7 +94,7 @@ describe('Programs API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.program).toEqual(expect.objectContaining({
-      id: createdProgramId,
+      id: editableProgramId,
       description: 'Updated program description',
       enrollmentRequired: true,
       minAge: 15,
@@ -223,10 +229,10 @@ describe('Programs API', () => {
   });
 
   it('rejects unsupported timezones at the database boundary', async () => {
-    await expect(sql`UPDATE programs SET timezone = 'torotto' WHERE id = ${createdProgramId}`)
+    await expect(sql`UPDATE programs SET timezone = 'torotto' WHERE id = ${editableProgramId}`)
       .rejects.toMatchObject({ code: '22P02' });
 
-    const [program] = await sql`SELECT timezone FROM programs WHERE id = ${createdProgramId}`;
+    const [program] = await sql`SELECT timezone FROM programs WHERE id = ${editableProgramId}`;
     expect(program.timezone).toBe('America/Toronto');
   });
 

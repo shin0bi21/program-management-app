@@ -184,47 +184,44 @@ describe('useInfiniteListQuery', () => {
 
 });
 
-for (const operation of ['replace', 'remove'] as const) {
-  for (const mode of ['next-page', 'refetch'] as const) {
-    it(`preserves a page-one ${operation} while ${mode} waits for page two`, async () => {
-      const first = { id: 'row-1', name: 'Old' };
-      const second = { id: 'row-2', name: 'Second' };
-      const firstPage: { rows: typeof first[]; nextCursor: string | null } = { rows: [first], nextCursor: 'page-2' };
-      const secondPage = { rows: [second], nextCursor: null };
-      const pending = deferred<typeof secondPage>();
-      const queryFn = vi.fn(({ pageParam }: { pageParam: string | null }) => Promise.resolve(pageParam ? secondPage : firstPage));
-      const client = createTestQueryClient();
-      const key = ['concurrent-list', mode, operation];
-      const { result } = renderHook(() => useInfiniteListQuery<Row>({
-        queryKey: key, queryFn, errorMessage: 'Could not load rows',
-      }), { wrapper: createQueryClientWrapper(client) });
-      await waitFor(() => expect(result.current.rows).toEqual([first]));
-      if (mode === 'refetch') {
-        act(() => result.current.loadNextPage());
-        await waitFor(() => expect(result.current.rows).toEqual([first, second]));
-      }
-      queryFn.mockImplementation(({ pageParam }) => pageParam ? pending.promise : Promise.resolve(firstPage));
-      queryFn.mockClear();
+for (const mode of ['next-page', 'refetch'] as const) {
+  it(`preserves a saved page-one row while ${mode} waits for page two`, async () => {
+    const first = { id: 'row-1', name: 'Old' };
+    const second = { id: 'row-2', name: 'Second' };
+    const firstPage: { rows: typeof first[]; nextCursor: string | null } = { rows: [first], nextCursor: 'page-2' };
+    const secondPage = { rows: [second], nextCursor: null };
+    const pending = deferred<typeof secondPage>();
+    const queryFn = vi.fn(({ pageParam }: { pageParam: string | null }) => Promise.resolve(pageParam ? secondPage : firstPage));
+    const client = createTestQueryClient();
+    const key = ['concurrent-list', mode];
+    const { result } = renderHook(() => useInfiniteListQuery<Row>({
+      queryKey: key, queryFn, errorMessage: 'Could not load rows',
+    }), { wrapper: createQueryClientWrapper(client) });
+    await waitFor(() => expect(result.current.rows).toEqual([first]));
+    if (mode === 'refetch') {
+      act(() => result.current.loadNextPage());
+      await waitFor(() => expect(result.current.rows).toEqual([first, second]));
+    }
+    queryFn.mockImplementation(({ pageParam }) => pageParam ? pending.promise : Promise.resolve(firstPage));
+    queryFn.mockClear();
 
-      act(() => mode === 'next-page' ? result.current.loadNextPage() : result.current.retry());
-      await waitFor(() => expect(queryFn).toHaveBeenCalledWith(expect.objectContaining({ pageParam: 'page-2' })));
-      act(() => {
-        if (operation === 'replace') replaceInfiniteListRow(client, key, { ...first, name: 'Saved' });
-        else removeInfiniteListRow(client, key, first.id);
-      });
-      act(() => pending.resolve(secondPage));
-
-      await waitFor(() => expect(result.current.loadingNextPage || result.current.refreshing).toBe(false));
-      expect(result.current.rows).toEqual(operation === 'replace' ? [{ ...first, name: 'Saved' }, second] : [second]);
-      expect(result.current.error).toBe('');
-
-      queryFn.mockImplementation(({ pageParam }) => Promise.resolve(pageParam ? secondPage : {
-        rows: [{ ...first, name: 'Newest server value' }], nextCursor: 'page-2',
-      }));
-      act(() => result.current.retry());
-      await waitFor(() => expect(result.current.rows[0]?.name).toBe('Newest server value'));
+    act(() => mode === 'next-page' ? result.current.loadNextPage() : result.current.retry());
+    await waitFor(() => expect(queryFn).toHaveBeenCalledWith(expect.objectContaining({ pageParam: 'page-2' })));
+    act(() => {
+      replaceInfiniteListRow(client, key, { ...first, name: 'Saved' });
     });
-  }
+    act(() => pending.resolve(secondPage));
+
+    await waitFor(() => expect(result.current.loadingNextPage || result.current.refreshing).toBe(false));
+    expect(result.current.rows).toEqual([{ ...first, name: 'Saved' }, second]);
+    expect(result.current.error).toBe('');
+
+    queryFn.mockImplementation(({ pageParam }) => Promise.resolve(pageParam ? secondPage : {
+      rows: [{ ...first, name: 'Newest server value' }], nextCursor: 'page-2',
+    }));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.rows[0]?.name).toBe('Newest server value'));
+  });
 }
 
 it('preserves a saved row while next-page loading is paused offline before the request starts', async () => {

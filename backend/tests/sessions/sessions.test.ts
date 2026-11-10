@@ -93,8 +93,37 @@ describe('Program cycle sessions and attendance API', () => {
       RETURNING id
     `;
     mainCycleId = cycle.id;
-    await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${programId}, ${mainCycleId})`;
+    const [unassignedProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Job Readiness'`;
+    unassignedProgramId = unassignedProgram.id;
+    await sql`
+      INSERT INTO program_cycle_assignments (program_id, cycle_id)
+      VALUES (${programId}, ${mainCycleId}), (${openProgramId}, ${mainCycleId}), (${unassignedProgramId}, ${mainCycleId})
+    `;
+    const [session, openSession] = await sql<{ id: string }[]>`
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, starts_at, ends_at)
+      VALUES
+        (${programId}, ${mainCycleId}, ${guestSpeakerType}, 'Communication', ${addDays(today, 1)}::date + TIME '17:00', ${addDays(today, 1)}::date + TIME '19:30'),
+        (${openProgramId}, ${mainCycleId}, ${guestSpeakerType}, 'Friday Drop In', ${addDays(today, 1)}::date + TIME '17:00', ${addDays(today, 1)}::date + TIME '20:00')
+      RETURNING id
+    `;
+    sessionId = session.id;
+    openSessionId = openSession.id;
+  });
 
+  beforeEach(async () => {
+    await sql`DELETE FROM session_notes WHERE session_id IN (${sessionId}, ${openSessionId})`;
+    await sql`DELETE FROM attendance_records WHERE session_id IN (${sessionId}, ${openSessionId})`;
+    await sql`
+      INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
+      VALUES (${programId}, ${mainCycleId}, ${youthId}, ${today}), (${programId}, ${mainCycleId}, ${secondYouthId}, ${today})
+      ON CONFLICT (program_id, cycle_id, youth_id) DO UPDATE SET enrolled_on = EXCLUDED.enrolled_on, withdrawn_on = NULL
+    `;
+    await sql`
+      UPDATE program_sessions
+      SET starts_at = ${addDays(today, 1)}::date + TIME '17:00',
+          ends_at = ${addDays(today, 1)}::date + TIME '19:30', cancelled_at = NULL
+      WHERE id IN (${sessionId}, ${openSessionId})
+    `;
   });
 
   afterAll(async () => {
@@ -167,15 +196,6 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('keeps the full program cycle lookup available for Youth profile filters', async () => {
-    const [jobReadiness] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE name = 'Job Readiness'
-    `;
-    await sql`
-      INSERT INTO program_cycle_assignments (program_id, cycle_id)
-      VALUES (${jobReadiness.id}, ${mainCycleId})
-    `;
-    unassignedProgramId = jobReadiness.id;
-
     const scoped = await request(app)
       .get('/api/programs/cycle-assignments')
       .set('Authorization', `Bearer ${staffToken}`);
@@ -188,6 +208,7 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('does not partially enroll a batch containing an unknown youth', async () => {
+    await sql`DELETE FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`;
     const response = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/enrollments`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -206,6 +227,7 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('enrolls multiple youth atomically with server-generated dates', async () => {
+    await sql`DELETE FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`;
     const response = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/enrollments`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -229,7 +251,7 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('creates individual sessions with explicit dates and type', async () => {
-    const firstSessionDate = addDays(today, 1);
+    const firstSessionDate = addDays(today, 2);
     const sessionDates = [firstSessionDate, addDays(firstSessionDate, 7), addDays(firstSessionDate, 14)];
     for (const date of sessionDates) {
       const response = await request(app)
@@ -240,13 +262,13 @@ describe('Program cycle sessions and attendance API', () => {
       expect(response.status).toBe(201);
       expect(response.body.theme).toBe('Communication');
       expect(response.body.sessionType).toBe('Guest Speaker');
-      if (date === firstSessionDate) sessionId = response.body.id;
     }
 
     const dates = await sql<{ localDate: string }[]>`
       SELECT (starts_at AT TIME ZONE 'America/Toronto')::date::text AS local_date
       FROM program_sessions
       WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND theme = 'Communication'
+        AND id <> ${sessionId}
       ORDER BY starts_at
     `;
     expect(dates.map(session => session.localDate)).toEqual([
@@ -254,6 +276,7 @@ describe('Program cycle sessions and attendance API', () => {
       addDays(firstSessionDate, 7),
       addDays(firstSessionDate, 14),
     ]);
+    await sql`DELETE FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND id <> ${sessionId}`;
   });
 
   it('rejects a session without a title or theme', async () => {
@@ -358,15 +381,13 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('updates and deletes session notes', async () => {
-    const notes = await request(app)
-      .get(`/api/sessions/${sessionId}/notes`)
-      .set('Authorization', `Bearer ${staffToken}`);
-    const attached = notes.body.find((note: { details: string }) => (
-      note.details === 'Youth led the group discussion.'
-    ));
-    const unlinked = notes.body.find((note: { details: string }) => (
-      note.details === 'Extended session note.'
-    ));
+    const [attached, unlinked] = await sql<{ id: string }[]>`
+      INSERT INTO session_notes (session_id, category, details, created_by, updated_by)
+      VALUES
+        (${sessionId}, 'achievement', 'Youth led the group discussion.', ${staffId}, ${staffId}),
+        (${sessionId}, 'general', 'Extended session note.', ${staffId}, ${staffId})
+      RETURNING id
+    `;
 
     const updated = await request(app)
       .put(`/api/sessions/${sessionId}/notes/${attached.id}`)
@@ -469,6 +490,11 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('returns linked session notes with context on a youth profile', async () => {
+    const [note] = await sql<{ id: string }[]>`
+      INSERT INTO session_notes (session_id, category, details, created_by, updated_by)
+      VALUES (${sessionId}, 'behaviour', 'Updated details.', ${staffId}, ${staffId}) RETURNING id
+    `;
+    await sql`INSERT INTO session_note_has_youth (note_id, youth_id) VALUES (${note.id}, ${secondYouthId})`;
     const response = await request(app)
       .get(`/api/youth/${secondYouthId}/session-notes`)
       .set('Authorization', `Bearer ${staffToken}`);
@@ -541,6 +567,10 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('prevents deleting a session or assignment that has session notes', async () => {
+    await sql`
+      INSERT INTO session_notes (session_id, category, details, created_by, updated_by)
+      VALUES (${sessionId}, 'general', 'Retained note', ${staffId}, ${staffId})
+    `;
     const sessionResponse = await request(app)
       .delete(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${staffToken}`);
@@ -553,8 +583,6 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('creates an open Drop In session with no enrollment roster', async () => {
-    await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${openProgramId}, ${mainCycleId})`;
-
     const created = await request(app)
       .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -566,13 +594,12 @@ describe('Program cycle sessions and attendance API', () => {
         endTime: '20:00',
       });
     expect(created.status).toBe(201);
-    openSessionId = created.body.id;
-
     const roster = await request(app)
-      .get(`/api/sessions/${openSessionId}/roster`)
+      .get(`/api/sessions/${created.body.id}/roster`)
       .set('Authorization', `Bearer ${staffToken}`);
     expect(roster.status).toBe(200);
     expect(roster.body).toEqual([]);
+    await sql`DELETE FROM program_sessions WHERE id = ${created.body.id}`;
   });
 
   it('checks any youth profile into an open session as attended', async () => {
@@ -602,6 +629,10 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('allows open session notes to attach checked-in youth', async () => {
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${openSessionId}, ${secondYouthId}, 'present', ${staffId})
+    `;
     const response = await request(app)
       .post(`/api/sessions/${openSessionId}/notes`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -638,6 +669,10 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('reports open-session reach without creating an enrollment', async () => {
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${openSessionId}, ${secondYouthId}, 'present', ${staffId})
+    `;
     await sql`
       INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
       VALUES (${openSessionId}, ${youthId}, 'absent', ${staffId})
@@ -966,6 +1001,10 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('clears an existing attendance record when a roster member is not marked', async () => {
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${sessionId}, ${secondYouthId}, 'present', ${staffId})
+    `;
     const response = await request(app)
       .put(`/api/sessions/${sessionId}/attendance`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -978,6 +1017,15 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
   it('loads scoped cycle attendance and renders that supplied data as a PDF', async () => {
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${sessionId}, ${youthId}, 'present', ${staffId})
+    `;
+    const [note] = await sql<{ id: string }[]>`
+      INSERT INTO session_notes (session_id, category, details, created_by, updated_by)
+      VALUES (${sessionId}, 'behaviour', 'Updated details.', ${staffId}, ${staffId}) RETURNING id
+    `;
+    await sql`INSERT INTO session_note_has_youth (note_id, youth_id) VALUES (${note.id}, ${secondYouthId})`;
     await sql`UPDATE program_cycles SET starts_on = ${addDays(today, -2)} WHERE id = ${mainCycleId}`;
     await sql`
       UPDATE program_sessions
@@ -1051,6 +1099,18 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('withdraws a youth without deleting their attendance history', async () => {
+    await sql`
+      UPDATE program_enrollments SET enrolled_on = ${addDays(today, -2)}
+      WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND youth_id = ${youthId}
+    `;
+    await sql`
+      UPDATE program_sessions SET starts_at = ${addDays(today, -1)}::date + TIME '17:00',
+        ends_at = ${addDays(today, -1)}::date + TIME '18:00' WHERE id = ${sessionId}
+    `;
+    await sql`
+      INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+      VALUES (${sessionId}, ${youthId}, 'present', ${staffId})
+    `;
     const response = await request(app)
       .patch(`/api/programs/${programId}/cycles/${mainCycleId}/enrollments/${youthId}/withdraw`)
       .set('Authorization', `Bearer ${staffToken}`);
