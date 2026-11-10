@@ -6,7 +6,7 @@ import { calculateAge, getDateOfBirthBounds, dateOfBirthSchema } from './dateOfB
 describe('youth birth dates', () => {
   afterEach(() => vi.useRealTimers());
 
-  it.each(['1980-01-01', '2014-10-29', '2006-10-28', '2026-10-27'])(
+  it.each(['1980-01-01', '2014-10-29', '2012-02-29', '2026-10-27'])(
     'accepts any real past birthdate %s without intake age limits', date => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-10-29T02:00:00Z'));
@@ -35,7 +35,11 @@ describe('youth birth dates', () => {
     expect(calculateAge(date, '2026-10-28')).toBeNull();
   });
 
-  it('bounds native dates at yesterday without a minimum age', () => {
+  it('bounds native dates at yesterday in Toronto without a minimum age', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T02:00:00Z'));
+
+    expect(getDateOfBirthBounds()).toEqual({ max: '2026-02-27' });
     expect(getDateOfBirthBounds('2026-10-28')).toEqual({ max: '2026-10-27' });
     expect(getDateOfBirthBounds('2028-03-01')).toEqual({ max: '2028-02-29' });
   });
