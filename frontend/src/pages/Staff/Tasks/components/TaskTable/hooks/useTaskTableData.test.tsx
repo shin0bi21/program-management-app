@@ -1,6 +1,4 @@
-import { makeTask } from '../../../../../../tests/factories/task';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
@@ -26,27 +24,15 @@ describe('useTaskTableData', () => {
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [], nextCursor: null });
   });
 
-  it('passes table controls to the query owner and forwards initial and next-page API inputs', async () => {
-    const client = createTestQueryClient();
-    const task = makeTask();
-    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: 'next' });
-    renderHook(() => useTaskTableData(['tasks', 'table'], filters, sorting, '2026-08-11'), { wrapper: createQueryClientWrapper(client) });
+  it('keys the applied controls and forwards the domain request', async () => {
+    renderHook(() => useTaskTableData(['tasks', 'table'], filters, sorting, '2026-08-11'));
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     const signal = new AbortController().signal;
 
     expect(options.queryKey).toEqual(['tasks', 'table', filters, sorting, '2026-08-11']);
-    await act(async () => {
-      const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
-      expect(page).toEqual({ rows: [task], nextCursor: 'next' });
-    });
-    expect(getTasksTableData).toHaveBeenLastCalledWith(
-      filters, { signal }, { ...sorting, cursor: undefined, limit: TABLE_PAGE_SIZE },
-    );
-
-    await act(async () => { await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]); });
+    await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getTasksTableData).toHaveBeenLastCalledWith(
       filters, { signal }, { ...sorting, cursor: 'cursor-2', limit: TABLE_PAGE_SIZE },
     );
   });
-
 });

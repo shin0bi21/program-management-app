@@ -114,7 +114,7 @@ describe('session API', () => {
 describe('session date-range filtering', () => {
   it('uses the same inclusive local days for table requests across DST', () => {
     getSessions({ dateRange: { start: '2026-03-08', end: '2026-03-08' } }, undefined,
-      { key: 'date', direction: 'asc', limit: 25 });
+      { key: 'date', direction: 'asc', limit: 50 });
     const path = vi.mocked(apiClient.get).mock.calls[vi.mocked(apiClient.get).mock.calls.length - 1]?.[0];
     const url = new URL(String(path), 'http://localhost');
     expect(url.searchParams.get('start')).toBe('2026-03-08T05:00:00Z');
