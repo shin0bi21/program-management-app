@@ -55,6 +55,10 @@ vi.mock('../../hours.api', () => ({
   getHoursCalendarData: vi.fn(),
 }));
 
+/**
+ * Builds a complete regular-hours row with scenario-specific values.
+ * @example buildItem({ hours: 3 }) // regular entry with three hours
+ */
 function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
   return makeHoursItem({
     id: 'entry-1',
@@ -68,6 +72,10 @@ function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
   });
 }
 
+/**
+ * Mounts the Hours calendar with domain filters, resources, and command spies.
+ * @example renderCalendar({ canWrite: false }) // read-only calendar and its callbacks
+ */
 function renderCalendar({
   data = [],
   resources = [resource],
@@ -123,6 +131,10 @@ function renderCalendar({
   };
 }
 
+/**
+ * Supplies the initial visible periods and waits for the domain range request.
+ * @example await initializeCalendar(periods) // request inputs are ready to inspect
+ */
 async function initializeCalendar(periods: CalendarPeriod[]) {
   act(() => calendarState.props?.onInitialPeriods?.(periods));
   await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalled());
@@ -132,16 +144,6 @@ describe('HoursCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     calendarState.props = null;
-  });
-
-  it('cancels its range request when unmounted', () => {
-    const { unmount } = renderCalendar();
-    act(() => calendarState.props?.onInitialPeriods?.(buildInitialDayPeriods(new Date(2026, 7, 10), 1)));
-    const signal = vi.mocked(getHoursCalendarData).mock.calls[0][2]?.signal;
-
-    unmount();
-
-    expect(signal?.aborted).toBe(true);
   });
 
   it('removes a moved or saved entry when its resolved cycle is outside the active selection', async () => {

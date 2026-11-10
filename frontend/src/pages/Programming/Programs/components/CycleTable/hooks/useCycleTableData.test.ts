@@ -8,11 +8,12 @@ import useCycleTableData from './useCycleTableData';
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({ default: vi.fn(() => ({ rows: [] })) }));
 vi.mock('../../../api/cycles.api', () => ({ getCycleList: vi.fn() }));
 
-const cycle = { id: 'cycle-1', name: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' as const };
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(getCycleList).mockResolvedValue({ rows: [], nextCursor: null });
+});
 
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(getCycleList).mockResolvedValue({ rows: [cycle], nextCursor: null }); });
-
-it('keys and gates the cycle list and forwards cancellation, page size, and cursor', async () => {
+it('keys and gates the cycle list and forwards the domain request', async () => {
   const { rerender } = renderHook(({ enabled }) => useCycleTableData(enabled), {
     initialProps: { enabled: false },
   });
@@ -24,11 +25,8 @@ it('keys and gates the cycle list and forwards cancellation, page size, and curs
   rerender({ enabled: true });
   expect(vi.mocked(useInfiniteListQuery).mock.lastCall![0].enabled).toBe(true);
 
-  expect(await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0])).toEqual({ rows: [cycle], nextCursor: null });
   await options.queryFn({ signal, pageParam: 'next-page' } as Parameters<typeof options.queryFn>[0]);
 
-  expect(getCycleList).toHaveBeenNthCalledWith(1,
-    { key: 'startsOn', direction: 'desc', limit: 50, cursor: undefined }, { signal });
-  expect(getCycleList).toHaveBeenNthCalledWith(2,
-    { key: 'startsOn', direction: 'desc', limit: 50, cursor: 'next-page' }, { signal });
+  expect(getCycleList).toHaveBeenCalledWith(
+    { key: 'startsOn', direction: 'desc', cursor: 'next-page' }, { signal });
 });

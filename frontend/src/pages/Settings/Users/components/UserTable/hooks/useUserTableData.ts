@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { User, UserFilters, UserSortKey } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
@@ -20,7 +19,7 @@ export default function useUserTableData(
     queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => {
       if (filters === null) throw new Error('User table filters are not initialized');
-      return getAccounts(filters, { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE }, { signal });
+      return getAccounts(filters, { ...sorting, cursor: pageParam ?? undefined }, { signal });
     },
     errorMessage: 'Failed to fetch accounts',
     enabled: filters !== null,

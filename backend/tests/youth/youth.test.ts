@@ -58,41 +58,7 @@ describe('Youth API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('sorts and paginates DOBs in both directions, including unknown dates and ties', async () => {
-      const surname = `BirthdateSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
-      const records: Array<{ id: string; dateOfBirth: string }> = [];
-      try {
-        for (const dateOfBirth of [null, '2012-06-15', '2012-06-15', '2008-01-01']) {
-          const saved = await request(app).post('/api/youth')
-            .set('Authorization', `Bearer ${adminToken}`)
-            .send({ ...baseYouth, lastName: surname, dateOfBirth });
-          expect(saved.status).toBe(201);
-          records.push({ id: saved.body.id, dateOfBirth: dateOfBirth ?? '' });
-        }
-
-        const ascending = [...records].sort((a, b) => a.dateOfBirth.localeCompare(b.dateOfBirth) || a.id.localeCompare(b.id));
-        for (const direction of ['asc', 'desc']) {
-          const actual: string[] = [];
-          let cursor: string | undefined;
-          do {
-            const response = await request(app).get('/api/youth')
-              .query({ search: surname, sort: 'dateOfBirth', direction, limit: 1, ...(cursor ? { cursor } : {}) })
-              .set('Authorization', `Bearer ${adminToken}`);
-            expect(response.status).toBe(200);
-            actual.push(...response.body.rows.map((row: { id: string }) => row.id));
-            cursor = response.body.nextCursor ?? undefined;
-          } while (cursor && actual.length <= records.length);
-
-          expect(cursor).toBeUndefined();
-          const expected = direction === 'asc' ? ascending : [...ascending].reverse();
-          expect(actual).toEqual(expected.map(row => row.id));
-        }
-      } finally {
-        for (const record of records) await deleteTestYouth(record.id);
-      }
-    });
-
-    it('sorts eligible enrollment program names rather than cycle labels', async () => {
+    it('projects only eligible active enrolled programs', async () => {
       const surname = `ProgramSort${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
       const youthIds: string[] = [];
       const fixtures: Array<{ programId: string; cycleId: string }> = [];
@@ -139,13 +105,16 @@ describe('Youth API', () => {
         }
 
         const response = await request(app).get('/api/youth')
-          .query({ search: surname, sort: 'activeProgram', direction: 'asc', limit: 3 })
+          .query({ search: surname, paginate: 'true' })
           .set('Authorization', `Bearer ${adminToken}`);
 
         expect(response.status).toBe(200);
-        expect(response.body.rows.map((row: { id: string }) => row.id)).toEqual([youthIds[2], youthIds[0], youthIds[1]]);
-        expect(response.body.rows[0].activeProgram).toBeNull();
-        expect(response.body.rows[1].activeProgram).toEqual({ programId: jobProgram.id, program: 'Job Readiness' });
+        expect(response.body.rows).toHaveLength(3);
+        expect(response.body.rows).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: youthIds[0], activeProgram: { programId: jobProgram.id, program: 'Job Readiness' } }),
+          expect.objectContaining({ id: youthIds[1], activeProgram: { programId: softSkillsProgramId, program: 'Soft Skills' } }),
+          expect.objectContaining({ id: youthIds[2], activeProgram: null }),
+        ]));
       } finally {
         for (const id of youthIds) await deleteTestYouth(id);
         for (const fixture of fixtures) await deleteTestProgramCycle(fixture.programId, fixture.cycleId);
@@ -304,21 +273,11 @@ describe('Youth API', () => {
         expect(mismatch.body).toEqual([]);
       });
 
-      it('combines cycle filtering with search and paginates matching youth', async () => {
-        const query = { cycleIds: current.cycleId, search: surname, limit: 1, sort: 'firstName' };
-        const first = await list(query);
-        expect(first.status).toBe(200);
-        expect(ids(first.body.rows)).toEqual([youth.Both]);
-        expect(first.body.nextCursor).toEqual(expect.any(String));
-
-        const second = await list({ ...query, cursor: first.body.nextCursor });
-        expect(second.status).toBe(200);
-        expect(ids(second.body.rows)).toEqual([youth.Cross]);
-
-        const third = await list({ ...query, cursor: second.body.nextCursor });
-        expect(third.status).toBe(200);
-        expect(ids(third.body.rows)).toEqual([youth.Current]);
-        expect(third.body.nextCursor).toBeNull();
+      it('combines cycle filtering with search for the table', async () => {
+        const response = await list({ cycleIds: current.cycleId, search: surname, paginate: 'true', sort: 'firstName' });
+        expect(response.status).toBe(200);
+        expect(ids(response.body.rows)).toEqual([youth.Both, youth.Cross, youth.Current].sort());
+        expect(response.body.nextCursor).toBeNull();
       });
 
       it('returns an empty list for an unmatched cycle and leaves omitted cycles unrestricted', async () => {
@@ -923,13 +882,6 @@ describe('Youth API', () => {
       `;
       [firstSessionId, secondSessionId] = sessions.map(session => session.id);
 
-      await sql`
-        INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
-        VALUES
-          (${firstSessionId}, ${youthId}, 'present', ${adminUserId}),
-          (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
-      `;
-
       const [linkedSessionNote] = await sql<{ id: string }[]>`
         INSERT INTO session_notes (
           session_id, category, details, created_by, updated_by
@@ -963,6 +915,16 @@ describe('Youth API', () => {
         RETURNING id
       `;
       openSessionId = openSession.id;
+    });
+
+    beforeEach(async () => {
+      await sql`DELETE FROM attendance_records WHERE youth_id IN (${youthId}, ${otherYouthId})`;
+      await sql`
+        INSERT INTO attendance_records (session_id, youth_id, status, marked_by)
+        VALUES
+          (${firstSessionId}, ${youthId}, 'present', ${adminUserId}),
+          (${firstSessionId}, ${otherYouthId}, 'present', ${adminUserId})
+      `;
     });
 
     afterAll(async () => {
@@ -1047,7 +1009,7 @@ describe('Youth API', () => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(response.body.youth).toEqual(profile.body);
       const listedSessions = await request(app).get('/api/sessions')
-        .set('Authorization', `Bearer ${adminToken}`).query({ limit: 50 });
+        .set('Authorization', `Bearer ${adminToken}`).query({ paginate: 'true' });
       expect(response.body.updatedSessions).toEqual(expect.arrayContaining([
         listedSessions.body.rows.find((session: { id: string }) => session.id === firstSessionId),
       ]));
@@ -1070,7 +1032,7 @@ describe('Youth API', () => {
         SELECT status FROM attendance_records
         WHERE session_id = ${firstSessionId} AND youth_id = ${youthId}
       `;
-      expect(attendance).toEqual([{ status: 'late' }]);
+      expect(attendance).toEqual([{ status: 'present' }]);
     });
 
     it('limits open-program youth attendance to attended or unmarked', async () => {

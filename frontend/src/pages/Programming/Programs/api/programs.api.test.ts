@@ -16,11 +16,11 @@ describe('programs API', () => {
     const page = { rows: [], nextCursor: 'next' };
     vi.mocked(apiClient.get).mockResolvedValueOnce(page);
 
-    expect(await getProgramList({ assignedOnly: true }, { key: 'name', direction: 'asc', cursor: 'previous', limit: 25 }, { signal })).toBe(page);
-    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=name&direction=asc&limit=25&scope=assigned&cursor=previous', { signal });
+    expect(await getProgramList({ assignedOnly: true }, { key: 'name', direction: 'asc', cursor: 'previous' }, { signal })).toBe(page);
+    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=name&direction=asc&scope=assigned&cursor=previous', { signal });
 
     getProgramList({}, { key: 'name', direction: 'desc' });
-    expect(apiClient.get).toHaveBeenLastCalledWith('/programs/list?sort=name&direction=desc&limit=50', undefined);
+    expect(apiClient.get).toHaveBeenLastCalledWith('/programs/list?sort=name&direction=desc', undefined);
   });
 
   it('replaces cycle assignments with one atomic request and returns the server result', async () => {

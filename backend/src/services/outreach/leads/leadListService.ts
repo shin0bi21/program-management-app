@@ -7,8 +7,8 @@ import { buildLeadFilters } from './leadRowFilters';
 /**
  * Lists matching leads.
  * @param filterValues - Validated origin, submitter, status, program, search, and optional cursor inputs.
- * @returns A cursor page when limited, otherwise all matching canonical lead rows.
- * @example getLeads(filterValues) // { rows, nextCursor } when filterValues.limit is set
+ * @returns A page of up to 50 rows when paginate=true, otherwise all matching canonical lead rows.
+ * @example getLeads(filterValues) // { rows, nextCursor } when filterValues.paginate is set
  */
 export function getLeads(filterValues: LeadQuery) {
   // 1. Find matching leads.
@@ -26,7 +26,7 @@ export function getLeads(filterValues: LeadQuery) {
   }[filterValues.sort]!;
 
   // 3. Return the requested list or page.
-  if (filterValues.limit === undefined) {
+  if (filterValues.paginate === undefined) {
     const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<LeadRow[]>`
       SELECT "row".*
@@ -39,6 +39,5 @@ export function getLeads(filterValues: LeadQuery) {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit,
   });
 }

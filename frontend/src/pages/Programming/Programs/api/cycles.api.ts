@@ -1,6 +1,6 @@
 import { apiClient, type RequestOptions } from '../../../../http/client';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../../../query/types';
+import type { CursorPage, CursorRequest } from '../../../../query/types';
 import type { ProgramCycleAssignmentChanges } from './programCycleAssignments.api';
 
 interface SetProgramCycleInput {
@@ -18,7 +18,6 @@ export function getCycleList(pagination: CursorRequest<'name' | 'startsOn'>, opt
   const params = new URLSearchParams({
     sort: pagination.key,
     direction: pagination.direction,
-    limit: String(pagination.limit ?? TABLE_PAGE_SIZE),
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   return apiClient.get<CursorPage<ProgramCycle>>(`/cycles/list?${params}`, opts);

@@ -62,7 +62,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
       // TODO: Use useInfiniteListQuery<${title}Row> under a table-only query prefix.
       // Receive applied filters/sorting and any required page reference context as arguments.
       // Cache complete API rows directly; do not create a normalized record store.
-      // Forward signal/cursor and TABLE_PAGE_SIZE; server filtering/sorting precedes pagination.
+      // Forward signal/cursor; the backend owns page size, filtering and sorting.
       // Report initial/refresh/next-page errors with their matching retry through usePageMessageReporter.
       // Under PageContainer, pass undefined as its callback argument to use automatic page reporting.
       // Replace saved rows or remove deleted rows with the existing cursor-list cache helpers.
@@ -96,12 +96,13 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     `
     // This hook owns adapter inputs, query identity, and domain row shaping.
     // useInfiniteListQuery owns accumulation, loading, refresh, and retry mechanics.
+    // Mock that shared owner and invoke its request callback for domain inputs.
+    // Keep shaping checks only when this hook transforms values; omit unchanged row passthrough.
     import { describe, it } from 'vitest';
 
     describe('${hookName}', () => {
       it.todo('builds the complete domain query key and honors enabled gates');
-      it.todo('forwards filters, sorting, page size, cursor, and AbortSignal to the API adapter');
-      it.todo('returns complete domain rows from the query');
+      it.todo('forwards filters, sorting, cursor, and AbortSignal to the API adapter');
     });
     `,
   );

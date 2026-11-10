@@ -1,12 +1,8 @@
 import { sql } from '../../../db/client';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
-import { paginateQuery, BATCH_SIZE } from '../../shared/cursorPagination';
-import {
-  attachTaskDetails,
-  loadTaskLoggedHours,
-  getTaskRows,
-} from './taskRowQuery';
+import { paginateQuery } from '../../shared/cursorPagination';
+import { getTaskRows } from './taskRowQuery';
 import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
 
 /**
@@ -19,7 +15,7 @@ import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
 export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskListQuery) {
   // 1. Load the matching tasks.
   const range = await resolveTaskDateRange(filterValues);
-  const { status, appliedFilters } = buildTaskFilters(filterValues);
+  const appliedFilters = buildTaskFilters(filterValues);
   const dateFilter = range
     ? sql`task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date`
     : sql`FALSE`;
@@ -37,17 +33,12 @@ export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskL
     program: sql`LOWER(COALESCE("row".program, ''))`,
     startDate: sql`"row".start_date`,
     dueDate: sql`"row".due_date`,
-    status,
+    status: sql`"row".status`,
   }[filterValues.sort]!;
-  const page = await paginateQuery(rowsQuery, {
+
+  return paginateQuery(rowsQuery, {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit ?? BATCH_SIZE,
   });
-
-  // 3. Add details for the visible tasks.
-  const rows = page.rows;
-  const loggedHours = await loadTaskLoggedHours(rows.map(row => row.id));
-  return { ...page, rows: attachTaskDetails(rows, loggedHours, actor) };
 }

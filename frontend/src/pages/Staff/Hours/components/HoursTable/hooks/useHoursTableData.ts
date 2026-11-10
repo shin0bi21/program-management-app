@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getHoursTableData } from '../../../hours.api';
 import type { HoursFilters, HoursSortKey, HoursItem } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
@@ -22,7 +21,7 @@ export default function useHoursTableData(
     queryFn: ({ signal, pageParam }) => getHoursTableData(
       filters,
       { signal },
-      { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
+      { ...sorting, cursor: pageParam ?? undefined },
     ),
     errorMessage: 'Could not load hours.',
   });

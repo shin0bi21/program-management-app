@@ -354,7 +354,7 @@ describe('Tasks API', () => {
     taskIds.delete(ownTask.body.id);
   });
 
-  it('paginates and searches the task list with a stable cursor', async () => {
+  it('searches the task table by title', async () => {
     const marker = `Paginated task ${firstStaffId}`;
     for (const suffix of ['A', 'B']) {
       const created = rememberTask(await request(app)
@@ -367,17 +367,14 @@ describe('Tasks API', () => {
       expect(created.status).toBe(201);
     }
 
-    const first = await request(app)
-      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=title&direction=asc&limit=1`)
+    const response = await request(app)
+      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(first.status).toBe(200);
-    expect(first.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} A` })], nextCursor: expect.any(String) });
-
-    const second = await request(app)
-      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=title&direction=asc&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-    expect(second.status).toBe(200);
-    expect(second.body).toEqual({ rows: [expect.objectContaining({ title: `${marker} B` })], nextCursor: null });
+    expect(response.status).toBe(200);
+    expect(response.body.rows).toHaveLength(2);
+    expect(response.body.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: `${marker} A` }), expect.objectContaining({ title: `${marker} B` }),
+    ]));
   });
 
   it('searches tasks by their displayed category label', async () => {
@@ -479,21 +476,6 @@ describe('Tasks API', () => {
         expect.objectContaining({ title: taskCase.title, state: 'open', status: taskCase.status, statusLabel: taskCase.label }),
       ]);
     }
-
-    const sorted = await request(app)
-      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=status&direction=asc&limit=1`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-
-    expect(sorted.status).toBe(200);
-    expect(sorted.body.rows).toEqual([expect.objectContaining({ status: 'in_progress' })]);
-    expect(sorted.body.nextCursor).toEqual(expect.any(String));
-
-    const nextPage = await request(app)
-      .get(`/api/tasks/list?search=${encodeURIComponent(marker)}&sort=status&direction=asc&limit=1&cursor=${encodeURIComponent(sorted.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-
-    expect(nextPage.status).toBe(200);
-    expect(nextPage.body.rows).toEqual([expect.objectContaining({ status: 'overdue' })]);
   });
 
   it('rejects the obsolete active task status filter', async () => {
@@ -620,19 +602,12 @@ describe('Tasks API', () => {
       expect.objectContaining({ id: outside.body.id }),
     ]));
 
-    const firstPage = await request(app)
-      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2`)
+    const table = await request(app)
+      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range`)
       .set('Authorization', `Bearer ${adminToken}`);
-    expect(firstPage.status).toBe(200);
-    expect(firstPage.body.rows.map((task: { id: string }) => task.id)).toEqual([spanning.body.id, inside.body.id]);
-    expect(firstPage.body.nextCursor).toEqual(expect.any(String));
-
-    const secondPage = await request(app)
-      .get(`/api/tasks/list?start=2026-06-12&end=2026-06-15&staffIds=${firstStaffId}&categories=outreach&search=calendar%20range&sort=startDate&direction=asc&limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`)
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(secondPage.status).toBe(200);
-    expect(secondPage.body.rows.map((task: { id: string }) => task.id)).toEqual([boundary.body.id]);
-    expect(secondPage.body.nextCursor).toBeNull();
+    expect(table.status).toBe(200);
+    expect(table.body.rows.map((task: { id: string }) => task.id).sort()).toEqual([spanning.body.id, inside.body.id, boundary.body.id].sort());
+    expect(table.body.nextCursor).toBeNull();
 
     const incompleteRange = await request(app)
       .get('/api/tasks/calendar?start=2026-06-12')

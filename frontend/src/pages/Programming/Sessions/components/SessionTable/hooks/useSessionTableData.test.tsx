@@ -1,6 +1,4 @@
-import { makeProgramSession } from '../../../../../../tests/factories/session';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { act, renderHook } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import { getSessions } from '../../../sessions.api';
@@ -14,10 +12,7 @@ beforeEach(() => {
   vi.mocked(getSessions).mockResolvedValue({ rows: [], nextCursor: null });
 });
 
-it('keys every session control and forwards cancellation, page size, and cursor', async () => {
-  const client = createTestQueryClient();
-  const session = makeProgramSession();
-  vi.mocked(getSessions).mockResolvedValue({ rows: [session], nextCursor: 'next' });
+it('keys every session control and forwards the domain request', async () => {
   const queryKey = ['sessions', 'table'];
   const filters = {
     programIds: ['program-1'], cycleIds: ['cycle-1', 'cycle-2'], sessionTypes: ['Regular'],
@@ -27,7 +22,6 @@ it('keys every session control and forwards cancellation, page size, and cursor'
   const sorting = { key: 'date' as const, direction: 'desc' as const };
   const { rerender } = renderHook(({ enabled }) => useSessionTableData(queryKey, filters, sorting, enabled), {
     initialProps: { enabled: false },
-    wrapper: createQueryClientWrapper(client),
   });
   const options = vi.mocked(useInfiniteListQuery).mock.calls[0][0];
   const signal = new AbortController().signal;
@@ -37,14 +31,9 @@ it('keys every session control and forwards cancellation, page size, and cursor'
   rerender({ enabled: true });
   expect(vi.mocked(useInfiniteListQuery).mock.lastCall![0].enabled).toBe(true);
 
-  await act(async () => {
-    const page = await options.queryFn({ signal, pageParam: null } as Parameters<typeof options.queryFn>[0]);
-    expect(page).toEqual({ rows: [session], nextCursor: 'next' });
-  });
-  await act(async () => { await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]); });
+  await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
 
-  expect(getSessions).toHaveBeenNthCalledWith(1, filters, { signal },
-    { ...sorting, cursor: undefined, limit: 50 });
-  expect(getSessions).toHaveBeenNthCalledWith(2, filters, { signal },
-    { ...sorting, cursor: 'cursor-2', limit: 50 });
+  expect(getSessions).toHaveBeenCalledWith(
+    filters, { signal },
+    { ...sorting, cursor: 'cursor-2' });
 });

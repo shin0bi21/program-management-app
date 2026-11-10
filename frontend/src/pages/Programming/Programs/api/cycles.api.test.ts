@@ -12,9 +12,9 @@ describe('cycle API', () => {
 
   it('serializes table pagination and forwards cancellation', () => {
     const signal = new AbortController().signal;
-    getCycleList({ key: 'name', direction: 'asc', cursor: 'next-page', limit: 25 }, { signal });
+    getCycleList({ key: 'name', direction: 'asc', cursor: 'next-page' }, { signal });
 
-    expect(apiClient.get).toHaveBeenCalledWith('/cycles/list?sort=name&direction=asc&limit=25&cursor=next-page', { signal });
+    expect(apiClient.get).toHaveBeenCalledWith('/cycles/list?sort=name&direction=asc&cursor=next-page', { signal });
   });
 
   it('creates, updates, and deletes cycles through the existing endpoints', () => {

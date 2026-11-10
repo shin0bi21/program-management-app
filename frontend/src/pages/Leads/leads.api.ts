@@ -1,7 +1,7 @@
 import type { ProgramCycleAssignment } from '../Programming/Programs/types';
 import { apiClient } from '../../http/client';
 import type { RequestOptions } from '../../http/client';
-import { TABLE_PAGE_SIZE, type CursorPage, type CursorRequest } from '../../query/types';
+import type { CursorPage, CursorRequest } from '../../query/types';
 import type {
   DiscoverySource,
   Lead,
@@ -25,9 +25,16 @@ interface CreateLeadInput {
 
 type UpdateLeadInput = CreateLeadInput;
 
+/**
+ * Loads one filtered lead page in the requested table order.
+ * @param filters - Applied lead search and filter selections.
+ * @param pagination - Required sort, direction, and optional continuation cursor.
+ * @param opts - Request cancellation options.
+ * @example getLeads({}, { key: 'created', direction: 'desc' }) // { rows, nextCursor }
+ */
 export const getLeads = (
-  filters: LeadFilters = {},
-  pagination?: CursorRequest<LeadSortKey>,
+  filters: LeadFilters,
+  pagination: CursorRequest<LeadSortKey>,
   opts?: RequestOptions,
 ) => {
   const params = new URLSearchParams();
@@ -36,18 +43,18 @@ export const getLeads = (
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
   if (filters.origins?.length) params.set('origins', filters.origins.join(','));
   if (filters.submitterRoles?.length) params.set('submitterRoles', filters.submitterRoles.join(','));
-  if (pagination) {
-    params.set('sort', pagination.key);
-    params.set('direction', pagination.direction);
-    params.set('limit', String(pagination.limit ?? TABLE_PAGE_SIZE));
-    if (pagination.cursor) params.set('cursor', pagination.cursor);
-  }
-  const query = params.toString();
-  const path = `/leads${query ? `?${query}` : ''}`;
+
+  params.set('sort', pagination.key);
+  params.set('direction', pagination.direction);
+  params.set('paginate', 'true');
+  if (pagination.cursor) params.set('cursor', pagination.cursor);
+
+  const path = `/leads?${params.toString()}`;
   return opts
     ? apiClient.get<CursorPage<Lead>>(path, opts)
     : apiClient.get<CursorPage<Lead>>(path);
 };
+
 export const createLead = (data: CreateLeadInput) => apiClient.post<Lead>('/leads', data);
 export const updateLead = (id: string, data: UpdateLeadInput) => apiClient.put<Lead>(`/leads/${id}`, data);
 export const updateLeadStatus = (id: string, status: EditableLeadStatus) =>

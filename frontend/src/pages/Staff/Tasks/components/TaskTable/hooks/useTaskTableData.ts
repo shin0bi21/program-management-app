@@ -1,4 +1,3 @@
-import { TABLE_PAGE_SIZE } from '../../../../../../query/types';
 import { getTasksTableData, type TasksFilters } from '../../../tasks.api';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
@@ -22,7 +21,7 @@ export default function useTaskTableData(
     ordering: { direction: sorting.direction, getValue: task => getTaskSortValue(task, sorting.key) },
     queryKey: [...queryKey, filters, sorting, today],
     queryFn: ({ signal, pageParam }) => getTasksTableData(
-      filters, { signal }, { ...sorting, cursor: pageParam ?? undefined, limit: TABLE_PAGE_SIZE },
+      filters, { signal }, { ...sorting, cursor: pageParam ?? undefined },
     ),
     errorMessage: 'Unable to load tasks.',
   });

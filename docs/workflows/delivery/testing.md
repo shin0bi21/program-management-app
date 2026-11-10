@@ -78,9 +78,9 @@ Follow [Test Ownership](#test-ownership) and the focused
 - API adapters: verify HTTP methods, paths, serialized inputs, cancellation,
   response shaping, and boundary normalization with a mocked centralized client.
 - Domain query hooks: verify query keys, enabled conditions, adapter inputs,
-  cursors, and domain shaping at the shared-query boundary. Invoke captured request
-  callbacks directly when that exercises the contract; use an isolated QueryClient
-  when coordination needs a real query lifecycle.
+  cursors, and domain shaping at the shared-query boundary. Mock the shared query
+  owner and invoke captured request callbacks when that exercises the contract;
+  use an isolated QueryClient only when coordination needs a real query lifecycle.
 - Shared query owners: verify accumulation, deduplication, ordering, stale-response
   protection, mapped errors, refresh, and retry mechanics once. Consumers verify
   their own decisions and wiring.
@@ -142,8 +142,17 @@ Choose the narrowest owner for each assertion:
 | Route component | Entry context, readiness, domain eligibility, and coordination |
 | Integration/API | Behavior across its boundary, including permissions and persistence |
 
-- Each case must detect a meaningful regression in its owner's contract. Add
-  cases for distinct behavior or failure risks, not merely more input values.
+- A code change alone does not require a new test or test file. Reuse existing
+  coverage; add cases only for distinct behavior or meaningful failure risks in
+  the owner's contract, not merely more input values.
+- Keep page-specific filters, permissions, and record presentation or projection
+  checks with the feature owner: those decisions vary by domain. Test shared
+  text/numeric sorting, pagination, and component/query processes once at their
+  shared owner; do not repeat first/next-page matrices in every consumer.
+- Check record values where runtime behavior produces or displays them, such as
+  an API's canonical projection or a table's domain cell formatter. Do not assert
+  an unchanged record passing through a hook or repeat type shapes checked by
+  TypeScript.
 - Test a shared behavior's matrix once at its owner. Consumers cover only their
   added decisions, transformations, and coordination. A parent may exercise
   internal children; separate files per child are unnecessary. Keep at most one

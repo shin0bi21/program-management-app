@@ -6,9 +6,9 @@ import { getYouthRows, type YouthRow } from './youthRowQuery';
 
 /**
  * Lists matching youth profiles.
- * @param filterValues - Selected programs, cycles, search text, and sorting after request validation; limit requests a page.
- * @returns A cursor page when limited, otherwise all matching youth rows in the requested order.
- * @example listYouth(filterValues) // { rows, nextCursor } when filterValues.limit is set
+ * @param filterValues - Selected programs, cycles, search text, and sorting after request validation; paginate requests a page.
+ * @returns A page of up to 50 rows when paginate=true, otherwise all matching youth rows in the requested order.
+ * @example listYouth(filterValues) // { rows, nextCursor } when filterValues.paginate is set
  */
 export function listYouth(filterValues: YouthQuery) {
   // 1. Restrict the canonical profile query to youth and the requested filters.
@@ -25,7 +25,7 @@ export function listYouth(filterValues: YouthQuery) {
   }[filterValues.sort]!;
 
   // 3. Return the requested list or page.
-  if (filterValues.limit === undefined) {
+  if (filterValues.paginate === undefined) {
     const sortDirection = filterValues.direction === 'asc' ? sql`ASC` : sql`DESC`;
     return sql<YouthRow[]>`
       SELECT "row".*
@@ -38,6 +38,5 @@ export function listYouth(filterValues: YouthQuery) {
     sortValue,
     direction: filterValues.direction,
     cursor: filterValues.cursor,
-    limit: filterValues.limit,
   });
 }

@@ -14,8 +14,6 @@ import { assertCanSetHours } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import {
-  getHoursRow,
-  toHoursItem,
   getHoursRows,
   type HoursRow,
 } from './hoursRowQuery';
@@ -33,7 +31,7 @@ import { buildHoursFilters } from './hoursRowFilters';
  */
 export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
   // 1. Load hours matching the calendar filters.
-  const rows = await sql<HoursRow[]>`
+  return sql<HoursRow[]>`
     ${getHoursRows(actor, sql`
       ${query.start && query.end
         ? sql`entry.date BETWEEN ${query.start}::date AND ${query.end}::date`
@@ -42,9 +40,6 @@ export async function getHoursCalendarData(actor: AccessTokenPayload, query: Hou
     `)}
     ORDER BY entry.date, staff.first_name, staff.last_name, entry.created_at, entry.id
   `;
-
-  // 2. Return the same entries used by the table and saved responses.
-  return rows.map(toHoursItem);
 }
 
 /**
@@ -69,13 +64,17 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
-    id: string; label: string; programId: string; program: string; date: string; startsAt: string;
+    id: string; label: string; startsAt: string; programId: string; program: string; date: string;
   }>>`
-    SELECT session.id,
+    SELECT
+      session.id,
       session.theme AS label,
-      program.id AS program_id, program.name AS program,
-      (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date,
-      session.starts_at::text AS starts_at
+      session.starts_at::text AS starts_at,
+
+      program.id AS program_id,
+      program.name AS program,
+
+      (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
@@ -122,7 +121,7 @@ export async function setHours(
     const savedId = id
       ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
       : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
-    saved = await getHoursRow(actor, savedId, trx);
+    [saved] = await getHoursRows(actor, trx`entry.id = ${savedId}`, trx);
     if (!saved) throw new InternalServerError('Saved hours record is unavailable');
 
     // 4. Complete the task if requested and record the change.
@@ -143,7 +142,7 @@ export async function setHours(
     updatedTasks = await getAffectedTasks([existing?.taskId, scope.taskId], actor, trx);
   });
   return {
-    ...toHoursItem(saved),
+    ...saved,
     ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
@@ -182,7 +181,7 @@ export async function updateHoursPlacement(
         updated_at = NOW()
       WHERE id = ${id}
     `;
-    updated = await getHoursRow(actor, id, trx);
+    [updated] = await getHoursRows(actor, trx`entry.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Updated hours record is unavailable');
 
     // 3. Record the change and load affected tasks.
@@ -190,7 +189,7 @@ export async function updateHoursPlacement(
     updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
   });
   return {
-    ...toHoursItem(updated),
+    ...updated,
     ...(updatedTasks.length ? { updatedTasks } : {}),
   };
 }
@@ -313,7 +312,8 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
   // 2. Load the assigned session.
   if (input.source === 'session') {
     const rows = await trx<Array<{ programId: string; date: string }>>`
-      SELECT session.program_id,
+      SELECT
+        session.program_id,
         (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date
       FROM program_sessions session
       INNER JOIN users target_staff ON target_staff.id = ${input.staffId}
@@ -337,8 +337,11 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
 
   // 3. Load the assigned task.
   const rows = await trx<Array<{ category: string; programId: string | null; startDate: string; dueDate: string }>>`
-    SELECT task.category, task.program_id,
-      task.start_date::text, task.due_date::text
+    SELECT
+      task.category,
+      task.program_id,
+      task.start_date::text,
+      task.due_date::text
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}
@@ -397,11 +400,12 @@ async function completeTaskFromHours(
 async function assertActiveStaffResource(staffId: string) {
   // 1. Check that the staff account is active.
   const rows = await sql<{ id: string }[]>`
-    SELECT u.id
-    FROM users u
-    INNER JOIN user_roles role ON role.id = u.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = u.id
-    WHERE u.id = ${staffId}
+    SELECT
+      staff.id
+    FROM users staff
+    INNER JOIN user_roles role ON role.id = staff.role_id
+    INNER JOIN user_credentials credentials ON credentials.user_id = staff.id
+    WHERE staff.id = ${staffId}
       AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
     LIMIT 1
@@ -418,6 +422,7 @@ async function assertActiveStaffResource(staffId: string) {
 async function assertProgramExists(programId: string | null, query = sql) {
   // 1. Check the selected program.
   if (!programId) return;
+
   const rows = await query<{ id: string }[]>`
     SELECT id
     FROM programs
@@ -440,12 +445,12 @@ async function resolveCycleForDate(date: string, programId: string | null, query
     SELECT cycle.id
     FROM program_cycles cycle
     WHERE ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      AND ${programId ? sql`EXISTS (
+      AND ${programId ? query`EXISTS (
         SELECT 1
         FROM program_cycle_assignments assignment
         WHERE assignment.program_id = ${programId}
           AND assignment.cycle_id = cycle.id
-      )` : sql`TRUE`}
+      )` : query`TRUE`}
     ORDER BY cycle.starts_on, cycle.id
     LIMIT 2
   `;
@@ -473,7 +478,7 @@ async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayl
   assertCanSetHours(actor, entry.staffId);
 
   // Authorize the locked owner before loading the full scoped record, preserving 403 for forbidden writes.
-  const row = await getHoursRow(actor, id, trx);
+  const [row] = await getHoursRows(actor, trx`entry.id = ${id}`, trx);
   if (!row) throw new InternalServerError('Locked hours record is unavailable');
   return row;
 }
