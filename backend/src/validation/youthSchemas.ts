@@ -79,14 +79,8 @@ export type YouthQuery = z.infer<typeof youthQuerySchema.shape.query>;
 export const setYouthSchema = z.object({
   body: z.object({
     id: z.string().uuid('Invalid youth ID').optional(),
-    firstName: z
-      .string()
-      .min(1, 'First name is required')
-      .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
-    lastName: z
-      .string()
-      .min(1, 'Last name is required')
-      .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+    firstName: z.string().trim().min(1, 'First name is required').max(120, 'First name is too long'),
+    lastName: z.string().trim().min(1, 'Last name is required').max(120, 'Last name is too long'),
     email: z.string().trim().email('Invalid email format').optional(),
     dateOfBirth: dateOfBirthSchema.nullable().optional(),
     schoolId: z.string().uuid('Invalid school ID').optional(),
