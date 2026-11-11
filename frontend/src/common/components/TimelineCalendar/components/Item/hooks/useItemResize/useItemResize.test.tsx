@@ -6,7 +6,7 @@ import type { StartPointerSession } from '../../../../hooks/usePointerSession/us
 import useItemResize from './useItemResize';
 
 const periods = [19, 20, 21, 22].map(day => ({
-  key: `2026-08-${day}`, start: new Date(2026, 7, day), end: new Date(2026, 7, day + 1),
+  key: `2026-08-${day}`, start: `2026-08-${String(day).padStart(2, '0')}`, end: `2026-08-${String(day + 1).padStart(2, '0')}`,
 }));
 
 afterEach(() => { vi.restoreAllMocks(); document.body.replaceChildren(); });

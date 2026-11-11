@@ -1,4 +1,5 @@
-import { addDays, dayKey } from './utils/periods';
+import { getDate } from '../../utils/date';
+import { addDays } from './utils/periods';
 // This suite owns TimelineCalendar composition, grid semantics, selection, and item construction.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,7 +21,7 @@ function renderCalendar(overrides: Partial<CalendarProps> = {}) {
   const props: CalendarProps = {
     rows: [rows[0]],
     items: {},
-    initialDate: new Date(2026, 7, 9),
+    initialDate: '2026-08-09',
     getRowId: row => row.id,
     getItemId: item => item.id,
     getItemRange: item => ({ start: item.start, end: item.end }),
@@ -133,8 +134,8 @@ describe('TimelineCalendar', () => {
   it.each([
     [0, 7, false], [-7, 0, false], [-7, -1, true], [1, 7, true],
   ])('disables Today only outside the inclusive range (%s, %s)', (startOffset, endOffset, disabled) => {
-    const today = new Date();
-    renderCalendar({ dateRange: { start: dayKey(addDays(today, startOffset)), end: dayKey(addDays(today, endOffset)) } });
+    const today = getDate();
+    renderCalendar({ dateRange: { start: addDays(today, startOffset), end: addDays(today, endOffset) } });
     const button = screen.getByRole('button', { name: 'Today' });
     if (disabled) expect(button).toBeDisabled();
     else expect(button).toBeEnabled();

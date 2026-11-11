@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { formatHours, formatShortDate, formatShortDateRange, getDateKeyInTimeZone } from './date';
+import { formatHours, formatShortDate, formatShortDateRange } from './date';
 
 describe('formatHours', () => {
   it('formats and pluralizes hour durations', () => {
@@ -19,6 +19,10 @@ describe('formatShortDate', () => {
     expect(formatShortDate(new Date('2026-01-05T12:00:00Z'))).toBe('Jan 5, 2026');
   });
 
+  it('shows event dates in program Eastern time across the UTC date boundary', () => {
+    expect(formatShortDate('2026-08-07T02:30:00Z')).toBe('Aug 6, 2026');
+  });
+
   it('keeps date-only values on their calendar day', () => {
     expect(formatShortDate('2026-07-01')).toBe('Jul 1, 2026');
   });
@@ -32,14 +36,5 @@ describe('formatShortDate', () => {
 describe('formatShortDateRange', () => {
   it('collapses repeated month and year information', () => {
     expect(formatShortDateRange('2026-07-29', '2026-08-11')).toBe('Jul 29 – Aug 11, 2026');
-  });
-});
-
-describe('getDateKeyInTimeZone', () => {
-  it('uses the Toronto calendar day instead of UTC', () => {
-    expect(getDateKeyInTimeZone(
-      new Date('2026-08-07T02:30:00.000Z'),
-      'America/Toronto',
-    )).toBe('2026-08-06');
   });
 });

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import FilterCard from '../../../components/FilterCard/FilterCard';
 import TimelineCalendar from '../../../components/TimelineCalendar/TimelineCalendar';
-import { localDateFromKey } from '../../../utils/dateRange';
 import { getCycleDateRange } from './cycleDateRange';
 import type { ProgramCycle } from './types';
 
@@ -24,7 +23,7 @@ export function CycleCalendar({ initialDate = '2028-02-29', initialCycleIds = ['
     <TimelineCalendar<{ id: string; name: string }, { id: string; start: string; end: string }>
       key={`${dateRange?.start}:${dateRange?.end}`}
       dateRange={dateRange}
-      initialDate={localDateFromKey(initialDate)}
+      initialDate={initialDate}
       positionStorageKey="cycle-calendar:browser-position"
       rows={rows} items={{}}
       ariaLabel="Cycle calendar"

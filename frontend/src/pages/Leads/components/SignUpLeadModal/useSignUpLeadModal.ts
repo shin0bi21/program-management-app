@@ -1,3 +1,4 @@
+import { getAge } from '../../../../common/utils/time';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -13,7 +14,7 @@ import { getErrorMessage } from '../../../../http/errors';
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import type { LeadSignUpResult } from '../../leads.api';
-import { calculateAge, dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
+import { dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
 
@@ -38,7 +39,7 @@ export default function useSignUpLeadModal({
 }: UseSignUpLeadModalOptions) {
   const [selectedPairKey, setSelectedPairKey] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(lead.dateOfBirth ?? '');
-  const age = calculateAge(dateOfBirth);
+  const age = getAge(dateOfBirth);
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory | ''>('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);

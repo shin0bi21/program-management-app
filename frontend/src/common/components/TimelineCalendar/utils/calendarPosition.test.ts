@@ -10,7 +10,7 @@ describe('loadCalendarPosition', () => {
     ['invalid date', JSON.stringify({ date: '2026-02-30', offset: 12 })],
     ['negative offset', JSON.stringify({ date: '2026-02-28', offset: -1 })],
   ])('removes %s and falls back to the supplied date', (_case, stored) => {
-    const fallbackDate = new Date(2026, 5, 10);
+    const fallbackDate = '2026-06-10';
     localStorage.setItem('calendar-position', stored);
 
     expect(loadCalendarPosition('calendar-position', fallbackDate)).toEqual({ date: fallbackDate, offset: 0 });
@@ -21,8 +21,8 @@ describe('loadCalendarPosition', () => {
     const stored = JSON.stringify({ date: '2026-02-28', offset: 24 });
     localStorage.setItem('calendar-position', stored);
 
-    expect(loadCalendarPosition('calendar-position', new Date(2026, 5, 10))).toEqual({
-      date: new Date(2026, 1, 28),
+    expect(loadCalendarPosition('calendar-position', '2026-06-10')).toEqual({
+      date: '2026-02-28',
       offset: 24,
     });
     expect(localStorage.getItem('calendar-position')).toBe(stored);

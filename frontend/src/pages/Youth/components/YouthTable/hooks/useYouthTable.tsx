@@ -23,7 +23,7 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
   const columns = useMemo<TableColumnDef<YouthProfile>[]>(() => [
     { id: 'firstName', header: 'First Name', accessorFn: profile => profile.firstName },
     { id: 'lastName', header: 'Last Name', accessorFn: profile => profile.lastName },
-    { id: 'dateOfBirth', header: 'Date of Birth', accessorFn: profile => formatBirthDate(profile.dateOfBirth), size: 150 },
+    { id: 'dateOfBirth', header: 'Date of Birth', accessorFn: profile => profile.dateOfBirth ? formatShortDate(profile.dateOfBirth) : '—', size: 150 },
     { id: 'school', header: 'School', accessorFn: profile => profile.schoolName ?? '—' },
     {
       id: 'activeProgram',
@@ -47,15 +47,4 @@ export default function useYouthTable({ canWrite, onEdit, onAddNote }: UseYouthT
   ], [canWrite, onAddNote, onEdit]);
 
   return { columns };
-}
-
-/**
- * Formats a calendar birth date without shifting its local calendar day.
- * @param dateOfBirth - Birth date in YYYY-MM-DD format, or null when unknown.
- * @example formatBirthDate('2012-06-15') // 'Jun 15, 2012'
- */
-function formatBirthDate(dateOfBirth: string | null): string {
-  if (!dateOfBirth) return '—';
-
-  return formatShortDate(new Date(`${dateOfBirth}T12:00:00`));
 }

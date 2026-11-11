@@ -38,7 +38,7 @@ describe('Single enrolled program per youth', () => {
         RETURNING id
       `;
       const [today] = await sql<{ date: string }[]>`
-        SELECT (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date
+        SELECT CURRENT_DATE::text AS date
       `;
       pairs.push(await seedTestProgramCycle({
         programId: program.id,
@@ -98,7 +98,7 @@ describe('Single enrolled program per youth', () => {
 
   it('permits overlapping cycles within the same program and repeated saves', async () => {
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
-      SELECT starts_on::text, ends_on::text FROM program_cycles WHERE id = ${pairs[0].cycleId}
+      SELECT starts_on, ends_on FROM program_cycles WHERE id = ${pairs[0].cycleId}
     `;
     const secondCycle = await seedTestProgramCycle({ programId: pairs[0].programId, ...dates });
     pairs.push(secondCycle);
@@ -166,7 +166,7 @@ describe('Single enrolled program per youth', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'Conflicting extension', startsOn: '2025-01-01', endsOn: '2025-06-01', programIds: [pairs[0].programId] });
     expect(updated.status).toBe(409);
-    expect((await sql`SELECT ends_on::text FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0].endsOn).toBe('2025-05-31');
+    expect((await sql`SELECT ends_on FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0].endsOn).toBe('2025-05-31');
   });
 
   it('permits only one concurrent cross-program enrollment request', async () => {
@@ -214,7 +214,7 @@ describe('Single enrolled program per youth', () => {
     });
 
     await expect(staleEdit).rejects.toMatchObject({ code: '40001' });
-    expect((await sql`SELECT ends_on::text FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0].endsOn).toBe('2025-05-31');
+    expect((await sql`SELECT ends_on FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0].endsOn).toBe('2025-05-31');
   });
 
   it('serializes concurrent program mode changes across shared cycles', async () => {

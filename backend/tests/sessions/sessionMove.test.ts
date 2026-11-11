@@ -110,9 +110,12 @@ describe('Future session date moves', () => {
       .rejects.toMatchObject({ code: '23514' });
   });
 
-  it('revalidates the saved clock times at the destination date', async () => {
+  it('preserves saved clock times when moving onto a daylight-saving transition date', async () => {
     await sql`UPDATE program_sessions SET start_time = '02:30', end_time = '04:00' WHERE id = ${sessionId}`;
-    expect((await move('2030-03-10')).status).toBe(409);
+    const response = await move('2030-03-10');
+
+    expect(response.status).toBe(200);
+    expect(response.body.session).toMatchObject({ date: '2030-03-10', startTime: '02:30', endTime: '04:00' });
   });
 
   it('resolves another assigned cycle for an unrecorded session', async () => {
@@ -125,9 +128,13 @@ describe('Future session date moves', () => {
     ]));
   });
 
-  it('rejects past sources, cancelled sessions, and past destinations', async () => {
+  it('rejects today and past destinations, cancelled sessions, and today and past sources', async () => {
+    const [{ today }] = await sql<{ today: string }[]>`SELECT CURRENT_DATE AS today`;
+    expect((await move(today)).status).toBe(409);
     expect((await move('2025-03-01')).status).toBe(409);
     await sql`UPDATE program_sessions SET cancelled_at = NOW() WHERE id = ${sessionId}`;
+    expect((await move('2030-03-11')).status).toBe(409);
+    await sql`UPDATE program_sessions SET cancelled_at = NULL, date = ${today} WHERE id = ${sessionId}`;
     expect((await move('2030-03-11')).status).toBe(409);
     await sql`UPDATE program_sessions SET cancelled_at = NULL, date = '2025-01-01' WHERE id = ${sessionId}`;
     expect((await move('2030-03-11')).status).toBe(409);

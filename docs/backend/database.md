@@ -69,6 +69,11 @@ Follow [Dates and Times](../workflows/date-and-time.md) for value types, precisi
 inclusive bounds, serialization, date arithmetic, and timezone boundaries.
 Enforce Session date bounds, same-day time ordering, and whole-minute Session /
 program default times with database checks as well as request validation.
+The shared database client handles `DATE` values as strings without changing
+the database or connection timezone. Use `CURRENT_DATE` for current-day
+business rules and return date columns directly. Type generation uses `--date-parser string`; timestamps
+remain exact instants. New audit snapshots preserve date-only strings; historical
+snapshots are not rewritten.
 
 ## Update Enumerated Fields
 

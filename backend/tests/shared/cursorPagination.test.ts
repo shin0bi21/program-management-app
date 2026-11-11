@@ -72,6 +72,7 @@ describe('shared cursor pagination', () => {
   describe.each([
     { name: 'text', expression: sql`'alpha'::text`, value: 'alpha' },
     { name: 'numeric', expression: sql`2.5::double precision`, value: 2.5 },
+    { name: 'date', expression: sql`DATE '2026-11-10'`, value: '2026-11-10' },
   ])('nullable $name sorting', ({ expression, value }) => {
     it.each(['asc', 'desc'] as const)('keeps nulls last across populated and null page boundaries in %s order', async direction => {
       const rowsQuery = sql<{ id: string; value: string | number | null }[]>`

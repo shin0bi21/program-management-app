@@ -1,3 +1,4 @@
+import { getDate } from '../../../../../common/utils/date';
 import { useCallback, useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
@@ -20,7 +21,7 @@ import type {
 import HoursCalendarItem from './HoursItem/HoursItem';
 import useHoursCalendarData from './hooks/useHoursCalendarData';
 
-const initialDate = new Date();
+const initialDate = getDate();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
 
 interface HoursCalendarProps {

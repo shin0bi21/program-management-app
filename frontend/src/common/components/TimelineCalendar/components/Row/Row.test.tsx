@@ -9,8 +9,8 @@ import Row from './Row';
 
 const period: CalendarPeriod = {
   key: '2026-08-19',
-  start: new Date(2026, 7, 19),
-  end: new Date(2026, 7, 20),
+  start: '2026-08-19',
+  end: '2026-08-20',
 };
 
 const fixtureTarget = { row: { id: 'staff-1' }, data: { id: 'task-1', date: '2026-08-19' }, range: { start: '2026-08-19', end: '2026-08-19' } };

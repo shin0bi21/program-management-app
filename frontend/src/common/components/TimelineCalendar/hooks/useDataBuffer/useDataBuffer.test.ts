@@ -16,8 +16,8 @@ describe('useDataBuffer', () => {
     const { result, unmount } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
 
     act(() => {
-      result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right');
+      result.current.initialize(buildInitialDayPeriods('2026-08-09', 1));
+      result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-12-01', 1), 'right');
     });
     const signal = load.mock.calls[0][1];
     unmount();
@@ -43,7 +43,7 @@ describe('useDataBuffer', () => {
       useEffect(() => {
         if (initialized.current) return;
         initialized.current = true;
-        initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+        initialize(buildInitialDayPeriods('2026-08-09', 1));
       }, [initialize]);
       return buffer;
     }, { wrapper: ({ children }) => createElement(StrictMode, null, children) });
@@ -76,7 +76,7 @@ describe('useDataBuffer', () => {
     const load = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
 
     act(() => result.current.initialize(periods));
@@ -95,8 +95,8 @@ describe('useDataBuffer', () => {
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
 
     act(() => {
-      result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right');
+      result.current.initialize(buildInitialDayPeriods('2026-08-09', 1));
+      result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-08-31', 1), 'right');
     });
     act(() => rejectInitial(new Error('initial offline')));
 
@@ -110,10 +110,10 @@ describe('useDataBuffer', () => {
   it('clears an initial failure when later scrolling successfully initializes the buffer', async () => {
     const load = vi.fn().mockRejectedValueOnce(new Error('initial offline')).mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 1)));
     await waitFor(() => expect(result.current.error).toBe('initial offline'));
 
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-08-31', 1), 'right'));
 
     await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(result.current.error).toBeNull());
@@ -127,12 +127,12 @@ describe('useDataBuffer', () => {
       .mockRejectedValueOnce(new Error('right still offline'))
       .mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 3)));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
 
     act(() => {
-      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 6, 18), 1), 'left');
-      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right');
+      result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-07-18', 1), 'left');
+      result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-08-31', 1), 'right');
     });
     await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(result.current.error).toBe('left offline'));
@@ -151,12 +151,12 @@ describe('useDataBuffer', () => {
       .mockRejectedValueOnce(new Error('December offline'))
       .mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 1)));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
 
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 9, 1), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-10-01', 1), 'right'));
     await waitFor(() => expect(result.current.error).toBe('October offline'));
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-12-01', 1), 'right'));
     await waitFor(() => expect(result.current.error).toBe('December offline'));
     const failedRange = load.mock.lastCall?.[0];
     act(() => result.current.retry());
@@ -172,14 +172,14 @@ describe('useDataBuffer', () => {
       .mockRejectedValueOnce(new Error('right offline'))
       .mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 1)));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 6, 18), 1), 'left'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-07-18', 1), 'left'));
     await waitFor(() => expect(result.current.error).toBe('left offline'));
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 9, 1), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-10-01', 1), 'right'));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(3));
 
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-12-01', 1), 'right'));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(4));
     expect(result.current.error).toBe('left offline');
     act(() => result.current.retry());
@@ -195,13 +195,13 @@ describe('useDataBuffer', () => {
       .mockImplementationOnce(() => new Promise((_, reject) => { rejectOctober = reject; }))
       .mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 1)));
     await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
-    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 9, 1), 1), 'right'));
+    act(() => result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-10-01', 1), 'right'));
     await waitFor(() => expect(rejectOctober).toBeTypeOf('function'));
 
     act(() => {
-      result.current.onPeriodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right');
+      result.current.onPeriodsBuilt(buildInitialDayPeriods('2026-12-01', 1), 'right');
       rejectOctober(new Error('October offline'));
     });
 
@@ -216,10 +216,10 @@ describe('useDataBuffer', () => {
   it('discards failed operations from the old window when resetting', async () => {
     const load = vi.fn().mockRejectedValueOnce(new Error('old window offline')).mockResolvedValue({});
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-    act(() => result.current.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1)));
+    act(() => result.current.initialize(buildInitialDayPeriods('2026-08-09', 1)));
     await waitFor(() => expect(result.current.error).toBe('old window offline'));
 
-    act(() => result.current.reset(buildInitialDayPeriods(new Date(2027, 7, 9), 1)));
+    act(() => result.current.reset(buildInitialDayPeriods('2027-08-09', 1)));
 
     await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(result.current.error).toBeNull());
@@ -231,7 +231,7 @@ describe('useDataBuffer', () => {
     const initialLoad = vi.fn().mockResolvedValue({});
     const nextLoad = vi.fn().mockResolvedValue({});
     const getItemId = (item: Item) => item.id;
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const { result, rerender } = renderHook(({ load }) => useDataBuffer<Item>({ load, getItemId }), {
       initialProps: { load: initialLoad },
     });
@@ -248,7 +248,7 @@ describe('useDataBuffer', () => {
 
   it('preserves a backend account error instead of replacing it with a generic load error', async () => {
     const load = vi.fn().mockRejectedValue(new ApiError(403, 'Account is inactive'));
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
 
     act(() => result.current.initialize(periods));
@@ -261,7 +261,7 @@ describe('useDataBuffer', () => {
     const load = vi.fn().mockResolvedValue({
       staff: { '2026-08-09': [item], '2026-08-10': [item] },
     });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: value => value.id }));
 
     act(() => result.current.initialize(periods));

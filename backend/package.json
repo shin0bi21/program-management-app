@@ -27,7 +27,7 @@
     "test:verbose": "JEST_VERBOSE=true JEST_SILENT=false jest",
     "db:migrate": "npx tsx db/scripts/update_schemas.ts",
     "db:status": "npx tsx db/scripts/update_schemas.ts --dry-run",
-    "db:types": "kysely-codegen --dialect postgres --out-file src/types/database.ts",
+    "db:types": "kysely-codegen --dialect postgres --date-parser string --out-file src/types/database.ts",
     "seed:admin": "npx tsx db/scripts/seed-admin.ts",
     "typecheck": "tsc --noEmit"
   },

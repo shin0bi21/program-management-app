@@ -437,7 +437,10 @@ describe('Leads API', () => {
     expect(res.body.updatedProgramCycle.enrolledCount).toBe(1);
 
     const [profile] = await sql<{ firstName: string; dateOfBirth: string }[]>`
-      SELECT u.first_name, yp.date_of_birth::text AS date_of_birth
+      SELECT
+        yp.date_of_birth,
+
+        u.first_name
       FROM youth_profiles yp
       JOIN users u ON u.id = yp.user_id
       WHERE yp.user_id = ${convertedYouthId!}
@@ -649,7 +652,10 @@ describe('Leads API', () => {
     try {
       expect(signedUp.body.lead.dateOfBirth).toBe(correctedDateOfBirth);
       const [profile] = await sql<{ dateOfBirth: string }[]>`
-        SELECT date_of_birth::text AS date_of_birth FROM youth_profiles WHERE user_id = ${youthId}
+        SELECT
+          date_of_birth
+        FROM youth_profiles
+        WHERE user_id = ${youthId}
       `;
       expect(profile.dateOfBirth).toBe(correctedDateOfBirth);
       const [leadAudit] = await sql<{ oldDate: string | null; newDate: string }[]>`
@@ -676,7 +682,12 @@ describe('Leads API', () => {
       .send({ programId: eligibleProgramId, cycleId: eligibleProgramCycleId, dateOfBirth: birthDateForAge(50) });
     expect(rejected.status).toBe(409);
     const [lead] = await sql<{ dateOfBirth: string; status: string; convertedYouthId: string | null }[]>`
-      SELECT date_of_birth::text AS date_of_birth, status, converted_youth_id FROM leads WHERE id = ${created.body.id}
+      SELECT
+        status,
+        converted_youth_id,
+        date_of_birth
+      FROM leads
+      WHERE id = ${created.body.id}
     `;
     expect(lead).toEqual({ dateOfBirth: payload.dateOfBirth, status: 'new', convertedYouthId: null });
     const [{ count: userCount }] = await sql<{ count: number }[]>`

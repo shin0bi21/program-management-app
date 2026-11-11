@@ -27,8 +27,8 @@ describe('Youth active-cycle attendance', () => {
     await sql`INSERT INTO youth_profiles (user_id) VALUES (${youthId})`;
 
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
-      SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+      SELECT (CURRENT_DATE - 30)::text AS starts_on,
+        (CURRENT_DATE + 30)::text AS ends_on
     `;
 
     for (const enrollmentRequired of [true, false]) {
@@ -50,7 +50,7 @@ describe('Youth active-cycle attendance', () => {
       for (const status of enrollmentRequired ? ['present', 'late', 'absent'] : ['present']) {
         const [session] = await sql<{ id: string }[]>`
           INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
-          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, (NOW() AT TIME ZONE 'America/Toronto')::date, TIME '00:00', TIME '00:01')
+          VALUES (${program.id}, ${cycle.cycleId}, ${`Summary fixture ${status}`}, CURRENT_DATE - 1, TIME '00:00', TIME '00:01')
           RETURNING id
         `;
         sessionIds.push(session.id);

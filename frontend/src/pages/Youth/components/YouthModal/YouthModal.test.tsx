@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import YouthModal from './YouthModal';
-import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 
 vi.mock('../../youth.api', () => ({
@@ -184,27 +183,7 @@ describe('YouthModal', () => {
       await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: null })));
     });
 
-    it('uses yesterday as maximum and accepts an adult DOB when creating', async () => {
-      renderModal();
-      fillRequiredFields();
-      const input = screen.getByLabelText('Date of Birth (optional)');
-      const bounds = getDateOfBirthBounds();
-      expect(input).not.toHaveAttribute('min');
-      expect(input).toHaveAttribute('max', bounds.max);
-      fireEvent.change(input, { target: { value: '1980-01-01' } });
-      submitForm();
 
-      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: '1980-01-01' })));
-    });
-
-    it('allows a historical profile birthdate outside intake ages when editing', async () => {
-      renderModal({ youthData: makeYouthProfile({ dateOfBirth: '1980-01-01' }) });
-      const input = screen.getByLabelText('Date of Birth (optional)');
-      expect(input).not.toHaveAttribute('min');
-      submitForm();
-
-      await waitFor(() => expect(mockSetYouth).toHaveBeenCalledWith(expect.objectContaining({ dateOfBirth: '1980-01-01' })));
-    });
 
     it('shows validation error when submitting without first name', async () => {
       renderModal();

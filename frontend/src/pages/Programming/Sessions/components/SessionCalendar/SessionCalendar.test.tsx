@@ -27,7 +27,7 @@ const programs: Program[] = [
   { id: 'program-2', name: 'Job Readiness', enrollmentRequired: false, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
 ];
 const session = makeProgramSession();
-const period = buildDayPeriod(new Date(2026, 7, 10));
+const period = buildDayPeriod('2026-08-10');
 
 /**
  * Mounts the session calendar with domain filters and optional write actions.
@@ -132,7 +132,7 @@ describe('SessionCalendar', () => {
       return updated;
     });
     api.getSessions.mockResolvedValue([future]);
-    const day = buildDayPeriod(new Date(2099, 7, 10));
+    const day = buildDayPeriod('2099-08-10');
     render(<SessionCalendar calendarCacheRef={calendarCacheRef} filters={{}} programs={programs}
       selectedSessionId={future.id} onSessionSelect={vi.fn()} onSessionMove={move} />);
     act(() => calendarState.props!.onInitialPeriods!([day]));

@@ -27,18 +27,17 @@ describe('Tasks API', () => {
     return response;
   };
 
-  const shiftDate = (date: string, days: number) => {
-    const shifted = new Date(`${date}T12:00:00.000Z`);
-    shifted.setUTCDate(shifted.getUTCDate() + days);
-    return shifted.toISOString().slice(0, 10);
+  const shiftDate = async (date: string, days: number) => {
+    const [shifted] = await sql<{ date: string }[]>`SELECT ${date}::date + ${days}::integer AS date`;
+    return shifted.date;
   };
 
   beforeAll(async () => {
     const stamp = Date.now();
     const [dates] = await sql<Array<{ taskDate: string; loggedDate: string }>>`
       SELECT
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS task_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS logged_date
+        CURRENT_DATE::text AS task_date,
+        (CURRENT_DATE + 1)::text AS logged_date
     `;
     ({ taskDate, loggedDate } = dates);
     const admin = await seedTestUser({ email: `tasks-admin-${stamp}@test.local`, role: 'admin' });
@@ -432,9 +431,9 @@ describe('Tasks API', () => {
   it('filters open tasks by their date-derived timing state', async () => {
     const marker = `Timing-filtered task ${firstStaffId}`;
     const cases = [
-      { status: 'upcoming', label: 'Upcoming', title: `${marker} upcoming`, startDate: shiftDate(taskDate, 1), dueDate: shiftDate(taskDate, 2) },
-      { status: 'in_progress', label: 'In Progress', title: `${marker} in progress`, startDate: shiftDate(taskDate, -1), dueDate: shiftDate(taskDate, 1) },
-      { status: 'overdue', label: 'Overdue', title: `${marker} overdue`, startDate: shiftDate(taskDate, -2), dueDate: shiftDate(taskDate, -1) },
+      { status: 'upcoming', label: 'Upcoming', title: `${marker} upcoming`, startDate: await shiftDate(taskDate, 1), dueDate: await shiftDate(taskDate, 2) },
+      { status: 'in_progress', label: 'In Progress', title: `${marker} in progress`, startDate: await shiftDate(taskDate, -1), dueDate: await shiftDate(taskDate, 1) },
+      { status: 'overdue', label: 'Overdue', title: `${marker} overdue`, startDate: await shiftDate(taskDate, -2), dueDate: await shiftDate(taskDate, -1) },
     ] as const;
 
     for (const taskCase of cases) {
@@ -468,7 +467,7 @@ describe('Tasks API', () => {
       ]);
 
       const calendar = await request(app)
-        .get(`/api/tasks/calendar?start=${shiftDate(taskDate, -3)}&end=${shiftDate(taskDate, 3)}&search=${encodeURIComponent(marker)}&statuses=${taskCase.status}`)
+        .get(`/api/tasks/calendar?start=${await shiftDate(taskDate, -3)}&end=${await shiftDate(taskDate, 3)}&search=${encodeURIComponent(marker)}&statuses=${taskCase.status}`)
         .set('Authorization', `Bearer ${firstStaffToken}`);
 
       expect(calendar.status).toBe(200);

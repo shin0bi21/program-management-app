@@ -73,7 +73,7 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
       program.id AS program_id,
       program.name AS program,
 
-      session.date::text
+      session.date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
@@ -313,7 +313,7 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
     const rows = await trx<Array<{ programId: string; date: string }>>`
       SELECT
         session.program_id,
-        session.date::text
+        session.date
       FROM program_sessions session
       INNER JOIN users target_staff ON target_staff.id = ${input.staffId}
       WHERE session.id = ${input.sessionId}
@@ -339,8 +339,8 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
     SELECT
       task.category,
       task.program_id,
-      task.start_date::text,
-      task.due_date::text
+      task.start_date,
+      task.due_date
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}

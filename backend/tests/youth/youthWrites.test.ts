@@ -53,9 +53,9 @@ describe('Youth birth date writes and focused contacts', () => {
     `;
     schoolId = school.id;
     const [dates] = await sql<{ today: string; tomorrow: string; yesterday: string }[]>`
-      SELECT (NOW() AT TIME ZONE 'America/Toronto')::date::text AS today,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS tomorrow,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date - 1)::text AS yesterday
+      SELECT CURRENT_DATE::text AS today,
+        (CURRENT_DATE + 1)::text AS tomorrow,
+        (CURRENT_DATE - 1)::text AS yesterday
     `;
     ({ today, tomorrow, yesterday } = dates);
   });
@@ -88,7 +88,10 @@ describe('Youth birth date writes and focused contacts', () => {
       expect(response.status).toBe(400);
       if (operation === 'edit') {
         const [stored] = await sql<{ dateOfBirth: string }[]>`
-          SELECT date_of_birth::text AS date_of_birth FROM youth_profiles WHERE user_id = ${youthId}
+          SELECT
+            date_of_birth
+          FROM youth_profiles
+          WHERE user_id = ${youthId}
         `;
         expect(stored.dateOfBirth).toBe(profile.dateOfBirth);
       }
@@ -140,7 +143,7 @@ describe('Youth birth date writes and focused contacts', () => {
           AND new_data->>'dateOfBirth' IS NULL
         ORDER BY created_at DESC LIMIT 1
       `;
-      expect(audit).toEqual({ oldDob: `${profile.dateOfBirth}T00:00:00.000Z`, newDob: null });
+      expect(audit).toEqual({ oldDob: profile.dateOfBirth, newDob: null });
       expect((await saveProfile({ ...profile, id: youthId })).status).toBe(200);
     });
 

@@ -91,10 +91,10 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
     SELECT
       session.id,
       session.theme,
-      session.date::text,
+      session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
       to_char(session.end_time, 'HH24:MI') AS end_time,
-      (session.date + session.end_time) <= (NOW() AT TIME ZONE 'America/Toronto') AS completed,
+      session.date < CURRENT_DATE AS completed,
       session.cancelled_at,
       session.session_type,
 

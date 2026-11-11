@@ -7,12 +7,11 @@ const app = createApp();
 
 /**
  * Shifts an ISO calendar date by the requested number of days.
- * @example addDays('2027-01-31', 1) // '2027-02-01'
+ * @example await addDays('2027-01-31', 1) // '2027-02-01'
  */
-function addDays(date: string, days: number) {
-  const value = new Date(`${date}T12:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
+async function addDays(date: string, days: number) {
+  const [shifted] = await sql<{ date: string }[]>`SELECT ${date}::date + ${days}::integer AS date`;
+  return shifted.date;
 }
 
 /**
@@ -62,13 +61,13 @@ describe('Program cycle sessions and attendance API', () => {
     youthId = youth.userId;
     await sql`
       INSERT INTO youth_profiles (user_id, date_of_birth)
-      VALUES (${youthId}, (NOW() AT TIME ZONE 'America/Toronto')::date - INTERVAL '13 years')
+      VALUES (${youthId}, CURRENT_DATE - INTERVAL '13 years')
     `;
     const secondYouth = await seedTestUser({ role: 'youth' });
     secondYouthId = secondYouth.userId;
     await sql`
       INSERT INTO youth_profiles (user_id, date_of_birth)
-      VALUES (${secondYouthId}, (NOW() AT TIME ZONE 'America/Toronto')::date - INTERVAL '14 years')
+      VALUES (${secondYouthId}, CURRENT_DATE - INTERVAL '14 years')
     `;
 
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
@@ -84,12 +83,12 @@ describe('Program cycle sessions and attendance API', () => {
       VALUES (${staffId}, ${openProgramId})
     `;
     const [clock] = await sql<{ today: string }[]>`
-      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date::text AS today
+      SELECT CURRENT_DATE::text AS today
     `;
     today = clock.today;
     const [cycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
-      VALUES (${`Program cycle API ${Date.now()}`}, ${addDays(today, -7)}, ${addDays(today, 60)})
+      VALUES (${`Program cycle API ${Date.now()}`}, ${await addDays(today, -7)}, ${await addDays(today, 60)})
       RETURNING id
     `;
     mainCycleId = cycle.id;
@@ -102,8 +101,8 @@ describe('Program cycle sessions and attendance API', () => {
     const [session, openSession] = await sql<{ id: string }[]>`
       INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, date, start_time, end_time)
       VALUES
-        (${programId}, ${mainCycleId}, ${guestSpeakerType}, 'Communication', ${addDays(today, 1)}::date, TIME '17:00', TIME '19:30'),
-        (${openProgramId}, ${mainCycleId}, ${guestSpeakerType}, 'Friday Drop In', ${addDays(today, 1)}::date, TIME '17:00', TIME '20:00')
+        (${programId}, ${mainCycleId}, ${guestSpeakerType}, 'Communication', ${await addDays(today, 1)}::date, TIME '17:00', TIME '19:30'),
+        (${openProgramId}, ${mainCycleId}, ${guestSpeakerType}, 'Friday Drop In', ${await addDays(today, 1)}::date, TIME '17:00', TIME '20:00')
       RETURNING id
     `;
     sessionId = session.id;
@@ -120,7 +119,7 @@ describe('Program cycle sessions and attendance API', () => {
     `;
     await sql`
       UPDATE program_sessions
-      SET date = ${addDays(today, 1)}, start_time = '17:00', end_time = '19:30', cancelled_at = NULL
+      SET date = ${await addDays(today, 1)}, start_time = '17:00', end_time = '19:30', cancelled_at = NULL
       WHERE id IN (${sessionId}, ${openSessionId})
     `;
   });
@@ -160,19 +159,19 @@ describe('Program cycle sessions and attendance API', () => {
     const denied = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: cycle, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
     expect(denied.status).toBe(403);
 
     const created = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: cycle, programIds: [], startsOn: addDays(today, 70), endsOn: addDays(today, 100) });
+      .send({ name: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
     expect(created.status).toBe(201);
 
     const updated = await request(app)
       .put(`/api/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: `${cycle} Updated`, programIds: [], startsOn: addDays(today, 71), endsOn: addDays(today, 101) });
+      .send({ name: `${cycle} Updated`, programIds: [], startsOn: await addDays(today, 71), endsOn: await addDays(today, 101) });
     expect(updated.status).toBe(200);
     expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycle} Updated` }));
 
@@ -255,7 +254,7 @@ describe('Program cycle sessions and attendance API', () => {
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
         sessionType: guestSpeakerType,
-        date: addDays(today, 2),
+        date: await addDays(today, 2),
         startTime: '13:00',
         endTime: '14:00',
       });
@@ -513,7 +512,7 @@ describe('Program cycle sessions and attendance API', () => {
   it('rejects youth who were not enrolled on the session date', async () => {
     await sql`
       UPDATE program_enrollments
-      SET enrolled_on = ${addDays(today, 2)}
+      SET enrolled_on = ${await addDays(today, 2)}
       WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}
         AND youth_id = ${secondYouthId}
     `;
@@ -559,7 +558,7 @@ describe('Program cycle sessions and attendance API', () => {
       .send({
         theme: 'Additional Drop In',
         sessionType: guestSpeakerType,
-        date: addDays(today, 1),
+        date: await addDays(today, 1),
         startTime: '17:00',
         endTime: '20:00',
       });
@@ -761,7 +760,7 @@ describe('Program cycle sessions and attendance API', () => {
   it('filters sessions across selected cycles while preserving program scope and pagination', async () => {
     const [otherCycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
-      VALUES (${`Other session cycle ${Date.now()}`}, ${today}, ${addDays(today, 60)})
+      VALUES (${`Other session cycle ${Date.now()}`}, ${today}, ${await addDays(today, 60)})
       RETURNING id
     `;
     let unrelatedSessionId: string | undefined;
@@ -774,8 +773,8 @@ describe('Program cycle sessions and attendance API', () => {
       const [otherSession, unrelatedSession] = await sql<{ id: string }[]>`
         INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
         VALUES
-          (${programId}, ${otherCycle.id}, 'Other cycle session', ${addDays(today, 1)}::date, TIME '12:00', TIME '13:00'),
-          (${unassignedProgramId}, ${mainCycleId}, 'Unassigned program session', ${addDays(today, 1)}::date, TIME '12:00', TIME '13:00')
+          (${programId}, ${otherCycle.id}, 'Other cycle session', ${await addDays(today, 1)}::date, TIME '12:00', TIME '13:00'),
+          (${unassignedProgramId}, ${mainCycleId}, 'Unassigned program session', ${await addDays(today, 1)}::date, TIME '12:00', TIME '13:00')
         RETURNING id
       `;
       unrelatedSessionId = unrelatedSession.id;
@@ -811,8 +810,8 @@ describe('Program cycle sessions and attendance API', () => {
           cycleIds: selectedCycles,
           programIds: programId,
           search: 'Other cycle session',
-          start: addDays(today, -400),
-          end: addDays(today, 400),
+          start: await addDays(today, -400),
+          end: await addDays(today, 400),
           paginate: 'true',
         })
         .set('Authorization', `Bearer ${staffToken}`);
@@ -879,8 +878,8 @@ describe('Program cycle sessions and attendance API', () => {
     const response = await request(app)
       .get('/api/sessions')
       .query({
-        start: addDays(today, 1),
-        end: addDays(today, 1),
+        start: await addDays(today, 1),
+        end: await addDays(today, 1),
         programIds: openProgramId, cycleIds: mainCycleId,
         statuses: 'upcoming',
         search: 'Drop In',
@@ -943,13 +942,13 @@ describe('Program cycle sessions and attendance API', () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ sessionType: guestSpeakerType, theme: 'Disposable Session', date: addDays(today, 1), startTime: '17:00', endTime: '19:00' });
+      .send({ sessionType: guestSpeakerType, theme: 'Disposable Session', date: await addDays(today, 1), startTime: '17:00', endTime: '19:00' });
     expect(created.status).toBe(201);
     const disposableSessionId = created.body.id;
 
     const updated = await request(app).put(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ theme: 'Updated theme', date: addDays(today, 1), startTime: '17:30', endTime: '19:00', description: 'Updated description' });
+      .send({ theme: 'Updated theme', date: await addDays(today, 1), startTime: '17:30', endTime: '19:00', description: 'Updated description' });
     expect(updated.status).toBe(200);
     expect(updated.body.session.theme).toBe('Updated theme');
     expect((await request(app).delete(`/api/sessions/${disposableSessionId}`)
@@ -983,15 +982,15 @@ describe('Program cycle sessions and attendance API', () => {
       VALUES (${sessionId}, 'behaviour', 'Updated details.', ${staffId}, ${staffId}) RETURNING id
     `;
     await sql`INSERT INTO session_note_has_youth (note_id, youth_id) VALUES (${note.id}, ${secondYouthId})`;
-    await sql`UPDATE program_cycles SET starts_on = ${addDays(today, -2)} WHERE id = ${mainCycleId}`;
+    await sql`UPDATE program_cycles SET starts_on = ${await addDays(today, -2)} WHERE id = ${mainCycleId}`;
     await sql`
       UPDATE program_sessions
-      SET date = ${addDays(today, -1)}, start_time = '13:00', end_time = '14:00'
+      SET date = ${await addDays(today, -1)}, start_time = '13:00', end_time = '14:00'
       WHERE id = ${sessionId}
     `;
     await sql`
       UPDATE program_enrollments
-      SET enrolled_on = ${addDays(today, -2)}
+      SET enrolled_on = ${await addDays(today, -2)}
       WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}
     `;
     const response = await request(app)
@@ -1056,11 +1055,11 @@ describe('Program cycle sessions and attendance API', () => {
 
   it('withdraws a youth without deleting their attendance history', async () => {
     await sql`
-      UPDATE program_enrollments SET enrolled_on = ${addDays(today, -2)}
+      UPDATE program_enrollments SET enrolled_on = ${await addDays(today, -2)}
       WHERE program_id = ${programId} AND cycle_id = ${mainCycleId} AND youth_id = ${youthId}
     `;
     await sql`
-      UPDATE program_sessions SET date = ${addDays(today, -1)}, start_time = '17:00', end_time = '18:00' WHERE id = ${sessionId}
+      UPDATE program_sessions SET date = ${await addDays(today, -1)}, start_time = '17:00', end_time = '18:00' WHERE id = ${sessionId}
     `;
     await sql`
       INSERT INTO attendance_records (session_id, youth_id, status, marked_by)

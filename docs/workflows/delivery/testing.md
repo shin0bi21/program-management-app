@@ -157,6 +157,12 @@ Choose the narrowest owner for each assertion:
   added decisions, transformations, and coordination. A parent may exercise
   internal children; separate files per child are unnecessary. Keep at most one
   representative composition check when the child's policy already has coverage.
+- Apply this boundary to dates and times: shared date utilities, DOB rules, form
+  controls, and calendar components own standard validity, formatting, input
+  bounds, date arithmetic, and calendar interactions. Do not repeat those checks
+  in each page, table, or form. Pages verify their own context, domain eligibility,
+  commands, and saved-payload coordination; shared cycle-range calculations are
+  tested once with the cycle-range helper.
 - Assert observable outcomes. Omit private details, copied implementation,
   arbitrary sleeps, static presentation, supplied options, unchanged prop
   forwarding, and type shapes already checked by TypeScript.

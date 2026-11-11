@@ -1,5 +1,5 @@
 import { Temporal } from 'temporal-polyfill';
-import { getDateKeyInTimeZone } from '../../../../../../common/utils/date';
+import { getDate } from '../../../../../../common/utils/date';
 import type { HomepageProgram, HomepageSession } from '../../../types';
 
 interface ProgramCardProps {
@@ -90,10 +90,10 @@ function UpcomingSessions({
 }
 
 /**
- * Counts calendar days from Eastern today to the saved Session date.
+ * Counts calendar days from local today to the saved Session date.
  * @param date - Saved YYYY-MM-DD business date.
  * @example On November 10, daysUntil('2026-11-11') returns 1.
  */
 function daysUntil(date: string) {
-  return Temporal.PlainDate.from(getDateKeyInTimeZone()).until(date).days;
+  return Temporal.PlainDate.from(getDate()).until(date).days;
 }

@@ -11,7 +11,7 @@ export type LeadRow = DbRow<Omit<Leads,
   recommendedProgram: string | null;
 };
 
-const leadAge = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
+const leadAge = sql`EXTRACT(YEAR FROM AGE(CURRENT_DATE, date_of_birth))::int`;
 
 export const recommendedProgramId = sql`(
   SELECT program.id
@@ -49,7 +49,7 @@ export const leadRowColumns = sql`
   updated_by,
   converted_youth_id,
   submitted_by_role,
-  date_of_birth::text AS date_of_birth,
+  date_of_birth,
 
   ${leadAge} AS age,
   ${recommendedProgramId} AS recommended_program_id,

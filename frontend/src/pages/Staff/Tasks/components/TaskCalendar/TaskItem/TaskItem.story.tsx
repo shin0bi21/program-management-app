@@ -23,7 +23,7 @@ export function InteractiveTaskItem() {
     <TimelineCalendar
       rows={[resource]}
       items={{ [resource.id]: [task] }}
-      initialDate={new Date(2026, 7, 9)}
+      initialDate={'2026-08-09'}
       ariaLabel="Browser-tested task calendar"
       getRowId={item => item.id}
       getItemId={item => item.id}

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProgramCycleAttendance } from '../../../../../common/features/Attendance/attendance.api';
 import { getErrorMessage } from '../../../../../http/errors';
-import { getDateKeyInTimeZone } from '../../../../../common/utils/date';
+import { getDate } from '../../../../../common/utils/date';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import Button from '../../../../../common/components/Button/Button';
 import { DashboardCard, DashboardCardLoading } from '../../../../../common/components/DashboardCard/DashboardCard';
@@ -49,7 +49,7 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
 
   const loading = Boolean(program) && query.loading;
   const assignments = program ? query.assignments : [];
-  const today = program ? getDateKeyInTimeZone(new Date(), program.timezone) : '';
+  const today = program ? getDate() : '';
   const currentAssignment = assignments
     .filter(assignment => assignment.startsOn <= today && assignment.endsOn >= today)
     .sort((left, right) => right.startsOn.localeCompare(left.startsOn) || left.cycleId.localeCompare(right.cycleId))[0];

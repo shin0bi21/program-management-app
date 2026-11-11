@@ -5,19 +5,18 @@ const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'satur
 
 /**
  * Chooses the next default weekday whose start time has not passed.
- * @param program - Saved weekday, clock time, and Eastern scheduling context.
- * @param now - Current instant, overridable for deterministic scheduling.
+ * @param program - Saved weekday and clock defaults.
+ * @param now - Local calendar date/time, overridable for deterministic scheduling.
  * @example With Tuesday defaults at 17:30, Tuesday at 18:00 returns the following Tuesday.
  */
-export function nextSessionDate(program: Program, now = Temporal.Now.instant()) {
-  const localNow = now.toZonedDateTimeISO(program.timezone);
+export function nextSessionDate(program: Program, now = Temporal.Now.plainDateTimeISO()) {
   const weekday = weekdays.indexOf(program.defaultDayOfWeek) + 1;
-  let days = (weekday - localNow.dayOfWeek + 7) % 7;
-  if (days === 0 && Temporal.PlainTime.compare(localNow.toPlainTime(), program.defaultStartTime) >= 0) {
+  let days = (weekday - now.dayOfWeek + 7) % 7;
+  if (days === 0 && Temporal.PlainTime.compare(now.toPlainTime(), program.defaultStartTime) >= 0) {
     days = 7;
   }
 
-  return localNow.toPlainDate().add({ days }).toString();
+  return now.toPlainDate().add({ days }).toString();
 }
 
 /**

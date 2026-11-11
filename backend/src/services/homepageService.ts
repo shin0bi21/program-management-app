@@ -337,7 +337,7 @@ async function readHomepagePrograms() {
         session.program_id,
         session.id AS session_id,
         session.theme AS session_theme,
-        session.date::text AS session_date,
+        session.date AS session_date,
         to_char(session.start_time, 'HH24:MI') AS session_start_time,
         to_char(session.end_time, 'HH24:MI') AS session_end_time,
         ROW_NUMBER() OVER (
@@ -345,7 +345,7 @@ async function readHomepagePrograms() {
           ORDER BY session.date, session.start_time, session.id
         ) AS program_session_order
       FROM program_sessions session
-      WHERE (session.date + session.end_time) >= (NOW() AT TIME ZONE 'America/Toronto')
+      WHERE session.date >= CURRENT_DATE
         AND session.cancelled_at IS NULL
     )
     SELECT
@@ -358,7 +358,9 @@ async function readHomepagePrograms() {
 
       ranked.session_id,
       ranked.session_theme,
-      ranked.session_date, ranked.session_start_time, ranked.session_end_time
+      ranked.session_date,
+      ranked.session_start_time,
+      ranked.session_end_time
     FROM programs program
     LEFT JOIN ranked_sessions ranked
       ON ranked.program_id = program.id
