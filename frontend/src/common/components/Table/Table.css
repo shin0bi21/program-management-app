@@ -21,11 +21,16 @@
   background-color: var(--color-white);
 }
 
-.table thead th {
-  background-color: var(--color-surface-warm);
+.table thead {
+  /* Keep overlapping resize handles above adjacent headers in one stacking context. */
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.table thead th {
+  background-color: var(--color-surface-warm);
+  position: relative;
 }
 
 .table th {
@@ -163,11 +168,17 @@
   cursor: ew-resize !important;
   padding: 0;
   position: absolute;
-  right: 0;
+  right: -0.25rem;
   top: 0;
   touch-action: none;
-  width: 0.75rem;
+  width: 0.5rem;
   z-index: 11;
+}
+
+/* The outer table edge has no neighboring column to extend into. */
+.table thead th:last-child > .table-resize-handle {
+  right: 0;
+  width: 0.25rem;
 }
 
 .table-wrapper--resizing,
