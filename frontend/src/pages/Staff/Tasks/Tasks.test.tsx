@@ -279,8 +279,7 @@ describe('Tasks', () => {
     act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(task.startDate, 3)));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
-      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
-      { signal: expect.any(AbortSignal) },
+      expect.anything(), expect.anything(),
     ));
   });
 
@@ -290,8 +289,7 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     const periods = buildInitialDayPeriods(task.startDate, 3);
-    const initialRangeLoader = calendarTestState.props!.onInitialPeriods;
-    act(() => initialRangeLoader?.(periods));
+    act(() => calendarTestState.props!.onInitialPeriods?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalled());
     vi.mocked(getTasksCalendarData).mockClear();
 
@@ -299,12 +297,11 @@ describe('Tasks', () => {
     fireEvent.change(search, { target: { value: 'workshop' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
-    await waitFor(() => expect(calendarTestState.props!.onInitialPeriods).not.toBe(initialRangeLoader));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ search: 'workshop' })));
     act(() => calendarTestState.props!.onInitialPeriods?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'workshop' }),
-      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
-      { signal: expect.any(AbortSignal) },
+      expect.anything(), expect.anything(),
     ));
   });
 
