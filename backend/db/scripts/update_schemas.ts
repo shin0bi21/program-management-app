@@ -221,7 +221,7 @@ function regenerateDatabaseTypes(): void {
   // 1. Generate types from the migrated schema using the current database connection.
   console.log('  Generating TypeScript types from database...');
   try {
-    execSync('npx kysely-codegen --dialect postgres --out-file src/types/database.ts', {
+    execSync('npx kysely-codegen --dialect postgres --date-parser string --out-file src/types/database.ts', {
       stdio: 'inherit',
       env: { ...process.env, DATABASE_URL: DB_URL },
     });

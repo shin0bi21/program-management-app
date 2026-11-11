@@ -39,7 +39,7 @@ export function getSessionRows(
     SELECT
       session.id,
       session.theme,
-      session.date::text,
+      session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
       to_char(session.end_time, 'HH24:MI') AS end_time,
       session.cancelled_at,
@@ -55,11 +55,11 @@ export function getSessionRows(
 
       CASE
         WHEN session.cancelled_at IS NOT NULL THEN 'cancelled'
-        WHEN (session.date + session.end_time) < (NOW() AT TIME ZONE 'America/Toronto') THEN 'completed'
+        WHEN session.date < CURRENT_DATE THEN 'completed'
         ELSE 'upcoming'
       END AS state,
       session.cancelled_at IS NULL
-        AND (session.date + session.start_time) > (NOW() AT TIME ZONE 'America/Toronto') AS movable
+        AND session.date > CURRENT_DATE AS movable
     FROM program_sessions session
     INNER JOIN program_cycles cycle ON cycle.id = session.cycle_id
     INNER JOIN programs program ON program.id = session.program_id

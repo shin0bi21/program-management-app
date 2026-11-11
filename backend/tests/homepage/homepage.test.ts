@@ -51,7 +51,7 @@ describe('Homepage management API', () => {
       SELECT
         ${programId}, ${cycleId},
         'Homepage Session ' || day_number,
-        (NOW() AT TIME ZONE 'America/Toronto')::date + day_number, TIME '17:00', TIME '19:00'
+        CURRENT_DATE + day_number, TIME '17:00', TIME '19:00'
       FROM generate_series(1, 4) AS day_number
       RETURNING id, theme
     `;

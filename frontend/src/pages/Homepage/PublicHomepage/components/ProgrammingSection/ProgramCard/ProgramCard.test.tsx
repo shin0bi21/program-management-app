@@ -16,12 +16,12 @@ const program: HomepageProgram = {
 describe('ProgramCard', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-11-11T02:00:00Z'));
+    vi.setSystemTime(new Date(2026, 10, 10, 21));
   });
 
   afterEach(() => vi.useRealTimers());
 
-  it('renders saved dates and counts days from Eastern today across the UTC date boundary', () => {
+  it('renders saved dates and counts days from local today', () => {
     render(<ProgramCard program={program} />);
 
     const rows = within(screen.getByRole('list', { name: 'Upcoming sessions' })).getAllByRole('listitem');

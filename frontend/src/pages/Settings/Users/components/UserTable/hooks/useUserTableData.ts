@@ -3,6 +3,13 @@ import type { User, UserFilters, UserSortKey } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import { getAccounts } from '../../../accounts.api';
 
+/**
+ * Loads account rows for the selected filters and server-compatible order.
+ * @param queryKey - List-only cache scope for the account table.
+ * @param filters - Applied filters; null waits for initialization.
+ * @param sorting - Selected account column and direction.
+ * @example useUserTableData(['accounts', 'table'], filters, sorting) // paginated account rows
+ */
 export default function useUserTableData(
   queryKey: readonly unknown[],
   filters: UserFilters | null,
@@ -13,7 +20,7 @@ export default function useUserTableData(
       direction: sorting.direction,
       getValue: account => ({
         name: `${account.firstName} ${account.lastName}`.toLowerCase(), email: account.email.toLowerCase(),
-        role: account.role, status: account.status, createdAt: new Date(account.createdAt),
+        role: account.role, status: account.status, createdAt: account.createdAt,
       }[sorting.key]),
     },
     queryKey: [...queryKey, filters, sorting],

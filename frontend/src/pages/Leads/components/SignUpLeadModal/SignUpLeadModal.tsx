@@ -1,3 +1,4 @@
+import { formatShortDate } from '../../../../common/utils/date';
 import FormField from '../../../../common/components/FormField/FormField';
 import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
@@ -12,11 +13,7 @@ import useSignUpLeadModal, { type LeadNoteCategory } from './useSignUpLeadModal'
 
 import './SignUpLeadModal.css';
 
-const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
+
 
 const noteCategoryOptions: Array<{ value: LeadNoteCategory; label: string }> = [
   { value: 'general', label: 'General' },
@@ -57,7 +54,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
     { value: '', label: 'Do not enroll yet' },
     ...workflow.visibleProgramCycles.map(programCycle => ({
       value: `${programCycle.programId}:${programCycle.cycleId}`,
-      label: `${programCycle.program} — ${programCycle.cycle} · ${formatDate(programCycle.startsOn)}–${formatDate(programCycle.endsOn)}`,
+      label: `${programCycle.program} — ${programCycle.cycle} · ${formatShortDate(programCycle.startsOn)}–${formatShortDate(programCycle.endsOn)}`,
     })),
   ];
   const modalStatus = workflow.submitStatus === 'idle' && workflow.loadError
@@ -99,7 +96,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
           <dl className="sign-up-lead-details">
             <div>
               <dt>Date of Birth</dt>
-              <dd>{workflow.age !== null ? formatDate(workflow.dateOfBirth) : '—'}</dd>
+              <dd>{workflow.age !== null ? formatShortDate(workflow.dateOfBirth) : '—'}</dd>
             </div>
             <div>
               <dt>Age</dt>
@@ -160,10 +157,3 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
     </Modal>
   );
 }
-
-/**
- * Formats a saved calendar date for the signup summary.
- * @param date - A valid YYYY-MM-DD birth date or cycle boundary.
- * @example formatDate('2026-07-01') // Jul 1, 2026
- */
-const formatDate = (date: string) => dateFormatter.format(new Date(`${date}T00:00:00`));

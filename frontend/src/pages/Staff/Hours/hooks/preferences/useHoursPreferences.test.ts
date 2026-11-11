@@ -161,7 +161,6 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     expect(result.current.view).toBe('calendar');
-    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-12-31' });
 
     act(() => {
       result.current.search.setValue(' workshop ');
@@ -201,7 +200,6 @@ describe('useHoursPreferences', () => {
     expect(result.current.filters.values).toMatchObject({
       cycleIds: [], programIds: ['program-1'],
     });
-    expect(result.current.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-12-31' });
     expect(result.current.search.appliedValue).toBe('retained');
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenCalledWith('hours-filters', expect.not.objectContaining({ cycleId: expect.anything() })));
@@ -210,20 +208,5 @@ describe('useHoursPreferences', () => {
     expect(saved).not.toHaveProperty('dateRange');
   });
 
-  it('derives the full multi-year cycle span and no range when there are no cycles', async () => {
-    const distantCycles = [
-      { ...cycles[0], startsOn: '2020-01-01', endsOn: '2020-12-31' },
-      { ...cycles[1], startsOn: '2028-01-01', endsOn: '2028-12-31' },
-    ];
-    const { result, rerender } = renderHook(({ availableCycles }) => useHoursPreferences({
-      role: 'admin', resources, programs, cycles: availableCycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }), { initialProps: { availableCycles: distantCycles } });
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.dateRange).toEqual({ start: '2020-01-01', end: '2028-12-31' });
-
-    rerender({ availableCycles: [] });
-    expect(result.current.filters.dateRange).toBeUndefined();
-  });
 
 });

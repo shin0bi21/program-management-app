@@ -25,7 +25,7 @@ const fixtureTarget = { row: { id: 'staff-1', name: 'Alex' }, data: { id: 'task-
 
 describe('Grid', () => {
   it('maps each visible row to its data, selection, and virtual offset', () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 2);
+    const periods = buildInitialDayPeriods('2026-08-10', 2);
     const firstItem = { id: 'entry-1' };
     const rangedItem = { id: 'task-1' };
     const getRowId = vi.fn((row: { id: string }) => row.id);

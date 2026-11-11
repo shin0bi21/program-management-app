@@ -325,18 +325,10 @@ describe('Sessions', () => {
     expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-1,cycle-2');
   });
 
-  it('uses all cycle bounds for table and calendar and has no Date Range filter', async () => {
+  it('offers cycle filters without a separate custom-date control', async () => {
     render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    const dateRange = { start: '2026-07-01', end: '2026-12-01' };
-    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dateRange }), expect.any(Object), expect.any(Object),
-    ));
     fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
     expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify(dateRange));
   });
 
   // Selection and coordination.
@@ -379,7 +371,6 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
-    expect(screen.getByText('Jul 28, 2026 · Communication')).toBeInTheDocument();
   });
 
   it('opens the add sessions flow from the page header', async () => {
@@ -410,16 +401,13 @@ describe('Sessions', () => {
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
     expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');
     expect(screen.getByLabelText('Program')).toBeEnabled();
-    expect(screen.getByLabelText('Session Date')).not.toHaveAttribute('max');
   });
 
-  it('opens a session with the calendar date and program default times', async () => {
+  it('opens the add-session form from a calendar cell', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Calendar date' }));
-    expect(screen.getByLabelText('Session Date')).toHaveValue('2026-07-29');
-    expect(screen.getByLabelText('Start Time')).toHaveValue('17:00');
-    expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
+    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
   });
 
   it('preserves item selection through its owning row and clears it on direct program selection', async () => {

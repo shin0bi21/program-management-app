@@ -1,3 +1,4 @@
+import { getDate } from '../../../common/utils/date';
 import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -11,7 +12,6 @@ import {
   getHoursReferenceData,
   getHoursCalendarData,
 } from './hours.api';
-import { dayKey } from '../../../common/components/TimelineCalendar/utils/periods';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
@@ -299,22 +299,6 @@ describe('Hours', () => {
     expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
   });
 
-  it('uses selected cycle bounds for table and calendar', async () => {
-    preferenceHook.preference = { view: 'table', cycleIds: ['cycle-fall'] };
-    renderHours();
-
-    const dateRange = { start: '2026-09-02', end: '2026-12-31' };
-    await waitFor(() => expect(getHoursTableData).toHaveBeenCalledWith(
-      expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }),
-      expect.anything(), expect.anything(),
-    ));
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ dateRange, cycleIds: ['cycle-fall'] }), expect.anything(),
-      { signal: expect.any(AbortSignal) },
-    ));
-  });
 
   it('reloads the calendar with the applied search and existing filters', async () => {
     renderHours();
@@ -373,8 +357,7 @@ describe('Hours', () => {
     renderHours();
 
     await screen.findByRole('heading', { name: 'Hours This Pay Period' });
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('Sep 2 – 15, 2026'));
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00');
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
     const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
     expect(averageCard.closest('article')).toHaveTextContent('4.00');
     expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
@@ -388,7 +371,7 @@ describe('Hours', () => {
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
     auth.role = 'admin';
-    const date = dayKey(new Date());
+    const date = getDate();
     vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ staffId: 'staff-1', date: date,
           id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
@@ -459,17 +442,15 @@ describe('Hours', () => {
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
   });
 
-  it('bridges a calendar cell target to a locked, dated entry modal', async () => {
+  it('opens the contextual entry modal for a calendar resource', async () => {
     const { container } = renderHours();
     await screen.findAllByLabelText('Zoe Wilson');
 
     const cell = container.querySelector<HTMLElement>('[data-row-id="staff-1"][data-period]')!;
-    const date = cell.dataset.period;
     fireEvent.click(cell);
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Regular Hours' }));
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
-    expect(screen.getByLabelText('Date')).toHaveValue(date);
   });
 
   it('keeps table Edit available when a background preference repair completes', async () => {

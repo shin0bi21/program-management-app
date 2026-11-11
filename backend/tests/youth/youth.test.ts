@@ -26,8 +26,8 @@ describe('Youth API', () => {
     const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
     softSkillsProgramId = program.id;
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
-      SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+      SELECT (CURRENT_DATE - 30)::text AS starts_on,
+        (CURRENT_DATE + 30)::text AS ends_on
     `;
     ({ cycleId: softSkillsCycleId } = await seedTestProgramCycle({
       programId: softSkillsProgramId,
@@ -63,7 +63,7 @@ describe('Youth API', () => {
       const youthIds: string[] = [];
       const fixtures: Array<{ programId: string; cycleId: string }> = [];
       const [today] = await sql<{ date: string }[]>`
-        SELECT (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date
+        SELECT CURRENT_DATE::text AS date
       `;
       const [openProgram] = await sql<{ id: string }[]>`
         SELECT id FROM programs WHERE enrollment_required = FALSE LIMIT 1
@@ -175,8 +175,8 @@ describe('Youth API', () => {
         `;
         openProgramId = openProgram.id;
         const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
-          SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
-            ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+          SELECT (CURRENT_DATE - 30)::text AS starts_on,
+            (CURRENT_DATE + 30)::text AS ends_on
         `;
         current = await seedTestProgramCycle({ programId: softSkillsProgramId, name: `Current ${randomUUID()}`, ...dates });
         past = await seedTestProgramCycle({
@@ -304,7 +304,7 @@ describe('Youth API', () => {
         youthIds.push(created.body.id);
         await sql`
           INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
-          VALUES (${current.programId}, ${current.cycleId}, ${created.body.id}, (NOW() AT TIME ZONE 'America/Toronto')::date + 1)
+          VALUES (${current.programId}, ${current.cycleId}, ${created.body.id}, CURRENT_DATE + 1)
         `;
 
         const query = { cycleIds: current.cycleId, programIds: softSkillsProgramId, search: `Planned ${surname}` };
@@ -374,7 +374,7 @@ describe('Youth API', () => {
         VALUES (
           ${softSkillsProgramId}, ${softSkillsCycleId},
           ${res.body.id},
-          (NOW() AT TIME ZONE 'America/Toronto')::date
+          CURRENT_DATE
         )
       `;
       createdIds.push(res.body.id);
@@ -553,7 +553,7 @@ describe('Youth API', () => {
             ${`Attendance Test Latest ${Date.now()}`},
             CURRENT_DATE - 1, TIME '17:00', TIME '19:00'
           )
-        RETURNING id, date::text
+        RETURNING id, date
       `;
 
       try {

@@ -41,8 +41,8 @@ const statusLabels = Object.fromEntries(TASK_STATUS_OPTIONS.map(option => [optio
 export const taskStatus = sql`
   CASE
     WHEN task.state <> 'open' THEN task.state
-    WHEN task.start_date > (NOW() AT TIME ZONE 'America/Toronto')::date THEN 'upcoming'
-    WHEN task.due_date < (NOW() AT TIME ZONE 'America/Toronto')::date THEN 'overdue'
+    WHEN task.start_date > CURRENT_DATE THEN 'upcoming'
+    WHEN task.due_date < CURRENT_DATE THEN 'overdue'
     ELSE 'in_progress'
   END
 `;
@@ -64,11 +64,11 @@ export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE
       task.details,
       task.category,
       task.state,
-      task.start_date::text,
-      task.due_date::text,
+      task.start_date,
+      task.due_date,
       task.staff_id,
       task.program_id,
-      task.completed_at::text,
+      task.completed_at,
 
       staff.first_name,
       staff.last_name,
@@ -86,7 +86,7 @@ export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE
       ) AS hours_logged,
       (
         SELECT COALESCE(json_agg(
-          json_build_object('date', daily.date::text, 'hours', daily.hours)
+          json_build_object('date', daily.date, 'hours', daily.hours)
           ORDER BY daily.date
         ), '[]'::json)
         FROM (

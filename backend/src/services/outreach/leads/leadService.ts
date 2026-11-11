@@ -137,7 +137,9 @@ export async function updateLead(id: string, data: UpdateLeadInput, actorId: str
   // 2. Distinguish missing records from converted, read-only intake.
   if (!rows.length) {
     const existing = await sql<{ status: string; convertedYouthId: string | null }[]>`
-      SELECT status, converted_youth_id
+      SELECT
+        status,
+        converted_youth_id
       FROM leads
       WHERE id = ${id}
       LIMIT 1
@@ -229,8 +231,17 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       convertedYouthId: string | null;
       dateOfBirth: string | null;
     }[]>`
-      SELECT id, youth_first_name, youth_last_name, school, contact_phone_number,
-        contact_relationship, notes, status, converted_youth_id, date_of_birth::text AS date_of_birth
+      SELECT
+        id,
+        youth_first_name,
+        youth_last_name,
+        school,
+        contact_phone_number,
+        contact_relationship,
+        notes,
+        status,
+        converted_youth_id,
+        date_of_birth
       FROM leads
       WHERE id = ${id}
       FOR UPDATE
@@ -264,13 +275,17 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
         maxAge: number | null;
         age: number;
       }[]>`
-        SELECT p.enrollment_required, p.min_age, p.max_age,
-          EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, ${dateOfBirth}::date))::int AS age
+        SELECT
+          p.enrollment_required,
+          p.min_age,
+          p.max_age,
+
+          EXTRACT(YEAR FROM AGE(CURRENT_DATE, ${dateOfBirth}::date))::int AS age
         FROM program_cycle_assignments pc
         INNER JOIN program_cycles cycle ON cycle.id = pc.cycle_id
         INNER JOIN programs p ON p.id = pc.program_id
         WHERE pc.program_id = ${data.programId} AND pc.cycle_id = ${data.cycleId}
-          AND (NOW() AT TIME ZONE 'America/Toronto')::date <= cycle.ends_on
+          AND CURRENT_DATE <= cycle.ends_on
         FOR UPDATE OF pc
       `;
       if (!programCycle) throw new ConflictError('Selected program cycle is unavailable');
@@ -344,7 +359,9 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
           program_id, cycle_id, youth_id, created_by, updated_by
         )
         VALUES (${data.programId}, ${data.cycleId}, ${youthId}, ${actorId}, ${actorId})
-        RETURNING id, enrolled_on::text AS enrolled_on
+        RETURNING
+          id,
+          enrolled_on
       `;
       await audit(trx, actorId, transactionId, 'program_enrollments', enrollments[0].id, 'INSERT', null, {
         id: enrollments[0].id,

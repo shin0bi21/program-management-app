@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { dayKey } from '../../utils/periods';
+import { Temporal } from 'temporal-polyfill';
+import { getDate } from '../../../../utils/date';
 
+/** Tracks the device-local date across midnight and browser reactivation. @example const { today } = useToday(); */
 export function useToday() {
-  const [today, setToday] = useState(() => new Date());
+  const [today, setToday] = useState(() => getDate());
 
   const refreshDate = useCallback(() => {
-    const now = new Date();
-    setToday(current => dayKey(current) === dayKey(now) ? current : now);
+    const now = getDate();
+    setToday(current => current === now ? current : now);
     return now;
   }, []);
 
@@ -15,7 +17,12 @@ export function useToday() {
   return { today, refreshDate };
 }
 
-function watchDate(refreshDate: () => Date) {
+/**
+ * Schedules date refreshes and returns cleanup for timers and browser listeners.
+ * @param refreshDate - Updates the observed local date and returns its YYYY-MM-DD value.
+ * @example const stop = watchDate(refreshDate); stop(); // releases all listeners
+ */
+function watchDate(refreshDate: () => string) {
   let timer: ReturnType<typeof setTimeout>;
 
   executeRefresh();
@@ -24,24 +31,26 @@ function watchDate(refreshDate: () => Date) {
 
   return stopWatchingDate;
 
+  /** Refreshes today and its next deadline. @example Focusing the tab refreshes a stale date. */
   function executeRefresh() {
-    const now = refreshDate();
-    scheduleRefresh(now);
+    refreshDate();
+    scheduleRefresh();
   }
 
-  function scheduleRefresh(now: Date) {
+  /** Replaces the timer with the next local midnight. @example A DST day may wait 23 or 25 hours. */
+  function scheduleRefresh() {
     clearTimeout(timer);
-    const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0);
-
-    // Local midnight can be less or more than 24 hours away across daylight saving changes.
-    timer = setTimeout(executeRefresh, midnight.getTime() - now.getTime());
+    const now = Temporal.Now.zonedDateTimeISO();
+    const midnight = now.add({ days: 1 }).startOfDay();
+    timer = setTimeout(executeRefresh, midnight.epochMilliseconds - now.epochMilliseconds);
   }
 
+  /** Refreshes only when the document becomes visible. @example Returning to a hidden tab updates today. */
   function handleVisibilityChange() {
     if (document.visibilityState === 'visible') executeRefresh();
   }
 
+  /** Releases this watcher's timer and listeners. @example Effect cleanup stops future refreshes. */
   function stopWatchingDate() {
     clearTimeout(timer);
     document.removeEventListener('visibilitychange', handleVisibilityChange);

@@ -112,8 +112,8 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
 
-  it('uses the program timezone and includes the final cycle date', () => {
-    vi.setSystemTime(new Date('2026-12-02T02:00:00Z'));
+  it('allows enrollment through the final cycle date', () => {
+    vi.setSystemTime(new Date(2026, 11, 1, 21));
     render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByRole('heading', { name: 'Art - Fall Overview' })).toBeInTheDocument();
   });

@@ -62,7 +62,7 @@ export function InteractiveHoursItems() {
           'staff-2': items.filter(item => item.staffId === 'staff-2'),
         }}
         getItemRange={data => ({ start: data.date, end: data.date })}
-        initialDate={new Date(2026, 7, 9)}
+        initialDate={'2026-08-09'}
         ariaLabel="Browser-tested hours calendar"
         getRowId={row => row.id}
         getItemId={data => data.id}

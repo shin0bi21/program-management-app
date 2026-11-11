@@ -11,12 +11,12 @@ const program: Program = {
 
 describe('program session scheduling', () => {
   it.each([
-    ['2026-10-26T23:00:00Z', '2026-10-27'],
-    ['2026-10-27T21:29:59Z', '2026-10-27'],
-    ['2026-10-27T21:30:00Z', '2026-11-03'],
-    ['2026-10-28T01:00:00Z', '2026-11-03'],
+    ['2026-10-26T19:00', '2026-10-27'],
+    ['2026-10-27T17:29:59', '2026-10-27'],
+    ['2026-10-27T17:30', '2026-11-03'],
+    ['2026-10-27T21:00', '2026-11-03'],
   ])('chooses the next available default weekday at %s', (now, date) => {
-    expect(nextSessionDate(program, Temporal.Instant.from(now))).toBe(date);
+    expect(nextSessionDate(program, Temporal.PlainDateTime.from(now))).toBe(date);
   });
 
 });

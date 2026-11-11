@@ -34,7 +34,12 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
       minAge: number | null;
       maxAge: number | null;
     }[]>`
-      SELECT assignment.program_id, program.enrollment_required, program.min_age, program.max_age
+      SELECT
+        assignment.program_id,
+
+        program.enrollment_required,
+        program.min_age,
+        program.max_age
       FROM program_cycle_assignments assignment
       INNER JOIN programs program ON program.id = assignment.program_id
       WHERE assignment.program_id = ${programId} AND assignment.cycle_id = ${cycleId}
@@ -46,9 +51,12 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     }
 
     // 3. Check the selected youth and age requirements.
-    const age = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, date_of_birth))::int`;
+    const age = sql`EXTRACT(YEAR FROM AGE(CURRENT_DATE, date_of_birth))::int`;
     const youth = await trx<{ id: string; age: number | null }[]>`
-      SELECT user_id AS id, ${age} AS age
+      SELECT
+        user_id AS id,
+
+        ${age} AS age
       FROM youth_profiles
       WHERE user_id = ANY(${sql.array(data.youthIds)}::uuid[])
       ORDER BY user_id
@@ -72,7 +80,8 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
         program_id, cycle_id, youth_id, created_by, updated_by
       )
       SELECT
-        ${programId}, ${cycleId},
+        ${programId},
+        ${cycleId},
         selected.youth_id,
         ${actor.userId},
         ${actor.userId}
@@ -85,12 +94,13 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
         updated_by = EXCLUDED.updated_by
       RETURNING
         id,
-        program_id, cycle_id,
         youth_id,
-        enrolled_on::text AS enrolled_on,
-        withdrawn_on::text AS withdrawn_on,
+        enrolled_on,
+        withdrawn_on,
         created_at,
-        updated_at
+        updated_at,
+        program_id,
+        cycle_id
     `;
 
     // 5. Return the affected rows.
@@ -135,11 +145,18 @@ export async function withdrawYouth(
     // 3. Withdraw the active enrollment.
     const [enrollment] = await trx`
       UPDATE program_enrollments
-      SET withdrawn_on = (NOW() AT TIME ZONE 'America/Toronto')::date,
+      SET withdrawn_on = CURRENT_DATE,
           updated_at = NOW(), updated_by = ${actor.userId}
       WHERE program_id = ${programId} AND cycle_id = ${cycleId} AND youth_id = ${youthId} AND withdrawn_on IS NULL
-      RETURNING id, program_id, cycle_id, youth_id, enrolled_on::text AS enrolled_on,
-        withdrawn_on::text AS withdrawn_on, created_at, updated_at
+      RETURNING
+        id,
+        youth_id,
+        enrolled_on,
+        withdrawn_on,
+        created_at,
+        updated_at,
+        program_id,
+        cycle_id
     `;
     if (!enrollment) throw new NotFoundError('Active program enrollment not found');
 

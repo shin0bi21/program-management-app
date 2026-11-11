@@ -15,7 +15,6 @@ import type {
 interface ProgramSchedule {
   defaultStartTime: string;
   defaultEndTime: string;
-  timezone: string;
   nextDate: string;
 }
 
@@ -91,7 +90,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
 
     // 3. Load the cycle date bounds.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
-      SELECT cycle.starts_on::text, cycle.ends_on::text
+      SELECT cycle.starts_on, cycle.ends_on
       FROM program_cycles cycle
       WHERE cycle.id = ${cycleId}
     `;
@@ -137,7 +136,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
 
     // 4. Validate the replacement date against the locked cycle.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
-      SELECT starts_on::text, ends_on::text
+      SELECT starts_on, ends_on
       FROM program_cycles
       WHERE id = ${session.cycleId}
     `;
@@ -146,11 +145,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
       throw new ConflictError('Sessions must fall within the cycle date range');
     }
 
-    // 5. Validate the replacement clock times without changing their stored values.
-    const schedule = await getProgramSchedule(session.programId, trx);
-    await sessionTiming(`${data.date}T${data.startTime}`, `${data.date}T${data.endTime}`, schedule.timezone, trx);
-
-    // 6. Save the replacement session details.
+    // 5. Save the replacement session details.
     const rows = await trx`
       UPDATE program_sessions
       SET session_type = COALESCE(${data.sessionType ?? null}, session_type),
@@ -162,21 +157,21 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
 
-    // 7. Load the complete saved session for the response.
+    // 6. Load the complete saved session for the response.
     const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
-    // 8. Load affected cycle rows and return them with the updated session.
+    // 7. Load affected cycle rows and return them with the updated session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(actor, [saved], trx) };
   }).catch(rethrowSessionConflict);
 }
 
 /**
- * Moves a future session to one assigned cycle while preserving local times and recorded history.
+ * Moves a session between future dates while preserving clock times and recorded history.
  * @param id - Accessible, non-cancelled session to move.
- * @param date - Validated destination calendar date in the program timezone.
+ * @param date - Authoritative YYYY-MM-DD destination, strictly after today.
  * @param actor - Actor used for authorization, write metadata, and response scope.
- * @example await moveSessionDate(sessionId, '2030-03-10', actor) // a Toronto 17:30 session keeps 17:30 local time across the move
+ * @example await moveSessionDate(sessionId, '2030-03-10', actor) // preserves both saved clock times
  */
 export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
 
@@ -196,25 +191,23 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     // 3. Lock the program before resolving the destination cycle.
     await lockAssignmentProgram(trx, lookup.programId, actor);
 
-    // 4. Load the program schedule and timezone.
-    const schedule = await getProgramSchedule(lookup.programId, trx);
-
-    // 5. Lock the session and retain its saved clock times.
+    // 4. Lock the session and check its saved date against today's date.
     const [session] = await trx<{
-      cycleId: string; movable: boolean; startTime: string; endTime: string;
+      cycleId: string; movable: boolean; today: string;
     }[]>`
       SELECT cycle_id,
         cancelled_at IS NULL
-          AND (date + start_time) > (clock_timestamp() AT TIME ZONE ${schedule.timezone}) AS movable,
-        to_char(start_time, 'HH24:MI') AS start_time, to_char(end_time, 'HH24:MI') AS end_time
+          AND date > CURRENT_DATE AS movable,
+        CURRENT_DATE AS today
       FROM program_sessions
       WHERE id = ${id}
       FOR UPDATE
     `;
     if (!session) throw new NotFoundError('Session not found');
-    if (!session.movable) throw new ConflictError('Only future, non-cancelled sessions can be moved');
+    if (!session.movable) throw new ConflictError('Only non-cancelled sessions on future dates can be moved');
+    if (date <= session.today) throw new ConflictError('Session destination must be after today');
 
-    // 6. Lock assigned cycles covering the destination dates.
+    // 5. Lock assigned cycles covering the destination date.
     const assignments = await trx<ProgramCycleKey[]>`
       SELECT assignment.program_id, assignment.cycle_id
       FROM program_cycle_assignments assignment
@@ -227,7 +220,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
     if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
 
-    // 7. Reject a cycle change when the session has recorded data.
+    // 6. Reject a cycle change when the session has recorded data.
     if (assignments[0].cycleId !== session.cycleId) {
       const [records] = await trx<{ recorded: boolean }[]>`
         SELECT EXISTS (SELECT 1
@@ -252,11 +245,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
     }
 
-    // 8. Validate the destination times in the program timezone.
-    const timing = await sessionTiming(`${date}T${session.startTime}`, `${date}T${session.endTime}`, schedule.timezone, trx);
-    if (!timing.future) throw new ConflictError('Session destination must be in the future');
-
-    // 9. Save only the destination date and resolved cycle, retaining both times.
+    // 7. Save only the destination date and resolved cycle, retaining both times.
     await trx`
       UPDATE program_sessions
       SET cycle_id = ${assignments[0].cycleId},
@@ -266,11 +255,11 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       RETURNING id
     `;
 
-    // 10. Load the complete moved session for the response.
+    // 8. Load the complete moved session for the response.
     const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
-    // 11. Load affected cycle rows and return them with the moved session.
+    // 9. Load affected cycle rows and return them with the moved session.
     return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved], trx) };
   }).catch(rethrowSessionConflict);
 }
@@ -395,34 +384,33 @@ async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId
 
 /**
  * Returns program clock defaults and the next default date; missing configuration is 500.
- * @param programId - Program whose defaults and current Eastern scheduling context are needed.
+ * @param programId - Program whose defaults and current date/time are needed.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @example await getProgramSchedule(programId, trx) // nextDate is next Tuesday if today's default start has passed
  */
 async function getProgramSchedule(programId: string, query = sql): Promise<ProgramSchedule> {
-  // 1. Resolve today's date, clock time, and weekday offset in the program timezone.
+  // 1. Resolve today's program date, clock time, and weekday offset.
   const [schedule] = await query<ProgramSchedule[]>`
     WITH schedule AS (
-      SELECT default_start_time, default_end_time, timezone,
-        (CURRENT_TIMESTAMP AT TIME ZONE timezone::text)::date AS today,
-        (CURRENT_TIMESTAMP AT TIME ZONE timezone::text)::time AS local_time,
+      SELECT default_start_time, default_end_time,
+        CURRENT_DATE AS today,
+        LOCALTIME AS local_time,
         (
           array_position(ARRAY['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'], default_day_of_week)
-          - 1 - EXTRACT(DOW FROM CURRENT_TIMESTAMP AT TIME ZONE timezone::text)::integer + 7
+          - 1 - EXTRACT(DOW FROM CURRENT_DATE)::integer + 7
         ) % 7 AS days_until_default
       FROM programs
       WHERE id = ${programId}
     )
     SELECT to_char(default_start_time, 'HH24:MI') AS default_start_time,
       to_char(default_end_time, 'HH24:MI') AS default_end_time,
-      timezone,
       (
         today + days_until_default
           + CASE
               WHEN days_until_default = 0 AND local_time >= default_start_time THEN 7
               ELSE 0
             END
-      )::text AS next_date
+      ) AS next_date
     FROM schedule
   `;
   if (!schedule) throw new InternalServerError('Required program schedule is unavailable');
@@ -436,8 +424,8 @@ async function getProgramSchedule(programId: string, query = sql): Promise<Progr
  * @param cycleId - Previously verified assigned cycle.
  * @param data - Validated session details and optional time overrides.
  * @param actor - Actor recorded on writes and used to scope response rows.
- * @param schedule - Program default times and timezone.
- * @param date - Resolved calendar date in the program timezone.
+ * @param schedule - Program clock defaults used when a request omits times.
+ * @param date - Authoritative supplied date or resolved default YYYY-MM-DD date.
  * @example await createScheduledSession(trx, programId, cycleId, { sessionType, theme: 'Cooking' }, actor, schedule, '2027-01-15') // inserts January 15 using schedule defaults
  */
 async function createScheduledSession(
@@ -452,8 +440,8 @@ async function createScheduledSession(
   const startTime = data.startTime ?? schedule.defaultStartTime;
   const endTime = data.endTime ?? schedule.defaultEndTime;
 
-  // 1. Validate the saved local schedule, including daylight-saving boundaries.
-  await sessionTiming(`${date}T${startTime}`, `${date}T${endTime}`, schedule.timezone, trx);
+  // 1. Validate clock ordering after resolving omitted program defaults.
+  if (endTime <= startTime) throw new ConflictError('End time must be after start time');
 
   // 2. Insert the session using the resolved schedule.
   const [session] = await trx`
@@ -488,44 +476,6 @@ function getUpdatedProgramCycles(actor: AccessTokenPayload, keys: ProgramCycleKe
   return actor.permissions.includes('read:programs')
     ? getProgramCycleRowsByKeys(query, actor, keys)
     : undefined;
-}
-
-/**
- * Resolves local timestamps and rejects invalid or ambiguous daylight-saving boundaries with 409.
- * @param startLocal - Validated local session start timestamp without an offset.
- * @param endLocal - Validated local session end timestamp without an offset.
- * @param timezone - Program IANA timezone used for both conversions.
- * @param query - Defaults to the shared client; pass trx to join an existing transaction.
- * @returns Whether the start is in the future; the caller decides whether a past start is allowed.
- * @example await sessionTiming('2027-01-15T17:30', '2027-01-15T19:30', 'America/Toronto', trx) // validates the local schedule
- */
-async function sessionTiming(startLocal: string, endLocal: string, timezone: string, query = sql) {
-  // 1. Convert local times and detect skipped or repeated clock times.
-  const [timing] = await query<{ valid: boolean; future: boolean }[]>`
-    WITH times AS (
-      SELECT ${startLocal}::timestamp AT TIME ZONE ${timezone} AS starts_at,
-        ${endLocal}::timestamp AT TIME ZONE ${timezone} AS ends_at
-    )
-    SELECT starts_at > clock_timestamp() AS future, ends_at > starts_at
-      AND starts_at AT TIME ZONE ${timezone} = ${startLocal}::timestamp
-      AND ends_at AT TIME ZONE ${timezone} = ${endLocal}::timestamp
-      AND NOT EXISTS (
-        SELECT 1
-        FROM (VALUES (starts_at), (ends_at)) AS boundary(instant)
-        CROSS JOIN (VALUES (INTERVAL '-1 day'), (INTERVAL '1 day')) AS nearby(delta)
-        CROSS JOIN LATERAL (
-          SELECT ((boundary.instant + nearby.delta) AT TIME ZONE ${timezone})
-            - ((boundary.instant AT TIME ZONE ${timezone}) + nearby.delta) AS offset_change
-        ) AS transition
-        WHERE transition.offset_change <> INTERVAL '0'
-          AND (boundary.instant - transition.offset_change) AT TIME ZONE ${timezone}
-            = boundary.instant AT TIME ZONE ${timezone}
-      ) AS valid
-    FROM times
-  `;
-  if (!timing.valid) throw new ConflictError('Session times are invalid in the program timezone');
-
-  return timing;
 }
 
 /**

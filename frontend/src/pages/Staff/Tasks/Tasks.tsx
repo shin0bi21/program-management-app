@@ -20,7 +20,7 @@ import useTaskData from './hooks/data/useTaskData';
 import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
-import { getDateKeyInTimeZone } from '../../../common/utils/date';
+import { getDate } from '../../../common/utils/date';
 import { getTaskDashboardData, type TasksFilters } from './tasks.api';
 import {
   TASK_TABLE_KEYS,
@@ -47,7 +47,7 @@ export default function Tasks() {
   // Permissions.
   const { permissions } = useAuth();
   const canWrite = permissions.includes('write:tasks');
-  const today = getDateKeyInTimeZone();
+  const today = getDate();
 
   // Page data and preferences.
   const pageData = useTaskData(TASK_REFERENCE_DATA_QUERY_KEY);

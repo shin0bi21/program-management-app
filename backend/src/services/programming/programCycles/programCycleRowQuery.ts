@@ -29,14 +29,17 @@ export const programCycleState = sql`
 
 export const programCycleRowColumns = sql`
   pc.program_id,
+
   p.name AS program,
   p.enrollment_required,
   p.min_age,
   p.max_age,
+
   cycle.id AS cycle_id,
   cycle.name AS cycle,
-  cycle.starts_on::text AS starts_on,
-  cycle.ends_on::text AS ends_on,
+  cycle.starts_on,
+  cycle.ends_on,
+
   (
     SELECT COUNT(DISTINCT ce.youth_id)::int
     FROM program_enrollments ce
@@ -44,17 +47,17 @@ export const programCycleRowColumns = sql`
       AND (ce.withdrawn_on IS NULL OR ce.withdrawn_on > CURRENT_DATE)
   ) AS enrolled_count,
   (
-    SELECT MIN(cs.date)::text
+    SELECT MIN(cs.date)
     FROM program_sessions cs
     WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
-      AND (cs.date + cs.start_time) >= (NOW() AT TIME ZONE 'America/Toronto')
+      AND cs.date >= CURRENT_DATE
       AND cs.cancelled_at IS NULL
   ) AS next_session_date,
   (
     SELECT cs.id
     FROM program_sessions cs
     WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
-      AND (cs.date + cs.start_time) >= (NOW() AT TIME ZONE 'America/Toronto')
+      AND cs.date >= CURRENT_DATE
       AND cs.cancelled_at IS NULL
     ORDER BY cs.date, cs.start_time
     LIMIT 1

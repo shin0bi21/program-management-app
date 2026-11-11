@@ -27,7 +27,7 @@ interface GridProps<TRow, TItemData> {
   // Period headers
   periods: readonly CalendarPeriod[];
   formatPeriodLabel: (period: CalendarPeriod) => string;
-  today: Date;
+  today: string;
 
   // Rows and selection
   rows: readonly TRow[];

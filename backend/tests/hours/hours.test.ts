@@ -2,7 +2,6 @@ import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
-import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriodUtils';
 import { getHoursRows } from '../../src/services/staff/hours/hoursRowQuery';
 import type { AccessTokenPayload } from '../../src/types/auth';
 
@@ -36,9 +35,9 @@ describe('Hours API', () => {
       placementDate: string;
     }>>`
       SELECT
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_date
+        CURRENT_DATE::text AS date,
+        (CURRENT_DATE + 1)::text AS linked_date,
+        (CURRENT_DATE + 2)::text AS placement_date
     `;
     ({ date, linkedDate, placementDate } = dates);
     const admin = await seedTestUser({ email: `hours-admin-${stamp}@test.local`, role: 'admin' });
@@ -82,7 +81,7 @@ describe('Hours API', () => {
     `;
     [activeCycleId, upcomingCycleId] = assignments.map(assignment => assignment.cycleId);
     const upcomingDates = await sql<Array<{ startsOn: string }>>`
-      SELECT starts_on::text FROM program_cycles WHERE id = ${upcomingCycleId}
+      SELECT starts_on FROM program_cycles WHERE id = ${upcomingCycleId}
     `;
     upcomingDate = upcomingDates[0].startsOn;
     await sql`
@@ -437,12 +436,16 @@ describe('Hours API', () => {
     const staff = await seedTestUser({ role: 'staff' });
     const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
-        starts_on::text AS starts_on,
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
+        starts_on,
+        CURRENT_DATE::text AS current_date
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
-    const payPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
+    const [payPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT starts_on AS period_start, (starts_on + 13)::text AS period_end
+      FROM program_cycles
+      WHERE id = ${activeCycleId}
+    `;
     try {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
@@ -472,15 +475,14 @@ describe('Hours API', () => {
   });
 
   it('loads a requested pay period without requiring a selected cycle', async () => {
-    const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
-      SELECT
-        starts_on::text AS starts_on,
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
+    const [currentPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT starts_on AS period_start, (starts_on + 13)::text AS period_end
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
-    const currentPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
-    const requestedPeriod = getBiweeklyPayPeriod(upcomingDate, upcomingDate);
+    const [requestedPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT ${upcomingDate}::date AS period_start, (${upcomingDate}::date + 13)::text AS period_end
+    `;
 
     const currentResponse = await request(app)
       .get(`/api/hours/pay-period?staffId=${firstStaffId}`)

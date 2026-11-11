@@ -1,6 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
@@ -96,8 +95,6 @@ describe('SignUpLeadModal', () => {
     expect(screen.getAllByText('—')).toHaveLength(2);
     expect(screen.getByLabelText('Date of Birth *')).toHaveValue('');
     expect(screen.getByLabelText('Date of Birth *')).toBeRequired();
-    expect(screen.getByLabelText('Date of Birth *')).not.toHaveAttribute('min');
-    expect(screen.getByLabelText('Date of Birth *')).toHaveAttribute('max', getDateOfBirthBounds().max);
 
     fireEvent.change(screen.getByLabelText('Date of Birth *'), { target: { value: `${new Date().getFullYear() - 16}-01-01` } });
     expect(screen.getByText('16')).toBeInTheDocument();

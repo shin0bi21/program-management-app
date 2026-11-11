@@ -63,9 +63,9 @@ export async function getYouthAttendance(youthId: string, actor: AccessTokenPayl
     INNER JOIN programs program ON program.id = enrollment.program_id
     WHERE enrollment.youth_id = ${youthId}
       AND program.enrollment_required = TRUE
-      AND enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
-      AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
-      AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN cycle.starts_on AND cycle.ends_on
+      AND enrollment.enrolled_on <= CURRENT_DATE
+      AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > CURRENT_DATE)
+      AND CURRENT_DATE BETWEEN cycle.starts_on AND cycle.ends_on
       AND ${programAccessPredicate(actor, sql`program.id`)}
   `;
   if (!enrollment) return null;
@@ -280,10 +280,10 @@ function getYouthAttendanceSessions(
     SELECT
       session.id,
       session.theme,
-      session.date::text,
+      session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
       to_char(session.end_time, 'HH24:MI') AS end_time,
-      (session.date + session.end_time) <= (NOW() AT TIME ZONE 'America/Toronto') AS completed,
+      session.date < CURRENT_DATE AS completed,
       session.cancelled_at,
       session.session_type,
 

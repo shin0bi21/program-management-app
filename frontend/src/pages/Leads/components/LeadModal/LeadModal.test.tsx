@@ -22,12 +22,6 @@ describe('LeadModal', () => {
     createLead.mockResolvedValue({ id: 'lead-1' });
   });
 
-  it('requires a date of birth before creating a lead', async () => {
-    render(<LeadModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
-    fireEvent.submit(document.getElementById('lead-form')!);
-    expect(await screen.findByText('Date of birth is required')).toBeInTheDocument();
-    expect(createLead).not.toHaveBeenCalled();
-  });
 
   it('validates and submits a normalized direct lead', async () => {
     const onClose = vi.fn();

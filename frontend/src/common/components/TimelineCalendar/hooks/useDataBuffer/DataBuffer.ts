@@ -1,9 +1,9 @@
+import { Temporal } from 'temporal-polyfill';
 import type { CalendarPeriod, RowPeriodData } from '../../types';
 import { addDays, buildDayPeriod } from '../../utils/periods';
 
 export type BufferDirection = 'initial' | 'left' | 'right';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_PRELOAD_PERIODS = 42;
 const DEFAULT_REFILL_THRESHOLD_PERIODS = 21;
 const DEFAULT_REFILL_PERIODS = 21;
@@ -34,10 +34,7 @@ export const dayPeriodBufferAdapter: PeriodBufferAdapter = {
    * @returns Positive for later days, negative for earlier days.
    * @example March 7 to March 9 is 2 even when the clock changes between those dates.
    */
-  distance: (start, end) => (
-    (Date.UTC(end.start.getFullYear(), end.start.getMonth(), end.start.getDate())
-      - Date.UTC(start.start.getFullYear(), start.start.getMonth(), start.start.getDate())) / DAY_MS
-  ),
+  distance: (start, end) => Temporal.PlainDate.from(start.start).until(end.start).days,
   /**
    * Checks whether an ISO date key lies in an inclusive day interval.
    * @param start - First included day.

@@ -13,8 +13,8 @@ describe('DataBuffer', () => {
     ));
     const onData = vi.fn();
     const buffer = new DataBuffer({ load, onData, getItemId: item => item.id });
-    const pending = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-    const queued = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 11, 1), 1), 'right');
+    const pending = buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
+    const queued = buffer.periodsBuilt(buildInitialDayPeriods('2026-12-01', 1), 'right');
 
     buffer.dispose();
     resolveLoad({ staff: { '2026-08-09': [{ id: 'obsolete' }] } });
@@ -29,7 +29,7 @@ describe('DataBuffer', () => {
 
   it('uses a six-week day runway on initialization', async () => {
     const load = vi.fn().mockResolvedValue({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({ load, onData: vi.fn() });
 
     await buffer.initialize(periods);
@@ -47,11 +47,11 @@ describe('DataBuffer', () => {
     const buffer = new DataBuffer({ load, onData, maxRetainedPeriods: 86 });
 
     try {
-      await expect(buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3)))
+      await expect(buffer.initialize(buildInitialDayPeriods('2026-08-09', 3)))
         .rejects.toThrow('maxRetainedPeriods must be at least 87');
       expect(load).not.toHaveBeenCalled();
 
-      await buffer[recovery](buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+      await buffer[recovery](buildInitialDayPeriods('2026-08-09', 1));
 
       expect(load).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
         start: expect.objectContaining({ key: '2026-06-28' }),
@@ -66,12 +66,12 @@ describe('DataBuffer', () => {
 
   it('replenishes three weeks when the right runway reaches three weeks', async () => {
     const load = vi.fn().mockResolvedValue({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({ load, onData: vi.fn() });
     await buffer.initialize(periods);
     load.mockClear();
 
-    const built = buildInitialDayPeriods(new Date(2026, 7, 31), 1);
+    const built = buildInitialDayPeriods('2026-08-31', 1);
     await buffer.periodsBuilt(built, 'right');
 
     expect(load).toHaveBeenCalledWith(expect.objectContaining({
@@ -83,12 +83,12 @@ describe('DataBuffer', () => {
 
   it('serializes and deduplicates directional replenishment ranges', async () => {
     const load = vi.fn().mockResolvedValue({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({ load, onData: vi.fn() });
     await buffer.initialize(periods);
     load.mockClear();
 
-    const built = buildInitialDayPeriods(new Date(2026, 7, 31), 1);
+    const built = buildInitialDayPeriods('2026-08-31', 1);
     await Promise.all([buffer.periodsBuilt(built, 'right'), buffer.periodsBuilt(built, 'right')]);
 
     expect(load).toHaveBeenCalledTimes(1);
@@ -102,8 +102,8 @@ describe('DataBuffer', () => {
         : Promise.resolve({})
     ));
     const buffer = new DataBuffer({ load, onData: vi.fn(), targetSize: 2, threshold: 0 });
-    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-    const replenishing = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 12), 1), 'right');
+    const initializing = buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
+    const replenishing = buffer.periodsBuilt(buildInitialDayPeriods('2026-08-12', 1), 'right');
 
     resolveInitial({});
     await Promise.all([initializing, replenishing]);
@@ -121,8 +121,8 @@ describe('DataBuffer', () => {
       .mockImplementationOnce(() => new Promise((_, reject) => { rejectInitial = reject; }))
       .mockResolvedValue({});
     const buffer = new DataBuffer({ load, onData: vi.fn(), targetSize: 2, threshold: 0 });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 12), 1);
-    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const periods = buildInitialDayPeriods('2026-08-12', 1);
+    const initializing = buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
     const replenishing = buffer.periodsBuilt(periods, 'right');
     const results = Promise.allSettled([initializing, replenishing]);
 
@@ -151,10 +151,10 @@ describe('DataBuffer', () => {
       load, onData, getItemId: item => item.id, getItemRange: item => item,
       targetSize: 2, threshold: 0, replenishSize: 2,
     });
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    await buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
     const untouchedSnapshot = onData.mock.lastCall?.[0].untouched;
 
-    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 11), 1), 'right');
+    await buffer.periodsBuilt(buildInitialDayPeriods('2026-08-11', 1), 'right');
 
     expect(onData).toHaveBeenLastCalledWith({
       staff: { '2026-08-08': [disjoint] }, other: { '2026-08-12': [updated] }, untouched,
@@ -176,7 +176,7 @@ describe('DataBuffer', () => {
       load, onData, getItemId: item => item.id, getItemRange: item => item,
       targetSize: 2,
     });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 1);
+    const periods = buildInitialDayPeriods('2026-08-09', 1);
     await buffer.initialize(periods);
     const resetting = buffer.reset(periods);
     await vi.waitFor(() => expect(resolveReset).toBeTypeOf('function'));
@@ -195,7 +195,7 @@ describe('DataBuffer', () => {
       .mockResolvedValueOnce({ staff: { '2026-08-09': [{ id: 'deleted' }] } })
       .mockResolvedValueOnce({});
     const buffer = new DataBuffer({ load, onData, getItemId: (item: { id: string }) => item.id });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 1);
+    const periods = buildInitialDayPeriods('2026-08-09', 1);
     await buffer.initialize(periods);
 
     await buffer.reset(periods);
@@ -205,12 +205,12 @@ describe('DataBuffer', () => {
 
   it('recenters its runway when virtualization jumps beyond the loaded range', async () => {
     const load = vi.fn().mockResolvedValue({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({ load, onData: vi.fn() });
     await buffer.initialize(periods);
     load.mockClear();
 
-    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2027, 7, 9), 1), 'right');
+    await buffer.periodsBuilt(buildInitialDayPeriods('2027-08-09', 1), 'right');
 
     expect(load).toHaveBeenCalledWith(expect.objectContaining({
       start: expect.objectContaining({ key: '2027-06-28' }),
@@ -223,7 +223,7 @@ describe('DataBuffer', () => {
     const load = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({});
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({ load, onData: vi.fn() });
 
     await expect(buffer.initialize(periods)).rejects.toThrow('offline');
@@ -240,9 +240,9 @@ describe('DataBuffer', () => {
       onData,
       initialData: { staff: { '2026-08-09': [{ id: 'old-entry' }] } },
     });
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3));
+    await buffer.initialize(buildInitialDayPeriods('2026-08-09', 3));
 
-    await buffer.reset(buildInitialDayPeriods(new Date(2027, 0, 10), 3));
+    await buffer.reset(buildInitialDayPeriods('2027-01-10', 3));
 
     expect(load).toHaveBeenCalledTimes(2);
     expect(load).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -267,10 +267,10 @@ describe('DataBuffer', () => {
     });
     const onData = vi.fn();
     const buffer = new DataBuffer<Item>({ load, onData, targetSize: 2 });
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 5, 9), 1));
+    await buffer.initialize(buildInitialDayPeriods('2026-06-09', 1));
 
-    const earlier = buffer.reset(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-    const latest = buffer.reset(buildInitialDayPeriods(new Date(2027, 0, 10), 1));
+    const earlier = buffer.reset(buildInitialDayPeriods('2026-08-09', 1));
+    const latest = buffer.reset(buildInitialDayPeriods('2027-01-10', 1));
     const settled = Promise.allSettled([earlier, latest]);
 
     try {
@@ -303,7 +303,7 @@ describe('DataBuffer', () => {
       }
       return { row: periods };
     });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 9), 3);
+    const periods = buildInitialDayPeriods('2026-08-09', 3);
     const buffer = new DataBuffer({
       load,
       onData: data => snapshots.push(data),
@@ -311,7 +311,7 @@ describe('DataBuffer', () => {
     });
     await buffer.initialize(periods);
 
-    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right');
+    await buffer.periodsBuilt(buildInitialDayPeriods('2026-08-31', 1), 'right');
 
     const retained = snapshots[snapshots.length - 1]?.row ?? {};
     expect(Object.keys(retained)).toHaveLength(100);
@@ -331,7 +331,7 @@ describe('DataBuffer', () => {
       initialData: { staff: { '2026-08-09': [{ id: 'entry-1', hours: 1 }] } },
       getItemId: item => item.id,
     });
-    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3));
+    const initializing = buffer.initialize(buildInitialDayPeriods('2026-08-09', 3));
     buffer.upsertItem('staff', '2026-08-09', { id: 'entry-1', hours: 2 });
     resolveLoad({ staff: { '2026-08-09': [{ id: 'entry-1', hours: 1 }] } });
     await initializing;
@@ -341,7 +341,7 @@ describe('DataBuffer', () => {
     }));
 
     load.mockResolvedValue({ staff: { '2026-08-09': [{ id: 'entry-1', hours: 3 }] } });
-    await buffer.reset(buildInitialDayPeriods(new Date(2026, 7, 9), 3));
+    await buffer.reset(buildInitialDayPeriods('2026-08-09', 3));
     expect(onData).toHaveBeenLastCalledWith(expect.objectContaining({
       staff: expect.objectContaining({ '2026-08-09': [{ id: 'entry-1', hours: 3 }] }),
     }));
@@ -365,8 +365,8 @@ describe('DataBuffer', () => {
       maxRetainedPeriods: 5,
     });
 
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
-    await buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 11), 1), 'right');
+    await buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
+    await buffer.periodsBuilt(buildInitialDayPeriods('2026-08-11', 1), 'right');
 
     expect(snapshots[snapshots.length - 1]).toEqual({ staff: { '2026-08-09': [task] } });
   });
@@ -385,7 +385,7 @@ describe('DataBuffer', () => {
       targetSize: 2,
       maxRetainedPeriods: 5,
     });
-    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const initializing = buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
     buffer.upsertItem('staff', stale.startDate, { ...stale, version: 2 });
     resolveLoad({ staff: { '2026-08-07': [stale] } });
     await initializing;
@@ -410,7 +410,7 @@ describe('DataBuffer', () => {
       targetSize: 2,
       maxRetainedPeriods: 5,
     });
-    const initializing = buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    const initializing = buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
     buffer.removeItem(task.id);
     resolveLoad({ staff: { '2026-08-07': [task] } });
     await initializing;
@@ -434,12 +434,12 @@ describe('DataBuffer', () => {
       onData,
       getItemId: (item: { id: string }) => item.id,
     });
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 3));
+    await buffer.initialize(buildInitialDayPeriods('2026-08-09', 3));
 
-    const leftLoad = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 6, 18), 1), 'left');
+    const leftLoad = buffer.periodsBuilt(buildInitialDayPeriods('2026-07-18', 1), 'left');
     await vi.waitFor(() => expect(resolveLeft).toBeTypeOf('function'));
     buffer.upsertItem('staff', '2026-06-20', { id: 'entry-1', hours: 2 });
-    const rightLoad = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 31), 1), 'right');
+    const rightLoad = buffer.periodsBuilt(buildInitialDayPeriods('2026-08-31', 1), 'right');
     await vi.waitFor(() => expect(resolveRight).toBeTypeOf('function'));
     resolveRight({});
     await rightLoad;
@@ -466,11 +466,11 @@ describe('DataBuffer', () => {
       load, onData, getItemId: item => item.id, getItemRange: item => item,
       targetSize: 2, threshold: 0, replenishSize: 2,
     });
-    await buffer.initialize(buildInitialDayPeriods(new Date(2026, 7, 9), 1));
+    await buffer.initialize(buildInitialDayPeriods('2026-08-09', 1));
     const pending: Promise<void>[] = [];
 
     try {
-      const left = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 7), 1), 'left');
+      const left = buffer.periodsBuilt(buildInitialDayPeriods('2026-08-07', 1), 'left');
       pending.push(left);
       await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.objectContaining({
         start: expect.objectContaining({ key: '2026-08-05' }),
@@ -479,7 +479,7 @@ describe('DataBuffer', () => {
       }), expect.any(AbortSignal)));
 
       buffer.removeItem(task.id);
-      const right = buffer.periodsBuilt(buildInitialDayPeriods(new Date(2026, 7, 11), 1), 'right');
+      const right = buffer.periodsBuilt(buildInitialDayPeriods('2026-08-11', 1), 'right');
       pending.push(right);
       await vi.waitFor(() => expect(load).toHaveBeenCalledWith(expect.objectContaining({
         start: expect.objectContaining({ key: '2026-08-12' }),

@@ -87,7 +87,7 @@ export function Interactive({ withItemShell = false }: { withItemShell?: boolean
         rows={rows}
         items={items}
         getItemRange={item => ({ start: item.start, end: item.end })}
-        initialDate={new Date(2026, 7, 8)}
+        initialDate={'2026-08-08'}
         ariaLabel="Browser-tested row calendar"
         rowHeader="Staff member"
         getRowId={row => row.id}
@@ -145,7 +145,7 @@ export function RangeLaneSizing() {
       rows={[firstRow]}
       items={{ [firstRow.id]: items }}
       getItemRange={item => ({ start: item.start, end: item.end })}
-      initialDate={new Date(2026, 7, 9)}
+      initialDate={'2026-08-09'}
       ariaLabel="Range lane sizing calendar"
       getRowId={row => row.id}
       getItemId={item => item.id}
@@ -175,7 +175,7 @@ export function ItemDensity() {
       rows={[firstRow]}
       items={{ [firstRow.id]: items }}
       getItemRange={item => ({ start: item.start, end: item.end })}
-      initialDate={new Date(2026, 7, 9)}
+      initialDate={'2026-08-09'}
       ariaLabel="Item density calendar"
       getRowId={row => row.id}
       getItemId={item => item.id}
@@ -197,7 +197,7 @@ export function PersistedPosition() {
       rows={rows.slice(0, 3)}
       items={{}}
       getItemRange={item => ({ start: item.start, end: item.end })}
-      initialDate={new Date(2026, 7, 8)}
+      initialDate={'2026-08-08'}
       positionStorageKey="timeline-calendar:playwright-position"
       ariaLabel="Persisted-position row calendar"
       rowHeader="Staff member"

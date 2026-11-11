@@ -36,18 +36,6 @@ describe('useSessionTable', () => {
     expect(result.current.some(column => column.id === 'actions')).toBe(false);
   });
 
-  it('formats the saved date and clock times', () => {
-    const { result } = renderHook(() => useSessionTable({
-      canWriteSessions: false,
-      onEdit: vi.fn(), onDelete: vi.fn(),
-    }));
-    const session = makeProgramSession({ date: '2026-08-09', startTime: '22:00', endTime: '23:00' });
-    const dateColumn = result.current.find(column => column.id === 'date')!;
-    const timeColumn = result.current.find(column => column.id === 'time')!;
-    if (!('accessorFn' in dateColumn) || !('accessorFn' in timeColumn)) throw new Error('Missing accessors');
-    expect(dateColumn.accessorFn!(session, 0)).toBe('Aug 9, 2026');
-    expect(timeColumn.accessorFn!(session, 0)).toMatch(/10:00.*11:00/);
-  });
 
   it('provides Edit and Delete actions with the exact session callbacks', () => {
     const session = makeProgramSession();

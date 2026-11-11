@@ -1,4 +1,5 @@
-import { isDateRange, localDateFromKey, type DateRange } from '../../../../utils/dateRange';
+import { Temporal } from 'temporal-polyfill';
+import { isDateRange, type DateRange } from '../../../../utils/dateRange';
 import { buildDayPeriod, addDays } from '../../utils/periods';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -8,7 +9,7 @@ import { saveCalendarPosition } from '../../utils/calendarPosition';
 interface UsePeriodVirtualizationOptions {
   // Period construction
   periodDefinition: PeriodDefinition;
-  initialDate: Date;
+  initialDate: string;
   periodCount: number;
   dateRange?: DateRange;
 
@@ -88,7 +89,7 @@ export function usePeriodVirtualization({
     allPeriods.length - 1,
     Math.max(0, Math.floor(visibleCenter / periodWidth)),
   );
-  const visibleYear = allPeriods[visiblePeriodIndex].start.getFullYear();
+  const visibleYear = Number(allPeriods[visiblePeriodIndex].start.slice(0, 4));
 
   const firstVirtualIndex = virtualItems[0]?.index ?? initialIndex;
   const lastVirtualIndex = virtualItems[virtualItems.length - 1]?.index ?? initialIndex;
@@ -106,9 +107,9 @@ export function usePeriodVirtualization({
   const previousRange = useRef<{ first: number; last: number } | null>(null);
 
   /** Scrolls to a known date and reports the replacement buffered window. */
-  const goToDate = useCallback((date: Date) => {
+  const goToDate = useCallback((date: string) => {
     const boundedDate = dateRange
-      ? new Date(Math.max(allPeriods[0].start.getTime(), Math.min(date.getTime(), allPeriods[allPeriods.length - 1].start.getTime())))
+      ? [allPeriods[0].start, date, allPeriods[allPeriods.length - 1].start].sort()[1]
       : date;
     const targetIndex = allPeriods.findIndex(period => boundedDate >= period.start && boundedDate < period.end);
 
@@ -220,17 +221,15 @@ export function normalizePeriodVirtualizationOptions(periodCount: number, oversc
  */
 function buildCalendarPeriods(
   periodDefinition: PeriodDefinition,
-  initialDate: Date,
+  initialDate: string,
   periodCount: number,
   dateRange?: DateRange,
 ): CalendarPeriod[] {
   if (!dateRange) return periodDefinition.buildInitial(initialDate, periodCount);
   if (!isDateRange(dateRange)) throw new Error('Calendar date range must contain valid ordered dates');
 
-  const first = localDateFromKey(dateRange.start);
-  const startTime = Date.parse(`${dateRange.start}T00:00:00Z`);
-  const endTime = Date.parse(`${dateRange.end}T00:00:00Z`);
-  const dayCount = (endTime - startTime) / 86_400_000 + 1;
+  const first = dateRange.start;
+  const dayCount = Temporal.PlainDate.from(first).until(dateRange.end).days + 1;
 
   return Array.from({ length: dayCount }, (_, index) => buildDayPeriod(addDays(first, index)));
 }

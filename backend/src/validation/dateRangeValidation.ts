@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const isoDateSchema = z.iso.date();
+
 /**
  * Accepts real Gregorian dates in years 0001–9999 using the canonical date-only shape.
  * @param value - Calendar date to validate without timezone interpretation.
@@ -8,8 +10,7 @@ import { z } from 'zod';
 export function isCalendarDate(value: string) {
   if (!/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  return isoDateSchema.safeParse(value).success;
 }
 
 /**

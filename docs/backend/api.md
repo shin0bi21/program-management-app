@@ -57,7 +57,7 @@ derives it from the session. Tasks use overlap of their inclusive start/due inte
 Date filters apply before pagination, paired bounds are required, and multi-year
 ranges are supported. Hours collection `cycleIds` match selected membership;
 an empty selection is unrestricted. Dashboard cards query independently:
-`/hours/pay-period` accepts `staffId` and an optional `date` (today in Toronto by
+`/hours/pay-period` accepts `staffId` and an optional `date` (the database's current date by
 default), using the most recent cycle start on or before that date to anchor the
 14-day pay period. It totals all entries within that period regardless of cycle
 membership. `/hours/cycle-summary` accepts `staffId` and `cycleId` and returns the
@@ -67,7 +67,7 @@ selection does not restrict or move the pay-period query.
 ## Youth Profiles and Lead Signup
 
 [Shared DOB validation](../../backend/src/validation/dateOfBirth.ts) requires a
-real date before today's Toronto date without an intake age restriction. Public
+real date before the server's local current date without an intake age restriction. Public
 and internal Lead intake require DOB. The Youth UI and API temporarily
 allow unknown DOB: omission preserves an existing value, explicit null clears
 it, and creation without a value stores null. The Youth form submits a blank DOB
@@ -142,14 +142,15 @@ session scheduling.
 
 A program's `enrollmentRequired` flag controls enrollment versus open attendance;
 it does not grant staff program access. Sessions use program scheduling defaults
-and the program timezone (`America/Toronto`). Missing dates resolve the next
+and the current date/time. Missing dates resolve the next
 default weekday, including today only before the default start time. Supplied
 dates remain unchanged. Sessions store `date` as `DATE` and `start_time` /
 `end_time` as `TIME WITHOUT TIME ZONE`. Requests and rows use `date`
 (`YYYY-MM-DD`), `startTime`, and `endTime` (`HH:mm` clock strings). End time must follow start time on the same
-date; overnight sessions are unsupported. Skipped or repeated daylight-saving
-times are rejected. Eastern time is used only for current-time rules; stored
-clock values are not converted for display.
+date; overnight sessions are unsupported. Supplied dates and clock values are
+authoritative, including clock values on daylight-saving transition dates;
+saves do not reconstruct timestamps or reject DST gaps/folds. The current clock is
+used only for today/now rules; stored values are not converted for display.
 
 Program-based creation resolves exactly one allowed cycle from the local date
 inside the assignment-locking transaction; missing or overlapping matches conflict.
@@ -160,6 +161,12 @@ combination. See
 Session types are fixed enum values: `Regular`, `Guest Speaker`, and `Field Trip`.
 Session requests and rows use `sessionType`; list filters use `sessionTypes`.
 
+Session status and upcoming/completed membership depend on the saved date, not
+clock times: dates before today's date are completed; today and later
+are upcoming. Cancelled sessions retain their cancelled state. Attendance
+completion, public upcoming sessions, and next-session summaries use this same
+date boundary.
+
 Session queries combine cycle, program, type, status, search, and date
 filters while preserving program access. Paired date bounds are inclusive;
 multi-year ranges and real calendar dates in years 0001–9999 are supported.
@@ -168,10 +175,11 @@ See the [session list service](../../backend/src/services/programming/sessions/s
 #### Move a Future Session Date
 
 The focused date command changes only the saved date and resolved cycle,
-preserving the program and both clock times. Both the source and destination must be future,
+preserving the program and both clock times. Both the source and destination dates must be strictly after today's date,
 the source must not be cancelled, and exactly one assigned cycle must contain the
 complete moved session. Recorded attendance, notes, attachments, or session-linked
-hours prevent moving to another cycle. Ambiguous DST times conflict; unrelated
+hours prevent moving to another cycle. Move eligibility compares dates directly,
+regardless of start/end clock times or DST transitions; unrelated
 session fields remain unchanged. Its authoritative response supplies the new
 placement for cache reconciliation. See the strict request in
 [programmingSchemas](../../backend/src/validation/programmingSchemas.ts).
@@ -180,7 +188,7 @@ placement for cache reconciliation. See the strict request in
 
 Roster lookup returns all eligible candidates independently of Youth table
 pagination, plus existing enrollments even after aging out so they can be
-withdrawn. Ages use today's Toronto date and inclusive program bounds; unknown
+withdrawn. Ages use the database's current date and inclusive program bounds; unknown
 DOB is eligible only without age bounds. Open-attendance programs do not use this
 roster. Enrollment writes recheck eligibility inside the transaction and reject
 an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts) and

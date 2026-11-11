@@ -29,7 +29,7 @@ export function buildSessionFilters(
   }
   if (filterValues.start && filterValues.end) {
     filters.push(query`
-      session.date::date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date
+      session.date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date
     `);
   }
   if (filterValues.programIds?.length) {
@@ -43,9 +43,9 @@ export function buildSessionFilters(
   }
   if (filterValues.statuses?.length === 1) {
     if (filterValues.statuses[0] === 'completed') {
-      filters.push(query`(session.date::date + session.end_time::time) < (NOW() AT TIME ZONE 'America/Toronto')`);
+      filters.push(query`session.date < CURRENT_DATE`);
     } else {
-      filters.push(query`(session.date::date + session.end_time::time) >= (NOW() AT TIME ZONE 'America/Toronto')`);
+      filters.push(query`session.date >= CURRENT_DATE`);
     }
   }
   if (filterValues.search) {

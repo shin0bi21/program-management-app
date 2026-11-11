@@ -4,6 +4,7 @@ const shortDateFormatter = new TemporalIntl.DateTimeFormat('en-CA', {
   year: 'numeric',
   month: 'short',
   day: 'numeric',
+  timeZone: 'America/Toronto',
 });
 
 /**
@@ -17,7 +18,7 @@ export function formatHours(hours: number): string {
 }
 
 /**
- * Formats business dates directly; event timestamps retain browser-local date display.
+ * Formats business dates directly and event timestamps on the program's Eastern date.
  * @param value - YYYY-MM-DD business date, timestamp, epoch milliseconds, or Date.
  * @example formatShortDate('2026-07-01') // 'Jul 1, 2026'
  */
@@ -38,24 +39,7 @@ export function formatShortDateRange(start: string, end: string): string {
   return shortDateFormatter.formatRange(Temporal.PlainDate.from(start), Temporal.PlainDate.from(end)).replace('–', ' – ');
 }
 
-/**
- * Finds the calendar date of an instant in the requested timezone.
- * @param value - Event instant; defaults to now.
- * @param timeZone - IANA timezone used to determine today, defaulting to Eastern.
- * @example getDateKeyInTimeZone(new Date('2026-08-07T02:30:00Z')) // '2026-08-06'
- */
-export function getDateKeyInTimeZone(
-  value: Date = new Date(),
-  timeZone = 'America/Toronto',
-): string {
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(value);
-  const part = (type: Intl.DateTimeFormatPartTypes) => (
-    parts.find(item => item.type === type)?.value ?? ''
-  );
-  return `${part('year')}-${part('month')}-${part('day')}`;
+/** Returns today's local calendar date. @example getDate() // '2026-11-10' */
+export function getDate(): string {
+  return Temporal.Now.plainDateISO().toString();
 }

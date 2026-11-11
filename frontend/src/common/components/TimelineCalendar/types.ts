@@ -6,12 +6,12 @@ import type { StartPointerSession } from './hooks/usePointerSession/usePointerSe
 /** Chronologically sortable key shared by periods and item ranges, e.g. '2026-08-19'. */
 export type PeriodKey = string;
 
-/** One column's half-open time interval: start is included, end is excluded. */
+/** One column's half-open date interval: start is included, end is excluded. */
 export interface CalendarPeriod {
   key: PeriodKey;
-  start: Date;
-  /** Exclusive timestamp boundary; item range keys below instead have inclusive ends. */
-  end: Date;
+  start: string;
+  /** Exclusive date boundary; item range keys below instead have inclusive ends. */
+  end: string;
 }
 
 /** Ordered inclusive period keys: a one-period item has identical start and end keys. */
@@ -145,8 +145,8 @@ export interface ItemEnvironment {
  * count is a number of columns; start/end dates locate each column for navigation and hit testing.
  */
 export interface PeriodDefinition {
-  navigate?: (anchor: Date, direction: 'previous' | 'next') => Date;
-  buildInitial: (anchor: Date, count: number) => CalendarPeriod[];
+  navigate?: (anchor: string, direction: 'previous' | 'next') => string;
+  buildInitial: (anchor: string, count: number) => CalendarPeriod[];
   formatLabel: (period: CalendarPeriod) => string;
 }
 
@@ -206,7 +206,7 @@ export interface TimelineCalendarProps<TRow, TItemData> {
 
   // Periods and range loading
   periodDefinition?: PeriodDefinition;
-  initialDate?: Date;
+  initialDate?: string;
   positionStorageKey?: string;
   periodCount?: number;
   dateRange?: DateRange;
@@ -218,7 +218,7 @@ export interface TimelineCalendarProps<TRow, TItemData> {
   // Toolbar navigation
   showToolbar?: boolean;
   showTodayButton?: boolean;
-  navigateDate?: (anchor: Date, direction: 'previous' | 'next') => Date;
+  navigateDate?: (anchor: string, direction: 'previous' | 'next') => string;
 
   // Rows and selection
   rows: readonly TRow[];

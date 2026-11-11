@@ -6,7 +6,7 @@ import { positionItems } from './itemPosition';
 
 const periods = Array.from(
   { length: 5 },
-  (_, index) => buildDayPeriod(addDays(new Date(2026, 7, 9), index)),
+  (_, index) => buildDayPeriod(addDays('2026-08-09', index)),
 );
 
 describe('positionItems', () => {

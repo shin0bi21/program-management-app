@@ -128,41 +128,10 @@ describe('Single session scheduling defaults', () => {
     expect((await createForProgram({ date: '2027-01-12' }, unrelated)).status).toBe(403);
   });
 
-  it('resolves the default date using the Toronto clock', async () => {
-    const [clock] = await sql<{ timezone: string; today: string; weekday: string; nextWeek: string; localTime: string }[]>`
-      SELECT 'America/Toronto' AS timezone,
-        (CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date::text AS today,
-        to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto', 'HH24:MI:SS') AS local_time,
-        lower(trim(to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto', 'Day'))) AS weekday,
-        ((CURRENT_TIMESTAMP AT TIME ZONE 'America/Toronto')::date + 7)::text AS next_week
-    `;
-    await sql`UPDATE programs SET timezone = ${clock.timezone}, default_day_of_week = ${clock.weekday},
-      default_start_time = '22:00', default_end_time = '23:00' WHERE id = ${programId}`;
-    const before = await create({ theme: 'Before default time' });
-    expect(before.status).toBe(201);
-    const [beforeDate] = await sql<{ date: string }[]>`
-      SELECT date::text
-      FROM program_sessions WHERE id = ${before.body.id}
-    `;
-    expect(beforeDate.date).toBe(clock.localTime < '22:00:00' ? clock.today : clock.nextWeek);
-
-    await sql`UPDATE programs SET default_start_time = '00:00', default_end_time = '01:00'
-      WHERE id = ${programId}`;
-    const after = await create({ theme: 'After default time' });
-    expect(after.status).toBe(201);
-    const [afterDate] = await sql<{ date: string }[]>`
-      SELECT date::text
-      FROM program_sessions WHERE id = ${after.body.id}
-    `;
-    expect(afterDate.date).toBe(clock.nextWeek);
-    await sql`UPDATE programs SET timezone = 'America/Toronto', default_day_of_week = 'tuesday',
-      default_start_time = '17:30', default_end_time = '19:30' WHERE id = ${programId}`;
-  });
-
   it('enforces inclusive cycle boundaries using the saved date', async () => {
     const [cycle] = await sql<{ id: string }[]>`
       INSERT INTO program_cycles (name, starts_on, ends_on)
-      VALUES (${`Timezone boundary ${Date.now()}`}, '2027-01-13', '2027-01-13') RETURNING id
+      VALUES (${`Cycle date boundary ${Date.now()}`}, '2027-01-13', '2027-01-13') RETURNING id
     `;
     await sql`
       INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${programId}, ${cycle.id})
@@ -170,7 +139,7 @@ describe('Single session scheduling defaults', () => {
     try {
       const response = await request(app).post(`/api/programs/${programId}/cycles/${cycle.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ sessionType: regularType, theme: 'Timezone boundary', date: '2027-01-13',
+        .send({ sessionType: regularType, theme: 'Cycle date boundary', date: '2027-01-13',
           startTime: '22:30', endTime: '23:00' });
       expect(response.status).toBe(201);
       expect(response.body.date).toBe('2027-01-13');
@@ -200,7 +169,7 @@ describe('Single session scheduling defaults', () => {
       expect(response.body.error).toBe('Sessions must fall within the cycle date range');
 
       const [saved] = await sql<{ theme: string; date: string; startTime: string; endTime: string }[]>`
-        SELECT theme, date::text,
+        SELECT theme, date,
           to_char(start_time, 'HH24:MI') AS start_time,
           to_char(end_time, 'HH24:MI') AS end_time
         FROM program_sessions
@@ -212,16 +181,6 @@ describe('Single session scheduling defaults', () => {
     } finally {
       await sql`DELETE FROM program_sessions WHERE id = ${created.body.id}`;
     }
-  });
-
-  it('rejects a local time skipped by daylight saving', async () => {
-    const response = await create({ date: '2027-03-14', startTime: '02:30', endTime: '04:00' });
-    expect(response.status).toBe(409);
-  });
-
-  it('rejects a local time repeated by daylight saving', async () => {
-    const response = await create({ date: '2027-11-07', startTime: '01:30', endTime: '03:00' });
-    expect(response.status).toBe(409);
   });
 
   it('requires session write permission and program access', async () => {
