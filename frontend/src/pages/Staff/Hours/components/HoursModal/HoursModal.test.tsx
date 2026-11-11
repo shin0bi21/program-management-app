@@ -88,8 +88,6 @@ describe('HoursModal', () => {
         ? [{
           id: 'session-future',
           label: 'Leadership',
-          programId: 'program-1',
-          program: 'Soft Skills',
           date,
         }]
         : []

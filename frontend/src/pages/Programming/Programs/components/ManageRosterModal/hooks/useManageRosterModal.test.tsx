@@ -17,7 +17,6 @@ const assignment: ProgramCycleAssignment = {
   programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
   cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01',
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
-  nextSessionDate: null, nextSessionId: null,
   uniqueAttendeeCount: 0,
 };
 /**

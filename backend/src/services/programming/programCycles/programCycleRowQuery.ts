@@ -13,8 +13,6 @@ export interface ProgramCycleRow {
   startsOn: string;
   endsOn: string;
   enrolledCount: number;
-  nextSessionDate: string | null;
-  nextSessionId: string | null;
   uniqueAttendeeCount: number;
   state: 'upcoming' | 'active' | 'completed';
 }
@@ -46,22 +44,6 @@ export const programCycleRowColumns = sql`
     WHERE ce.program_id = pc.program_id AND ce.cycle_id = pc.cycle_id AND ce.enrolled_on <= CURRENT_DATE
       AND (ce.withdrawn_on IS NULL OR ce.withdrawn_on > CURRENT_DATE)
   ) AS enrolled_count,
-  (
-    SELECT MIN(cs.date)
-    FROM program_sessions cs
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
-      AND cs.date >= CURRENT_DATE
-      AND cs.cancelled_at IS NULL
-  ) AS next_session_date,
-  (
-    SELECT cs.id
-    FROM program_sessions cs
-    WHERE cs.program_id = pc.program_id AND cs.cycle_id = pc.cycle_id
-      AND cs.date >= CURRENT_DATE
-      AND cs.cancelled_at IS NULL
-    ORDER BY cs.date, cs.start_time
-    LIMIT 1
-  ) AS next_session_id,
   (
     SELECT COUNT(DISTINCT ar.youth_id)::int
     FROM program_sessions cs

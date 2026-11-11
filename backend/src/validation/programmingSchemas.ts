@@ -79,7 +79,6 @@ export const attendanceReportSchema = z.object({
         theme: z.string(),
         date: dateSchema,
         startTime: timeSchema,
-        endTime: timeSchema,
         completed: z.boolean(),
         cancelledAt: z.string().datetime({ offset: true }).nullable(),
         status: z.enum(['present', 'late', 'absent', 'excused']).nullable(),

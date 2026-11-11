@@ -11,7 +11,6 @@ interface AttendanceSessionRow {
   theme: string;
   date: string;
   startTime: string;
-  endTime: string;
   completed: boolean;
   cancelledAt: string | null;
   sessionType: string;
@@ -93,7 +92,6 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
       session.theme,
       session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
-      to_char(session.end_time, 'HH24:MI') AS end_time,
       session.date < CURRENT_DATE AS completed,
       session.cancelled_at,
       session.session_type,
