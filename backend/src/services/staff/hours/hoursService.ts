@@ -64,15 +64,11 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
-    id: string; label: string; programId: string; program: string; date: string;
+    id: string; label: string; date: string;
   }>>`
     SELECT
       session.id,
       session.theme AS label,
-
-      program.id AS program_id,
-      program.name AS program,
-
       session.date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id

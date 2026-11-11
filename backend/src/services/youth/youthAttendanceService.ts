@@ -21,20 +21,6 @@ interface YouthProgramCycleContext {
   enrollmentRequired: boolean;
 }
 
-interface YouthAttendanceSession {
-  id: string;
-  theme: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  completed: boolean;
-  cancelledAt: Date | null;
-  sessionType: string;
-
-  status: 'present' | 'absent' | 'late' | 'excused' | null;
-  notes: string | null;
-}
-
 /**
  * Loads complete attendance for the youth's active enrolled program cycle.
  * @param youthId - Selected youth; a missing profile produces a not-found error.
@@ -261,7 +247,7 @@ async function getYouthProgramCycleContext(
 }
 
 /**
- * Loads eligible sessions and saved attendance for a youth.
+ * Loads and optionally locks IDs of sessions eligible for a youth.
  * @param youthId - Youth whose attendance is needed.
  * @param programId - Program to read.
  * @param cycleId - Cycle to read.
@@ -276,19 +262,8 @@ function getYouthAttendanceSessions(
   lock = false,
   query = sql,
 ) {
-  return query<YouthAttendanceSession[]>`
-    SELECT
-      session.id,
-      session.theme,
-      session.date,
-      to_char(session.start_time, 'HH24:MI') AS start_time,
-      to_char(session.end_time, 'HH24:MI') AS end_time,
-      session.date < CURRENT_DATE AS completed,
-      session.cancelled_at,
-      session.session_type,
-
-      attendance.status,
-      attendance.notes
+  return query<{ id: string }[]>`
+    SELECT session.id
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
     LEFT JOIN attendance_records attendance

@@ -127,8 +127,6 @@ describe('useHoursModal', () => {
     vi.mocked(getHoursSessions).mockResolvedValue([{
       id: 'session-1',
       label: 'Leadership',
-      programId: 'program-1',
-      program: 'Soft Skills',
       date: '2026-08-20',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);

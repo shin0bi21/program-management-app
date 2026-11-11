@@ -27,7 +27,7 @@ export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
         programId: program.id, program: program.name,
         enrollmentRequired: true, minAge: null, maxAge: null,
         cycleId: 'cycle-1', cycle: 'Current Cycle', startsOn: '2020-01-01', endsOn: '2099-12-31', state: 'active',
-        enrolledCount: 12, nextSessionDate: null, nextSessionId: null,
+        enrolledCount: 12,
         uniqueAttendeeCount: 10,
       }]);
       queryClient.setQueryData<AttendanceData>(['programs', 'cycle-attendance', program.id, 'cycle-1'], {

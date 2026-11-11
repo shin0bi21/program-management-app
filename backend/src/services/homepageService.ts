@@ -39,8 +39,6 @@ interface HomepageProgramRow {
   sessionId: string | null;
   sessionTheme: string | null;
   sessionDate: string | null;
-  sessionStartTime: string | null;
-  sessionEndTime: string | null;
 }
 
 export type PublicLeadInput = {
@@ -338,8 +336,7 @@ async function readHomepagePrograms() {
         session.id AS session_id,
         session.theme AS session_theme,
         session.date AS session_date,
-        to_char(session.start_time, 'HH24:MI') AS session_start_time,
-        to_char(session.end_time, 'HH24:MI') AS session_end_time,
+        session.start_time AS session_start_time,
         ROW_NUMBER() OVER (
           PARTITION BY session.program_id
           ORDER BY session.date, session.start_time, session.id
@@ -358,9 +355,7 @@ async function readHomepagePrograms() {
 
       ranked.session_id,
       ranked.session_theme,
-      ranked.session_date,
-      ranked.session_start_time,
-      ranked.session_end_time
+      ranked.session_date
     FROM programs program
     LEFT JOIN ranked_sessions ranked
       ON ranked.program_id = program.id
@@ -381,7 +376,7 @@ async function readHomepagePrograms() {
     enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
-    sessions: Array<{ id: string; theme: string; date: string; startTime: string; endTime: string }>;
+    sessions: Array<{ id: string; theme: string; date: string }>;
   }>();
 
   for (const row of rows) {
@@ -400,7 +395,7 @@ async function readHomepagePrograms() {
     }
 
     if (row.sessionId === null) continue;
-    if (row.sessionTheme === null || row.sessionDate === null || row.sessionStartTime === null || row.sessionEndTime === null) {
+    if (row.sessionTheme === null || row.sessionDate === null) {
       throw new Error(`Homepage session ${row.sessionId} is missing required data`);
     }
 
@@ -408,8 +403,6 @@ async function readHomepagePrograms() {
       id: row.sessionId,
       theme: row.sessionTheme,
       date: row.sessionDate,
-      startTime: row.sessionStartTime,
-      endTime: row.sessionEndTime,
     });
   }
 

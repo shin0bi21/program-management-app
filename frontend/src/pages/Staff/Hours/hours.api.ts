@@ -25,8 +25,6 @@ export type HoursCalendarData = HoursItem[];
 export interface HoursSession {
   id: string;
   label: string;
-  programId: string;
-  program: string;
   date: string;
 }
 

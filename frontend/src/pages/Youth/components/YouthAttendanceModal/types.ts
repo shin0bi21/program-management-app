@@ -7,7 +7,6 @@ export interface YouthAttendanceSession {
   theme: string;
   date: string;
   startTime: string;
-  endTime: string;
   completed: boolean;
   cancelledAt: string | null;
   status: AttendanceStatus | null;

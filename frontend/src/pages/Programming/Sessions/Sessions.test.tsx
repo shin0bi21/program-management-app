@@ -153,8 +153,6 @@ describe('Sessions', () => {
         endsOn: '2100-12-31',
         state: 'active',
         enrolledCount: 1,
-        nextSessionDate: null,
-        nextSessionId: null,
         uniqueAttendeeCount: 0,
       },
     ]);

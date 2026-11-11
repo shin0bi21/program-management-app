@@ -729,8 +729,6 @@ describe('Program cycle sessions and attendance API', () => {
     expect(overview.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         programId, cycleId: mainCycleId,
-        nextSessionId: sessionId,
-        nextSessionDate: expect.any(String),
         minAge: 12,
         maxAge: 15,
       }),

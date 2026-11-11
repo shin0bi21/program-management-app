@@ -73,14 +73,14 @@ describe('Future session date moves', () => {
     expect(session).toMatchObject({ theme: 'Latest theme', description: 'Latest description', sessionType: regularType });
   });
 
-  it('returns canonical rows after full edits and deletion without stale next-session metadata', async () => {
+  it('returns canonical rows after full edits and deletion', async () => {
     const edited = await request(app).put(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ sessionType: regularType, theme: 'Edited theme', date: '2030-03-03', startTime: '17:45', endTime: '19:15', description: 'Edited description' });
 
     expect(edited.status).toBe(200);
     expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId });
-    expect(edited.body.updatedProgramCycles).toEqual([expect.objectContaining({ programId, cycleId, nextSessionId: sessionId })]);
+    expect(edited.body.updatedProgramCycles).toEqual([expect.objectContaining({ programId, cycleId })]);
 
     const list = await request(app).get(`/api/sessions?programIds=${programId}&cycleIds=${cycleId}`)
       .set('Authorization', `Bearer ${token}`);
@@ -90,7 +90,7 @@ describe('Future session date moves', () => {
     const removed = await request(app).delete(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`);
     expect(removed.status).toBe(200);
-    expect(removed.body).toMatchObject({ id: sessionId, updatedProgramCycles: [expect.objectContaining({ programId, cycleId, nextSessionId: null })] });
+    expect(removed.body).toMatchObject({ id: sessionId, updatedProgramCycles: [expect.objectContaining({ programId, cycleId })] });
   });
 
   it('omits cross-area program cycle rows without program-read capability', async () => {
@@ -123,8 +123,8 @@ describe('Future session date moves', () => {
     expect(response.status).toBe(200);
     expect(response.body.session).toMatchObject({ programId, cycleId: nextCycleId });
     expect(response.body.updatedProgramCycles).toEqual(expect.arrayContaining([
-      expect.objectContaining({ programId, cycleId, nextSessionId: null }),
-      expect.objectContaining({ programId, cycleId: nextCycleId, nextSessionId: sessionId }),
+      expect.objectContaining({ programId, cycleId }),
+      expect.objectContaining({ programId, cycleId: nextCycleId }),
     ]));
   });
 
