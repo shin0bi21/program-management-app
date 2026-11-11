@@ -53,8 +53,8 @@ export function getLeadSortValue(lead: Lead, key: LeadSortKey) {
     firstName: lead.youthFirstName.toLowerCase(),
     lastName: lead.youthLastName.toLowerCase(),
     school: lead.school.toLowerCase(),
-    program: lead.recommendedProgram?.toLowerCase() ?? '',
+    program: lead.recommendedProgram?.toLowerCase() ?? null,
     status: lead.status,
-    created: new Date(lead.createdAt),
+    created: lead.createdAt,
   }[key];
 }

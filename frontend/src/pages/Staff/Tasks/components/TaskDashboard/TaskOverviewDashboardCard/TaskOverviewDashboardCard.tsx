@@ -1,15 +1,14 @@
+import { Temporal } from 'temporal-polyfill';
 import { useEffect, useMemo, useState } from 'react';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import { dayKey } from '../../../../../../common/components/TimelineCalendar/utils/periods';
 import type { Task } from '../../../types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import useTaskOverviewData from './hooks/useTaskOverviewData';
 import './TaskOverviewDashboardCard.css';
 
-const compactDateFormatter = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' });
 
 /**
  * Queries the selected staff overview and displays its queried tasks.
@@ -145,20 +144,8 @@ function groupTasksForOverview(tasks: readonly Task[], today: string) {
  * @example currentWeekEnd('2026-08-11') // '2026-08-16'
  */
 function currentWeekEnd(today: string) {
-  const date = parseCalendarDate(today);
-  const daysSinceMonday = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - daysSinceMonday + 6);
-  return dayKey(date);
-}
-
-/**
- * Converts an ISO calendar date to a browser-local date without UTC day shifts.
- * @param value - A valid YYYY-MM-DD calendar date.
- * @example parseCalendarDate('2026-08-11').getDate() // 11
- */
-function parseCalendarDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  const date = Temporal.PlainDate.from(today);
+  return date.add({ days: 7 - date.dayOfWeek }).toString();
 }
 
 /**
@@ -198,11 +185,10 @@ function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeek
 }
 
 /**
- * Formats an ISO calendar date as a short month and day in browser-local time.
+ * Formats a business date directly as a short month and day.
  * @param value - A valid YYYY-MM-DD calendar date.
  * @example formatCompactDate('2026-08-11') // 'Aug 11'
  */
 function formatCompactDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return compactDateFormatter.format(new Date(year, month - 1, day, 12));
+  return Temporal.PlainDate.from(value).toLocaleString('en-CA', { month: 'short', day: 'numeric' });
 }

@@ -40,7 +40,7 @@ export function ManagementTables() {
             programId: program.id, program: program.name, cycleId: cycle.id, cycle: cycle.name,
             startsOn: cycle.startsOn, endsOn: cycle.endsOn, state: cycle.state,
             enrollmentRequired: true, minAge: null, maxAge: null, enrolledCount: 0,
-            nextSessionAt: null, nextSessionId: null,
+            nextSessionDate: null, nextSessionId: null,
             uniqueAttendeeCount: 0,
           }],
           loading: false, ready: true, error: '', refresh: async () => {},

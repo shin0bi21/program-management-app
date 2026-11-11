@@ -40,7 +40,7 @@ describe('usePeriodVirtualization', () => {
     const onPeriodsBuilt = vi.fn();
     const options = {
       periodDefinition: dayPeriodDefinition,
-      initialDate: new Date(2026, 7, 10),
+      initialDate: '2026-08-10',
       initialOffset: 0,
       periodCount: 5,
       overscan: 1,
@@ -70,7 +70,7 @@ describe('usePeriodVirtualization', () => {
     const onPeriodsReset = vi.fn();
     const { result } = renderHook(() => usePeriodVirtualization({
       periodDefinition: dayPeriodDefinition,
-      initialDate: new Date(2026, 7, 10),
+      initialDate: '2026-08-10',
       initialOffset: 0,
       periodCount: 5,
       overscan: 1,
@@ -80,7 +80,7 @@ describe('usePeriodVirtualization', () => {
       onPeriodsReset,
     }));
 
-    act(() => result.current.goToDate(new Date(2026, 7, 11)));
+    act(() => result.current.goToDate('2026-08-11'));
 
     expect(scrollToOffset).toHaveBeenCalledWith(300, { align: 'start' });
     expect(onPeriodsReset).toHaveBeenCalledWith([
@@ -93,23 +93,23 @@ describe('usePeriodVirtualization', () => {
     mockWindow([0, 1, 2]);
     const { result } = renderHook(() => usePeriodVirtualization({
       periodDefinition: dayPeriodDefinition,
-      initialDate: new Date(2035, 0, 1), initialOffset: 50,
+      initialDate: '2035-01-01', initialOffset: 50,
       periodCount: 2500, dateRange: { start: '2028-02-28', end: '2028-03-01' },
       overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
     }));
     expect(result.current.allPeriods.map(period => period.key)).toEqual(['2028-02-28', '2028-02-29', '2028-03-01']);
     expect(vi.mocked(useVirtualizer).mock.calls[vi.mocked(useVirtualizer).mock.calls.length - 1]?.[0]).toMatchObject({ count: 3, initialOffset: 200 });
 
-    act(() => result.current.goToDate(new Date(2020, 0, 1)));
+    act(() => result.current.goToDate('2020-01-01'));
     expect(scrollToOffset).toHaveBeenLastCalledWith(0, { align: 'start' });
-    act(() => result.current.goToDate(new Date(2040, 0, 1)));
+    act(() => result.current.goToDate('2040-01-01'));
     expect(scrollToOffset).toHaveBeenLastCalledWith(200, { align: 'start' });
   });
 
   it('covers a multi-year range while exposing only its virtual window', () => {
     mockWindow([0, 1, 2]);
     const { result } = renderHook(() => usePeriodVirtualization({
-      periodDefinition: dayPeriodDefinition, initialDate: new Date(2026, 0, 1), initialOffset: 0,
+      periodDefinition: dayPeriodDefinition, initialDate: '2026-01-01', initialOffset: 0,
       periodCount: 2500, dateRange: { start: '2026-01-01', end: '2028-12-31' },
       overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
     }));
@@ -120,7 +120,7 @@ describe('usePeriodVirtualization', () => {
 
   it('rejects reversed dates before constructing periods', () => {
     expect(() => renderHook(() => usePeriodVirtualization({
-      periodDefinition: dayPeriodDefinition, initialDate: new Date(2026, 0, 1), initialOffset: 0,
+      periodDefinition: dayPeriodDefinition, initialDate: '2026-01-01', initialOffset: 0,
       periodCount: 2500, dateRange: { start: '2027-01-01', end: '2026-12-31' },
       overscan: 1, periodWidth: 100, coveredLeftWidth: 25,
     }))).toThrow('Calendar date range must contain valid ordered dates');

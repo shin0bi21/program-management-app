@@ -21,7 +21,7 @@ const assignment: ProgramCycleAssignment = {
   endsOn: '2026-08-31',
   state: 'active',
   enrolledCount: 1,
-  nextSessionAt: null,
+  nextSessionDate: null,
   nextSessionId: null,
   uniqueAttendeeCount: 0,
 };

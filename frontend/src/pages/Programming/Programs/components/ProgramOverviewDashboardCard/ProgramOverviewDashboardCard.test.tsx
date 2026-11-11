@@ -27,7 +27,7 @@ const programCycle: ProgramCycleAssignment = {
   programId: program.id, program: program.name,
   enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
-  enrolledCount: 12, nextSessionAt: null, nextSessionId: null,
+  enrolledCount: 12, nextSessionDate: null, nextSessionId: null,
   uniqueAttendeeCount: 10,
 };
 const openProgramCycle: ProgramCycleAssignment = {
@@ -112,8 +112,8 @@ describe('ProgramOverviewDashboardCard', () => {
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
   });
 
-  it('uses the program timezone and includes the final cycle date', () => {
-    vi.setSystemTime(new Date('2026-12-02T02:00:00Z'));
+  it('allows enrollment through the final cycle date', () => {
+    vi.setSystemTime(new Date(2026, 11, 1, 21));
     render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByRole('heading', { name: 'Art - Fall Overview' })).toBeInTheDocument();
   });

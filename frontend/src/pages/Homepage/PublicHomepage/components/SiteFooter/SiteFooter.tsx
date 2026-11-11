@@ -1,7 +1,12 @@
+import { getDate } from '../../../../../common/utils/date';
 import './SiteFooter.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faEnvelope, faHeart, faLocationDot, faPhone } from '@fortawesome/free-solid-svg-icons'
 
+/**
+ * Displays organization contact links and the local current copyright year.
+ * @example <SiteFooter /> // public homepage footer
+ */
 export default function SiteFooter() {
   const contactEmail = 'beoriginalyouthgroup@gmail.com'
   const mailtoHref = `mailto:${contactEmail}`
@@ -74,7 +79,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="site-footer-bottom">
-        <p>Copyright {new Date().getFullYear()} Your Organization. All rights reserved.</p>
+        <p>Copyright {getDate().slice(0, 4)} Your Organization. All rights reserved.</p>
       </div>
     </footer>
   )

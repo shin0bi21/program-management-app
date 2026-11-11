@@ -18,8 +18,9 @@ export const cycleState = sql`
 export const cycleRowColumns = sql`
   cycle.id,
   cycle.name,
-  cycle.starts_on::text AS starts_on,
-  cycle.ends_on::text AS ends_on,
+  cycle.starts_on,
+  cycle.ends_on,
+
   ${cycleState} AS state
 `;
 

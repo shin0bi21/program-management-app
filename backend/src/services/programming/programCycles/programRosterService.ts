@@ -31,7 +31,7 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
   // 1. Check the selected enrollment-based program and cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
 
-  const ageInYears = sql`EXTRACT(YEAR FROM AGE((NOW() AT TIME ZONE 'America/Toronto')::date, profile.date_of_birth))::int`;
+  const ageInYears = sql`EXTRACT(YEAR FROM AGE(CURRENT_DATE, profile.date_of_birth))::int`;
   const [programCycle] = await sql<Array<{
     enrollmentRequired: boolean;
     minAge: number | null;
@@ -43,8 +43,9 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
       program.enrollment_required,
       program.min_age,
       program.max_age,
-      cycle.starts_on::text,
-      cycle.ends_on::text
+
+      cycle.starts_on,
+      cycle.ends_on
     FROM program_cycle_assignments assignment
     INNER JOIN programs program ON program.id = assignment.program_id
     INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
@@ -57,7 +58,7 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
   }
 
   // 2. Keep retained members and available candidates for a new enrollment today.
-  const enrollmentPeriod = sql`daterange((NOW() AT TIME ZONE 'America/Toronto')::date, NULL, '[)')
+  const enrollmentPeriod = sql`daterange(CURRENT_DATE, NULL, '[)')
     * daterange(${programCycle.startsOn}::date, ${programCycle.endsOn}::date, '[]')`;
 
   return sql<ProgramCycleRosterYouthRow[]>`
@@ -66,7 +67,7 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
       youth.first_name,
       youth.last_name,
 
-      profile.date_of_birth::text AS date_of_birth,
+      profile.date_of_birth,
 
       school.name AS school_name,
 
@@ -92,10 +93,10 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
           FROM program_enrollments active_enrollment
           WHERE active_enrollment.program_id = ${programId} AND active_enrollment.cycle_id = ${cycleId}
             AND active_enrollment.youth_id = youth.id
-            AND active_enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
+            AND active_enrollment.enrolled_on <= CURRENT_DATE
             AND (
               active_enrollment.withdrawn_on IS NULL
-              OR active_enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date
+              OR active_enrollment.withdrawn_on > CURRENT_DATE
             )
         )
         OR (

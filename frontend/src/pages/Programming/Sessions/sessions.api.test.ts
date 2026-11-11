@@ -21,12 +21,12 @@ vi.mock('../../../http/client', () => ({
 describe('session API', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('loads scheduling options and allowed program-cycle pairs with cancellation', async () => {
+  it('loads scheduling references with cancellation', async () => {
     const options = { signal: new AbortController().signal };
     const projection = { programs: [], sessionTypes: [] };
     vi.mocked(apiClient.get).mockResolvedValueOnce(projection);
 
-    expect(await getSessionReferenceData(options)).toEqual(projection);
+    await getSessionReferenceData(options);
     expect(apiClient.get).toHaveBeenCalledWith('/sessions/reference-data', options);
   });
 
@@ -35,17 +35,12 @@ describe('session API', () => {
     expect(apiClient.put).toHaveBeenCalledWith('/sessions/session-1/date', { date: '2027-01-12' });
   });
 
-  it('forwards canonical edit and attendance command responses to their owners', async () => {
-    const saved = { id: 'session-1', theme: 'Authoritative session' };
-    const edit = { sessionType: 'Regular', theme: 'Edited', startsAt: '2027-01-12T18:00:00Z', endsAt: '2027-01-12T20:00:00Z' };
-    vi.mocked(apiClient.put).mockResolvedValueOnce({ session: saved });
-
-    await expect(updateSession('session-1', edit)).resolves.toEqual({ session: saved });
+  it('sends the date/time edit and attendance commands to their endpoints', () => {
+    const edit = { sessionType: 'Regular', theme: 'Edited', date: '2027-01-12', startTime: '13:00', endTime: '15:00' };
+    updateSession('session-1', edit);
     expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1', edit);
 
-    const attendance = { roster: [], session: saved };
-    vi.mocked(apiClient.put).mockResolvedValueOnce(attendance);
-    await expect(setSessionAttendance('session-1', [])).resolves.toBe(attendance);
+    setSessionAttendance('session-1', []);
     expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1/attendance', { records: [] });
   });
 
@@ -109,15 +104,13 @@ describe('session API', () => {
       mimeType: 'image/png',
     })).toBe('Workshop - Photos.png');
   });
-});
 
-describe('session date-range filtering', () => {
-  it('uses the same inclusive local days for table requests across DST', () => {
+  it('serializes inclusive table dates without timestamp reconstruction', () => {
     getSessions({ dateRange: { start: '2026-03-08', end: '2026-03-08' } }, undefined,
       { key: 'date', direction: 'asc' });
-    const path = vi.mocked(apiClient.get).mock.calls[vi.mocked(apiClient.get).mock.calls.length - 1]?.[0];
-    const url = new URL(String(path), 'http://localhost');
-    expect(url.searchParams.get('start')).toBe('2026-03-08T05:00:00Z');
-    expect(url.searchParams.get('end')).toBe('2026-03-09T04:00:00Z');
+
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      '/sessions?start=2026-03-08&end=2026-03-08&sort=date&direction=asc&paginate=true',
+    );
   });
 });

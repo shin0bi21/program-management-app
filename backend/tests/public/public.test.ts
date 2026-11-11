@@ -50,15 +50,15 @@ describe('Public lead API', () => {
       submittedByRole: string;
     }[]>`
       SELECT
+        origin,
         youth_first_name as "youthFirstName",
         youth_last_name as "youthLastName",
+        school,
         contact_phone_number as "contactPhoneNumber",
         contact_relationship as "contactRelationship",
-        date_of_birth::text AS date_of_birth,
-        school,
         discovery_source as "discoverySource",
-        origin,
-        submitted_by_role as "submittedByRole"
+        submitted_by_role as "submittedByRole",
+        date_of_birth
       FROM leads
       WHERE youth_last_name = ${youthLastName}
       LIMIT 1

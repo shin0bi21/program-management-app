@@ -29,8 +29,7 @@ export function buildSessionFilters(
   }
   if (filterValues.start && filterValues.end) {
     filters.push(query`
-      session.starts_at < ${filterValues.end}::timestamptz
-      AND session.ends_at > ${filterValues.start}::timestamptz
+      session.date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date
     `);
   }
   if (filterValues.programIds?.length) {
@@ -44,9 +43,9 @@ export function buildSessionFilters(
   }
   if (filterValues.statuses?.length === 1) {
     if (filterValues.statuses[0] === 'completed') {
-      filters.push(query`session.ends_at < NOW()`);
+      filters.push(query`session.date < CURRENT_DATE`);
     } else {
-      filters.push(query`session.ends_at >= NOW()`);
+      filters.push(query`session.date >= CURRENT_DATE`);
     }
   }
   if (filterValues.search) {

@@ -13,7 +13,7 @@ export interface ProgramCycleAssignment extends ProgramCycleKey {
   endsOn: string;
   state: 'upcoming' | 'active' | 'completed';
   enrolledCount: number;
-  nextSessionAt: string | null;
+  nextSessionDate: string | null;
   nextSessionId: string | null;
   uniqueAttendeeCount: number;
 }

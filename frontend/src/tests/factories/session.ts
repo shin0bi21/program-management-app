@@ -11,11 +11,12 @@ export function makeProgramSession(overrides: Partial<ProgramSession> = {}): Pro
     programId: 'program-1',
     program: 'Future Ready',
     enrollmentRequired: true,
-    startsAt: '2026-08-10T17:00:00.000Z',
-    endsAt: '2026-08-10T19:00:00.000Z',
+    date: '2026-08-10', startTime: '13:00',
+    endTime: '15:00',
     cancelledAt: null,
     description: null,
     state: 'upcoming',
+    movable: false,
     ...overrides,
   };
 }

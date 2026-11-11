@@ -25,6 +25,15 @@ export const sql = postgres(DATABASE_URL, {
   
   onnotice: () => {},     // Suppress notices in production
   transform: postgres.camel, // Transform snake_case to camelCase (optional)
+  // PostgreSQL DATE is a business date, never a JavaScript timestamp.
+  types: {
+    date: {
+      to: 1082,
+      from: [1082],
+      serialize: (value: string) => value,
+      parse: (value: string) => value,
+    },
+  },
   
   // Connection error handling
   connection: {

@@ -105,8 +105,8 @@ describe('Programs API', () => {
   it('returns canonical retained program cycles and youth memberships after a program edit without expanding read capabilities', async () => {
     const [program] = await sql<{ id: string }[]>`INSERT INTO programs (name) VALUES (${`Program envelope ${Date.now()}`}) RETURNING id`;
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
-      SELECT ((NOW() AT TIME ZONE 'America/Toronto')::date - 30)::text AS starts_on,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 30)::text AS ends_on
+      SELECT (CURRENT_DATE - 30)::text AS starts_on,
+        (CURRENT_DATE + 30)::text AS ends_on
     `;
     const { cycleId } = await seedTestProgramCycle({ programId: program.id, ...dates });
     const youth = await seedTestUser({ role: 'youth', firstName: 'Envelope', lastName: 'Youth' });

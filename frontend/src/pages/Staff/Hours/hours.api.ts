@@ -28,7 +28,6 @@ export interface HoursSession {
   programId: string;
   program: string;
   date: string;
-  startsAt: string;
 }
 
 export interface HoursReferenceData {

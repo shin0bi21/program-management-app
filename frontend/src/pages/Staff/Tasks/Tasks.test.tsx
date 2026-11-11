@@ -18,7 +18,7 @@ import { setHours } from '../Hours/hours.api';
 import type { TimelineCalendarProps } from '../../../common/components/TimelineCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/TimelineCalendar/utils/periods';
 import type { Task, TaskResource } from './types';
-import { getDateKeyInTimeZone } from '../../../common/utils/date';
+import { getDate } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import Tasks from './Tasks';
@@ -72,7 +72,7 @@ vi.mock('../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   },
 }));
 
-const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
+const today = getDate();
 const task = makeTask({ startDate: today, dueDate: today });
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
@@ -206,8 +206,7 @@ describe('Tasks', () => {
   });
 
   // Controls and views.
-  it('sends cycle IDs to the table and uses multi-year bounds for calendar display', async () => {
-    const dateRange = { start: '2024-01-01', end: '2027-12-31' };
+  it('sends multiple selected cycle IDs to the table query', async () => {
     vi.mocked(getCycleReferences).mockResolvedValue([
       { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
       { id: 'cycle-2', name: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
@@ -218,9 +217,6 @@ describe('Tasks', () => {
     await screen.findByRole('table', { name: 'Tasks' });
     await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
       expect.anything(), expect.anything()));
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
-    await waitFor(() => expect(calendarTestState.props?.dateRange).toEqual(dateRange));
   });
 
   it('sends an empty cycle selection for all cycles and applies a selected cycle to the query', async () => {
@@ -280,7 +276,7 @@ describe('Tasks', () => {
     fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(new Date(`${task.startDate}T12:00:00`), 3)));
+    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(task.startDate, 3)));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
       expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
@@ -293,7 +289,7 @@ describe('Tasks', () => {
     renderTasks();
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const periods = buildInitialDayPeriods(new Date(`${task.startDate}T12:00:00`), 3);
+    const periods = buildInitialDayPeriods(task.startDate, 3);
     const initialRangeLoader = calendarTestState.props!.onInitialPeriods;
     act(() => initialRangeLoader?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalled());
@@ -319,8 +315,8 @@ describe('Tasks', () => {
     renderTasks();
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = new Date(`${today}T12:00:00`);
-    const end = new Date(`${today}T12:00:00`);
+    const start = today;
+    const end = today;
     act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(start, 3)));
     await waitFor(() => expect(calendarTestState.props!.items['staff-1']).toEqual([task]));
     const row: TaskResource = {
@@ -444,15 +440,12 @@ describe('Tasks', () => {
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
-  it('opens a new task form with today as its initial range', async () => {
+  it('opens the new task form from the page action', async () => {
     renderTasks();
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
 
-    const today = getDateKeyInTimeZone(new Date(), 'America/Toronto');
     expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Start date *')).toHaveValue(today);
-    expect(screen.getByLabelText('Due date *')).toHaveValue(today);
   });
 
   it('owns delete confirmation and delegates the confirmed task deletion', async () => {

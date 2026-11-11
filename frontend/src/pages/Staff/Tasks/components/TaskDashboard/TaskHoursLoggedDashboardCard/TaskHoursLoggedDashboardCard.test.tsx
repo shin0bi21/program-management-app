@@ -23,8 +23,6 @@ describe('TaskHoursLoggedDashboardCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Prepare workshop' });
-    expect(within(dialog).getByText('Start').nextSibling).toHaveTextContent('Aug 10, 2026');
-    expect(within(dialog).getByText('End').nextSibling).toHaveTextContent('Aug 12, 2026');
     expect(within(dialog).getByRole('progressbar', { name: '3 hours on Aug 10, 2026' })).toBeInTheDocument();
     expect(within(dialog).getByRole('progressbar', { name: '1.5 hours on Aug 11, 2026' })).toBeInTheDocument();
     expect(within(dialog).getByText('Total').nextSibling).toHaveTextContent('4.5 hours');

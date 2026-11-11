@@ -7,6 +7,12 @@ import type {
   UpdateSessionNoteInput,
 } from '../../../validation/programmingSchemas';
 
+/**
+ * Lists notes and linked youth for an accessible session.
+ * @param sessionId - Session whose notes are requested.
+ * @param actor - User whose session access is enforced.
+ * @example getSessionNotes(sessionId, actor) // notes ordered newest first
+ */
 export async function getSessionNotes(sessionId: string, actor: AccessTokenPayload) {
   await assertCanAccessSession(actor, sessionId);
   return sql`
@@ -39,6 +45,13 @@ export async function getSessionNotes(sessionId: string, actor: AccessTokenPaylo
   `;
 }
 
+/**
+ * Creates a note and eligible youth links in one transaction.
+ * @param sessionId - Accessible session receiving the note.
+ * @param data - Validated note content and roster youth IDs.
+ * @param actor - User checked for access and recorded as author.
+ * @example createSessionNote(sessionId, data, actor) // saved note with linked youth
+ */
 export async function createSessionNote(
   sessionId: string,
   data: CreateSessionNoteInput,
@@ -97,6 +110,14 @@ export async function createSessionNote(
   return createdNote;
 }
 
+/**
+ * Replaces a note and its eligible youth links atomically.
+ * @param sessionId - Accessible session owning the note.
+ * @param noteId - Existing note; a missing target is a not-found error.
+ * @param data - Validated replacement content and youth IDs.
+ * @param actor - User checked for access and recorded as updater.
+ * @example updateSessionNote(sessionId, noteId, data, actor) // complete saved note
+ */
 export async function updateSessionNote(
   sessionId: string,
   noteId: string,
@@ -148,6 +169,13 @@ export async function updateSessionNote(
   return updatedNote;
 }
 
+/**
+ * Deletes a note belonging to an accessible session.
+ * @param sessionId - Session whose access is checked.
+ * @param noteId - Note to remove; missing targets are not-found errors.
+ * @param actor - User requesting deletion.
+ * @example deleteSessionNote(sessionId, noteId, actor) // removes the note
+ */
 export async function deleteSessionNote(
   sessionId: string,
   noteId: string,
@@ -163,6 +191,14 @@ export async function deleteSessionNote(
   if (!deleted.length) throw new NotFoundError('Session note not found');
 }
 
+/**
+ * Removes one youth link without deleting the session note.
+ * @param sessionId - Accessible session owning the note.
+ * @param noteId - Note whose link changes.
+ * @param youthId - Linked youth; missing links are not-found errors.
+ * @param actor - User requesting the change.
+ * @example unlinkYouthFromSessionNote(sessionId, noteId, youthId, actor) // preserves other links
+ */
 export async function unlinkYouthFromSessionNote(
   sessionId: string,
   noteId: string,
@@ -182,6 +218,13 @@ export async function unlinkYouthFromSessionNote(
   if (!unlinked.length) throw new NotFoundError('Session note youth link not found');
 }
 
+/**
+ * Lists a youth profile's linked notes within the actor's program scope.
+ * @param youthId - Required youth profile whose notes are requested.
+ * @param actor - User whose program scope restricts the result.
+ * @param programCycle - Optional program and cycle pair restricting the notes.
+ * @example listSessionNotesForYouth(youthId, actor) // accessible notes across cycles
+ */
 export async function listSessionNotesForYouth(
   youthId: string,
   actor: AccessTokenPayload,
@@ -192,10 +235,22 @@ export async function listSessionNotesForYouth(
 
   return sql`
     SELECT
-      sn.id, sn.session_id, sn.category, sn.details, sn.created_at, sn.updated_at,
+      sn.id,
+      sn.session_id,
+      sn.category,
+      sn.details,
+      sn.created_at,
+      sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
-      cs.theme AS session_theme, cs.starts_at, cs.cycle_id,
-      cycle.name AS cycle, p.id AS program_id, p.name AS program, p.enrollment_required,
+      cs.theme AS session_theme,
+      cs.date,
+      cs.cycle_id,
+
+      cycle.name AS cycle,
+
+      p.id AS program_id,
+      p.name AS program,
+      p.enrollment_required,
       COALESCE(
         JSON_AGG(
           JSON_BUILD_OBJECT(
@@ -218,10 +273,18 @@ export async function listSessionNotesForYouth(
     WHERE ${programAccessPredicate(actor, sql`p.id`)}
       AND ${programCycle ? sql`cs.program_id = ${programCycle.programId} AND cs.cycle_id = ${programCycle.cycleId}` : sql`TRUE`}
     GROUP BY sn.id, author.id, cs.id, cycle.id, p.id
-    ORDER BY cs.starts_at DESC, sn.created_at DESC
+    ORDER BY cs.date DESC, cs.start_time DESC, sn.created_at DESC
   `;
 }
 
+/**
+ * Rejects links to youth outside the session roster or open-session attendance.
+ * @param trx - Caller-owned transaction used for eligibility reads.
+ * @param sessionId - Session receiving the youth links.
+ * @param enrollmentRequired - Whether enrollment determines eligibility.
+ * @param youthIds - Validated distinct IDs; an empty list requires no checks.
+ * @example assertYouthEligibility(trx, sessionId, true, []) // accepts a note without youth links
+ */
 async function assertYouthEligibility(
   trx: ReturnType<typeof asTransactionSql>,
   sessionId: string,
@@ -243,10 +306,10 @@ async function assertYouthEligibility(
         INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
         WHERE cs.id = ${sessionId}
           AND ce.youth_id = ANY(${sql.array(youthIds)}::uuid[])
-          AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+          AND ce.enrolled_on <= cs.date
           AND (
             ce.withdrawn_on IS NULL
-            OR ce.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date
+            OR ce.withdrawn_on > cs.date
           )
       `;
   if (eligibleYouth.length !== youthIds.length) {

@@ -64,29 +64,28 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
-    id: string; label: string; startsAt: string; programId: string; program: string; date: string;
+    id: string; label: string; programId: string; program: string; date: string;
   }>>`
     SELECT
       session.id,
       session.theme AS label,
-      session.starts_at::text AS starts_at,
 
       program.id AS program_id,
       program.name AS program,
 
-      (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date
+      session.date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
     INNER JOIN users target_staff ON target_staff.id = ${query.staffId}
     WHERE session.cancelled_at IS NULL
-      AND (session.starts_at AT TIME ZONE 'America/Toronto')::date = ${query.date}::date
+      AND session.date = ${query.date}::date
       AND EXISTS (
         SELECT 1
         FROM user_program_assignments assignment
         WHERE assignment.program_id = program.id
           AND assignment.user_id = target_staff.id
       )
-    ORDER BY session.starts_at, session.id
+    ORDER BY session.start_time, session.id
   `;
 }
 
@@ -314,7 +313,7 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
     const rows = await trx<Array<{ programId: string; date: string }>>`
       SELECT
         session.program_id,
-        (session.starts_at AT TIME ZONE 'America/Toronto')::date::text AS date
+        session.date
       FROM program_sessions session
       INNER JOIN users target_staff ON target_staff.id = ${input.staffId}
       WHERE session.id = ${input.sessionId}
@@ -340,8 +339,8 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
     SELECT
       task.category,
       task.program_id,
-      task.start_date::text,
-      task.due_date::text
+      task.start_date,
+      task.due_date
     FROM tasks task
     WHERE task.id = ${input.taskId}
       AND task.staff_id = ${input.staffId}

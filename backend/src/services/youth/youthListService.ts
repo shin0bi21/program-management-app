@@ -19,9 +19,9 @@ export function listYouth(filterValues: YouthQuery) {
   const sortValue = {
     firstName: sql`LOWER("row".first_name)`,
     lastName: sql`LOWER("row".last_name)`,
-    dateOfBirth: sql`COALESCE("row".date_of_birth::text, '')`,
-    school: sql`LOWER(COALESCE("row".school_name, ''))`,
-    activeProgram: sql`LOWER(COALESCE("row".active_program->>'program', ''))`,
+    dateOfBirth: sql`"row".date_of_birth`,
+    school: sql`LOWER("row".school_name)`,
+    activeProgram: sql`LOWER("row".active_program->>'program')`,
   }[filterValues.sort]!;
 
   // 3. Return the requested list or page.
@@ -30,7 +30,7 @@ export function listYouth(filterValues: YouthQuery) {
     return sql<YouthRow[]>`
       SELECT "row".*
       FROM (${rowsQuery}) "row"
-      ORDER BY ${sortValue} ${sortDirection}, "row".id ${sortDirection}
+      ORDER BY ${sortValue} ${sortDirection} NULLS LAST, "row".id ${sortDirection}
     `;
   }
 

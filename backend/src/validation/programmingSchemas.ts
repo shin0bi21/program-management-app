@@ -1,10 +1,11 @@
 import { SESSION_TYPES } from '../types/programming';
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
-import { isCalendarDate, sessionRangeCalendarDates } from './dateRangeValidation';
+import { calendarDateSchema } from './dateRangeValidation';
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
+const dateSchema = calendarDateSchema();
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must use HH:mm');
+
 /**
  * Parses at most 20 filter values from comma-separated strings or repeated query parameters.
  * @param schema - Validation applied to each supplied filter value.
@@ -76,8 +77,10 @@ export const attendanceReportSchema = z.object({
         id: z.string().uuid('Invalid session ID'),
         sessionType: z.enum(SESSION_TYPES),
         theme: z.string(),
-        startsAt: z.string().datetime({ offset: true }),
-        endsAt: z.string().datetime({ offset: true }),
+        date: dateSchema,
+        startTime: timeSchema,
+        endTime: timeSchema,
+        completed: z.boolean(),
         cancelledAt: z.string().datetime({ offset: true }).nullable(),
         status: z.enum(['present', 'late', 'absent', 'excused']).nullable(),
         sessionNotes: z.array(z.object({
@@ -121,20 +124,21 @@ export const withdrawYouthSchema = z.object({
 const createSessionBodySchema = z.object({
   sessionType: z.enum(SESSION_TYPES),
   theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
-  date: z.iso.date().optional(),
+  date: dateSchema.optional(),
   startTime: timeSchema.optional(),
   endTime: timeSchema.optional(),
   description: z.string().trim().max(5000).nullable().optional(),
-});
+}).strict();
 
 /**
  * Requires supplied end times to follow start times; omitted values use program defaults later.
- * @param data - Optional start and end times in HH:MM format.
+ * @param data - Optional clock times using HH:mm.
  * @example validSessionTimes({ startTime: '17:00', endTime: '18:00' }) // true
  */
 const validSessionTimes = (data: { startTime?: string; endTime?: string }) => (
   !data.startTime || !data.endTime || data.endTime > data.startTime
 );
+
 const sessionTimeError = { message: 'End time must be after start time', path: ['endTime'] };
 
 export const createSessionSchema = z.object({
@@ -151,35 +155,20 @@ export const createProgramSessionSchema = z.object({
 
 export const sessionListQuerySchema = z.object({
   query: z.object({
-    start: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'Start must use a supported calendar year').optional(),
-    end: z.string().datetime({ offset: true }).refine(value => isCalendarDate(value.slice(0, 10)), 'End must use a supported calendar year').optional(),
+    start: dateSchema.optional(),
+    end: dateSchema.optional(),
     programIds: commaSeparated(z.string().uuid('Invalid program ID')),
     cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
     sessionTypes: commaSeparated(z.enum(SESSION_TYPES)),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'], 'date', 'desc'),
-  }).superRefine((data, context) => {
-    if (Boolean(data.start) !== Boolean(data.end)) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Session range requires both start and end',
-        path: [data.start ? 'end' : 'start'],
-      });
-    }
-    if (data.start && data.end && Date.parse(data.end) <= Date.parse(data.start)) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Session range end must be after start',
-        path: ['end'],
-      });
-    }
-    if (data.start && data.end && Date.parse(data.end) > Date.parse(data.start)) {
-      const dates = sessionRangeCalendarDates(data.start, data.end);
-      if (!dates) {
-        context.addIssue({ code: 'custom', message: 'Session range must use supported calendar dates', path: ['end'] });
-      }
-    }
+  }).refine(data => Boolean(data.start) === Boolean(data.end), {
+    message: 'Session range requires both start and end',
+    path: ['end'],
+  }).refine(data => !data.start || !data.end || data.start <= data.end, {
+    message: 'Session range end must be on or after start',
+    path: ['end'],
   }),
 });
 
@@ -198,7 +187,7 @@ export const saveAttendanceSchema = z.object({
 });
 export const moveSessionDateSchema = z.object({
   params: z.object({ sessionId: z.string().uuid('Invalid session ID') }),
-  body: z.object({ date: z.iso.date() }).strict(),
+  body: z.object({ date: dateSchema }).strict(),
 });
 
 export const updateSessionSchema = z.object({
@@ -206,13 +195,11 @@ export const updateSessionSchema = z.object({
   body: z.object({
     sessionType: z.enum(SESSION_TYPES).optional(),
     theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
-    startsAt: z.string().datetime({ offset: true }),
-    endsAt: z.string().datetime({ offset: true }),
+    date: dateSchema,
+    startTime: timeSchema,
+    endTime: timeSchema,
     description: z.string().trim().max(5000).nullable().optional(),
-  }).refine(data => Date.parse(data.endsAt) > Date.parse(data.startsAt), {
-    message: 'Session end time must be after its start time',
-    path: ['endsAt'],
-  }),
+  }).strict().refine(validSessionTimes, sessionTimeError),
 });
 export const deleteSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),

@@ -85,7 +85,7 @@ describe('TaskCalendar', () => {
 
   it('loads buffered task data and applies the staff resource filter', async () => {
     renderCalendar({ staffIds: ['staff-1'] });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     act(() => calendarState.props?.onInitialPeriods?.(periods));
 
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
@@ -99,7 +99,7 @@ describe('TaskCalendar', () => {
 
   it('updates full buffered rows through mutation callbacks after saves and deletes', async () => {
     const { calendarCacheRef } = renderCalendar();
-    act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods(new Date(2026, 7, 10), 3)));
+    act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods('2026-08-10', 3)));
     await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
 
     const saved = makeTask({ title: 'Saved by another consumer' });
@@ -179,8 +179,8 @@ describe('TaskCalendar', () => {
       data: openTask,
       range: { start: openTask.startDate, end: openTask.dueDate },
       calendar: makeItemCalendarProps({ row: resource, data: openTask, range: { start: openTask.startDate, end: openTask.dueDate } }),
-      visibleStart: { key: openTask.startDate, start: new Date(), end: new Date() },
-      visibleEnd: { key: openTask.dueDate, start: new Date(), end: new Date() },
+      visibleStart: { key: openTask.startDate, start: openTask.startDate, end: openTask.dueDate },
+      visibleEnd: { key: openTask.dueDate, start: openTask.startDate, end: openTask.dueDate },
     }) as { props: { selected: boolean; onComplete: () => void; onCancel: () => void; onEdit: () => void } };
 
     expect(element.props.selected).toBe(true);
@@ -237,7 +237,7 @@ describe('TaskCalendar', () => {
 
   it('opens a row-scoped add target only for writable resources', () => {
     const rendered = renderCalendar();
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     calendarState.props?.onCellActivate?.({ row: resource, rowIndex: 0, period: periods[1], items: [] });
     expect(rendered.onAddTask).toHaveBeenCalledWith({
       startDate: periods[1].key, dueDate: periods[1].key, staffId: 'staff-1',
@@ -247,7 +247,7 @@ describe('TaskCalendar', () => {
   it('removes mutation callbacks in read-only mode and keeps failed ranges distinct from empty results', async () => {
     vi.mocked(getTasksCalendarData).mockRejectedValue(new Error('Task request failed'));
     renderCalendar({ canWrite: false });
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     expect(calendarState.props?.onItemResize).toBeUndefined();
     expect(calendarState.props?.onItemMove).toBeUndefined();
     expect(calendarState.props?.onCellActivate).toBeUndefined();

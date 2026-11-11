@@ -13,7 +13,7 @@ const items: TestItem[] = [{ id: 'entry-1' }, { id: 'entry-2' }];
 const context: CalendarCellContext<TestRow, TestItem> = {
   row,
   rowIndex: 0,
-  period: buildDayPeriod(new Date(2026, 7, 10)),
+  period: buildDayPeriod('2026-08-10'),
   items,
 };
 

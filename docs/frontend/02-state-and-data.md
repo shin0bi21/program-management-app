@@ -40,6 +40,11 @@ component → focused query hook → typed feature API → centralized HTTP clie
 
 ### Record Field Names
 
+Follow [Dates and Times](../workflows/date-and-time.md) for business-date and
+clock-time shapes, input values, formatting, and event-timestamp boundaries.
+Calendar dates, including period bounds and navigation anchors, stay as
+`YYYY-MM-DD` strings; use `getDate` for local today.
+
 Use `programId` and `cycleId` for related record identifiers, with `program` and
 `cycle` for their display values. Use the same fields in backend projections,
 API responses, queries, tables, and calendars. A Program or Cycle record
@@ -57,7 +62,9 @@ itself keeps its own `id` and `name`. Keep display labels out of identifier fiel
 1. Use a list-only query-key prefix; keep lookups, direct records, calendars, and aggregates on sibling keys.
 2. Fetch through [useInfiniteListQuery](../../frontend/src/query/hooks/useInfiniteListQuery.ts) with the backend owning the page size. Keep only observed lists: discard unused lists immediately and show loading instead of previous rows when filters or sorting change.
 3. Let the server filter and sort before pagination.
-4. Supply the active server-compatible `ordering`.
+4. Supply the active server-compatible `ordering`, preserving missing values as
+   `null`. Shared list ordering keeps nulls last in both directions, matching the
+   backend pagination contract; display placeholders do not become sort values.
 5. Replace saved rows in place with the existing cursor-list cache helpers. When an edit changes their sort order, display `refreshNotice` through [tableRefreshMessage](../../frontend/src/common/components/Table/tableRefreshMessage.ts): “This table’s data is out of order.” with the **Refresh** action. Keep the loaded positions until the user refreshes; do not automatically reorder or refetch solely to correct sort order.
 
 ### Calendars

@@ -60,7 +60,7 @@ function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAtten
         }}
       >
         <p className="attendance-modal__context">
-          {formatShortDate(session.startsAt)}
+          {formatShortDate(session.date)}
           {session.theme ? ` · ${session.theme}` : ''}
         </p>
 

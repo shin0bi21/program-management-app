@@ -6,8 +6,9 @@ export type SessionTypeValue = 'Regular' | 'Guest Speaker' | 'Field Trip';
 export interface ProgramSession {
   id: string;
   theme: string;
-  startsAt: string;
-  endsAt: string;
+  date: string;
+  startTime: string;
+  endTime: string;
   cancelledAt: string | null;
   description: string | null;
   cycleId: string;
@@ -20,6 +21,7 @@ export interface ProgramSession {
   enrollmentRequired: boolean;
 
   state: 'upcoming' | 'completed' | 'cancelled';
+  movable: boolean;
 }
 
 export interface SessionListFilters {
@@ -77,7 +79,7 @@ export interface SessionNote {
 export interface YouthSessionNote extends SessionNote {
   cycleId: string;
   sessionTheme: string | null;
-  startsAt: string;
+  date: string;
   cycle: string;
   programId: string;
   program: string;

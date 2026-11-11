@@ -7,8 +7,9 @@ import type { AccessTokenPayload } from '../../../types/auth';
 export interface SessionRow {
   id: string;
   theme: string;
-  startsAt: Date;
-  endsAt: Date;
+  date: string;
+  startTime: string;
+  endTime: string;
   cancelledAt: Date | null;
   description: string | null;
   cycleId: string;
@@ -21,6 +22,7 @@ export interface SessionRow {
   enrollmentRequired: boolean;
 
   state: 'upcoming' | 'completed' | 'cancelled';
+  movable: boolean;
 }
 
 /**
@@ -37,8 +39,9 @@ export function getSessionRows(
     SELECT
       session.id,
       session.theme,
-      session.starts_at,
-      session.ends_at,
+      session.date,
+      to_char(session.start_time, 'HH24:MI') AS start_time,
+      to_char(session.end_time, 'HH24:MI') AS end_time,
       session.cancelled_at,
       session.description,
       session.cycle_id,
@@ -52,9 +55,11 @@ export function getSessionRows(
 
       CASE
         WHEN session.cancelled_at IS NOT NULL THEN 'cancelled'
-        WHEN session.ends_at < NOW() THEN 'completed'
+        WHEN session.date < CURRENT_DATE THEN 'completed'
         ELSE 'upcoming'
-      END AS state
+      END AS state,
+      session.cancelled_at IS NULL
+        AND session.date > CURRENT_DATE AS movable
     FROM program_sessions session
     INNER JOIN program_cycles cycle ON cycle.id = session.cycle_id
     INNER JOIN programs program ON program.id = session.program_id

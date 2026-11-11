@@ -46,7 +46,7 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
   task.title,
   session.theme,
   entry.note,
-  entry.date::text
+  entry.date
 )`;
 
 /**
@@ -65,7 +65,7 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
       entry.staff_id,
       entry.program_id,
       entry.category,
-      entry.date::text,
+      entry.date,
       entry.hours::double precision,
       entry.note,
       entry.task_id,
@@ -78,8 +78,8 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
 
       cycle.id AS cycle_id,
       cycle.name AS cycle,
-      cycle.starts_on::text AS cycle_starts_on,
-      cycle.ends_on::text AS cycle_ends_on,
+      cycle.starts_on AS cycle_starts_on,
+      cycle.ends_on AS cycle_ends_on,
 
       task.title AS task_title,
 

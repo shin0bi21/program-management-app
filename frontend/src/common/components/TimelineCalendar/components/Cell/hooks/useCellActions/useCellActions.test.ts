@@ -9,7 +9,7 @@ vi.mock('../../../../../FloatingMenu/hooks/useFloatingMenu', () => ({ useFloatin
 
 const context = {
   row: { id: 'staff-1' }, rowIndex: 0,
-  period: buildDayPeriod(new Date(2026, 7, 10)), items: [],
+  period: buildDayPeriod('2026-08-10'), items: [],
 };
 beforeEach(() => vi.clearAllMocks());
 

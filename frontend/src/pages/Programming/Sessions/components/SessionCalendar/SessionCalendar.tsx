@@ -14,8 +14,6 @@ import type { Program } from '../../../../../common/features/programs/types';
 import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import { getSessions } from '../../sessions.api';
 import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';
-import { getSessionRequestRange } from '../../utils/sessionDateRange';
-import { getSessionRange } from './sessionCalendarDates';
 import SessionItem from './SessionItem/SessionItem';
 import './SessionCalendar.css';
 
@@ -37,25 +35,6 @@ interface SessionCalendarProps {
   onSessionEdit?: (session: ProgramSession) => void;
   onSessionDelete?: (session: ProgramSession) => void;
   onMessageChange?: PageMessageChangeHandler;
-}
-
-const getProgramId = (program: Program) => program.id;
-const getSessionId = (session: { id: string }) => session.id;
-
-/**
- * Displays the program name in a calendar resource header.
- * @example renderProgramRow(context) // program display name
- */
-function renderProgramRow({ row }: RenderRowContext<Program>) {
-  return <span>{row.name}</span>;
-}
-
-/**
- * Restricts session moves to their existing program.
- * @example canMoveWithinProgram(context) // false for a different program
- */
-function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, ProgramSession>) {
-  return row.id === destinationRow.id;
 }
 
 /**
@@ -85,8 +64,7 @@ export default function SessionCalendar({
     const dates = intersectDateRanges({ start: start.key, end: end.key }, filters.dateRange);
     if (!dates) return {};
 
-    const requestRange = getSessionRequestRange(dates.start, dates.end);
-    const requestFilters = { ...filters, ...requestRange };
+    const requestFilters = { ...filters, ...dates };
     const sessions = await getSessions(requestFilters, { signal });
 
     signal.throwIfAborted();
@@ -126,8 +104,7 @@ export default function SessionCalendar({
           return;
         }
 
-        const range = getSessionRange(session);
-        upsertItem(session.programId, range.start, session);
+        upsertItem(session.programId, session.date, session);
       },
       remove: removeItem,
     };
@@ -150,14 +127,13 @@ export default function SessionCalendar({
    * Displays a shared session with selection and permitted edit/delete actions.
    * @example buildItem(context) // session item for its program row
    */
-  function buildItem({ data: session, row, calendar: itemCalendar }: BuildItemContext<Program, ProgramSession>) {
+  function buildItem({ data: session, calendar: itemCalendar }: BuildItemContext<Program, ProgramSession>) {
     const isPending = pendingSessionIds.includes(session.id);
 
     return (
       <SessionItem
         calendar={itemCalendar}
         session={session}
-        timezone={row.timezone}
         selected={session.id === selectedSessionId}
         onEdit={onSessionEdit && !isPending ? () => onSessionEdit(session) : undefined}
         onDelete={onSessionDelete && !isPending ? () => onSessionDelete(session) : undefined}
@@ -172,7 +148,7 @@ export default function SessionCalendar({
   function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, ProgramSession>) {
     const draggable = Boolean(onSessionMove)
       && !session.cancelledAt
-      && new Date(session.startsAt).getTime() > Date.now()
+      && session.movable
       && !pendingSessionIds.includes(session.id);
 
     return { draggable, resizable: false };
@@ -221,4 +197,35 @@ export default function SessionCalendar({
       />
     </div>
   );
+}
+
+/** Returns a session's stable calendar key. @example getSessionId(session) // session.id */
+const getSessionId = (session: { id: string }) => session.id;
+
+/**
+ * Places a single-day session directly on its saved business date.
+ * @param session - Canonical session with a validated date.
+ * @example getSessionRange(session) // { start: session.date, end: session.date }
+ */
+function getSessionRange(session: ProgramSession) {
+  return { start: session.date, end: session.date };
+}
+
+/** Returns a program's stable resource key. @example getProgramId(program) // program.id */
+const getProgramId = (program: Program) => program.id;
+
+/**
+ * Displays the program name in a calendar resource header.
+ * @example renderProgramRow(context) // program display name
+ */
+function renderProgramRow({ row }: RenderRowContext<Program>) {
+  return <span>{row.name}</span>;
+}
+
+/**
+ * Restricts session moves to their existing program.
+ * @example canMoveWithinProgram(context) // false for a different program
+ */
+function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, ProgramSession>) {
+  return row.id === destinationRow.id;
 }

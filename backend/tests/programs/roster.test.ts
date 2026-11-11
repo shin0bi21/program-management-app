@@ -102,16 +102,16 @@ describe('Program cycle roster eligibility', () => {
         INSERT INTO youth_profiles (user_id, date_of_birth)
         VALUES (${user.userId}, CASE
           WHEN ${age}::int IS NULL THEN NULL
-          ELSE (NOW() AT TIME ZONE 'America/Toronto')::date - make_interval(years => ${age}::int)
+          ELSE CURRENT_DATE - make_interval(years => ${age}::int)
         END)
       `;
     }
     await sql`
       INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on, withdrawn_on)
       VALUES
-        (${ageLimitedCycle.programId}, ${ageLimitedCycle.cycleId}, ${youth.retained}, (NOW() AT TIME ZONE 'America/Toronto')::date - 30, NULL),
-        (${ageLimitedCycle.programId}, ${ageLimitedCycle.cycleId}, ${youth.withdrawn}, (NOW() AT TIME ZONE 'America/Toronto')::date - 30, (NOW() AT TIME ZONE 'America/Toronto')::date),
-        (${otherCycle.programId}, ${otherCycle.cycleId}, ${youth.eligible}, (NOW() AT TIME ZONE 'America/Toronto')::date, NULL)
+        (${ageLimitedCycle.programId}, ${ageLimitedCycle.cycleId}, ${youth.retained}, CURRENT_DATE - 30, NULL),
+        (${ageLimitedCycle.programId}, ${ageLimitedCycle.cycleId}, ${youth.withdrawn}, CURRENT_DATE - 30, CURRENT_DATE),
+        (${otherCycle.programId}, ${otherCycle.cycleId}, ${youth.eligible}, CURRENT_DATE, NULL)
     `;
 
     const extras = await sql<{ id: string }[]>`
@@ -124,7 +124,7 @@ describe('Program cycle roster eligibility', () => {
     userIds.push(...extraYouthIds);
     await sql`
       INSERT INTO youth_profiles (user_id, date_of_birth)
-      SELECT id, (NOW() AT TIME ZONE 'America/Toronto')::date - INTERVAL '14 years'
+      SELECT id, CURRENT_DATE - INTERVAL '14 years'
       FROM UNNEST(${sql.array(extraYouthIds)}::uuid[]) AS selected(id)
     `;
   });

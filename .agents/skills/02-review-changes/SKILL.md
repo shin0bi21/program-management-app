@@ -56,6 +56,9 @@ For each affected responsibility, record a compact comparison:
 Review every changed file in full as required by [AGENTS.md](../../../AGENTS.md#canonical-documentation),
 including unchanged functions, helpers, and test sections. Report standards gaps
 throughout those files; hand authorized fixes to implementation before re-review.
+For frontend files, explicitly check function declarations and arrow-function
+helpers against [Rendered Components](../../../docs/frontend/01-ownership.md#rendered-components).
+Record helper placement and caller order in the pattern comparison above.
 Inspect relevant contracts/callers. Compare one
 strong matching implementation; use a second only when the pattern is ambiguous.
 For a new workflow with no implementation analogue, state that and compare its

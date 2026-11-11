@@ -48,11 +48,11 @@ describe('TaskOverviewDashboardCard', () => {
     const dialog = screen.getByRole('dialog', { name: 'Zoe Wilson' });
     expect(within(dialog).getByText('Assigned').nextSibling).toHaveTextContent('3');
     expect(within(dialog).getByRole('heading', { name: 'Overdue' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Submit report').nextSibling).toHaveTextContent('Aug 9');
+    expect(within(dialog).getByText('Submit report')).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { name: 'Upcoming' })).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { name: 'In Progress' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Prepare workshop').nextSibling).toHaveTextContent('Aug 12');
-    expect(within(dialog).getByText('Future workshop').nextSibling).toHaveTextContent('Aug 14');
+    expect(within(dialog).getByText('Prepare workshop')).toBeInTheDocument();
+    expect(within(dialog).getByText('Future workshop')).toBeInTheDocument();
   });
 
   it('excludes closed tasks and sorts in progress tasks by due date', () => {

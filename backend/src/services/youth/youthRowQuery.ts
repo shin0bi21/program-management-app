@@ -30,7 +30,7 @@ export function getYouthRows(appliedFilters = sql`TRUE`, query = sql) {
       youth.last_name,
       youth.created_at,
 
-      profile.date_of_birth::text AS date_of_birth,
+      profile.date_of_birth,
       profile.school_id,
 
       school.name AS school_name,
@@ -54,9 +54,9 @@ export function getYouthRows(appliedFilters = sql`TRUE`, query = sql) {
             FROM program_enrollments enrollment
             INNER JOIN program_cycles cycle ON cycle.id = enrollment.cycle_id
             WHERE enrollment.program_id = program.id AND enrollment.youth_id = youth.id
-              AND enrollment.enrolled_on <= (NOW() AT TIME ZONE 'America/Toronto')::date
-              AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > (NOW() AT TIME ZONE 'America/Toronto')::date)
-              AND (NOW() AT TIME ZONE 'America/Toronto')::date BETWEEN cycle.starts_on AND cycle.ends_on
+              AND enrollment.enrolled_on <= CURRENT_DATE
+              AND (enrollment.withdrawn_on IS NULL OR enrollment.withdrawn_on > CURRENT_DATE)
+              AND CURRENT_DATE BETWEEN cycle.starts_on AND cycle.ends_on
           )
       ) AS active_program,
       (

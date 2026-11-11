@@ -5,8 +5,8 @@ import { publicLeadSchema } from '../../src/validation/publicSchemas';
 describe('Lead date of birth validation', () => {
   afterEach(() => jest.useRealTimers());
 
-  it('uses the Toronto date and accepts past DOBs regardless of age', () => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-10-29T02:00:00Z'));
+  it('accepts past DOBs regardless of age', () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 9, 28, 22));
 
     expect(dateOfBirthSchema.safeParse('2026-10-28').success).toBe(false);
     expect(dateOfBirthSchema.safeParse('2026-10-27').success).toBe(true);

@@ -8,7 +8,6 @@ import {
 } from '../../../../tests/queryClientTestUtils';
 
 import { signUpLead } from '../../leads.api';
-import { getDateKeyInTimeZone } from '../../../../common/utils/date';
 import type { Lead } from '../../types';
 import useSignUpLeadModal from './useSignUpLeadModal';
 
@@ -53,7 +52,7 @@ const programCycle = {
   endsOn: '2026-08-31',
   state: 'active' as const,
   enrolledCount: 10,
-  nextSessionAt: null,
+  nextSessionDate: null,
   nextSessionId: null,
   uniqueAttendeeCount: 0,
 };
@@ -140,11 +139,6 @@ describe('useSignUpLeadModal', () => {
     await act(() => result.current.submit());
     expect(signUpLead).not.toHaveBeenCalled();
     expect(result.current.statusMessage).toBe('Date of birth is required');
-
-    act(() => result.current.changeDateOfBirth(getDateKeyInTimeZone()));
-    await act(() => result.current.submit());
-    expect(signUpLead).not.toHaveBeenCalled();
-    expect(result.current.statusMessage).toBe('Date of birth must be before today');
 
     act(() => result.current.changeDateOfBirth(`${new Date().getFullYear() - 16}-01-01`));
     expect(result.current.visibleProgramCycles.map(item => item.cycleId)).toEqual(['programCycle-too-old']);

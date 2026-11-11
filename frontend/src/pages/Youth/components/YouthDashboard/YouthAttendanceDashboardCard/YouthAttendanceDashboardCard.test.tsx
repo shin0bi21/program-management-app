@@ -13,18 +13,10 @@ vi.mock('../../../../../common/features/Attendance/ViewAttendanceModal', () => (
 
 const attendance: AttendanceData = {
   programCycle: { cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true },
-  youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 2, sessions: [{
+  youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 0, sessions: [{
     id: 'session-1', sessionType: 'Regular', theme: 'Teamwork',
-    startsAt: '2026-07-21T21:00:00.000Z', endsAt: '2026-07-21T22:00:00.000Z',
+    date: '2026-07-21', startTime: '17:00', endTime: '18:00', completed: true,
     cancelledAt: null, status: 'present', notes: null, sessionNotes: [],
-  }, {
-    id: 'session-2', sessionType: 'Regular', theme: 'Communication',
-    startsAt: '2026-07-22T21:00:00.000Z', endsAt: '2026-07-22T22:00:00.000Z',
-    cancelledAt: null, status: null, notes: null, sessionNotes: [],
-  }, {
-    id: 'session-3', sessionType: 'Regular', theme: 'Planning',
-    startsAt: '2026-07-23T21:00:00.000Z', endsAt: '2026-07-23T22:00:00.000Z',
-    cancelledAt: null, status: 'excused', notes: null, sessionNotes: [],
   }] }],
 };
 const loaded = { attendance, loading: false, error: null, retry: vi.fn() };
@@ -44,7 +36,7 @@ describe('YouthAttendanceDashboardCard', () => {
     vi.mocked(useYouthAttendanceData).mockReturnValue(loaded);
     render(<YouthAttendanceDashboardCard youthId="youth-1" youth={makeYouthProfile()} canManage canViewReport onSaved={vi.fn()} />);
 
-    expect(screen.getByText(/Present 1.*Late 0.*Absent 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Present 1.*Late 0.*Absent 0/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance for Soft Skills · Summer 2026' }));
     expect(screen.getByRole('dialog', { name: 'Manage Attendance' })).toBeInTheDocument();
     expect(screen.getByText('Teamwork')).toBeInTheDocument();

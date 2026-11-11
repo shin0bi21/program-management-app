@@ -1,4 +1,5 @@
-import { localDateFromKey, type DateRange } from '../../utils/dateRange';
+import { getBoundedDate } from '../../utils/dateRange';
+import { getDate } from '../../utils/date';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { usePeriodVirtualization } from './hooks/usePeriodVirtualization/usePeriodVirtualization';
 import { usePointerSession } from './hooks/usePointerSession/usePointerSession';
@@ -49,7 +50,7 @@ export default function TimelineCalendar<TRow, TItemData>({
 
   // Periods and range loading
   periodDefinition = dayPeriodDefinition,
-  initialDate = new Date(),
+  initialDate = getDate(),
   positionStorageKey,
   periodCount = 2500,
   dateRange,
@@ -91,7 +92,7 @@ export default function TimelineCalendar<TRow, TItemData>({
   getCellActions,
 }: TimelineCalendarProps<TRow, TItemData>) {
   const [initialPosition] = useState(() => loadCalendarPosition(positionStorageKey, initialDate));
-  const [navigationAnchor, setNavigationAnchor] = useState(() => new Date(initialPosition.date));
+  const [navigationAnchor, setNavigationAnchor] = useState(() => initialPosition.date);
 
   const effectiveOverscan = overscanPeriods ?? 14;
   const { periods, allPeriods, viewportRef, goToDate, visibleYear, leadingPeriodWidth, trailingPeriodWidth } = usePeriodVirtualization({
@@ -249,21 +250,4 @@ export default function TimelineCalendar<TRow, TItemData>({
       </div>
     </div>
   );
-}
-
-/**
- * Keeps a requested navigation date within the calendar's allowed dates.
- * @param date - Date the user is trying to navigate to.
- * @param dateRange - Valid ordered earliest/latest dates, both included; omit to leave date unchanged.
- * @returns The original date when no bounds apply, or a new date clamped between local-midnight boundaries.
- * @example Navigating to May 4 with May 1–3 bounds returns local midnight on May 3.
- */
-function getBoundedDate(date: Date, dateRange?: DateRange): Date {
-  if (!dateRange) return date;
-
-  const first = localDateFromKey(dateRange.start);
-  const last = localDateFromKey(dateRange.end);
-  const boundedTime = Math.max(first.getTime(), Math.min(date.getTime(), last.getTime()));
-
-  return new Date(boundedTime);
 }

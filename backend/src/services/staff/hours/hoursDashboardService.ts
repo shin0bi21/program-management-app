@@ -4,7 +4,6 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type { HoursCategory, HoursCycleSummaryQuery, HoursPayPeriodQuery } from '../../../validation/hoursSchemas';
 import { getStaffReferenceData } from '../../referenceData/staffReferenceData';
 import { getHoursCategoryLabel } from './hoursReferenceData';
-import { getBiweeklyPayPeriod } from './payPeriodUtils';
 
 interface HoursCategoryTotal {
   category: HoursCategory;
@@ -14,7 +13,7 @@ interface HoursCategoryTotal {
 /**
  * Summarizes accessible staff hours for the pay period containing the requested date.
  * @param actor - Actor whose staff access is enforced.
- * @param query - Staff member and optional date; omission uses today's Toronto date.
+ * @param query - Staff member and optional date; omission uses the database's current date.
  * @example getHoursPayPeriodData(actor, { staffId }) // current pay-period total and breakdown
  */
 export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: HoursPayPeriodQuery) {
@@ -22,21 +21,22 @@ export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: Ho
   await assertReadableStaff(actor, query.staffId);
 
   // 2. Find the pay period independently of the dashboard's selected cycle.
-  const [payPeriodCycle] = await sql<Array<{ startsOn: string; requestedDate: string }>>`
-    SELECT
-      starts_on::text AS starts_on,
-      COALESCE(${query.date ?? null}::date, (NOW() AT TIME ZONE 'America/Toronto')::date)::text AS requested_date
-    FROM program_cycles
-    WHERE starts_on <= COALESCE(${query.date ?? null}::date, (NOW() AT TIME ZONE 'America/Toronto')::date)
-    ORDER BY starts_on DESC, id
-    LIMIT 1
+  const [payPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+    WITH anchor AS (
+      SELECT starts_on + ((COALESCE(${query.date ?? null}::date, CURRENT_DATE) - starts_on) / 14) * 14 AS period_start
+      FROM program_cycles
+      WHERE starts_on <= COALESCE(${query.date ?? null}::date, CURRENT_DATE)
+      ORDER BY starts_on DESC, id
+      LIMIT 1
+    )
+    SELECT period_start, (period_start + 13) AS period_end
+    FROM anchor
   `;
-  if (!payPeriodCycle) {
+  if (!payPeriod) {
     if (query.date) throw new NotFoundError('Hours pay period not found');
 
     throw new InternalServerError('Expected a program cycle to have started before the requested pay period.');
   }
-  const payPeriod = getBiweeklyPayPeriod(payPeriodCycle.startsOn, payPeriodCycle.requestedDate);
 
   // 3. Summarize every entry within the pay period, regardless of cycle membership.
   const rows = await sql<HoursCategoryTotal[]>`
@@ -70,7 +70,7 @@ export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query:
   const [cycle] = await sql<Array<{ periodCount: number }>>`
     SELECT ((GREATEST(
       starts_on,
-      LEAST(ends_on, (NOW() AT TIME ZONE 'America/Toronto')::date)
+      LEAST(ends_on, CURRENT_DATE)
     ) - starts_on) / 14) + 1 AS period_count
     FROM program_cycles
     WHERE id = ${query.cycleId}

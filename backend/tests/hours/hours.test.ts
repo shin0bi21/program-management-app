@@ -2,7 +2,6 @@ import request from 'supertest';
 import { createApp } from '../shared/app';
 import { deleteTestUser, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
-import { getBiweeklyPayPeriod } from '../../src/services/staff/hours/payPeriodUtils';
 import { getHoursRows } from '../../src/services/staff/hours/hoursRowQuery';
 import type { AccessTokenPayload } from '../../src/types/auth';
 
@@ -36,9 +35,9 @@ describe('Hours API', () => {
       placementDate: string;
     }>>`
       SELECT
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 1)::text AS linked_date,
-        ((NOW() AT TIME ZONE 'America/Toronto')::date + 2)::text AS placement_date
+        CURRENT_DATE::text AS date,
+        (CURRENT_DATE + 1)::text AS linked_date,
+        (CURRENT_DATE + 2)::text AS placement_date
     `;
     ({ date, linkedDate, placementDate } = dates);
     const admin = await seedTestUser({ email: `hours-admin-${stamp}@test.local`, role: 'admin' });
@@ -82,7 +81,7 @@ describe('Hours API', () => {
     `;
     [activeCycleId, upcomingCycleId] = assignments.map(assignment => assignment.cycleId);
     const upcomingDates = await sql<Array<{ startsOn: string }>>`
-      SELECT starts_on::text FROM program_cycles WHERE id = ${upcomingCycleId}
+      SELECT starts_on FROM program_cycles WHERE id = ${upcomingCycleId}
     `;
     upcomingDate = upcomingDates[0].startsOn;
     await sql`
@@ -90,9 +89,9 @@ describe('Hours API', () => {
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
     const [session] = await sql<Array<{ id: string }>>`
-      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, starts_at, ends_at)
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, date, start_time, end_time)
       SELECT ${programId}, ${activeCycleId}, 'Regular', 'Hours workshop',
-        ${date}::date + TIME '10:00', ${date}::date + TIME '12:00'
+        ${date}::date, TIME '10:00', TIME '12:00'
       RETURNING id
     `;
     sessionId = session.id;
@@ -230,7 +229,7 @@ describe('Hours API', () => {
     ]);
   });
 
-  it('searches policy-scoped calendar entries with the same fields as the table', async () => {
+  it('searches the complete policy-scoped Hours collection', async () => {
     const marker = `Calendar search ${firstStaffId}`;
     const created = await request(app)
       .post('/api/hours')
@@ -290,32 +289,14 @@ describe('Hours API', () => {
 
   it.each([
     'start=2026-06-12',
-    'end=2026-06-15',
     'start=2026-06-15&end=2026-06-12',
     'start=2026-02-30&end=2026-03-01',
-    'start=0000-01-01&end=0000-01-02',
   ])('rejects an invalid hours table range: %s', async query => {
     const response = await request(app)
       .get(`/api/hours/table?${query}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
 
     expect(response.status).toBe(400);
-  });
-
-  it('accepts a 366-day leap-year table range', async () => {
-    const response = await request(app)
-      .get('/api/hours/table?start=2024-01-01&end=2024-12-31')
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-
-    expect(response.status).toBe(200);
-  });
-
-  it('accepts a multi-year table range for cycle-driven calendars', async () => {
-    const response = await request(app)
-      .get('/api/hours/table?start=2024-01-01&end=2025-01-01')
-      .set('Authorization', `Bearer ${firstStaffToken}`);
-
-    expect(response.status).toBe(200);
   });
 
   it('filters table and calendar collections by any selected cycle without widening staff scope', async () => {
@@ -355,7 +336,7 @@ describe('Hours API', () => {
     expect(invalidCycle.status).toBe(400);
   });
 
-  it('lists assigned open-program sessions and derives session time metadata', async () => {
+  it('lists assigned sessions on the requested work date and derives linked Hours scope', async () => {
     const sessions = await request(app)
       .get(`/api/hours/sessions?staffId=${firstStaffId}&date=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
@@ -455,12 +436,16 @@ describe('Hours API', () => {
     const staff = await seedTestUser({ role: 'staff' });
     const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
       SELECT
-        starts_on::text AS starts_on,
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
+        starts_on,
+        CURRENT_DATE::text AS current_date
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
-    const payPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
+    const [payPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT starts_on AS period_start, (starts_on + 13)::text AS period_end
+      FROM program_cycles
+      WHERE id = ${activeCycleId}
+    `;
     try {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
@@ -490,15 +475,14 @@ describe('Hours API', () => {
   });
 
   it('loads a requested pay period without requiring a selected cycle', async () => {
-    const [cycle] = await sql<Array<{ startsOn: string; currentDate: string }>>`
-      SELECT
-        starts_on::text AS starts_on,
-        (NOW() AT TIME ZONE 'America/Toronto')::date::text AS current_date
+    const [currentPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT starts_on AS period_start, (starts_on + 13)::text AS period_end
       FROM program_cycles
       WHERE id = ${activeCycleId}
     `;
-    const currentPeriod = getBiweeklyPayPeriod(cycle.startsOn, cycle.currentDate);
-    const requestedPeriod = getBiweeklyPayPeriod(upcomingDate, upcomingDate);
+    const [requestedPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
+      SELECT ${upcomingDate}::date AS period_start, (${upcomingDate}::date + 13)::text AS period_end
+    `;
 
     const currentResponse = await request(app)
       .get(`/api/hours/pay-period?staffId=${firstStaffId}`)

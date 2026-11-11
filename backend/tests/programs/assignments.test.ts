@@ -82,8 +82,8 @@ describe('Program cycle assignments', () => {
   it('preserves session cascading when an assignment is deleted directly in the database', async () => {
     await setCycles([cycleIds[0]]);
     const [session] = await sql<{ id: string }[]>`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-      VALUES (${programId}, ${cycleIds[0]}, 'Delete behavior', '2026-06-01T14:00:00Z', '2026-06-01T15:00:00Z')
+      INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+      VALUES (${programId}, ${cycleIds[0]}, 'Delete behavior', '2026-06-01', '10:00:00', '11:00:00')
       RETURNING id
     `;
 
@@ -241,8 +241,8 @@ describe('Program cycle assignments', () => {
   it.each(['sessions', 'enrollments', 'withdrawn enrollments', 'hours'])('preserves %s and rolls back the entire replacement', async dependency => {
     await setCycles([cycleIds[0]]);
     if (dependency === 'sessions') {
-      await sql`INSERT INTO program_sessions (program_id, cycle_id, theme, starts_at, ends_at)
-        VALUES (${programId}, ${cycleIds[0]}, 'History', '2026-10-01T17:00:00Z', '2026-10-01T19:00:00Z')`;
+      await sql`INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+        VALUES (${programId}, ${cycleIds[0]}, 'History', '2026-10-01', '13:00:00', '15:00:00')`;
     } else if (dependency === 'hours') {
       await sql`INSERT INTO time_entries (staff_id, program_id, cycle_id, category, date, hours, note)
         VALUES (${staffId}, ${programId}, ${cycleIds[0]}, 'planning_prep', '2026-10-01', 1, 'Assignment history')`;

@@ -1,17 +1,9 @@
 import { z } from 'zod';
 import { dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
 
-const namePattern = /^[a-zA-Z\s'-]+$/;
-
 export const youthSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, 'First name is required')
-    .regex(namePattern, "First name can only contain letters, spaces, hyphens, and apostrophes"),
-  lastName: z
-    .string()
-    .min(1, 'Last name is required')
-    .regex(namePattern, "Last name can only contain letters, spaces, hyphens, and apostrophes"),
+  firstName: z.string().trim().min(1, 'First name is required').max(120, 'First name is too long'),
+  lastName: z.string().trim().min(1, 'Last name is required').max(120, 'Last name is too long'),
   email: z.union([z.literal(''), z.string().email('Invalid email address')]),
   dateOfBirth: z.union([z.literal(''), dateOfBirthSchema]),
   schoolId: z.string().optional(),

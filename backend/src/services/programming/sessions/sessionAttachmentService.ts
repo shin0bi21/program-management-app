@@ -216,8 +216,8 @@ async function assertYouthEligibility(
         INNER JOIN program_enrollments ce ON ce.program_id = cs.program_id AND ce.cycle_id = cs.cycle_id
         WHERE cs.id = ${sessionId}
           AND ce.youth_id = ANY(${sql.array(youthIds)}::uuid[])
-          AND ce.enrolled_on <= (cs.starts_at AT TIME ZONE 'America/Toronto')::date
-          AND (ce.withdrawn_on IS NULL OR ce.withdrawn_on > (cs.starts_at AT TIME ZONE 'America/Toronto')::date)
+          AND ce.enrolled_on <= cs.date
+          AND (ce.withdrawn_on IS NULL OR ce.withdrawn_on > cs.date)
       `;
   if (eligible.length !== youthIds.length) {
     throw new ConflictError('Session attachments can only reference youth in the session roster');

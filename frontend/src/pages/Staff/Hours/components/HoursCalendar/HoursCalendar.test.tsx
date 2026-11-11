@@ -162,7 +162,7 @@ describe('HoursCalendar', () => {
     const onAdd = vi.fn();
     renderCalendar({ resources: [resource, coworker], staffIds: ['staff-1'], onAdd });
     const props = calendarState.props!;
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     const regularItem = buildItem();
     const sessionItem = buildItem({ sessionId: 'session-1', sessionLabel: 'Confidence' });
 
@@ -194,7 +194,7 @@ describe('HoursCalendar', () => {
   });
 
   it('loads the initialized range with all page filters and adapts the returned records for display', async () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     const item = buildItem({ date: periods[1].key });
     renderCalendar({
       data: [item],
@@ -218,7 +218,7 @@ describe('HoursCalendar', () => {
   });
 
   it('updates a buffered row through the mounted calendar callback', async () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     const item = buildItem({ date: periods[1].key });
     const { calendarIndexRef } = renderCalendar({ data: [item] });
     await initializeCalendar(periods);
@@ -233,7 +233,7 @@ describe('HoursCalendar', () => {
   });
 
   it('translates a calendar drop into the page-owned move action', async () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     const item = buildItem({ date: periods[1].key });
     const onMove = vi.fn().mockResolvedValue(undefined);
     const rendered = renderCalendar({
@@ -259,7 +259,7 @@ describe('HoursCalendar', () => {
   it('removes calendar mutation callbacks in read-only mode', () => {
     renderCalendar({ canWrite: false });
     const props = calendarState.props!;
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
 
     expect(props.onItemMove).toBeUndefined();
     expect(props.getCellActions).toBeUndefined();
@@ -281,7 +281,7 @@ describe('HoursCalendar', () => {
   });
 
   it('shows a load error and retries the failed calendar range', async () => {
-    const periods = buildInitialDayPeriods(new Date(2026, 7, 10), 3);
+    const periods = buildInitialDayPeriods('2026-08-10', 3);
     vi.mocked(getHoursCalendarData)
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([]);

@@ -160,7 +160,7 @@ export interface Leads {
   converted_youth_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  date_of_birth: Timestamp | null;
+  date_of_birth: string | null;
   discovery_source: DiscoverySource;
   expression_of_interest_id: string | null;
   id: Generated<string>;
@@ -189,10 +189,10 @@ export interface ProgramCycleAssignments {
 export interface ProgramCycles {
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  ends_on: Timestamp;
+  ends_on: string;
   id: Generated<string>;
   name: string;
-  starts_on: Timestamp;
+  starts_on: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -205,12 +205,12 @@ export interface ProgramEnrollments {
    * Trigger-maintained enrollment/cycle date intersection; empty for open-attendance programs.
    */
   effective_period: Generated<string>;
-  enrolled_on: Generated<Timestamp>;
+  enrolled_on: Generated<string>;
   id: Generated<string>;
   program_id: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
-  withdrawn_on: Timestamp | null;
+  withdrawn_on: string | null;
   youth_id: string;
 }
 
@@ -232,12 +232,13 @@ export interface ProgramSessions {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
+  date: string;
   description: string | null;
-  ends_at: Timestamp;
+  end_time: string;
   id: Generated<string>;
   program_id: string;
   session_type: Generated<SessionType>;
-  starts_at: Timestamp;
+  start_time: string;
   theme: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
@@ -314,11 +315,11 @@ export interface Tasks {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   details: string | null;
-  due_date: Timestamp;
+  due_date: string;
   id: Generated<string>;
   program_id: string | null;
   staff_id: string;
-  start_date: Timestamp;
+  start_date: string;
   state: Generated<string>;
   title: string;
   updated_at: Generated<Timestamp>;
@@ -330,7 +331,7 @@ export interface TimeEntries {
   created_at: Generated<Timestamp>;
   created_by: string | null;
   cycle_id: string;
-  date: Timestamp;
+  date: string;
   hours: Numeric;
   id: Generated<string>;
   note: string;
@@ -486,7 +487,7 @@ export interface YouthProfileNotes {
 export interface YouthProfiles {
   created_at: Generated<Timestamp>;
   created_by: string | null;
-  date_of_birth: Timestamp | null;
+  date_of_birth: string | null;
   id: Generated<string>;
   school_id: string | null;
   updated_at: Generated<Timestamp>;
