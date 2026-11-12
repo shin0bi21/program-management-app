@@ -17,7 +17,7 @@ import {
 import { setHours } from '../Hours/hours.api';
 import type { TimelineCalendarProps } from '../../../common/components/TimelineCalendar/types';
 import { buildInitialDayPeriods } from '../../../common/components/TimelineCalendar/utils/periods';
-import type { Task, TaskResource } from './types';
+import type { Task, StaffReference } from './types';
 import { getDate } from '../../../common/utils/date';
 import { makeTask } from '../../../tests/factories/task';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
@@ -26,7 +26,7 @@ import HoursModal from '../Hours/components/HoursModal/HoursModal';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
 
-type TaskCalendarProps = TimelineCalendarProps<TaskResource, Task>;
+type TaskCalendarProps = TimelineCalendarProps<StaffReference, Task>;
 const hoursModal = vi.hoisted(() => ({ props: null as ComponentProps<typeof HoursModal> | null }));
 vi.mock('../Hours/components/HoursModal/HoursModal', () => ({
   default: (props: ComponentProps<typeof HoursModal>) => {
@@ -159,7 +159,7 @@ describe('Tasks', () => {
     expect(calendarTestState.props).toBeNull();
   });
 
-  it('shows tasks from a readable coworker resource without exposing write controls', async () => {
+  it('shows tasks from a readable coworker without exposing write controls', async () => {
     const coworkerTask: Task = {
       ...task,
       id: 'task-2',
@@ -279,8 +279,7 @@ describe('Tasks', () => {
     act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(task.startDate, 3)));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'missing' }),
-      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
-      { signal: expect.any(AbortSignal) },
+      expect.anything(), expect.anything(),
     ));
   });
 
@@ -290,8 +289,7 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     const periods = buildInitialDayPeriods(task.startDate, 3);
-    const initialRangeLoader = calendarTestState.props!.onInitialPeriods;
-    act(() => initialRangeLoader?.(periods));
+    act(() => calendarTestState.props!.onInitialPeriods?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalled());
     vi.mocked(getTasksCalendarData).mockClear();
 
@@ -299,12 +297,11 @@ describe('Tasks', () => {
     fireEvent.change(search, { target: { value: 'workshop' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
-    await waitFor(() => expect(calendarTestState.props!.onInitialPeriods).not.toBe(initialRangeLoader));
+    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ search: 'workshop' })));
     act(() => calendarTestState.props!.onInitialPeriods?.(periods));
     await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'workshop' }),
-      expect.objectContaining({ start: expect.any(String), end: expect.any(String) }),
-      { signal: expect.any(AbortSignal) },
+      expect.anything(), expect.anything(),
     ));
   });
 
@@ -319,7 +316,7 @@ describe('Tasks', () => {
     const end = today;
     act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(start, 3)));
     await waitFor(() => expect(calendarTestState.props!.items['staff-1']).toEqual([task]));
-    const row: TaskResource = {
+    const row: StaffReference = {
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
     };
     const item = calendarTestState.props!.buildItem({

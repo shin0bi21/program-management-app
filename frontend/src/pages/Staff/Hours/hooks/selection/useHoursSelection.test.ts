@@ -4,15 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import useHoursSelection from './useHoursSelection';
 
-const resources = [
+const staff = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
 ];
 
 describe('useHoursSelection', () => {
-  it('aligns a selected row with dashboard staff and cycle, then clears it on resource selection', () => {
+  it('aligns a selected row with dashboard staff and cycle, then clears it on staff member selection', () => {
     const { result } = renderHook(() => useHoursSelection({
-      resources, currentUserResource: resources[0],
+      staff, currentUserStaff: staff[0],
     }));
     const row = makeHoursItem({ id: 'entry-1', staffId: 'staff-2', cycleId: 'cycle-2' });
 

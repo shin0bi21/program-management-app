@@ -18,7 +18,7 @@ describe('ManageRosterModal', () => {
     programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
     minAge: 12, maxAge: 15, cycleId: 'cycle-summer-2026', cycle: 'Summer 2026',
     startsOn: '2026-06-30', endsOn: '2026-08-31', state: 'active' as const,
-    enrolledCount: 1, nextSessionDate: null, nextSessionId: null,
+    enrolledCount: 1,
     uniqueAttendeeCount: 0,
   };
 

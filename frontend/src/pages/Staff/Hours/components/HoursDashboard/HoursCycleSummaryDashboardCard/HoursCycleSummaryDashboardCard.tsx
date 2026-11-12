@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { StaffResource } from '../../../types';
+import type { StaffReference } from '../../../types';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
@@ -15,7 +15,7 @@ import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
  */
 export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle }: {
   queryKey: readonly unknown[];
-  staff: StaffResource | null;
+  staff: StaffReference | null;
   cycle: ProgramCycle | null;
 }) {
   const state = useHoursCycleSummaryData(queryKey, staff?.id ?? null, cycle?.id ?? null);

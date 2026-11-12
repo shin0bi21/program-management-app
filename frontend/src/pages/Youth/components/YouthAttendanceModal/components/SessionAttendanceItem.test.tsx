@@ -21,7 +21,7 @@ describe('SessionAttendanceItem', () => {
     render(<SessionAttendanceItem
       session={{
         id: 'session-1', sessionType: 'Workshop', theme: 'Communication',
-        date: '2026-08-19', startTime: '13:00', endTime: '14:00', completed: true,
+        date: '2026-08-19', startTime: '13:00', completed: true,
         cancelledAt: null, status: 'present', notes: null, sessionNotes: [note],
       }}
       enrollmentRequired={true}

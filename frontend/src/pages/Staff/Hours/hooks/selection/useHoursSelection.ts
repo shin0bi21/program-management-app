@@ -1,18 +1,18 @@
 import { useCallback, useState } from 'react';
 
-import type { HoursItem, StaffResource } from '../../types';
+import type { HoursItem, StaffReference } from '../../types';
 
 /**
  * Tracks selected IDs and the staff/cycle used by the Hours overview.
- * @param options - Visible resources and the current user's default resource.
+ * @param options - Visible staff and the current user's default staff member.
  * @example selection.selectRow(entry) // selects its staff member and cycle
  */
 export default function useHoursSelection({
-  resources,
-  currentUserResource,
+  staff,
+  currentUserStaff,
 }: {
-  resources: readonly StaffResource[];
-  currentUserResource: StaffResource | null;
+  staff: readonly StaffReference[];
+  currentUserStaff: StaffReference | null;
 }) {
   const [dashboardCycleId, setDashboardCycleId] = useState<string | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -29,8 +29,8 @@ export default function useHoursSelection({
     setSelectedRowId(null);
   }, []);
 
-  const selectedStaff = resources.find(resource => resource.id === selectedStaffId)
-    ?? currentUserResource;
+  const selectedStaff = staff.find(staffMember => staffMember.id === selectedStaffId)
+    ?? currentUserStaff;
 
   return {
     dashboardCycleId,

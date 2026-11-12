@@ -56,10 +56,10 @@ export default function Tasks() {
     referenceData: pageData.referenceData,
     referenceDataLoading: pageData.referenceDataLoading,
     referenceDataError: Boolean(pageData.referenceDataError),
-    resources: pageData.resources,
+    staff: pageData.staff,
     programs: pageData.programs,
-    resourcesLoading: pageData.resourcesLoading,
-    resourcesError: Boolean(pageData.resourcesError),
+    staffLoading: pageData.staffLoading,
+    staffError: Boolean(pageData.staffError),
     programsLoading: pageData.programsLoading,
     programsError: Boolean(pageData.programsError),
     tableKeys: TASK_TABLE_KEYS,
@@ -79,7 +79,7 @@ export default function Tasks() {
   }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
-  const selection = useTaskSelection({ resources: pageData.resources });
+  const selection = useTaskSelection({ staff: pageData.staff });
 
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
@@ -155,11 +155,11 @@ export default function Tasks() {
   const taskCalendar = (
     <TaskCalendar
       key={JSON.stringify(taskFilters)}
-      resources={pageData.resources}
+      staff={pageData.staff}
       filters={taskFilters}
       dateRange={dateRange}
       canWrite={canWrite}
-      selectedResourceId={selection.selectedResourceId}
+      selectedStaffId={selection.selectedStaffId}
       selectedTaskId={selection.selectedTaskId}
       actions={{
         isTaskPending: actions.isTaskPending,
@@ -169,7 +169,7 @@ export default function Tasks() {
       }}
       calendarCacheRef={actions.calendarCacheRef}
       onTaskSelect={selection.selectTask}
-      onResourceSelect={selection.selectResource}
+      onStaffSelect={selection.selectStaff}
       onAddTask={openAddTaskModal}
       onEditTask={openEditTaskModal}
       onMessageChange={setViewError}
@@ -186,7 +186,7 @@ export default function Tasks() {
       ariaLabel="Task overview and assignments"
       controls={preferences}
       loadingLabel="Loading saved task preferences…"
-      actions={canWrite && pageData.writableResources.length ? <Button
+      actions={canWrite && pageData.writableStaff.length ? <Button
         disabled={pageData.referenceDataLoading || Boolean(pageData.referenceDataError)}
         onClick={() => {
           openAddTaskModal({ startDate: today, dueDate: today });
@@ -202,7 +202,7 @@ export default function Tasks() {
           message: 'Unable to load task options.',
           details: 'Staff, programs, and task categories could not be loaded.',
         } : null,
-        pageData.resourcesError ? { message: 'Unable to load task staff.' } : null,
+        pageData.staffError ? { message: 'Unable to load task staff.' } : null,
         pageData.programsError ? { message: 'Unable to load task programs.' } : null,
         pageData.cyclesError ? {
           message: 'Unable to load cycles.',
@@ -210,11 +210,11 @@ export default function Tasks() {
         } : null,
         viewError,
       ]}
-      dashboard={selection.selectedResource ? <>
+      dashboard={selection.selectedStaff ? <>
         <TaskOverviewDashboardCard
           queryKey={TASK_QUERY_KEY}
-          resourceId={selection.selectedResource.id}
-          resourceName={selection.selectedResource.name}
+          staffId={selection.selectedStaff.id}
+          staffName={selection.selectedStaff.name}
           today={today}
         />
         <TaskHoursLoggedDashboardCard
@@ -229,7 +229,7 @@ export default function Tasks() {
     {canWrite && taskModalState && <TaskModal
       key={taskModalState.mode === 'edit' ? taskModalState.task.id : 'new'}
       target={taskModalState}
-      resources={pageData.writableResources}
+      staff={pageData.writableStaff}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
       onSaved={task => actions.syncTask(task, taskModalState.mode === 'add' ? 'create' : 'update')}
@@ -242,7 +242,7 @@ export default function Tasks() {
       initialTask={hoursModalTask}
       initialStaffId={hoursModalTask.staffId}
       canCompleteTask={canWrite}
-      resources={pageData.resources}
+      staff={pageData.staff}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
       loadTasks={getTaskDashboardData}

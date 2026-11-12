@@ -27,10 +27,12 @@ and the authenticated My Account page. These are alternative permissions for
 minimal metadata, not permission to read or manage the complete domain records.
 Management endpoints retain their existing permissions and record policies.
 
-Staff results include only active staff, project manager, and administrator resources visible under the shared
-staff-resource read policy. The required `feature` determines both read
+Staff results include only active staff, project managers, and administrators visible under the shared
+staff read policy. Use `staff` and the canonical `StaffReference` projection throughout
+these workflows; identities remain stored in `users`, and `staffId` refers to a user ID.
+Generic calendar infrastructure still uses rows for staff or programs. The required `feature` determines both read
 authorization and the domain-specific `writable` flag. A Tasks capability must not
-authorize an Hours lookup or make an Hours resource writable.
+authorize an Hours lookup or make a staff member writable in Hours.
 
 ## Compose Feature-Owned Options
 

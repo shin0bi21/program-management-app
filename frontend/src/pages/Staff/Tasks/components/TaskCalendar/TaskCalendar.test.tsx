@@ -7,33 +7,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import { getTasksCalendarData } from '../../tasks.api';
-import type { Task, TaskResource } from '../../types';
+import type { Task, StaffReference } from '../../types';
 import { makeTask } from '../../../../../tests/factories/task';
 import type { TaskCalendarCache } from '../../types';
 import TaskCalendar, { type TaskCalendarActions } from './TaskCalendar';
 
-type CalendarProps = TimelineCalendarProps<TaskResource, Task>;
+type CalendarProps = TimelineCalendarProps<StaffReference, Task>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
   default: (props: CalendarProps) => {
     calendarState.props = props;
-    return <div aria-label="Task calendar">{props.rows.map(resource => <span key={resource.id}>{resource.name}</span>)}</div>;
+    return <div aria-label="Task calendar">{props.rows.map(staffMember => <span key={staffMember.id}>{staffMember.name}</span>)}</div>;
   },
 }));
 vi.mock('../../tasks.api', () => ({ getTasksCalendarData: vi.fn() }));
 
-const resource: TaskResource = {
+const staffMember: StaffReference = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 };
-const coworker: TaskResource = {
+const coworker: StaffReference = {
   id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true,
 };
 const task = makeTask();
 
 /** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
 function renderCalendar({
-  resources = [resource, coworker],
+  staff = [staffMember, coworker],
   staffIds = [] as string[],
   canWrite = true,
   selectedTaskId = null as string | null,
@@ -61,13 +61,13 @@ function renderCalendar({
     current: { upsert: vi.fn(), remove: vi.fn() },
   };
   const callbacks = {
-    onTaskSelect: vi.fn(), onResourceSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
+    onTaskSelect: vi.fn(), onStaffSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
   };
   const rendered = render(<TaskCalendar
-    resources={resources}
+    staff={staff}
     filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
     canWrite={canWrite}
-    selectedResourceId="staff-1"
+    selectedStaffId="staff-1"
     selectedTaskId={selectedTaskId}
     actions={actions}
     calendarCacheRef={calendarCacheRef}
@@ -83,7 +83,7 @@ describe('TaskCalendar', () => {
     vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
   });
 
-  it('loads buffered task data and applies the staff resource filter', async () => {
+  it('loads buffered task data and applies the staff member filter', async () => {
     renderCalendar({ staffIds: ['staff-1'] });
     const periods = buildInitialDayPeriods('2026-08-10', 3);
     act(() => calendarState.props?.onInitialPeriods?.(periods));
@@ -94,7 +94,7 @@ describe('TaskCalendar', () => {
       { signal: expect.any(AbortSignal) },
     ));
     await waitFor(() => expect(calendarState.props?.items['staff-1']).toEqual([task]));
-    expect(calendarState.props?.rows).toEqual([resource]);
+    expect(calendarState.props?.rows).toEqual([staffMember]);
   });
 
   it('updates full buffered rows through mutation callbacks after saves and deletes', async () => {
@@ -110,17 +110,17 @@ describe('TaskCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
   });
 
-  it('emits narrow resize and cross-resource move commands with selection changes', async () => {
+  it('emits narrow resize and cross-staff member move commands with selection changes', async () => {
     const rendered = renderCalendar();
     await act(async () => calendarState.props?.onItemResize?.({
-      row: resource,
+      row: staffMember,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
       nextRange: { start: '2026-08-11', end: '2026-08-13' },
       edge: 'end',
     }));
     await act(async () => calendarState.props?.onItemMove?.({
-      row: resource,
+      row: staffMember,
       destinationRow: coworker,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
@@ -140,14 +140,14 @@ describe('TaskCalendar', () => {
       startDate: '2026-08-12', dueDate: '2026-08-14',
       staffId: 'staff-2',
     }));
-    expect(rendered.onResourceSelect).not.toHaveBeenCalled();
+    expect(rendered.onStaffSelect).not.toHaveBeenCalled();
   });
 
   it('routes item activation through the shared calendar contract', () => {
     const rendered = renderCalendar();
 
     calendarState.props?.onItemActivate?.({
-      row: resource,
+      row: staffMember,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
     });
@@ -160,7 +160,7 @@ describe('TaskCalendar', () => {
     vi.mocked(rendered.actions.setTaskRange).mockResolvedValueOnce(null);
 
     await act(async () => calendarState.props?.onItemMove?.({
-      row: resource,
+      row: staffMember,
       destinationRow: coworker,
       item: task,
       originalRange: { start: task.startDate, end: task.dueDate },
@@ -168,17 +168,17 @@ describe('TaskCalendar', () => {
     }));
 
     expect(rendered.onTaskSelect).not.toHaveBeenCalled();
-    expect(rendered.onResourceSelect).not.toHaveBeenCalled();
+    expect(rendered.onStaffSelect).not.toHaveBeenCalled();
   });
 
   it('builds lifecycle actions from task state and write capability', async () => {
     const rendered = renderCalendar({ selectedTaskId: 'task-1' });
     const openTask: Task = { ...task, state: 'open', hoursLogged: 1 };
     const element = calendarState.props?.buildItem({
-      row: resource,
+      row: staffMember,
       data: openTask,
       range: { start: openTask.startDate, end: openTask.dueDate },
-      calendar: makeItemCalendarProps({ row: resource, data: openTask, range: { start: openTask.startDate, end: openTask.dueDate } }),
+      calendar: makeItemCalendarProps({ row: staffMember, data: openTask, range: { start: openTask.startDate, end: openTask.dueDate } }),
       visibleStart: { key: openTask.startDate, start: openTask.startDate, end: openTask.dueDate },
       visibleEnd: { key: openTask.dueDate, start: openTask.startDate, end: openTask.dueDate },
     }) as { props: { selected: boolean; onComplete: () => void; onCancel: () => void; onEdit: () => void } };
@@ -198,36 +198,36 @@ describe('TaskCalendar', () => {
     const openTaskWithHours = { ...task, state: 'open' as const, hoursLogged: 1 };
     const completed = { ...task, state: 'completed' as const, status: 'completed' as const, hoursLogged: 1 };
 
-    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: task, range })).toEqual({
+    expect(calendarState.props?.getItemCapabilities?.({ row: staffMember, data: task, range })).toEqual({
       draggable: true,
       resizable: true,
     });
-    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: completed, range })).toEqual({
+    expect(calendarState.props?.getItemCapabilities?.({ row: staffMember, data: completed, range })).toEqual({
       draggable: false,
       resizable: false,
     });
     vi.mocked(rendered.actions.isTaskPending).mockReturnValue(true);
-    expect(calendarState.props?.getItemCapabilities?.({ row: resource, data: task, range })).toEqual({
+    expect(calendarState.props?.getItemCapabilities?.({ row: staffMember, data: task, range })).toEqual({
       draggable: false,
       resizable: true,
     });
     vi.mocked(rendered.actions.isTaskPending).mockReturnValue(false);
     expect(calendarState.props?.canItemMove?.({
-      row: resource,
-      destinationRow: resource,
+      row: staffMember,
+      destinationRow: staffMember,
       item: openTaskWithHours,
       originalRange: range,
       nextRange: range,
     })).toBe(true);
     expect(calendarState.props?.canItemMove?.({
-      row: resource,
+      row: staffMember,
       destinationRow: coworker,
       item: openTaskWithHours,
       originalRange: range,
       nextRange: range,
     })).toBe(false);
     expect(calendarState.props?.canItemMove?.({
-      row: resource,
+      row: staffMember,
       destinationRow: coworker,
       item: task,
       originalRange: range,
@@ -235,10 +235,10 @@ describe('TaskCalendar', () => {
     })).toBe(true);
   });
 
-  it('opens a row-scoped add target only for writable resources', () => {
+  it('opens a row-scoped add target only for writable staff', () => {
     const rendered = renderCalendar();
     const periods = buildInitialDayPeriods('2026-08-10', 3);
-    calendarState.props?.onCellActivate?.({ row: resource, rowIndex: 0, period: periods[1], items: [] });
+    calendarState.props?.onCellActivate?.({ row: staffMember, rowIndex: 0, period: periods[1], items: [] });
     expect(rendered.onAddTask).toHaveBeenCalledWith({
       startDate: periods[1].key, dueDate: periods[1].key, staffId: 'staff-1',
     });

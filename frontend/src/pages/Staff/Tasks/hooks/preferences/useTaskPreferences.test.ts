@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { TaskReferenceData } from '../../tasks.api';
-import type { TaskResource, TaskProgram } from '../../types';
-type TestTaskOptions = TaskReferenceData & { resources: TaskResource[]; programs: TaskProgram[] };
+import type { StaffReference, TaskProgram } from '../../types';
+type TestTaskOptions = TaskReferenceData & { staff: StaffReference[]; programs: TaskProgram[] };
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -25,7 +25,7 @@ const savedPreference: { preference: StoredTaskPreferences | null; error: string
 };
 
 const options: TestTaskOptions = {
-  resources: [{
+  staff: [{
     id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
   }],
   programs: [{ id: 'program-1', name: 'Soft Skills' }],
@@ -59,10 +59,10 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
     : options;
 
   return useTaskPreferences({
-    resources: currentOptions?.resources ?? [],
+    staff: currentOptions?.staff ?? [],
     programs: currentOptions?.programs ?? [],
-    resourcesLoading: settings.optionsLoading ?? false,
-    resourcesError: settings.optionsError ?? false,
+    staffLoading: settings.optionsLoading ?? false,
+    staffError: settings.optionsError ?? false,
     programsLoading: settings.optionsLoading ?? false,
     programsError: settings.optionsError ?? false,
     referenceData: currentOptions,

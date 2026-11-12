@@ -12,7 +12,7 @@ import type {
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type {
-  StaffResource,
+  StaffReference,
   HoursFilters,
   HoursCalendarIndex,
   HoursItemMove,
@@ -25,7 +25,7 @@ const initialDate = getDate();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
 
 interface HoursCalendarProps {
-  resources: StaffResource[];
+  staff: StaffReference[];
   filters: HoursFilters;
   canWrite: boolean;
   selectedStaffId?: string;
@@ -45,7 +45,7 @@ interface HoursCalendarProps {
  * @example <HoursCalendar filters={filters} {...viewProps} />
  */
 export default function HoursCalendar({
-  resources,
+  staff,
   filters,
   canWrite,
   selectedStaffId,
@@ -65,17 +65,17 @@ export default function HoursCalendar({
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
 
-  const visibleResources = useMemo(() => {
-    if (!staffIds.length) return resources;
+  const visibleStaff = useMemo(() => {
+    if (!staffIds.length) return staff;
 
-    return resources.filter(resource => staffIds.includes(resource.id));
-  }, [staffIds, resources]);
+    return staff.filter(staffMember => staffIds.includes(staffMember.id));
+  }, [staffIds, staff]);
 
   const buildItem = useCallback(({
     row,
     data,
     calendar: itemCalendar,
-  }: BuildItemContext<StaffResource, HoursItem>) => {
+  }: BuildItemContext<StaffReference, HoursItem>) => {
     const entry = data;
     const canModifyEntry = canWrite && row.writable && !isItemPending(entry.id);
 
@@ -93,7 +93,7 @@ export default function HoursCalendar({
    * Allows dragging only writable entries without session-owned placement or pending changes.
    * @example getItemCapabilities(context) // { draggable: false } for a session entry
    */
-  function getItemCapabilities({ row, data }: ItemCapabilityContext<StaffResource, HoursItem>) {
+  function getItemCapabilities({ row, data }: ItemCapabilityContext<StaffReference, HoursItem>) {
     const entry = data;
     const draggable = canWrite && row.writable && !entry.sessionId && !isItemPending(entry.id);
 
@@ -104,7 +104,7 @@ export default function HoursCalendar({
    * Sends the destination day to page-owned placement actions.
    * @example moveHours(context) // saves context.nextRange.start
    */
-  function moveHours({ item, nextRange }: ItemMoveContext<StaffResource, HoursItem>) {
+  function moveHours({ item, nextRange }: ItemMoveContext<StaffReference, HoursItem>) {
     return onMove({ item, date: nextRange.start });
   }
 
@@ -112,7 +112,7 @@ export default function HoursCalendar({
    * Offers source-specific entry creation for a writable staff member and day.
    * @example getCellActions(context) // [] for a read-only staff member
    */
-  function getCellActions({ row, period }: CalendarCellContext<StaffResource, HoursItem>) {
+  function getCellActions({ row, period }: CalendarCellContext<StaffReference, HoursItem>) {
     if (!row.writable) return [];
 
     const target = { staffId: row.id, date: period.key };
@@ -129,7 +129,7 @@ export default function HoursCalendar({
   }
 
   return (
-    <TimelineCalendar<StaffResource, HoursItem>
+    <TimelineCalendar<StaffReference, HoursItem>
       ariaLabel="Staff hours calendar"
       initialDate={initialDate}
       dateRange={dateRange}
@@ -138,9 +138,9 @@ export default function HoursCalendar({
       onInitialPeriods={calendar.initialize}
       onPeriodsReset={calendar.reset}
 
-      rows={visibleResources}
+      rows={visibleStaff}
       rowHeader="Name"
-      getRowId={getStaffResourceId}
+      getRowId={getStaffId}
       renderRow={renderStaffRow}
       selectedRowId={selectedStaffId}
       onRowSelect={row => onStaffSelect(row.id)}
@@ -159,29 +159,37 @@ export default function HoursCalendar({
   );
 }
 
-/** Identifies a staff calendar row. @example getStaffResourceId(staff) // staff.id */
-const getStaffResourceId = (resource: StaffResource) => resource.id;
-/** Identifies a saved entry in a calendar membership index. @example getHoursItemId(entry) // entry.id */
-const getHoursItemId = (item: HoursItem) => item.id;
-/** Places an entry on its logged day. @example getHoursItemRange(entry) // { start: entry.date, end: entry.date } */
-const getHoursItemRange = (data: HoursItem) => ({ start: data.date, end: data.date });
-
+/** Identifies a staff calendar row. @example getStaffId(staff) // staff.id */
+function getStaffId(staffMember: StaffReference) {
+  return staffMember.id;
+}
 /**
  * Displays the staff member for a calendar row.
  * @example renderStaffRow(context) // compact staff name
  */
-function renderStaffRow({ row }: RenderRowContext<StaffResource>) {
+function renderStaffRow({ row }: RenderRowContext<StaffReference>) {
   return (
-    <div className="hours-resource">
+    <div className="hours-staff">
       <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>
     </div>
   );
 }
 
+
+/** Identifies a saved entry in a calendar membership index. @example getHoursItemId(entry) // entry.id */
+function getHoursItemId(item: HoursItem) {
+  return item.id;
+}
+/** Places an entry on its logged day. @example getHoursItemRange(entry) // { start: entry.date, end: entry.date } */
+function getHoursItemRange(data: HoursItem) {
+  return { start: data.date, end: data.date };
+}
+
+
 /**
  * Allows a move only within the same writable staff row.
  * @example canMoveWithinStaff(context) // false when destination staff differs
  */
-function canMoveWithinStaff({ row, destinationRow }: ItemMoveContext<StaffResource, HoursItem>) {
+function canMoveWithinStaff({ row, destinationRow }: ItemMoveContext<StaffReference, HoursItem>) {
   return row.writable && destinationRow.writable && row.id === destinationRow.id;
 }

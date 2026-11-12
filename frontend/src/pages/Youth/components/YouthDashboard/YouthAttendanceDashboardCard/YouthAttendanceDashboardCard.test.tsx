@@ -15,7 +15,7 @@ const attendance: AttendanceData = {
   programCycle: { cycleId: 'cycle-1', cycle: 'Summer 2026', programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true },
   youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 0, sessions: [{
     id: 'session-1', sessionType: 'Regular', theme: 'Teamwork',
-    date: '2026-07-21', startTime: '17:00', endTime: '18:00', completed: true,
+    date: '2026-07-21', startTime: '17:00', completed: true,
     cancelledAt: null, status: 'present', notes: null, sessionNotes: [],
   }] }],
 };

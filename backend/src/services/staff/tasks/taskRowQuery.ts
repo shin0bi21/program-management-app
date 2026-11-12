@@ -49,7 +49,7 @@ export const taskStatus = sql`
 
 /**
  * Builds canonical task rows within the actor's readable staff scope.
- * @param actor - Actor whose resource scope is always enforced.
+ * @param actor - Actor whose staff scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
  * @returns Complete rows with labels, numeric totals, date-ordered daily hours, and policy-derived write access.

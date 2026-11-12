@@ -65,7 +65,7 @@ export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
-    await assertActiveStaffResource(input.staffId, trx);
+    await assertActiveStaff(input.staffId, trx);
     await assertProgramExists(input.programId, trx);
 
     // 3. Save the task.
@@ -127,7 +127,7 @@ export async function updateTaskPlacement(
     const nextStaffId = input.staffId ?? existing.staffId;
     const assigneeChanged = nextStaffId !== existing.staffId;
     if (assigneeChanged) {
-      await assertActiveStaffResource(nextStaffId, trx);
+      await assertActiveStaff(nextStaffId, trx);
       if (existing.hoursLogged > 0) {
         throw new ConflictError('Only open tasks without logged time can be reassigned');
       }
@@ -276,7 +276,7 @@ async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTo
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
-    await assertActiveStaffResource(input.staffId, trx);
+    await assertActiveStaff(input.staffId, trx);
     await assertProgramExists(input.programId, trx);
 
     // 3. Lock the task and check whether it can be edited.
@@ -329,19 +329,19 @@ function isTerminalTask(task: TaskRow) {
 }
 
 /**
- * Requires an active employee account.
+ * Requires an active staff account.
  * @param staffId - Assignee to check.
  * @param trx - Transaction owning the task change.
- * @example assertActiveStaffResource(staffId, trx) // throws 404 when unavailable
+ * @example assertActiveStaff(staffId, trx) // throws 404 when unavailable
  */
-async function assertActiveStaffResource(staffId: string, trx: typeof sql) {
+async function assertActiveStaff(staffId: string, trx: typeof sql) {
   const staff = await trx<{ id: string }[]>`
     SELECT
-      employee.id
-    FROM users employee
-    INNER JOIN user_roles role ON role.id = employee.role_id
-    INNER JOIN user_credentials credentials ON credentials.user_id = employee.id
-    WHERE employee.id = ${staffId}
+      staff.id
+    FROM users staff
+    INNER JOIN user_roles role ON role.id = staff.role_id
+    INNER JOIN user_credentials credentials ON credentials.user_id = staff.id
+    WHERE staff.id = ${staffId}
       AND role.name IN ('admin', 'project_manager', 'staff')
       AND credentials.status = 'active'
   `;

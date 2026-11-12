@@ -22,8 +22,6 @@ describe('useProgramCycleAssignments', () => {
       minAge: 12,
       maxAge: 15,
       enrolledCount: 10,
-      nextSessionDate: null,
-      nextSessionId: null,
       uniqueAttendeeCount: 0,
     }]);
   });

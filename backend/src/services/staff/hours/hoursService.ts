@@ -60,19 +60,15 @@ export function getHoursReferenceData() {
 export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
   // 1. Check access to the staff member.
   assertCanSetHours(actor, query.staffId);
-  await assertActiveStaffResource(query.staffId);
+  await assertActiveStaff(query.staffId);
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
-    id: string; label: string; programId: string; program: string; date: string;
+    id: string; label: string; date: string;
   }>>`
     SELECT
       session.id,
       session.theme AS label,
-
-      program.id AS program_id,
-      program.name AS program,
-
       session.date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id
@@ -103,7 +99,7 @@ export async function setHours(
 ) {
   // 1. Check access to the staff member.
   assertCanSetHours(actor, input.staffId);
-  await assertActiveStaffResource(input.staffId);
+  await assertActiveStaff(input.staffId);
   const transactionId = crypto.randomUUID();
   let saved!: HoursRow;
   let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
@@ -394,9 +390,9 @@ async function completeTaskFromHours(
 /**
  * Requires an active staff account for logging time.
  * @param staffId - Staff member to check; unavailable accounts raise 404.
- * @example assertActiveStaffResource(staffId) // throws for inactive accounts
+ * @example assertActiveStaff(staffId) // throws for inactive accounts
  */
-async function assertActiveStaffResource(staffId: string) {
+async function assertActiveStaff(staffId: string) {
   // 1. Check that the staff account is active.
   const rows = await sql<{ id: string }[]>`
     SELECT

@@ -14,11 +14,11 @@ import type {
 import {
   getHoursCalendarData,
 } from '../../hours.api';
-import type { StaffResource, HoursItem, HoursFilters } from '../../types';
+import type { StaffReference, HoursItem, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarIndex } from '../../types';
 
-const resource: StaffResource = {
+const staffMember: StaffReference = {
   id: 'staff-1',
   firstName: 'Zoe',
   lastName: 'Wilson',
@@ -26,7 +26,7 @@ const resource: StaffResource = {
   role: 'staff',
   writable: true,
 };
-const coworker: StaffResource = {
+const coworker: StaffReference = {
   id: 'staff-2',
   firstName: 'Alex',
   lastName: 'Morgan',
@@ -35,7 +35,7 @@ const coworker: StaffResource = {
   writable: false,
 };
 
-type CalendarProps = TimelineCalendarProps<StaffResource, HoursItem>;
+type CalendarProps = TimelineCalendarProps<StaffReference, HoursItem>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
@@ -73,12 +73,12 @@ function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
 }
 
 /**
- * Mounts the Hours calendar with domain filters, resources, and command spies.
+ * Mounts the Hours calendar with domain filters, staff, and command spies.
  * @example renderCalendar({ canWrite: false }) // read-only calendar and its callbacks
  */
 function renderCalendar({
   data = [],
-  resources = [resource],
+  staff = [staffMember],
   staffIds = [],
   search = '',
   filters = {},
@@ -90,7 +90,7 @@ function renderCalendar({
   onMove = vi.fn().mockResolvedValue(undefined),
 }: {
   data?: HoursItem[];
-  resources?: StaffResource[];
+  staff?: StaffReference[];
   staffIds?: string[];
   search?: string;
   filters?: Partial<HoursFilters>;
@@ -107,7 +107,7 @@ function renderCalendar({
   };
   const result = renderWithQueryClient(
       <HoursCalendar
-        resources={resources}
+        staff={staff}
         filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
         canWrite={canWrite}
         isItemPending={() => false}
@@ -158,29 +158,29 @@ describe('HoursCalendar', () => {
     expect(calendarState.props!.items).toEqual({});
   });
 
-  it('filters resources and restricts dragging and cell actions by entry source', () => {
+  it('filters staff and restricts dragging and cell actions by entry source', () => {
     const onAdd = vi.fn();
-    renderCalendar({ resources: [resource, coworker], staffIds: ['staff-1'], onAdd });
+    renderCalendar({ staff: [staffMember, coworker], staffIds: ['staff-1'], onAdd });
     const props = calendarState.props!;
     const periods = buildInitialDayPeriods('2026-08-10', 3);
     const regularItem = buildItem();
     const sessionItem = buildItem({ sessionId: 'session-1', sessionLabel: 'Confidence' });
 
-    expect(props.rows).toEqual([resource]);
+    expect(props.rows).toEqual([staffMember]);
     expect(props.selectedRowId).toBe('staff-1');
     expect(props.getItemCapabilities?.({
-      row: resource,
+      row: staffMember,
       data: regularItem,
       range: { start: periods[1].key, end: periods[1].key },
     })).toEqual({ draggable: true });
     expect(props.getItemCapabilities?.({
-      row: resource,
+      row: staffMember,
       data: sessionItem,
       range: { start: periods[1].key, end: periods[1].key },
     })).toEqual({ draggable: false });
 
     const actions = props.getCellActions?.({
-      row: resource,
+      row: staffMember,
       rowIndex: 0,
       period: periods[1],
       items: [],
@@ -243,8 +243,8 @@ describe('HoursCalendar', () => {
     await initializeCalendar(periods);
 
     await act(async () => calendarState.props?.onItemMove?.({
-      row: resource,
-      destinationRow: resource,
+      row: staffMember,
+      destinationRow: staffMember,
       item: item,
       originalRange: { start: periods[1].key, end: periods[1].key },
       nextRange: { start: periods[2].key, end: periods[2].key },
@@ -266,12 +266,12 @@ describe('HoursCalendar', () => {
     const entry = buildItem();
     const data = entry;
     const range = { start: periods[1].key, end: periods[1].key };
-    expect(props.getItemCapabilities?.({ row: resource, data, range })).toEqual({ draggable: false });
+    expect(props.getItemCapabilities?.({ row: staffMember, data, range })).toEqual({ draggable: false });
     const item = props.buildItem({
-      row: resource,
+      row: staffMember,
       data,
       range,
-      calendar: makeItemCalendarProps({ row: resource, data, range }),
+      calendar: makeItemCalendarProps({ row: staffMember, data, range }),
       visibleStart: periods[1],
       visibleEnd: periods[1],
     });

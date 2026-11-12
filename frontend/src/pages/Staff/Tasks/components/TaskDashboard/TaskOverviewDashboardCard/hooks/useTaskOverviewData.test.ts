@@ -13,7 +13,7 @@ vi.mock('../../../../tasks.api', () => ({
 describe('useTaskOverviewData', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('loads tasks for the selected resource under the page-owned query key', async () => {
+  it('loads tasks for the selected staff member under the page-owned query key', async () => {
     const task = makeTask();
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
     const client = createTestQueryClient();
@@ -41,29 +41,29 @@ describe('useTaskOverviewData', () => {
     expect(result.current.tasks).toEqual([]);
   });
 
-  it('does not carry the previous resource tasks into a pending resource query', async () => {
-    let resolveSecondResource: (tasks: ReturnType<typeof makeTask>[]) => void = () => undefined;
-    vi.mocked(getTaskDashboardData).mockImplementation(resourceId => (
-      resourceId === 'staff-1'
+  it('does not carry the previous staff member’s tasks into a pending staff query', async () => {
+    let resolveSecondStaff: (tasks: ReturnType<typeof makeTask>[]) => void = () => undefined;
+    vi.mocked(getTaskDashboardData).mockImplementation(staffId => (
+      staffId === 'staff-1'
         ? Promise.resolve([makeTask({ id: 'task-1' })])
-        : new Promise(resolve => { resolveSecondResource = resolve; })
+        : new Promise(resolve => { resolveSecondStaff = resolve; })
     ));
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(
-      ({ resourceId }) => useTaskOverviewData(['tasks'], resourceId),
+      ({ staffId }) => useTaskOverviewData(['tasks'], staffId),
       {
-        initialProps: { resourceId: 'staff-1' },
+        initialProps: { staffId: 'staff-1' },
         wrapper: createQueryClientWrapper(client),
       },
     );
 
     await waitFor(() => expect(result.current.tasks).toHaveLength(1));
-    rerender({ resourceId: 'staff-2' });
+    rerender({ staffId: 'staff-2' });
 
     expect(result.current.loading).toBe(true);
     expect(result.current.tasks).toEqual([]);
 
-    resolveSecondResource([makeTask({ id: 'task-2' })]);
+    resolveSecondStaff([makeTask({ id: 'task-2' })]);
     await waitFor(() => expect(result.current.tasks[0]?.id).toBe('task-2'));
   });
 });

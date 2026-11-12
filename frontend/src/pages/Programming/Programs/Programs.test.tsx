@@ -59,7 +59,6 @@ describe('Programs', () => {
       programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Fall 2026',
       startsOn: '2020-01-01', endsOn: '2100-12-31', enrollmentRequired: true, minAge: 12, maxAge: 15, state: 'active',
       enrolledCount: 5, uniqueAttendeeCount: 0,
-      nextSessionDate: null, nextSessionId: null,
     }]);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     programState.programs = [{

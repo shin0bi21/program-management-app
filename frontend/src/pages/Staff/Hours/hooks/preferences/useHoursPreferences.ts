@@ -13,7 +13,7 @@ import {
   preferenceSorting,
 } from '../../../../../common/features/Preferences/preferences';
 import type {
-  StaffResource,
+  StaffReference,
   HoursCategory,
   HoursItemType,
   HoursProgram,
@@ -39,27 +39,27 @@ export type StoredHoursPreferences = Partial<HoursPreferences>;
 
 export default function useHoursPreferences({
   role,
-  resources,
+  staff,
   programs,
   cycles,
   categories,
   types,
   loadingDependencies,
   optionsError,
-  resourcesError = optionsError,
+  staffError = optionsError,
   programsError = optionsError,
   cyclesError,
   tableKeys,
 }: {
   role: string | null;
-  resources: readonly StaffResource[];
+  staff: readonly StaffReference[];
   programs: readonly HoursProgram[];
   cycles: readonly CycleReference[];
   categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
   types: ReadonlyArray<{ value: HoursItemType; label: string }>;
   loadingDependencies: boolean;
   optionsError: boolean;
-  resourcesError?: boolean;
+  staffError?: boolean;
   programsError?: boolean;
   cyclesError: boolean;
   tableKeys: readonly HoursSortKey[];
@@ -73,8 +73,8 @@ export default function useHoursPreferences({
     fields: {
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(role !== 'admin' ? [] : !loadingDependencies && !resourcesError
-        ? resources.map(resource => resource.id) : undefined),
+      staffIds: preferenceIds(role !== 'admin' ? [] : !loadingDependencies && !staffError
+        ? staff.map(staffMember => staffMember.id) : undefined),
       programIds: preferenceIds(!loadingDependencies && !programsError ? ['general', ...programs.map(program => program.id)] : undefined),
       categories: preferenceOptions<HoursCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
@@ -113,7 +113,7 @@ export default function useHoursPreferences({
     ...(role === 'admin' ? [{
       id: 'staffIds' as const,
       label: 'Staff',
-      options: toFilterOptions(resources),
+      options: toFilterOptions(staff),
     }] : []),
     {
       id: 'programIds' as const,
@@ -130,7 +130,7 @@ export default function useHoursPreferences({
     },
     { id: 'types' as const, label: 'Type', options: [...types] },
     { id: 'categories' as const, label: 'Category', options: [...categories] },
-  ], [categories, cycles, programs, resources, role, types]);
+  ], [categories, cycles, programs, staff, role, types]);
 
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {
     updatePreferences({ sorting });
