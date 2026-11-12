@@ -23,7 +23,7 @@ const cycles = [
   { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const },
   { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming' as const },
 ];
-const resources = [{
+const staff = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
@@ -54,7 +54,7 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ loading }) => useHoursPreferences({
-        role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: loading,
+        role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: loading,
         optionsError: false, cyclesError: false, tableKeys,
       }),
       { initialProps: { loading: true } },
@@ -79,7 +79,7 @@ describe('useHoursPreferences', () => {
       view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
     };
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'staff', resources, programs, cycles, categories, types, loadingDependencies: false,
+      role: 'staff', staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
@@ -98,7 +98,7 @@ describe('useHoursPreferences', () => {
       sorting: { key: 'removedColumn' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
+      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
@@ -123,7 +123,7 @@ describe('useHoursPreferences', () => {
     const { result, rerender } = renderHook(
       ({ optionsError, cyclesError }) => useHoursPreferences({
         role: 'admin',
-        resources: optionsError ? [] : resources,
+        staff: optionsError ? [] : staff,
         programs: optionsError ? [] : programs,
         categories: optionsError ? [] : categories,
         types: optionsError ? [] : types,
@@ -155,7 +155,7 @@ describe('useHoursPreferences', () => {
 
   it('keeps applied search and account sorting separate from browser layout', async () => {
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
+      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -192,7 +192,7 @@ describe('useHoursPreferences', () => {
       cycleId: 'cycle-2', dateRange: { start: '2026-03-01', end: '2026-03-31' },
     });
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', resources, programs, cycles, categories, types, loadingDependencies: false,
+      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 

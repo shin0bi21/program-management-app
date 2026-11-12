@@ -11,7 +11,7 @@ vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const loadTasks = vi.fn();
 
-const resources = [
+const staff = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
 ] as const;
@@ -19,7 +19,7 @@ const programs = [{ id: 'program-1', name: 'Soft Skills' }];
 
 function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
   const options: UseHoursModalOptions = {
-    resources,
+    staff,
     programs,
     loadTasks,
     onAdd: vi.fn().mockResolvedValue(undefined),

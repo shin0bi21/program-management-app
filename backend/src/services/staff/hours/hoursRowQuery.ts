@@ -51,7 +51,7 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
 
 /**
  * Builds canonical hours rows within the actor's readable staff scope.
- * @param actor - Actor whose resource scope is always enforced.
+ * @param actor - Actor whose staff scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
  * @returns Complete rows with category labels and numeric hours; storage allows more than 0 and at most 24 hours with two decimal places.

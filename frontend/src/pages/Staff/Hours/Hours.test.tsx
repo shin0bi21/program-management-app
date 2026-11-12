@@ -433,7 +433,7 @@ describe('Hours', () => {
     expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
   });
 
-  it('opens the contextual entry modal for a calendar resource', async () => {
+  it('opens the contextual entry modal for a calendar staff member', async () => {
     const { container } = renderHours();
     await screen.findAllByLabelText('Zoe Wilson');
 

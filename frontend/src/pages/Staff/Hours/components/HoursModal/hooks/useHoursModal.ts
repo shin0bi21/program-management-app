@@ -7,7 +7,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 import type { RequestOptions } from '../../../../../../http/client';
 import { getHoursSessions, type SetHoursInput } from '../../../hours.api';
 import type {
-  StaffResource,
+  StaffReference,
   HoursCategory,
   HoursProgram,
   HoursItem,
@@ -36,7 +36,7 @@ interface HoursDraft {
 }
 
 export interface UseHoursModalOptions {
-  resources: readonly StaffResource[];
+  staff: readonly StaffReference[];
   programs: readonly HoursProgram[];
   loadTasks: (
     staffId: string,
@@ -49,20 +49,6 @@ export interface UseHoursModalOptions {
   initialTask?: HoursTaskOption;
   initialItem?: HoursItem;
   canCompleteTask?: boolean;
-}
-
-/** Validates the command fields before saving. @example getDraftError(draft) // empty when valid */
-function getDraftError(draft: HoursDraft) {
-  if (!draft.staffId) return 'Select a staff member.';
-  if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
-  if (draft.source === 'session' && !draft.sessionId) return 'Select a session.';
-
-  const hours = Number(draft.hours);
-  if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) {
-    return 'Hours must be between 0.25 and 24.';
-  }
-  if (!draft.note.trim()) return 'Enter a note.';
-  return '';
 }
 
 /**
@@ -232,4 +218,18 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     setCompleteTask,
     submit,
   };
+}
+
+/** Validates the command fields before saving. @example getDraftError(draft) // empty when valid */
+function getDraftError(draft: HoursDraft) {
+  if (!draft.staffId) return 'Select a staff member.';
+  if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
+  if (draft.source === 'session' && !draft.sessionId) return 'Select a session.';
+
+  const hours = Number(draft.hours);
+  if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) {
+    return 'Hours must be between 0.25 and 24.';
+  }
+  if (!draft.note.trim()) return 'Enter a note.';
+  return '';
 }

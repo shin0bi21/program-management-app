@@ -18,13 +18,13 @@ test('selects an hours item owning row without redundant selection', async ({ pa
   const item = component.getByRole('button', { name: /Administrative, 1.5 hours/ });
 
   await item.click();
-  await expect(component.getByTestId('selected-resource')).toHaveValue('staff-2');
-  await expect(component.getByTestId('resource-selection-count')).toHaveValue('1');
+  await expect(component.getByTestId('selected-staff')).toHaveValue('staff-2');
+  await expect(component.getByTestId('staff-selection-count')).toHaveValue('1');
   await expect(item.locator('xpath=ancestor::div[contains(@class, "row")]'))
     .toHaveClass(/selected/);
   await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
 
   await page.keyboard.press('Escape');
   await item.click();
-  await expect(component.getByTestId('resource-selection-count')).toHaveValue('1');
+  await expect(component.getByTestId('staff-selection-count')).toHaveValue('1');
 });

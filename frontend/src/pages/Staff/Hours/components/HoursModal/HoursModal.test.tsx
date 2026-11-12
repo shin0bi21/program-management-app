@@ -12,7 +12,7 @@ vi.mock('../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const loadTasks = vi.fn();
 
-const resources = [
+const staff = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
 ] as const;
@@ -27,7 +27,7 @@ function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {})
   const props: ComponentProps<typeof HoursModal> = {
     isOpen: true,
     initialStaffId: 'staff-1',
-    resources,
+    staff,
     programs,
     categories,
     loadTasks,
@@ -112,7 +112,7 @@ describe('HoursModal', () => {
   });
 
   it('locks a contextual task and its assigned staff while logging task time', async () => {
-    renderModal({ resources: [resources[0]], programs: [], initialTask: task, canCompleteTask: true });
+    renderModal({ staff: [staff[0]], programs: [], initialTask: task, canCompleteTask: true });
 
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.getByRole('button', { name: 'Task' })).not.toHaveTextContent('Planning / Prep');

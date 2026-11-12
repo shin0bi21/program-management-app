@@ -35,7 +35,7 @@ export interface Task {
 }
 
 // Shared task data contracts.
-export type { StaffReference as TaskResource, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
+export type { StaffReference, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
 
 // Shared table contracts.
 export const TASK_TABLE_KEYS = [

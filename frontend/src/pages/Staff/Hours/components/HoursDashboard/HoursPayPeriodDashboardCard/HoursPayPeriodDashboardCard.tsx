@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { StaffResource } from '../../../types';
+import type { StaffReference } from '../../../types';
 import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { formatShortDateRange } from '../../../../../../common/utils/date';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
@@ -15,7 +15,7 @@ import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
  */
 export default function HoursPayPeriodDashboardCard({ queryKey, staff }: {
   queryKey: readonly unknown[];
-  staff: StaffResource | null;
+  staff: StaffReference | null;
 }) {
   const state = useHoursPayPeriodData(queryKey, staff?.id ?? null);
   const error = state.status === 'error' ? state.message : null;

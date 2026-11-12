@@ -96,14 +96,14 @@ export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query:
 }
 
 /**
- * Conceals summaries for staff resources outside the actor's Hours visibility.
- * @param actor - Actor whose readable staff resources determine access.
- * @param staffId - Requested staff resource ID.
- * @example await assertReadableStaff(actor, staffId) // throws 404 for an unrelated resource
+ * Conceals summaries for staff outside the actor's Hours visibility.
+ * @param actor - Actor whose readable staff determine access.
+ * @param staffId - Requested staff member ID.
+ * @example await assertReadableStaff(actor, staffId) // throws 404 for an unrelated staff member
  */
 async function assertReadableStaff(actor: AccessTokenPayload, staffId: string) {
   const readableStaff = await getStaffReferenceData(actor, 'hours');
-  if (!readableStaff.some(resource => resource.id === staffId)) {
+  if (!readableStaff.some(staffMember => staffMember.id === staffId)) {
     throw new NotFoundError('Hours overview not found');
   }
 }

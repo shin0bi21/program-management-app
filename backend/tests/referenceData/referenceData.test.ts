@@ -139,7 +139,7 @@ describe('Page-authorized reference data', () => {
     expect((await get(`/reference-data/staff?feature=${feature}`, [`read:${other}`])).status).toBe(403);
     const readOnly = await get(`/reference-data/staff?feature=${feature}`, [`read:${feature}`, `write:${other}`]);
     expect(readOnly.status).toBe(200);
-    expect(readOnly.body.every((resource: { writable: boolean }) => !resource.writable)).toBe(true);
+    expect(readOnly.body.every((staffMember: { writable: boolean }) => !staffMember.writable)).toBe(true);
 
     const scoped = await get(`/reference-data/staff?feature=${feature}`, [`read:${feature}`, `write:${feature}`]);
     expect(scoped.status).toBe(200);
@@ -147,8 +147,8 @@ describe('Page-authorized reference data', () => {
       { id: staffId, firstName: 'Reference', lastName: 'Owner', name: 'Reference Owner', role: 'staff', writable: true },
       { id: sharedId, firstName: 'Reference', lastName: 'Coworker', name: 'Reference Coworker', role: 'staff', writable: false },
     ]));
-    expect(scoped.body.map((resource: { id: string }) => resource.id)).not.toContain(unrelatedId);
-    expect(scoped.body.map((resource: { id: string }) => resource.id)).not.toContain(inactiveId);
+    expect(scoped.body.map((staffMember: { id: string }) => staffMember.id)).not.toContain(unrelatedId);
+    expect(scoped.body.map((staffMember: { id: string }) => staffMember.id)).not.toContain(inactiveId);
 
     const unrelated = await get(`/reference-data/staff?feature=${feature}`, [`read:${feature}`, `write:${feature}`], unrelatedId);
     expect(unrelated.body).toEqual([expect.objectContaining({ id: unrelatedId, writable: true })]);
@@ -157,10 +157,10 @@ describe('Page-authorized reference data', () => {
       expect.objectContaining({ id: staffId, writable: true }),
       expect.objectContaining({ id: unrelatedId, writable: true }),
     ]));
-    expect(admin.body.map((resource: { id: string }) => resource.id)).not.toContain(inactiveId);
+    expect(admin.body.map((staffMember: { id: string }) => staffMember.id)).not.toContain(inactiveId);
   });
 
-  it.each(['tasks', 'hours'])('keeps project managers in %s resources with staff read and write scope', async feature => {
+  it.each(['tasks', 'hours'])('keeps project managers in %s staff with staff read and write scope', async feature => {
     const permissions = [`read:${feature}`, `write:${feature}`];
     const manager = await get(`/reference-data/staff?feature=${feature}`, permissions, managerId, 'project_manager');
 
@@ -169,7 +169,7 @@ describe('Page-authorized reference data', () => {
       expect.objectContaining({ id: managerId, role: 'project_manager', writable: true }),
       expect.objectContaining({ id: sharedId, writable: false }),
     ]));
-    expect(manager.body.map((resource: { id: string }) => resource.id)).not.toContain(unrelatedId);
+    expect(manager.body.map((staffMember: { id: string }) => staffMember.id)).not.toContain(unrelatedId);
 
     const staff = await get(`/reference-data/staff?feature=${feature}`, permissions);
     expect(staff.body).toContainEqual(expect.objectContaining({ id: managerId, writable: false }));

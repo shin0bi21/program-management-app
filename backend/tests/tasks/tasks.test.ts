@@ -131,7 +131,7 @@ describe('Tasks API', () => {
     }
   });
 
-  it('keeps resource scope inside the canonical query without caller-supplied permission filters', async () => {
+  it('keeps staff scope inside the canonical query without caller-supplied permission filters', async () => {
     const createdIds: string[] = [];
     for (const staffId of [firstStaffId, secondStaffId, unrelatedStaffId]) {
       const created = rememberTask(await request(app).post('/api/tasks')
@@ -204,7 +204,7 @@ describe('Tasks API', () => {
       expect(missing.body.error).toBe('Task not found');
     });
 
-    it('reads own and shared-resource tasks regardless of task program metadata and conceals unrelated tasks', async () => {
+    it('reads own and shared-staff member tasks regardless of task program metadata and conceals unrelated tasks', async () => {
       const created = rememberTask(await request(app)
         .post('/api/tasks')
         .set('Authorization', `Bearer ${firstStaffToken}`)
@@ -296,7 +296,7 @@ describe('Tasks API', () => {
     });
   });
 
-  it('reads every task in a visible resource row while keeping staff writes self-scoped', async () => {
+  it('reads every task in a visible staff member row while keeping staff writes self-scoped', async () => {
     const ownTask = rememberTask(await request(app)
       .post('/api/tasks')
       .set('Authorization', `Bearer ${firstStaffToken}`)
@@ -399,7 +399,7 @@ describe('Tasks API', () => {
     ]));
   });
 
-  it('filters the task list by readable staff resources', async () => {
+  it('filters the task list by readable staff', async () => {
     const marker = `Staff-filtered task ${firstStaffId}`;
     const firstTask = rememberTask(await request(app)
       .post('/api/tasks')

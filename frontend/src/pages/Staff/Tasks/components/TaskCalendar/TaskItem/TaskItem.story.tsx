@@ -3,14 +3,14 @@ import TimelineCalendar from '../../../../../../common/components/TimelineCalend
 import type { Task } from '../../../types';
 import TaskItem from './TaskItem';
 
-const resource = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };
+const staffMember = { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson' };
 const initialTask: Task = {
   id: 'task-1', title: 'Prepare workshop', details: 'Prepare activities and materials.', category: 'planning_prep',
   categoryLabel: 'Planning / Prep', programId: 'program-1', program: 'Soft Skills', state: 'open',
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
-  staffId: resource.id, firstName: resource.firstName, lastName: resource.lastName, name: resource.name,
+  staffId: staffMember.id, firstName: staffMember.firstName, lastName: staffMember.lastName, name: staffMember.name,
   writable: true,
 };
 
@@ -21,8 +21,8 @@ export function InteractiveTaskItem() {
   const [rangeChange, setRangeChange] = useState('');
   return <div style={{ height: '300px', padding: 16 }}>
     <TimelineCalendar
-      rows={[resource]}
-      items={{ [resource.id]: [task] }}
+      rows={[staffMember]}
+      items={{ [staffMember.id]: [task] }}
       initialDate={'2026-08-09'}
       ariaLabel="Browser-tested task calendar"
       getRowId={item => item.id}

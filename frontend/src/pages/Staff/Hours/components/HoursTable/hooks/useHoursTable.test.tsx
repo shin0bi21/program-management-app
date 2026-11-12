@@ -21,7 +21,7 @@ describe('useHoursTable', () => {
   it('omits row actions for read-only users', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: false,
-      resourcesById: new Map(),
+      staffById: new Map(),
       isItemPending: () => false,
       onEdit: vi.fn(),
       onDelete: vi.fn(),
@@ -30,12 +30,12 @@ describe('useHoursTable', () => {
     expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
   });
 
-  it('builds row actions only for writable resources', () => {
+  it('builds row actions only for writable staff', () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
-      resourcesById: new Map([[writable.id, writable]]),
+      staffById: new Map([[writable.id, writable]]),
       isItemPending: () => false,
       onEdit,
       onDelete,
@@ -52,10 +52,10 @@ describe('useHoursTable', () => {
     expect(onDelete).toHaveBeenCalledWith(row);
   });
 
-  it('hides row actions for a read-only resource in a writable table', () => {
+  it('hides row actions for a read-only staff member in a writable table', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
-      resourcesById: new Map([['staff-1', { ...writable, writable: false }]]),
+      staffById: new Map([['staff-1', { ...writable, writable: false }]]),
       isItemPending: () => false,
       onEdit: vi.fn(),
       onDelete: vi.fn(),
