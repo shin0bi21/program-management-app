@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getHoursCycleSummaryData, getHoursPayPeriodData, type HoursPayPeriodData } from '../../hours.api';
 import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils';
-import type { StaffResource } from '../../types';
+import type { StaffReference } from '../../types';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import HoursPayPeriodDashboardCard from './HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
 import HoursCycleSummaryDashboardCard from './HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
@@ -12,7 +12,7 @@ import HoursCycleSummaryDashboardCard from './HoursCycleSummaryDashboardCard/Hou
  * @param props - Selected staff and cycle supplied to both cards.
  * @example <HoursCards {...baseProps} />
  */
-function HoursCards({ queryKey, staff, cycle }: { queryKey: readonly unknown[]; staff: StaffResource | null; cycle: ProgramCycle | null }) {
+function HoursCards({ queryKey, staff, cycle }: { queryKey: readonly unknown[]; staff: StaffReference | null; cycle: ProgramCycle | null }) {
   return <>
     <HoursPayPeriodDashboardCard queryKey={queryKey} staff={staff} />
     <HoursCycleSummaryDashboardCard queryKey={queryKey} staff={staff} cycle={cycle} />

@@ -21,10 +21,10 @@ export default function useTaskCalendarData(
     const data: Record<string, Record<string, Task[]>> = {};
 
     for (const task of tasks) {
-      const resourceId = task.staffId;
-      data[resourceId] ??= {};
-      data[resourceId][start.key] ??= [];
-      data[resourceId][start.key].push(task);
+      const staffId = task.staffId;
+      data[staffId] ??= {};
+      data[staffId][start.key] ??= [];
+      data[staffId][start.key].push(task);
     }
 
     return data;
@@ -56,6 +56,10 @@ export default function useTaskCalendarData(
 }
 
 /** Identifies a task membership. @example getTaskId({ id: 'task-1' }) // 'task-1' */
-const getTaskId = (task: { id: string }) => task.id;
+function getTaskId(task: { id: string }) {
+  return task.id;
+}
 /** Uses a task's inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
-const getTaskRange = (task: Task) => ({ start: task.startDate, end: task.dueDate });
+function getTaskRange(task: Task) {
+  return { start: task.startDate, end: task.dueDate };
+}

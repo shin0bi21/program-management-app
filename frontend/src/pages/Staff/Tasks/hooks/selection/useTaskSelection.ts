@@ -1,51 +1,51 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Task, TaskResource } from '../../types';
+import type { Task, StaffReference } from '../../types';
 
 interface UseTaskSelectionOptions {
-  resources: TaskResource[];
+  staff: StaffReference[];
 }
 
 /**
  * Keeps the clicked task as temporary selection context for dashboards.
  * @param options - Current staff choices supplied by the page.
- * @example useTaskSelection({ resources }).selectedTask
+ * @example useTaskSelection({ staff }).selectedTask
  */
 export default function useTaskSelection({
-  resources,
+  staff,
 }: UseTaskSelectionOptions) {
-  const [resourceId, setResourceId] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const selectedResourceId = selectedTask?.staffId ?? resourceId;
+  const selectedStaffId = selectedTask?.staffId ?? staffId;
 
-  const selectedResource = useMemo(
-    () => resources.find(resource => resource.id === selectedResourceId) ?? null,
-    [resources, selectedResourceId],
+  const selectedStaff = useMemo(
+    () => staff.find(staffMember => staffMember.id === selectedStaffId) ?? null,
+    [staff, selectedStaffId],
   );
 
-  // Preserve a valid selection, then prefer a writable resource before a readable fallback.
+  // Preserve a valid selection, then prefer a writable staff member before a readable fallback.
   useEffect(() => {
-    if (selectedResourceId && resources.some(resource => resource.id === selectedResourceId)) {
-      if (resourceId !== selectedResourceId) setResourceId(selectedResourceId);
+    if (selectedStaffId && staff.some(staffMember => staffMember.id === selectedStaffId)) {
+      if (staffId !== selectedStaffId) setStaffId(selectedStaffId);
       return;
     }
 
-    const fallbackResourceId = resources.find(resource => resource.writable)?.id
-      ?? resources[0]?.id
+    const fallbackStaffId = staff.find(staffMember => staffMember.writable)?.id
+      ?? staff[0]?.id
       ?? null;
 
-    setResourceId(fallbackResourceId);
-    setSelectedTask(current => current?.staffId === fallbackResourceId ? current : null);
-  }, [resourceId, resources, selectedResourceId]);
+    setStaffId(fallbackStaffId);
+    setSelectedTask(current => current?.staffId === fallbackStaffId ? current : null);
+  }, [staffId, staff, selectedStaffId]);
 
   // Selection transitions.
   const selectTask = useCallback((task: Task) => {
-    setResourceId(task.staffId);
+    setStaffId(task.staffId);
     setSelectedTask(task);
   }, []);
 
-  const selectResource = useCallback((resourceId: string) => {
-    setResourceId(resourceId);
+  const selectStaff = useCallback((staffId: string) => {
+    setStaffId(staffId);
     setSelectedTask(null);
   }, []);
 
@@ -58,12 +58,12 @@ export default function useTaskSelection({
   }, []);
 
   return {
-    selectedResourceId,
-    selectedResource,
+    selectedStaffId,
+    selectedStaff,
     selectedTaskId: selectedTask?.id ?? null,
     selectedTask,
     selectTask,
-    selectResource,
+    selectStaff,
     removeSelectedTask,
     onTaskSynced,
   };

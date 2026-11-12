@@ -109,7 +109,7 @@ describe('Hours API', () => {
     await deleteTestUser(adminId);
   });
 
-  it('keeps resource scope inside the canonical hours query and preserves forbidden writes', async () => {
+  it('keeps staff scope inside the canonical hours query and preserves forbidden writes', async () => {
     const createdIds: string[] = [];
     try {
       for (const staffId of [firstStaffId, secondStaffId, unrelatedStaffId]) {
@@ -514,7 +514,7 @@ describe('Hours API', () => {
     }
   });
 
-  it('conceals each summary for an unreadable staff resource', async () => {
+  it('conceals each summary for an unreadable staff member', async () => {
     for (const path of [
       `/api/hours/pay-period?staffId=${unrelatedStaffId}`,
       `/api/hours/cycle-summary?staffId=${unrelatedStaffId}&cycleId=${activeCycleId}`,
@@ -532,7 +532,7 @@ describe('Hours API', () => {
     try {
       await sql`
         INSERT INTO time_entries (staff_id, cycle_id, category, date, hours, note)
-        VALUES (${coworker.userId}, ${activeCycleId}, 'meeting', ${date}::date, 2, 'Shared resource overview')
+        VALUES (${coworker.userId}, ${activeCycleId}, 'meeting', ${date}::date, 2, 'Shared staff overview')
       `;
       const periodResponse = await request(app)
         .get(`/api/hours/pay-period?staffId=${coworker.userId}`)
@@ -600,7 +600,7 @@ describe('Hours API', () => {
     }
   });
 
-  it('returns read-only resource capabilities without writable rows', async () => {
+  it('returns read-only staff member capabilities without writable rows', async () => {
     const readOnlyToken = generateToken(
       adminId,
       'admin',
@@ -653,7 +653,7 @@ describe('Hours API', () => {
     expect(response.status).toBe(403);
   });
 
-  it('allows admins to create entries for staff and list all staff resources', async () => {
+  it('allows admins to create entries for staff and list all staff', async () => {
     const created = await request(app)
       .post('/api/hours')
       .set('Authorization', `Bearer ${adminToken}`)

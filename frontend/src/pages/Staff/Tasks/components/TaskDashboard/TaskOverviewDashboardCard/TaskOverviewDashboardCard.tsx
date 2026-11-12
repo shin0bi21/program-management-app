@@ -9,20 +9,19 @@ import UnavailableState from '../../../../../../common/components/UnavailableSta
 import useTaskOverviewData from './hooks/useTaskOverviewData';
 import './TaskOverviewDashboardCard.css';
 
-
 /**
  * Queries the selected staff overview and displays its queried tasks.
- * @param props - staff identity, local date, and page-message reporter.
+ * @param props - Staff identity, local date, and page-message reporter.
  * @example <TaskOverviewDashboardCard {...overviewProps} />
  */
-export default function TaskOverviewDashboardCard({ queryKey, resourceId, resourceName, today, onMessageChange }: {
+export default function TaskOverviewDashboardCard({ queryKey, staffId, staffName, today, onMessageChange }: {
   queryKey: readonly unknown[];
-  resourceId: string;
-  resourceName: string;
+  staffId: string;
+  staffName: string;
   today: string;
   onMessageChange?: PageMessageChangeHandler;
 }) {
-  const overviewData = useTaskOverviewData(queryKey, resourceId);
+  const overviewData = useTaskOverviewData(queryKey, staffId);
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
   usePageMessageReporter(onMessageChange, overviewData.error, retryAction);
 
@@ -31,8 +30,8 @@ export default function TaskOverviewDashboardCard({ queryKey, resourceId, resour
     loading={overviewData.loading}
     error={overviewData.error}
     onRetry={overviewData.retry}
-    resourceId={resourceId}
-    resourceName={resourceName}
+    staffId={staffId}
+    staffName={staffName}
     today={today}
   />;
 }
@@ -42,19 +41,19 @@ export default function TaskOverviewDashboardCard({ queryKey, resourceId, resour
  * @param props - Current tasks, query feedback, staff identity, and local reporting date.
  * @example <TaskOverviewContent tasks={tasks} {...reportProps} />
  */
-function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resourceName, today }: {
+function TaskOverviewContent({ tasks, loading, error, onRetry, staffId, staffName, today }: {
   tasks: readonly Task[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  resourceId: string;
-  resourceName: string;
+  staffId: string;
+  staffName: string;
   today: string;
 }) {
-  const [openResourceId, setOpenResourceId] = useState<string | null>(null);
+  const [openStaffId, setOpenStaffId] = useState<string | null>(null);
 
   const unavailable = loading || Boolean(error);
-  useEffect(() => setOpenResourceId(null), [resourceId, unavailable]);
+  useEffect(() => setOpenStaffId(null), [staffId, unavailable]);
 
   const overview = useMemo(() => groupTasksForOverview(tasks, today), [tasks, today]);
   const summary = {
@@ -81,12 +80,12 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, resourceId, resou
         variant="secondary"
         aria-haspopup="dialog"
         disabled={unavailable}
-        onClick={() => setOpenResourceId(resourceId)}
+        onClick={() => setOpenStaffId(staffId)}
       >See Breakdown</Button>}
     >
       {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
     </DashboardCard>
-    <Modal isOpen={openResourceId === resourceId && !unavailable} onClose={() => setOpenResourceId(null)} title={resourceName} maxWidth="560px">
+    <Modal isOpen={openStaffId === staffId && !unavailable} onClose={() => setOpenStaffId(null)} title={staffName} maxWidth="560px">
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
         <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>

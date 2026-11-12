@@ -29,7 +29,7 @@ describe('useHoursData', () => {
     }]);
   });
 
-  it('loads each page-wide option once and exposes derived resource owners', async () => {
+  it('loads each page-wide option once and resolves writable and current staff', async () => {
     const client = createTestQueryClient();
     const { result } = renderHook(
       () => useHoursData(['hours-options'], 'staff-1'),
@@ -37,9 +37,9 @@ describe('useHoursData', () => {
     );
 
     await waitFor(() => expect(result.current.cycles).toHaveLength(1));
-    expect(result.current.writableResources.map(resource => resource.id)).toEqual(['staff-1']);
-    expect(result.current.resourcesById.get('staff-2')?.name).toBe('Alex Morgan');
-    expect(result.current.currentUserResource?.name).toBe('Zoe Wilson');
+    expect(result.current.writableStaff.map(staffMember => staffMember.id)).toEqual(['staff-1']);
+    expect(result.current.staffById.get('staff-2')?.name).toBe('Alex Morgan');
+    expect(result.current.currentUserStaff?.name).toBe('Zoe Wilson');
     expect(getHoursReferenceData).toHaveBeenCalledOnce();
     expect(getStaffReferences).toHaveBeenCalledWith('hours', { signal: expect.any(AbortSignal) });
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });

@@ -31,7 +31,7 @@ export default function HoursModal({ isOpen, ...props }: HoursModalProps) {
 
 /** Owns the mounted Hours form and its draft. @example <HoursForm {...options} /> */
 function HoursForm({
-  resources,
+  staff,
   programs,
   loadTasks,
   onClose,
@@ -46,7 +46,7 @@ function HoursForm({
   categories,
 }: Omit<HoursModalProps, 'isOpen'>) {
   const workflow = useHoursModal({
-    resources,
+    staff,
     programs,
     loadTasks,
     onAdd,
@@ -64,7 +64,7 @@ function HoursForm({
   const isRegularEntry = draft.source === 'regular';
   const sessionDateLocked = isSessionEntry && Boolean(initialItem || initialDate);
   const sourceMissing = (isTaskEntry && !draft.taskId) || (isSessionEntry && !draft.sessionId);
-  const submitDisabled = submissionComplete || !resources.length || sourceMissing;
+  const submitDisabled = submissionComplete || !staff.length || sourceMissing;
   let sessionPlaceholder = workflow.sessionOptions.length ? 'Select session' : 'No sessions on this date';
   if (workflow.sessionsLoading) sessionPlaceholder = 'Loading sessions…';
 
@@ -106,12 +106,12 @@ function HoursForm({
             <FloatingSelect
               id="hours-staff"
               value={draft.staffId}
-              options={toFilterOptions(resources)}
+              options={toFilterOptions(staff)}
               onChange={workflow.selectStaff}
               placeholder="Select staff member"
               ariaLabel="Staff member"
               disabled={submissionComplete
-                || resources.length === 0
+                || staff.length === 0
                 || workflow.taskLocked
                 || staffLocked}
             />

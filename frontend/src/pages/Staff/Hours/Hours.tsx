@@ -62,14 +62,14 @@ export default function Hours() {
 
   const preferences = useHoursPreferences({
     role,
-    resources: pageData.resources,
+    staff: pageData.staff,
     programs: pageData.programs,
     cycles: pageData.cycles,
     categories: pageData.categories,
     types: pageData.types,
     loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
     optionsError: Boolean(pageData.localOptionsError),
-    resourcesError: Boolean(pageData.resourcesError),
+    staffError: Boolean(pageData.staffError),
     programsError: Boolean(pageData.programsError),
     cyclesError: Boolean(pageData.cyclesError),
     tableKeys: HOURS_TABLE_KEYS,
@@ -105,8 +105,8 @@ export default function Hours() {
 
   // Selection and actions.
   const selection = useHoursSelection({
-    resources: pageData.resources,
-    currentUserResource: pageData.currentUserResource,
+    staff: pageData.staff,
+    currentUserStaff: pageData.currentUserStaff,
   });
 
   const actions = useHoursActions({
@@ -135,7 +135,7 @@ export default function Hours() {
   // Table configuration.
   const table = useHoursTable({
     canWrite,
-    resourcesById: pageData.resourcesById,
+    staffById: pageData.staffById,
     isItemPending: actions.isItemPending,
     onEdit: openEditHoursModal,
     onDelete: actions.requestDelete,
@@ -149,6 +149,7 @@ export default function Hours() {
     ?? pageData.cycles.find(cycle => cycle.state === 'active')
     ?? pageData.cycles[0]
     ?? null;
+
   const hoursTable = (
     <HoursTable
       queryKey={HOURS_TABLE_QUERY_KEY}
@@ -168,7 +169,7 @@ export default function Hours() {
   const hoursCalendar = (
     <HoursCalendar
       key={JSON.stringify(hoursFilters)}
-      resources={pageData.resources}
+      staff={pageData.staff}
       filters={hoursFilters}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
@@ -194,7 +195,7 @@ export default function Hours() {
       controls={preferences}
       loadingSpinner
       title="Hours"
-      actions={canWrite && pageData.writableResources.length ? <ActionsMenu
+      actions={canWrite && pageData.writableStaff.length ? <ActionsMenu
         triggerLabel="+ Add"
         ariaLabel="Add hours"
         items={[
@@ -229,7 +230,7 @@ export default function Hours() {
 
     <HoursModal
       isOpen={hoursModalState !== null}
-      resources={pageData.writableResources}
+      staff={pageData.writableStaff}
       programs={pageData.programs}
       categories={pageData.categories}
       loadTasks={getTaskDashboardData}

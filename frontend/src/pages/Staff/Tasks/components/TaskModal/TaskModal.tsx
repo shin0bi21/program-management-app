@@ -4,7 +4,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
-import type { Task, TaskCategory, TaskModalState, TaskProgram, TaskResource } from '../../types';
+import type { Task, TaskCategory, TaskModalState, TaskProgram, StaffReference } from '../../types';
 
 import useTaskModal from './hooks/useTaskModal';
 
@@ -12,7 +12,7 @@ import './TaskModal.css';
 
 export interface TaskModalProps {
   target: Exclude<TaskModalState, null>;
-  resources: readonly TaskResource[];
+  staff: readonly StaffReference[];
   programs: readonly TaskProgram[];
   categories: ReadonlyArray<{ value: TaskCategory; label: string }>;
   onSaved: (task: Task) => void;
@@ -27,7 +27,7 @@ export interface TaskModalProps {
 export default function TaskModal(props: TaskModalProps) {
   const {
     target,
-    resources,
+    staff,
     programs,
     categories,
     onClose,
@@ -73,7 +73,7 @@ export default function TaskModal(props: TaskModalProps) {
           <FloatingSelect
             id="task-staff"
             value={modal.draft.staffId}
-            options={toFilterOptions(resources)}
+            options={toFilterOptions(staff)}
             onChange={value => modal.updateDraft('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"

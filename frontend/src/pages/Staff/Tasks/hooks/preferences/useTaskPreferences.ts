@@ -40,10 +40,10 @@ interface UseTaskPreferencesOptions {
   referenceData: TaskReferenceData | undefined;
   referenceDataLoading: boolean;
   referenceDataError: boolean;
-  resources: StaffReference[];
+  staff: StaffReference[];
   programs: ProgramReference[];
-  resourcesLoading: boolean;
-  resourcesError: boolean;
+  staffLoading: boolean;
+  staffError: boolean;
   programsLoading: boolean;
   programsError: boolean;
   tableKeys: readonly TaskSortKey[];
@@ -56,10 +56,10 @@ export default function useTaskPreferences({
   referenceData,
   referenceDataLoading,
   referenceDataError,
-  resources,
+  staff,
   programs,
-  resourcesLoading,
-  resourcesError,
+  staffLoading,
+  staffError,
   programsLoading,
   programsError,
   tableKeys,
@@ -71,12 +71,12 @@ export default function useTaskPreferences({
   const layout = useTableLayout({ key: 'task-preferences', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
-    waiting: referenceDataLoading || cyclesLoading || resourcesLoading || programsLoading,
+    waiting: referenceDataLoading || cyclesLoading || staffLoading || programsLoading,
     fields: {
       cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(resourcesLoading || resourcesError ? undefined : resources.map(resource => resource.id)),
+      staffIds: preferenceIds(staffLoading || staffError ? undefined : staff.map(staffMember => staffMember.id)),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       categories: preferenceOptions<TaskCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
@@ -114,7 +114,7 @@ export default function useTaskPreferences({
     {
       id: 'staffIds' as const,
       label: 'Staff',
-      options: toFilterOptions(resources),
+      options: toFilterOptions(staff),
     },
     {
       id: 'programIds' as const,
@@ -124,7 +124,7 @@ export default function useTaskPreferences({
     { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
     { id: 'categories' as const, label: 'Category', options: referenceData?.categories ?? [] },
     { id: 'statuses' as const, label: 'Status', options: referenceData?.statuses ?? [] },
-  ], [referenceData, cycles, resources, programs]);
+  ], [referenceData, cycles, staff, programs]);
 
   const filterValues = useMemo(() => ({
     cycleIds: preferences.cycleIds,

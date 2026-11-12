@@ -12,7 +12,7 @@ vi.mock('../../tasks.api', () => ({
 }));
 vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
 
-const resources = [
+const staff = [
   { id: 'staff-read', firstName: 'Read', lastName: 'Only', name: 'Read Only', role: 'staff', writable: false },
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Ana', lastName: 'Diaz', name: 'Ana Diaz', role: 'staff', writable: true },
@@ -24,7 +24,7 @@ describe('useTaskData', () => {
     vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
     }]);
-    vi.mocked(getStaffReferences).mockResolvedValue(resources);
+    vi.mocked(getStaffReferences).mockResolvedValue(staff);
     vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
       categories: [{ value: 'meeting', label: 'Meeting' }],
@@ -32,18 +32,18 @@ describe('useTaskData', () => {
     });
   });
 
-  it('loads task reference data and exposes stable derived resources', async () => {
+  it('loads task reference data and exposes stable derived staff', async () => {
     const client = createTestQueryClient();
     const { result, rerender } = renderHook(() => useTaskData(['task-reference-data']), {
       wrapper: createQueryClientWrapper(client),
     });
 
-    await waitFor(() => expect(result.current.resources).toEqual(resources));
-    const writableResources = result.current.writableResources;
+    await waitFor(() => expect(result.current.staff).toEqual(staff));
+    const writableStaff = result.current.writableStaff;
 
-    expect(writableResources.map(resource => resource.id)).toEqual(['staff-1', 'staff-2']);
+    expect(writableStaff.map(staffMember => staffMember.id)).toEqual(['staff-1', 'staff-2']);
     rerender();
-    expect(result.current.writableResources).toBe(writableResources);
+    expect(result.current.writableStaff).toBe(writableStaff);
     expect(getTaskReferenceData).toHaveBeenCalledTimes(1);
     expect(getStaffReferences).toHaveBeenCalledWith('tasks', { signal: expect.any(AbortSignal) });
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });

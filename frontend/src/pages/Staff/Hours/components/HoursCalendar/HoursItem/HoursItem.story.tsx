@@ -4,12 +4,12 @@ import TimelineCalendar from '../../../../../../common/components/TimelineCalend
 import type { HoursItem } from '../../../types';
 import HoursCalendarItem from './HoursItem';
 
-interface StoryResource {
+interface StoryStaff {
   id: string;
   name: string;
 }
 
-const resources: StoryResource[] = [
+const staff: StoryStaff[] = [
   { id: 'staff-1', name: 'Zoe Wilson' },
   { id: 'staff-2', name: 'Alex Morgan' },
 ];
@@ -51,12 +51,12 @@ const items: HoursItem[] = [
 
 export function InteractiveHoursItems() {
   const [actionRecord, setActionRecord] = useState('');
-  const [selectedResourceId, setSelectedResourceId] = useState('staff-1');
+  const [selectedStaffId, setSelectedStaffId] = useState('staff-1');
   const [selectionCount, setSelectionCount] = useState(0);
   return (
     <div style={{ height: '420px', padding: '16px' }}>
-      <TimelineCalendar<StoryResource, HoursItem>
-        rows={resources}
+      <TimelineCalendar<StoryStaff, HoursItem>
+        rows={staff}
         items={{
           'staff-1': items.filter(item => item.staffId === 'staff-1'),
           'staff-2': items.filter(item => item.staffId === 'staff-2'),
@@ -67,9 +67,9 @@ export function InteractiveHoursItems() {
         getRowId={row => row.id}
         getItemId={data => data.id}
         renderRow={({ row }) => row.name}
-        selectedRowId={selectedResourceId}
+        selectedRowId={selectedStaffId}
         onRowSelect={row => {
-          setSelectedResourceId(row.id);
+          setSelectedStaffId(row.id);
           setSelectionCount(count => count + 1);
         }}
         buildItem={({ data, calendar }) => (
@@ -84,8 +84,8 @@ export function InteractiveHoursItems() {
         onItemMove={() => undefined}
       />
       <input hidden readOnly data-testid="hours-item-action" value={actionRecord} />
-      <input hidden readOnly data-testid="selected-resource" value={selectedResourceId} />
-      <input hidden readOnly data-testid="resource-selection-count" value={selectionCount} />
+      <input hidden readOnly data-testid="selected-staff" value={selectedStaffId} />
+      <input hidden readOnly data-testid="staff-selection-count" value={selectionCount} />
     </div>
   );
 }

@@ -9,7 +9,7 @@ export type HoursCategory =
   | 'maintenance'
   | 'other';
 
-export type { StaffReference as StaffResource, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
+export type { StaffReference, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
 export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
 export interface HoursItem {
   id: string;

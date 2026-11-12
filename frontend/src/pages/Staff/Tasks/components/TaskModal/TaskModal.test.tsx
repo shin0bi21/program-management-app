@@ -10,7 +10,7 @@ vi.mock('../../tasks.api', () => ({
   setTask: vi.fn(),
 }));
 
-const resources = [{
+const staff = [{
   id: 'staff-1',
   firstName: 'Zoe',
   lastName: 'Wilson',
@@ -36,7 +36,7 @@ describe('TaskModal', () => {
           staffId: 'staff-1',
         },
       }}
-      resources={resources}
+      staff={staff}
       programs={programs}
       categories={categories}
       onSaved={vi.fn()}
@@ -60,7 +60,7 @@ describe('TaskModal', () => {
           staffId: 'staff-1',
         },
       }}
-      resources={resources}
+      staff={staff}
       programs={programs}
       categories={categories}
       onSaved={vi.fn()}
@@ -90,7 +90,7 @@ describe('TaskModal', () => {
           loggedHoursByDate: [{ date: '2026-08-10', hours: 1 }],
         }),
       }}
-      resources={resources}
+      staff={staff}
       programs={programs}
       categories={categories}
       onSaved={vi.fn()}

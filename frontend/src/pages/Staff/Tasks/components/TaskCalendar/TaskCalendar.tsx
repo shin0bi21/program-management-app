@@ -13,7 +13,7 @@ import type {
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type { TasksFilters } from '../../tasks.api';
-import type { AddTaskModalInitialValues, Task, TaskCalendarCache, TaskResource } from '../../types';
+import type { AddTaskModalInitialValues, Task, TaskCalendarCache, StaffReference } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -39,17 +39,17 @@ export interface TaskCalendarActions {
 }
 
 interface TaskCalendarProps {
-  resources: TaskResource[];
+  staff: StaffReference[];
   filters: TasksFilters;
   dateRange?: DateRange;
   canWrite: boolean;
-  selectedResourceId: string | null;
+  selectedStaffId: string | null;
   selectedTaskId: string | null;
   actions: TaskCalendarActions;
   calendarCacheRef: MutableRefObject<TaskCalendarCache>;
 
   onTaskSelect: (task: Task) => void;
-  onResourceSelect: (resourceId: string) => void;
+  onStaffSelect: (staffId: string) => void;
   onAddTask: (initialValues: AddTaskModalInitialValues) => void;
   onEditTask: (task: Task) => void;
   onMessageChange?: PageMessageChangeHandler;
@@ -60,17 +60,17 @@ interface TaskCalendarProps {
  * @example <TaskCalendar filters={filters} {...viewProps} />
  */
 export default function TaskCalendar({
-  resources,
+  staff,
   filters,
   dateRange,
   canWrite,
-  selectedResourceId,
+  selectedStaffId,
   selectedTaskId,
   actions,
   calendarCacheRef,
 
   onTaskSelect,
-  onResourceSelect,
+  onStaffSelect,
   onAddTask,
   onEditTask,
   onMessageChange,
@@ -81,17 +81,17 @@ export default function TaskCalendar({
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
 
-  const visibleResources = useMemo(() => {
-    if (!staffIds.length) return resources;
+  const visibleStaff = useMemo(() => {
+    if (!staffIds.length) return staff;
 
-    return resources.filter(resource => staffIds.includes(resource.id));
-  }, [staffIds, resources]);
+    return staff.filter(staffMember => staffIds.includes(staffMember.id));
+  }, [staffIds, staff]);
 
   /**
    * Displays a buffered task with actions allowed by its lifecycle and permissions.
    * @example buildItem(context) // task item with permitted actions
    */
-  function buildItem({ data: task, calendar: itemCalendar }: BuildItemContext<TaskResource, Task>) {
+  function buildItem({ data: task, calendar: itemCalendar }: BuildItemContext<StaffReference, Task>) {
     const actionsAvailable = canWrite && task.writable && !actions.isTaskPending(task.id);
 
     return (
@@ -112,7 +112,7 @@ export default function TaskCalendar({
    * Enables date interactions according to task permissions and pending placement.
    * @example getItemCapabilities(context) // draggable and resizable flags
    */
-  function getItemCapabilities({ data: task }: ItemCapabilityContext<TaskResource, Task>) {
+  function getItemCapabilities({ data: task }: ItemCapabilityContext<StaffReference, Task>) {
     const canAdjustDates = canWrite && task.writable && canEditTask(task);
     const taskPending = actions.isTaskPending(task.id);
 
@@ -123,7 +123,7 @@ export default function TaskCalendar({
    * Checks destination write access and task reassignment eligibility.
    * @example canMoveTask(context) // false for reassignment after hours are logged
    */
-  function canMoveTask({ item: task, row, destinationRow }: ItemMoveContext<TaskResource, Task>) {
+  function canMoveTask({ item: task, row, destinationRow }: ItemMoveContext<StaffReference, Task>) {
     const canWriteDestination = task.writable && !actions.isTaskPending(task.id) && destinationRow.writable;
     const canUseDestination = row.id === destinationRow.id || canReassignTask(task);
 
@@ -134,7 +134,7 @@ export default function TaskCalendar({
    * Saves the requested task dates and assignee, then selects a successful result.
    * @example moveTask(context) // reports a move to the page action owner
    */
-  async function moveTask({ item: task, nextRange, destinationRow }: ItemMoveContext<TaskResource, Task>) {
+  async function moveTask({ item: task, nextRange, destinationRow }: ItemMoveContext<StaffReference, Task>) {
     const updatedTask = await actions.setTaskRange(task, nextRange, 'move', destinationRow.id);
 
     if (updatedTask) onTaskSelect(updatedTask);
@@ -144,7 +144,7 @@ export default function TaskCalendar({
    * Saves a changed task range and selects the successful result.
    * @example resizeTask(context) // reports a resize to the page action owner
    */
-  async function resizeTask({ item: task, nextRange }: ItemResizeContext<TaskResource, Task>) {
+  async function resizeTask({ item: task, nextRange }: ItemResizeContext<StaffReference, Task>) {
     const updatedTask = await actions.setTaskRange(task, nextRange, 'resize');
 
     if (updatedTask) onTaskSelect(updatedTask);
@@ -154,7 +154,7 @@ export default function TaskCalendar({
    * Opens task creation for a writable staff row and selected day.
    * @example addTask(context) // adds a task scoped to this staff member
    */
-  function addTask({ row, period }: CalendarCellContext<TaskResource, Task>) {
+  function addTask({ row, period }: CalendarCellContext<StaffReference, Task>) {
     if (!row.writable) return;
 
     onAddTask({ startDate: period.key, dueDate: period.key, staffId: row.id });
@@ -173,12 +173,12 @@ export default function TaskCalendar({
       onInitialPeriods={calendar.initialize}
       onPeriodsReset={calendar.reset}
 
-      rows={visibleResources}
+      rows={visibleStaff}
       rowHeader="Staff"
-      getRowId={getTaskResourceId}
+      getRowId={getStaffId}
       renderRow={renderStaffRow}
-      selectedRowId={selectedResourceId}
-      onRowSelect={row => onResourceSelect(row.id)}
+      selectedRowId={selectedStaffId}
+      onRowSelect={row => onStaffSelect(row.id)}
 
       items={visibleItems}
       getItemId={getTaskId}
@@ -196,20 +196,28 @@ export default function TaskCalendar({
   );
 }
 
-/** Identifies a staff row. @example getTaskResourceId(resource) // resource.id */
-const getTaskResourceId = (resource: TaskResource) => resource.id;
-/** Identifies a task. @example getTaskId(task) // task.id */
-const getTaskId = (task: { id: string }) => task.id;
-/** Reads inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
-const getTaskRange = (task: Task) => ({ start: task.startDate, end: task.dueDate });
-
+/** Identifies a staff row. @example getStaffId(staffMember) // staffMember.id */
+function getStaffId(staffMember: StaffReference) {
+  return staffMember.id;
+}
 /**
- * Displays a compact staff name in the resource header.
+ * Displays a compact staff name in the staff member header.
  * @example renderStaffRow(context) // staff display name
  */
-function renderStaffRow({ row }: RenderRowContext<TaskResource>) {
+function renderStaffRow({ row }: RenderRowContext<StaffReference>) {
   return <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>;
 }
+
+
+/** Identifies a task. @example getTaskId(task) // task.id */
+function getTaskId(task: { id: string }) {
+  return task.id;
+}
+/** Reads inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
+function getTaskRange(task: Task) {
+  return { start: task.startDate, end: task.dueDate };
+}
+
 
 /**
  * Allows reassignment only for open tasks without logged hours.

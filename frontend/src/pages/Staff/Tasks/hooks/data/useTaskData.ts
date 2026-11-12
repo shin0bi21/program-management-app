@@ -7,7 +7,7 @@ import { getTaskReferenceData } from '../../tasks.api';
 /**
  * Supplies shared staff, program, cycle, and task choices.
  * @param referenceDataQueryKey - Cache key for task categories and lifecycle statuses.
- * @example const { resources, cycles } = useTaskData(['task-reference-data'])
+ * @example const { staff, cycles } = useTaskData(['task-reference-data'])
  */
 export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   const query = useQuery({
@@ -18,11 +18,11 @@ export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
   const cyclesQuery = useCycleReferences();
   const programsQuery = useProgramReferences();
   const staffQuery = useStaffReferences('tasks');
-  const resources = staffQuery.rows;
+  const staff = staffQuery.rows;
 
-  const writableResources = useMemo(
-    () => resources?.filter(resource => resource.writable) ?? [],
-    [resources],
+  const writableStaff = useMemo(
+    () => staff.filter(staffMember => staffMember.writable),
+    [staff],
   );
 
   return {
@@ -32,12 +32,12 @@ export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
     referenceData: query.data,
     referenceDataLoading: query.isLoading,
     referenceDataError: query.error,
-    resources,
-    resourcesLoading: staffQuery.loading,
-    resourcesError: staffQuery.error,
+    staff,
+    staffLoading: staffQuery.loading,
+    staffError: staffQuery.error,
     programs: programsQuery.rows,
     programsLoading: programsQuery.loading,
     programsError: programsQuery.error,
-    writableResources,
+    writableStaff,
   };
 }
