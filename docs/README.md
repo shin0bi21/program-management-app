@@ -35,10 +35,7 @@ Edit the source guides in `backend/`, `frontend/`, `local-development/`,
 `src/content/docs/`. The sidebar follows the source directories and headings;
 folder README files appear first, and other entries are alphabetical.
 
-Number setup guides in execution order. Give substantial onboarding stages their
-own page, prerequisites, expected results, and a link to the next step; keep
-routine operations separate. Use short title-case headings, preserving product
-names and acronyms. Add an index when an area needs one.
+Number setup guides in execution order and use short title-case headings.
 
 When moving or merging guides, update repository links and skill references,
 preserve linked section IDs or update their callers, and run the repository link
