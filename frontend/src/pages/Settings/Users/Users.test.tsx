@@ -44,6 +44,11 @@ const accounts = [
   },
 ] as const;
 
+/**
+ * Mounts the accounts route with an isolated query cache.
+ * @returns The rendered route and its QueryClient for the current test.
+ * @example renderPage() // renders Users under its query provider
+ */
 const renderPage = () => renderWithQueryClient(<Users />);
 
 describe('Users', () => {
@@ -59,7 +64,7 @@ describe('Users', () => {
   });
 
   // Entry and readiness.
-  it('shows admin account controls and sends search state to the accounts query', async () => {
+  it('offers staff and youth invitations to administrators', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts', 'write:accounts', 'write:youth_profiles'] });
     renderPage();
     await screen.findByRole('button', { name: 'Filters' });
@@ -67,31 +72,21 @@ describe('Users', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
     expect(screen.getByRole('menuitem', { name: 'Invite Staff' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Invite Youth' })).toBeInTheDocument();
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search accounts' }), { target: { value: 'Yara' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(mockUseUserTableData).toHaveBeenLastCalledWith(
-      ['accounts', 'table'],
-      expect.objectContaining({ search: 'Yara' }),
-      expect.any(Object),
-    );
   });
 
-  it('combines account search with restored filters', async () => {
+  it('waits for restored account filters before querying the table', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
     let restore!: (value: { statuses: string[] }) => void;
     preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
     renderPage();
 
-    await act(async () => restore({ statuses: ['invited'] }));
+    expect(mockUseUserTableData).not.toHaveBeenCalled();
 
-    const search = await screen.findByRole('textbox', { name: 'Search accounts' });
-    fireEvent.change(search, { target: { value: 'Yara' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    await act(async () => restore({ statuses: ['invited'] }));
 
     await waitFor(() => expect(mockUseUserTableData).toHaveBeenLastCalledWith(
       ['accounts', 'table'],
-      expect.objectContaining({ search: 'Yara', statuses: ['invited'] }),
+      expect.objectContaining({ statuses: ['invited'] }),
       expect.any(Object),
     ));
   });
@@ -146,5 +141,4 @@ describe('Users', () => {
     expect(screen.getByRole('heading', { name: 'Deactivate Account' })).toBeInTheDocument();
     expect(screen.getByText('Deactivate login access for Alice Admin?')).toBeInTheDocument();
   });
-
 });

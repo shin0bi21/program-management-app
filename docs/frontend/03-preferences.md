@@ -84,7 +84,7 @@ Return these groups from the page preference or control hook, without flat alias
 
 | Group | Members |
 |---|---|
-| `search` | `value`, `setValue`, `appliedValue`, `apply`, `clear` |
+| `search` | `appliedValue`, `apply(search)` |
 | `filters` | `values`, `definitions`, `apply`, `clear` |
 | `table` | `sorting`, `setSorting`, `columnWidths`, `setColumnWidths`, `hiddenColumns`, `setHiddenColumns` |
 
@@ -95,9 +95,9 @@ Return these groups from the page preference or control hook, without flat alias
 
 ### Apply Search
 
-1. Keep the draft local.
-2. Save the trimmed draft on Search or Enter; do not debounce or defer it.
-3. On Clear, reset both the draft and saved search.
+1. Keep the draft inside `SearchInput`; page hooks expose only the applied search and its update callback.
+2. Save the submitted text on Search or Enter; `SearchInput` trims it before invoking the callback. Do not debounce or defer it.
+3. On Clear, `SearchInput` applies an empty string through the same submit handler, using `onApply` or falling back to `onChange` for live filtering.
 
 ### Define Filters
 

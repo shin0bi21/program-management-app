@@ -47,9 +47,9 @@ describe('useProgramRoster', () => {
     expect(getProgramRosterYouth).toHaveBeenCalledWith({ programId: assignment.programId, cycleId: assignment.cycleId }, { signal: expect.any(AbortSignal) });
     expect(result.current.youth.map((profile) => profile.id)).toEqual(['enrolled', 'available']);
 
-    act(() => result.current.setSearch('available'));
+    act(() => result.current.setAppliedSearch('available'));
     rerender({ target: { ...assignment, cycle: 'Updated label' } });
-    expect(result.current.search).toBe('available');
-
+    expect(result.current.appliedSearch).toBe('available');
+    expect(result.current.filterYouth(result.current.youth).map(profile => profile.id)).toEqual(['available']);
   });
 });

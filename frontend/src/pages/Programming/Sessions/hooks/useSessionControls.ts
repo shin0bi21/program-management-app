@@ -43,12 +43,16 @@ interface UseSessionControlsOptions {
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle' };
+/**
+ * Restores session controls and derives cycle bounds, with applied search kept in memory.
+ * @param options - Role, reference choices, dependency status, and supported table keys.
+ * @example search.apply('workshop') updates the session search without changing saved filters.
+ */
 export function useSessionControls({
   role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
   sessionTypes: sessionTypeOptions, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
-  const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const layout = useTableLayout({ key: 'session-filters', tableKeys, columnKeyAliases: SESSION_COLUMN_KEY_ALIASES });
   const { preferences, updatePreferences, ready, error } = usePreferences({
@@ -66,12 +70,6 @@ export function useSessionControls({
   const { view, programIds, cycleIds, sessionTypes, statuses, sorting } = preferences;
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
-  const applySearch = () => setAppliedSearch(search.trim());
-  const clearSearch = () => {
-    setSearch('');
-    setAppliedSearch('');
-  };
-
   const filterCategories = useMemo(() => [
     { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
     { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
@@ -88,11 +86,8 @@ export function useSessionControls({
     view,
     setView,
     search: {
-      value: search,
-      setValue: setSearch,
       appliedValue: appliedSearch,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: setAppliedSearch,
     },
     filters: {
       dateRange,

@@ -134,13 +134,9 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.search.value).toBe('Jamie');
     expect(result.current.search.appliedValue).toBe('Jamie');
 
-    act(() => result.current.search.setValue('  Alex Lee  '));
-    expect(result.current.search.appliedValue).toBe('Jamie');
-
-    act(() => result.current.search.apply());
+    act(() => result.current.search.apply('  Alex Lee  '));
     expect(result.current.search.appliedValue).toBe('Alex Lee');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
@@ -148,8 +144,7 @@ describe('useYouthControls', () => {
       }),
     ));
 
-    act(() => result.current.search.clear());
-    expect(result.current.search.value).toBe('');
+    act(() => result.current.search.apply(''));
     expect(result.current.search.appliedValue).toBe('');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({ search: '', cycleIds: ['cycle-1'] }),

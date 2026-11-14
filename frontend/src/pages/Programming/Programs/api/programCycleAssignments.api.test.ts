@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../../../../http/client';
-import { enrollYouth, withdrawYouth, getProgramCycleAssignments, getProgramRosterYouth } from './programCycleAssignments.api';
+import { setProgramRoster, enrollYouth, withdrawYouth, getProgramCycleAssignments, getProgramRosterYouth } from './programCycleAssignments.api';
 
 vi.mock('../../../../http/client', () => ({
-  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+  apiClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn() },
 }));
 
 describe('program cycle assignment API', () => {
@@ -29,6 +29,11 @@ describe('program cycle assignment API', () => {
 
     expect(apiClient.get).toHaveBeenCalledWith('/programs/program-1/cycles/cycle-1/roster', options);
   });
+  it('submits the complete selected roster in one request, including an empty selection', () => {
+    setProgramRoster({ programId: 'program-1', cycleId: 'cycle-1' }, { youthIds: [] });
+    expect(apiClient.put).toHaveBeenCalledExactlyOnceWith('/programs/program-1/cycles/cycle-1/roster', { youthIds: [] });
+  });
+
   it('filters assignments by cycle and mutates enrollments using both IDs', () => {
     const pair = { programId: 'program-1', cycleId: 'cycle-1' };
     getProgramCycleAssignments('program-1', { cycleId: 'cycle-1' });

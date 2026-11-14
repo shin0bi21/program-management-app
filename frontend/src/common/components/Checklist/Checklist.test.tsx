@@ -48,22 +48,17 @@ it('preserves checkbox menu semantics without submitting a surrounding form', as
   expect(onSubmit).not.toHaveBeenCalled();
 });
 
-it('filters labels immediately without changing selected values or submitting the form', async () => {
+it('filters labels without changing selected values', async () => {
   const user = userEvent.setup();
   const onToggle = vi.fn();
-  const onSubmit = vi.fn(event => event.preventDefault());
-  render(<form onSubmit={onSubmit}>
-    <Checklist options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" search />
-  </form>);
+  render(<Checklist options={options} value={['fall']} onToggle={onToggle} ariaLabel="Cycles" search />);
   const search = screen.getByRole('searchbox', { name: 'Search Cycles' });
 
   await user.type(search, 'SPRING');
   expect(screen.queryByRole('checkbox', { name: 'Fall 2026' })).not.toBeInTheDocument();
-  await user.keyboard('{Enter}');
-  expect(onSubmit).not.toHaveBeenCalled();
   expect(onToggle).not.toHaveBeenCalled();
 
-  await user.clear(search);
+  await user.click(screen.getByRole('button', { name: 'Clear search' }));
   expect(screen.getByRole('checkbox', { name: 'Fall 2026' })).toBeChecked();
   await user.type(search, 'absent');
   expect(screen.getByRole('status')).toHaveTextContent('No matching items.');

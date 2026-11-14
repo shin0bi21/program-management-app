@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,10 +6,9 @@ import { makeProgramRosterYouth } from '../../../../../tests/factories/programRo
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import ManageRosterModal from './ManageRosterModal';
 
-const api = vi.hoisted(() => ({ getProgramRosterYouth: vi.fn(), withdrawYouth: vi.fn(), enrollYouth: vi.fn() }));
+const api = vi.hoisted(() => ({ getProgramRosterYouth: vi.fn(), setProgramRoster: vi.fn() }));
 vi.mock('../../api/programCycleAssignments.api', () => ({
-  withdrawYouth: api.withdrawYouth,
-  enrollYouth: api.enrollYouth,
+  setProgramRoster: api.setProgramRoster,
   getProgramRosterYouth: api.getProgramRosterYouth,
 }));
 
@@ -31,11 +30,10 @@ describe('ManageRosterModal', () => {
       }),
       makeProgramRosterYouth({ id: 'youth-2', firstName: 'Not', lastName: 'Enrolled', dateOfBirth: '2010-01-01', age: 15, schoolName: 'Central School' }),
     ]);
-    api.enrollYouth.mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
-    api.withdrawYouth.mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
+    api.setProgramRoster.mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
   });
 
-  it('shows all youth in one checklist and enrolls an unchecked youth', async () => {
+  it('edits checkbox payloads locally and saves the complete selected roster', async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn().mockResolvedValue(undefined);
     render(<ManageRosterModal assignment={assignment} onClose={vi.fn()} onSuccess={onSuccess} />);
@@ -49,7 +47,11 @@ describe('ManageRosterModal', () => {
 
     await user.click(available);
 
-    await waitFor(() => expect(api.enrollYouth).toHaveBeenCalledWith(assignment, { youthIds: ['youth-2'] }));
+    expect(available).toBeChecked();
+    expect(api.setProgramRoster).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(api.setProgramRoster).toHaveBeenCalledExactlyOnceWith(assignment, { youthIds: ['youth-1', 'youth-2'] }));
     expect(onSuccess).toHaveBeenCalledOnce();
   });
 
@@ -67,26 +69,35 @@ describe('ManageRosterModal', () => {
     await user.keyboard('{Enter}');
     expect(screen.queryByRole('checkbox', { name: /Already Enrolled/ })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Not Enrolled/ })).toBeInTheDocument();
-
-    await user.clear(screen.getByRole('textbox', { name: 'Search youth' }));
-    await user.keyboard('{Enter}');
-    expect(screen.getByRole('checkbox', { name: /Already Enrolled/ })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /Not Enrolled/ })).toBeInTheDocument();
   });
 
-  it('confirms withdrawal from the same checklist and preserves attendance history', async () => {
+  it('submits withdrawal only on Save', async () => {
     const user = userEvent.setup();
-    const onSuccess = vi.fn().mockResolvedValue(undefined);
-    render(<ManageRosterModal assignment={assignment} onClose={vi.fn()} onSuccess={onSuccess} />);
+    render(<ManageRosterModal assignment={assignment} onClose={vi.fn()} onSuccess={vi.fn()} />);
+    const member = await screen.findByRole('checkbox', { name: /Already Enrolled/ });
+    await user.click(member);
 
-    await user.click(await screen.findByRole('checkbox', { name: /Already Enrolled/ }));
-    const confirmation = screen.getByRole('heading', { name: 'Withdraw Youth' }).closest('.modal-container');
-    expect(confirmation).toHaveTextContent('Their existing attendance history will be kept.');
+    expect(member).not.toBeChecked();
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(api.setProgramRoster).not.toHaveBeenCalled();
 
-    await user.click(within(confirmation as HTMLElement).getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(api.withdrawYouth).toHaveBeenCalledWith(assignment, 'youth-1'));
-    expect(onSuccess).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(api.setProgramRoster).toHaveBeenCalledExactlyOnceWith(assignment, { youthIds: [] }));
+  });
+
+  it('discards checkbox changes on Cancel without sending a request', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const props = { assignment, onClose, onSuccess: vi.fn() };
+    const view = render(<ManageRosterModal {...props} />);
+    await user.click(await screen.findByRole('checkbox', { name: /Already Enrolled/ }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(api.setProgramRoster).not.toHaveBeenCalled();
+
+    view.rerender(<ManageRosterModal {...props} assignment={null} />);
+    view.rerender(<ManageRosterModal {...props} />);
+    expect(await screen.findByRole('checkbox', { name: /Already Enrolled/ })).toBeChecked();
   });
 
   it('shows roster loading failures as accessible errors', async () => {

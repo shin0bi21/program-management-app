@@ -23,16 +23,17 @@ export interface ProgramCycleRosterYouthRow {
  * @param programId - Enrollment-based program whose roster is being edited.
  * @param cycleId - Assigned cycle that bounds a new enrollment.
  * @param actor - Actor whose program access must be checked.
+ * @param query - Database client or transaction used for the roster read.
  * @returns Available candidates and retained youth, with date-only birth dates and ages in years.
  * @throws ConflictError when the program does not use enrollment.
  * @example getProgramRosterYouth(programId, cycleId, actor) // excludes conflicting programs
  */
-export async function getProgramRosterYouth(programId: string, cycleId: string, actor: AccessTokenPayload) {
+export async function getProgramRosterYouth(programId: string, cycleId: string, actor: AccessTokenPayload, query = sql) {
   // 1. Check the selected enrollment-based program and cycle.
   await assertCanAccessProgramCycle(actor, programId, cycleId);
 
-  const ageInYears = sql`EXTRACT(YEAR FROM AGE(CURRENT_DATE, profile.date_of_birth))::int`;
-  const [programCycle] = await sql<Array<{
+  const ageInYears = query`EXTRACT(YEAR FROM AGE(CURRENT_DATE, profile.date_of_birth))::int`;
+  const [programCycle] = await query<Array<{
     enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
@@ -58,10 +59,10 @@ export async function getProgramRosterYouth(programId: string, cycleId: string, 
   }
 
   // 2. Keep retained members and available candidates for a new enrollment today.
-  const enrollmentPeriod = sql`daterange(CURRENT_DATE, NULL, '[)')
+  const enrollmentPeriod = query`daterange(CURRENT_DATE, NULL, '[)')
     * daterange(${programCycle.startsOn}::date, ${programCycle.endsOn}::date, '[]')`;
 
-  return sql<ProgramCycleRosterYouthRow[]>`
+  return query<ProgramCycleRosterYouthRow[]>`
     SELECT
       youth.id,
       youth.first_name,

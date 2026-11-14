@@ -24,6 +24,7 @@ interface ChecklistProps {
  * @param props.value - Values of the checked choices.
  * @param props.onToggle - Receives the activated choice value; the caller updates value to change its checked state.
  * @param props.inMenu - Uses checkbox menu items; the caller supplies the surrounding menu and its keyboard navigation.
+ * @param props.search - Includes live filtering; choose once for the mounted checklist.
  * @param props.dynamicItems - Reveals 25 choices at a time as the user scrolls or tabs.
  * @example <Checklist options={[{ value: "fall", label: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
  */
@@ -39,7 +40,7 @@ export default function Checklist({
   dynamicItems = false,
   search: searchEnabled = false,
 }: ChecklistProps) {
-  const { itemsRef, search, setSearch, items, loadMoreItems, handleScroll } = useChecklistItems({
+  const { itemsRef, setSearch, items, loadMoreItems, handleScroll } = useChecklistItems({
     options,
     dynamicItems,
     searchEnabled,
@@ -57,15 +58,8 @@ export default function Checklist({
           type="search"
           label={`Search ${ariaLabel}`}
           placeholder="Search…"
-          value={search}
           disabled={disabled}
-          onChange={event => setSearch(event.target.value)}
-          onClear={() => setSearch('')}
-          onKeyDown={event => {
-            if (event.key === 'Enter') event.preventDefault();
-
-            if (event.key !== 'Escape' && event.key !== 'Tab') event.stopPropagation();
-          }}
+          onChange={setSearch}
         />
       )}
       <div className="checklist-items" ref={itemsRef} onScroll={handleScroll}>

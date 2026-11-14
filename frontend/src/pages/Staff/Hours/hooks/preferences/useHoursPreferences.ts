@@ -1,5 +1,5 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
@@ -37,6 +37,11 @@ interface HoursPreferences {
 
 export type StoredHoursPreferences = Partial<HoursPreferences>;
 
+/**
+ * Restores hours controls and derives calendar bounds from selected cycles.
+ * @param options - Role, available filter choices, dependency status, and table keys.
+ * @example Submitting search.apply('workshop') saves the applied hours search.
+ */
 export default function useHoursPreferences({
   role,
   staff,
@@ -91,21 +96,10 @@ export default function useHoursPreferences({
     },
   });
   const dateRange = useMemo(() => getCycleDateRange(cycles, preferences.cycleIds), [cycles, preferences.cycleIds]);
-  const [searchDraft, setSearchValue] = useState<string | null>(null);
-  const searchValue = searchDraft ?? preferences.search;
 
   // View preference.
   const setView = (view: HoursPreferences['view']) => {
     updatePreferences({ view });
-  };
-
-  // Search preference.
-  const applySearch = () => {
-    updatePreferences({ search: searchValue.trim() });
-  };
-  const clearSearch = () => {
-    setSearchValue('');
-    updatePreferences({ search: '' });
   };
 
   // Filter preferences.
@@ -144,11 +138,8 @@ export default function useHoursPreferences({
     setView,
 
     search: {
-      value: searchValue,
       appliedValue: preferences.search,
-      setValue: setSearchValue,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: (search: string) => updatePreferences({ search }),
     },
 
     filters: {
