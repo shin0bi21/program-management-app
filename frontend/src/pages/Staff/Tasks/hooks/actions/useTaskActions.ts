@@ -46,8 +46,10 @@ export default function useTaskActions({
 
   const startTaskAction = useCallback((taskId: string) => {
     if (pendingTaskIdsRef.current.has(taskId)) return false;
+
     pendingTaskIdsRef.current.add(taskId);
     setPendingTaskIds(new Set(pendingTaskIdsRef.current));
+
     return true;
   }, []);
 
@@ -85,6 +87,7 @@ export default function useTaskActions({
 
     try {
       await deleteTask(task.id);
+
       removeInfiniteListRow(queryClient, taskTableQueryKey, task.id);
       calendarCacheRef.current.remove(task.id);
       onTaskRemoved?.(task.id);
@@ -110,7 +113,9 @@ export default function useTaskActions({
         dueDate: nextRange.end,
         ...(staffId !== task.staffId ? { staffId } : {}),
       });
+
       syncTask(updatedTask);
+
       return updatedTask;
     } catch {
       setActionError(`Unable to ${action} task.`);
@@ -127,6 +132,7 @@ export default function useTaskActions({
 
     try {
       const updatedTask = await updateTaskState(task.id, state);
+
       syncTask(updatedTask);
     } catch {
       setActionError('Unable to update task status.');
@@ -137,11 +143,13 @@ export default function useTaskActions({
 
   const logHours = useCallback(async (input: SetHoursInput) => {
     const taskId = input.source === 'task' ? input.taskId : undefined;
+
     if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
     try {
       const saved = await setHours(input);
       const { updatedTasks } = saved;
+
       setActionError('');
 
       if (input.source === 'task') {
