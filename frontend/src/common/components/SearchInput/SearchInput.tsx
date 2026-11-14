@@ -69,6 +69,7 @@ export default function SearchInput({
       {onApply && (
         <Button
           type="button"
+          variant="ghost"
           size="sm"
           className="search-input__apply"
           aria-label="Search"
