@@ -1,17 +1,13 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { enrollYouth, withdrawYouth } from '../../../api/programCycleAssignments.api';
+import { setProgramRoster } from '../../../api/programCycleAssignments.api';
 import type { ProgramCycleAssignment } from '../../../types';
 import { makeYouthProfile } from '../../../../../../tests/factories/youth';
 import { makeProgramRosterYouth } from '../../../../../../tests/factories/programRoster';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { useManageRosterModal } from './useManageRosterModal';
 
-vi.mock('../../../api/programCycleAssignments.api', () => ({
-  enrollYouth: vi.fn(),
-  withdrawYouth: vi.fn(),
-}));
+vi.mock('../../../api/programCycleAssignments.api', () => ({ setProgramRoster: vi.fn() }));
 
 const assignment: ProgramCycleAssignment = {
   programId: 'program-1', program: 'Soft Skills', enrollmentRequired: true,
@@ -19,87 +15,91 @@ const assignment: ProgramCycleAssignment = {
   endsOn: '2026-08-31', state: 'active', minAge: 12, maxAge: 15, enrolledCount: 5,
   uniqueAttendeeCount: 0,
 };
+const youth = [
+  makeProgramRosterYouth({ id: 'youth-1', programCycles: [{ programId: assignment.programId, cycleId: assignment.cycleId, withdrawnOn: null }] }),
+  makeProgramRosterYouth({ id: 'youth-2' }),
+];
+
 /**
  * Supplies an isolated query cache for one roster workflow test.
  * @example renderHook(useWorkflow, { wrapper: wrapper() })
  */
 const wrapper = () => createQueryClientWrapper(createTestQueryClient());
-const youth = makeProgramRosterYouth({ id: 'youth-1', firstName: 'Avery', lastName: 'Youth' });
 
 describe('useManageRosterModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(enrollYouth).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
-    vi.mocked(withdrawYouth).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
+    vi.mocked(setProgramRoster).mockResolvedValue({ programCycle: assignment, updatedYouth: [] });
   });
 
-  it('enrolls an unchecked youth and notifies the roster owner', async () => {
+  it('keeps checkbox changes local, preserves the draft on refresh, and submits the complete selected set once', async () => {
     const refresh = vi.fn().mockResolvedValue(undefined);
     const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const savedProgramCycle = { ...assignment, enrolledCount: 6 };
-    const savedYouth = makeYouthProfile({ id: youth.id });
-    vi.mocked(enrollYouth).mockResolvedValue({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: wrapper() });
-
-    await act(() => result.current.addYouth(youth));
-
-    expect(enrollYouth).toHaveBeenCalledWith(assignment, { youthIds: ['youth-1'] });
-    expect(refresh).toHaveBeenCalledOnce();
-    expect(onSuccess).toHaveBeenCalledWith({ programCycle: savedProgramCycle, updatedYouth: [savedYouth] });
-  });
-
-  it('locks enrollment while a youth update is pending', async () => {
-    let finishEnrollment: () => void = () => {};
-    vi.mocked(enrollYouth).mockReturnValue(new Promise(resolve => {
-      finishEnrollment = () => resolve({ programCycle: assignment, updatedYouth: [] });
-    }));
-    const { result } = renderHook(() => useManageRosterModal({
-      assignment,
-      refresh: vi.fn(),
-      onSuccess: vi.fn(),
-    }), { wrapper: wrapper() });
+    const saved = { programCycle: assignment, updatedYouth: [makeYouthProfile({ id: 'youth-2' })] };
+    vi.mocked(setProgramRoster).mockResolvedValue(saved);
+    const { result, rerender } = renderHook(({ rows }) => useManageRosterModal({ assignment, youth: rows, refresh, onSuccess }), {
+      initialProps: { rows: youth }, wrapper: wrapper(),
+    });
+    expect(result.current.selectedYouthIds).toEqual(['youth-1']);
 
     act(() => {
-      void result.current.addYouth(youth);
-      void result.current.addYouth(makeProgramRosterYouth({ id: 'youth-2' }));
+      result.current.toggleYouth('youth-1');
+      result.current.toggleYouth('youth-2');
     });
+    rerender({ rows: [...youth] });
+    expect(result.current.selectedYouthIds).toEqual(['youth-2']);
+    expect(setProgramRoster).not.toHaveBeenCalled();
 
-    expect(result.current.pendingYouthId).toBe('youth-1');
-    expect(enrollYouth).toHaveBeenCalledOnce();
-
-    await act(async () => finishEnrollment());
-    expect(result.current.pendingYouthId).toBeNull();
-  });
-
-  it('withdraws youth after confirmation and preserves attendance history', async () => {
-    const refresh = vi.fn().mockResolvedValue(undefined);
-    const onSuccess = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useManageRosterModal({ assignment, refresh, onSuccess }), { wrapper: wrapper() });
-
-    act(() => result.current.requestWithdrawal(youth));
-    expect(result.current.confirmAction?.message).toContain('attendance history will be kept');
-
-    await act(async () => result.current.confirmAction?.onConfirm());
-
-    expect(withdrawYouth).toHaveBeenCalledWith(assignment, 'youth-1');
+    await act(() => result.current.submit());
+    expect(setProgramRoster).toHaveBeenCalledExactlyOnceWith(assignment, { youthIds: ['youth-2'] });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledExactlyOnceWith(saved);
+    expect(result.current.submitStatus).toBe('success');
   });
 
-  it('reports enrollment and reconciliation failures', async () => {
-    vi.mocked(enrollYouth).mockRejectedValueOnce(new Error('Enrollment failed'));
+  it('locks the selection and duplicate submissions until a save completes', async () => {
+    let finishSave: () => void = () => {};
+    vi.mocked(setProgramRoster).mockReturnValue(new Promise(resolve => {
+      finishSave = () => resolve({ programCycle: assignment, updatedYouth: [] });
+    }));
+    const { result } = renderHook(() => useManageRosterModal({ assignment, youth, refresh: vi.fn(), onSuccess: vi.fn() }), { wrapper: wrapper() });
+
+    act(() => {
+      void result.current.submit();
+      void result.current.submit();
+    });
+    act(() => result.current.toggleYouth('youth-2'));
+    expect(result.current.selectedYouthIds).toEqual(['youth-1']);
+    expect(result.current.locked).toBe(true);
+    expect(setProgramRoster).toHaveBeenCalledOnce();
+
+    await act(async () => finishSave());
+    expect(result.current.submitStatus).toBe('success');
+  });
+
+  it('retains the selection after a failed save and permits retrying an empty roster', async () => {
+    vi.mocked(setProgramRoster).mockRejectedValueOnce(new Error('Save failed'));
+    const { result } = renderHook(() => useManageRosterModal({ assignment, youth, refresh: vi.fn(), onSuccess: vi.fn() }), { wrapper: wrapper() });
+    act(() => result.current.toggleYouth('youth-1'));
+
+    await act(() => result.current.submit());
+    expect(result.current.statusMessage).toBe('Save failed');
+    expect(result.current.selectedYouthIds).toEqual([]);
+    expect(result.current.locked).toBe(false);
+
+    await act(() => result.current.submit());
+    expect(setProgramRoster).toHaveBeenLastCalledWith(assignment, { youthIds: [] });
+    expect(result.current.submitStatus).toBe('success');
+  });
+
+  it('distinguishes a committed save from failed reconciliation', async () => {
     const { result } = renderHook(() => useManageRosterModal({
-      assignment,
-      refresh: vi.fn().mockRejectedValue(new Error('Refresh failed')),
-      onSuccess: vi.fn(),
+      assignment, youth, refresh: vi.fn().mockRejectedValue(new Error('Refresh failed')), onSuccess: vi.fn(),
     }), { wrapper: wrapper() });
 
-    await act(() => result.current.addYouth(youth));
-    expect(result.current.actionError).toBe('Enrollment failed');
-
-    vi.mocked(enrollYouth).mockResolvedValueOnce({ programCycle: assignment, updatedYouth: [] });
-    await act(() => result.current.addYouth(youth));
-    expect(result.current.actionError).toContain('was enrolled, but the roster could not refresh');
+    await act(() => result.current.submit());
+    expect(result.current.statusMessage).toBe('Roster saved, but it could not refresh. Reload to see the changes.');
+    expect(result.current.submitStatus).toBe('error');
+    expect(result.current.locked).toBe(false);
   });
-
 });

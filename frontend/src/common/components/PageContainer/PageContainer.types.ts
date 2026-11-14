@@ -4,11 +4,8 @@ import type FilterCard from '../FilterCard/FilterCard';
 type PageView = 'table' | 'calendar';
 
 export interface PageSearchControls {
-  value: string;
-  setValue: (value: string) => void;
   appliedValue: string;
-  apply: () => void;
-  clear: () => void;
+  apply: (search: string) => void;
 }
 
 interface PageControlGroups {

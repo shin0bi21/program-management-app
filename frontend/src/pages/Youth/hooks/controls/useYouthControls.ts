@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
@@ -27,6 +27,11 @@ interface UseYouthControlsOptions {
 
 const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
 
+/**
+ * Restores youth controls with role-specific program defaults and browser-local layout.
+ * @param options - Role, available programs and cycles, dependency status, and table keys.
+ * @example A staff user without saved controls starts with their available programs selected.
+ */
 export function useYouthControls({
   role,
   programs,
@@ -54,15 +59,6 @@ export function useYouthControls({
     },
   });
 
-  const [searchDraft, setSearchValue] = useState<string | null>(null);
-  const searchValue = searchDraft ?? preferences.search;
-
-  const applySearch = () => updatePreferences({ search: searchValue.trim() });
-  const clearSearch = () => {
-    setSearchValue('');
-    updatePreferences({ search: '' });
-  };
-
   const filterCategories = useMemo(() => [
     {
       id: 'programIds' as const,
@@ -80,11 +76,8 @@ export function useYouthControls({
     ready,
     error,
     search: {
-      value: searchValue,
-      setValue: setSearchValue,
       appliedValue: preferences.search,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: (search: string) => updatePreferences({ search }),
     },
     filters: createPreferenceFilters({
       values: {

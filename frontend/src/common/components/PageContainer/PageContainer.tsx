@@ -87,11 +87,8 @@ export default function PageContainer<T>({
           search={ready && search && searchControls ? <SearchInput
             label={search.label}
             placeholder={search.placeholder}
-            value={searchControls.value}
             appliedValue={searchControls.appliedValue}
-            onChange={event => searchControls.setValue(event.target.value)}
             onApply={searchControls.apply}
-            onClear={searchControls.clear}
           /> : undefined}
           filters={ready && filters ? <FilterCard
             categories={filters.definitions}

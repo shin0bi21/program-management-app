@@ -8,12 +8,11 @@ import { getErrorMessage } from '../../../../../../http/errors';
 const noYouth: ProgramRosterYouth[] = [];
 
 /**
- * Loads selectable youth for one mounted roster and owns its search controls.
+ * Loads selectable youth for one mounted roster and filters by its applied search.
  * @param assignment - Loaded program-cycle assignment being managed.
  * @example useProgramRoster(assignment).youth // eligible roster choices
  */
 export function useProgramRoster(assignment: ProgramCycleAssignment) {
-  const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const programId = assignment.programId;
   const cycleId = assignment.cycleId;
@@ -23,12 +22,11 @@ export function useProgramRoster(assignment: ProgramCycleAssignment) {
   });
   const youth = query.data ?? noYouth;
 
-  const applySearch = useCallback(() => setAppliedSearch(search.trim()), [search]);
-  const clearSearch = useCallback(() => {
-    setSearch('');
-    setAppliedSearch('');
-  }, []);
-
+  /**
+   * Filters supplied roster candidates by the applied name or school search.
+   * @param profiles - Loaded candidates; filtering does not change the selected roster draft.
+   * @example An applied search of 'central' includes youth attending Central School.
+   */
   const filterYouth = useCallback(
     (profiles: ProgramRosterYouth[]) => {
       const query = appliedSearch.toLowerCase();
@@ -45,14 +43,12 @@ export function useProgramRoster(assignment: ProgramCycleAssignment) {
 
   return {
     youth,
-    search,
-    setSearch,
+    ready: query.data !== undefined,
     appliedSearch,
-    applySearch,
-    clearSearch,
+    setAppliedSearch,
     filterYouth,
     loading: query.isLoading,
     error: query.error ? getErrorMessage(query.error, 'Could not load youth') : null,
-    refresh: async () => { await query.refetch(); },
+    refresh: async () => { await query.refetch({ throwOnError: true }); },
   };
 }

@@ -109,7 +109,7 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current).toMatchObject({
       view: 'calendar',
-      search: { value: 'workshop', appliedValue: 'workshop' },
+      search: { appliedValue: 'workshop' },
       filters: {
         values: { staffIds: ['staff-1'], programIds: ['program-1'], categories: ['planning_prep'], statuses: ['in_progress'] },
       },
@@ -174,19 +174,14 @@ describe('useTaskPreferences', () => {
     expect(saved).not.toHaveProperty('columnWidths');
   });
 
-  it('applies trimmed search explicitly and clears draft and applied values together', async () => {
+  it('saves submitted search and empty search', async () => {
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    act(() => result.current.search.setValue(' workshop '));
-    expect(result.current.search.appliedValue).toBe('');
-    act(() => result.current.search.apply());
+    act(() => result.current.search.apply(' workshop '));
     expect(result.current.search.appliedValue).toBe('workshop');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: 'workshop' })));
-    act(() => result.current.search.setValue('planning'));
-    expect(result.current.search.appliedValue).toBe('workshop');
-    act(() => result.current.search.clear());
-    expect(result.current.search.value).toBe('');
+    act(() => result.current.search.apply(''));
     expect(result.current.search.appliedValue).toBe('');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: '' })));
   });

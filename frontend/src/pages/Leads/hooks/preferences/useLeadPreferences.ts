@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
@@ -19,6 +19,16 @@ const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'd
 const externalSubmitterRoles: LeadSubmitterRole[] = ['youth', 'parent', 'guardian'];
 const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'created', direction: 'desc' };
 
+/**
+ * Restores lead controls and restricts saved choices to the selected origin.
+ * @param origin - Lead collection whose filters are being edited.
+ * @param preferenceKey - Account preference record for that collection.
+ * @param programs - Available program choices.
+ * @param programsLoading - Whether program choices are still loading.
+ * @param programsError - Failed program lookup; preserves unverified selections.
+ * @param tableKeys - Supported sorting and layout columns.
+ * @example Internal leads discard saved external submitter-role filters.
+ */
 export function useLeadPreferences(
   origin: LeadOrigin,
   preferenceKey: 'outreach-external-leads-filters' | 'outreach-internal-leads-filters',
@@ -41,9 +51,6 @@ export function useLeadPreferences(
     },
   });
 
-  const [searchDraft, setSearchDraft] = useState<string | null>(null);
-  const searchValue = searchDraft ?? preferences.search;
-
   const filterCategories = useMemo(() => [
     { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
     { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
@@ -54,25 +61,12 @@ export function useLeadPreferences(
     }] : []),
   ], [origin, programs]);
 
-  const applySearch = () => {
-    updatePreferences({ search: searchValue });
-    setSearchDraft(null);
-  };
-
-  const clearSearch = () => {
-    updatePreferences({ search: '' });
-    setSearchDraft(null);
-  };
-
   return {
     ready,
     error,
     search: {
-      value: searchValue,
       appliedValue: preferences.search,
-      setValue: setSearchDraft,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: (search: string) => updatePreferences({ search }),
     },
     filters: createPreferenceFilters({
       values: {
@@ -94,6 +88,11 @@ export function useLeadPreferences(
   };
 }
 
+/**
+ * Displays an underscore-separated filter value as capitalized words.
+ * @param value - A nonempty status or submitter-role key.
+ * @example statusLabel('signed_up') // "Signed Up"
+ */
 function statusLabel(value: string) {
   return value
     .split('_')

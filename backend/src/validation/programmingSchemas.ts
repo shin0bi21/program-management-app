@@ -103,6 +103,15 @@ export const programRosterSchema = z.object({
   params: programCycleParams,
 });
 
+export const setProgramRosterSchema = z.object({
+  params: programCycleParams,
+  body: z.object({
+    youthIds: z.array(z.string().uuid('Invalid youth ID')).max(500).refine(
+      values => new Set(values).size === values.length, 'Youth selections must be unique',
+    ),
+  }).strict(),
+});
+
 export const enrollYouthSchema = z.object({
   params: programCycleParams,
   body: z.object({
@@ -286,6 +295,7 @@ export const sessionAttachmentParamsSchema = z.object({
 
 export type SetProgramCycleInput = z.infer<typeof updateCycleSchema.shape.body>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema.shape.body>;
+export type SetProgramRosterInput = z.infer<typeof setProgramRosterSchema.shape.body>;
 export type EnrollYouthInput = z.infer<typeof enrollYouthSchema.shape.body>;
 export type SessionListQuery = z.infer<typeof sessionListQuerySchema.shape.query>;
 export type ProgramCycleQuery = z.infer<typeof programCycleQuerySchema.shape.query>;

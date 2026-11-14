@@ -27,14 +27,13 @@ it('searches beyond revealed items and resets the batch when searching or cleari
   expect(result.current.items).toHaveLength(25);
 });
 
-it('handles option replacement and switching optional capabilities', () => {
+it('handles option replacement and switching incremental rendering', () => {
   const { result, rerender } = renderHook(
     props => useChecklistItems(props),
-    { initialProps: { options, dynamicItems: true, searchEnabled: true } },
+    { initialProps: { options, dynamicItems: true, searchEnabled: false } },
   );
 
-  act(() => result.current.setSearch('absent'));
-  expect(result.current.items).toHaveLength(0);
+  expect(result.current.items).toHaveLength(25);
 
   rerender({ options, dynamicItems: false, searchEnabled: false });
   expect(result.current.items).toHaveLength(63);
@@ -42,4 +41,5 @@ it('handles option replacement and switching optional capabilities', () => {
   rerender({ options: options.slice(0, 3), dynamicItems: true, searchEnabled: false });
   expect(result.current.items).toHaveLength(3);
   expect(result.current.hasMoreItems).toBe(false);
+
 });

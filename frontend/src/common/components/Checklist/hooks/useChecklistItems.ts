@@ -19,13 +19,13 @@ const BATCH_SIZE = 25;
  * Attach itemsRef and handleScroll to the choices' scroll container; query or dynamic-mode changes reset its scroll and batch.
  * @param options.options - Available choices, such as youth names or statuses.
  * @param options.dynamicItems - Whether scrolling/focus reveals another batch of choices.
- * @param options.searchEnabled - Whether search text filters choices by their label.
- * @returns Displayed choices, search controls, and handlers for revealing more choices.
+ * @param options.searchEnabled - Whether this mounted checklist includes label search; fixed for its lifetime.
+ * @returns Displayed choices, the filter-query setter, and handlers for revealing more choices.
  * @example With dynamicItems enabled, searching 100 choices for 30 matches reveals 25; loadMoreItems reveals the last five.
  */
 export function useChecklistItems({ options, dynamicItems, searchEnabled }: ChecklistItemsOptions) {
   const itemsRef = useRef<HTMLDivElement>(null);
-  const { search, setSearch, query, matches } = useOptionSearch(options, searchEnabled);
+  const { setSearch, query, matches } = useOptionSearch(options, searchEnabled);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
   const items = dynamicItems ? matches.slice(0, visibleCount) : matches;
@@ -59,5 +59,5 @@ export function useChecklistItems({ options, dynamicItems, searchEnabled }: Chec
     if (distanceToBottom <= 32) loadMoreItems();
   };
 
-  return { itemsRef, search, setSearch, items, hasMoreItems, loadMoreItems, handleScroll };
+  return { itemsRef, setSearch, items, hasMoreItems, loadMoreItems, handleScroll };
 }

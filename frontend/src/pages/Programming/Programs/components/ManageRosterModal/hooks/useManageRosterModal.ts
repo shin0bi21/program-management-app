@@ -1,84 +1,78 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/programCycleAssignmentCache';
-
-import type { ConfirmAction } from '../../../../../../common/components/ConfirmModal/types';
-import { enrollYouth, withdrawYouth, type RosterMutationResult } from '../../../api/programCycleAssignments.api';
-import type { ProgramRosterYouth } from '../../../api/programCycleAssignments.api';
+import { setProgramRoster, type ProgramRosterYouth, type RosterMutationResult } from '../../../api/programCycleAssignments.api';
 import type { ProgramCycleAssignment } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
+import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 
 interface UseManageRosterModalOptions {
   assignment: ProgramCycleAssignment;
+  youth: ProgramRosterYouth[];
   refresh: () => Promise<void>;
   onSuccess: (result: RosterMutationResult) => void | Promise<void>;
 }
 
 /**
- * Enrolls or withdraws Youth, then refreshes affected queries and roster callbacks.
- * @param options - Selected assignment and callbacks that refresh the roster after a save.
- * @example useManageRosterModal({ assignment, refresh, onSuccess })
+ * Owns a loaded roster draft and saves the complete selection only on form submission.
+ * @param options - Assignment, loaded candidates, and callbacks that reconcile a committed save.
+ * @example Toggling a selected youth edits selectedYouthIds without sending a request.
  */
-export function useManageRosterModal({ assignment, refresh, onSuccess }: UseManageRosterModalOptions) {
+export function useManageRosterModal({ assignment, youth, refresh, onSuccess }: UseManageRosterModalOptions) {
   const queryClient = useQueryClient();
   const { tryLock, unlock } = useSubmitLock();
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [pendingYouthId, setPendingYouthId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState('');
+  const [selectedYouthIds, setSelectedYouthIds] = useState(() => youth.filter(profile => profile.programCycles.some(
+    enrollment => enrollment.programId === assignment.programId && enrollment.cycleId === assignment.cycleId && enrollment.withdrawnOn === null,
+  )).map(profile => profile.id));
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
+  const locked = submitStatus === 'submitting' || submitStatus === 'success';
 
-  const reconcileRoster = async (completedAction: string, result: RosterMutationResult) => {
-    syncProgramCycleAssignmentChanges(queryClient, { updatedProgramCycles: [result.programCycle], updatedYouth: result.updatedYouth, createdProgramCycles: [], removedProgramCycles: [] });
-
-    try {
-      await Promise.all([refresh(), onSuccess(result)]);
-    } catch {
-      setActionError(`${completedAction}, but the roster could not refresh. Reload to see the change.`);
-    }
+  /**
+   * Toggles one candidate in the local draft while editing is available.
+   * @param youthId - ID of a candidate supplied to this mounted editor.
+   * @example Toggling an enrolled youth removes their ID from the pending payload.
+   */
+  const toggleYouth = (youthId: string) => {
+    if (locked) return;
+    setSelectedYouthIds(current => current.includes(youthId)
+      ? current.filter(id => id !== youthId)
+      : [...current, youthId]);
   };
 
-  const addYouth = async (profile: ProgramRosterYouth) => {
+  /**
+   * Saves the complete roster in one request and reconciles the authoritative response.
+   * @example Repeated submissions while saving send only one request.
+   */
+  const submit = async () => {
     if (!tryLock()) return;
+    setSubmitStatus('submitting');
+    setStatusMessage('Saving roster...');
 
-    setPendingYouthId(profile.id);
-    setActionError('');
     let saved: RosterMutationResult;
     try {
-      saved = await enrollYouth(assignment, { youthIds: [profile.id] });
+      saved = await setProgramRoster(assignment, { youthIds: selectedYouthIds });
     } catch (cause) {
-      setActionError(getErrorMessage(cause, 'Could not enroll youth'));
-      setPendingYouthId(null);
+      setStatusMessage(getErrorMessage(cause, 'Could not save roster'));
+      setSubmitStatus('error');
       unlock();
       return;
     }
 
-    await reconcileRoster(`${profile.firstName} ${profile.lastName} was enrolled`, saved);
+    try {
+      syncProgramCycleAssignmentChanges(queryClient, { updatedProgramCycles: [saved.programCycle], updatedYouth: saved.updatedYouth, createdProgramCycles: [], removedProgramCycles: [] });
+      await Promise.all([refresh(), onSuccess(saved)]);
+    } catch {
+      setStatusMessage('Roster saved, but it could not refresh. Reload to see the changes.');
+      setSubmitStatus('error');
+      unlock();
+      return;
+    }
 
-    setPendingYouthId(null);
-    unlock();
+    setSubmitStatus('success');
+    setStatusMessage('Roster saved.');
   };
 
-  const requestWithdrawal = (profile: ProgramRosterYouth) => {
-    setActionError('');
-    setConfirmAction({
-      title: 'Withdraw Youth',
-      message: `Withdraw ${profile.firstName} ${profile.lastName} from ${assignment.program} - ${assignment.cycle}? Their existing attendance history will be kept.`,
-      confirmVariant: 'danger',
-      successMessage: `${profile.firstName} ${profile.lastName} successfully withdrawn.`,
-      onConfirm: async () => {
-        const saved = await withdrawYouth(assignment, profile.id);
-
-        await reconcileRoster(`${profile.firstName} ${profile.lastName} was withdrawn`, saved);
-      },
-    });
-  };
-
-  return {
-    pendingYouthId,
-    addYouth,
-    confirmAction,
-    requestWithdrawal,
-    closeConfirmation: () => setConfirmAction(null),
-    actionError,
-  };
+  return { selectedYouthIds, toggleYouth, submit, submitStatus, statusMessage, locked };
 }

@@ -162,10 +162,7 @@ describe('useHoursPreferences', () => {
 
     expect(result.current.view).toBe('calendar');
 
-    act(() => {
-      result.current.search.setValue(' workshop ');
-    });
-    act(() => result.current.search.apply());
+    act(() => result.current.search.apply('workshop'));
     expect(result.current.search.appliedValue).toBe('workshop');
 
     act(() => {
@@ -184,7 +181,6 @@ describe('useHoursPreferences', () => {
       search: 'workshop',
       sorting: { key: 'hours', direction: 'asc' },
     })));
-
 
   });
   it('retires legacy cycle and custom-date fields without losing sibling preferences', async () => {
@@ -207,6 +203,5 @@ describe('useHoursPreferences', () => {
     const saved = calls[calls.length - 1]?.[1];
     expect(saved).not.toHaveProperty('dateRange');
   });
-
 
 });
