@@ -12,6 +12,12 @@ import type { UserRole, UserSortKey, UserStatus } from '../types';
 
 const DEFAULT_SORTING: ListSort<UserSortKey> = { key: 'name', direction: 'asc' };
 
+/**
+ * Restores account filters and layout while keeping applied search in this page session.
+ * @param isAdmin - Whether role filters are available.
+ * @param tableKeys - Supported sorting and layout columns.
+ * @example search.apply('Alex') changes the session search without saving an account preference.
+ */
 export function useAccountControls(
   isAdmin: boolean,
   tableKeys: readonly UserSortKey[],
@@ -27,14 +33,7 @@ export function useAccountControls(
     },
   });
 
-  const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-
-  const applySearch = () => setAppliedSearch(search.trim());
-  const clearSearch = () => {
-    setSearch('');
-    setAppliedSearch('');
-  };
 
   const filterCategories = useMemo(() => [
     { id: 'statuses' as const, label: 'Status', options: [
@@ -54,11 +53,8 @@ export function useAccountControls(
     ready,
     error,
     search: {
-      value: search,
-      setValue: setSearch,
       appliedValue: appliedSearch,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: setAppliedSearch,
     },
     filters: createPreferenceFilters({
       values: {

@@ -2,7 +2,7 @@ import createPreferenceFilters from '../../../../../common/features/Preferences/
 import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import type { TaskReferenceData } from '../../tasks.api';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
@@ -52,6 +52,11 @@ interface UseTaskPreferencesOptions {
   cyclesError: boolean;
 }
 
+/**
+ * Restores task controls and saves submitted search, filters, view, and sorting.
+ * @param options - Reference choices, their availability, and supported table keys.
+ * @example Submitting search.apply('workshop') saves the applied task search.
+ */
 export default function useTaskPreferences({
   referenceData,
   referenceDataLoading,
@@ -91,22 +96,10 @@ export default function useTaskPreferences({
       sorting: preferenceSorting(tableKeys, { key: 'startDate', direction: 'asc' }),
     },
   });
-  const [searchDraft, setSearchValue] = useState<string | null>(null);
-  const searchValue = searchDraft ?? preferences.search;
 
   // View preference.
   const setView = (view: TasksView) => {
     updatePreferences({ view });
-  };
-
-  // Search preference.
-  const applySearch = () => {
-    updatePreferences({ search: searchValue.trim() });
-  };
-
-  const clearSearch = () => {
-    setSearchValue('');
-    updatePreferences({ search: '' });
   };
 
   // Filter preferences.
@@ -147,11 +140,8 @@ export default function useTaskPreferences({
     setView,
 
     search: {
-      value: searchValue,
       appliedValue: preferences.search,
-      setValue: setSearchValue,
-      apply: applySearch,
-      clear: clearSearch,
+      apply: (search: string) => updatePreferences({ search }),
     },
 
     filters: createPreferenceFilters({

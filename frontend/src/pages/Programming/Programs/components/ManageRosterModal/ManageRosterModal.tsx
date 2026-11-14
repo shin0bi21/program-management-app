@@ -2,7 +2,7 @@ import type { RosterMutationResult } from '../../api/programCycleAssignments.api
 import { useMemo } from 'react';
 
 import Button from '../../../../../common/components/Button/Button';
-import ConfirmModal from '../../../../../common/components/ConfirmModal/ConfirmModal';
+import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
 import Modal from '../../../../../common/components/Modal/Modal';
 import SearchInput from '../../../../../common/components/SearchInput/SearchInput';
 import type { ProgramCycleAssignment } from '../../types';
@@ -28,47 +28,56 @@ export default function ManageRosterModal({ assignment, ...props }: ManageRoster
 }
 
 /**
- * Keeps roster search mounted while a withdrawal confirmation suspends the dialog.
- * @param props - Assignment being managed and its completion actions.
- * @example <Roster assignment={assignment} onClose={close} onSuccess={sync} />
+ * Waits for roster data before mounting its state-owning form.
+ * @param props - Selected assignment and completion actions.
+ * @example A failed initial lookup shows Retry without creating an empty enrollment draft.
  */
-function Roster({ assignment, onClose, onSuccess }: Omit<ManageRosterModalProps, 'assignment'> & { assignment: ProgramCycleAssignment }) {
-  const {
-    youth, search, setSearch, appliedSearch, applySearch, clearSearch,
-    filterYouth, loading, error, refresh,
-  } = useProgramRoster(assignment);
-  const visibleYouth = useMemo(() => filterYouth(youth), [filterYouth, youth]);
-  const workflow = useManageRosterModal({ assignment, refresh, onSuccess });
+function Roster(props: Omit<ManageRosterModalProps, 'assignment'> & { assignment: ProgramCycleAssignment }) {
+  const roster = useProgramRoster(props.assignment);
+  if (!roster.ready) {
+    return <Modal isOpen onClose={props.onClose} title={`${props.assignment.program} - ${props.assignment.cycle} Roster`}>
+      {roster.error
+        ? <p role="alert">{roster.error} <Button onClick={() => { void roster.refresh().catch(() => undefined); }}>Retry</Button></p>
+        : <p className="page-empty">Loading youth…</p>}
+    </Modal>;
+  }
+  return <RosterForm {...props} roster={roster} />;
+}
 
-  const isEnrolled = (profile: typeof youth[number]) => profile.programCycles.some(
-    enrollment => enrollment.programId === assignment.programId && enrollment.cycleId === assignment.cycleId && enrollment.withdrawnOn === null,
-  );
+/**
+ * Edits a mounted roster selection and submits it through the modal's Save action.
+ * @param props - Loaded roster choices, assignment, and completion actions.
+ * @example Unchecking a member changes only the local draft until Save is pressed.
+ */
+function RosterForm({ assignment, onClose, onSuccess, roster }: Omit<ManageRosterModalProps, 'assignment'> & {
+  assignment: ProgramCycleAssignment;
+  roster: ReturnType<typeof useProgramRoster>;
+}) {
+  const { youth, appliedSearch, setAppliedSearch, filterYouth, error, refresh } = roster;
+  const visibleYouth = useMemo(() => filterYouth(youth), [filterYouth, youth]);
+  const workflow = useManageRosterModal({ assignment, youth, refresh, onSuccess });
 
   return (
-    <>
-      <Modal
-        isOpen={workflow.confirmAction === null}
-        onClose={onClose}
-        title={`${assignment.program} - ${assignment.cycle} Roster`}
-        disableClose={workflow.pendingYouthId !== null}
-        footer={<Button
-          variant="secondary"
-          onClick={onClose}
-          disabled={workflow.pendingYouthId !== null}
-        >Close</Button>}
-      >
-        {(error || workflow.actionError) && (
-          <p className="form-error" role="alert">{error || workflow.actionError}</p>
-        )}
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`${assignment.program} - ${assignment.cycle} Roster`}
+      status={workflow.submitStatus}
+      statusMessage={workflow.statusMessage}
+      footer={<ModalFormFooter formId="manage-roster-form" submitStatus={workflow.submitStatus} onClose={onClose} />}
+    >
+      <form id="manage-roster-form" onSubmit={event => {
+        event.preventDefault();
+        void workflow.submit();
+      }} aria-busy={workflow.locked}>
+        {error && <p className="form-error" role="alert">{error}</p>}
         <div className="manage-roster-controls">
           <SearchInput
             className="manage-roster-search"
             label="Search youth"
-            value={search}
+            disabled={workflow.locked}
             appliedValue={appliedSearch}
-            onChange={event => setSearch(event.target.value)}
-            onApply={applySearch}
-            onClear={clearSearch}
+            onApply={setAppliedSearch}
             placeholder="Search by name or school"
           />
           <fieldset className="manage-roster-age-filter" aria-describedby="roster-age-help">
@@ -103,20 +112,13 @@ function Roster({ assignment, onClose, onSuccess }: Omit<ManageRosterModalProps,
           </fieldset>
         </div>
         <div className="manage-roster-list" aria-label="Program cycle roster">
-          {loading && <p className="page-empty">Loading youth…</p>}
-          {!loading && visibleYouth.map(profile => (
+          {visibleYouth.map(profile => (
             <label key={profile.id} className="manage-roster-list__item">
               <input
                 type="checkbox"
-                checked={isEnrolled(profile)}
-                disabled={workflow.pendingYouthId !== null}
-                onChange={() => {
-                  if (isEnrolled(profile)) {
-                    workflow.requestWithdrawal(profile);
-                    return;
-                  }
-                  void workflow.addYouth(profile);
-                }}
+                checked={workflow.selectedYouthIds.includes(profile.id)}
+                disabled={workflow.locked}
+                onChange={() => workflow.toggleYouth(profile.id)}
               />
               <span>
                 <strong>{profile.firstName} {profile.lastName}</strong>
@@ -127,16 +129,11 @@ function Roster({ assignment, onClose, onSuccess }: Omit<ManageRosterModalProps,
               </span>
             </label>
           ))}
-          {!loading && visibleYouth.length === 0 && !error && (
+          {visibleYouth.length === 0 && !error && (
             <p className="page-empty">{youth.length ? 'No youth match your search.' : 'No eligible youth found.'}</p>
           )}
         </div>
-      </Modal>
-
-      <ConfirmModal
-        action={workflow.confirmAction}
-        onClose={workflow.closeConfirmation}
-      />
-    </>
+      </form>
+    </Modal>
   );
 }

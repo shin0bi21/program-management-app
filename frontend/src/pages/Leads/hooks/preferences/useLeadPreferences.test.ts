@@ -44,8 +44,7 @@ describe('useLeadPreferences', () => {
     expect(result.current.filters.values.statuses).toEqual([]);
     expect(result.current.filters.values.programIds).toEqual([]);
 
-    act(() => result.current.search.setValue(' school '));
-    act(() => result.current.search.apply());
+    act(() => result.current.search.apply(' school '));
     act(() => result.current.filters.apply('statuses', ['contacted']));
     act(() => result.current.filters.apply('submitterRoles', ['youth']));
     act(() => {
@@ -100,7 +99,7 @@ describe('useLeadPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.search.value).toBe('school');
+    expect(result.current.search.appliedValue).toBe('school');
     expect(result.current.filters.values.statuses).toEqual(['contacted']);
     expect(result.current.filters.values.programIds).toEqual(['program-1']);
     expect(result.current.filters.values.submitterRoles).toEqual(['parent']);
@@ -111,7 +110,7 @@ describe('useLeadPreferences', () => {
     ));
   });
 
-  it('uses program availability without applying the local search draft', async () => {
+  it('repairs program availability while preserving applied controls', async () => {
     preferenceApi.getPreference.mockResolvedValue({ programIds: ['removed-program'] });
     const { result, rerender } = renderHook(({ error }: { error: string | null }) => (
       useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, error, tableKeys)
@@ -120,12 +119,10 @@ describe('useLeadPreferences', () => {
     expect(result.current.filters.values.programIds).toEqual(['removed-program']);
 
     act(() => result.current.filters.apply('statuses', ['contacted']));
-    act(() => result.current.search.setValue('unfinished search'));
     rerender({ error: null });
 
     await waitFor(() => expect(result.current.filters.values.programIds).toEqual([]));
     expect(result.current.filters.values.statuses).toEqual(['contacted']);
-    expect(result.current.search.value).toBe('unfinished search');
     expect(result.current.search.appliedValue).toBe('');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-external-leads-filters', expect.objectContaining({ programIds: [], statuses: ['contacted'], search: '' }),

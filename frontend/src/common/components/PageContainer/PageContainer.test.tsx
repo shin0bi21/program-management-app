@@ -11,14 +11,16 @@ const columns: TableColumnDef<{ name: string; status: string }>[] = [
   { id: 'status', header: 'Status', accessorKey: 'status' },
 ];
 
+/**
+ * Supplies ready collection controls with observable action callbacks.
+ * @returns Fresh controls so each test owns its action history.
+ * @example makeControls().search.appliedValue // 'saved'
+ */
 function makeControls() {
   return {
     search: {
-      value: 'draft',
       appliedValue: 'saved',
-      setValue: vi.fn(),
       apply: vi.fn(),
-      clear: vi.fn(),
     },
     filters: {
       definitions: [{ id: 'statuses', label: 'Status', options: [{ value: 'active', label: 'Active' }] }],
@@ -70,31 +72,11 @@ describe('PageContainer', () => {
     rerender(<PageContainer {...props} controls={controls} />);
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Search records' })).toHaveValue('draft');
+    expect(screen.getByRole('textbox', { name: 'Search records' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'View: Table' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Columns' })).toBeInTheDocument();
     expect(contentMounted).toHaveBeenCalledTimes(2);
-  });
-
-  it('connects search changes, application, and clearing once ready', () => {
-    const controls = makeControls();
-    const { search } = controls;
-    render(<PageContainer
-      title="Records"
-      ariaLabel="Records"
-      controls={{ ready: true, search }}
-      search={{ label: 'Search records' }}
-      table={<p>Records</p>}
-    />);
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Search records' }), { target: { value: 'next' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-
-    expect(search.setValue).toHaveBeenCalledWith('next');
-    expect(search.apply).toHaveBeenCalledOnce();
-    expect(search.clear).toHaveBeenCalledOnce();
   });
 
   it('selects the active view and exposes columns only for the table', () => {

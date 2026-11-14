@@ -194,6 +194,13 @@ roster. Enrollment writes recheck eligibility inside the transaction and reject
 an invalid batch atomically. See [roster service](../../backend/src/services/programming/programCycles/programRosterService.ts) and
 [enrollment service](../../backend/src/services/programming/programCycles/enrollmentService.ts).
 
+Manage Roster submits the complete selected `youthIds` to
+`PUT /programs/:programId/cycles/:cycleId/roster`, requiring `write:enrollments`.
+The server diffs that selection against current membership inside one transaction.
+It retains unchanged enrollment dates, enrolls additions, and marks removals as
+withdrawn without deleting attendance. Invalid selections roll back the whole save.
+See [roster mutation service](../../backend/src/services/programming/programCycles/programRosterMutationService.ts).
+
 Youth can be enrolled in only one enrollment-based program on a calendar date.
 Membership is the intersection of the cycle's inclusive dates and the enrollment
 period: enrollment day is included and withdrawal day is excluded. Historical and

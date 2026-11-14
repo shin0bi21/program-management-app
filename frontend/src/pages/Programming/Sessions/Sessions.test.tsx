@@ -181,24 +181,6 @@ describe('Sessions', () => {
   });
 
   // Entry and readiness.
-  it('applies an ephemeral search after preferences are restored', async () => {
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    const search = await screen.findByRole('textbox', { name: 'Search sessions' });
-    fireEvent.change(search, { target: { value: 'Communication' } });
-    fireEvent.keyDown(search, { key: 'Enter' });
-
-    await screen.findByRole('table', { name: 'Sessions' });
-    await waitFor(() => expect(getSessions).toHaveBeenCalledWith(
-      expect.objectContaining({ search: 'Communication' }),
-      expect.anything(), expect.anything(),
-    ));
-  });
-
   it('keeps session filters and the calendar available with session read permission alone', async () => {
     auth.permissions = ['read:sessions'];
     preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };

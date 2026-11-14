@@ -35,7 +35,6 @@ export default function SelectOptions({
   'aria-invalid': ariaInvalid,
 }: SelectOptionsProps) {
   const {
-    search,
     changeSearch,
     matches,
     activeIndex,
@@ -80,9 +79,7 @@ export default function SelectOptions({
         className="floating-select-search"
         label={`Search ${label}`}
         placeholder="Search…"
-        value={search}
-        onChange={event => changeSearch(event.target.value)}
-        onClear={() => changeSearch('')}
+        onChange={changeSearch}
         autoFocus
         role="combobox"
         aria-autocomplete="list"
