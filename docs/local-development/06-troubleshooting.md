@@ -20,7 +20,7 @@ Docker Compose cannot find the project's `docker-compose.yml`. This file lists
 the services to start. Your terminal is outside the downloaded project folder.
 
 1. In VS Code, choose **File → Open Folder** and open the folder you cloned
-   (`be-original`, or `my-webapp` for an older checkout). The Explorer panel must
+   (`program-management-app`). The Explorer panel must
    show `docker-compose.yml`, `frontend`, and `backend` at the top level.
 2. Close the old terminal with its trash icon, then choose **Terminal → New
    Terminal**. The new terminal starts in the folder you opened.
