@@ -22,7 +22,7 @@ const firstItem: HoursItem = makeHoursItem({
   category: 'program_delivery',
   categoryLabel: 'Program Delivery',
   taskId: null,
-  taskTitle: null, sessionId: null, sessionLabel: null,
+  taskTitle: null, sessionId: null, sessionTitle: null,
   hours: 2,
   note: 'Workshop delivery',
 });

@@ -37,7 +37,7 @@ interface HomepageProgramRow {
   minAge: number | null;
   maxAge: number | null;
   sessionId: string | null;
-  sessionTheme: string | null;
+  sessionTitle: string | null;
   sessionDate: string | null;
 }
 
@@ -334,7 +334,7 @@ async function readHomepagePrograms() {
       SELECT
         session.program_id,
         session.id AS session_id,
-        session.theme AS session_theme,
+        session.title AS session_title,
         session.date AS session_date,
         session.start_time AS session_start_time,
         ROW_NUMBER() OVER (
@@ -354,7 +354,7 @@ async function readHomepagePrograms() {
       program.max_age,
 
       ranked.session_id,
-      ranked.session_theme,
+      ranked.session_title,
       ranked.session_date
     FROM programs program
     LEFT JOIN ranked_sessions ranked
@@ -376,7 +376,7 @@ async function readHomepagePrograms() {
     enrollmentRequired: boolean;
     minAge: number | null;
     maxAge: number | null;
-    sessions: Array<{ id: string; theme: string; date: string }>;
+    sessions: Array<{ id: string; title: string; date: string }>;
   }>();
 
   for (const row of rows) {
@@ -395,13 +395,13 @@ async function readHomepagePrograms() {
     }
 
     if (row.sessionId === null) continue;
-    if (row.sessionTheme === null || row.sessionDate === null) {
+    if (row.sessionTitle === null || row.sessionDate === null) {
       throw new Error(`Homepage session ${row.sessionId} is missing required data`);
     }
 
     program.sessions.push({
       id: row.sessionId,
-      theme: row.sessionTheme,
+      title: row.sessionTitle,
       date: row.sessionDate,
     });
   }

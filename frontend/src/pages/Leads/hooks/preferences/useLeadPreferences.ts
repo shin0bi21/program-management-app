@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
-import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
@@ -52,12 +51,12 @@ export function useLeadPreferences(
   });
 
   const filterCategories = useMemo(() => [
-    { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
-    { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ value: status, label: statusLabel(status) })) },
+    { id: 'programIds' as const, label: 'Program', options: programs },
+    { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ id: status, name: statusLabel(status) })) },
     ...(origin === 'external' ? [{
       id: 'submitterRoles' as const,
       label: 'Filled Out By',
-      options: externalSubmitterRoles.map(role => ({ value: role, label: statusLabel(role) })),
+      options: externalSubmitterRoles.map(role => ({ id: role, name: statusLabel(role) })),
     }] : []),
   ], [origin, programs]);
 

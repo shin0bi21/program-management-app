@@ -3,7 +3,7 @@ import Checklist from './Checklist';
 import FilterCard from '../FilterCard/FilterCard';
 import FormFieldGroup from '../FormField/FormFieldGroup';
 
-const options = [{ value: 'fall', label: 'Fall 2026' }, { value: 'spring', label: 'Spring 2026' }];
+const options = [{ id: 'fall', name: 'Fall 2026' }, { id: 'spring', name: 'Spring 2026' }];
 
 export function FormAndFilter() {
   const [selected, setSelected] = useState(['fall']);
@@ -19,7 +19,7 @@ export function FormAndFilter() {
   </div>;
 }
 
-const longOptions = Array.from({ length: 63 }, (_, index) => ({ value: String(index), label: `Person ${index + 1}` }));
+const longOptions = Array.from({ length: 63 }, (_, index) => ({ id: String(index), name: `Person ${index + 1}` }));
 
 export function SearchableDynamic({ variant = 'form', containerHeight }: {
   variant?: 'compact' | 'form';

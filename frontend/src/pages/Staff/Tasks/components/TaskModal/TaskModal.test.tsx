@@ -19,7 +19,7 @@ const staff = [{
   writable: true,
 }];
 const programs = [{ id: 'program-soft', name: 'Soft Skills' }];
-const categories = [{ value: 'planning_prep' as const, label: 'Planning / Prep' }];
+const categories = [{ id: 'planning_prep' as const, name: 'Planning / Prep' }];
 
 describe('TaskModal', () => {
   beforeEach(() => {

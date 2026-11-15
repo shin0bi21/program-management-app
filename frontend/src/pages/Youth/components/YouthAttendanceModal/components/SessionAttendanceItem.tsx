@@ -39,23 +39,23 @@ export default function SessionAttendanceItem({
   onEditNote: (note: SessionNote) => void;
   onUnlinkNote: (note: SessionNote) => void;
 }) {
-  const sessionLabel = session.theme;
+  const sessionTitle = session.title;
   const canAddNote = enrollmentRequired || session.status === 'present';
 
   return (
     <article className="youth-attendance-modal__session">
       <div className="youth-attendance-modal__session-overview">
         <div className="youth-attendance-modal__session-details">
-          <strong>{sessionLabel}</strong>
+          <strong>{sessionTitle}</strong>
           <span>{formatShortDate(session.date)}</span>
           {session.cancelledAt && (
             <Label tone="negative">Cancelled</Label>
           )}
         </div>
-        <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionLabel}`}>
+        <section className="youth-attendance-modal__attendance" aria-label={`Attendance for ${sessionTitle}`}>
           <AttendanceStatusSelect
             id={`youth-attendance-${session.id}`}
-            ariaLabel={`Attendance for ${sessionLabel} on ${formatShortDate(session.date)}`}
+            ariaLabel={`Attendance for ${sessionTitle} on ${formatShortDate(session.date)}`}
             enrollmentRequired={enrollmentRequired}
             value={status}
             disabled={Boolean(session.cancelledAt)}
@@ -64,7 +64,7 @@ export default function SessionAttendanceItem({
         </section>
       </div>
 
-      <section className="youth-attendance-modal__notes" aria-label={`Notes for ${sessionLabel}`}>
+      <section className="youth-attendance-modal__notes" aria-label={`Notes for ${sessionTitle}`}>
         <div className="youth-attendance-modal__notes-header">
           {session.sessionNotes.length > 0 ? (
             <Button

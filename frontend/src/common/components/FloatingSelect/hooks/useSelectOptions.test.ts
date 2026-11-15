@@ -3,8 +3,8 @@ import { expect, it } from 'vitest';
 import { useSelectOptions } from './useSelectOptions';
 
 const options = [
-  { value: 'one', label: 'School One' },
-  { value: 'two', label: 'School Two' },
+  { id: 'one', name: 'School One' },
+  { id: 'two', name: 'School Two' },
 ];
 
 it('starts at the selected choice, resets navigation on search, and wraps through matches', () => {

@@ -12,16 +12,16 @@ const item = makeHoursItem({
   category: 'program_delivery' as const,
   categoryLabel: 'Program Delivery',
   taskId: null,
-  taskTitle: null, sessionId: null, sessionLabel: null,
+  taskTitle: null, sessionId: null, sessionTitle: null,
   hours: 2,
   note: 'Workshop delivery',
 });
 
 describe('HoursItem', () => {
   it.each([
-    ['Task', { type: 'task' as const, taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionLabel: null }],
-    ['Session', { type: 'session' as const, taskId: null, taskTitle: null, sessionId: 'session-1', sessionLabel: 'Healthy Relationships' }],
-    ['Regular', { type: 'regular' as const, taskId: null, taskTitle: null, sessionId: null, sessionLabel: null }],
+    ['Task', { type: 'task' as const, taskId: 'task-1', taskTitle: 'Prepare workshop', sessionId: null, sessionTitle: null }],
+    ['Session', { type: 'session' as const, taskId: null, taskTitle: null, sessionId: 'session-1', sessionTitle: 'Healthy Relationships' }],
+    ['Regular', { type: 'regular' as const, taskId: null, taskTitle: null, sessionId: null, sessionTitle: null }],
   ])('shows hours and the %s entry type', (type, source) => {
     render(<HoursItem item={{ ...item, ...source }} />);
 
@@ -60,7 +60,7 @@ describe('HoursItem', () => {
       ...item,
       type: 'session',
       sessionId: 'session-1',
-      sessionLabel: 'Healthy Relationships',
+      sessionTitle: 'Healthy Relationships',
     }} />);
     fireEvent.mouseEnter(screen.getByRole('button'));
 

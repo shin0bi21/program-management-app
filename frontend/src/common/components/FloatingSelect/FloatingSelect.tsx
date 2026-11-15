@@ -7,8 +7,8 @@ import SelectOptions from './SelectOptions';
 import './FloatingSelect.css';
 
 export interface FloatingSelectOption {
-  value: string;
-  label: string;
+  id: string;
+  name: string;
   className?: string;
 }
 
@@ -41,9 +41,9 @@ interface FloatingSelectProps {
 /**
  * Displays a controlled single-choice field with an optional searchable popup.
  * @param props.id - Connects the button to its form label.
- * @param props.value - Selected option value; the placeholder appears when no option matches.
- * @param props.options - Available choices with unique values, such as programs or staff members.
- * @param props.onChange - Receives the chosen value before the popup closes; update value to display it.
+ * @param props.value - Selected option ID; the placeholder appears when no option matches.
+ * @param props.options - Available choices with unique IDs and display names, such as programs or staff members.
+ * @param props.onChange - Receives the chosen ID before the popup closes; update value to display it.
  * @param props.search - Adds a field to find an existing option; typing alone does not select it.
  * @param props.action - Optional action above the choices; closes the popup before invoking onSelect.
  * @param props.optionActions - Extra actions for an option, such as Edit or Delete.
@@ -71,15 +71,15 @@ export default function FloatingSelect({
     { side: 'bottom', align: 'start' },
     { widthEstimate: triggerWidth ?? 240, heightEstimate: 260 },
   );
-  const selected = options.find(option => option.value === value);
+  const selected = options.find(option => option.id === value);
   const fieldLabel = Array.from(triggerRef.current?.labels ?? [])
     .map(item => item.textContent)
     .join(' ');
   const label = ariaLabel ?? (fieldLabel || placeholder);
 
   /**
-   * Reports the chosen option value and dismisses this popup session.
-   * @param nextValue - Value of the option chosen from the displayed choices.
+   * Reports the chosen option ID and dismisses this popup session.
+   * @param nextValue - ID of the option chosen from the displayed choices.
    * @example select('program-1') calls onChange('program-1') before closing.
    */
   const select = (nextValue: string) => {
@@ -109,7 +109,7 @@ export default function FloatingSelect({
         }}
       >
         <span className={selected ? undefined : 'floating-select-placeholder'}>
-          {selected?.label ?? placeholder}
+          {selected?.name ?? placeholder}
         </span>
         <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
       </button>
@@ -154,22 +154,22 @@ export default function FloatingSelect({
               )}
               <div className="floating-select-options">
                 {options.map(option => (
-                  <div className="floating-select-option-row" key={option.value}>
+                  <div className="floating-select-option-row" key={option.id}>
                     <button
                       type="button"
                       role="menuitemradio"
-                      aria-checked={option.value === value}
+                      aria-checked={option.id === value}
                       className={`floating-select-option${option.className ? ` ${option.className}` : ''}`}
-                      onClick={() => select(option.value)}
+                      onClick={() => select(option.id)}
                     >
-                      {option.label}
+                      {option.name}
                     </button>
                     {optionActions?.(option).map(optionAction => (
                       <button
                         key={optionAction.label}
                         type="button"
                         role="menuitem"
-                        aria-label={`${optionAction.label} ${option.label}`}
+                        aria-label={`${optionAction.label} ${option.name}`}
                         className={`floating-select-option-action${optionAction.variant === 'danger' ? ' floating-select-option-action--danger' : ''}`}
                         onClick={() => {
                           close();

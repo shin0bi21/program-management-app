@@ -17,7 +17,7 @@ const cycles: ProgramCycle[] = [
   { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
 ];
 const sessionTypes: SessionType[] = [{ id: 'Regular', name: 'Regular' }];
-const tableKeys = ['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'] as const;
+const tableKeys = ['program', 'cycle', 'title', 'date', 'time', 'type', 'status'] as const;
 
 describe('useSessionControls', () => {
   beforeEach(() => {
@@ -31,11 +31,11 @@ describe('useSessionControls', () => {
 
   it('restores account preferences and the browser-local table layout', async () => {
     localStorage.setItem('table-layout:v1:user-1:session-filters', JSON.stringify({
-      columnWidths: { theme: 240 }, hiddenColumns: ['status'],
+      columnWidths: { title: 240 }, hiddenColumns: ['status'],
     }));
     preferenceApi.getPreference.mockResolvedValue({
       view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'],
-      sorting: { key: 'theme', direction: 'asc' },
+      sorting: { key: 'title', direction: 'asc' },
     });
     const { result } = renderHook(() => useSessionControls({
       role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
@@ -45,7 +45,7 @@ describe('useSessionControls', () => {
     expect(result.current).toMatchObject({
       view: 'table',
       filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'] } },
-      table: { sorting: { key: 'theme', direction: 'asc' }, columnWidths: { theme: 240 }, hiddenColumns: ['status'] },
+      table: { sorting: { key: 'title', direction: 'asc' }, columnWidths: { title: 240 }, hiddenColumns: ['status'] },
     });
   });
 
@@ -67,7 +67,7 @@ describe('useSessionControls', () => {
 
   it('restores the existing cycle column layout saved under its previous internal key', async () => {
     localStorage.setItem('table-layout:v1:user-1:session-filters', JSON.stringify({
-      columnWidths: { cohort: 240, theme: 180 }, hiddenColumns: ['cohort'],
+      columnWidths: { cohort: 240, theme: 180 }, hiddenColumns: ['cohort', 'theme'],
     }));
     preferenceApi.getPreference.mockResolvedValue({ sorting: { key: 'cycle', direction: 'asc' } });
     const { result } = renderHook(() => useSessionControls({
@@ -78,7 +78,7 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.table).toMatchObject({
       sorting: { key: 'cycle', direction: 'asc' },
-      columnWidths: { cycle: 240, theme: 180 }, hiddenColumns: ['cycle'],
+      columnWidths: { cycle: 240, title: 180 }, hiddenColumns: ['cycle', 'title'],
     });
   });
 
@@ -133,11 +133,11 @@ describe('useSessionControls', () => {
       result.current.filters.apply('statuses', ['completed']);
       result.current.setView('table');
       result.current.table.setHiddenColumns(['status']);
-      result.current.table.setColumnWidths({ theme: 240 });
+      result.current.table.setColumnWidths({ title: 240 });
     });
 
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:session-filters')!)).toEqual({
-      hiddenColumns: ['status'], columnWidths: { theme: 240 },
+      hiddenColumns: ['status'], columnWidths: { title: 240 },
     });
     expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({

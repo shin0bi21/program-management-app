@@ -46,16 +46,16 @@ describe('Homepage management API', () => {
       name: `Homepage Test ${Date.now()}`,
     }));
 
-    const sessions = await sql<{ id: string; theme: string }[]>`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+    const sessions = await sql<{ id: string; title: string }[]>`
+      INSERT INTO program_sessions (program_id, cycle_id, title, date, start_time, end_time)
       SELECT
         ${programId}, ${cycleId},
         'Homepage Session ' || day_number,
         CURRENT_DATE + day_number, TIME '17:00', TIME '19:00'
       FROM generate_series(1, 4) AS day_number
-      RETURNING id, theme
+      RETURNING id, title
     `;
-    sessionIds = sessions.sort((first, second) => first.theme.localeCompare(second.theme)).map(session => session.id);
+    sessionIds = sessions.sort((first, second) => first.title.localeCompare(second.title)).map(session => session.id);
   });
 
   afterAll(async () => {

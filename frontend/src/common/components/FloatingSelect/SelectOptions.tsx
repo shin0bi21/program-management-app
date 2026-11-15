@@ -19,8 +19,8 @@ interface SelectOptionsProps {
 /**
  * Displays the searchable option list and actions inside an open FloatingSelect popup.
  * Unmount when the popup closes so reopening resets search and highlights the selected option.
- * @param props.onSelect - Reports a chosen value; the caller controls selection and dismissal.
- * @example With value="two", reopening shows all choices and highlights the option with value "two".
+ * @param props.onSelect - Reports a chosen ID; the caller controls selection and dismissal.
+ * @example With value="two", reopening shows all choices and highlights the option with ID "two".
  */
 export default function SelectOptions({
   id,
@@ -54,7 +54,7 @@ export default function SelectOptions({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (activeOption) onSelect(activeOption.value);
+      if (activeOption) onSelect(activeOption.id);
       return;
     }
 
@@ -109,16 +109,16 @@ export default function SelectOptions({
       >
         {matches.map((option, index) => (
           <div
-            key={option.value}
+            key={option.id}
             id={`${listId}-${index}`}
             role="option"
-            aria-selected={option.value === value}
+            aria-selected={option.id === value}
             className={`floating-select-option${index === activeIndex ? ' floating-select-option--active' : ''}${option.className ? ` ${option.className}` : ''}`}
-            onPointerMove={() => setActiveValue(option.value)}
+            onPointerMove={() => setActiveValue(option.id)}
             onMouseDown={event => event.preventDefault()}
-            onClick={() => onSelect(option.value)}
+            onClick={() => onSelect(option.id)}
           >
-            {option.label}
+            {option.name}
           </div>
         ))}
       </div>
@@ -126,12 +126,12 @@ export default function SelectOptions({
         <span role="status" className="floating-select-empty">No matching options.</span>
       )}
       {activeOption && actions.length > 0 && (
-        <div className="floating-select-option-actions" role="group" aria-label={`Actions for ${activeOption.label}`}>
+        <div className="floating-select-option-actions" role="group" aria-label={`Actions for ${activeOption.name}`}>
           {actions.map(optionAction => (
             <button
               key={optionAction.label}
               type="button"
-              aria-label={`${optionAction.label} ${activeOption.label}`}
+              aria-label={`${optionAction.label} ${activeOption.name}`}
               className={`floating-menu-action floating-select-option-action${optionAction.variant === 'danger' ? ' floating-select-option-action--danger' : ''}`}
               onClick={() => runAction(optionAction.onSelect)}
             >

@@ -89,7 +89,7 @@ describe('Hours API', () => {
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
     const [session] = await sql<Array<{ id: string }>>`
-      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, date, start_time, end_time)
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, title, date, start_time, end_time)
       SELECT ${programId}, ${activeCycleId}, 'Regular', 'Hours workshop',
         ${date}::date, TIME '10:00', TIME '12:00'
       RETURNING id
@@ -341,7 +341,7 @@ describe('Hours API', () => {
       .get(`/api/hours/sessions?staffId=${firstStaffId}&date=${date}`)
       .set('Authorization', `Bearer ${firstStaffToken}`);
     expect(sessions.status).toBe(200);
-    expect(sessions.body).toEqual([{ id: sessionId, label: 'Hours workshop', date }]);
+    expect(sessions.body).toEqual([{ id: sessionId, name: 'Hours workshop', date }]);
 
     const unassignedSessions = await request(app)
       .get(`/api/hours/sessions?staffId=${unrelatedStaffId}&date=${date}`)
@@ -376,7 +376,7 @@ describe('Hours API', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminSessions.status).toBe(200);
     expect(adminSessions.body).toEqual([
-      expect.objectContaining({ id: sessionId, label: 'Hours workshop', date }),
+      expect.objectContaining({ id: sessionId, name: 'Hours workshop', date }),
     ]);
 
     const adminEntry = await request(app)

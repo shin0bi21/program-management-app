@@ -29,7 +29,7 @@ export default function LeadNoteModal({
       formId="lead-note-form"
       categoryLabel="Category"
       category="follow_up"
-      categoryOptions={[{ value: 'follow_up', label: 'Follow-up' }]}
+      categoryOptions={[{ id: 'follow_up', name: 'Follow-up' }]}
       categoryDisabled
       details={workflow.details}
       submitStatus={workflow.submitStatus}

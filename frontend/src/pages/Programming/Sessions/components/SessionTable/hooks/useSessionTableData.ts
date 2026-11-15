@@ -56,7 +56,7 @@ export function getSessionSortValue(session: ProgramSession, key: SessionSortKey
   return {
     program: session.program.toLowerCase(),
     cycle: session.cycle.toLowerCase(),
-    theme: session.theme.toLowerCase(),
+    title: session.title.toLowerCase(),
     date: session.date,
     time: session.startTime,
     type: session.sessionType.toLowerCase(),

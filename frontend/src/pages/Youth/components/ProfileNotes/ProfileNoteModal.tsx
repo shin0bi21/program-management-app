@@ -33,9 +33,9 @@ export default function ProfileNoteModal({
       categoryLabel="Category"
       category={workflow.draft.category}
       categoryOptions={[
-        { value: 'general', label: 'General' },
-        { value: 'health', label: 'Health' },
-        { value: 'preference', label: 'Preference' },
+        { id: 'general', name: 'General' },
+        { id: 'health', name: 'Health' },
+        { id: 'preference', name: 'Preference' },
       ]}
       details={workflow.draft.details}
       submitStatus={workflow.submitStatus}

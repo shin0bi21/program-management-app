@@ -77,7 +77,7 @@ function UpcomingSessions({
               <span className="next-session-month">{date.toLocaleString('en-CA', { month: 'short' })}</span>
             </time>
             <div className="next-session-body">
-              <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.theme}</p>
+              <p className="next-session-topic">{dropIn ? 'Drop-in Day' : session.title}</p>
               <span className="next-session-tag">
                 {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}
               </span>

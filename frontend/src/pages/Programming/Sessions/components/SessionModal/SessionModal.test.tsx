@@ -38,22 +38,22 @@ describe('SessionModal', () => {
       />,
     );
 
-    expect(screen.getByRole('textbox', { name: 'Title / Theme' })).toHaveValue('Communication');
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Communication');
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('Practice session');
     expect(screen.getByLabelText('Start Time')).toHaveValue('17:00');
     expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
     await user.click(screen.getByRole('button', { name: 'Type' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Guest Speaker' }));
-    await user.clear(screen.getByRole('textbox', { name: 'Title / Theme' }));
-    await user.type(screen.getByRole('textbox', { name: 'Title / Theme' }), 'Career Stories');
+    await user.clear(screen.getByRole('textbox', { name: 'Title' }));
+    await user.type(screen.getByRole('textbox', { name: 'Title' }), 'Career Stories');
     await user.clear(screen.getByRole('textbox', { name: 'Description' }));
     fireEvent.change(screen.getByLabelText('Session Date'), { target: { value: '2026-12-22' } });
     fireEvent.submit(document.getElementById('session-form')!);
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(updateSession).toHaveBeenCalledWith(session.id, {
-      sessionType: 'Guest Speaker', theme: 'Career Stories', description: null,
+      sessionType: 'Guest Speaker', title: 'Career Stories', description: null,
       date: '2026-12-22', startTime: '17:00', endTime: '19:30',
     });
   });

@@ -35,8 +35,8 @@ describe('Future session date moves', () => {
 
   beforeEach(async () => {
     const [session] = await sql<{ id: string }[]>`INSERT INTO program_sessions
-      (program_id, cycle_id, session_type, theme, date, start_time, end_time, description)
-      VALUES (${programId}, ${cycleId}, ${regularType}, 'Keep my theme', '2030-03-03', '17:30:00', '19:30:00', 'Keep my description') RETURNING id`;
+      (program_id, cycle_id, session_type, title, date, start_time, end_time, description)
+      VALUES (${programId}, ${cycleId}, ${regularType}, 'Keep my title', '2030-03-03', '17:30:00', '19:30:00', 'Keep my description') RETURNING id`;
     sessionId = session.id;
   });
   afterEach(async () => {
@@ -60,7 +60,7 @@ describe('Future session date moves', () => {
   it('preserves clock times and newer session details across date moves', async () => {
     const edited = await request(app).put(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ theme: 'Latest theme', description: 'Latest description', date: '2030-03-03',
+      .send({ title: 'Latest title', description: 'Latest description', date: '2030-03-03',
         startTime: '17:45', endTime: '19:15' });
     expect(edited.status).toBe(200);
 
@@ -68,18 +68,18 @@ describe('Future session date moves', () => {
     expect(response.status).toBe(200);
     expect(response.body.session).toMatchObject({ id: sessionId, programId, cycleId,
       date: '2030-03-10', startTime: '17:45', endTime: '19:15',
-      theme: 'Latest theme', description: 'Latest description', movable: true });
-    const [session] = await sql`SELECT theme, description, session_type FROM program_sessions WHERE id = ${sessionId}`;
-    expect(session).toMatchObject({ theme: 'Latest theme', description: 'Latest description', sessionType: regularType });
+      title: 'Latest title', description: 'Latest description', movable: true });
+    const [session] = await sql`SELECT title, description, session_type FROM program_sessions WHERE id = ${sessionId}`;
+    expect(session).toMatchObject({ title: 'Latest title', description: 'Latest description', sessionType: regularType });
   });
 
   it('returns canonical rows after full edits and deletion', async () => {
     const edited = await request(app).put(`/api/sessions/${sessionId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ sessionType: regularType, theme: 'Edited theme', date: '2030-03-03', startTime: '17:45', endTime: '19:15', description: 'Edited description' });
+      .send({ sessionType: regularType, title: 'Edited title', date: '2030-03-03', startTime: '17:45', endTime: '19:15', description: 'Edited description' });
 
     expect(edited.status).toBe(200);
-    expect(edited.body.session).toMatchObject({ id: sessionId, theme: 'Edited theme', programId, cycleId });
+    expect(edited.body.session).toMatchObject({ id: sessionId, title: 'Edited title', programId, cycleId });
     expect(edited.body.updatedProgramCycles).toEqual([expect.objectContaining({ programId, cycleId })]);
 
     const list = await request(app).get(`/api/sessions?programIds=${programId}&cycleIds=${cycleId}`)
@@ -99,7 +99,7 @@ describe('Future session date moves', () => {
     const response = await move('2030-03-10', writer);
 
     expect(response.status).toBe(200);
-    expect(response.body.session).toMatchObject({ id: sessionId, theme: 'Keep my theme' });
+    expect(response.body.session).toMatchObject({ id: sessionId, title: 'Keep my title' });
     expect(response.body).not.toHaveProperty('updatedProgramCycles');
   });
 

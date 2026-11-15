@@ -1,6 +1,5 @@
 import type { CreatedSessionResult, UpdatedSessionResult } from '../../sessions.api';
 import type { ProgramSession, SessionType } from '../../types';
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
@@ -33,18 +32,16 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
     <form id="session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
       {!isEdit && <FormField id="session-program" label="Program">
         <FloatingSelect id="session-program" value={workflow.programId} onChange={workflow.selectProgram}
-          disabled={workflow.locked} options={options.programs.map(program => ({
-            value: program.id, label: program.name,
-          }))} />
+          disabled={workflow.locked} options={options.programs} />
       </FormField>}
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionType}
           onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
-          options={toFilterOptions(sessionTypes)} />
+          options={sessionTypes} />
       </FormField>
-      <FormField id="session-theme" label="Title / Theme">
-        <input id="session-theme" required maxLength={160} value={workflow.draft.theme}
-          disabled={workflow.locked} onChange={event => workflow.updateDraft('theme', event.target.value)} />
+      <FormField id="session-title" label="Title">
+        <input id="session-title" required maxLength={160} value={workflow.draft.title}
+          disabled={workflow.locked} onChange={event => workflow.updateDraft('title', event.target.value)} />
       </FormField>
       <FormField id="session-date" label="Session Date">
         <input id="session-date" type="date" required value={workflow.draft.date}

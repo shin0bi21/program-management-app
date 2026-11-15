@@ -4,7 +4,7 @@ import FilterCategoryCard from './FilterCategoryCard';
 
 const category = {
   id: 'status', label: 'Status', selectionMode: 'single' as const,
-  options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
+  options: [{ id: 'active', name: 'Active' }, { id: 'inactive', name: 'Inactive' }],
 };
 const shared = { active: true, resetVersion: 0, onBack: vi.fn(), onDraftCountChange: vi.fn() };
 

@@ -21,7 +21,7 @@ export function listSessions(actor: AccessTokenPayload, filterValues: SessionLis
   const sortValue = {
     program: sql`LOWER("row".program)`,
     cycle: sql`LOWER("row".cycle)`,
-    theme: sql`LOWER("row".theme)`,
+    title: sql`LOWER("row".title)`,
     date: sql`"row".date`,
     time: sql`"row".start_time`,
     type: sql`LOWER("row".session_type::text)`,

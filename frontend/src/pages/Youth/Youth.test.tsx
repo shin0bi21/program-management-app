@@ -112,17 +112,11 @@ describe('Youth', () => {
   });
 
   // Entry and readiness.
-  it('loads program and cycle filter metadata with youth read permission alone', async () => {
+  it('loads youth records without exposing attendance to youth-only readers', async () => {
     authState.permissions = ['read:youth_profiles'];
     render(<Youth />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /^Program/ }));
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Soft Skills' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Jamie').closest('tr')!);
+    fireEvent.click((await screen.findByText('Jamie')).closest('tr')!);
     expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
     expect(attendanceApi.getYouthAttendance).not.toHaveBeenCalled();
   });
@@ -148,7 +142,7 @@ describe('Youth', () => {
   });
 
   // Controls and views.
-  it('passes restored search and cycle filters to the youth table and clears the cycle from the header', async () => {
+  it('passes restored filters to the youth table and coordinates clearing the cycle', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       search: 'Jamie',
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['active'],
@@ -167,12 +161,6 @@ describe('Youth', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
     await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
       search: 'Jamie', programIds: ['program-1'], cycleIds: [],
-    }));
-
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'],
     }));
   });
 

@@ -94,7 +94,7 @@ function CycleForm({ cycle, programs, assignments, programsReady = true, program
           <Checklist
             variant="form"
             ariaLabel="Assigned programs"
-            options={programs.map(program => ({ value: program.id, label: program.name }))}
+            options={programs}
             value={workflow.selectedProgramIds}
             onToggle={workflow.toggleProgram}
             disabled={workflow.submissionComplete || !workflow.assignmentsReady}

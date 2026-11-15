@@ -1,4 +1,3 @@
-import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import FormField from '../../../../common/components/FormField/FormField';
@@ -152,13 +151,13 @@ function YouthForm({
               <FloatingSelect
                 id="school"
                 value={schoolId ?? ''}
-                options={toFilterOptions(schools)}
+                options={schools}
                 onChange={setSchoolId}
                 placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
                 disabled={submissionComplete || schoolsLoading}
                 action={canManageSchools ? { label: '+ Add school', onSelect: () => manageSchool({ type: 'add' }) } : undefined}
                 optionActions={canManageSchools ? option => {
-                  const school = schools.find(item => item.id === option.value)!;
+                  const school = schools.find(item => item.id === option.id)!;
                   return [
                     { label: 'Edit', icon: <FontAwesomeIcon icon={faPen} />, onSelect: () => manageSchool({ type: 'edit', school }) },
                     { label: 'Delete', icon: <FontAwesomeIcon icon={faTrash} />, variant: 'danger', onSelect: () => manageSchool({ type: 'delete', school }) },
@@ -212,9 +211,9 @@ function YouthForm({
                       ariaLabel={`Relationship ${index + 1}`}
                       value={contact.type}
                       options={[
-                        { value: 'parent', label: 'Parent' },
-                        { value: 'guardian', label: 'Guardian' },
-                        { value: 'sibling', label: 'Sibling' },
+                        { id: 'parent', name: 'Parent' },
+                        { id: 'guardian', name: 'Guardian' },
+                        { id: 'sibling', name: 'Sibling' },
                       ]}
                       onChange={value => handleContactChange(index, 'type', value)}
                       disabled={submissionComplete}

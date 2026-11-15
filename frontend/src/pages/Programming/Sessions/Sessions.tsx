@@ -182,7 +182,7 @@ export default function Sessions() {
 
         search={{
           label: 'Search sessions',
-          placeholder: 'Search titles, themes, descriptions, or program cycles',
+          placeholder: 'Search titles, descriptions, or program cycles',
         }}
         columns={columns}
         messages={[

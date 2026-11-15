@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import Checklist from './Checklist';
 
-const options = [{ value: 'fall', label: 'Fall 2026' }, { value: 'spring', label: 'Spring 2026' }];
+const options = [{ id: 'fall', name: 'Fall 2026' }, { id: 'spring', name: 'Spring 2026' }];
 
 it.each(['compact', 'form'] as const)('renders controlled native checkboxes with keyboard access (%s)', async variant => {
   const user = userEvent.setup();
@@ -67,7 +67,7 @@ it('filters labels without changing selected values', async () => {
 it('allows selection of a search result beyond the initial batch', async () => {
   const user = userEvent.setup();
   const onToggle = vi.fn();
-  const rows = Array.from({ length: 60 }, (_, index) => ({ value: String(index), label: `Person ${index + 1}` }));
+  const rows = Array.from({ length: 60 }, (_, index) => ({ id: String(index), name: `Person ${index + 1}` }));
   render(<Checklist options={rows} value={[]} onToggle={onToggle} ariaLabel="People" dynamicItems search />);
   expect(screen.getAllByRole('checkbox')).toHaveLength(25);
 

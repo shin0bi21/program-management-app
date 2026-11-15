@@ -32,7 +32,7 @@ export function getSessionTypes() {
  * @param data - Validated session settings, with optional schedule defaults.
  * @param actor - Actor used for authorization and write metadata.
  * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createProgramSession(programId, { sessionType, theme: 'Cooking', date: '2027-01-15' }, actor) // session in the cycle covering January 15
+ * @example await createProgramSession(programId, { sessionType, title: 'Cooking', date: '2027-01-15' }, actor) // session in the cycle covering January 15
  */
 export async function createProgramSession(programId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
   // 1. Check access to the program.
@@ -76,7 +76,7 @@ export async function createProgramSession(programId: string, data: CreateSessio
  * @param data - Validated session settings, with optional schedule defaults.
  * @param actor - Actor used for authorization and write metadata.
  * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createSession(programId, cycleId, { sessionType, theme: 'Cooking', date: '2027-01-15' }, actor) // January 15 session using program default times
+ * @example await createSession(programId, cycleId, { sessionType, title: 'Cooking', date: '2027-01-15' }, actor) // January 15 session using program default times
  */
 export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
 
@@ -114,7 +114,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
  * @param id - Session the actor must be allowed to access.
  * @param data - Validated replacement session fields.
  * @param actor - Actor used for authorization, write metadata, and response scope.
- * @example await updateSession(sessionId, { theme: 'Cooking', date: '2027-01-15', startTime: '17:00', endTime: '18:00' }, actor) // returns the saved session with its existing type and cleared description
+ * @example await updateSession(sessionId, { title: 'Cooking', date: '2027-01-15', startTime: '17:00', endTime: '18:00' }, actor) // returns the saved session with its existing type and cleared description
  */
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
 
@@ -149,7 +149,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     const rows = await trx`
       UPDATE program_sessions
       SET session_type = COALESCE(${data.sessionType ?? null}, session_type),
-          theme = ${data.theme},
+          title = ${data.title},
           date = ${data.date}, start_time = ${data.startTime}, end_time = ${data.endTime},
           description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actor.userId}
       WHERE id = ${id}
@@ -426,7 +426,7 @@ async function getProgramSchedule(programId: string, query = sql): Promise<Progr
  * @param actor - Actor recorded on writes and used to scope response rows.
  * @param schedule - Program clock defaults used when a request omits times.
  * @param date - Authoritative supplied date or resolved default YYYY-MM-DD date.
- * @example await createScheduledSession(trx, programId, cycleId, { sessionType, theme: 'Cooking' }, actor, schedule, '2027-01-15') // inserts January 15 using schedule defaults
+ * @example await createScheduledSession(trx, programId, cycleId, { sessionType, title: 'Cooking' }, actor, schedule, '2027-01-15') // inserts January 15 using schedule defaults
  */
 async function createScheduledSession(
   trx: typeof sql,
@@ -446,9 +446,9 @@ async function createScheduledSession(
   // 2. Insert the session using the resolved schedule.
   const [session] = await trx`
     INSERT INTO program_sessions (
-      program_id, cycle_id, session_type, theme, date, start_time, end_time, description, created_by, updated_by
+      program_id, cycle_id, session_type, title, date, start_time, end_time, description, created_by, updated_by
     ) VALUES (
-      ${programId}, ${cycleId}, ${data.sessionType}, ${data.theme},
+      ${programId}, ${cycleId}, ${data.sessionType}, ${data.title},
       ${date}, ${startTime}, ${endTime},
       ${data.description ?? null}, ${actor.userId}, ${actor.userId}
     )
@@ -484,8 +484,8 @@ function getUpdatedProgramCycles(actor: AccessTokenPayload, keys: ProgramCycleKe
  * @example rethrowSessionConflict(new Error('offline')) // throws that same Error unchanged
  */
 function rethrowSessionConflict(error: unknown): never {
-  if (isUniqueViolation(error, 'uq_program_sessions_program_cycle_theme_start')) {
-    throw Object.assign(new ConflictError('A session with this theme and start time already exists in this program cycle'), { cause: error });
+  if (isUniqueViolation(error, 'uq_program_sessions_program_cycle_title_start')) {
+    throw Object.assign(new ConflictError('A session with this title and start time already exists in this program cycle'), { cause: error });
   }
   throw error;
 }

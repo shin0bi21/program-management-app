@@ -24,7 +24,7 @@ const note: SessionNote = {
 const session: YouthAttendanceSession = {
   id: 'session-1',
   sessionType: 'Regular',
-  theme: 'Communication',
+  title: 'Communication',
   date: '2026-08-19', startTime: '13:00', completed: true,
   cancelledAt: null,
   status: null,

@@ -159,7 +159,7 @@ describe('SessionCalendar', () => {
     act(() => calendarCacheRef.current.upsert(makeProgramSession({ cycleId: 'cycle-2' })));
     await waitFor(() => expect(calendarState.props!.items['program-1'] ?? []).toEqual([]));
 
-    const saved = makeProgramSession({ theme: 'Authoritative edit' });
+    const saved = makeProgramSession({ title: 'Authoritative edit' });
     act(() => calendarCacheRef.current.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['program-1']).toEqual([saved]));
 

@@ -76,7 +76,7 @@ export const attendanceReportSchema = z.object({
       sessions: z.array(z.object({
         id: z.string().uuid('Invalid session ID'),
         sessionType: z.enum(SESSION_TYPES),
-        theme: z.string(),
+        title: z.string(),
         date: dateSchema,
         startTime: timeSchema,
         completed: z.boolean(),
@@ -131,7 +131,7 @@ export const withdrawYouthSchema = z.object({
 
 const createSessionBodySchema = z.object({
   sessionType: z.enum(SESSION_TYPES),
-  theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
+  title: z.string().trim().min(1, 'Title is required').max(160),
   date: dateSchema.optional(),
   startTime: timeSchema.optional(),
   endTime: timeSchema.optional(),
@@ -170,7 +170,7 @@ export const sessionListQuerySchema = z.object({
     sessionTypes: commaSeparated(z.enum(SESSION_TYPES)),
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
-    ...cursorListFields(['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'], 'date', 'desc'),
+    ...cursorListFields(['program', 'cycle', 'title', 'date', 'time', 'type', 'status'], 'date', 'desc'),
   }).refine(data => Boolean(data.start) === Boolean(data.end), {
     message: 'Session range requires both start and end',
     path: ['end'],
@@ -202,7 +202,7 @@ export const updateSessionSchema = z.object({
   params: z.object({ sessionId: z.string().uuid() }),
   body: z.object({
     sessionType: z.enum(SESSION_TYPES).optional(),
-    theme: z.string().trim().min(1, 'Title / Theme is required').max(160),
+    title: z.string().trim().min(1, 'Title is required').max(160),
     date: dateSchema,
     startTime: timeSchema,
     endTime: timeSchema,

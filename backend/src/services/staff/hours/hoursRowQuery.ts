@@ -27,14 +27,14 @@ export interface HoursRow {
 
   taskTitle: string | null;
 
-  sessionLabel: string | null;
+  sessionTitle: string | null;
 
   name: string;
   categoryLabel: string;
   type: 'task' | 'session' | 'regular';
 }
 
-const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
+const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [option.id, option.name]));
 
 /** Searchable hours values shared by calendar and table collection reads. */
 export const hoursSearchValue = sql`CONCAT_WS(' ',
@@ -44,7 +44,7 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
   cycle.name,
   entry.category::text,
   task.title,
-  session.theme,
+  session.title,
   entry.note,
   entry.date
 )`;
@@ -83,7 +83,7 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
 
       task.title AS task_title,
 
-      session.theme AS session_label,
+      session.title AS session_title,
 
       CONCAT(staff.first_name, ' ', staff.last_name) AS name,
       ${query.json(categoryLabels)}::jsonb ->> entry.category AS category_label,

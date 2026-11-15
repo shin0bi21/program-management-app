@@ -1,4 +1,3 @@
-import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import { useMemo, useState } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
@@ -42,7 +41,7 @@ interface UseSessionControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
-const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle' };
+const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle', theme: 'title' };
 /**
  * Restores session controls and derives cycle bounds, with applied search kept in memory.
  * @param options - Role, reference choices, dependency status, and supported table keys.
@@ -71,10 +70,10 @@ export function useSessionControls({
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const filterCategories = useMemo(() => [
-    { id: 'programIds' as const, label: 'Program', options: toFilterOptions(programs) },
-    { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
-    { id: 'sessionTypes' as const, label: 'Type', options: toFilterOptions(sessionTypeOptions) },
-    { id: 'statuses' as const, label: 'Status', options: [{ value: 'upcoming', label: 'Upcoming' }, { value: 'completed', label: 'Completed' }] },
+    { id: 'programIds' as const, label: 'Program', options: programs },
+    { id: 'cycleIds' as const, label: 'Cycle', options: cycles },
+    { id: 'sessionTypes' as const, label: 'Type', options: sessionTypeOptions },
+    { id: 'statuses' as const, label: 'Status', options: [{ id: 'upcoming', name: 'Upcoming' }, { id: 'completed', name: 'Completed' }] },
   ], [cycles, programs, sessionTypeOptions]);
 
   const setView = (view: SessionView) => updatePreferences({ view });

@@ -32,7 +32,7 @@ describe('Program authorization before missing-record responses', () => {
     const pair = await seedTestProgramCycle({ programId });
     cycleId = pair.cycleId;
     const [session] = await sql`
-      INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+      INSERT INTO program_sessions (program_id, cycle_id, title, date, start_time, end_time)
       VALUES (${programId}, ${cycleId}, 'Access checks', '2026-06-01', '10:00:00', '11:00:00')
       RETURNING id
     `;
@@ -52,7 +52,7 @@ describe('Program authorization before missing-record responses', () => {
     const response = await request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${tokens[actor]}`)
       .send({ programId: missingId, sessionType: 'Regular',
-        theme: 'Missing program', date: '2026-06-01' });
+        title: 'Missing program', date: '2026-06-01' });
 
     expect(response.status).toBe(status);
   });

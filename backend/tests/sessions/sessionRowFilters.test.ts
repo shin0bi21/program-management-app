@@ -22,7 +22,7 @@ it('intersects IDs with other filters and cannot introduce rows absent from the 
   });
   const excluded = await buildSessionFilters(sessionRows(), { ids: [excludedId] });
 
-  expect(rows).toEqual([expect.objectContaining({ id: secondId, theme: 'Beta', sessionType: 'Guest Speaker' })]);
+  expect(rows).toEqual([expect.objectContaining({ id: secondId, title: 'Beta', sessionType: 'Guest Speaker' })]);
   expect(excluded).toEqual([]);
 });
 
@@ -35,7 +35,7 @@ function sessionRows() {
   return sql<SessionRow[]>`
     SELECT
       fixture.id,
-      fixture.theme,
+      fixture.title,
       (CURRENT_DATE + 1)::text AS date,
       '17:00'::text AS start_time, '19:00'::text AS end_time,
       NULL::timestamptz AS cancelled_at,
@@ -54,6 +54,6 @@ function sessionRows() {
     FROM (VALUES
       (${firstId}::uuid, 'Alpha', 'Regular'::session_type),
       (${secondId}::uuid, 'Beta', 'Guest Speaker'::session_type)
-    ) fixture(id, theme, session_type)
+    ) fixture(id, title, session_type)
   `;
 }

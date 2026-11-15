@@ -30,12 +30,12 @@ const options: TestTaskOptions = {
   }],
   programs: [{ id: 'program-1', name: 'Soft Skills' }],
   categories: [
-    { value: 'planning_prep', label: 'Planning / Prep' },
-    { value: 'meeting', label: 'Meeting' },
+    { id: 'planning_prep', name: 'Planning / Prep' },
+    { id: 'meeting', name: 'Meeting' },
   ],
   statuses: [
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
+    { id: 'in_progress', name: 'In Progress' },
+    { id: 'completed', name: 'Completed' },
   ],
 };
 const cycles: ProgramCycle[] = [

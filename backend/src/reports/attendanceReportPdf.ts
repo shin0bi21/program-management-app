@@ -232,7 +232,7 @@ function drawTimeline(doc: PDFKit.PDFDocument, sessions: Sessions, colors: Map<s
 }
 
 /**
- * Draws notes under their original session date and theme.
+ * Draws notes under their original session date and title.
  * @param sessions - Chronological session records with linked notes.
  * @example drawNotes(doc, sessions) // reads session.sessionNotes directly
  */
@@ -249,7 +249,7 @@ function drawNotes(doc: PDFKit.PDFDocument, sessions: Sessions) {
       ensureSpace(doc, 34 + detailHeight);
       const style = noteStyles[note.category];
       const date = formatReportDate(session.date, true);
-      const sessionTitle = session.theme || 'Untitled session';
+      const sessionTitle = session.title || 'Untitled session';
       doc.circle(margin + 6, doc.y + 5, 6).fillColor(style.color).fill();
       doc.font('Helvetica-Bold').fontSize(style.marker.length > 1 ? 4 : 6).fillColor('#ffffff')
         .text(style.marker, margin + 1, doc.y + 2, { width: 10, align: 'center' });

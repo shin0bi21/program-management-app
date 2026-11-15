@@ -65,7 +65,7 @@ describe('useSessionNotes', () => {
 
     const refreshed = { ...note, details: 'Refreshed details.' };
     act(() => client.setQueryData(['sessions', session.id, 'notes'], [refreshed]));
-    const refreshedSession = { ...session, theme: 'Updated session theme' };
+    const refreshedSession = { ...session, title: 'Updated session title' };
     rerender({ target: refreshedSession });
 
     await waitFor(() => expect(result.current.editNote).toEqual(refreshed));

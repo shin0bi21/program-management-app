@@ -18,8 +18,8 @@ const staff = [
 ] as const;
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
 const categories = [
-  { value: 'program_delivery' as const, label: 'Program Delivery' },
-  { value: 'meeting' as const, label: 'Meeting' },
+  { id: 'program_delivery' as const, name: 'Program Delivery' },
+  { id: 'meeting' as const, name: 'Meeting' },
 ];
 const task = makeTask();
 
@@ -87,7 +87,7 @@ describe('HoursModal', () => {
       date === '2099-01-01'
         ? [{
           id: 'session-future',
-          label: 'Leadership',
+          name: 'Leadership',
           date,
         }]
         : []
@@ -133,7 +133,7 @@ describe('HoursModal', () => {
         taskId: null,
         taskTitle: null,
         sessionId: null,
-        sessionLabel: null,
+        sessionTitle: null,
         hours: 2,
         note: 'Original note',
       }),
