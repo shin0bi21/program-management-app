@@ -34,7 +34,7 @@ export interface HoursRow {
   type: 'task' | 'session' | 'regular';
 }
 
-const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
+const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [option.id, option.name]));
 
 /** Searchable hours values shared by calendar and table collection reads. */
 export const hoursSearchValue = sql`CONCAT_WS(' ',

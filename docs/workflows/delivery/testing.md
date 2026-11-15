@@ -153,6 +153,9 @@ Choose the narrowest owner for each assertion:
   an API's canonical projection or a table's domain cell formatter. Do not assert
   an unchanged record passing through a hook or repeat type shapes checked by
   TypeScript.
+- Keep reference-option structure, displayed names, and ID-only filter output in
+  shared filter/component tests. Pages cover their own field rules and request
+  selections without asserting copied option shapes.
 - Test a shared behavior's matrix once at its owner. Consumers cover only their
   added decisions, transformations, and coordination. A parent may exercise
   internal children; separate files per child are unnecessary. Keep at most one

@@ -9,8 +9,8 @@ describe('ViewMenu', () => {
       <ViewMenu
         value="calendar"
         options={[
-          { value: 'calendar', label: 'Calendar' },
-          { value: 'list', label: 'List' },
+          { id: 'calendar', name: 'Calendar' },
+          { id: 'list', name: 'List' },
         ]}
         onChange={onChange}
       />,

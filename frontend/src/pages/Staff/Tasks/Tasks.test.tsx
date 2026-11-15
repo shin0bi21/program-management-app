@@ -47,12 +47,12 @@ const currentPreference: StoredTaskPreferences = {
 };
 const taskReferenceChoices = {
   categories: [
-    { value: 'planning_prep' as const, label: 'Planning / Prep' },
-    { value: 'outreach' as const, label: 'Outreach' },
+    { id: 'planning_prep' as const, name: 'Planning / Prep' },
+    { id: 'outreach' as const, name: 'Outreach' },
   ],
   statuses: [
-    { value: 'in_progress' as const, label: 'In Progress' },
-    { value: 'completed' as const, label: 'Completed' },
+    { id: 'in_progress' as const, name: 'In Progress' },
+    { id: 'completed' as const, name: 'Completed' },
   ],
 };
 

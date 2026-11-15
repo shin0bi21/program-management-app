@@ -1,6 +1,5 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import { useMemo } from 'react';
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
@@ -60,8 +59,8 @@ export default function useHoursPreferences({
   staff: readonly StaffReference[];
   programs: readonly HoursProgram[];
   cycles: readonly CycleReference[];
-  categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
-  types: ReadonlyArray<{ value: HoursItemType; label: string }>;
+  categories: ReadonlyArray<{ id: HoursCategory; name: string }>;
+  types: ReadonlyArray<{ id: HoursItemType; name: string }>;
   loadingDependencies: boolean;
   optionsError: boolean;
   staffError?: boolean;
@@ -84,12 +83,12 @@ export default function useHoursPreferences({
       categories: preferenceOptions<HoursCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
         [],
-        canVerifyOptions ? categories.map(category => category.value) : null,
+        canVerifyOptions ? categories.map(category => category.id) : null,
       ),
       types: preferenceOptions<HoursItemType>(
         ['task', 'session', 'regular'],
         [],
-        canVerifyOptions ? types.map(type => type.value) : null,
+        canVerifyOptions ? types.map(type => type.id) : null,
       ),
       cycleIds: preferenceIds(canVerifyCycles ? cycles.map(cycle => cycle.id) : undefined),
       sorting: preferenceSorting(tableKeys, { key: 'date', direction: 'desc' }),
@@ -107,23 +106,23 @@ export default function useHoursPreferences({
     ...(role === 'admin' ? [{
       id: 'staffIds' as const,
       label: 'Staff',
-      options: toFilterOptions(staff),
+      options: staff,
     }] : []),
     {
       id: 'programIds' as const,
       label: 'Program',
       options: [
-        { value: 'general', label: 'General' },
-        ...toFilterOptions(programs),
+        { id: 'general', name: 'General' },
+        ...programs,
       ],
     },
     {
       id: 'cycleIds' as const,
       label: 'Cycle',
-      options: toFilterOptions(cycles),
+      options: cycles,
     },
-    { id: 'types' as const, label: 'Type', options: [...types] },
-    { id: 'categories' as const, label: 'Category', options: [...categories] },
+    { id: 'types' as const, label: 'Type', options: types },
+    { id: 'categories' as const, label: 'Category', options: categories },
   ], [categories, cycles, programs, staff, role, types]);
 
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {

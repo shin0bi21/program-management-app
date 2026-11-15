@@ -6,15 +6,15 @@ import Button from '../Button/Button';
 import FloatingMenuPanel from '../FloatingMenu/FloatingMenuPanel';
 import './ViewMenu.css';
 
-export interface ViewMenuOption<T extends string> {
-  value: T;
-  label: string;
+export interface ViewMenuOption<TView extends string> {
+  id: TView;
+  name: string;
 }
 
-interface ViewMenuProps<T extends string> {
-  options: ViewMenuOption<T>[];
-  value: T;
-  onChange: (value: T) => void;
+interface ViewMenuProps<TView extends string> {
+  options: ViewMenuOption<TView>[];
+  value: TView;
+  onChange: (value: TView) => void;
   label?: string;
 }
 
@@ -24,19 +24,19 @@ interface ViewMenuProps<T extends string> {
  * @param props.options - Available views, such as Table and Calendar.
  * @example Choosing Calendar calls onChange('calendar') and closes the view menu.
  */
-export default function ViewMenu<T extends string>({
+export default function ViewMenu<TView extends string>({
   options,
   value,
   onChange,
   label = 'View',
-}: ViewMenuProps<T>) {
+}: ViewMenuProps<TView>) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const { isOpen, toggle, close, position, menuRef } = useFloatingMenu(
     triggerRef,
     { side: 'bottom', align: 'end' },
     { widthEstimate: 180, heightEstimate: options.length * 40 + 12 },
   );
-  const selected = options.find(option => option.value === value);
+  const selected = options.find(option => option.id === value);
 
   return (
     <>
@@ -44,7 +44,7 @@ export default function ViewMenu<T extends string>({
         ref={triggerRef}
         variant="secondary"
         className="view-menu-trigger"
-        aria-label={`${label}: ${selected?.label ?? value}`}
+        aria-label={`${label}: ${selected?.name ?? value}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={toggle}
@@ -57,18 +57,18 @@ export default function ViewMenu<T extends string>({
         <FloatingMenuPanel menuRef={menuRef} position={position} onClose={close} className="view-menu" width={180}>
           {options.map(option => (
             <button
-              key={option.value}
+              key={option.id}
               type="button"
               role="menuitemradio"
-              aria-checked={option.value === value}
+              aria-checked={option.id === value}
               className="view-menu-option"
               onClick={() => {
-                onChange(option.value);
+                onChange(option.id);
                 close();
               }}
             >
-              <span>{option.label}</span>
-              {option.value === value && <FontAwesomeIcon icon={faCheck} />}
+              <span>{option.name}</span>
+              {option.id === value && <FontAwesomeIcon icon={faCheck} />}
             </button>
           ))}
         </FloatingMenuPanel>

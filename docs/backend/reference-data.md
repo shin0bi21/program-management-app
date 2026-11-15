@@ -40,9 +40,10 @@ Keep domain choices beside their feature. `/tasks/reference-data` returns only
 `categories` and `statuses`; `/hours/reference-data` returns only `categories` and
 `types`. Their page hooks compose these results with shared cycle, program, and
 staff queries. Avoid a global registry for unrelated statuses or categories.
+Declare enum choices explicitly as `{ id, name }` so display wording stays visible at the feature owner.
 
 Sessions require complete assigned program scheduling defaults, rather than just
-labels. `GET /cohorts/sessions/reference-data` requires `read:sessions` and composes
+labels. `GET /sessions/reference-data` requires `read:sessions` and composes
 the existing assigned-program query with session types. This feature endpoint
 does not grant access to program management.
 
@@ -52,7 +53,10 @@ does not grant access to program management.
 endpoint serialization. `hooks/useReferenceData.ts` owns query keys and forwards
 cancellation through the centralized HTTP client. Keys include `assignedOnly`
 for programs and `feature` for staff; these results must not share a cache entry.
-`toFilterOptions` converts named projections to the standard filter option shape.
+Reference rows and UI choices use `{ id, name }` directly. Consumers can retain
+extra fields such as cycle date bounds; do not map a row solely to rename its fields.
+Filters display `name` and persist or submit only selected IDs. Look up those IDs
+in reference data when a consumer needs additional fields.
 Page hooks compose these shared hooks with their own feature choices and expose
 loading/error state per source. They do not fetch shared data from another page's
 API adapter.

@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import FloatingSelect from './FloatingSelect';
 
 const options = [
-  { value: 'one', label: 'School One' },
-  { value: 'two', label: 'School Two' },
+  { id: 'one', name: 'School One' },
+  { id: 'two', name: 'School Two' },
 ];
 
 describe('FloatingSelect', () => {
@@ -55,7 +55,7 @@ describe('FloatingSelect', () => {
     const onChange = vi.fn();
     const props = { id: 'school', value: 'one', options, onChange, search: true,
       action: { label: 'Add school', onSelect: onAdd },
-      optionActions: (option: typeof options[number]) => [{ label: 'Edit', onSelect: () => onEdit(option.value) }] };
+      optionActions: (option: typeof options[number]) => [{ label: 'Edit', onSelect: () => onEdit(option.id) }] };
     const { rerender } = render(<><label htmlFor="school">School</label><FloatingSelect {...props} disabled /></>);
     expect(screen.getByLabelText('School')).toBeDisabled();
 
@@ -123,7 +123,7 @@ describe('FloatingSelect', () => {
 
   it('runs actions attached to an individual option', () => {
     const onEdit = vi.fn();
-    render(<FloatingSelect id="school" value="" options={options} onChange={vi.fn()} optionActions={option => [{ label: 'Edit', onSelect: () => onEdit(option.value) }]} />);
+    render(<FloatingSelect id="school" value="" options={options} onChange={vi.fn()} optionActions={option => [{ label: 'Edit', onSelect: () => onEdit(option.id) }]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Select an option' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Edit School One' }));

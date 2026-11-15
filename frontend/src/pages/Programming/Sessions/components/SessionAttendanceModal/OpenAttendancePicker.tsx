@@ -30,8 +30,8 @@ export default function OpenAttendancePicker({
   if (youth.length === 0) return <p className="page-empty">No youth profiles available.</p>;
 
   const options = youth.map(profile => ({
-    value: profile.id,
-    label: `${profile.firstName} ${profile.lastName}`,
+    id: profile.id,
+    name: `${profile.firstName} ${profile.lastName}`,
   }));
 
   return (

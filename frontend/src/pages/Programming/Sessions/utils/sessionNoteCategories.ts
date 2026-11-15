@@ -14,11 +14,11 @@ const sessionNoteCategories: SessionNoteCategory[] = [
 ];
 
 export const sessionNoteCategoryOptions: Array<{
-  value: SessionNoteCategory;
-  label: string;
+  id: SessionNoteCategory;
+  name: string;
 }> = sessionNoteCategories.map(value => ({
-  value,
-  label: sessionNoteCategoryLabels[value],
+  id: value,
+  name: sessionNoteCategoryLabels[value],
 }));
 
 export const getSessionNoteCategoryLabel = (category: SessionNoteCategory) => (

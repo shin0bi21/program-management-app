@@ -1,4 +1,3 @@
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -14,7 +13,7 @@ export interface TaskModalProps {
   target: Exclude<TaskModalState, null>;
   staff: readonly StaffReference[];
   programs: readonly TaskProgram[];
-  categories: ReadonlyArray<{ value: TaskCategory; label: string }>;
+  categories: ReadonlyArray<{ id: TaskCategory; name: string }>;
   onSaved: (task: Task) => void;
   onClose: () => void;
 }
@@ -73,7 +72,7 @@ export default function TaskModal(props: TaskModalProps) {
           <FloatingSelect
             id="task-staff"
             value={modal.draft.staffId}
-            options={toFilterOptions(staff)}
+            options={staff}
             onChange={value => modal.updateDraft('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"
@@ -86,7 +85,7 @@ export default function TaskModal(props: TaskModalProps) {
             <FloatingSelect
               id="task-program"
               value={modal.draft.programId}
-              options={toFilterOptions(programs)}
+              options={programs}
               onChange={value => modal.updateDraft('programId', value)}
               placeholder="Select a program"
               ariaLabel="Task program"

@@ -77,9 +77,9 @@ function AccountForm({ account, onClose, onSuccess }: Omit<AccountModalProps, 'i
                   ariaLabel="Role"
                   value={field.value ?? ''}
                   options={[
-                    { value: 'staff', label: 'Staff' },
-                    { value: 'project_manager', label: 'Project Manager' },
-                    { value: 'admin', label: 'Admin' },
+                    { id: 'staff', name: 'Staff' },
+                    { id: 'project_manager', name: 'Project Manager' },
+                    { id: 'admin', name: 'Admin' },
                   ]}
                   onChange={field.onChange}
                   disabled={submissionComplete}
@@ -103,7 +103,7 @@ function AccountForm({ account, onClose, onSuccess }: Omit<AccountModalProps, 'i
                 <Checklist
                   variant="form"
                   ariaLabel="Programs"
-                  options={programs.map(program => ({ value: program.id, label: program.name }))}
+                  options={programs}
                   value={field.value}
                   onToggle={value => field.onChange(field.value.includes(value)
                     ? field.value.filter(id => id !== value)

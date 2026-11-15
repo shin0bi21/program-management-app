@@ -37,15 +37,15 @@ export function useAccountControls(
 
   const filterCategories = useMemo(() => [
     { id: 'statuses' as const, label: 'Status', options: [
-      { value: 'active', label: 'Active' },
-      { value: 'invited', label: 'Invited' },
-      { value: 'inactive', label: 'Inactive' },
+      { id: 'active', name: 'Active' },
+      { id: 'invited', name: 'Invited' },
+      { id: 'inactive', name: 'Inactive' },
     ] },
     ...(isAdmin ? [{ id: 'roles' as const, label: 'Role', options: [
-      { value: 'admin', label: 'Admin' },
-      { value: 'project_manager', label: 'Project Manager' },
-      { value: 'staff', label: 'Staff' },
-      { value: 'youth', label: 'Youth' },
+      { id: 'admin', name: 'Admin' },
+      { id: 'project_manager', name: 'Project Manager' },
+      { id: 'staff', name: 'Staff' },
+      { id: 'youth', name: 'Youth' },
     ] }] : []),
   ], [isAdmin]);
 

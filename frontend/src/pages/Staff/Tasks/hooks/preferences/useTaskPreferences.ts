@@ -1,6 +1,5 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import type { TaskReferenceData } from '../../tasks.api';
 import { useMemo } from 'react';
 
@@ -86,12 +85,12 @@ export default function useTaskPreferences({
       categories: preferenceOptions<TaskCategory>(
         ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
         [],
-        options?.categories.map(category => category.value) ?? null,
+        options?.categories.map(category => category.id) ?? null,
       ),
       statuses: preferenceOptions<TaskStatus>(
         ['upcoming', 'in_progress', 'overdue', 'completed', 'cancelled'],
         [],
-        options?.statuses.map(status => status.value) ?? null,
+        options?.statuses.map(status => status.id) ?? null,
       ),
       sorting: preferenceSorting(tableKeys, { key: 'startDate', direction: 'asc' }),
     },
@@ -107,14 +106,14 @@ export default function useTaskPreferences({
     {
       id: 'staffIds' as const,
       label: 'Staff',
-      options: toFilterOptions(staff),
+      options: staff,
     },
     {
       id: 'programIds' as const,
       label: 'Program',
-      options: toFilterOptions(programs),
+      options: programs,
     },
-    { id: 'cycleIds' as const, label: 'Cycle', options: toFilterOptions(cycles) },
+    { id: 'cycleIds' as const, label: 'Cycle', options: cycles },
     { id: 'categories' as const, label: 'Category', options: referenceData?.categories ?? [] },
     { id: 'statuses' as const, label: 'Status', options: referenceData?.statuses ?? [] },
   ], [referenceData, cycles, staff, programs]);

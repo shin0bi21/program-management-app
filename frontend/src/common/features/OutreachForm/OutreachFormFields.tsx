@@ -7,17 +7,17 @@ import { getDateOfBirthBounds } from '../youth/dateOfBirth';
 import './OutreachForm.css';
 
 const contactRelationshipOptions = [
-  { value: 'parent', label: 'Parent' },
-  { value: 'guardian', label: 'Guardian' },
-  { value: 'sibling', label: 'Sibling' },
+  { id: 'parent', name: 'Parent' },
+  { id: 'guardian', name: 'Guardian' },
+  { id: 'sibling', name: 'Sibling' },
 ] as const;
 
 const discoverySourceOptions = [
-  { value: 'online', label: 'Online' },
-  { value: 'friend_family', label: 'Friend / Family' },
-  { value: 'school', label: 'School' },
-  { value: 'community_outreach', label: 'Community Outreach' },
-  { value: 'other', label: 'Other' },
+  { id: 'online', name: 'Online' },
+  { id: 'friend_family', name: 'Friend / Family' },
+  { id: 'school', name: 'School' },
+  { id: 'community_outreach', name: 'Community Outreach' },
+  { id: 'other', name: 'Other' },
 ] as const;
 
 /**

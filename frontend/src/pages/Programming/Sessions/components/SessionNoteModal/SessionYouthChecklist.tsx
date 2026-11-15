@@ -31,7 +31,7 @@ export default function SessionYouthChecklist({
         <Checklist
           variant="form"
           ariaLabel="Link youth"
-          options={roster.map(youth => ({ value: youth.youthId, label: `${youth.firstName} ${youth.lastName}` }))}
+          options={roster.map(youth => ({ id: youth.youthId, name: `${youth.firstName} ${youth.lastName}` }))}
           value={selectedYouthIds}
           onToggle={onToggle}
           disabled={disabled}

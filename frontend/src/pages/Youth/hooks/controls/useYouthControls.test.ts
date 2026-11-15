@@ -161,9 +161,6 @@ describe('useYouthControls', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
-    expect(result.current.filters.definitions).toContainEqual({
-      id: 'cycleIds', label: 'Cycle', options: [{ value: 'cycle-1', label: 'Summer 2026' }],
-    });
 
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({ cycleIds: ['cycle-1'], programIds: ['program-1'] }),

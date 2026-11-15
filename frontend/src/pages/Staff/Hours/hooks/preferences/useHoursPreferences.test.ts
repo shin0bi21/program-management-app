@@ -27,8 +27,8 @@ const staff = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
 const programs = [{ id: 'program-1', name: 'Soft Skills' }];
-const categories = [{ value: 'meeting' as const, label: 'Meeting' }];
-const types = [{ value: 'task' as const, label: 'Task' }];
+const categories = [{ id: 'meeting' as const, name: 'Meeting' }];
+const types = [{ id: 'task' as const, name: 'Task' }];
 const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 
 describe('useHoursPreferences', () => {

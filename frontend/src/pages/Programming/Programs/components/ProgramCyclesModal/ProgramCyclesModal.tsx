@@ -71,7 +71,7 @@ function ProgramCyclesForm({
         <Checklist
           variant="form"
           ariaLabel="Assigned cycles"
-          options={cycles.map(cycle => ({ value: cycle.id, label: cycle.name }))}
+          options={cycles}
           value={workflow.selectedCycleIds}
           onToggle={workflow.toggleCycle}
           disabled={!workflow.ready || workflow.locked}
