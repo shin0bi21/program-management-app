@@ -32,7 +32,7 @@ describe('useTaskSelection', () => {
     const task = makeTask();
     const updated = makeTask({
       title: 'Updated workshop',
-      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
+      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith',
     });
     const { result } = renderHook(() => useTaskSelection({ staff }));
 

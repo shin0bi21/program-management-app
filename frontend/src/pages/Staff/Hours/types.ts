@@ -16,7 +16,6 @@ export interface HoursItem {
   staffId: string;
   firstName: string;
   lastName: string;
-  name: string;
   programId: string | null;
   program: string | null;
   cycleId: string;

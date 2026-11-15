@@ -1,5 +1,10 @@
 import type { Task } from '../../pages/Staff/Tasks/types';
 
+/**
+ * Builds a complete task with scenario overrides and matching closed-state labels.
+ * @param overrides - Task fields supplied by the test scenario.
+ * @example makeTask({ state: 'completed' }) // a completed task with its matching status
+ */
 export function makeTask(overrides: Partial<Task> = {}): Task {
   const task: Task = {
     id: 'task-1',
@@ -20,7 +25,6 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     staffId: 'staff-1',
     firstName: 'Zoe',
     lastName: 'Wilson',
-    name: 'Zoe Wilson',
     writable: true,
     ...overrides,
   };

@@ -221,7 +221,7 @@ describe('Hours', () => {
         id: 'entry-coworker', category: 'administration', categoryLabel: 'Administration',
         hours: 4, note: 'Coworker administration',
       }, {
-        staffId: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        staffId: 'staff-2', firstName: 'Alex', lastName: 'Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getStaffReferences).mockResolvedValue([
@@ -367,7 +367,7 @@ describe('Hours', () => {
           id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 2, note: 'Zoe workshop',
-        }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan',
           id: 'entry-alex', programId: null, program: null,
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'meeting',
           categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 7, note: 'Alex planning meeting',
@@ -379,7 +379,7 @@ describe('Hours', () => {
       }, { date: date }),
       hoursItem({ id: 'entry-alex', hours: 7, note: 'Alex planning meeting' }, {
         date: date, staffId: 'staff-2',
-        firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        firstName: 'Alex', lastName: 'Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
