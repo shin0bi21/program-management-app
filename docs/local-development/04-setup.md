@@ -25,6 +25,24 @@ Docker Compose reads `docker-compose.yml` to work out which services to start.
 `--build` builds the required images, and `-d` keeps the services running in the
 background so you can keep using the terminal.
 
+Run this from the `program-management-app` checkout so Docker Compose uses that
+project name and mounts its source files. The local services have these container
+names:
+
+| Compose Service | Container Name |
+|---|---|
+| `frontend` | `frontend` |
+| `backend` | `backend` |
+| `db` | `database` |
+| `db_test` | `test_database` |
+| `docs` | `docs` |
+
+Compose commands use the service key, for example `docker compose logs db`.
+Direct Docker commands use the container name, for example `docker logs database`.
+Container names are fixed, so run one local stack at a time.
+The optional `nginx` service uses the container name `nginx` when its profile is
+enabled.
+
 The first start downloads images, builds the backend, and installs project
 dependencies. The backend waits for the database, applies migrations to create
 its tables, and creates your administrator account from `.env` before starting.
