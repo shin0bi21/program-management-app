@@ -30,7 +30,6 @@ export interface Task {
   staffId: string;
   firstName: string;
   lastName: string;
-  name: string;
   writable: boolean;
 }
 

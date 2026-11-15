@@ -29,7 +29,6 @@ export interface HoursRow {
 
   sessionTitle: string | null;
 
-  name: string;
   categoryLabel: string;
   type: 'task' | 'session' | 'regular';
 }
@@ -85,7 +84,6 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
 
       session.title AS session_title,
 
-      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
       ${query.json(categoryLabels)}::jsonb ->> entry.category AS category_label,
       CASE
         WHEN entry.task_id IS NOT NULL THEN 'task'

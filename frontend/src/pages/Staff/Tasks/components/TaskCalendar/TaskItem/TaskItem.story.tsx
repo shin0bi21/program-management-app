@@ -10,15 +10,20 @@ const initialTask: Task = {
   status: 'in_progress', statusLabel: 'In Progress',
   startDate: '2026-08-09', dueDate: '2026-08-11', hoursLogged: 1.5,
   loggedHoursByDate: [{ date: '2026-08-10', hours: 1.5 }], completedAt: null,
-  staffId: staffMember.id, firstName: staffMember.firstName, lastName: staffMember.lastName, name: staffMember.name,
+  staffId: staffMember.id, firstName: staffMember.firstName, lastName: staffMember.lastName,
   writable: true,
 };
 
+/**
+ * Displays a task calendar with observable action and range changes for browser tests.
+ * @example <InteractiveTaskItem />
+ */
 export function InteractiveTaskItem() {
   const [task, setTask] = useState(initialTask);
   const [action, setAction] = useState('');
   const [activatedTaskId, setActivatedTaskId] = useState('');
   const [rangeChange, setRangeChange] = useState('');
+
   return <div style={{ height: '300px', padding: 16 }}>
     <TimelineCalendar
       rows={[staffMember]}

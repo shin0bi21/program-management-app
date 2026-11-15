@@ -198,7 +198,10 @@ describe('Hours API', () => {
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 2.5, note: 'Program meeting' });
 
     expect(created.status).toBe(201);
-    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', type: 'regular', taskId: null, sessionId: null, hours: 2.5 }));
+    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', category: 'meeting', type: 'regular', taskId: null, sessionId: null, hours: 2.5 }));
+
+    expect(created.body).not.toHaveProperty('name');
+    expect(created.body).not.toHaveProperty('staffName');
 
     const listed = await request(app)
       .get(`/api/hours/calendar?start=${date}&end=${date}`)

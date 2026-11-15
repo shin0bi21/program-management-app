@@ -25,7 +25,6 @@ export interface TaskRow {
 
   program: string | null;
 
-  name: string;
   categoryLabel: string;
   status: TaskStatus;
   statusLabel: string;
@@ -75,7 +74,6 @@ export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE
 
       program.name AS program,
 
-      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
       ${query.json(categoryLabels)}::jsonb ->> task.category AS category_label,
       ${taskStatus} AS status,
       ${query.json(statusLabels)}::jsonb ->> (${taskStatus}) AS status_label,
