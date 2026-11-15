@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
-import { toFilterOptions } from '../../../../common/features/referenceData/filterOptions';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
@@ -63,12 +62,12 @@ export function useYouthControls({
     {
       id: 'programIds' as const,
       label: 'Program',
-      options: toFilterOptions(programs),
+      options: programs,
     },
     {
       id: 'cycleIds' as const,
       label: 'Cycle',
-      options: toFilterOptions(cycles),
+      options: cycles,
     },
   ], [programs, cycles]);
 

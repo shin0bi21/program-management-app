@@ -1,4 +1,3 @@
-import { toFilterOptions } from '../../../../../common/features/referenceData/filterOptions';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -12,7 +11,7 @@ interface HoursModalProps extends UseHoursModalOptions {
   isOpen: boolean;
   onClose: () => void;
   staffLocked?: boolean;
-  categories: ReadonlyArray<{ value: HoursCategory; label: string }>;
+  categories: ReadonlyArray<{ id: HoursCategory; name: string }>;
 }
 
 /**
@@ -106,7 +105,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-staff"
               value={draft.staffId}
-              options={toFilterOptions(staff)}
+              options={staff}
               onChange={workflow.selectStaff}
               placeholder="Select staff member"
               ariaLabel="Staff member"
@@ -128,7 +127,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-assigned-task"
                 value={draft.taskId}
-                options={workflow.taskOptions.map(task => ({ value: task.id, label: task.title }))}
+                options={workflow.taskOptions.map(task => ({ id: task.id, name: task.title }))}
                 onChange={workflow.selectTask}
                 placeholder={workflow.tasksLoading ? 'Loading assigned tasks…' : 'Select assigned task'}
                 ariaLabel="Task"
@@ -156,10 +155,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-session"
                 value={draft.sessionId}
-                options={workflow.sessionOptions.map(session => ({
-                  value: session.id,
-                  label: session.label,
-                }))}
+                options={workflow.sessionOptions}
                 onChange={workflow.selectSession}
                 placeholder={sessionPlaceholder}
                 ariaLabel="Session"
@@ -174,7 +170,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-program"
               value={draft.programId}
-              options={toFilterOptions(programs)}
+              options={programs}
               onChange={workflow.selectProgram}
               placeholder="Select a program"
               ariaLabel="Program"
@@ -189,7 +185,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-category"
               value={draft.category}
-              options={categories.filter(option => option.value !== 'program_delivery')}
+              options={categories.filter(option => option.id !== 'program_delivery')}
               onChange={value => workflow.selectCategory(
                 value as Exclude<HoursCategory, 'program_delivery'>,
               )}

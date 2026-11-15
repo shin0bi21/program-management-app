@@ -192,11 +192,15 @@ describe('Page-authorized reference data', () => {
     const tasks = await get('/tasks/reference-data', ['read:tasks']);
     expect(tasks.status).toBe(200);
     expect(Object.keys(tasks.body).sort()).toEqual(['categories', 'statuses']);
+    expect(tasks.body.categories).toContainEqual({ id: 'planning_prep', name: 'Planning / Prep' });
+    expect(tasks.body.statuses).toContainEqual({ id: 'in_progress', name: 'In Progress' });
     const hours = await get('/hours/reference-data', ['read:hours']);
     expect(hours.status).toBe(200);
     expect(Object.keys(hours.body).sort()).toEqual(['categories', 'types']);
     expect(hours.body.categories.length).toBeGreaterThan(0);
     expect(hours.body.types.length).toBeGreaterThan(0);
+    expect(hours.body.categories).toContainEqual({ id: 'program_delivery', name: 'Program Delivery' });
+    expect(hours.body.types).toContainEqual({ id: 'regular', name: 'Regular' });
     expect((await get('/tasks/reference-data', ['read:hours'])).status).toBe(403);
     expect((await get('/hours/reference-data', ['read:tasks'])).status).toBe(403);
   });

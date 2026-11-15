@@ -34,8 +34,8 @@ export interface TaskRow {
   writable: boolean;
 }
 
-const categoryLabels = Object.fromEntries(TASK_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
-const statusLabels = Object.fromEntries(TASK_STATUS_OPTIONS.map(option => [option.value, option.label]));
+const categoryLabels = Object.fromEntries(TASK_CATEGORY_OPTIONS.map(option => [option.id, option.name]));
+const statusLabels = Object.fromEntries(TASK_STATUS_OPTIONS.map(option => [option.id, option.name]));
 
 /** Displayed task status shared by the canonical projection, filters, and sorting. */
 export const taskStatus = sql`

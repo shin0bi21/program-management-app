@@ -11,7 +11,7 @@ interface NoteModalProps {
   formId: string;
   categoryLabel: string;
   category: string;
-  categoryOptions: Array<{ value: string; label: string }>;
+  categoryOptions: Array<{ id: string; name: string }>;
   categoryDisabled?: boolean;
   details: string;
   submitStatus: SubmitStatus;

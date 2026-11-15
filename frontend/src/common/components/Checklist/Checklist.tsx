@@ -5,7 +5,7 @@ import SearchInput from '../SearchInput/SearchInput';
 import './Checklist.css';
 
 interface ChecklistProps {
-  options: readonly { value: string; label: string }[];
+  options: readonly { id: string; name: string }[];
   value: readonly string[];
   onToggle: (value: string) => void;
   ariaLabel: string;
@@ -20,13 +20,13 @@ interface ChecklistProps {
 /**
  * Displays controlled checkbox choices, optionally filtered by a local search field.
  * In a floating panel, search requires keyboardMode="form" and the default inMenu=false.
- * @param props.options - Available choices with unique stored values and displayed labels.
- * @param props.value - Values of the checked choices.
- * @param props.onToggle - Receives the activated choice value; the caller updates value to change its checked state.
+ * @param props.options - Available choices with unique IDs and display names; extra reference fields are preserved.
+ * @param props.value - IDs of the checked choices.
+ * @param props.onToggle - Receives the activated choice ID; the caller updates value to change its checked state.
  * @param props.inMenu - Uses checkbox menu items; the caller supplies the surrounding menu and its keyboard navigation.
  * @param props.search - Includes live filtering; choose once for the mounted checklist.
  * @param props.dynamicItems - Reveals 25 choices at a time as the user scrolls or tabs.
- * @example <Checklist options={[{ value: "fall", label: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
+ * @example <Checklist options={[{ id: "fall", name: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
  */
 export default function Checklist({
   options,
@@ -64,7 +64,7 @@ export default function Checklist({
       )}
       <div className="checklist-items" ref={itemsRef} onScroll={handleScroll}>
         {items.map((option, index) => {
-          const checked = value.includes(option.value);
+          const checked = value.includes(option.id);
           const isLastItem = index === items.length - 1;
           const content = (
             <>
@@ -73,31 +73,31 @@ export default function Checklist({
                   {checked && <FontAwesomeIcon icon={faCheck} />}
                 </span>
               )}
-              <span className="checklist-label">{option.label}</span>
+              <span className="checklist-label">{option.name}</span>
             </>
           );
 
           return inMenu ? (
             <button
-              key={option.value}
+              key={option.id}
               type="button"
               role="menuitemcheckbox"
               aria-checked={checked}
               className="checklist-option"
               disabled={disabled}
-              onClick={() => onToggle(option.value)}
+              onClick={() => onToggle(option.id)}
               onFocus={isLastItem ? loadMoreItems : undefined}
             >
               {content}
             </button>
           ) : (
-            <label key={option.value} className={`checklist-option${disabled ? ' disabled' : ''}`}>
+            <label key={option.id} className={`checklist-option${disabled ? ' disabled' : ''}`}>
               <input
                 type="checkbox"
-                value={option.value}
+                value={option.id}
                 checked={checked}
                 disabled={disabled}
-                onChange={() => onToggle(option.value)}
+                onChange={() => onToggle(option.id)}
                 onFocus={isLastItem ? loadMoreItems : undefined}
               />
               {content}

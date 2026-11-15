@@ -24,13 +24,13 @@ export type HoursCalendarData = HoursItem[];
 
 export interface HoursSession {
   id: string;
-  label: string;
+  name: string;
   date: string;
 }
 
 export interface HoursReferenceData {
-  categories: Array<{ value: HoursCategory; label: string }>;
-  types: Array<{ value: HoursItemType; label: string }>;
+  categories: Array<{ id: HoursCategory; name: string }>;
+  types: Array<{ id: HoursItemType; name: string }>;
 }
 
 export interface HoursPayPeriodData {

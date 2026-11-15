@@ -15,8 +15,8 @@ describe('NoteModal', () => {
       categoryLabel="Category"
       category="general"
       categoryOptions={[
-        { value: 'general', label: 'General' },
-        { value: 'health', label: 'Health' },
+        { id: 'general', name: 'General' },
+        { id: 'health', name: 'Health' },
       ]}
       details="Current note"
       submitStatus="idle"
@@ -45,7 +45,7 @@ describe('NoteModal', () => {
       formId="test-note-form"
       categoryLabel="Status"
       category="new"
-      categoryOptions={[{ value: 'new', label: 'New' }]}
+      categoryOptions={[{ id: 'new', name: 'New' }]}
       details="Required reason"
       submitStatus="submitting"
       onCategoryChange={vi.fn()}

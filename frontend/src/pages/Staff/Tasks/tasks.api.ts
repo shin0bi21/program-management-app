@@ -63,8 +63,8 @@ function applyTaskFilters(params: URLSearchParams, filters: TasksFilters) {
 }
 
 export interface TaskReferenceData {
-  categories: Array<{ value: TaskCategory; label: string }>;
-  statuses: Array<{ value: TaskStatus; label: string }>;
+  categories: Array<{ id: TaskCategory; name: string }>;
+  statuses: Array<{ id: TaskStatus; name: string }>;
 }
 
 export function getTaskReferenceData(opts?: RequestOptions) {

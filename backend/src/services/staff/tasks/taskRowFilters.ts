@@ -1,6 +1,7 @@
 import { sql } from '../../../db/client';
 import type { TaskListQuery } from '../../../validation/taskSchemas';
 import { resolveCycleDateRange } from '../../programming/cycles/cycleDateRange';
+import { getMatchingReferenceIds } from '../../shared/referenceOptions';
 import { TASK_CATEGORY_OPTIONS } from './taskReferenceData';
 import { taskStatus } from './taskRowQuery';
 
@@ -40,7 +41,7 @@ export function buildTaskFilters(filterValues: TaskFilters) {
   }
   if (filterValues.search) {
     const search = `%${filterValues.search}%`;
-    const matchingCategories = getMatchingCategories(filterValues.search);
+    const matchingCategories = getMatchingReferenceIds(TASK_CATEGORY_OPTIONS, filterValues.search);
     filters.push(sql`(
       CONCAT_WS(' ', task.title, task.details, program.name, staff.first_name, staff.last_name) ILIKE ${search}
       OR task.category::text = ANY(${sql.array(matchingCategories)}::text[])
@@ -70,20 +71,4 @@ export async function resolveTaskDateRange(query: Pick<TaskListQuery, 'cycleIds'
   const end = query.end && query.end < cycles.end ? query.end : cycles.end;
 
   return start <= end ? { start, end } : null;
-}
-
-/**
- * Finds task categories whose label or value matches search text.
- * @param search - Optional case-insensitive search text.
- * @example getMatchingCategories('meeting') // matching stored category values
- */
-function getMatchingCategories(search: string | undefined) {
-  if (!search) return [];
-  const normalizedSearch = search.toLocaleLowerCase();
-  return TASK_CATEGORY_OPTIONS
-    .filter(option => (
-      option.label.toLocaleLowerCase().includes(normalizedSearch)
-      || option.value.toLocaleLowerCase().includes(normalizedSearch)
-    ))
-    .map(option => option.value);
 }

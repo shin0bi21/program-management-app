@@ -108,8 +108,8 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             disabled={workflow.submissionComplete}
             onChange={value => workflow.updateDraft('defaultDayOfWeek', value as ProgramWeekday)}
             options={['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => ({
-              value: day,
-              label: day[0].toUpperCase() + day.slice(1),
+              id: day,
+              name: day[0].toUpperCase() + day.slice(1),
             }))}
           />
         </FormField>
@@ -140,7 +140,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             id="program-timezone"
             value={workflow.draft.timezone}
             disabled={workflow.submissionComplete}
-            options={[{ value: 'America/Toronto', label: 'Toronto (Eastern Time)' }]}
+            options={[{ id: 'America/Toronto', name: 'Toronto (Eastern Time)' }]}
             onChange={value => workflow.updateDraft('timezone', value as Program['timezone'])}
           />
         </FormField>
@@ -154,8 +154,8 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
               value === 'yes',
             )}
             options={[
-              { value: 'yes', label: 'Yes' },
-              { value: 'no', label: 'No' },
+              { id: 'yes', name: 'Yes' },
+              { id: 'no', name: 'No' },
             ]}
           />
         </FormField>

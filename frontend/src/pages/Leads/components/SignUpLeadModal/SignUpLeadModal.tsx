@@ -15,10 +15,10 @@ import './SignUpLeadModal.css';
 
 
 
-const noteCategoryOptions: Array<{ value: LeadNoteCategory; label: string }> = [
-  { value: 'general', label: 'General' },
-  { value: 'health', label: 'Health' },
-  { value: 'preference', label: 'Preference' },
+const noteCategoryOptions: Array<{ id: LeadNoteCategory; name: string }> = [
+  { id: 'general', name: 'General' },
+  { id: 'health', name: 'Health' },
+  { id: 'preference', name: 'Preference' },
 ];
 
 interface SignUpLeadModalProps {
@@ -51,10 +51,10 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
   });
 
   const programCycleOptions = [
-    { value: '', label: 'Do not enroll yet' },
+    { id: '', name: 'Do not enroll yet' },
     ...workflow.visibleProgramCycles.map(programCycle => ({
-      value: `${programCycle.programId}:${programCycle.cycleId}`,
-      label: `${programCycle.program} — ${programCycle.cycle} · ${formatShortDate(programCycle.startsOn)}–${formatShortDate(programCycle.endsOn)}`,
+      id: `${programCycle.programId}:${programCycle.cycleId}`,
+      name: `${programCycle.program} — ${programCycle.cycle} · ${formatShortDate(programCycle.startsOn)}–${formatShortDate(programCycle.endsOn)}`,
     })),
   ];
   const modalStatus = workflow.submitStatus === 'idle' && workflow.loadError

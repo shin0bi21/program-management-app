@@ -52,8 +52,8 @@ const auth: AuthContextValue = {
 };
 
 const hoursReferenceChoices = {
-  categories: [{ value: 'meeting' as const, label: 'Meeting' }],
-  types: [{ value: 'regular' as const, label: 'Regular' }],
+  categories: [{ id: 'meeting' as const, name: 'Meeting' }],
+  types: [{ id: 'regular' as const, name: 'Regular' }],
 };
 
 /**

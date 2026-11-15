@@ -126,7 +126,7 @@ describe('useHoursModal', () => {
   it('reloads sessions by staff and date before submitting the selected session', async () => {
     vi.mocked(getHoursSessions).mockResolvedValue([{
       id: 'session-1',
-      label: 'Leadership',
+      name: 'Leadership',
       date: '2026-08-20',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);

@@ -2,8 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useOptionSearch } from '../../../hooks/useOptionSearch';
 
 interface ChecklistOption {
-  value: string;
-  label: string;
+  id: string;
+  name: string;
 }
 
 interface ChecklistItemsOptions {

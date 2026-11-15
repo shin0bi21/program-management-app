@@ -4,7 +4,7 @@ import FloatingSelect from '../FloatingSelect/FloatingSelect';
 import FormField from './FormField';
 import FormFieldGroup from './FormFieldGroup';
 
-const options = [{ value: 'fall', label: 'Fall 2026' }, { value: 'spring', label: 'Spring 2026' }];
+const options = [{ id: 'fall', name: 'Fall 2026' }, { id: 'spring', name: 'Spring 2026' }];
 
 export function StandardFields() {
   const [selected, setSelected] = useState<string[]>([]);

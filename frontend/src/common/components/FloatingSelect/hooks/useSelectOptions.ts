@@ -21,7 +21,7 @@ export function useSelectOptions({ id, value, options }: UseSelectOptionsArgs) {
   const [activeValue, setActiveValue] = useState<string | null>(value);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const activeIndex = Math.max(0, matches.findIndex(option => option.value === activeValue));
+  const activeIndex = Math.max(0, matches.findIndex(option => option.id === activeValue));
   const activeOption = matches[activeIndex];
   const listId = `${id}-options`;
   const activeId = activeOption ? `${listId}-${activeIndex}` : undefined;
@@ -51,7 +51,7 @@ export function useSelectOptions({ id, value, options }: UseSelectOptionsArgs) {
     if (matches.length === 0) return;
 
     const nextIndex = (activeIndex + offset + matches.length) % matches.length;
-    setActiveValue(matches[nextIndex].value);
+    setActiveValue(matches[nextIndex].id);
   };
 
   return {
