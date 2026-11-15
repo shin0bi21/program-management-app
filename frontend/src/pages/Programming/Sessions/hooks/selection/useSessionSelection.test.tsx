@@ -24,7 +24,7 @@ describe('useSessionSelection', () => {
     act(() => result.current.selection.syncSelectedSession(session));
     await waitFor(() => expect(result.current.selection.selectedSession).toEqual(session));
 
-    const saved = makeProgramSession({ theme: 'Updated theme' });
+    const saved = makeProgramSession({ title: 'Updated title' });
     act(() => result.current.selection.syncSelectedSession(saved));
     await waitFor(() => expect(result.current.selection.selectedSession).toEqual(saved));
     expect(result.current.selection.selectedSessionId).toBe(session.id);

@@ -25,14 +25,14 @@ describe('single session creation', () => {
     act(() => result.current.selectProgram('p2'));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '16:00', endTime: '18:00' });
     act(() => {
-      result.current.updateDraft('theme', ' Music ');
+      result.current.updateDraft('title', ' Music ');
       result.current.updateDraft('sessionType', 'Regular');
       result.current.updateDraft('description', ' Practice session ');
     });
     await act(() => result.current.submit());
     expect(createSession).toHaveBeenCalledWith({
       programId: 'p2', description: 'Practice session',
-      sessionType: 'Regular', theme: 'Music', date: '2026-11-04', startTime: '16:00', endTime: '18:00',
+      sessionType: 'Regular', title: 'Music', date: '2026-11-04', startTime: '16:00', endTime: '18:00',
     });
     expect(onSaved).toHaveBeenCalledOnce();
   });
@@ -40,7 +40,7 @@ describe('single session creation', () => {
   it('shows cycle resolution errors from the server without retrying another assignment', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('No assigned cycle covers this session date.'));
     const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved: vi.fn() }));
-    act(() => { result.current.updateDraft('theme', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
+    act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     expect(result.current.message).toContain('No assigned cycle');
@@ -51,7 +51,7 @@ describe('single session creation', () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce(makeProgramSession());
     const onSaved = vi.fn().mockRejectedValue(new Error('Refresh failed'));
     const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved }));
-    act(() => { result.current.updateDraft('theme', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
+    act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     await act(async () => { await Promise.all([result.current.submit(), result.current.submit()]); });

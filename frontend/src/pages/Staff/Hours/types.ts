@@ -28,7 +28,7 @@ export interface HoursItem {
   taskId: string | null;
   taskTitle: string | null;
   sessionId: string | null;
-  sessionLabel: string | null;
+  sessionTitle: string | null;
   date: string;
   type: HoursItemType;
   hours: number;

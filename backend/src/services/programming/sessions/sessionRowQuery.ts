@@ -6,7 +6,7 @@ import type { AccessTokenPayload } from '../../../types/auth';
 /** Session details shared by table, calendar, and mutation responses. */
 export interface SessionRow {
   id: string;
-  theme: string;
+  title: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -38,7 +38,7 @@ export function getSessionRows(
   return query<SessionRow[]>`
     SELECT
       session.id,
-      session.theme,
+      session.title,
       session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
       to_char(session.end_time, 'HH24:MI') AS end_time,

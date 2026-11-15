@@ -1,6 +1,6 @@
 export interface HomepageSession {
   id: string;
-  theme: string;
+  title: string;
   date: string;
 }
 

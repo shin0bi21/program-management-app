@@ -4,7 +4,7 @@ import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
 describe('SessionItem', () => {
-  it('shows only the theme on the bar and gives type, saved times, cycle, status and description in its details', async () => {
+  it('shows only the title on the bar and gives type, saved times, cycle, status and description in its details', async () => {
     const session = makeProgramSession({
       date: '2026-12-21', startTime: '17:00', endTime: '19:30',
       sessionType: 'Guest Speaker', state: 'cancelled',

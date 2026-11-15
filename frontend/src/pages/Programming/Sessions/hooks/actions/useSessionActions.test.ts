@@ -32,7 +32,7 @@ describe('useSessionActions', () => {
   it('uses the complete move response and locks duplicate drops', async () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
-      ...session, theme: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
+      ...session, title: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
       date: '2027-01-12', startTime: '13:00', endTime: '15:00',
     });
     const { result, invalidate, calendar, onSessionSynced } = renderActions();
@@ -89,7 +89,7 @@ describe('useSessionActions', () => {
 
   it('updates the attendance roster and refreshes related summaries', () => {
     const { result, client, invalidate } = renderActions();
-    const session = makeProgramSession({ theme: 'Saved attendance session' });
+    const session = makeProgramSession({ title: 'Saved attendance session' });
     const roster = [{ youthId: 'youth-1', firstName: 'Maya', lastName: 'Lee', status: 'present' as const, notes: null }];
     act(() => result.current.syncAttendance({ session, roster }));
 

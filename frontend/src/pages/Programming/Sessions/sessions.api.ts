@@ -36,7 +36,7 @@ interface UpdateSessionAttachmentInput {
 
 interface UpdateSessionInput {
   sessionType: string;
-  theme: string;
+  title: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -58,7 +58,7 @@ export function getAttendanceYouth(opts?: RequestOptions) {
 export interface CreateSessionInput {
   programId: string;
   sessionType: string;
-  theme: string;
+  title: string;
   date?: string;
   startTime?: string;
   endTime?: string;

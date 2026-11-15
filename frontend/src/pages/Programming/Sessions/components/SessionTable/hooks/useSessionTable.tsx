@@ -26,7 +26,7 @@ export default function useSessionTable({
   return useMemo<TableColumnDef<ProgramSession>[]>(() => [
     { id: 'program', header: 'Program', accessorFn: session => session.program },
     { id: 'cycle', header: 'Cycle', accessorFn: session => session.cycle },
-    { id: 'theme', header: 'Title / Theme', accessorFn: session => session.theme },
+    { id: 'title', header: 'Title', accessorFn: session => session.title },
     {
       id: 'date', header: 'Date', size: 135,
       accessorFn: session => formatShortDate(session.date),
@@ -58,7 +58,7 @@ export default function useSessionTable({
       enableHiding: false,
       header: '',
       cell: ({ row: { original: session } }: CellContext<ProgramSession, unknown>) => <ActionsMenu
-        ariaLabel={`More actions for ${session.theme}`}
+        ariaLabel={`More actions for ${session.title}`}
         items={[
           { id: 'edit', label: 'Edit', onClick: () => onEdit(session) },
           { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => onDelete(session) },

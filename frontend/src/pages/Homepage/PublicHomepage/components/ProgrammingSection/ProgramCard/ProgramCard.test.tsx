@@ -7,9 +7,9 @@ const program: HomepageProgram = {
   id: 'program-1', name: 'Future Ready', description: 'Build confidence and communication skills.',
   enrollmentRequired: true, minAge: 12, maxAge: 15,
   sessions: [
-    { id: 'session-1', theme: 'Communication', date: '2026-11-10' },
-    { id: 'session-2', theme: 'Cooking', date: '2026-11-11' },
-    { id: 'session-3', theme: 'Careers', date: '2026-11-12' },
+    { id: 'session-1', title: 'Communication', date: '2026-11-10' },
+    { id: 'session-2', title: 'Cooking', date: '2026-11-11' },
+    { id: 'session-3', title: 'Careers', date: '2026-11-12' },
   ],
 };
 

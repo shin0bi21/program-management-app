@@ -41,7 +41,7 @@ interface UseSessionControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
-const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle' };
+const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle', theme: 'title' };
 /**
  * Restores session controls and derives cycle bounds, with applied search kept in memory.
  * @param options - Role, reference choices, dependency status, and supported table keys.

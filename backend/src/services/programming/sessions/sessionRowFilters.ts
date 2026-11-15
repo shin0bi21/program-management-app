@@ -51,7 +51,7 @@ export function buildSessionFilters(
   if (filterValues.search) {
     const search = `%${filterValues.search}%`;
     filters.push(query`(
-      COALESCE(session.theme, '') ILIKE ${search}
+      COALESCE(session.title, '') ILIKE ${search}
       OR COALESCE(session.description, '') ILIKE ${search}
       OR session.cycle ILIKE ${search}
       OR session.program ILIKE ${search}

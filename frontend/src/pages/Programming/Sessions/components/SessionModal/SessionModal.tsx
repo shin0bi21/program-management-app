@@ -39,9 +39,9 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
           onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
           options={sessionTypes} />
       </FormField>
-      <FormField id="session-theme" label="Title / Theme">
-        <input id="session-theme" required maxLength={160} value={workflow.draft.theme}
-          disabled={workflow.locked} onChange={event => workflow.updateDraft('theme', event.target.value)} />
+      <FormField id="session-title" label="Title">
+        <input id="session-title" required maxLength={160} value={workflow.draft.title}
+          disabled={workflow.locked} onChange={event => workflow.updateDraft('title', event.target.value)} />
       </FormField>
       <FormField id="session-date" label="Session Date">
         <input id="session-date" type="date" required value={workflow.draft.date}

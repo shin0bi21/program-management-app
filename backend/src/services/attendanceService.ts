@@ -8,7 +8,7 @@ type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
 type YouthRow = { id: string; firstName: string; lastName: string };
 interface AttendanceSessionRow {
   id: string;
-  theme: string;
+  title: string;
   date: string;
   startTime: string;
   completed: boolean;
@@ -89,7 +89,7 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
   const sessions = await sql<AttendanceSessionRow[]>`
     SELECT
       session.id,
-      session.theme,
+      session.title,
       session.date,
       to_char(session.start_time, 'HH24:MI') AS start_time,
       session.date < CURRENT_DATE AS completed,

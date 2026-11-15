@@ -27,7 +27,7 @@ export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
     taskId: null,
     taskTitle: null,
     sessionId: null,
-    sessionLabel: null,
+    sessionTitle: null,
     hours: 1,
     note: 'Team meeting',
     ...overrides,

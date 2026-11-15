@@ -4,7 +4,7 @@ import type { SessionNote } from '../../../Programming/Sessions/types';
 export interface YouthAttendanceSession {
   id: string;
   sessionType: string;
-  theme: string;
+  title: string;
   date: string;
   startTime: string;
   completed: boolean;

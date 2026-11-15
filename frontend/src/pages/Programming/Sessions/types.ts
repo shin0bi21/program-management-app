@@ -5,7 +5,7 @@ export type SessionTypeValue = 'Regular' | 'Guest Speaker' | 'Field Trip';
 
 export interface ProgramSession {
   id: string;
-  theme: string;
+  title: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -35,7 +35,7 @@ export interface SessionListFilters {
 
 export type SessionStatusFilter = 'upcoming' | 'completed';
 
-export const SESSION_TABLE_KEYS = ['program', 'cycle', 'theme', 'date', 'time', 'type', 'status'] as const;
+export const SESSION_TABLE_KEYS = ['program', 'cycle', 'title', 'date', 'time', 'type', 'status'] as const;
 export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
 
 export interface SessionType {
@@ -78,7 +78,7 @@ export interface SessionNote {
 
 export interface YouthSessionNote extends SessionNote {
   cycleId: string;
-  sessionTheme: string | null;
+  sessionTitle: string | null;
   date: string;
   cycle: string;
   programId: string;

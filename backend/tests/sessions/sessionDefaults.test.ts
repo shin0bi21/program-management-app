@@ -46,7 +46,7 @@ describe('Single session scheduling defaults', () => {
   function create(input: Record<string, unknown>, authToken = token) {
     return request(app).post(`/api/programs/${programId}/cycles/${cycleId}/sessions`)
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ sessionType: regularType, theme: `Defaults ${Date.now()}`, ...input });
+      .send({ sessionType: regularType, title: `Defaults ${Date.now()}`, ...input });
   }
 
   /**
@@ -56,7 +56,7 @@ describe('Single session scheduling defaults', () => {
   function createForProgram(input: Record<string, unknown>, authToken = token) {
     return request(app).post('/api/sessions')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ programId, sessionType: regularType, theme: 'Resolved session', ...input });
+      .send({ programId, sessionType: regularType, title: 'Resolved session', ...input });
   }
 
   it('resolves the assigned cycle and saves the supplied date and clock times', async () => {
@@ -113,7 +113,7 @@ describe('Single session scheduling defaults', () => {
       const direct = await request(app)
         .post(`/api/programs/${programId}/cycles/${unassigned.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ sessionType: regularType, theme: 'Unassigned pair', date: '2027-01-15' });
+        .send({ sessionType: regularType, title: 'Unassigned pair', date: '2027-01-15' });
       expect(direct.status).toBe(404);
       expect(await sql`SELECT 1 FROM program_sessions WHERE program_id = ${programId} AND cycle_id = ${unassigned.id}`).toHaveLength(0);
     } finally {
@@ -139,7 +139,7 @@ describe('Single session scheduling defaults', () => {
     try {
       const response = await request(app).post(`/api/programs/${programId}/cycles/${cycle.id}/sessions`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ sessionType: regularType, theme: 'Cycle date boundary', date: '2027-01-13',
+        .send({ sessionType: regularType, title: 'Cycle date boundary', date: '2027-01-13',
           startTime: '22:30', endTime: '23:00' });
       expect(response.status).toBe(201);
       expect(response.body.date).toBe('2027-01-13');
@@ -164,19 +164,19 @@ describe('Single session scheduling defaults', () => {
     try {
       const response = await request(app).put(`/api/sessions/${created.body.id}`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ theme: 'Rejected edit', date: '2041-01-01', startTime: '18:00', endTime: '20:00' });
+        .send({ title: 'Rejected edit', date: '2041-01-01', startTime: '18:00', endTime: '20:00' });
       expect(response.status).toBe(409);
       expect(response.body.error).toBe('Sessions must fall within the cycle date range');
 
-      const [saved] = await sql<{ theme: string; date: string; startTime: string; endTime: string }[]>`
-        SELECT theme, date,
+      const [saved] = await sql<{ title: string; date: string; startTime: string; endTime: string }[]>`
+        SELECT title, date,
           to_char(start_time, 'HH24:MI') AS start_time,
           to_char(end_time, 'HH24:MI') AS end_time
         FROM program_sessions
         WHERE id = ${created.body.id}
       `;
       expect(saved).toEqual({
-        theme: created.body.theme, date: '2027-06-01', startTime: '17:00', endTime: '19:00',
+        title: created.body.title, date: '2027-06-01', startTime: '17:00', endTime: '19:00',
       });
     } finally {
       await sql`DELETE FROM program_sessions WHERE id = ${created.body.id}`;

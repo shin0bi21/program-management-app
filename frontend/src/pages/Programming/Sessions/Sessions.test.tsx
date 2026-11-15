@@ -93,7 +93,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
           onClick={() => {
             const session = makeProgramSession({
               sessionType: 'Regular',
-              theme: 'Communication',
+              title: 'Communication',
               programId: 'program-1',
               program: 'Soft Skills',
               date: '2026-07-28', startTime: '17:00',
@@ -158,7 +158,7 @@ describe('Sessions', () => {
     ]);
     getSessions.mockResolvedValue({ rows: [makeProgramSession({
       sessionType: 'Regular',
-      theme: 'Communication',
+      title: 'Communication',
       programId: 'program-1',
       program: 'Soft Skills',
       date: '2026-07-28', startTime: '17:00',
@@ -217,7 +217,7 @@ describe('Sessions', () => {
       id: 'drop-in-session',
 
       sessionType: 'Field Trip',
-      theme: 'Friday Drop In',
+      title: 'Friday Drop In',
       programId: 'drop-in',
       program: 'Drop In',
       enrollmentRequired: false,
