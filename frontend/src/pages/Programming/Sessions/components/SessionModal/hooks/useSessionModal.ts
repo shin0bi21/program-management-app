@@ -24,7 +24,7 @@ export default function useSessionModal({ programs, session, initialProgramId, i
   const [draft, setDraft] = useState(() => {
     return {
       sessionType: session?.sessionType ?? '',
-      theme: session?.theme ?? '',
+      title: session?.title ?? '',
       date: session?.date ?? initialDate ?? (program ? nextSessionDate(program) : ''),
       startTime: session?.startTime ?? program?.defaultStartTime ?? '',
       endTime: session?.endTime ?? program?.defaultEndTime ?? '',
@@ -51,7 +51,7 @@ export default function useSessionModal({ programs, session, initialProgramId, i
   };
 
   const submit = async () => {
-    if ((!session && !program) || !draft.theme.trim() || !draft.sessionType) return;
+    if ((!session && !program) || !draft.title.trim() || !draft.sessionType) return;
     if (draft.startTime && draft.endTime && draft.endTime <= draft.startTime) {
       setStatus('error');
       setMessage('End time must be after start time.');
@@ -65,7 +65,7 @@ export default function useSessionModal({ programs, session, initialProgramId, i
     try {
       const fields = {
         sessionType: draft.sessionType,
-        theme: draft.theme.trim(),
+        title: draft.title.trim(),
         description: draft.description.trim() || null,
         date: draft.date,
         startTime: draft.startTime,

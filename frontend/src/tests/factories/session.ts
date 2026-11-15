@@ -6,7 +6,7 @@ export function makeProgramSession(overrides: Partial<ProgramSession> = {}): Pro
     cycleId: 'cycle-1',
 
     sessionType: 'Regular',
-    theme: 'Communication',
+    title: 'Communication',
     cycle: 'Summer 2026',
     programId: 'program-1',
     program: 'Future Ready',

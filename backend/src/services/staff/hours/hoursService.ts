@@ -68,7 +68,7 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
   }>>`
     SELECT
       session.id,
-      session.theme AS name,
+      session.title AS name,
       session.date
     FROM program_sessions session
     INNER JOIN programs program ON program.id = session.program_id

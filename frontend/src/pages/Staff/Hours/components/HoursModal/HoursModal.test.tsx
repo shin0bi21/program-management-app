@@ -133,7 +133,7 @@ describe('HoursModal', () => {
         taskId: null,
         taskTitle: null,
         sessionId: null,
-        sessionLabel: null,
+        sessionTitle: null,
         hours: 2,
         note: 'Original note',
       }),

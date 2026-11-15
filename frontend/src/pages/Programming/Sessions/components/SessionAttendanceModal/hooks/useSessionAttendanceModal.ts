@@ -109,7 +109,7 @@ export default function useSessionAttendanceModal({
   const submit = async () => {
     if (submitDisabled || !tryLock()) return;
 
-    const sessionName = session.theme || `${session.program} session`;
+    const sessionTitle = session.title || `${session.program} session`;
     const attendance: SessionAttendanceRecord[] = [];
     if (isOpenRoster) {
       for (const youthId of selectedYouthIds) {
@@ -130,7 +130,7 @@ export default function useSessionAttendanceModal({
     }
 
     setSubmitStatus('submitting');
-    setStatusMessage(`Saving attendance for ${sessionName}...`);
+    setStatusMessage(`Saving attendance for ${sessionTitle}...`);
 
     let saved: SessionAttendanceResult;
     try {
@@ -151,7 +151,7 @@ export default function useSessionAttendanceModal({
 
     setStatusMessage(refreshFailed
       ? 'Attendance was saved, but the page could not refresh. Reload to see it.'
-      : `Attendance successfully saved for ${sessionName}.`);
+      : `Attendance successfully saved for ${sessionTitle}.`);
     setSubmitStatus('success');
   };
 

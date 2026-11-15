@@ -61,7 +61,7 @@ function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAtten
       >
         <p className="attendance-modal__context">
           {formatShortDate(session.date)}
-          {session.theme ? ` · ${session.theme}` : ''}
+          {session.title ? ` · ${session.title}` : ''}
         </p>
 
         {workflow.youthError && (

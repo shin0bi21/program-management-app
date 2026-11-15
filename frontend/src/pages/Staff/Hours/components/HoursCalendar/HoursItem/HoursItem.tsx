@@ -19,7 +19,7 @@ interface HoursItemProps<TRow, TItemData> {
 export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onDelete }: HoursItemProps<TRow, TItemData>) {
   const type = item.type;
   const label = HOURS_ITEM_TYPE_LABELS[type];
-  const title = item.taskTitle ?? item.sessionLabel ?? item.categoryLabel;
+  const title = item.taskTitle ?? item.sessionTitle ?? item.categoryLabel;
   return <Item
     calendar={calendar}
     id={item.id}

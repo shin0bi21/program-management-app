@@ -242,7 +242,7 @@ export async function listSessionNotesForYouth(
       sn.created_at,
       sn.updated_at,
       CONCAT_WS(' ', author.first_name, author.last_name) AS created_by_name,
-      cs.theme AS session_theme,
+      cs.title AS session_title,
       cs.date,
       cs.cycle_id,
 

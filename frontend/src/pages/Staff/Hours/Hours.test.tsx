@@ -268,7 +268,7 @@ describe('Hours', () => {
     vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ date: '2026-08-09',
         id: 'entry-list', programId: 'program-1', program: 'Soft Skills',
         cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
-        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Youth workshop',
+        categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 2, note: 'Youth workshop',
       })]);
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
       id: 'entry-list', programId: 'program-1', program: 'Soft Skills', category: 'program_delivery',
@@ -366,11 +366,11 @@ describe('Hours', () => {
     vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ staffId: 'staff-1', date: date,
           id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
-          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 2, note: 'Zoe workshop',
+          categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 2, note: 'Zoe workshop',
         }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
           id: 'entry-alex', programId: null, program: null,
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'meeting',
-          categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionLabel: null, hours: 7, note: 'Alex planning meeting',
+          categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 7, note: 'Alex planning meeting',
         })]);
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [
       hoursItem({

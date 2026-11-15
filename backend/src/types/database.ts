@@ -239,7 +239,7 @@ export interface ProgramSessions {
   program_id: string;
   session_type: Generated<SessionType>;
   start_time: string;
-  theme: string;
+  title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }

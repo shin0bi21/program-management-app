@@ -211,7 +211,7 @@ describe('Youth API', () => {
           VALUES (${current.programId}, ${current.cycleId}, ${youth.Withdrawn}, '2020-01-01', '2020-02-01')
         `;
         const [session] = await sql<{ id: string }[]>`
-          INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+          INSERT INTO program_sessions (program_id, cycle_id, title, date, start_time, end_time)
           VALUES (${open.programId}, ${open.cycleId}, 'Cycle filter attendance', (CURRENT_DATE - 1), TIME '17:00', TIME '18:00') RETURNING id
         `;
         sessionId = session.id;
@@ -541,7 +541,7 @@ describe('Youth API', () => {
 
     it('loads full attendance separately from the canonical profile', async () => {
       const sessions = await sql<{ id: string; date: string }[]>`
-        INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+        INSERT INTO program_sessions (program_id, cycle_id, title, date, start_time, end_time)
         VALUES
           (
             ${softSkillsProgramId}, ${softSkillsCycleId},
@@ -870,7 +870,7 @@ describe('Youth API', () => {
       `;
       const sessions = await sql<{ id: string }[]>`
         INSERT INTO program_sessions (
-          program_id, cycle_id, session_type, theme, date, start_time, end_time, created_by, updated_by
+          program_id, cycle_id, session_type, title, date, start_time, end_time, created_by, updated_by
         )
         VALUES
           (${softSkillsProgramId}, ${softSkillsCycleId}, ${'Regular'}, ${`Youth Attendance A ${Date.now()}`}, (CURRENT_DATE - 2), TIME '17:00', TIME '18:00', ${adminUserId}, ${adminUserId}),
@@ -906,7 +906,7 @@ describe('Youth API', () => {
       openCycleId = openCohort.cycleId;
       const [openSession] = await sql<{ id: string }[]>`
         INSERT INTO program_sessions (
-          program_id, cycle_id, session_type, theme, date, start_time, end_time, created_by, updated_by
+          program_id, cycle_id, session_type, title, date, start_time, end_time, created_by, updated_by
         )
         VALUES (${openProgramId}, ${openCycleId}, ${'Regular'}, 'Open attendance', (CURRENT_DATE - 1), TIME '19:00', TIME '20:00', ${adminUserId}, ${adminUserId})
         RETURNING id

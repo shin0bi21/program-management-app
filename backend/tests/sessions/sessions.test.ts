@@ -99,7 +99,7 @@ describe('Program cycle sessions and attendance API', () => {
       VALUES (${programId}, ${mainCycleId}), (${openProgramId}, ${mainCycleId}), (${unassignedProgramId}, ${mainCycleId})
     `;
     const [session, openSession] = await sql<{ id: string }[]>`
-      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, date, start_time, end_time)
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, title, date, start_time, end_time)
       VALUES
         (${programId}, ${mainCycleId}, ${guestSpeakerType}, 'Communication', ${await addDays(today, 1)}::date, TIME '17:00', TIME '19:30'),
         (${openProgramId}, ${mainCycleId}, ${guestSpeakerType}, 'Friday Drop In', ${await addDays(today, 1)}::date, TIME '17:00', TIME '20:00')
@@ -248,7 +248,7 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('rejects a session without a title or theme', async () => {
+  it('rejects a session without a title', async () => {
     const response = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
@@ -556,7 +556,7 @@ describe('Program cycle sessions and attendance API', () => {
       .post(`/api/programs/${openProgramId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({
-        theme: 'Additional Drop In',
+        title: 'Additional Drop In',
         sessionType: guestSpeakerType,
         date: await addDays(today, 1),
         startTime: '17:00',
@@ -748,7 +748,7 @@ describe('Program cycle sessions and attendance API', () => {
       expect.objectContaining({
         id: sessionId,
         programId, cycleId: mainCycleId,
-        theme: 'Communication',
+        title: 'Communication',
 
         sessionType: 'Guest Speaker',
       }),
@@ -769,7 +769,7 @@ describe('Program cycle sessions and attendance API', () => {
         VALUES (${programId}, ${otherCycle.id})
       `;
       const [otherSession, unrelatedSession] = await sql<{ id: string }[]>`
-        INSERT INTO program_sessions (program_id, cycle_id, theme, date, start_time, end_time)
+        INSERT INTO program_sessions (program_id, cycle_id, title, date, start_time, end_time)
         VALUES
           (${programId}, ${otherCycle.id}, 'Other cycle session', ${await addDays(today, 1)}::date, TIME '12:00', TIME '13:00'),
           (${unassignedProgramId}, ${mainCycleId}, 'Unassigned program session', ${await addDays(today, 1)}::date, TIME '12:00', TIME '13:00')
@@ -910,7 +910,7 @@ describe('Program cycle sessions and attendance API', () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ sessionType: guestSpeakerType, theme: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
+      .send({ sessionType: guestSpeakerType, title: 'Session with logged hours', date: today, startTime: '12:00', endTime: '13:00' });
     expect(created.status).toBe(201);
     const recordedSessionId = created.body.id;
     let entryId: string | undefined;
@@ -940,15 +940,15 @@ describe('Program cycle sessions and attendance API', () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ sessionType: guestSpeakerType, theme: 'Disposable Session', date: await addDays(today, 1), startTime: '17:00', endTime: '19:00' });
+      .send({ sessionType: guestSpeakerType, title: 'Disposable Session', date: await addDays(today, 1), startTime: '17:00', endTime: '19:00' });
     expect(created.status).toBe(201);
     const disposableSessionId = created.body.id;
 
     const updated = await request(app).put(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ theme: 'Updated theme', date: await addDays(today, 1), startTime: '17:30', endTime: '19:00', description: 'Updated description' });
+      .send({ title: 'Updated title', date: await addDays(today, 1), startTime: '17:30', endTime: '19:00', description: 'Updated description' });
     expect(updated.status).toBe(200);
-    expect(updated.body.session.theme).toBe('Updated theme');
+    expect(updated.body.session.title).toBe('Updated title');
     expect((await request(app).delete(`/api/sessions/${disposableSessionId}`)
       .set('Authorization', `Bearer ${staffToken}`)).status).toBe(200);
     expect(await sql`SELECT 1 FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${mainCycleId}`).toHaveLength(2);
@@ -999,7 +999,7 @@ describe('Program cycle sessions and attendance API', () => {
     expect(response.body.programCycle).toEqual(expect.objectContaining({ programId, cycleId: mainCycleId, cycle: expect.any(String) }));
     expect(response.body.youth).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: youthId, sessions: expect.arrayContaining([
-        expect.objectContaining({ id: sessionId, sessionType: 'Guest Speaker', theme: 'Communication', status: 'present' }),
+        expect.objectContaining({ id: sessionId, sessionType: 'Guest Speaker', title: 'Communication', status: 'present' }),
       ]) }),
       expect.objectContaining({ id: secondYouthId, sessions: expect.arrayContaining([
         expect.objectContaining({ id: sessionId, sessionNotes: expect.arrayContaining([

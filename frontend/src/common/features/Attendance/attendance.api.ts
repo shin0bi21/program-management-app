@@ -17,7 +17,7 @@ export interface AttendanceData {
     sessions: Array<{
       id: string;
       sessionType: string;
-      theme: string;
+      title: string;
       date: string;
       startTime: string;
       completed: boolean;

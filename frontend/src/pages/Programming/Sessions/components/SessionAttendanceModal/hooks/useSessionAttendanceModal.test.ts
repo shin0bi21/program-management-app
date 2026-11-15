@@ -20,7 +20,7 @@ vi.mock('../../../sessions.api', () => ({
   setSessionAttendance: vi.fn(),
 }));
 
-const session = makeProgramSession({ enrollmentRequired: true, theme: 'Communication' });
+const session = makeProgramSession({ enrollmentRequired: true, title: 'Communication' });
 const roster = [{
   youthId: 'youth-1',
   firstName: 'Maya',
@@ -77,7 +77,7 @@ describe('useSessionAttendanceModal', () => {
   });
 
   it('submits every checked-in youth as present for an open roster', async () => {
-    const openSession = makeProgramSession({ enrollmentRequired: false, theme: 'Drop In' });
+    const openSession = makeProgramSession({ enrollmentRequired: false, title: 'Drop In' });
     const { result } = renderWorkflow({ session: openSession, roster: [] });
 
     await waitFor(() => expect(result.current.attendanceLoading).toBe(false));

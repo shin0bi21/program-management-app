@@ -89,7 +89,7 @@ describe('Hours API', () => {
       VALUES (${adminId}, ${programId}), (${firstStaffId}, ${programId}), (${secondStaffId}, ${programId})
     `;
     const [session] = await sql<Array<{ id: string }>>`
-      INSERT INTO program_sessions (program_id, cycle_id, session_type, theme, date, start_time, end_time)
+      INSERT INTO program_sessions (program_id, cycle_id, session_type, title, date, start_time, end_time)
       SELECT ${programId}, ${activeCycleId}, 'Regular', 'Hours workshop',
         ${date}::date, TIME '10:00', TIME '12:00'
       RETURNING id

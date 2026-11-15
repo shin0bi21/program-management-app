@@ -36,7 +36,7 @@ describe('session API', () => {
   });
 
   it('sends the date/time edit and attendance commands to their endpoints', () => {
-    const edit = { sessionType: 'Regular', theme: 'Edited', date: '2027-01-12', startTime: '13:00', endTime: '15:00' };
+    const edit = { sessionType: 'Regular', title: 'Edited', date: '2027-01-12', startTime: '13:00', endTime: '15:00' };
     updateSession('session-1', edit);
     expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1', edit);
 
@@ -45,7 +45,7 @@ describe('session API', () => {
   });
 
   it('creates by program and date so the server resolves the assigned cycle', () => {
-    const data = { programId: 'program-1', sessionType: 'Regular', theme: 'Art', date: '2026-10-27' };
+    const data = { programId: 'program-1', sessionType: 'Regular', title: 'Art', date: '2026-10-27' };
     createSession(data);
     expect(apiClient.post).toHaveBeenCalledWith('/sessions', data);
   });

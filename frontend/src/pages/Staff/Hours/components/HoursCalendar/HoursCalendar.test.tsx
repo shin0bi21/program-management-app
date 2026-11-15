@@ -164,7 +164,7 @@ describe('HoursCalendar', () => {
     const props = calendarState.props!;
     const periods = buildInitialDayPeriods('2026-08-10', 3);
     const regularItem = buildItem();
-    const sessionItem = buildItem({ sessionId: 'session-1', sessionLabel: 'Confidence' });
+    const sessionItem = buildItem({ sessionId: 'session-1', sessionTitle: 'Confidence' });
 
     expect(props.rows).toEqual([staffMember]);
     expect(props.selectedRowId).toBe('staff-1');

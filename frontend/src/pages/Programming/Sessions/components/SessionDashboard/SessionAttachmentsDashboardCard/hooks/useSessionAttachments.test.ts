@@ -66,7 +66,7 @@ describe('useSessionAttachments', () => {
 
     const refreshed = { ...attachment, title: 'Refreshed title' };
     act(() => client.setQueryData(['sessions', session.id, 'attachments'], [refreshed]));
-    const refreshedSession = { ...session, theme: 'Updated session theme' };
+    const refreshedSession = { ...session, title: 'Updated session title' };
     rerender({ target: refreshedSession });
 
     await waitFor(() => expect(result.current.editAttachment).toEqual(refreshed));
