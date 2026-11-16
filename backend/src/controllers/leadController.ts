@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
-import { createLead, deleteLead, signUpLead, updateLead, updateLeadStatus } from '../services/outreach/leads/leadService';
+import { deleteLead, setLead, signUpLead, updateLeadStatus } from '../services/outreach/leads/leadService';
 import { getLeads } from '../services/outreach/leads/leadListService';
 import { createLeadNote, deleteLeadNote, getLeadNotes, updateLeadNoteDetails } from '../services/outreach/leads/leadNoteService';
 import type { CreateLeadInput, LeadQuery, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../validation/leadSchemas';
@@ -21,7 +21,7 @@ export const handleGetLeads = async (req: Request, res: Response) => {
  */
 export const handleCreateLead = async (req: Request, res: Response) => {
   const actorId = (req as AuthRequest).user!.userId;
-  res.status(201).json(await createLead(req.body as CreateLeadInput, actorId));
+  res.status(201).json(await setLead(req.body as CreateLeadInput, actorId));
 };
 
 /**
@@ -30,7 +30,7 @@ export const handleCreateLead = async (req: Request, res: Response) => {
  */
 export const handleUpdateLead = async (req: Request, res: Response) => {
   const actorId = (req as AuthRequest).user!.userId;
-  res.json(await updateLead(req.params.id, req.body as UpdateLeadInput, actorId));
+  res.json(await setLead(req.body as UpdateLeadInput, actorId, req.params.id));
 };
 
 /**

@@ -59,6 +59,8 @@ throughout those files; hand authorized fixes to implementation before re-review
 For frontend files, explicitly check function declarations and arrow-function
 helpers against [Rendered Components](../../../docs/frontend/01-ownership.md#rendered-components).
 Record helper placement and caller order in the pattern comparison above.
+For record saves, check the [canonical save flow](../../../docs/backend/services.md#save-a-full-record),
+including upsert identity semantics, protected fields, authorization, and shared error handling.
 Inspect relevant contracts/callers. Compare one
 strong matching implementation; use a second only when the pattern is ambiguous.
 For a new workflow with no implementation analogue, state that and compare its
