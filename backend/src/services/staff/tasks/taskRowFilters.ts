@@ -43,7 +43,7 @@ export function buildTaskFilters(filterValues: TaskFilters) {
     const search = `%${filterValues.search}%`;
     const matchingCategories = getMatchingReferenceIds(TASK_CATEGORY_OPTIONS, filterValues.search);
     filters.push(sql`(
-      CONCAT_WS(' ', task.title, task.details, program.name, staff.first_name, staff.last_name) ILIKE ${search}
+      CONCAT_WS(' ', task.title, task.details, program.title, staff.first_name, staff.last_name) ILIKE ${search}
       OR task.category::text = ANY(${sql.array(matchingCategories)}::text[])
     )`);
   }

@@ -19,13 +19,13 @@ describe('useHoursData', () => {
       { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
     ]);
-    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', title: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       categories: [{ id: 'meeting', name: 'Meeting' }],
       types: [{ id: 'regular', name: 'Regular' }],
     });
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
   });
 

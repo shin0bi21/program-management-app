@@ -4,7 +4,7 @@ import type { CursorPage, CursorRequest } from '../../../../query/types';
 import type { Program, ProgramWeekday } from '../../../../common/features/programs/types';
 
 export interface CreateProgramInput {
-  name: string;
+  title: string;
   description?: string | null;
   enrollmentRequired?: boolean;
   minAge?: number | null;
@@ -40,7 +40,7 @@ export interface ProgramFilters {
   assignedOnly?: boolean;
 }
 
-export function getProgramList(filters: ProgramFilters, pagination: CursorRequest<'name'>, opts?: RequestOptions) {
+export function getProgramList(filters: ProgramFilters, pagination: CursorRequest<'title'>, opts?: RequestOptions) {
   const params = new URLSearchParams({
     sort: pagination.key,
     direction: pagination.direction,

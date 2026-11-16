@@ -10,7 +10,7 @@ describe('reference data API', () => {
 
   it('loads shared cycle and school projections with cancellation', async () => {
     const options = { signal: new AbortController().signal };
-    const cycles = [{ id: 'cycle-1', name: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' }];
+    const cycles = [{ id: 'cycle-1', title: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' }];
     vi.mocked(apiClient.get).mockResolvedValueOnce(cycles).mockResolvedValueOnce([]);
 
     expect(await getCycleReferences(options)).toEqual(cycles);

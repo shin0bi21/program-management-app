@@ -5,7 +5,7 @@ import type { Program } from '../../../../common/features/programs/types';
 import { nextSessionDate } from './sessionSchedule';
 
 const program: Program = {
-  id: 'program-1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
+  id: 'program-1', title: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto',
 };
 

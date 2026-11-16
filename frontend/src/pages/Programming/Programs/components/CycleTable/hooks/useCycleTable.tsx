@@ -17,7 +17,7 @@ interface UseCycleTableOptions {
  */
 export default function useCycleTable({ onEdit, onDelete }: UseCycleTableOptions) {
   const columns = useMemo<TableColumnDef<ProgramCycle>[]>(() => [
-    { id: 'name', header: 'Cycle', accessorFn: cycle => cycle.name },
+    { id: 'title', header: 'Cycle', accessorFn: cycle => cycle.title },
     { id: 'start', header: 'Start', size: 140, accessorFn: cycle => formatShortDate(cycle.startsOn) },
     { id: 'end', header: 'End', size: 140, accessorFn: cycle => formatShortDate(cycle.endsOn) },
     {
@@ -27,7 +27,7 @@ export default function useCycleTable({ onEdit, onDelete }: UseCycleTableOptions
       enableResizing: false,
       enableHiding: false,
       cell: ({ row: { original: cycle } }) => <ActionsMenu
-        ariaLabel={`Actions for ${cycle.name}`}
+        ariaLabel={`Actions for ${cycle.title}`}
         items={[
           { id: 'edit', label: 'Edit Cycle', onClick: () => onEdit(cycle) },
           { id: 'delete', label: 'Delete Cycle', variant: 'danger', onClick: () => onDelete(cycle) },

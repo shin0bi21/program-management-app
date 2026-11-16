@@ -28,13 +28,13 @@ export const programCycleState = sql`
 export const programCycleRowColumns = sql`
   pc.program_id,
 
-  p.name AS program,
+  p.title AS program,
   p.enrollment_required,
   p.min_age,
   p.max_age,
 
   cycle.id AS cycle_id,
-  cycle.name AS cycle,
+  cycle.title AS cycle,
   cycle.starts_on,
   cycle.ends_on,
 

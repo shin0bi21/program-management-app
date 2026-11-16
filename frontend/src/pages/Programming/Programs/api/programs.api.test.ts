@@ -16,11 +16,11 @@ describe('programs API', () => {
     const page = { rows: [], nextCursor: 'next' };
     vi.mocked(apiClient.get).mockResolvedValueOnce(page);
 
-    expect(await getProgramList({ assignedOnly: true }, { key: 'name', direction: 'asc', cursor: 'previous' }, { signal })).toBe(page);
-    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=name&direction=asc&scope=assigned&cursor=previous', { signal });
+    expect(await getProgramList({ assignedOnly: true }, { key: 'title', direction: 'asc', cursor: 'previous' }, { signal })).toBe(page);
+    expect(apiClient.get).toHaveBeenCalledWith('/programs/list?sort=title&direction=asc&scope=assigned&cursor=previous', { signal });
 
-    getProgramList({}, { key: 'name', direction: 'desc' });
-    expect(apiClient.get).toHaveBeenLastCalledWith('/programs/list?sort=name&direction=desc', undefined);
+    getProgramList({}, { key: 'title', direction: 'desc' });
+    expect(apiClient.get).toHaveBeenLastCalledWith('/programs/list?sort=title&direction=desc', undefined);
   });
 
   it('replaces cycle assignments with one atomic request and returns the server result', async () => {
@@ -33,23 +33,23 @@ describe('programs API', () => {
 
   it('preserves create and update fields', () => {
     createProgram({
-      name: 'Future Ready',
+      title: 'Future Ready',
       description: 'Career skills',
       enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     });
-    updateProgram('program-1', { name: 'Job Readiness', description: 'Career skills', enrollmentRequired: false });
+    updateProgram('program-1', { title: 'Job Readiness', description: 'Career skills', enrollmentRequired: false });
 
     expect(apiClient.post).toHaveBeenCalledWith('/programs', {
-      name: 'Future Ready',
+      title: 'Future Ready',
       description: 'Career skills',
       enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
     });
     expect(apiClient.put).toHaveBeenCalledWith('/programs/program-1', {
-      name: 'Job Readiness',
+      title: 'Job Readiness',
       description: 'Career skills',
       enrollmentRequired: false,
     });

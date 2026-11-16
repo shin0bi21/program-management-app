@@ -13,7 +13,7 @@ vi.mock('../../api/programs.api', () => ({
 
 const program: Program = {
   id: 'program-1',
-  name: 'Soft Skills',
+  title: 'Soft Skills',
   description: 'Life skills',
   enrollmentRequired: true,
   minAge: 12,
@@ -49,9 +49,9 @@ describe('ProgramModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    const nameInput = screen.getByRole('textbox', { name: 'Program Name' });
-    await waitFor(() => expect(nameInput.closest('form')).toHaveAttribute('aria-busy', 'true'));
-    expect(nameInput).toBeDisabled();
+    const titleInput = screen.getByRole('textbox', { name: 'Program Title' });
+    await waitFor(() => expect(titleInput.closest('form')).toHaveAttribute('aria-busy', 'true'));
+    expect(titleInput).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Default Session Day' })).toBeDisabled();
     expect(screen.getByLabelText('Default Start Time')).toBeDisabled();
     expect(screen.getByLabelText('Default End Time')).toBeDisabled();

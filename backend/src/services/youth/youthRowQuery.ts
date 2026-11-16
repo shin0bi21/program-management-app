@@ -45,7 +45,7 @@ export function getYouthRows(appliedFilters = sql`TRUE`, query = sql) {
       (
         SELECT json_build_object(
           'programId', program.id,
-          'program', program.name
+          'program', program.title
         )
         FROM programs program
         WHERE program.enrollment_required = TRUE

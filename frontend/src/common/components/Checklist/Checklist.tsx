@@ -5,7 +5,7 @@ import SearchInput from '../SearchInput/SearchInput';
 import './Checklist.css';
 
 interface ChecklistProps {
-  options: readonly { id: string; name: string }[];
+  options: readonly { id: string; label: string }[];
   value: readonly string[];
   onToggle: (value: string) => void;
   ariaLabel: string;
@@ -26,7 +26,7 @@ interface ChecklistProps {
  * @param props.inMenu - Uses checkbox menu items; the caller supplies the surrounding menu and its keyboard navigation.
  * @param props.search - Includes live filtering; choose once for the mounted checklist.
  * @param props.dynamicItems - Reveals 25 choices at a time as the user scrolls or tabs.
- * @example <Checklist options={[{ id: "fall", name: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
+ * @example <Checklist options={[{ id: "fall", label: "Fall 2026" }]} value={["fall"]} onToggle={toggleCycle} ariaLabel="Cycles" /> // Fall 2026 is checked.
  */
 export default function Checklist({
   options,
@@ -73,7 +73,7 @@ export default function Checklist({
                   {checked && <FontAwesomeIcon icon={faCheck} />}
                 </span>
               )}
-              <span className="checklist-label">{option.name}</span>
+              <span className="checklist-label">{option.label}</span>
             </>
           );
 

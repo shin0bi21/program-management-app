@@ -15,7 +15,7 @@ vi.mock('../../api/programCycleAssignments.api', () => ({ getProgramCycleAssignm
 
 const cycle = {
   id: 'cycle-1',
-  name: 'Fall 2026',
+  title: 'Fall 2026',
   startsOn: '2026-09-01',
   endsOn: '2027-01-31',
   state: 'upcoming' as const,

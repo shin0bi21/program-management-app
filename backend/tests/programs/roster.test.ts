@@ -44,7 +44,7 @@ describe('Program cycle roster eligibility', () => {
    */
   async function makeProgram(label: string, enrollmentRequired: boolean, hasAgeLimits: boolean) {
     const [program] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, enrollment_required, min_age, max_age)
+      INSERT INTO programs (title, enrollment_required, min_age, max_age)
       VALUES (${`Roster ${label} ${Date.now()}`}, ${enrollmentRequired}, ${hasAgeLimits ? 12 : null}, ${hasAgeLimits ? 15 : null})
       RETURNING id
     `;

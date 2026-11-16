@@ -18,16 +18,16 @@ export const recommendedProgramId = sql`(
   FROM programs program
   WHERE program.enrollment_required = TRUE
     AND ${leadAge} BETWEEN program.min_age AND program.max_age
-  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
+  ORDER BY program.min_age DESC, program.max_age ASC, program.title ASC
   LIMIT 1
 )`;
 
 const recommendedProgram = sql`(
-  SELECT program.name
+  SELECT program.title
   FROM programs program
   WHERE program.enrollment_required = TRUE
     AND ${leadAge} BETWEEN program.min_age AND program.max_age
-  ORDER BY program.min_age DESC, program.max_age ASC, program.name ASC
+  ORDER BY program.min_age DESC, program.max_age ASC, program.title ASC
   LIMIT 1
 )`;
 

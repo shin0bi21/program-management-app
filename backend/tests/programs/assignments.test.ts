@@ -34,11 +34,11 @@ describe('Program cycle assignments', () => {
 
   beforeEach(async () => {
     const [program] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name) VALUES (${`Assignment ${crypto.randomUUID()}`}) RETURNING id
+      INSERT INTO programs (title) VALUES (${`Assignment ${crypto.randomUUID()}`}) RETURNING id
     `;
     programId = program.id;
     const cycles = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Assignment A ${crypto.randomUUID()}`}, '2026-01-01', '2026-12-31'),
         (${`Assignment B ${crypto.randomUUID()}`}, '2026-01-01', '2026-12-31')
       RETURNING id
@@ -124,12 +124,12 @@ describe('Program cycle assignments', () => {
     expect(scopedPrograms.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: programId })]));
 
     expect((await request(app).put(`/api/programs/${programId}`)
-      .set('Authorization', `Bearer ${managerToken}`).send({ name: 'Manager edited program' })).status).toBe(200);
+      .set('Authorization', `Bearer ${managerToken}`).send({ title: 'Manager edited program' })).status).toBe(200);
     expect((await setCycles([cycleIds[0]], managerToken)).status).toBe(200);
     const futureYear = new Date().getUTCFullYear() + 1;
     const cycle = await request(app).post('/api/cycles')
       .set('Authorization', `Bearer ${managerToken}`)
-      .send({ name: `Manager cycle ${crypto.randomUUID()}`, startsOn: `${futureYear}-01-01`, endsOn: `${futureYear}-12-31`, programIds: [programId] });
+      .send({ title: `Manager cycle ${crypto.randomUUID()}`, startsOn: `${futureYear}-01-01`, endsOn: `${futureYear}-12-31`, programIds: [programId] });
     expect(cycle.status).toBe(201);
     cycleIds.push(cycle.body.cycle.id);
 
@@ -157,7 +157,7 @@ describe('Program cycle assignments', () => {
 
     expect((await setCycles([cycleIds[0]], reader)).status).toBe(403);
     expect((await request(app).post('/api/cycles').set('Authorization', `Bearer ${reader}`)
-      .send({ name: 'Denied', startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [] })).status).toBe(403);
+      .send({ title: 'Denied', startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [] })).status).toBe(403);
     expect((await request(app).post('/api/sessions').set('Authorization', `Bearer ${reader}`)
       .send({})).status).toBe(403);
   });
@@ -173,7 +173,7 @@ describe('Program cycle assignments', () => {
     expect((await request(app).get('/api/programs/cycle-assignments')
       .set('Authorization', `Bearer ${writer}`)).status).toBe(403);
 
-    const cycleInput = { name: `Write-only cycle ${crypto.randomUUID()}`, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [programId] };
+    const cycleInput = { title: `Write-only cycle ${crypto.randomUUID()}`, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [programId] };
     const created = await request(app).post('/api/cycles')
       .set('Authorization', `Bearer ${writer}`).send(cycleInput);
     expect(created.status).toBe(201);
@@ -182,7 +182,7 @@ describe('Program cycle assignments', () => {
     expect(created.body.updatedProgramCycles).toEqual([]);
 
     const updated = await request(app).put(`/api/cycles/${cycleIds[0]}`)
-      .set('Authorization', `Bearer ${writer}`).send({ ...cycleInput, name: `${cycleInput.name} edited` });
+      .set('Authorization', `Bearer ${writer}`).send({ ...cycleInput, title: `${cycleInput.title} edited` });
     expect(updated.status).toBe(200);
     expect(updated.body.updatedProgramCycles).toEqual([]);
 
@@ -191,7 +191,7 @@ describe('Program cycle assignments', () => {
     expect(readableAssignment.body.updatedProgramCycles).toHaveLength(2);
 
     const readableCycle = await request(app).put(`/api/cycles/${cycleIds[0]}`)
-      .set('Authorization', `Bearer ${readerWriter}`).send({ ...cycleInput, name: `${cycleInput.name} edited` });
+      .set('Authorization', `Bearer ${readerWriter}`).send({ ...cycleInput, title: `${cycleInput.title} edited` });
     expect(readableCycle.status).toBe(200);
     expect(readableCycle.body.updatedProgramCycles).toHaveLength(1);
   });
@@ -227,7 +227,7 @@ describe('Program cycle assignments', () => {
 
     const updated = await request(app).put(`/api/cycles/${cycleIds[0]}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Updated canonical cycle', startsOn: '2026-01-02', endsOn: '2026-12-30', programIds: [programId] });
+      .send({ title: 'Updated canonical cycle', startsOn: '2026-01-02', endsOn: '2026-12-30', programIds: [programId] });
     expect(updated.status).toBe(200);
     expect(updated.body.updatedProgramCycles).toEqual([expect.objectContaining({
       programId, cycleId: cycleIds[0], cycle: 'Updated canonical cycle', startsOn: '2026-01-02',
@@ -257,40 +257,40 @@ describe('Program cycle assignments', () => {
   });
 
   it('creates and edits cycle programs atomically while retaining relationships', async () => {
-    const name = `Cycle editor ${crypto.randomUUID()}`;
+    const title = `Cycle editor ${crypto.randomUUID()}`;
     const created = await request(app).post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [programId] });
+      .send({ title, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds: [programId] });
     expect(created.status).toBe(201);
     cycleIds.push(created.body.cycle.id);
     const cycleId = created.body.cycle.id;
 
-    const update = (programIds: string[], updatedName = name) => request(app)
+    const update = (programIds: string[], updatedName = title) => request(app)
       .put(`/api/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: updatedName, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds });
+      .send({ title: updatedName, startsOn: '2026-01-01', endsOn: '2026-12-31', programIds });
     expect((await update([programId], 'Renamed cycle')).status).toBe(200);
     expect(await sql`SELECT program_id FROM program_cycle_assignments WHERE program_id = ${programId} AND cycle_id = ${cycleId}`).toHaveLength(1);
     expect((await update([crypto.randomUUID()], 'Must roll back')).status).toBe(404);
-    expect((await sql`SELECT name FROM program_cycles WHERE id = ${created.body.cycle.id}`)[0].name).toBe('Renamed cycle');
+    expect((await sql`SELECT title FROM program_cycles WHERE id = ${created.body.cycle.id}`)[0].title).toBe('Renamed cycle');
 
     await sql`INSERT INTO program_enrollments (program_id, cycle_id, youth_id) VALUES (${programId}, ${cycleId}, ${youthId})`;
     expect((await update([], 'Must also roll back')).status).toBe(409);
-    expect((await sql`SELECT name FROM program_cycles WHERE id = ${created.body.cycle.id}`)[0].name).toBe('Renamed cycle');
+    expect((await sql`SELECT title FROM program_cycles WHERE id = ${created.body.cycle.id}`)[0].title).toBe('Renamed cycle');
     await sql`DELETE FROM program_enrollments WHERE program_id = ${programId} AND cycle_id = ${cycleId}`;
     expect((await update([])).status).toBe(200);
     expect(await sql`SELECT program_id FROM program_cycle_assignments WHERE cycle_id = ${created.body.cycle.id}`).toHaveLength(0);
   });
 
   it('rejects invalid cycle programs without creating a partial cycle', async () => {
-    const name = `Invalid cycle ${crypto.randomUUID()}`;
-    const input = { name, startsOn: '2026-01-01', endsOn: '2026-12-31' };
+    const title = `Invalid cycle ${crypto.randomUUID()}`;
+    const input = { title, startsOn: '2026-01-01', endsOn: '2026-12-31' };
     expect((await request(app).post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`).send(input)).status).toBe(400);
     expect((await request(app).post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ ...input, programIds: [programId, crypto.randomUUID()] })).status).toBe(404);
-    expect(await sql`SELECT id FROM program_cycles WHERE name = ${name}`).toHaveLength(0);
+    expect(await sql`SELECT id FROM program_cycles WHERE title = ${title}`).toHaveLength(0);
   });
 
   it('serializes concurrent checklist replacements into one complete set', async () => {

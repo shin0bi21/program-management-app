@@ -100,7 +100,7 @@ describe('Tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+      id: 'cycle-1', title: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
     }]);
     calendarTestState.view = 'table';
     calendarTestState.props = null;
@@ -214,8 +214,8 @@ describe('Tasks', () => {
   // Controls and views.
   it('sends multiple selected cycle IDs to the table query', async () => {
     vi.mocked(getCycleReferences).mockResolvedValue([
-      { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
-      { id: 'cycle-2', name: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
+      { id: 'cycle-1', title: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
+      { id: 'cycle-2', title: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
     ]);
     vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, cycleIds: ['cycle-1', 'cycle-2'] });
     renderTasks();

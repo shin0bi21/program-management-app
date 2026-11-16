@@ -151,7 +151,7 @@ function YouthForm({
               <FloatingSelect
                 id="school"
                 value={schoolId ?? ''}
-                options={schools}
+                options={schools.map(({ id, name }) => ({ id, label: name }))}
                 onChange={setSchoolId}
                 placeholder={schoolsLoading ? 'Loading schools...' : 'Select a school'}
                 disabled={submissionComplete || schoolsLoading}
@@ -211,9 +211,9 @@ function YouthForm({
                       ariaLabel={`Relationship ${index + 1}`}
                       value={contact.type}
                       options={[
-                        { id: 'parent', name: 'Parent' },
-                        { id: 'guardian', name: 'Guardian' },
-                        { id: 'sibling', name: 'Sibling' },
+                        { id: 'parent', label: 'Parent' },
+                        { id: 'guardian', label: 'Guardian' },
+                        { id: 'sibling', label: 'Sibling' },
                       ]}
                       onChange={value => handleContactChange(index, 'type', value)}
                       disabled={submissionComplete}

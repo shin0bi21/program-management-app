@@ -47,9 +47,9 @@ export async function getProgramCycleAttendance(programId: string, cycleId: stri
       assignment.program_id,
       assignment.cycle_id,
 
-      cycle.name AS cycle,
+      cycle.title AS cycle,
 
-      program.name AS program,
+      program.title AS program,
       program.enrollment_required
     FROM program_cycle_assignments assignment
     INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id

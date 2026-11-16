@@ -6,7 +6,7 @@ import ProgrammingSection from './ProgrammingSection';
 const programs = [
   {
     id: 'program-1',
-    name: 'Future Ready',
+    title: 'Future Ready',
     description: 'Build communication skills.',
     enrollmentRequired: true,
     minAge: 12,

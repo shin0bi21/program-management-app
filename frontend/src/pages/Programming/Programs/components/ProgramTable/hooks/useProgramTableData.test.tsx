@@ -25,5 +25,5 @@ it('keys the assigned scope and forwards the domain request to the program adapt
 
   expect(getProgramList).toHaveBeenCalledWith(
     filters,
-    { key: 'name', direction: 'asc', cursor: 'next-page' }, { signal });
+    { key: 'title', direction: 'asc', cursor: 'next-page' }, { signal });
 });

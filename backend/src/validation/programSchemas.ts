@@ -9,14 +9,14 @@ export const programQuerySchema = z.object({
 
 export const programListQuerySchema = z.object({
   query: programQuerySchema.shape.query.extend({
-    ...cursorListFields(['name'], 'name', 'asc'),
+    ...cursorListFields(['title'], 'title', 'asc'),
   }),
 });
 
 export type ProgramListQuery = z.infer<typeof programListQuerySchema.shape.query>;
 
 const programBodySchema = z.object({
-    name: z.string().trim().min(1, 'Program name is required').max(120),
+    title: z.string().trim().min(1, 'Program title is required').max(120),
     description: z.string().trim().max(2000).nullable().optional(),
     defaultDayOfWeek: z.enum(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']).default('tuesday'),
     defaultStartTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('17:00'),

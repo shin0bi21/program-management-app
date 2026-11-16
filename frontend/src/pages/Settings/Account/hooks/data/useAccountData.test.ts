@@ -19,7 +19,7 @@ describe('useAccountData', () => {
     const retryPrograms = vi.fn();
     vi.mocked(useProgramReferences).mockReturnValue({
       rows: [{
-        id: 'program-1', name: 'Soft Skills',
+        id: 'program-1', title: 'Soft Skills',
       }],
       upsert: vi.fn(), remove: vi.fn(),
       loading: false,

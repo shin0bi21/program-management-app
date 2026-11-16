@@ -14,7 +14,7 @@ const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(
 
 const programs: Program[] = [{
   id: 'program-1',
-  name: 'Future Ready',
+  title: 'Future Ready',
   description: null,
   enrollmentRequired: true,
   minAge: 12,

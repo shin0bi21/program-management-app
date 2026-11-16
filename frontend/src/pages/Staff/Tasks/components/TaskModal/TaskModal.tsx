@@ -72,7 +72,7 @@ export default function TaskModal(props: TaskModalProps) {
           <FloatingSelect
             id="task-staff"
             value={modal.draft.staffId}
-            options={staff}
+            options={staff.map(({ id, name }) => ({ id, label: name }))}
             onChange={value => modal.updateDraft('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"
@@ -85,7 +85,7 @@ export default function TaskModal(props: TaskModalProps) {
             <FloatingSelect
               id="task-program"
               value={modal.draft.programId}
-              options={programs}
+              options={programs.map(({ id, title }) => ({ id, label: title }))}
               onChange={value => modal.updateDraft('programId', value)}
               placeholder="Select a program"
               ariaLabel="Task program"
@@ -98,7 +98,7 @@ export default function TaskModal(props: TaskModalProps) {
             <FloatingSelect
               id="task-category"
               value={modal.draft.category}
-              options={categories}
+              options={categories.map(({ id, name }) => ({ id, label: name }))}
               onChange={value => modal.updateDraft('category', value as TaskCategory)}
               ariaLabel="Task category"
               disabled={modal.submissionComplete}

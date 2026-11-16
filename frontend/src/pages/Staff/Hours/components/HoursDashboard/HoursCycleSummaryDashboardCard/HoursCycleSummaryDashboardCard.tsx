@@ -27,7 +27,7 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle 
   const breakdownData = summary ? {
     total: summary.averageHours,
     title: staff?.name ?? '',
-    subtitle: `${cycle?.name ?? ''} · Biweekly Average`,
+    subtitle: `${cycle?.title ?? ''} · Biweekly Average`,
     breakdown: summary.breakdown,
   } : null;
   const emptyMessage = staff
@@ -42,11 +42,11 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle 
   }
 
   return <DashboardCard
-    title={`Average Biweekly Hours${cycle ? ` - ${cycle.name}` : ''}`}
+    title={`Average Biweekly Hours${cycle ? ` - ${cycle.title}` : ''}`}
     loading={state.status === 'loading'}
     className="dashboard-card--short"
     details={[
-      { label: 'Cycle', value: cycle?.name },
+      { label: 'Cycle', value: cycle?.title },
       { label: 'Biweekly Average', value: summary?.averageHours.toFixed(2) },
     ]}
     action={<HoursBreakdown

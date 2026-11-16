@@ -8,7 +8,7 @@ const app = createApp();
 
 interface ListedProgram {
   id: string;
-  name: string;
+  title: string;
 }
 
 describe('Programs table list', () => {
@@ -33,10 +33,10 @@ describe('Programs table list', () => {
     adminToken = generateToken(adminId, 'admin');
     managerToken = generateToken(managerId, 'project_manager');
 
-    const fixtures = Array.from({ length: 3 }, (_, index) => ({ name: `${prefix}-${index}` }));
+    const fixtures = Array.from({ length: 3 }, (_, index) => ({ title: `${prefix}-${index}` }));
     assigned = await Promise.all(fixtures.map(async fixture => {
       const [program] = await sql<ListedProgram[]>`
-        INSERT INTO programs (name) VALUES (${fixture.name}) RETURNING id, name
+        INSERT INTO programs (title) VALUES (${fixture.title}) RETURNING id, title
       `;
       return program;
     }));
@@ -44,7 +44,7 @@ describe('Programs table list', () => {
       INSERT INTO user_program_assignments ${sql(assigned.map(program => ({ user_id: staffId, program_id: program.id })), 'user_id', 'program_id')}
     `;
     const [unrelated] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name) VALUES (${`${prefix}-unrelated`}) RETURNING id
+      INSERT INTO programs (title) VALUES (${`${prefix}-unrelated`}) RETURNING id
     `;
     unrelatedId = unrelated.id;
   });
@@ -83,7 +83,7 @@ describe('Programs table list', () => {
     const program = assigned[2];
     const updated = await request(app).put(`/api/programs/${program.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: program.name, description: 'Edited table row', enrollmentRequired: false, minAge: 12, maxAge: 16 });
+      .send({ title: program.title, description: 'Edited table row', enrollmentRequired: false, minAge: 12, maxAge: 16 });
     expect(updated.status).toBe(200);
 
     const response = await list().query({ scope: 'assigned' });

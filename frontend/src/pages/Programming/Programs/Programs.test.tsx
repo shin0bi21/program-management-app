@@ -8,7 +8,7 @@ import { getProgramCycleAssignments } from './api/programCycleAssignments.api';
 import Programs from './Programs';
 
 vi.mock('./components/ProgramCyclesModal/ProgramCyclesModal', () => ({
-  default: ({ program, onClose }: { program: Program; onClose: () => void }) => <div role="dialog" aria-label={`Assignments for ${program.name}`}><button onClick={onClose}>Close assignments</button></div>,
+  default: ({ program, onClose }: { program: Program; onClose: () => void }) => <div role="dialog" aria-label={`Assignments for ${program.title}`}><button onClick={onClose}>Close assignments</button></div>,
 }));
 
 vi.mock('./api/programCycleAssignments.api', () => ({ getProgramCycleAssignments: vi.fn() }));
@@ -62,15 +62,15 @@ describe('Programs', () => {
     }]);
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     programState.programs = [{
-      id: 'program-1', name: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+      id: 'program-1', title: 'Soft Skills', description: 'Life skills', enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     }];
-    programmingApi.getProgramReferences.mockImplementation(async () => programState.programs.map(({ id, name }) => ({ id, name })));
+    programmingApi.getProgramReferences.mockImplementation(async () => programState.programs.map(({ id, title }) => ({ id, title })));
     programsApi.getProgramList.mockImplementation(async () => ({ rows: programState.programs, nextCursor: null }));
     programmingApi.getCycleList.mockResolvedValue({ rows: [{
-      id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
+      id: 'cycle-1', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
     }], nextCursor: null });
     programmingApi.getCycleReferences.mockResolvedValue([{
-      id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
+      id: 'cycle-1', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
     }]);
   });
 
@@ -159,15 +159,15 @@ describe('Programs', () => {
 
   it('updates the selected program overview after editing', async () => {
     const user = userEvent.setup();
-    const saved = { ...programState.programs[0], name: 'Updated Skills' };
+    const saved = { ...programState.programs[0], title: 'Updated Skills' };
     programsApi.updateProgram.mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
     await user.click(await screen.findByText('Soft Skills'));
     await user.click(screen.getByRole('button', { name: 'Actions for Soft Skills' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit Program' }));
 
-    await user.clear(screen.getByRole('textbox', { name: 'Program Name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Program Name' }), saved.name);
+    await user.clear(screen.getByRole('textbox', { name: 'Program Title' }));
+    await user.type(screen.getByRole('textbox', { name: 'Program Title' }), saved.title);
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
@@ -179,13 +179,13 @@ describe('Programs', () => {
   it('creates programs from the Programs header', async () => {
     const user = userEvent.setup();
     const created = {
-      id: 'program-2', name: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+      id: 'program-2', title: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
     programsApi.createProgram.mockResolvedValue({ program: created, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: '+ Add Program' }));
-    await user.type(screen.getByRole('textbox', { name: 'Program Name' }), 'Job Readiness');
+    await user.type(screen.getByRole('textbox', { name: 'Program Title' }), 'Job Readiness');
     await user.click(screen.getByRole('button', { name: 'Default Session Day' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Tuesday' }));
     await user.type(screen.getByLabelText('Default Start Time'), '17:00');
@@ -201,7 +201,7 @@ describe('Programs', () => {
   it('keeps the cycle query alive while editing and returns to the saved row without refetching', async () => {
     const user = userEvent.setup();
     programmingApi.setProgramCycle.mockResolvedValue({
-      cycle: { id: 'cycle-1', name: 'Updated cycle', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming' },
+      cycle: { id: 'cycle-1', title: 'Updated cycle', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming' },
       updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [],
     });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
@@ -210,8 +210,8 @@ describe('Programs', () => {
     await user.click(await screen.findByRole('button', { name: 'Actions for Fall 2026' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit Cycle' }));
 
-    await user.clear(screen.getByRole('textbox', { name: 'Cycle name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Cycle name' }), 'Updated cycle');
+    await user.clear(screen.getByRole('textbox', { name: 'Cycle Title' }));
+    await user.type(screen.getByRole('textbox', { name: 'Cycle Title' }), 'Updated cycle');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('cell', { name: 'Updated cycle' }, { timeout: 3000 })).toBeInTheDocument();

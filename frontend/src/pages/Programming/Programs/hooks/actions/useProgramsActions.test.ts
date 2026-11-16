@@ -13,7 +13,7 @@ vi.mock('../../api/cycles.api', () => ({
 
 const cycle = {
   id: 'cycle-1',
-  name: 'Fall 2026',
+  title: 'Fall 2026',
   startsOn: '2026-09-01',
   endsOn: '2027-01-31',
   state: 'upcoming' as const,
@@ -25,7 +25,7 @@ describe('useProgramsActions', () => {
   it('updates the selected program and refreshes its affected references', () => {
     const client = createTestQueryClient();
     const program: Program = {
-      id: 'program-1', name: 'Alpha', enrollmentRequired: true, minAge: 12, maxAge: 15,
+      id: 'program-1', title: 'Alpha', enrollmentRequired: true, minAge: 12, maxAge: 15,
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
     const tableKey = ['programs', 'table'];
@@ -35,7 +35,7 @@ describe('useProgramsActions', () => {
     const { result } = renderHook(() => useProgramsActions({
       programTableQueryKey: tableKey, onProgramSynced, onCycleDeleted: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
-    const saved = { ...program, name: 'Zulu' };
+    const saved = { ...program, title: 'Zulu' };
     act(() => result.current.syncProgram({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update'));
 
     expect(onProgramSynced).toHaveBeenCalledWith(saved);
@@ -53,7 +53,7 @@ describe('useProgramsActions', () => {
       programTableQueryKey: tableKey, onProgramSynced, onCycleDeleted: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
     const program: Program = {
-      id: 'program-1', name: 'New program', enrollmentRequired: true, minAge: null, maxAge: null,
+      id: 'program-1', title: 'New program', enrollmentRequired: true, minAge: null, maxAge: null,
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
 
@@ -71,7 +71,7 @@ describe('useProgramsActions', () => {
       programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(), onCycleDeleted: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
     client.setQueryData(referenceDataKeys.cycles, [cycle]);
-    const saved = { ...cycle, name: 'Updated cycle' };
+    const saved = { ...cycle, title: 'Updated cycle' };
 
     act(() => result.current.syncCycle({ cycle: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update'));
 

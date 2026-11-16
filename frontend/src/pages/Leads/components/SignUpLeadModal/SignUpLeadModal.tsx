@@ -124,7 +124,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
             ariaLabel="Program and cycle enrollment"
             value={workflow.selectedPairKey}
             onChange={workflow.selectProgramCycle}
-            options={programCycleOptions}
+            options={programCycleOptions.map(({ id, name }) => ({ id, label: name }))}
             placeholder={workflow.loading ? 'Loading program cycles...' : 'Do not enroll yet'}
             disabled={workflow.loading || workflow.submissionComplete}
           />
@@ -148,7 +148,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
               ariaLabel="Type of note"
               value={workflow.noteCategory}
               onChange={value => workflow.selectNoteCategory(value as LeadNoteCategory)}
-              options={noteCategoryOptions}
+              options={noteCategoryOptions.map(({ id, name }) => ({ id, label: name }))}
               disabled={workflow.submissionComplete}
             />
           </section>

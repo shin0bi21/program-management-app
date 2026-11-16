@@ -1,7 +1,7 @@
 export interface FilterCardOption {
   /** Stable choice key, unique within its category and containing no null characters. */
   id: string;
-  name: string;
+  label: string;
 }
 
 export interface FilterCardCategory {

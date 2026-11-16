@@ -9,11 +9,11 @@ import ProgramTable from './ProgramTable';
 
 const PROGRAM_TABLE_QUERY_KEY = ['programs', 'table'] as const;
 const program: Program = {
-  id: 'program-1', name: 'Art', enrollmentRequired: true, minAge: null, maxAge: null,
+  id: 'program-1', title: 'Art', enrollmentRequired: true, minAge: null, maxAge: null,
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
 };
 const cycle = {
-  id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' as const,
+  id: 'cycle-1', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' as const,
 };
 
 /**
@@ -37,7 +37,7 @@ export function ManagementTables() {
       table={<ProgramTable
         assignments={{
           assignments: [{
-            programId: program.id, program: program.name, cycleId: cycle.id, cycle: cycle.name,
+            programId: program.id, program: program.title, cycleId: cycle.id, cycle: cycle.title,
             startsOn: cycle.startsOn, endsOn: cycle.endsOn, state: cycle.state,
             enrollmentRequired: true, minAge: null, maxAge: null, enrolledCount: 0,
             uniqueAttendeeCount: 0,

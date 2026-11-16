@@ -347,7 +347,7 @@ async function readHomepagePrograms() {
     )
     SELECT
       program.id AS program_id,
-      program.name AS program,
+      program.title AS program,
       program.description AS program_description,
       program.enrollment_required,
       program.min_age,
@@ -362,7 +362,7 @@ async function readHomepagePrograms() {
       AND ranked.program_session_order <= 3
     ORDER BY
       program.min_age ASC NULLS FIRST,
-      program.name,
+      program.title,
       ranked.session_date,
       ranked.session_start_time,
       ranked.session_id
@@ -371,7 +371,7 @@ async function readHomepagePrograms() {
   // 2. Group session rows under each program, retaining empty programs.
   const programs = new Map<string, {
     id: string;
-    name: string;
+    title: string;
     description: string | null;
     enrollmentRequired: boolean;
     minAge: number | null;
@@ -384,7 +384,7 @@ async function readHomepagePrograms() {
     if (!program) {
       program = {
         id: row.programId,
-        name: row.program,
+        title: row.program,
         description: row.programDescription,
         enrollmentRequired: row.enrollmentRequired,
         minAge: row.minAge,

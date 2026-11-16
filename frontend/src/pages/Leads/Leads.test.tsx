@@ -37,7 +37,7 @@ vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi
 
 vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
   ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
-  useProgramReferences: () => ({ rows: [{ id: 'program-1', name: 'Future Ready' }], loading: false, error: '' }),
+  useProgramReferences: () => ({ rows: [{ id: 'program-1', title: 'Future Ready' }], loading: false, error: '' }),
 }));
 
 vi.mock('../Programming/Programs/api/programCycleAssignments.api', () => ({

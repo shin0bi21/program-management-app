@@ -16,7 +16,7 @@ const staff = [
   { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
   { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
 ] as const;
-const programs = [{ id: 'program-1', name: 'Soft Skills' }];
+const programs = [{ id: 'program-1', title: 'Soft Skills' }];
 const categories = [
   { id: 'program_delivery' as const, name: 'Program Delivery' },
   { id: 'meeting' as const, name: 'Meeting' },

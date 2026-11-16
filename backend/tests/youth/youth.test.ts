@@ -23,7 +23,7 @@ describe('Youth API', () => {
     const admin = await seedTestUser({ email: `youth-admin-${Date.now()}@test.local`, role: 'admin' });
     adminUserId = admin.userId;
     adminToken = generateToken(admin.userId, 'admin', admin.email);
-    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE title = 'Soft Skills'`;
     softSkillsProgramId = program.id;
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
       SELECT (CURRENT_DATE - 30)::text AS starts_on,
@@ -69,7 +69,7 @@ describe('Youth API', () => {
         SELECT id FROM programs WHERE enrollment_required = FALSE LIMIT 1
       `;
       const [jobProgram] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE name = 'Job Readiness'
+        SELECT id FROM programs WHERE title = 'Job Readiness'
       `;
 
       try {
@@ -896,7 +896,7 @@ describe('Youth API', () => {
       `;
 
       const [openProgram] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
+        SELECT id FROM programs WHERE enrollment_required = FALSE ORDER BY title LIMIT 1
       `;
       const openCohort = await seedTestProgramCycle({
         programId: openProgram.id,

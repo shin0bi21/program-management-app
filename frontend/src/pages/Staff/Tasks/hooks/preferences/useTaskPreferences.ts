@@ -106,16 +106,16 @@ export default function useTaskPreferences({
     {
       id: 'staffIds' as const,
       label: 'Staff',
-      options: staff,
+      options: staff.map(({ id, name }) => ({ id, label: name })),
     },
     {
       id: 'programIds' as const,
       label: 'Program',
-      options: programs,
+      options: programs.map(({ id, title }) => ({ id, label: title })),
     },
-    { id: 'cycleIds' as const, label: 'Cycle', options: cycles },
-    { id: 'categories' as const, label: 'Category', options: referenceData?.categories ?? [] },
-    { id: 'statuses' as const, label: 'Status', options: referenceData?.statuses ?? [] },
+    { id: 'cycleIds' as const, label: 'Cycle', options: cycles.map(({ id, title }) => ({ id, label: title })) },
+    { id: 'categories' as const, label: 'Category', options: (referenceData?.categories ?? []).map(({ id, name }) => ({ id, label: name })) },
+    { id: 'statuses' as const, label: 'Status', options: (referenceData?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
   ], [referenceData, cycles, staff, programs]);
 
   const filterValues = useMemo(() => ({

@@ -219,7 +219,7 @@ const getProgramId = (program: Program) => program.id;
  * @example renderProgramRow(context) // program display name
  */
 function renderProgramRow({ row }: RenderRowContext<Program>) {
-  return <span>{row.name}</span>;
+  return <span>{row.title}</span>;
 }
 
 /**

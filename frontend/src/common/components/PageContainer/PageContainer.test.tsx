@@ -23,7 +23,7 @@ function makeControls() {
       apply: vi.fn(),
     },
     filters: {
-      definitions: [{ id: 'statuses', label: 'Status', options: [{ id: 'active', name: 'Active' }] }],
+      definitions: [{ id: 'statuses', label: 'Status', options: [{ id: 'active', label: 'Active' }] }],
       values: { statuses: ['active'] },
       apply: vi.fn(),
       clear: vi.fn(),

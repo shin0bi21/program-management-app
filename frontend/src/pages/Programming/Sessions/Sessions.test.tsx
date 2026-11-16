@@ -29,7 +29,7 @@ const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [{
     id: 'program-1',
-    name: 'Soft Skills',
+    title: 'Soft Skills',
     description: null,
 
     defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
@@ -123,7 +123,7 @@ describe('Sessions', () => {
     auth.permissions = ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
     programState.programs = [{
       id: 'program-1',
-      name: 'Soft Skills',
+      title: 'Soft Skills',
       description: null,
 
       defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
@@ -137,9 +137,9 @@ describe('Sessions', () => {
       { id: 'Field Trip', name: 'Field Trip' },
     ]);
     getCycleReferences.mockResolvedValue([{
-      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
-      id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
+      id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
     }]);
     getProgramCycleAssignments.mockResolvedValue([
       {

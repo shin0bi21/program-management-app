@@ -118,7 +118,7 @@ export default function SelectOptions({
             onMouseDown={event => event.preventDefault()}
             onClick={() => onSelect(option.id)}
           >
-            {option.name}
+            {option.label}
           </div>
         ))}
       </div>
@@ -126,12 +126,12 @@ export default function SelectOptions({
         <span role="status" className="floating-select-empty">No matching options.</span>
       )}
       {activeOption && actions.length > 0 && (
-        <div className="floating-select-option-actions" role="group" aria-label={`Actions for ${activeOption.name}`}>
+        <div className="floating-select-option-actions" role="group" aria-label={`Actions for ${activeOption.label}`}>
           {actions.map(optionAction => (
             <button
               key={optionAction.label}
               type="button"
-              aria-label={`${optionAction.label} ${activeOption.name}`}
+              aria-label={`${optionAction.label} ${activeOption.label}`}
               className={`floating-menu-action floating-select-option-action${optionAction.variant === 'danger' ? ' floating-select-option-action--danger' : ''}`}
               onClick={() => runAction(optionAction.onSelect)}
             >

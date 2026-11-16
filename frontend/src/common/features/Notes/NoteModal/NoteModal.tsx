@@ -69,7 +69,7 @@ export default function NoteModal({
             id={`${formId}-category`}
             ariaLabel={categoryLabel}
             value={category}
-            options={categoryOptions}
+            options={categoryOptions.map(({ id, name }) => ({ id, label: name }))}
             onChange={onCategoryChange}
             disabled={categoryDisabled || submissionComplete}
           />

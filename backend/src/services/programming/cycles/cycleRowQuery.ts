@@ -2,7 +2,7 @@ import { sql } from '../../../db/client';
 
 export interface CycleRow {
   id: string;
-  name: string;
+  title: string;
   startsOn: string;
   endsOn: string;
   state: 'active' | 'upcoming' | 'completed';
@@ -17,7 +17,7 @@ export const cycleState = sql`
 `;
 export const cycleRowColumns = sql`
   cycle.id,
-  cycle.name,
+  cycle.title,
   cycle.starts_on,
   cycle.ends_on,
 

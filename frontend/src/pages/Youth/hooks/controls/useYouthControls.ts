@@ -62,12 +62,12 @@ export function useYouthControls({
     {
       id: 'programIds' as const,
       label: 'Program',
-      options: programs,
+      options: programs.map(({ id, title }) => ({ id, label: title })),
     },
     {
       id: 'cycleIds' as const,
       label: 'Cycle',
-      options: cycles,
+      options: cycles.map(({ id, title }) => ({ id, label: title })),
     },
   ], [programs, cycles]);
 

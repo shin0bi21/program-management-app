@@ -15,7 +15,7 @@ vi.mock('../../../api/programs.api', () => ({
 
 const program: Program = {
   id: 'program-1',
-  name: 'Soft Skills',
+  title: 'Soft Skills',
   description: 'Life skills',
   enrollmentRequired: true,
   minAge: 12,
@@ -34,7 +34,7 @@ describe('useProgramModal', () => {
   });
 
   it('creates a normalized program and returns the saved record', async () => {
-    const saved = { ...program, id: 'program-2', name: 'Job Readiness' };
+    const saved = { ...program, id: 'program-2', title: 'Job Readiness' };
     vi.mocked(createProgram).mockResolvedValue({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
@@ -42,7 +42,7 @@ describe('useProgramModal', () => {
       onSaved,
     }));
     act(() => {
-      result.current.updateDraft('name', '  Job Readiness  ');
+      result.current.updateDraft('title', '  Job Readiness  ');
       result.current.updateDraft('defaultDayOfWeek', 'tuesday');
       result.current.updateDraft('defaultStartTime', '17:00');
       result.current.updateDraft('defaultEndTime', '19:30');
@@ -55,7 +55,7 @@ describe('useProgramModal', () => {
     await act(async () => result.current.submit());
 
     expect(createProgram).toHaveBeenCalledWith({
-      name: 'Job Readiness',
+      title: 'Job Readiness',
       description: null,
       enrollmentRequired: true,
       minAge: 16,
@@ -76,7 +76,7 @@ describe('useProgramModal', () => {
       onSaved,
     }));
     expect(result.current.draft).toEqual({
-      name: 'Soft Skills',
+      title: 'Soft Skills',
       description: 'Life skills',
       enrollmentRequired: true,
       minAge: '12',
@@ -91,7 +91,7 @@ describe('useProgramModal', () => {
     await act(async () => result.current.submit());
 
     expect(updateProgram).toHaveBeenCalledWith(program.id, {
-      name: 'Soft Skills',
+      title: 'Soft Skills',
       description: 'Life skills',
       enrollmentRequired: false,
       minAge: 12,
@@ -115,7 +115,7 @@ describe('useProgramModal', () => {
       onSaved: vi.fn(),
     }));
     act(() => {
-      result.current.updateDraft('name', 'Job Readiness');
+      result.current.updateDraft('title', 'Job Readiness');
       result.current.updateDraft('minAge', minAge);
       result.current.updateDraft('maxAge', maxAge);
     });
@@ -156,14 +156,14 @@ describe('useProgramModal', () => {
   });
 
   it('reports a save failure and allows retry', async () => {
-    vi.mocked(createProgram).mockRejectedValueOnce(new Error('Program name already exists'));
+    vi.mocked(createProgram).mockRejectedValueOnce(new Error('Program title already exists'));
     const onSaved = vi.fn();
     const { result } = renderHook(() => useProgramModal({
       program: null,
       onSaved,
     }));
     act(() => {
-      result.current.updateDraft('name', 'Soft Skills');
+      result.current.updateDraft('title', 'Soft Skills');
       result.current.updateDraft('defaultDayOfWeek', 'tuesday');
       result.current.updateDraft('defaultStartTime', '17:00');
       result.current.updateDraft('defaultEndTime', '19:30');
@@ -171,7 +171,7 @@ describe('useProgramModal', () => {
 
     await act(async () => result.current.submit());
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.statusMessage).toBe('Program name already exists');
+    expect(result.current.statusMessage).toBe('Program title already exists');
     expect(onSaved).not.toHaveBeenCalled();
 
     await act(async () => result.current.submit());

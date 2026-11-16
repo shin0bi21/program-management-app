@@ -40,11 +40,11 @@ describe('Page-authorized reference data', () => {
     await sql`UPDATE user_credentials SET status = 'inactive' WHERE user_id = ${inactiveId}`;
 
     const [assigned] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, description, min_age, max_age)
+      INSERT INTO programs (title, description, min_age, max_age)
       VALUES (${`Assigned reference ${stamp}`}, 'Private scheduling detail', 12, 19) RETURNING id
     `;
     const [other] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name) VALUES (${`Other reference ${stamp}`}) RETURNING id
+      INSERT INTO programs (title) VALUES (${`Other reference ${stamp}`}) RETURNING id
     `;
     assignedProgramId = assigned.id;
     otherProgramId = other.id;
@@ -53,7 +53,7 @@ describe('Page-authorized reference data', () => {
       VALUES (${staffId}, ${assignedProgramId}), (${sharedId}, ${assignedProgramId}), (${managerId}, ${assignedProgramId})
     `;
     const [cycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Reference cycle ${stamp}`}, CURRENT_DATE - 1, CURRENT_DATE + 7) RETURNING id
     `;
     cycleId = cycle.id;
@@ -82,33 +82,33 @@ describe('Page-authorized reference data', () => {
   ])('allows minimal program and cycle metadata for %s', async permission => {
     const programs = await get('/reference-data/programs', [permission]);
     expect(programs.status).toBe(200);
-    expect(programs.body).toContainEqual({ id: assignedProgramId, name: expect.any(String) });
-    expect(programs.body).toContainEqual({ id: otherProgramId, name: expect.any(String) });
-    for (const program of programs.body) expect(Object.keys(program).sort()).toEqual(['id', 'name']);
+    expect(programs.body).toContainEqual({ id: assignedProgramId, title: expect.any(String) });
+    expect(programs.body).toContainEqual({ id: otherProgramId, title: expect.any(String) });
+    for (const program of programs.body) expect(Object.keys(program).sort()).toEqual(['id', 'title']);
 
     const cycles = await get('/reference-data/cycles', [permission]);
     expect(cycles.status).toBe(200);
     expect(cycles.body).toContainEqual({
-      id: cycleId, name: expect.any(String), startsOn: expect.any(String), endsOn: expect.any(String), state: 'active',
+      id: cycleId, title: expect.any(String), startsOn: expect.any(String), endsOn: expect.any(String), state: 'active',
     });
-    for (const cycle of cycles.body) expect(Object.keys(cycle).sort()).toEqual(['endsOn', 'id', 'name', 'startsOn', 'state']);
+    for (const cycle of cycles.body) expect(Object.keys(cycle).sort()).toEqual(['endsOn', 'id', 'startsOn', 'state', 'title']);
   });
 
   it('validates assignedOnly and scopes assigned labels through program policy', async () => {
     const assigned = await get('/reference-data/programs?assignedOnly=true', ['read:sessions']);
     expect(assigned.status).toBe(200);
-    expect(assigned.body).toEqual([{ id: assignedProgramId, name: expect.any(String) }]);
+    expect(assigned.body).toEqual([{ id: assignedProgramId, title: expect.any(String) }]);
     const all = await get('/reference-data/programs?assignedOnly=false', ['read:sessions']);
-    expect(all.body).toContainEqual({ id: otherProgramId, name: expect.any(String) });
+    expect(all.body).toContainEqual({ id: otherProgramId, title: expect.any(String) });
     const admin = await get('/reference-data/programs?assignedOnly=true', ['read:programs'], adminId, 'admin');
-    expect(admin.body).toContainEqual({ id: otherProgramId, name: expect.any(String) });
+    expect(admin.body).toContainEqual({ id: otherProgramId, title: expect.any(String) });
     expect((await get('/reference-data/programs?assignedOnly=anything', ['read:sessions'])).status).toBe(400);
   });
 
   it('serves own assigned labels without a feature permission while protecting unrestricted labels', async () => {
     const assigned = await get('/reference-data/programs?assignedOnly=true', []);
     expect(assigned.status).toBe(200);
-    expect(assigned.body).toEqual([{ id: assignedProgramId, name: expect.any(String) }]);
+    expect(assigned.body).toEqual([{ id: assignedProgramId, title: expect.any(String) }]);
     const unassigned = await get('/reference-data/programs?assignedOnly=true', [], unrelatedId);
     expect(unassigned.status).toBe(200);
     expect(unassigned.body).toEqual([]);
@@ -120,8 +120,8 @@ describe('Page-authorized reference data', () => {
 
     const accountOptions = await get('/reference-data/programs', ['write:accounts']);
     expect(accountOptions.status).toBe(200);
-    expect(accountOptions.body).toContainEqual({ id: otherProgramId, name: expect.any(String) });
-    for (const program of accountOptions.body) expect(Object.keys(program).sort()).toEqual(['id', 'name']);
+    expect(accountOptions.body).toContainEqual({ id: otherProgramId, title: expect.any(String) });
+    for (const program of accountOptions.body) expect(Object.keys(program).sort()).toEqual(['id', 'title']);
     expect((await get('/programs', ['write:accounts'])).status).toBe(403);
     expect((await get('/reference-data/cycles', ['write:accounts'])).status).toBe(403);
     expect((await get('/reference-data/cycles', [])).status).toBe(403);

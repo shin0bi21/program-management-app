@@ -22,9 +22,9 @@ const dropInId = '22222222-2222-4222-8222-222222222222';
 describe('AccountModal program assignments', () => {
   beforeEach(() => {
     vi.mocked(getProgramReferences).mockResolvedValue([
-      { id: softSkillsId, name: 'Soft Skills' },
-      { id: jobReadinessId, name: 'Job Readiness' },
-      { id: dropInId, name: 'Drop In' },
+      { id: softSkillsId, title: 'Soft Skills' },
+      { id: jobReadinessId, title: 'Job Readiness' },
+      { id: dropInId, title: 'Drop In' },
     ]);
     vi.mocked(inviteAccount).mockResolvedValue({
       id: '33333333-3333-4333-8333-333333333333',

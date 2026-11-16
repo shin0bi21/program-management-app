@@ -3,7 +3,7 @@ import { useOptionSearch } from '../../../hooks/useOptionSearch';
 
 interface ChecklistOption {
   id: string;
-  name: string;
+  label: string;
 }
 
 interface ChecklistItemsOptions {

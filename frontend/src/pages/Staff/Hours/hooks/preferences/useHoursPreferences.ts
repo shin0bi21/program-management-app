@@ -106,23 +106,23 @@ export default function useHoursPreferences({
     ...(role === 'admin' ? [{
       id: 'staffIds' as const,
       label: 'Staff',
-      options: staff,
+      options: staff.map(({ id, name }) => ({ id, label: name })),
     }] : []),
     {
       id: 'programIds' as const,
       label: 'Program',
       options: [
-        { id: 'general', name: 'General' },
-        ...programs,
+        { id: 'general', label: 'General' },
+        ...programs.map(({ id, title }) => ({ id, label: title })),
       ],
     },
     {
       id: 'cycleIds' as const,
       label: 'Cycle',
-      options: cycles,
+      options: cycles.map(({ id, title }) => ({ id, label: title })),
     },
-    { id: 'types' as const, label: 'Type', options: types },
-    { id: 'categories' as const, label: 'Category', options: categories },
+    { id: 'types' as const, label: 'Type', options: types.map(({ id, name }) => ({ id, label: name })) },
+    { id: 'categories' as const, label: 'Category', options: categories.map(({ id, name }) => ({ id, label: name })) },
   ], [categories, cycles, programs, staff, role, types]);
 
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {

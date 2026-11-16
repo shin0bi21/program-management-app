@@ -17,7 +17,7 @@ describe('shared reference queries', () => {
     vi.mocked(getCycleReferences).mockResolvedValue([]);
     vi.mocked(getSchoolReferences).mockResolvedValue([]);
     vi.mocked(getProgramReferences).mockImplementation(async ({ assignedOnly } = {}) => [
-      { id: assignedOnly ? 'assigned-program' : 'all-programs', name: 'Program' },
+      { id: assignedOnly ? 'assigned-program' : 'all-programs', title: 'Program' },
     ]);
     vi.mocked(getStaffReferences).mockImplementation(async feature => [{
       id: 'staff-1', name: 'Staff One', firstName: 'Staff', lastName: 'One', role: 'staff', writable: feature === 'tasks',

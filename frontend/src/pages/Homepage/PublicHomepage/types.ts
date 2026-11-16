@@ -6,7 +6,7 @@ export interface HomepageSession {
 
 export interface HomepageProgram {
   id: string;
-  name: string;
+  title: string;
   description: string | null;
   enrollmentRequired: boolean;
   minAge: number | null;
