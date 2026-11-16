@@ -282,7 +282,7 @@ describe('Accounts API', () => {
     it('should create staff user with valid data (admin)', async () => {
       const uniqueEmail = `create-${Date.now()}@test.local`;
       const [program] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE name = 'Drop In'
+        SELECT id FROM programs WHERE title = 'Drop In'
       `;
       const res = await request(app)
         .post('/api/accounts')
@@ -404,7 +404,7 @@ describe('Accounts API', () => {
 
     it('should update an admin account with explicit program assignments', async () => {
       const [program] = await sql<{ id: string }[]>`
-        SELECT id FROM programs WHERE enrollment_required = TRUE ORDER BY name LIMIT 1
+        SELECT id FROM programs WHERE enrollment_required = TRUE ORDER BY title LIMIT 1
       `;
       const res = await request(app)
         .post('/api/accounts')
@@ -462,7 +462,7 @@ describe('Accounts API', () => {
           SELECT id
           FROM programs
           WHERE enrollment_required = TRUE
-          ORDER BY name
+          ORDER BY title
           LIMIT 2
         `;
         expect(programs).toHaveLength(2);

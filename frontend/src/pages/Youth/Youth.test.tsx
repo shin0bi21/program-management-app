@@ -33,7 +33,7 @@ vi.mock('../../common/features/referenceData/hooks/useReferenceData', async impo
   ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
   useProgramReferences: (...args: unknown[]) => {
     expect(args).toEqual([{ assignedOnly: true }]);
-    return { rows: [{ id: 'program-1', name: 'Soft Skills' }], loading: false, error: '' };
+    return { rows: [{ id: 'program-1', title: 'Soft Skills' }], loading: false, error: '' };
   },
 }));
 
@@ -89,7 +89,7 @@ describe('Youth', () => {
     authState.permissions = ['read:youth_profiles', 'write:youth_profiles', 'read:programs', 'write:enrollments', 'read:attendance', 'write:attendance', 'read:sessions', 'write:sessions'];
     mockUseYouthTableData.mockClear();
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     attendanceApi.getYouthAttendance.mockResolvedValue({

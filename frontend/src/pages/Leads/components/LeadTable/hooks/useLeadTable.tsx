@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { CellContext } from '@tanstack/react-table';
 
 import Label from '../../../../../common/components/Label/Label';
-import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
+import ActionsMenu, { type ActionItem } from '../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import type { EditableLeadStatus, Lead, LeadOrigin } from '../../../types';
@@ -34,6 +34,11 @@ interface UseLeadTableOptions {
   onStatusChange: (lead: Lead, status: EditableLeadStatus) => void | Promise<void>;
 }
 
+/**
+ * Supplies lead columns and permitted intake, signup, and lifecycle actions.
+ * @param options - Origin, write capability, and callbacks for available row actions.
+ * @example useLeadTable(options) // converted leads offer Edit only
+ */
 export default function useLeadTable({
   origin,
   canWrite,
@@ -68,12 +73,14 @@ export default function useLeadTable({
       enableResizing: false,
       enableHiding: false,
       header: '',
-      cell: ({ row: { original: lead } }: CellContext<Lead, unknown>) => (
-        lead.status === 'signed_up' ? null : <ActionsMenu
-          ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
-          items={[
-            { id: 'edit', label: 'Edit', onClick: () => onEdit(lead) },
-            { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => onDelete(lead) },
+      cell: ({ row: { original: lead } }: CellContext<Lead, unknown>) => {
+        const items: ActionItem[] = [
+          { id: 'edit', label: 'Edit', onClick: () => onEdit(lead) },
+        ];
+        const isConverted = lead.status === 'signed_up' || lead.convertedYouthId !== null;
+        if (!isConverted) {
+          items.push(
+            { id: 'delete', label: 'Delete', variant: 'danger', onClick: () => onDelete(lead) },
             { id: 'sign-up', label: 'Sign Up', groupStart: true, onClick: () => onSignUp(lead) },
             ...editableStatuses.filter(status => status !== lead.status).map((status, index) => ({
               id: status,
@@ -81,15 +88,25 @@ export default function useLeadTable({
               groupStart: index === 0,
               onClick: () => void onStatusChange(lead, status),
             })),
-          ]}
-        />
-      ),
+          );
+        }
+
+        return <ActionsMenu
+          ariaLabel={`More actions for ${lead.youthFirstName} ${lead.youthLastName}`}
+          items={items}
+        />;
+      },
     }] : []),
   ], [canWrite, onDelete, onEdit, onSignUp, onStatusChange, origin]);
 
   return { columns };
 }
 
+/**
+ * Formats a stored status or submitter role as a label.
+ * @param value - Words separated by underscores.
+ * @example title('signed_up') // 'Signed Up'
+ */
 function title(value: string) {
   return value.split('_').map(part => part[0].toUpperCase() + part.slice(1)).join(' ');
 }

@@ -7,7 +7,7 @@ import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatu
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface ProgramDraft {
-  name: string;
+  title: string;
   description: string;
   enrollmentRequired: boolean;
   minAge: string;
@@ -34,7 +34,7 @@ type ParsedAges =
  */
 export default function useProgramModal({ program, onSaved }: UseProgramModalOptions) {
   const [draft, setDraft] = useState<ProgramDraft>(() => ({
-    name: program?.name ?? '',
+    title: program?.title ?? '',
     description: program?.description ?? '',
     enrollmentRequired: program?.enrollmentRequired ?? false,
     minAge: program?.minAge == null ? '' : String(program.minAge),
@@ -56,10 +56,10 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
   };
 
   const submit = async () => {
-    const name = draft.name.trim();
-    if (!name) {
+    const title = draft.title.trim();
+    if (!title) {
       setSubmitStatus('error');
-      setStatusMessage('Program name is required.');
+      setStatusMessage('Program title is required.');
       return;
     }
 
@@ -84,7 +84,7 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
     if (!tryLock()) return;
 
     const input: CreateProgramInput = {
-      name,
+      title,
       description: draft.description.trim() || null,
       enrollmentRequired: draft.enrollmentRequired,
       minAge: ages.minAge,
@@ -95,7 +95,7 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
       timezone: draft.timezone,
     };
     setSubmitStatus('submitting');
-    setStatusMessage(program ? `Updating ${name}...` : `Adding ${name}...`);
+    setStatusMessage(program ? `Updating ${title}...` : `Adding ${title}...`);
 
     let saved;
     try {

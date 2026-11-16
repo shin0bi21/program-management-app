@@ -70,13 +70,13 @@ describe('Program cycle sessions and attendance API', () => {
       VALUES (${secondYouthId}, CURRENT_DATE - INTERVAL '14 years')
     `;
 
-    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Soft Skills'`;
+    const [program] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE title = 'Soft Skills'`;
     programId = program.id;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
       VALUES (${staffId}, ${programId})
     `;
-    const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Drop In'`;
+    const [openProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE title = 'Drop In'`;
     openProgramId = openProgram.id;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
@@ -87,12 +87,12 @@ describe('Program cycle sessions and attendance API', () => {
     `;
     today = clock.today;
     const [cycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Program cycle API ${Date.now()}`}, ${await addDays(today, -7)}, ${await addDays(today, 60)})
       RETURNING id
     `;
     mainCycleId = cycle.id;
-    const [unassignedProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE name = 'Job Readiness'`;
+    const [unassignedProgram] = await sql<{ id: string }[]>`SELECT id FROM programs WHERE title = 'Job Readiness'`;
     unassignedProgramId = unassignedProgram.id;
     await sql`
       INSERT INTO program_cycle_assignments (program_id, cycle_id)
@@ -159,21 +159,21 @@ describe('Program cycle sessions and attendance API', () => {
     const denied = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
+      .send({ title: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
     expect(denied.status).toBe(403);
 
     const created = await request(app)
       .post('/api/cycles')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
+      .send({ title: cycle, programIds: [], startsOn: await addDays(today, 70), endsOn: await addDays(today, 100) });
     expect(created.status).toBe(201);
 
     const updated = await request(app)
       .put(`/api/cycles/${created.body.cycle.id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: `${cycle} Updated`, programIds: [], startsOn: await addDays(today, 71), endsOn: await addDays(today, 101) });
+      .send({ title: `${cycle} Updated`, programIds: [], startsOn: await addDays(today, 71), endsOn: await addDays(today, 101) });
     expect(updated.status).toBe(200);
-    expect(updated.body.cycle).toEqual(expect.objectContaining({ name: `${cycle} Updated` }));
+    expect(updated.body.cycle).toEqual(expect.objectContaining({ title: `${cycle} Updated` }));
 
     const deniedDelete = await request(app)
       .delete(`/api/cycles/${created.body.cycle.id}`)
@@ -757,7 +757,7 @@ describe('Program cycle sessions and attendance API', () => {
 
   it('filters sessions across selected cycles while preserving program scope and pagination', async () => {
     const [otherCycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Other session cycle ${Date.now()}`}, ${today}, ${await addDays(today, 60)})
       RETURNING id
     `;

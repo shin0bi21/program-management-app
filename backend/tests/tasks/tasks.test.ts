@@ -22,11 +22,22 @@ describe('Tasks API', () => {
   let cycleId: string;
   const taskIds = new Set<string>();
 
+  /**
+   * Tracks a created task for suite cleanup and returns its response.
+   * @param response - Task request response, possibly without an ID after failure.
+   * @example rememberTask(response).body.id
+   */
   const rememberTask = <T extends { body: { id?: string } }>(response: T) => {
     if (response.body.id) taskIds.add(response.body.id);
     return response;
   };
 
+  /**
+   * Shifts a business date using PostgreSQL calendar arithmetic.
+   * @param date - Starting business date.
+   * @param days - Signed number of calendar days.
+   * @example await shiftDate('2026-08-10', 1) // '2026-08-11'
+   */
   const shiftDate = async (date: string, days: number) => {
     const [shifted] = await sql<{ date: string }[]>`SELECT ${date}::date + ${days}::integer AS date`;
     return shifted.date;
@@ -58,10 +69,10 @@ describe('Tasks API', () => {
     secondStaffToken = generateToken(secondStaff.userId, 'staff', secondStaff.email);
     unrelatedStaffId = unrelatedStaff.userId;
     unrelatedStaffToken = generateToken(unrelatedStaff.userId, 'staff', unrelatedStaff.email);
-    const programs = await sql<Array<{ id: string }>>`SELECT id FROM programs ORDER BY name LIMIT 1`;
+    const programs = await sql<Array<{ id: string }>>`SELECT id FROM programs ORDER BY title LIMIT 1`;
     programId = programs[0].id;
     const cycles = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (
         ${`Tasks API ${stamp}`},
         LEAST(${taskDate}::date - 7, '2024-01-01'::date),
@@ -215,12 +226,12 @@ describe('Tasks API', () => {
       expect(created.status).toBe(201);
       expect(Object.keys(created.body).sort()).toEqual([
         'id', 'title', 'details', 'category', 'categoryLabel',
-        'staffId', 'firstName', 'lastName', 'name', 'programId', 'program',
+        'staffId', 'firstName', 'lastName', 'programId', 'program',
         'state', 'status', 'statusLabel', 'startDate', 'dueDate',
         'hoursLogged', 'loggedHoursByDate', 'completedAt', 'writable',
       ].sort());
       expect(created.body).toMatchObject({
-        staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', state: 'open',
+        staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', state: 'open',
       });
       for (const endpoint of ['list', 'calendar']) {
         const collection = await request(app).get(`/api/tasks/${endpoint}`)
@@ -307,7 +318,7 @@ describe('Tasks API', () => {
       }));
     expect(ownTask.status).toBe(201);
     expect(ownTask.body).toEqual(expect.objectContaining({
-      staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson',
+      staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson',
     }));
 
     const otherCreate = await request(app)
@@ -524,7 +535,7 @@ describe('Tasks API', () => {
 
   it('intersects task dates with selected cycle spans and endpoint ranges independently of program membership', async () => {
     const cycles = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on) VALUES
+      INSERT INTO program_cycles (title, starts_on, ends_on) VALUES
         ('Tasks early boundary', '2081-01-01', '2081-01-31'),
         ('Tasks late boundary', '2081-03-01', '2081-03-31')
       RETURNING id
@@ -721,7 +732,7 @@ describe('Tasks API', () => {
       });
     expect(reassigned.status).toBe(200);
     expect(reassigned.body).toEqual(expect.objectContaining({
-      staffId: secondStaffId, firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
+      staffId: secondStaffId, firstName: 'Alex', lastName: 'Smith',
     }));
 
     const returned = await request(app)

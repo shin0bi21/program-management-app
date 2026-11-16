@@ -54,7 +54,7 @@ export function buildYouthFilters(filterValues: YouthQuery) {
           INNER JOIN program_cycles search_cycle ON search_cycle.id = search_enrollment.cycle_id
           INNER JOIN programs search_program ON search_program.id = search_enrollment.program_id
           WHERE search_enrollment.youth_id = profile.user_id
-            AND CONCAT_WS(' ', search_program.name, search_cycle.name) ILIKE ${search} ESCAPE '\\'
+            AND CONCAT_WS(' ', search_program.title, search_cycle.title) ILIKE ${search} ESCAPE '\\'
         )
         OR EXISTS (
           SELECT 1
@@ -64,7 +64,7 @@ export function buildYouthFilters(filterValues: YouthQuery) {
           INNER JOIN programs search_program ON search_program.id = search_session.program_id
           WHERE search_attendance.youth_id = profile.user_id
             AND search_program.enrollment_required = FALSE
-            AND CONCAT_WS(' ', search_program.name, search_cycle.name)
+            AND CONCAT_WS(' ', search_program.title, search_cycle.title)
               ILIKE ${search} ESCAPE '\\'
         )
       )`);

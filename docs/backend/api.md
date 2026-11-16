@@ -66,6 +66,15 @@ selection does not restrict or move the pay-period query.
 
 ## Youth Profiles and Lead Signup
 
+The staff Lead save uses an upsert: `POST /leads` generates a new ID, while
+`PUT /leads/:id` creates at an unknown ID or replaces editable intake fields at
+an existing ID. Both require the complete validated intake form. Existing origin,
+submitter, creation metadata, status, and conversion fields are preserved.
+Signed-up intake remains editable; those edits are audited and do not change the
+linked Youth profile. Signup remains one-time, and converted leads retain their
+status and deletion protections. Status, signup, note, and delete commands still
+require an existing target.
+
 [Shared DOB validation](../../backend/src/validation/dateOfBirth.ts) requires a
 real date before the server's local current date without an intake age restriction. Public
 and internal Lead intake require DOB. The Youth UI and API temporarily

@@ -2,67 +2,83 @@ import crypto from 'crypto';
 import type { AccessTokenPayload } from '../../../types/auth';
 import { getProgramCycleRowsByKeys } from '../../programming/programCycles/programCycleRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
-import { ConflictError, NotFoundError } from '../../../errors';
-import type { CreateLeadInput, SignUpLeadInput, UpdateLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
+import { ConflictError, InternalServerError, NotFoundError } from '../../../errors';
+import type { CreateLeadInput, SignUpLeadInput, UpdateLeadStatusInput } from '../../../validation/leadSchemas';
 import { audit } from '../../shared/auditService';
 import { setContacts } from '../../youth/youthContactService';
-import { leadRowColumns } from './leadRowQuery';
+import { getLeadRows, type LeadRow } from './leadRowQuery';
 
 /**
  * Loads one canonical lead, including its current age and recommended program.
  * @param id - Lead ID; a missing record throws 404.
- * @example await getLead(id) // complete intake row
+ * @param query - Database client; pass trx inside a transaction.
+ * @example await getLead(id, trx) // complete intake row
  */
-export async function getLead(id: string) {
+export async function getLead(id: string, query = sql) {
   // 1. Load the lead.
-  const rows = await sql`
-    SELECT ${leadRowColumns}
-    FROM leads
-    WHERE id = ${id}
-  `;
+  const rows = await getLeadRows(query`lead.id = ${id}`, query);
   if (!rows.length) throw new NotFoundError('Lead not found');
   return rows[0];
 }
 
 /**
- * Creates one internal staff-submitted lead and returns its canonical intake row.
- * @param data - Validated intake fields; optional notes are stored as null when omitted.
- * @param actorId - Staff user recorded as the creator and last editor.
- * @example await createLead(data, actorId) // saved lead with age and recommended program
+ * Upserts and audits intake details independently of any linked Youth profile.
+ * @param data - Validated intake fields; omitted notes are stored as null.
+ * @param actorId - Staff user recorded on the save.
+ * @param id - Lead identity; an absent or unknown ID creates intake. Signed-up intake remains editable.
+ * @example setLead(data, actorId, id) // creates or replaces intake at this ID
  */
-export async function createLead(data: CreateLeadInput, actorId: string) {
-  // 1. Store the internal intake and return its canonical projection.
-  const rows = await sql`
-    INSERT INTO leads (
-      origin,
-      submitted_by_role,
-      youth_first_name,
-      youth_last_name,
-      date_of_birth,
-      school,
-      contact_phone_number,
-      contact_relationship,
-      discovery_source,
-      notes,
-      created_by,
-      updated_by
-    ) VALUES (
-      'internal',
-      'staff',
-      ${data.youthFirstName},
-      ${data.youthLastName},
-      ${data.dateOfBirth},
-      ${data.school},
-      ${data.contactPhoneNumber},
-      ${data.contactRelationship},
-      ${data.discoverySource},
-      ${data.notes ?? null},
-      ${actorId},
-      ${actorId}
-    )
-    RETURNING ${leadRowColumns}
-  `;
-  return rows[0];
+export async function setLead(data: CreateLeadInput, actorId: string, id?: string) {
+  return sql.begin(async rawTx => {
+    const trx = asTransactionSql(rawTx);
+
+    // 1. Define the editable intake fields once for both new and existing leads.
+    const values = {
+      youthFirstName: data.youthFirstName,
+      youthLastName: data.youthLastName,
+      school: data.school,
+      contactPhoneNumber: data.contactPhoneNumber,
+      contactRelationship: data.contactRelationship,
+      discoverySource: data.discoverySource,
+      notes: data.notes ?? null,
+      dateOfBirth: data.dateOfBirth,
+      updatedBy: actorId,
+    };
+
+    // 2. Save intake while retaining an existing lead's origin and workflow metadata.
+    const [record] = await trx<{
+      id: string;
+      oldData: Record<string, unknown> | null;
+      newData: Record<string, unknown>;
+    }[]>`
+      INSERT INTO leads ${trx({
+        ...(id ? { id } : {}),
+        origin: 'internal',
+        submittedByRole: 'staff',
+        createdBy: actorId,
+        ...values,
+      })}
+      ON CONFLICT (id) DO UPDATE
+      SET ${trx(values)}, updated_at = NOW()
+      RETURNING
+        id,
+        CASE
+          WHEN old.id IS NULL THEN NULL
+          ELSE to_jsonb(old)
+        END AS old_data,
+        to_jsonb(new) AS new_data
+    `;
+    if (!record) throw new InternalServerError('Lead save returned no record');
+
+    // 3. Record the database's before and after values within the same transaction.
+    await audit(trx, actorId, crypto.randomUUID(), 'leads', record.id,
+      record.oldData ? 'UPDATE' : 'INSERT', record.oldData, record.newData);
+
+    // 4. Return the canonical row before committing the save.
+    const [saved] = await getLeadRows(trx`lead.id = ${record.id}`, trx);
+    if (!saved) throw new InternalServerError('Saved lead record is unavailable');
+    return saved;
+  });
 }
 
 /**
@@ -78,7 +94,7 @@ export async function createExternalLead(
   trx: typeof sql,
 ) {
   // 1. Store the external intake inside the existing transaction.
-  const rows = await trx`
+  const rows = await trx<{ id: string }[]>`
     INSERT INTO leads (
       origin,
       submitted_by_role,
@@ -90,7 +106,8 @@ export async function createExternalLead(
       contact_relationship,
       discovery_source,
       notes
-    ) VALUES (
+    )
+    VALUES (
       'external',
       ${submittedByRole},
       ${data.youthFirstName},
@@ -102,52 +119,14 @@ export async function createExternalLead(
       ${data.discoverySource},
       ${data.notes ?? null}
     )
-    RETURNING ${leadRowColumns}
+    RETURNING id
   `;
-  return rows[0];
-}
+  if (!rows.length) throw new InternalServerError('Lead creation returned no record');
 
-/**
- * Updates editable intake details and returns the canonical saved lead.
- * @param id - Existing lead ID; missing leads are 404 and converted leads are 409.
- * @param data - Validated replacement intake fields.
- * @param actorId - Staff user recorded as the last editor.
- * @example await updateLead(id, data, actorId) // current age and recommended program included
- */
-export async function updateLead(id: string, data: UpdateLeadInput, actorId: string) {
-  // 1. Replace intake fields only while the lead remains unconverted.
-  const rows = await sql`
-    UPDATE leads
-    SET youth_first_name = ${data.youthFirstName},
-        youth_last_name = ${data.youthLastName},
-        date_of_birth = ${data.dateOfBirth},
-        school = ${data.school},
-        contact_phone_number = ${data.contactPhoneNumber},
-        contact_relationship = ${data.contactRelationship},
-        discovery_source = ${data.discoverySource},
-        notes = ${data.notes ?? null},
-        updated_at = NOW(),
-        updated_by = ${actorId}
-    WHERE id = ${id}
-      AND status != 'signed_up'
-      AND converted_youth_id IS NULL
-    RETURNING ${leadRowColumns}
-  `;
-
-  // 2. Distinguish missing records from converted, read-only intake.
-  if (!rows.length) {
-    const existing = await sql<{ status: string; convertedYouthId: string | null }[]>`
-      SELECT
-        status,
-        converted_youth_id
-      FROM leads
-      WHERE id = ${id}
-      LIMIT 1
-    `;
-    if (!existing.length) throw new NotFoundError('Lead not found');
-    throw new ConflictError('Signed-up leads must be edited through their youth profile');
-  }
-  return rows[0];
+  // 2. Return the complete intake before the caller commits.
+  const [created] = await getLeadRows(trx`lead.id = ${rows[0].id}`, trx);
+  if (!created) throw new InternalServerError('Saved lead record is unavailable');
+  return created;
 }
 
 /**
@@ -161,19 +140,17 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
   // 1. Assign one audit transaction to the status change.
   const transactionId = crypto.randomUUID();
 
-  await sql.begin(async rawTx => {
+  return sql.begin(async rawTx => {
     const trx = asTransactionSql(rawTx);
 
     // 2. Lock the intake row before checking its conversion state.
-    const leads = await trx<Record<string, unknown>[]>`
-      SELECT ${leadRowColumns}
-      FROM leads
-      WHERE id = ${id}
-      FOR UPDATE
+    const leads = await trx<LeadRow[]>`
+      ${getLeadRows(trx`lead.id = ${id}`, trx)}
+      FOR UPDATE OF lead
     `;
     if (!leads.length) throw new NotFoundError('Lead not found');
 
-    const lead = leads[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+    const lead = leads[0];
 
     // 3. Reject status changes after conversion.
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
@@ -181,25 +158,24 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
     }
 
     // 4. Save the requested status and retain its timestamp when unchanged.
-    const updatedLeads = await trx<Record<string, unknown>[]>`
+    await trx`
       UPDATE leads
       SET status = ${data.status},
-          status_updated_at = CASE
-            WHEN status = ${data.status} THEN status_updated_at
-            ELSE NOW()
-          END,
-          updated_at = NOW(),
-          updated_by = ${actorId}
+        status_updated_at = CASE
+          WHEN status = ${data.status} THEN status_updated_at
+          ELSE NOW()
+        END,
+        updated_at = NOW(),
+        updated_by = ${actorId}
       WHERE id = ${id}
-      RETURNING ${leadRowColumns}
     `;
+    const [updated] = await getLeadRows(trx`lead.id = ${id}`, trx);
+    if (!updated) throw new InternalServerError('Updated lead record is unavailable');
 
     // 5. Audit the status transition in the same transaction.
-    await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE', lead, updatedLeads[0]);
+    await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE', { ...lead }, { ...updated });
+    return updated;
   });
-
-  // 6. Return the canonical saved intake.
-  return getLead(id);
 }
 
 /**
@@ -219,32 +195,9 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     const trx = asTransactionSql(rawTx);
 
     // 2. Find and lock the lead.
-    const leads = await trx<{
-      id: string;
-      youthFirstName: string;
-      youthLastName: string;
-      school: string;
-      contactPhoneNumber: string;
-      contactRelationship: string;
-      notes: string | null;
-      status: string;
-      convertedYouthId: string | null;
-      dateOfBirth: string | null;
-    }[]>`
-      SELECT
-        id,
-        youth_first_name,
-        youth_last_name,
-        school,
-        contact_phone_number,
-        contact_relationship,
-        notes,
-        status,
-        converted_youth_id,
-        date_of_birth
-      FROM leads
-      WHERE id = ${id}
-      FOR UPDATE
+    const leads = await trx<LeadRow[]>`
+      ${getLeadRows(trx`lead.id = ${id}`, trx)}
+      FOR UPDATE OF lead
     `;
     if (!leads.length) throw new NotFoundError('Lead not found');
 
@@ -315,6 +268,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       )
       RETURNING id
     `;
+    if (!users.length) throw new InternalServerError('Youth creation returned no record');
     const youthId = users[0].id;
 
     // 6. Record the new youth account.
@@ -363,6 +317,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
           id,
           enrolled_on
       `;
+      if (!enrollments.length) throw new InternalServerError('Enrollment creation returned no record');
       await audit(trx, actorId, transactionId, 'program_enrollments', enrollments[0].id, 'INSERT', null, {
         id: enrollments[0].id,
         programId: data.programId,
@@ -382,11 +337,11 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     await trx`
       UPDATE leads
       SET status = 'signed_up',
-          date_of_birth = ${dateOfBirth},
-          converted_youth_id = ${youthId},
-          status_updated_at = NOW(),
-          updated_at = NOW(),
-          updated_by = ${actorId}
+        date_of_birth = ${dateOfBirth},
+        converted_youth_id = ${youthId},
+        status_updated_at = NOW(),
+        updated_at = NOW(),
+        updated_by = ${actorId}
       WHERE id = ${id}
     `;
     await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE',
@@ -394,11 +349,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
       { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
     // 13. Return the lead and affected rows.
-    const [leadRecord] = await trx`
-      SELECT ${leadRowColumns}
-      FROM leads
-      WHERE id = ${id}
-    `;
+    const [leadRecord] = await getLeadRows(trx`lead.id = ${id}`, trx);
+    if (!leadRecord) throw new InternalServerError('Converted lead record is unavailable');
     const [updatedProgramCycle] = data.programId && data.cycleId && actor.permissions.includes('read:programs')
       ? await getProgramCycleRowsByKeys(trx, actor, [{ programId: data.programId, cycleId: data.cycleId }])
       : [];
@@ -420,14 +372,12 @@ export async function deleteLead(id: string, actorId: string) {
     const trx = asTransactionSql(rawTx);
 
     // 2. Lock the intake before checking deletion eligibility.
-    const rows = await trx<Record<string, unknown>[]>`
-      SELECT ${leadRowColumns}
-      FROM leads
-      WHERE id = ${id}
-      FOR UPDATE
+    const rows = await trx<LeadRow[]>`
+      ${getLeadRows(trx`lead.id = ${id}`, trx)}
+      FOR UPDATE OF lead
     `;
     if (!rows.length) throw new NotFoundError('Lead not found');
-    const lead = rows[0] as { status: string; convertedYouthId: string | null } & Record<string, unknown>;
+    const lead = rows[0];
 
     // 3. Preserve converted intake history.
     if (lead.status === 'signed_up' || lead.convertedYouthId) {
@@ -440,7 +390,7 @@ export async function deleteLead(id: string, actorId: string) {
       FROM leads
       WHERE id = ${id}
     `;
-    await audit(trx, actorId, transactionId, 'leads', id, 'DELETE', lead, null);
+    await audit(trx, actorId, transactionId, 'leads', id, 'DELETE', { ...lead }, null);
     return { id };
   });
 }

@@ -8,7 +8,7 @@ import './ViewMenu.css';
 
 export interface ViewMenuOption<TView extends string> {
   id: TView;
-  name: string;
+  label: string;
 }
 
 interface ViewMenuProps<TView extends string> {
@@ -44,7 +44,7 @@ export default function ViewMenu<TView extends string>({
         ref={triggerRef}
         variant="secondary"
         className="view-menu-trigger"
-        aria-label={`${label}: ${selected?.name ?? value}`}
+        aria-label={`${label}: ${selected?.label ?? value}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={toggle}
@@ -67,7 +67,7 @@ export default function ViewMenu<TView extends string>({
                 close();
               }}
             >
-              <span>{option.name}</span>
+              <span>{option.label}</span>
               {option.id === value && <FontAwesomeIcon icon={faCheck} />}
             </button>
           ))}

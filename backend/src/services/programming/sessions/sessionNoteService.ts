@@ -246,10 +246,10 @@ export async function listSessionNotesForYouth(
       cs.date,
       cs.cycle_id,
 
-      cycle.name AS cycle,
+      cycle.title AS cycle,
 
       p.id AS program_id,
-      p.name AS program,
+      p.title AS program,
       p.enrollment_required,
       COALESCE(
         JSON_AGG(

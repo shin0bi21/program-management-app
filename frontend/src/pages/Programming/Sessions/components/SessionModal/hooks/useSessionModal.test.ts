@@ -7,9 +7,9 @@ import useSessionModal from './useSessionModal';
 
 vi.mock('../../../sessions.api', () => ({ createSession: vi.fn() }));
 const programs: Program[] = [
-  { id: 'p1', name: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
+  { id: 'p1', title: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
     defaultDayOfWeek: 'tuesday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto' },
-  { id: 'p2', name: 'Music', enrollmentRequired: false, minAge: null, maxAge: null,
+  { id: 'p2', title: 'Music', enrollmentRequired: false, minAge: null, maxAge: null,
     defaultDayOfWeek: 'thursday', defaultStartTime: '16:00', defaultEndTime: '18:00', timezone: 'America/Toronto' },
 ];
 describe('single session creation', () => {

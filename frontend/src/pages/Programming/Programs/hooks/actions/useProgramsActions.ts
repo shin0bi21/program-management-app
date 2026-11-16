@@ -62,7 +62,7 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
   const requestCycleDeletion = useCallback((cycle: ProgramCycle) => {
     setConfirmAction({
       title: 'Delete Cycle',
-      message: `Delete ${cycle.name}? Cycles assigned to programs or logged hours cannot be deleted.`,
+      message: `Delete ${cycle.title}? Cycles assigned to programs or logged hours cannot be deleted.`,
       confirmVariant: 'danger',
       successMessage: 'Cycle deleted',
       onConfirm: async () => {

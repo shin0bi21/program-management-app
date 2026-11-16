@@ -12,7 +12,7 @@ export { getCycleReferenceData as getProgramCycles } from '../../referenceData/c
 
 /**
  * Saves cycle metadata and replaces its program assignments in one transaction.
- * @param data - Validated date range, name, and complete set of unique program IDs.
+ * @param data - Validated date range, title, and complete set of unique program IDs.
  * @param actor - Actor recorded on writes and used to scope response rows.
  * @param id - Existing cycle to update; omitted when creating.
  * @returns The saved cycle and affected rows.
@@ -36,8 +36,8 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
 
     // 3. Save the cycle.
     const [cycle] = await trx<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on, created_by, updated_by)
-      VALUES (${data.name}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
+      INSERT INTO program_cycles (title, starts_on, ends_on, created_by, updated_by)
+      VALUES (${data.title}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
       RETURNING id
     `;
     if (!cycle) throw new InternalServerError('Cycle creation returned no record');
@@ -110,7 +110,7 @@ export async function deleteProgramCycle(id: string) {
 /**
  * Updates a cycle without removing used assignments or excluding existing sessions.
  * @param id - Required cycle to update.
- * @param data - Validated replacement dates, name, and assignments.
+ * @param data - Validated replacement dates, title, and assignments.
  * @param actor - Actor recorded on writes and used to scope response rows.
  * @returns The saved cycle, assignment changes, and permission-gated program-cycle and youth rows.
  * @example updateProgramCycleRecord(cycleId, data, actor) // update dates and assignments
@@ -168,7 +168,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     // 5. Save the cycle and its program assignments.
     await trx`
       UPDATE program_cycles
-      SET name = ${data.name},
+      SET title = ${data.title},
         starts_on = ${data.startsOn},
         ends_on = ${data.endsOn},
         updated_at = NOW(),
@@ -225,14 +225,14 @@ async function requireCycleRow(trx: typeof sql, id: string) {
 }
 
 /**
- * Reports duplicate cycle names and overlapping enrolled programs as conflicts.
+ * Reports duplicate cycle titles and overlapping enrolled programs as conflicts.
  * Other failures retain their original identity.
  * @example rethrowCycleConflict(new Error('Disconnected')) // throws the same Error instance
  */
 function rethrowCycleConflict(error: unknown): never {
-  // 1. Report duplicate cycle names.
-  if (isUniqueViolation(error, 'program_cycles_name_key')) {
-    throw Object.assign(new ConflictError('A cycle with this name already exists'), { cause: error });
+  // 1. Report duplicate cycle titles.
+  if (isUniqueViolation(error, 'program_cycles_title_key')) {
+    throw Object.assign(new ConflictError('A cycle with this title already exists'), { cause: error });
   }
   rethrowEnrollmentConflict(error);
 }

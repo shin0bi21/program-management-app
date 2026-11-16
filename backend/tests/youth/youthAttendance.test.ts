@@ -33,7 +33,7 @@ describe('Youth active-cycle attendance', () => {
 
     for (const enrollmentRequired of [true, false]) {
       const [program] = await sql<{ id: string }[]>`
-        INSERT INTO programs (name, enrollment_required)
+        INSERT INTO programs (title, enrollment_required)
         VALUES (${`Attendance data ${enrollmentRequired} ${Date.now()}`}, ${enrollmentRequired})
         RETURNING id
       `;

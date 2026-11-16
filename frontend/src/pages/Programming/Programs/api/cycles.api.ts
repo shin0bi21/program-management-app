@@ -4,7 +4,7 @@ import type { CursorPage, CursorRequest } from '../../../../query/types';
 import type { ProgramCycleAssignmentChanges } from './programCycleAssignments.api';
 
 interface SetProgramCycleInput {
-  name: string;
+  title: string;
   startsOn: string;
   endsOn: string;
   programIds: string[];
@@ -14,7 +14,7 @@ export interface SetCycleResult extends ProgramCycleAssignmentChanges {
   cycle: ProgramCycle;
 }
 
-export function getCycleList(pagination: CursorRequest<'name' | 'startsOn'>, opts?: RequestOptions) {
+export function getCycleList(pagination: CursorRequest<'title' | 'startsOn'>, opts?: RequestOptions) {
   const params = new URLSearchParams({
     sort: pagination.key,
     direction: pagination.direction,

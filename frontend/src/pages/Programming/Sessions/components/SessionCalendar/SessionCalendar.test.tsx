@@ -23,8 +23,8 @@ vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', ()
 vi.mock('../../sessions.api', () => ({ getSessions: api.getSessions }));
 
 const programs: Program[] = [
-  { id: 'program-1', name: 'Future Ready', enrollmentRequired: true, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
-  { id: 'program-2', name: 'Job Readiness', enrollmentRequired: false, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
+  { id: 'program-1', title: 'Future Ready', enrollmentRequired: true, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
+  { id: 'program-2', title: 'Job Readiness', enrollmentRequired: false, minAge: null, maxAge: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto' },
 ];
 const session = makeProgramSession();
 const period = buildDayPeriod('2026-08-10');

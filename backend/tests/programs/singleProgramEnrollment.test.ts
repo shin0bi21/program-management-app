@@ -33,7 +33,7 @@ describe('Single enrolled program per youth', () => {
       youthIds.push(youth.userId);
       await sql`INSERT INTO youth_profiles (user_id) VALUES (${youth.userId})`;
       const [program] = await sql<{ id: string }[]>`
-        INSERT INTO programs (name)
+        INSERT INTO programs (title)
         VALUES (${`Single program ${crypto.randomUUID()}`})
         RETURNING id
       `;
@@ -147,7 +147,7 @@ describe('Single enrolled program per youth', () => {
 
     const updated = await request(app).put(`/api/programs/${pairs[1].programId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: `Enrollment mode ${crypto.randomUUID()}`, enrollmentRequired: true });
+      .send({ title: `Enrollment mode ${crypto.randomUUID()}`, enrollmentRequired: true });
     expect(updated.status).toBe(409);
     expect((await sql`SELECT enrollment_required FROM programs WHERE id = ${pairs[1].programId}`)[0].enrollmentRequired).toBe(false);
     expect((await enroll(pairs[1])).status).toBe(409);
@@ -164,7 +164,7 @@ describe('Single enrolled program per youth', () => {
 
     const updated = await request(app).put(`/api/cycles/${pairs[0].cycleId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Conflicting extension', startsOn: '2025-01-01', endsOn: '2025-06-01', programIds: [pairs[0].programId] });
+      .send({ title: 'Conflicting extension', startsOn: '2025-01-01', endsOn: '2025-06-01', programIds: [pairs[0].programId] });
     expect(updated.status).toBe(409);
     expect((await sql`SELECT ends_on FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0].endsOn).toBe('2025-05-31');
   });
@@ -189,13 +189,13 @@ describe('Single enrolled program per youth', () => {
   });
 
   it('prevents bypassing the derived period and preserves parent values', async () => {
-    const [programBefore] = await sql`SELECT name, enrollment_required FROM programs WHERE id = ${pairs[0].programId}`;
+    const [programBefore] = await sql`SELECT title, enrollment_required FROM programs WHERE id = ${pairs[0].programId}`;
     const [cycleBefore] = await sql`SELECT updated_at, updated_by FROM program_cycles WHERE id = ${pairs[0].cycleId}`;
     expect((await enroll(pairs[0])).status).toBe(201);
     await sql`UPDATE program_enrollments SET effective_period = 'empty'::daterange WHERE youth_id = ${youthIds[0]}`;
 
     expect((await enroll(pairs[1])).status).toBe(409);
-    expect((await sql`SELECT name, enrollment_required FROM programs WHERE id = ${pairs[0].programId}`)[0]).toEqual(programBefore);
+    expect((await sql`SELECT title, enrollment_required FROM programs WHERE id = ${pairs[0].programId}`)[0]).toEqual(programBefore);
     expect((await sql`SELECT updated_at, updated_by FROM program_cycles WHERE id = ${pairs[0].cycleId}`)[0]).toEqual(cycleBefore);
   });
 
@@ -235,7 +235,7 @@ describe('Single enrolled program per youth', () => {
     // Child refresh order visits the two shared cycles in opposite directions.
     const responses = await Promise.all(pairs.map(pair => request(app).put(`/api/programs/${pair.programId}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: `Mode changed ${pair.programId}`, enrollmentRequired: true })));
+      .send({ title: `Mode changed ${pair.programId}`, enrollmentRequired: true })));
 
     expect(responses.map(response => response.status)).toEqual([200, 200]);
     const programs = await sql`SELECT enrollment_required FROM programs WHERE id = ANY(${sql.array(pairs.map(pair => pair.programId))}::uuid[])`;

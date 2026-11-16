@@ -12,7 +12,7 @@ vi.mock('../../../api/cycles.api', () => ({
 const assignments = [{ programId: 'program-1', cycleId: 'cycle-1' }] as import('../../../types').ProgramCycleAssignment[];
 const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 
-const input = { name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31' };
+const input = { title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31' };
 const cycle = { id: 'cycle-1', ...input, state: 'upcoming' as const };
 
 describe('useCycleModal', () => {

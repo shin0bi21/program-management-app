@@ -24,7 +24,7 @@ describe('Manage roster submission', () => {
   beforeEach(async () => {
     youthIds = [];
     const [program] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, enrollment_required)
+      INSERT INTO programs (title, enrollment_required)
       VALUES ('Manage roster transaction test', TRUE)
       RETURNING id
     `;

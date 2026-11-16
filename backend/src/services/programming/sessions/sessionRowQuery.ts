@@ -47,10 +47,10 @@ export function getSessionRows(
       session.cycle_id,
       session.session_type,
 
-      cycle.name AS cycle,
+      cycle.title AS cycle,
 
       program.id AS program_id,
-      program.name AS program,
+      program.title AS program,
       program.enrollment_required,
 
       CASE

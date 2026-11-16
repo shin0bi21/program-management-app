@@ -5,10 +5,15 @@ export interface NamedReference {
   name: string;
 }
 
-export type ProgramReference = NamedReference;
+export interface ProgramReference {
+  id: string;
+  title: string;
+}
 export type SchoolReference = NamedReference;
 
-export interface CycleReference extends NamedReference {
+export interface CycleReference {
+  id: string;
+  title: string;
   startsOn: string;
   endsOn: string;
   state: 'upcoming' | 'active' | 'completed';

@@ -14,7 +14,7 @@ describe('useYouthData', () => {
 
   it.each([true, false])('preserves assignedOnly=%s and the shared cycle query contract', async assignedOnly => {
     const cycles = [{
-      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const,
+      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const,
     }];
     vi.mocked(getCycleReferences).mockResolvedValue(cycles);
     const client = createTestQueryClient();

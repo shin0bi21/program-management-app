@@ -8,7 +8,7 @@ vi.mock('../publicHomepage.api', () => ({ getPublicHomepagePrograms: vi.fn() }))
 
 const program = {
   id: 'program-1',
-  name: 'Future Ready',
+  title: 'Future Ready',
   description: 'Build confidence and communication skills.',
   enrollmentRequired: true,
   minAge: 12,

@@ -1,4 +1,6 @@
+import { randomUUID } from 'crypto';
 import request from 'supertest';
+import * as auditService from '../../src/services/shared/auditService';
 import { createApp } from '../shared/app';
 import { deleteTestProgramCycle, deleteTestUser, seedTestProgramCycle, seedTestUser, sql } from '../shared/db';
 import { generateToken } from '../shared/tokenHelpers';
@@ -53,23 +55,23 @@ describe('Leads API', () => {
     const youth = await seedTestUser({ email: `lead-youth-${Date.now()}@test.local`, role: 'youth' });
     youthUserId = youth.userId;
     youthToken = generateToken(youth.userId, 'youth', youth.email);
-    const [program] = await sql<{ id: string; name: string }[]>`
-      SELECT id, name
+    const [program] = await sql<{ id: string; title: string }[]>`
+      SELECT id, title
       FROM programs
       WHERE enrollment_required = TRUE
         AND 14 BETWEEN min_age AND max_age
-      ORDER BY min_age DESC, max_age ASC, name ASC
+      ORDER BY min_age DESC, max_age ASC, title ASC
       LIMIT 1
     `;
     eligibleProgramId = program.id;
-    eligibleProgramName = program.name;
+    eligibleProgramName = program.title;
     await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${staffUserId}, ${eligibleProgramId})`;
     ({ cycleId: eligibleProgramCycleId } = await seedTestProgramCycle({
       programId: eligibleProgramId,
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, enrollment_required)
+      INSERT INTO programs (title, enrollment_required)
       VALUES (${`Lead alternate program ${Date.now()}`}, TRUE) RETURNING id
     `;
     otherProgramId = otherProgram.id;
@@ -117,6 +119,40 @@ describe('Leads API', () => {
       recommendedProgram: eligibleProgramName,
       createdBy: staffUserId,
     }));
+  });
+
+  it('creates an unknown supplied ID and updates that same lead on the next save', async () => {
+    const id = randomUUID();
+    const input = { ...payload, youthFirstName: 'UpsertIdentity' };
+    const created = await request(app).put(`/api/leads/${id}`)
+      .set('Authorization', `Bearer ${staffToken}`).send(input);
+
+    const updated = await request(app).put(`/api/leads/${id}`)
+      .set('Authorization', `Bearer ${staffToken}`).send({ ...input, school: 'Clarified School' });
+
+    expect(created.status).toBe(200);
+    expect(created.body).toMatchObject({ id, status: 'new', createdBy: staffUserId });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({
+      id, school: 'Clarified School', createdAt: created.body.createdAt,
+      createdBy: staffUserId, statusUpdatedAt: created.body.statusUpdatedAt,
+    });
+  });
+
+  it('rolls back intake when its audit cannot be written', async () => {
+    const id = randomUUID();
+    const writeAudit = jest.spyOn(auditService, 'audit').mockRejectedValueOnce(new Error('Audit unavailable'));
+
+    try {
+      const saved = await request(app).put(`/api/leads/${id}`)
+        .set('Authorization', `Bearer ${staffToken}`).send(payload);
+      expect(saved.status).toBe(500);
+    } finally {
+      writeAudit.mockRestore();
+    }
+
+    const rows = await sql`SELECT id FROM leads WHERE id = ${id}`;
+    expect(rows).toHaveLength(0);
   });
 
   it('returns an empty note collection for an existing lead and 404 for a missing lead', async () => {
@@ -414,7 +450,7 @@ describe('Leads API', () => {
     }));
   });
 
-  it('signs up a lead into a youth profile and canonical contact', async () => {
+  it('signs up a lead and keeps later intake corrections separate from its Youth profile', async () => {
     const [lead] = await sql<{ id: string }[]>`
       SELECT id FROM leads WHERE created_by = ${staffUserId} ORDER BY created_at DESC LIMIT 1
     `;
@@ -493,12 +529,53 @@ describe('Leads API', () => {
       .send({ status: 'contacted' });
     expect(statusChange.status).toBe(409);
 
-    const edit = await request(app)
-      .put(`/api/leads/${lead.id}`)
-      .set('Authorization', `Bearer ${staffToken}`)
-      .send({ ...payload, school: 'Should Not Change' });
-    expect(edit.status).toBe(409);
-    expect(edit.body.error).toBe('Signed-up leads must be edited through their youth profile');
+    const corrections = {
+      ...payload,
+      youthFirstName: 'Clarified',
+      dateOfBirth: birthDateForAge(13),
+      school: 'Clarified School',
+    };
+    const edit = await request(app).put(`/api/leads/${lead.id}`)
+      .set('Authorization', `Bearer ${staffToken}`).send(corrections);
+    expect(edit.status).toBe(200);
+    expect(edit.body).toMatchObject({
+      ...corrections, id: lead.id, status: 'signed_up',
+      statusUpdatedAt: res.body.lead.statusUpdatedAt, convertedYouthId,
+    });
+
+    const [unchangedYouth] = await sql<{ firstName: string; dateOfBirth: string }[]>`
+      SELECT youth.first_name, profile.date_of_birth
+      FROM users youth
+      INNER JOIN youth_profiles profile ON profile.user_id = youth.id
+      WHERE youth.id = ${convertedYouthId!}
+    `;
+    expect(unchangedYouth).toEqual({ firstName: payload.youthFirstName, dateOfBirth: payload.dateOfBirth });
+
+    const [editAudit] = await sql<{
+      userId: string;
+      oldData: Record<string, unknown>;
+      newData: Record<string, unknown>;
+    }[]>`
+      SELECT
+        user_id,
+        old_data,
+        new_data
+      FROM audit_log
+      WHERE table_name = 'leads' AND record_id = ${lead.id} AND action = 'UPDATE'
+        AND new_data->>'school' = 'Clarified School'
+    `;
+    expect(editAudit.userId).toBe(staffUserId);
+    expect(editAudit.oldData).toMatchObject({ status: 'signed_up', convertedYouthId });
+    expect(editAudit.newData).toMatchObject({
+      school: 'Clarified School', status: 'signed_up', convertedYouthId,
+    });
+
+    const repeatSignup = await request(app).post(`/api/leads/${lead.id}/sign-up`)
+      .set('Authorization', `Bearer ${staffToken}`).send({ programId: null, cycleId: null });
+    expect(repeatSignup.status).toBe(409);
+    const removed = await request(app).delete(`/api/leads/${lead.id}`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(removed.status).toBe(409);
   });
 
   it('does not expose a program cycle projection without its read capability during signup', async () => {

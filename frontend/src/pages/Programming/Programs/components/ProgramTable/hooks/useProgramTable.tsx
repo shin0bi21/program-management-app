@@ -51,7 +51,7 @@ export default function useProgramTable(
   }, [assignments, loading, error]);
 
   const programColumns = useMemo<TableColumnDef<Program>[]>(() => [
-    { id: 'name', header: 'Program', accessorFn: program => program.name },
+    { id: 'title', header: 'Program', accessorFn: program => program.title },
     {
       id: 'enrollmentRequired',
       header: 'Enrollment Required',
@@ -70,7 +70,7 @@ export default function useProgramTable(
       enableResizing: false,
       enableHiding: false,
       cell: ({ row: { original: program } }) => <ActionsMenu
-        ariaLabel={`Actions for ${program.name}`}
+        ariaLabel={`Actions for ${program.title}`}
         items={[
           { id: 'edit', label: 'Edit Program', onClick: () => onEdit(program) },
           { id: 'cycles', label: 'Assigned Cycles', onClick: () => onManageCycles(program) },

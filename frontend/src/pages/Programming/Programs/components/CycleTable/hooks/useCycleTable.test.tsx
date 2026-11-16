@@ -16,7 +16,7 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 
 it('routes edit and delete actions to the selected cycle', () => {
   const cycle = {
-    id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
+    id: 'cycle-1', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
   } as ProgramCycle;
   const onEdit = vi.fn();
   const onDelete = vi.fn();

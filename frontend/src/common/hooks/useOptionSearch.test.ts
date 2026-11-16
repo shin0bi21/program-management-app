@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { useOptionSearch } from './useOptionSearch';
 
-const options = [{ id: 'hidden', name: 'Toronto' }, { id: 'toronto', name: 'London' }];
+const options = [{ id: 'hidden', label: 'Toronto' }, { id: 'toronto', label: 'London' }];
 
 it('filters visible labels case-insensitively, retains option data, and clears without mutating options', () => {
   const { result } = renderHook(() => useOptionSearch(options));

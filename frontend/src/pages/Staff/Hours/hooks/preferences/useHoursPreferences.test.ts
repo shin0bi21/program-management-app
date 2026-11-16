@@ -20,13 +20,13 @@ const savedPreference: { preference: StoredHoursPreferences | null } = {
 };
 
 const cycles = [
-  { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const },
-  { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming' as const },
+  { id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const },
+  { id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming' as const },
 ];
 const staff = [{
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 }];
-const programs = [{ id: 'program-1', name: 'Soft Skills' }];
+const programs = [{ id: 'program-1', title: 'Soft Skills' }];
 const categories = [{ id: 'meeting' as const, name: 'Meeting' }];
 const types = [{ id: 'task' as const, name: 'Task' }];
 const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;

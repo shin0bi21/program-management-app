@@ -54,7 +54,6 @@ function renderCalendar({
       staffId,
       firstName: staffId === coworker.id ? coworker.firstName : currentTask.firstName,
       lastName: staffId === coworker.id ? coworker.lastName : currentTask.lastName,
-      name: staffId === coworker.id ? coworker.name : currentTask.name,
     })),
   };
   const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {

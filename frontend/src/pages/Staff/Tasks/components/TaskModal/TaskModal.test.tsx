@@ -18,7 +18,7 @@ const staff = [{
   role: 'staff',
   writable: true,
 }];
-const programs = [{ id: 'program-soft', name: 'Soft Skills' }];
+const programs = [{ id: 'program-soft', title: 'Soft Skills' }];
 const categories = [{ id: 'planning_prep' as const, name: 'Planning / Prep' }];
 
 describe('TaskModal', () => {

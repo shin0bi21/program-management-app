@@ -58,14 +58,14 @@ describe('Hours API', () => {
     secondStaffToken = generateToken(secondStaff.userId, 'staff', secondStaff.email);
     unrelatedStaffId = unrelatedStaff.userId;
     unrelatedStaffToken = generateToken(unrelatedStaff.userId, 'staff', unrelatedStaff.email);
-    const programs = await sql<Array<{ id: string; name: string }>>`
-      SELECT id, name FROM programs WHERE enrollment_required = FALSE ORDER BY name LIMIT 1
+    const programs = await sql<Array<{ id: string; title: string }>>`
+      SELECT id, title FROM programs WHERE enrollment_required = FALSE ORDER BY title LIMIT 1
     `;
     programId = programs[0].id;
-    program = programs[0].name;
+    program = programs[0].title;
     const assignments = await sql<Array<{ cycleId: string }>>`
       WITH cycles AS (
-        INSERT INTO program_cycles (name, starts_on, ends_on)
+        INSERT INTO program_cycles (title, starts_on, ends_on)
         VALUES
           (
             ${`Active Hours ${stamp}`},
@@ -198,7 +198,10 @@ describe('Hours API', () => {
       .send({ source: 'regular', staffId: firstStaffId, programId, category: 'meeting', date, hours: 2.5, note: 'Program meeting' });
 
     expect(created.status).toBe(201);
-    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, category: 'meeting', type: 'regular', taskId: null, sessionId: null, hours: 2.5 }));
+    expect(created.body).toEqual(expect.objectContaining({ staffId: firstStaffId, firstName: 'Zoe', lastName: 'Wilson', category: 'meeting', type: 'regular', taskId: null, sessionId: null, hours: 2.5 }));
+
+    expect(created.body).not.toHaveProperty('name');
+    expect(created.body).not.toHaveProperty('staffName');
 
     const listed = await request(app)
       .get(`/api/hours/calendar?start=${date}&end=${date}`)
@@ -495,7 +498,7 @@ describe('Hours API', () => {
 
   it('keeps pay-period data available when multiple cycles overlap', async () => {
     const [overlappingCycle] = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       SELECT ${`Overlapping Hours ${Date.now()}`}, starts_on, ends_on
       FROM program_cycles
       WHERE id = ${activeCycleId}
@@ -994,7 +997,7 @@ describe('Hours API', () => {
   it('rejects work dates covered by multiple eligible cycles', async () => {
     const [overlap] = await sql<Array<{ cycleId: string }>>`
       WITH cycle AS (
-        INSERT INTO program_cycles (name, starts_on, ends_on)
+        INSERT INTO program_cycles (title, starts_on, ends_on)
         VALUES ('Overlapping write cycle', ${date}, ${date})
         RETURNING id
       ), assignment AS (

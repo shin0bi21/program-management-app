@@ -9,6 +9,6 @@ export function getCycleReferenceData() {
   return sql<CycleRow[]>`
     SELECT ${cycleRowColumns}
     FROM program_cycles cycle
-    ORDER BY cycle.starts_on DESC, cycle.name, cycle.id
+    ORDER BY cycle.starts_on DESC, cycle.title, cycle.id
   `;
 }

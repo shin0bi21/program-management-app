@@ -67,9 +67,9 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
                   ariaLabel="Who is filling out this form?"
                   value={field.value ?? ''}
                   options={[
-                    { id: 'youth', name: 'Youth' },
-                    { id: 'parent', name: 'Parent' },
-                    { id: 'guardian', name: 'Guardian' },
+                    { id: 'youth', label: 'Youth' },
+                    { id: 'parent', label: 'Parent' },
+                    { id: 'guardian', label: 'Guardian' },
                   ]}
                   onChange={field.onChange}
                   disabled={isFormLocked}

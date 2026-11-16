@@ -28,7 +28,7 @@ const options: TestTaskOptions = {
   staff: [{
     id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
   }],
-  programs: [{ id: 'program-1', name: 'Soft Skills' }],
+  programs: [{ id: 'program-1', title: 'Soft Skills' }],
   categories: [
     { id: 'planning_prep', name: 'Planning / Prep' },
     { id: 'meeting', name: 'Meeting' },
@@ -39,7 +39,7 @@ const options: TestTaskOptions = {
   ],
 };
 const cycles: ProgramCycle[] = [
-  { id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active' },
+  { id: 'cycle-1', title: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active' },
 ];
 const tableKeys = [
   'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',

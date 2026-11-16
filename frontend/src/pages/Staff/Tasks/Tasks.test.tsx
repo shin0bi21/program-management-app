@@ -80,10 +80,16 @@ const auth: AuthContextValue = {
   login: vi.fn(), logout: vi.fn(),
 };
 
+/** Reads the latest route preference save. @example getLastSavedPreference()?.sorting */
 function getLastSavedPreference() {
   return vi.mocked(setPreference).mock.lastCall?.[1];
 }
 
+/**
+ * Opens Tasks with an isolated query client and the supplied account.
+ * @param authValue - Account permissions used by the scenario.
+ * @example renderTasks() // opens Tasks as the default staff member
+ */
 function renderTasks(authValue: AuthContextValue = auth) {
   return renderWithQueryClient(
     <MemoryRouter><AuthContext.Provider value={authValue}><Tasks /></AuthContext.Provider></MemoryRouter>,
@@ -94,7 +100,7 @@ describe('Tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+      id: 'cycle-1', title: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
     }]);
     calendarTestState.view = 'table';
     calendarTestState.props = null;
@@ -166,7 +172,7 @@ describe('Tasks', () => {
       title: 'Complete administration',
       programId: null,
       program: null,
-      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith',
+      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith',
       writable: false,
     };
     vi.mocked(getTaskDashboardData).mockResolvedValue([task, coworkerTask]);
@@ -208,8 +214,8 @@ describe('Tasks', () => {
   // Controls and views.
   it('sends multiple selected cycle IDs to the table query', async () => {
     vi.mocked(getCycleReferences).mockResolvedValue([
-      { id: 'cycle-1', name: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
-      { id: 'cycle-2', name: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
+      { id: 'cycle-1', title: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
+      { id: 'cycle-2', title: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
     ]);
     vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, cycleIds: ['cycle-1', 'cycle-2'] });
     renderTasks();

@@ -65,7 +65,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
                 id={id('contactRelationship')}
                 ariaLabel="Relationship"
                 value={String(relationshipField.value ?? '')}
-                options={contactRelationshipOptions}
+                options={contactRelationshipOptions.map(({ id, name }) => ({ id, label: name }))}
                 onChange={relationshipField.onChange}
                 disabled={disabled}
               />
@@ -85,7 +85,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
               id={id('discoverySource')}
               ariaLabel="How Did You Hear About Us?"
               value={String(discoveryField.value ?? '')}
-              options={discoverySourceOptions}
+              options={discoverySourceOptions.map(({ id, name }) => ({ id, label: name }))}
               onChange={discoveryField.onChange}
               disabled={disabled}
             />

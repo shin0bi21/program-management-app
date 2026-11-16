@@ -16,7 +16,7 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
 
 it('routes program management actions to the selected row', () => {
   const program = {
-    id: 'program-1', name: 'Soft Skills', description: null, enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+    id: 'program-1', title: 'Soft Skills', description: null, enrollmentRequired: true, minAge: 12, maxAge: 15, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
   } as Program;
   const onEdit = vi.fn();
   const onManageCycles = vi.fn();

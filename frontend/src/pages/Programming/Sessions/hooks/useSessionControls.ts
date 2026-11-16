@@ -70,10 +70,10 @@ export function useSessionControls({
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const filterCategories = useMemo(() => [
-    { id: 'programIds' as const, label: 'Program', options: programs },
-    { id: 'cycleIds' as const, label: 'Cycle', options: cycles },
-    { id: 'sessionTypes' as const, label: 'Type', options: sessionTypeOptions },
-    { id: 'statuses' as const, label: 'Status', options: [{ id: 'upcoming', name: 'Upcoming' }, { id: 'completed', name: 'Completed' }] },
+    { id: 'programIds' as const, label: 'Program', options: programs.map(({ id, title }) => ({ id, label: title })) },
+    { id: 'cycleIds' as const, label: 'Cycle', options: cycles.map(({ id, title }) => ({ id, label: title })) },
+    { id: 'sessionTypes' as const, label: 'Type', options: sessionTypeOptions.map(({ id, name }) => ({ id, label: name })) },
+    { id: 'statuses' as const, label: 'Status', options: [{ id: 'upcoming', label: 'Upcoming' }, { id: 'completed', label: 'Completed' }] },
   ], [cycles, programs, sessionTypeOptions]);
 
   const setView = (view: SessionView) => updatePreferences({ view });

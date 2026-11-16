@@ -18,12 +18,12 @@ describe('Future session date moves', () => {
     const user = await seedTestUser({ role: 'admin' });
     userId = user.userId;
     token = generateToken(userId, 'admin', user.email);
-    const [program] = await sql<{ id: string }[]>`INSERT INTO programs (name)
+    const [program] = await sql<{ id: string }[]>`INSERT INTO programs (title)
       VALUES (${`Move sessions ${Date.now()}`}) RETURNING id`;
     programId = program.id;
-    const [cycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (name, starts_on, ends_on)
+    const [cycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Move source ${Date.now()}`}, '2020-01-01', '2031-12-31') RETURNING id`;
-    const [nextCycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (name, starts_on, ends_on)
+    const [nextCycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Move destination ${Date.now()}`}, '2032-01-01', '2033-12-31') RETURNING id`;
     cycleId = cycle.id;
     nextCycleId = nextCycle.id;
@@ -142,7 +142,7 @@ describe('Future session date moves', () => {
 
   it('rejects unassigned and overlapping destination cycles without writing', async () => {
     expect((await move('2035-01-01')).status).toBe(409);
-    const [cycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (name, starts_on, ends_on)
+    const [cycle] = await sql<{ id: string }[]>`INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Overlap ${Date.now()}`}, '2030-03-01', '2030-03-31') RETURNING id`;
     try {
       await sql`INSERT INTO program_cycle_assignments (program_id, cycle_id) VALUES (${programId}, ${cycle.id})`;

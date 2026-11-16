@@ -12,7 +12,7 @@ describe('useProgramsModals', () => {
     expect(result.current.program.target).toBeNull();
     act(() => result.current.program.open({
       id: 'program-1',
-      name: 'Skills',
+      title: 'Skills',
       description: null,
       enrollmentRequired: false,
       minAge: null,

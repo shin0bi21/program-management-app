@@ -33,7 +33,7 @@ describe('Homepage management API', () => {
     const [program] = await sql<{ id: string }[]>`
       SELECT id
       FROM programs
-      WHERE name = 'Soft Skills'
+      WHERE title = 'Soft Skills'
     `;
     await sql`
       INSERT INTO user_program_assignments (user_id, program_id)
@@ -176,13 +176,13 @@ describe('Homepage management API', () => {
     const [program] = await sql<{ id: string }[]>`
       SELECT id
       FROM programs
-      WHERE name = 'Soft Skills'
+      WHERE title = 'Soft Skills'
     `;
-    const programs = await sql<{ id: string; name: string }[]>`
-      SELECT id, name
+    const programs = await sql<{ id: string; title: string }[]>`
+      SELECT id, title
       FROM programs
     `;
-    const programIdsByName = new Map(programs.map(item => [item.name, item.id]));
+    const programIdsByName = new Map(programs.map(item => [item.title, item.id]));
     const expectedProgramIds = ['Drop In', 'Soft Skills', 'Job Readiness'].map(name => programIdsByName.get(name));
     expect(publicContent.status).toBe(200);
     expect(publicContent.body.programs.map((item: { id: string }) => item.id))
@@ -191,7 +191,7 @@ describe('Homepage management API', () => {
       (item: { id: string }) => item.id === program.id,
     );
     expect(softSkills).toEqual(expect.objectContaining({
-      name: 'Soft Skills',
+      title: 'Soft Skills',
       enrollmentRequired: true,
       minAge: 12,
       maxAge: 15,
@@ -199,7 +199,7 @@ describe('Homepage management API', () => {
     expect(softSkills.sessions.map((session: { id: string }) => session.id))
       .toEqual(sessionIds.slice(0, 3));
     expect(publicContent.body.programs).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Job Readiness', sessions: expect.any(Array) }),
+      expect.objectContaining({ title: 'Job Readiness', sessions: expect.any(Array) }),
     ]));
 
     const managed = await request(app).get('/api/homepage').set('Authorization', `Bearer ${staffToken}`);

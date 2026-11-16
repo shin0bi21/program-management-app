@@ -166,7 +166,7 @@ describe('Hours', () => {
     });
     vi.mocked(getHoursCalendarData).mockResolvedValue([]);
     vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
-    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', title: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
@@ -178,11 +178,11 @@ describe('Hours', () => {
       biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
     });
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
-      id: 'cycle-fall', name: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming',
+      id: 'cycle-fall', title: 'Fall 2026', startsOn: '2026-09-02', endsOn: '2026-12-31', state: 'upcoming',
     }, {
-      id: 'cycle-spring', name: 'Spring 2026', startsOn: '2026-02-01', endsOn: '2026-06-30', state: 'completed',
+      id: 'cycle-spring', title: 'Spring 2026', startsOn: '2026-02-01', endsOn: '2026-06-30', state: 'completed',
     }]);
   });
 
@@ -221,14 +221,14 @@ describe('Hours', () => {
         id: 'entry-coworker', category: 'administration', categoryLabel: 'Administration',
         hours: 4, note: 'Coworker administration',
       }, {
-        staffId: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        staffId: 'staff-2', firstName: 'Alex', lastName: 'Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
       ]);
-    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', title: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
@@ -367,7 +367,7 @@ describe('Hours', () => {
           id: 'entry-zoe', programId: 'program-1', program: 'Soft Skills',
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
           categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 2, note: 'Zoe workshop',
-        }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        }), makeHoursItem({ staffId: 'staff-2', date: date, firstName: 'Alex', lastName: 'Morgan',
           id: 'entry-alex', programId: null, program: null,
           cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'meeting',
           categoryLabel: 'Meeting', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 7, note: 'Alex planning meeting',
@@ -379,7 +379,7 @@ describe('Hours', () => {
       }, { date: date }),
       hoursItem({ id: 'entry-alex', hours: 7, note: 'Alex planning meeting' }, {
         date: date, staffId: 'staff-2',
-        firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan',
+        firstName: 'Alex', lastName: 'Morgan',
       }),
     ], nextCursor: null });
     vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
@@ -389,7 +389,7 @@ describe('Hours', () => {
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
       ]);
-    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', name: 'Soft Skills' }]);
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', title: 'Soft Skills' }]);
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });

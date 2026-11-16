@@ -191,8 +191,8 @@ export interface ProgramCycles {
   created_by: string | null;
   ends_on: string;
   id: Generated<string>;
-  name: string;
   starts_on: string;
+  title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
 }
@@ -223,8 +223,8 @@ export interface Programs {
   id: Generated<string>;
   max_age: number | null;
   min_age: number | null;
-  name: string;
   timezone: Generated<ProgramTimezone>;
+  title: string;
 }
 
 export interface ProgramSessions {

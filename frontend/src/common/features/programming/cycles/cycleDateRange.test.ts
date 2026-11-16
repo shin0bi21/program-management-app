@@ -4,9 +4,9 @@ import { getCycleDateRange } from './cycleDateRange';
 import type { ProgramCycle } from './types';
 
 const cycles: ProgramCycle[] = [
-  { id: 'recent', name: 'Recent', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' },
-  { id: 'old', name: 'Old', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
-  { id: 'next', name: 'Next', startsOn: '2027-01-01', endsOn: '2027-06-30', state: 'upcoming' },
+  { id: 'recent', title: 'Recent', startsOn: '2026-09-01', endsOn: '2026-12-31', state: 'active' },
+  { id: 'old', title: 'Old', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
+  { id: 'next', title: 'Next', startsOn: '2027-01-01', endsOn: '2027-06-30', state: 'upcoming' },
 ];
 
 describe('getCycleDateRange', () => {

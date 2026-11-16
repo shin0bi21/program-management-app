@@ -7,16 +7,16 @@ const statusClassName = (status: AttendanceStatus | '') => (
 );
 
 const enrolledOptions = [
-  { id: 'present', name: 'Present', className: statusClassName('present') },
-  { id: 'absent', name: 'Absent', className: statusClassName('absent') },
-  { id: 'late', name: 'Late', className: statusClassName('late') },
-  { id: 'excused', name: 'Excused', className: statusClassName('excused') },
-  { id: '', name: 'Not marked', className: statusClassName('') },
+  { id: 'present', label: 'Present', className: statusClassName('present') },
+  { id: 'absent', label: 'Absent', className: statusClassName('absent') },
+  { id: 'late', label: 'Late', className: statusClassName('late') },
+  { id: 'excused', label: 'Excused', className: statusClassName('excused') },
+  { id: '', label: 'Not marked', className: statusClassName('') },
 ] as const;
 
 const openOptions = [
-  { id: 'present', name: 'Attended', className: statusClassName('present') },
-  { id: '', name: 'Not attended', className: statusClassName('') },
+  { id: 'present', label: 'Attended', className: statusClassName('present') },
+  { id: '', label: 'Not attended', className: statusClassName('') },
 ] as const;
 
 export default function AttendanceStatusSelect({

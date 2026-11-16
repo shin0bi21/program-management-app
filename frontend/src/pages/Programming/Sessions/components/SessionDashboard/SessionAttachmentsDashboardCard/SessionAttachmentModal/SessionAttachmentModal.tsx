@@ -72,7 +72,7 @@ function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved
             <Checklist
               variant="form"
               ariaLabel="Link youth"
-              options={roster.map(youth => ({ id: youth.youthId, name: `${youth.firstName} ${youth.lastName}` }))}
+              options={roster.map(youth => ({ id: youth.youthId, label: `${youth.firstName} ${youth.lastName}` }))}
               value={selectedYouthIds}
               onToggle={toggleYouth}
               disabled={submissionComplete}

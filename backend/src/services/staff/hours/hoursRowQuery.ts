@@ -29,7 +29,6 @@ export interface HoursRow {
 
   sessionTitle: string | null;
 
-  name: string;
   categoryLabel: string;
   type: 'task' | 'session' | 'regular';
 }
@@ -40,8 +39,8 @@ const categoryLabels = Object.fromEntries(HOURS_CATEGORY_OPTIONS.map(option => [
 export const hoursSearchValue = sql`CONCAT_WS(' ',
   staff.first_name,
   staff.last_name,
-  program.name,
-  cycle.name,
+  program.title,
+  cycle.title,
   entry.category::text,
   task.title,
   session.title,
@@ -74,10 +73,10 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
       staff.first_name,
       staff.last_name,
 
-      program.name AS program,
+      program.title AS program,
 
       cycle.id AS cycle_id,
-      cycle.name AS cycle,
+      cycle.title AS cycle,
       cycle.starts_on AS cycle_starts_on,
       cycle.ends_on AS cycle_ends_on,
 
@@ -85,7 +84,6 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
 
       session.title AS session_title,
 
-      CONCAT(staff.first_name, ' ', staff.last_name) AS name,
       ${query.json(categoryLabels)}::jsonb ->> entry.category AS category_label,
       CASE
         WHEN entry.task_id IS NOT NULL THEN 'task'

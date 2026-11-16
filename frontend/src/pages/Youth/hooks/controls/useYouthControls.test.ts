@@ -16,7 +16,7 @@ const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(
 
 const programs: Program[] = [{
   id: 'program-1',
-  name: 'Soft Skills',
+  title: 'Soft Skills',
   description: null,
   enrollmentRequired: true,
   minAge: 12,
@@ -27,7 +27,7 @@ const programs: Program[] = [{
   timezone: 'America/Toronto',
 }];
 const cycles: ProgramCycle[] = [{
-  id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+  id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 }];
 const tableKeys = YOUTH_TABLE_KEYS;
 

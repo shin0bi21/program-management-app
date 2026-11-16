@@ -70,7 +70,7 @@ export default function ProgramOverviewDashboardCard({ program, canManageRoster,
   let title = 'Program Overview';
   if (program) {
     const cycleSuffix = cycle ? ` - ${cycle}` : '';
-    title = `${program.name}${cycleSuffix} Overview`;
+    title = `${program.title}${cycleSuffix} Overview`;
   }
   const metricsLoading = Boolean(program) && loading;
   const attendanceLoading = metricsLoading || Boolean(assignment && canViewYouthReport && attendanceQuery.isLoading);
