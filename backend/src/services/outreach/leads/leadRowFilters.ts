@@ -1,30 +1,32 @@
 import { sql } from '../../../db/client';
 import type { LeadQuery } from '../../../validation/leadSchemas';
-import { recommendedProgramId } from './leadRowQuery';
+
+type LeadFilters = Pick<LeadQuery, 'statuses' | 'programIds' | 'origins' | 'submitterRoles' | 'search'>;
 
 /**
  * Builds filters for table and calendar items.
  * @param filterValues - Validated intake selections; empty selections add no restriction.
+ * @returns Combined restrictions against the canonical intake and recommended program.
  * @example buildLeadFilters(filterValues) // matching lead filters
  */
-export function buildLeadFilters(filterValues: LeadQuery) {
+export function buildLeadFilters(filterValues: LeadFilters) {
   // 1. Collect the selected filters.
   const filters = [];
   if (filterValues.statuses.length) {
-    filters.push(sql`status = ANY(${sql.array(filterValues.statuses)}::lead_status[])`);
+    filters.push(sql`lead.status = ANY(${sql.array(filterValues.statuses)}::lead_status[])`);
   }
   if (filterValues.programIds.length) {
-    filters.push(sql`${recommendedProgramId} = ANY(${sql.array(filterValues.programIds)}::uuid[])`);
+    filters.push(sql`recommended_program.id = ANY(${sql.array(filterValues.programIds)}::uuid[])`);
   }
   if (filterValues.origins.length) {
-    filters.push(sql`origin = ANY(${sql.array(filterValues.origins)}::lead_origin[])`);
+    filters.push(sql`lead.origin = ANY(${sql.array(filterValues.origins)}::lead_origin[])`);
   }
   if (filterValues.submitterRoles.length) {
-    filters.push(sql`submitted_by_role = ANY(${sql.array(filterValues.submitterRoles)}::lead_submitter_role[])`);
+    filters.push(sql`lead.submitted_by_role = ANY(${sql.array(filterValues.submitterRoles)}::lead_submitter_role[])`);
   }
   if (filterValues.search) {
     const search = `%${escapeLikePattern(filterValues.search)}%`;
-    filters.push(sql`CONCAT_WS(' ', youth_first_name, youth_last_name, school) ILIKE ${search} ESCAPE '\\'`);
+    filters.push(sql`CONCAT_WS(' ', lead.youth_first_name, lead.youth_last_name, lead.school) ILIKE ${search} ESCAPE '\\'`);
   }
 
   // 2. Apply the selected filters.

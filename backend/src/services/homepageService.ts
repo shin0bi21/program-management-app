@@ -3,7 +3,7 @@ import { access, mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { asTransactionSql, sql } from '../db/client';
-import { BadRequestError, ConflictError, NotFoundError } from '../errors';
+import { BadRequestError, ConflictError, InternalServerError, NotFoundError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
 import type {
   CreateHomepageImageInput,
@@ -118,16 +118,19 @@ export async function getHomepageImageFile(
  * @example await submitPublicLead(data) // saves the youth details and contact
  */
 export async function submitPublicLead(data: PublicLeadInput) {
-  return createExternalLead({
-    youthFirstName: data.youthFirstName.trim(),
-    youthLastName: data.youthLastName.trim(),
-    dateOfBirth: data.dateOfBirth,
-    school: data.school.trim(),
-    discoverySource: data.discoverySource,
-    contactPhoneNumber: data.contactPhoneNumber.trim(),
-    contactRelationship: data.contactRelationship,
-    notes: data.notes?.trim() || null,
-  }, data.submittedByRole, sql);
+  return sql.begin(async rawTx => {
+    const trx = asTransactionSql(rawTx);
+    return createExternalLead({
+      youthFirstName: data.youthFirstName.trim(),
+      youthLastName: data.youthLastName.trim(),
+      dateOfBirth: data.dateOfBirth,
+      school: data.school.trim(),
+      discoverySource: data.discoverySource,
+      contactPhoneNumber: data.contactPhoneNumber.trim(),
+      contactRelationship: data.contactRelationship,
+      notes: data.notes?.trim() || null,
+    }, data.submittedByRole, trx);
+  });
 }
 
 /**
@@ -197,6 +200,7 @@ export async function createHomepageImage(
       FROM homepage_images
       RETURNING ${homepageImageRowColumns}
     `;
+    if (!rows.length) throw new InternalServerError('Homepage image creation returned no record');
     return rows[0];
   } catch (error) {
     await Promise.all([filePath, thumbnailPath, mobilePath, displayPath].map(candidate => unlink(candidate).catch(() => {})));
@@ -396,7 +400,7 @@ async function readHomepagePrograms() {
 
     if (row.sessionId === null) continue;
     if (row.sessionTitle === null || row.sessionDate === null) {
-      throw new Error(`Homepage session ${row.sessionId} is missing required data`);
+      throw new InternalServerError('Homepage session is missing required data');
     }
 
     program.sessions.push({

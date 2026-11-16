@@ -24,6 +24,12 @@ const lead: Lead = {
   statusUpdatedAt: '2026-08-01T12:00:00.000Z', createdAt: '2026-08-01T12:00:00.000Z',
 };
 
+/**
+ * Renders the column's cell for a supplied lead fixture.
+ * @param column - Column with a function cell renderer.
+ * @param value - Row passed to that renderer.
+ * @example renderCell(actionsColumn, lead) // action menu for this lead
+ */
 function renderCell(column: ColumnDef<Lead>, value: Lead) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
   return column.cell({ row: { original: value } } as CellContext<Lead, unknown>);
@@ -63,12 +69,19 @@ describe('useLeadTable', () => {
     expect(callbacks.onStatusChange).toHaveBeenCalledWith(lead, 'contacted');
   });
 
-  it('omits row actions after sign-up', () => {
+  it.each([
+    { ...lead, status: 'signed_up' as const, convertedYouthId: 'youth-1' },
+    { ...lead, convertedYouthId: 'youth-1' },
+  ])('offers only intake editing for converted lead $id with status $status', converted => {
     const callbacks = { onEdit: vi.fn(), onDelete: vi.fn(), onSignUp: vi.fn(), onStatusChange: vi.fn() };
     const { result } = renderHook(() => useLeadTable({ origin: 'external', canWrite: true, ...callbacks }));
     const actionsColumn = result.current.columns.find(column => column.id === 'actions')!;
 
-    expect(renderCell(actionsColumn, { ...lead, status: 'signed_up' })).toBeNull();
+    render(<>{renderCell(actionsColumn, converted)}</>);
+
+    expect(menu.items.map(item => item.id)).toEqual(['edit']);
+    menu.items[0].onClick();
+    expect(callbacks.onEdit).toHaveBeenCalledWith(converted);
   });
 
   it.each(['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed'] as const)(

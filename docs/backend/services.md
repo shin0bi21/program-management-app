@@ -64,8 +64,8 @@ to row types and `RETURNING` projections.
 
 Order public operations **get → set and focused changes → delete**, followed by
 private helpers. Keep descriptive command names such as `invite` or `revoke`.
-When one form creates and edits a full record, use one `set<Domain>` operation with
-an optional ID and small insert/update helpers.
+When one form creates and edits a full record, use one `set<Domain>` operation.
+Follow [Save a Full Record](#save-a-full-record) for its persistence flow.
 
 Use short numbered comments for meaningful steps, restarting at 1 in each
 operation. Describe what happens in plain language: `// 1. Check the selected
@@ -75,6 +75,29 @@ Do not number every statement or explain SQL mechanics in the step label.
 
 Keep function contracts brief; explain important constraints and include one
 small example. Follow [Code Documentation](../workflows/documentation.md).
+
+## Save a Full Record
+
+Use one `INSERT ... ON CONFLICT ... DO UPDATE` statement for a record save whose
+contract allows creation when the supplied identity is absent. Generate an ID
+when none is supplied. Keep one validation and authorization flow, one write,
+and one canonical read inside the owning transaction. Avoid separate insert and
+update helpers that duplicate the same field mapping and result handling.
+
+Map only validated editable fields. On conflict, preserve creation metadata and
+unrelated lifecycle fields; set the update metadata on the saved record. Enforce
+record scope and lifecycle rules before or within the write. Never treat an
+inaccessible record as a missing record that may be recreated.
+
+Document each endpoint's creation and missing-ID behavior in its source contract
+and the [API guide](api.md). Existing-only commands such as moves, status changes,
+and deletion continue to require their target. Multi-record workflows retain
+their relationship, audit, and external-operation rules. Keep a separate path
+only where one of those contracts requires different behavior, and explain why.
+
+Use the shared [error handler](errors.md#connect-the-error-path) for both insert
+and conflict-update failures. Translate a known database constraint only once,
+where the service can give it domain meaning.
 
 ## Keep Writes Safe
 
