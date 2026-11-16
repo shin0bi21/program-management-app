@@ -18,7 +18,7 @@ export default function useAccountData(): AccountPageData {
     name: [user?.firstName, user?.lastName].filter(Boolean).join(' '),
     email: user?.email ?? '—',
     role: role ?? '—',
-    programNames: programs.map(program => program.name).join(', '),
+    programNames: programs.map(program => program.title).join(', '),
     programsLoading,
     programsError,
     retryPrograms,

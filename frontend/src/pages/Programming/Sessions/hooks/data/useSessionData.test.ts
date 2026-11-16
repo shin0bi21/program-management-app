@@ -9,7 +9,7 @@ vi.mock('../../../../../common/features/referenceData/referenceData.api', () => 
 vi.mock('../../sessions.api', () => ({ getSessionReferenceData: vi.fn() }));
 
 const cycles = [{
-  id: 'cycle-1', name: 'Summer', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const,
+  id: 'cycle-1', title: 'Summer', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' as const,
 }];
 
 describe('useSessionData', () => {

@@ -10,11 +10,11 @@ const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference:
 vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
 const programs: Program[] = [{
-  id: 'program-1', name: 'Soft Skills', description: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto', enrollmentRequired: true, minAge: 12, maxAge: 15,
+  id: 'program-1', title: 'Soft Skills', description: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto', enrollmentRequired: true, minAge: 12, maxAge: 15,
 }];
 const cycles: ProgramCycle[] = [
-  { id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
-  { id: 'cycle-2', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
+  { id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
+  { id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
 ];
 const sessionTypes: SessionType[] = [{ id: 'Regular', name: 'Regular' }];
 const tableKeys = ['program', 'cycle', 'title', 'date', 'time', 'type', 'status'] as const;

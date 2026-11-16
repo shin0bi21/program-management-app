@@ -22,7 +22,7 @@ describe('useTaskData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCycleReferences).mockResolvedValue([{
-      id: 'cycle-1', name: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
+      id: 'cycle-1', title: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
     }]);
     vi.mocked(getStaffReferences).mockResolvedValue(staff);
     vi.mocked(getProgramReferences).mockResolvedValue([]);

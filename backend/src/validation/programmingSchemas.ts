@@ -31,14 +31,14 @@ export const programCycleQuerySchema = z.object({
 });
 
 export const cycleListQuerySchema = z.object({
-  query: z.object({ ...cursorListFields(['name', 'startsOn'], 'startsOn', 'desc') }),
+  query: z.object({ ...cursorListFields(['title', 'startsOn'], 'startsOn', 'desc') }),
 });
 
 export type CycleListQuery = z.infer<typeof cycleListQuerySchema.shape.query>;
 
 export const createCycleSchema = z.object({
   body: z.object({
-    name: z.string().trim().min(1).max(120),
+    title: z.string().trim().min(1).max(120),
     startsOn: dateSchema,
     endsOn: dateSchema,
     programIds: z.array(z.string().uuid()).max(500).refine(

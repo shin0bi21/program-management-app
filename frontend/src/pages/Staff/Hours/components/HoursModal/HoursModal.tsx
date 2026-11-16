@@ -105,7 +105,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-staff"
               value={draft.staffId}
-              options={staff}
+              options={staff.map(({ id, name }) => ({ id, label: name }))}
               onChange={workflow.selectStaff}
               placeholder="Select staff member"
               ariaLabel="Staff member"
@@ -127,7 +127,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-assigned-task"
                 value={draft.taskId}
-                options={workflow.taskOptions.map(task => ({ id: task.id, name: task.title }))}
+                options={workflow.taskOptions.map(task => ({ id: task.id, label: task.title }))}
                 onChange={workflow.selectTask}
                 placeholder={workflow.tasksLoading ? 'Loading assigned tasks…' : 'Select assigned task'}
                 ariaLabel="Task"
@@ -155,7 +155,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-session"
                 value={draft.sessionId}
-                options={workflow.sessionOptions}
+                options={workflow.sessionOptions.map(({ id, name }) => ({ id, label: name }))}
                 onChange={workflow.selectSession}
                 placeholder={sessionPlaceholder}
                 ariaLabel="Session"
@@ -170,7 +170,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-program"
               value={draft.programId}
-              options={programs}
+              options={programs.map(({ id, title }) => ({ id, label: title }))}
               onChange={workflow.selectProgram}
               placeholder="Select a program"
               ariaLabel="Program"
@@ -185,7 +185,7 @@ function HoursForm({
             <FloatingSelect
               id="hours-category"
               value={draft.category}
-              options={categories.filter(option => option.id !== 'program_delivery')}
+              options={categories.filter(option => option.id !== 'program_delivery').map(({ id, name }) => ({ id, label: name }))}
               onChange={value => workflow.selectCategory(
                 value as Exclude<HoursCategory, 'program_delivery'>,
               )}

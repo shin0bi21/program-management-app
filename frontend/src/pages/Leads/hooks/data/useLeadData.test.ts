@@ -12,7 +12,7 @@ vi.mock('../../../../common/features/referenceData/hooks/useReferenceData', () =
 describe('useLeadData', () => {
   it('composes shared program references for the route', () => {
     vi.mocked(useProgramReferences).mockReturnValue({
-      rows: [{ id: 'program-1', name: 'Future Ready' }],
+      rows: [{ id: 'program-1', title: 'Future Ready' }],
       loading: false,
       error: 'offline',
       upsert: vi.fn(), remove: vi.fn(), refetch: vi.fn(),
@@ -21,7 +21,7 @@ describe('useLeadData', () => {
     const { result } = renderHook(() => useLeadData(), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     expect(result.current).toEqual({
-      programs: [{ id: 'program-1', name: 'Future Ready' }],
+      programs: [{ id: 'program-1', title: 'Future Ready' }],
       programsLoading: false,
       programsError: 'offline',
     });

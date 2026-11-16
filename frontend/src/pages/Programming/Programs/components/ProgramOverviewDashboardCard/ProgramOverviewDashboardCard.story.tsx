@@ -7,7 +7,7 @@ import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY } from '../../hooks/actions/program
 import type { AttendanceData } from '../../../../../common/features/Attendance/attendance.api';
 
 const program: Program = {
-  id: 'program-1', name: 'Art', enrollmentRequired: true, minAge: null, maxAge: null,
+  id: 'program-1', title: 'Art', enrollmentRequired: true, minAge: null, maxAge: null,
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
 };
 
@@ -24,7 +24,7 @@ export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
       void queryClient.fetchQuery({ queryKey, queryFn: () => new Promise<ProgramCycleAssignment[]>(() => {}) });
     } else {
       queryClient.setQueryData<ProgramCycleAssignment[]>(queryKey, [{
-        programId: program.id, program: program.name,
+        programId: program.id, program: program.title,
         enrollmentRequired: true, minAge: null, maxAge: null,
         cycleId: 'cycle-1', cycle: 'Current Cycle', startsOn: '2020-01-01', endsOn: '2099-12-31', state: 'active',
         enrolledCount: 12,
@@ -32,7 +32,7 @@ export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
       }]);
       queryClient.setQueryData<AttendanceData>(['programs', 'cycle-attendance', program.id, 'cycle-1'], {
         programCycle: {
-          programId: program.id, program: program.name, cycleId: 'cycle-1', cycle: 'Current Cycle', enrollmentRequired: true,
+          programId: program.id, program: program.title, cycleId: 'cycle-1', cycle: 'Current Cycle', enrollmentRequired: true,
         },
         youth: [],
         averageAttendance: 75,

@@ -29,7 +29,7 @@ describe('Programs API', () => {
     adminToken = generateToken(admin.userId, 'admin', admin.email);
 
     const [softSkills] = await sql<{ id: string }[]>`
-      SELECT id FROM programs WHERE name = 'Soft Skills'
+      SELECT id FROM programs WHERE title = 'Soft Skills'
     `;
     softSkillsProgramId = softSkills.id;
     await sql`
@@ -37,7 +37,7 @@ describe('Programs API', () => {
       VALUES (${staffUserId}, ${softSkillsProgramId})
     `;
     const [editableProgram] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name) VALUES (${`Editable ${createdName}`}) RETURNING id
+      INSERT INTO programs (title) VALUES (${`Editable ${createdName}`}) RETURNING id
     `;
     editableProgramId = editableProgram.id;
   });
@@ -55,7 +55,7 @@ describe('Programs API', () => {
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        name: ` ${createdName} `,
+        title: ` ${createdName} `,
         enrollmentRequired: false,
         minAge: 14,
         maxAge: 18,
@@ -68,7 +68,7 @@ describe('Programs API', () => {
     expect(res.status).toBe(201);
     expect(res.body.program).toEqual(expect.objectContaining({
       id: expect.any(String),
-      name: createdName,
+      title: createdName,
       enrollmentRequired: false,
       minAge: 14,
       maxAge: 18,
@@ -85,7 +85,7 @@ describe('Programs API', () => {
       .put(`/api/programs/${editableProgramId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        name: `Edited ${createdName}`,
+        title: `Edited ${createdName}`,
         description: 'Updated program description',
         enrollmentRequired: true,
         minAge: 15,
@@ -103,7 +103,7 @@ describe('Programs API', () => {
   });
 
   it('returns canonical retained program cycles and youth memberships after a program edit without expanding read capabilities', async () => {
-    const [program] = await sql<{ id: string }[]>`INSERT INTO programs (name) VALUES (${`Program envelope ${Date.now()}`}) RETURNING id`;
+    const [program] = await sql<{ id: string }[]>`INSERT INTO programs (title) VALUES (${`Program envelope ${Date.now()}`}) RETURNING id`;
     const [dates] = await sql<{ startsOn: string; endsOn: string }[]>`
       SELECT (CURRENT_DATE - 30)::text AS starts_on,
         (CURRENT_DATE + 30)::text AS ends_on
@@ -112,11 +112,11 @@ describe('Programs API', () => {
     const youth = await seedTestUser({ role: 'youth', firstName: 'Envelope', lastName: 'Youth' });
     await sql`INSERT INTO youth_profiles (user_id) VALUES (${youth.userId})`;
     await sql`INSERT INTO program_enrollments (program_id, cycle_id, youth_id) VALUES (${program.id}, ${cycleId}, ${youth.userId})`;
-    const name = `Renamed program ${Date.now()}`;
+    const title = `Renamed program ${Date.now()}`;
 
     try {
       const saved = await request(app).put(`/api/programs/${program.id}`).set('Authorization', `Bearer ${adminToken}`)
-        .send({ name, enrollmentRequired: true, minAge: 13, maxAge: 18 });
+        .send({ title, enrollmentRequired: true, minAge: 13, maxAge: 18 });
       expect(saved.status).toBe(200);
       const programCycles = await request(app).get('/api/programs/cycle-assignments').query({ programId: program.id })
         .set('Authorization', `Bearer ${adminToken}`);
@@ -125,15 +125,15 @@ describe('Programs API', () => {
       expect(programCycles.status).toBe(200);
       expect(youthRows.status).toBe(200);
       expect(saved.body.updatedProgramCycles).toEqual(programCycles.body);
-      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, program: name, minAge: 13, maxAge: 18 });
+      expect(saved.body.updatedProgramCycles[0]).toMatchObject({ programId: program.id, program: title, minAge: 13, maxAge: 18 });
       expect(saved.body.updatedYouth).toEqual(youthRows.body.rows);
-      expect(saved.body.updatedYouth[0].activeProgram).toEqual(expect.objectContaining({ programId: program.id, program: name }));
+      expect(saved.body.updatedYouth[0].activeProgram).toEqual(expect.objectContaining({ programId: program.id, program: title }));
       expect(saved.body.removedProgramCycles).toEqual([]);
       expect(saved.body.createdProgramCycles).toEqual([]);
 
       const writer = generateToken(adminUserId, 'admin', undefined, ['write:programs']);
       const restricted = await request(app).put(`/api/programs/${program.id}`).set('Authorization', `Bearer ${writer}`)
-        .send({ name, enrollmentRequired: true, minAge: 13, maxAge: 18 });
+        .send({ title, enrollmentRequired: true, minAge: 13, maxAge: 18 });
       expect(restricted.status).toBe(200);
       expect(restricted.body.updatedProgramCycles).toEqual([]);
       expect(restricted.body.updatedYouth).toEqual([]);
@@ -149,7 +149,7 @@ describe('Programs API', () => {
     const res = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: 'Staff Program' });
+      .send({ title: 'Staff Program' });
 
     expect(res.status).toBe(403);
   });
@@ -158,7 +158,7 @@ describe('Programs API', () => {
     const response = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: `Default enrollment ${Date.now()}` });
+      .send({ title: `Default enrollment ${Date.now()}` });
 
     expect(response.status).toBe(201);
 
@@ -177,7 +177,7 @@ describe('Programs API', () => {
     const response = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Invalid enrollment requirement', enrollmentRequired });
+      .send({ title: 'Invalid enrollment requirement', enrollmentRequired });
 
     expect(response.status).toBe(400);
   });
@@ -186,7 +186,7 @@ describe('Programs API', () => {
     const response = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Obsolete enrollment request', rosterMode: 'open' });
+      .send({ title: 'Obsolete enrollment request', rosterMode: 'open' });
 
     expect(response.status).toBe(400);
   });
@@ -195,7 +195,7 @@ describe('Programs API', () => {
     const res = await request(app)
       .put(`/api/programs/${softSkillsProgramId}`)
       .set('Authorization', `Bearer ${staffToken}`)
-      .send({ name: 'Staff Program', enrollmentRequired: true });
+      .send({ title: 'Staff Program', enrollmentRequired: true });
 
     expect(res.status).toBe(403);
   });
@@ -204,11 +204,11 @@ describe('Programs API', () => {
     const missingMaximum = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Incomplete Age Range', minAge: 12 });
+      .send({ title: 'Incomplete Age Range', minAge: 12 });
     const reversedRange = await request(app)
       .post('/api/programs')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Reversed Age Range', minAge: 19, maxAge: 16 });
+      .send({ title: 'Reversed Age Range', minAge: 19, maxAge: 16 });
 
     expect(missingMaximum.status).toBe(400);
     expect(reversedRange.status).toBe(400);
@@ -223,7 +223,7 @@ describe('Programs API', () => {
     ]) {
       const response = await request(app).post('/api/programs')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'Invalid scheduling defaults', ...defaults });
+        .send({ title: 'Invalid scheduling defaults', ...defaults });
       expect(response.status).toBe(400);
     }
   });
@@ -245,14 +245,14 @@ describe('Programs API', () => {
     expect(res.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: expect.any(String),
-        name: 'Soft Skills',
+        title: 'Soft Skills',
         minAge: 12,
         maxAge: 15,
       }),
     ]));
     expect(res.body).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Job Readiness', minAge: 16, maxAge: 19 }),
-      expect.objectContaining({ name: 'Drop In', enrollmentRequired: false }),
+      expect.objectContaining({ title: 'Job Readiness', minAge: 16, maxAge: 19 }),
+      expect.objectContaining({ title: 'Drop In', enrollmentRequired: false }),
     ]));
   });
 
@@ -263,9 +263,9 @@ describe('Programs API', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Soft Skills' }),
-      expect.objectContaining({ name: 'Job Readiness' }),
-      expect.objectContaining({ name: 'Drop In' }),
+      expect.objectContaining({ title: 'Soft Skills' }),
+      expect.objectContaining({ title: 'Job Readiness' }),
+      expect.objectContaining({ title: 'Drop In' }),
     ]));
   });
 

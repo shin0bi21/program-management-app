@@ -3,7 +3,7 @@ import TimelineCalendar from '../../../../../../common/components/TimelineCalend
 import { makeProgramSession } from '../../../../../../tests/factories/session';
 import SessionItem from './SessionItem';
 
-const program = { id: 'program-1', name: 'Soft Skills' };
+const program = { id: 'program-1', title: 'Soft Skills' };
 const session = makeProgramSession({ date: '2026-08-09', startTime: '17:30', endTime: '19:30' });
 
 export function InteractiveSessionItem() {
@@ -14,7 +14,7 @@ export function InteractiveSessionItem() {
       getRowId={row => row.id} getItemId={item => item.id}
       getItemRange={() => ({ start: '2026-08-09', end: '2026-08-09' })}
       getItemCapabilities={() => ({ draggable: true, resizable: false })}
-      renderRow={({ row }) => row.name}
+      renderRow={({ row }) => row.title}
       buildItem={({ calendar }) => <SessionItem calendar={calendar} session={session} selected
         onEdit={() => setAction('edit')} onDelete={() => setAction('delete')} />} />
     <input hidden readOnly data-testid="session-action" value={action} />

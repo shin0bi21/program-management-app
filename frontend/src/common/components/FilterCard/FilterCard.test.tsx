@@ -6,7 +6,7 @@ import FilterCard, { type FilterCardValues } from './FilterCard';
 const categories = [{
   id: 'status',
   label: 'Status',
-  options: [{ id: 'active', name: 'Active' }, { id: 'inactive', name: 'Inactive' }],
+  options: [{ id: 'active', label: 'Active' }, { id: 'inactive', label: 'Inactive' }],
 }];
 
 /**
@@ -30,7 +30,7 @@ function openStatus() {
 describe('FilterCard', () => {
   it('displays reference names and applies only selected IDs', () => {
     const onApply = vi.fn();
-    const options = [{ id: 'cycle-1', name: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-31' }];
+    const options = [{ id: 'cycle-1', label: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-31' }];
     render(<FilterCard categories={[{ id: 'cycleIds', label: 'Cycle', options }]} values={{ cycleIds: [] }} onApply={onApply} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));

@@ -37,7 +37,7 @@ describe('User preferences API', () => {
 
   it('persists validated filters independently for each user', async () => {
     const [program] = await sql<{ id: string }[]>`
-      SELECT id FROM programs ORDER BY name LIMIT 1
+      SELECT id FROM programs ORDER BY title LIMIT 1
     `;
     const value = { statuses: ['inactive'], programIds: [program.id] };
 

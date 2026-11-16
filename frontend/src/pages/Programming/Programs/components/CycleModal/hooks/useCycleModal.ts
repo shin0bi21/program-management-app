@@ -8,7 +8,7 @@ import type { ProgramCycle } from '../../../../../../common/features/programming
 import { getErrorMessage } from '../../../../../../http/errors';
 
 interface CycleInput {
-  name: string;
+  title: string;
   startsOn: string;
   endsOn: string;
 }
@@ -46,7 +46,7 @@ export default function useCycleModal({ cycle, assignments, programsReady = true
     if (!assignmentsReady || !tryLock()) return;
 
     setSubmitStatus('submitting');
-    setStatusMessage(cycle ? `Updating ${input.name}...` : `Creating ${input.name}...`);
+    setStatusMessage(cycle ? `Updating ${input.title}...` : `Creating ${input.title}...`);
 
     try {
       const command = { ...input, programIds: selectedProgramIds };

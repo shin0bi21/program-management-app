@@ -28,7 +28,7 @@ const staff = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 } as const;
 const cycle = {
-  id: 'cycle-1', name: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
+  id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 } as const;
 const baseProps = { queryKey: ['hours'] as const, staff, cycle };
 const payPeriod = {
@@ -63,7 +63,7 @@ describe('HoursCards', () => {
     expect(await screen.findByText('9.00')).toBeInTheDocument();
     vi.mocked(getHoursCycleSummaryData).mockResolvedValue({ ...cycleSummary, averageHours: 6 });
 
-    rerender(<HoursCards {...baseProps} cycle={{ ...cycle, id: 'cycle-2', name: 'Fall 2026' }} />);
+    rerender(<HoursCards {...baseProps} cycle={{ ...cycle, id: 'cycle-2', title: 'Fall 2026' }} />);
 
     expect(await screen.findByText('6.00')).toBeInTheDocument();
     expect(screen.getByText('12.00')).toBeInTheDocument();

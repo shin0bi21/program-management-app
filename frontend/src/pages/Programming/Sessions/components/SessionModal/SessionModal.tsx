@@ -32,12 +32,12 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
     <form id="session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
       {!isEdit && <FormField id="session-program" label="Program">
         <FloatingSelect id="session-program" value={workflow.programId} onChange={workflow.selectProgram}
-          disabled={workflow.locked} options={options.programs} />
+          disabled={workflow.locked} options={options.programs.map(({ id, title }) => ({ id, label: title }))} />
       </FormField>}
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionType}
           onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
-          options={sessionTypes} />
+          options={sessionTypes.map(({ id, name }) => ({ id, label: name }))} />
       </FormField>
       <FormField id="session-title" label="Title">
         <input id="session-title" required maxLength={160} value={workflow.draft.title}

@@ -53,15 +53,15 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
           void workflow.submit();
         }}
       >
-        <FormField id="program-name" label="Program Name">
+        <FormField id="program-title" label="Program Title">
           <input
-            id="program-name"
-            name="name"
+            id="program-title"
+            name="title"
             required
             maxLength={120}
-            value={workflow.draft.name}
+            value={workflow.draft.title}
             disabled={workflow.submissionComplete}
-            onChange={event => workflow.updateDraft('name', event.target.value)}
+            onChange={event => workflow.updateDraft('title', event.target.value)}
           />
         </FormField>
         <FormField id="program-description" label="Description">
@@ -109,7 +109,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             onChange={value => workflow.updateDraft('defaultDayOfWeek', value as ProgramWeekday)}
             options={['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => ({
               id: day,
-              name: day[0].toUpperCase() + day.slice(1),
+              label: day[0].toUpperCase() + day.slice(1),
             }))}
           />
         </FormField>
@@ -140,7 +140,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             id="program-timezone"
             value={workflow.draft.timezone}
             disabled={workflow.submissionComplete}
-            options={[{ id: 'America/Toronto', name: 'Toronto (Eastern Time)' }]}
+            options={[{ id: 'America/Toronto', label: 'Toronto (Eastern Time)' }]}
             onChange={value => workflow.updateDraft('timezone', value as Program['timezone'])}
           />
         </FormField>
@@ -154,8 +154,8 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
               value === 'yes',
             )}
             options={[
-              { id: 'yes', name: 'Yes' },
-              { id: 'no', name: 'No' },
+              { id: 'yes', label: 'Yes' },
+              { id: 'no', label: 'No' },
             ]}
           />
         </FormField>

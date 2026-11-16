@@ -35,8 +35,8 @@ type PageContainerProps<T> = PageContent & {
 };
 
 const VIEW_OPTIONS = [
-  { id: 'calendar' as const, name: 'Calendar' },
-  { id: 'table' as const, name: 'Table' },
+  { id: 'calendar' as const, label: 'Calendar' },
+  { id: 'table' as const, label: 'Table' },
 ];
 
 /**

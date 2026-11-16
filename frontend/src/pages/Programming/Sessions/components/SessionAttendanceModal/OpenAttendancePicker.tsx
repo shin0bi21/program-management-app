@@ -38,7 +38,7 @@ export default function OpenAttendancePicker({
     <Checklist
       variant="form"
       ariaLabel="Youth attendance"
-      options={options}
+      options={options.map(({ id, name }) => ({ id, label: name }))}
       value={selectedYouthIds}
       onToggle={onToggle}
       disabled={disabled}

@@ -17,12 +17,12 @@ describe('Single session scheduling defaults', () => {
     userId = user.userId;
     token = generateToken(userId, 'admin', user.email);
     const [program] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, default_start_time, default_end_time)
+      INSERT INTO programs (title, default_start_time, default_end_time)
       VALUES (${`Session defaults ${Date.now()}`}, '17:30', '19:30') RETURNING id
     `;
     programId = program.id;
     const [cycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Session defaults ${Date.now()}`}, '2020-01-01', '2040-12-31') RETURNING id
     `;
     cycleId = cycle.id;
@@ -85,7 +85,7 @@ describe('Single session scheduling defaults', () => {
     expect(JSON.stringify(outside.body)).toContain('No assigned cycle covers');
 
     const [overlap] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Overlapping session cycle ${Date.now()}`}, '2027-01-01', '2027-12-31') RETURNING id
     `;
     await sql`
@@ -106,7 +106,7 @@ describe('Single session scheduling defaults', () => {
 
   it('requires the explicit program and cycle pair to be assigned', async () => {
     const [unassigned] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Unassigned session cycle ${Date.now()}`}, '2027-01-01', '2027-12-31') RETURNING id
     `;
     try {
@@ -130,7 +130,7 @@ describe('Single session scheduling defaults', () => {
 
   it('enforces inclusive cycle boundaries using the saved date', async () => {
     const [cycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${`Cycle date boundary ${Date.now()}`}, '2027-01-13', '2027-01-13') RETURNING id
     `;
     await sql`

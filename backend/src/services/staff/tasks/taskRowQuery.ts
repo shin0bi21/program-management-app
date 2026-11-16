@@ -72,7 +72,7 @@ export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE
       staff.first_name,
       staff.last_name,
 
-      program.name AS program,
+      program.title AS program,
 
       ${query.json(categoryLabels)}::jsonb ->> task.category AS category_label,
       ${taskStatus} AS status,

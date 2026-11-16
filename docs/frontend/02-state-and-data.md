@@ -23,9 +23,9 @@ Choose by lifetime and who changes the value. Use [Ownership](01-ownership.md) f
 
 - Put shared filter and selector lookups in `common/features/referenceData`.
 - Give each shared lookup one projection, API adapter, and query key.
-- Pass `{ id, name }` reference rows directly into option controls; keep any extra
-  fields with the reference data. Persist selections as IDs, then look up selected
-  records when other fields are needed.
+- Map reference rows to `{ id, label }` once when supplying option controls, using
+  Program/Cycle `title` or Staff/School `name`. Keep domain fields in reference
+  data. Persist selections as IDs, then look up records when other fields are needed.
 - Compose shared lookups and feature-owned choices, such as Task statuses, in page data hooks.
 - Keep full workflow records with their feature instead of expanding shared label projections.
 - Follow the [reference-data contract](../backend/reference-data.md) for permissions, cache scope, reconciliation, and failures.

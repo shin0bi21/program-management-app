@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import FloatingSelect from './FloatingSelect';
 
 const options = [
-  { id: 'one', name: 'School One' },
-  { id: 'two', name: 'School Two' },
+  { id: 'one', label: 'School One' },
+  { id: 'two', label: 'School Two' },
 ];
 
 describe('FloatingSelect', () => {

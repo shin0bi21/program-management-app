@@ -51,12 +51,12 @@ export function useLeadPreferences(
   });
 
   const filterCategories = useMemo(() => [
-    { id: 'programIds' as const, label: 'Program', options: programs },
-    { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ id: status, name: statusLabel(status) })) },
+    { id: 'programIds' as const, label: 'Program', options: programs.map(({ id, title }) => ({ id, label: title })) },
+    { id: 'statuses' as const, label: 'Status', options: statuses.map(status => ({ id: status, label: statusLabel(status) })) },
     ...(origin === 'external' ? [{
       id: 'submitterRoles' as const,
       label: 'Filled Out By',
-      options: externalSubmitterRoles.map(role => ({ id: role, name: statusLabel(role) })),
+      options: externalSubmitterRoles.map(role => ({ id: role, label: statusLabel(role) })),
     }] : []),
   ], [origin, programs]);
 

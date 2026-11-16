@@ -4,7 +4,7 @@ import type { HomepageProgram } from '../../../types';
 import ProgramCard from './ProgramCard';
 
 const program: HomepageProgram = {
-  id: 'program-1', name: 'Future Ready', description: 'Build confidence and communication skills.',
+  id: 'program-1', title: 'Future Ready', description: 'Build confidence and communication skills.',
   enrollmentRequired: true, minAge: 12, maxAge: 15,
   sessions: [
     { id: 'session-1', title: 'Communication', date: '2026-11-10' },

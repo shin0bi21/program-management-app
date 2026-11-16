@@ -57,7 +57,7 @@ function CycleForm({ cycle, programs, assignments, programsReady = true, program
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     await workflow.submit({
-      name: String(form.get('name')),
+      title: String(form.get('title')),
       startsOn: String(form.get('startsOn')),
       endsOn: String(form.get('endsOn')),
     });
@@ -77,8 +77,8 @@ function CycleForm({ cycle, programs, assignments, programsReady = true, program
         aria-busy={workflow.submissionComplete}
         onSubmit={(event) => void submit(event)}
       >
-        <FormField id="cycle-name" label="Cycle name">
-          <input id="cycle-name" name="name" required maxLength={120} placeholder="Fall 2026" defaultValue={cycle?.name} disabled={workflow.submissionComplete} />
+        <FormField id="cycle-title" label="Cycle Title">
+          <input id="cycle-title" name="title" required maxLength={120} placeholder="Fall 2026" defaultValue={cycle?.title} disabled={workflow.submissionComplete} />
         </FormField>
         <div className="form-row">
           <FormField id="cycle-start" label="Starts on">
@@ -94,7 +94,7 @@ function CycleForm({ cycle, programs, assignments, programsReady = true, program
           <Checklist
             variant="form"
             ariaLabel="Assigned programs"
-            options={programs}
+            options={programs.map(({ id, title }) => ({ id, label: title }))}
             value={workflow.selectedProgramIds}
             onToggle={workflow.toggleProgram}
             disabled={workflow.submissionComplete || !workflow.assignmentsReady}

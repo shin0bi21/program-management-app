@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { useChecklistItems } from './useChecklistItems';
 
-const options = Array.from({ length: 63 }, (_, index) => ({ id: String(index), name: `Choice ${index + 1}` }));
+const options = Array.from({ length: 63 }, (_, index) => ({ id: String(index), label: `Choice ${index + 1}` }));
 
 it('reveals batches of 25 and stops at the available matches', () => {
   const { result } = renderHook(() => useChecklistItems({ options, dynamicItems: true, searchEnabled: true }));

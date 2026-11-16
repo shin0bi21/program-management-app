@@ -9,12 +9,12 @@ export async function seedTestDefaults(): Promise<TestDefaults> {
   // These shared examples used to arrive through historical migrations. Keep
   // test data independent of the business records chosen for a fresh install.
   const programs = await sql<{ id: string }[]>`
-    INSERT INTO programs (name, enrollment_required, min_age, max_age)
+    INSERT INTO programs (title, enrollment_required, min_age, max_age)
     VALUES
       ('Soft Skills', TRUE, 12, 15),
       ('Job Readiness', TRUE, 16, 19),
       ('Drop In', FALSE, NULL, NULL)
-    ON CONFLICT (name) DO NOTHING
+    ON CONFLICT (title) DO NOTHING
     RETURNING id
   `;
 

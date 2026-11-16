@@ -53,23 +53,23 @@ describe('Leads API', () => {
     const youth = await seedTestUser({ email: `lead-youth-${Date.now()}@test.local`, role: 'youth' });
     youthUserId = youth.userId;
     youthToken = generateToken(youth.userId, 'youth', youth.email);
-    const [program] = await sql<{ id: string; name: string }[]>`
-      SELECT id, name
+    const [program] = await sql<{ id: string; title: string }[]>`
+      SELECT id, title
       FROM programs
       WHERE enrollment_required = TRUE
         AND 14 BETWEEN min_age AND max_age
-      ORDER BY min_age DESC, max_age ASC, name ASC
+      ORDER BY min_age DESC, max_age ASC, title ASC
       LIMIT 1
     `;
     eligibleProgramId = program.id;
-    eligibleProgramName = program.name;
+    eligibleProgramName = program.title;
     await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${staffUserId}, ${eligibleProgramId})`;
     ({ cycleId: eligibleProgramCycleId } = await seedTestProgramCycle({
       programId: eligibleProgramId,
       name: `Lead Conversion ${Date.now()}`,
     }));
     const [otherProgram] = await sql<{ id: string }[]>`
-      INSERT INTO programs (name, enrollment_required)
+      INSERT INTO programs (title, enrollment_required)
       VALUES (${`Lead alternate program ${Date.now()}`}, TRUE) RETURNING id
     `;
     otherProgramId = otherProgram.id;

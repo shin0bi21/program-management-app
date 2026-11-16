@@ -69,10 +69,10 @@ describe('Tasks API', () => {
     secondStaffToken = generateToken(secondStaff.userId, 'staff', secondStaff.email);
     unrelatedStaffId = unrelatedStaff.userId;
     unrelatedStaffToken = generateToken(unrelatedStaff.userId, 'staff', unrelatedStaff.email);
-    const programs = await sql<Array<{ id: string }>>`SELECT id FROM programs ORDER BY name LIMIT 1`;
+    const programs = await sql<Array<{ id: string }>>`SELECT id FROM programs ORDER BY title LIMIT 1`;
     programId = programs[0].id;
     const cycles = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (
         ${`Tasks API ${stamp}`},
         LEAST(${taskDate}::date - 7, '2024-01-01'::date),
@@ -535,7 +535,7 @@ describe('Tasks API', () => {
 
   it('intersects task dates with selected cycle spans and endpoint ranges independently of program membership', async () => {
     const cycles = await sql<Array<{ id: string }>>`
-      INSERT INTO program_cycles (name, starts_on, ends_on) VALUES
+      INSERT INTO program_cycles (title, starts_on, ends_on) VALUES
         ('Tasks early boundary', '2081-01-01', '2081-01-31'),
         ('Tasks late boundary', '2081-03-01', '2081-03-31')
       RETURNING id

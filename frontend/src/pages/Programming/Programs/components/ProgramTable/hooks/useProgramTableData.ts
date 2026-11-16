@@ -13,11 +13,11 @@ export default function useProgramTableData(
   filters: ProgramFilters,
 ) {
   const query = useInfiniteListQuery<Program>({
-    ordering: { getValue: program => program.name.toLowerCase(), direction: 'asc' },
+    ordering: { getValue: program => program.title.toLowerCase(), direction: 'asc' },
     queryKey: [...queryKey, filters],
     queryFn: ({ signal, pageParam }) => getProgramList(
       filters,
-      { key: 'name', direction: 'asc', cursor: pageParam ?? undefined },
+      { key: 'title', direction: 'asc', cursor: pageParam ?? undefined },
       { signal },
     ),
     errorMessage: 'Could not load programs',

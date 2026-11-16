@@ -13,9 +13,9 @@ validation where applicable, and the normal error middleware still apply.
 
 | Endpoint | Projection | Access |
 |---|---|---|
-| `GET /reference-data/cycles` | `id`, `name`, `startsOn`, `endsOn`, `state` | Any consuming capability listed below |
-| `GET /reference-data/programs` | `id`, `name` | Any consuming capability below, or `write:accounts` |
-| `GET /reference-data/programs?assignedOnly=true` | Assigned program IDs and names | Any authenticated actor; the program-access policy determines assignments |
+| `GET /reference-data/cycles` | `id`, `title`, `startsOn`, `endsOn`, `state` | Any consuming capability listed below |
+| `GET /reference-data/programs` | `id`, `title` | Any consuming capability below, or `write:accounts` |
+| `GET /reference-data/programs?assignedOnly=true` | Assigned program IDs and titles | Any authenticated actor; the program-access policy determines assignments |
 | `GET /reference-data/staff?feature=tasks` | Identity, display name, role, `writable` | `read:tasks`, with task read/write scope |
 | `GET /reference-data/staff?feature=hours` | Identity, display name, role, `writable` | `read:hours`, with hours read/write scope |
 | `GET /reference-data/schools` | `id`, `name` | Any of `read:schools`, `write:schools`, `read:youth_profiles` |
@@ -53,10 +53,12 @@ does not grant access to program management.
 endpoint serialization. `hooks/useReferenceData.ts` owns query keys and forwards
 cancellation through the centralized HTTP client. Keys include `assignedOnly`
 for programs and `feature` for staff; these results must not share a cache entry.
-Reference rows and UI choices use `{ id, name }` directly. Consumers can retain
-extra fields such as cycle date bounds; do not map a row solely to rename its fields.
-Filters display `name` and persist or submit only selected IDs. Look up those IDs
-in reference data when a consumer needs additional fields.
+Program and Cycle references use `{ id, title }`; Staff and School references
+retain `name`. Shared option controls accept `{ id, label }`. Map domain rows
+once at the control boundary, using their `title` or `name` as the label. Keep
+reference rows intact in the cache, including cycle date bounds. Filters display
+`label` and persist or submit only selected IDs. Look up those IDs in reference
+data when a consumer needs additional fields.
 Page hooks compose these shared hooks with their own feature choices and expose
 loading/error state per source. They do not fetch shared data from another page's
 API adapter.

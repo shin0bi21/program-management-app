@@ -12,8 +12,8 @@ const workflow = vi.hoisted(() => ({
 }));
 vi.mock('./hooks/useProgramCyclesModal', () => ({ default: () => workflow }));
 const props = {
-  program: { id: 'program-1', name: 'Skills' } as Program,
-  cycles: [{ id: 'cycle-1', name: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' as const }],
+  program: { id: 'program-1', title: 'Skills' } as Program,
+  cycles: [{ id: 'cycle-1', title: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' as const }],
   assignments: [], assignmentsReady: true, assignmentsError: '', onRetryAssignments: vi.fn(),
   cyclesLoading: false, cyclesError: null, onRetryCycles: vi.fn(), onClose: vi.fn(),
 };

@@ -19,12 +19,12 @@ vi.mock('../../../../../common/features/Attendance/ViewAttendanceModal', () => (
 }));
 
 const program: Program = {
-  id: 'program-1', name: 'Art', description: 'Make art together.',
+  id: 'program-1', title: 'Art', description: 'Make art together.',
   defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
   enrollmentRequired: true, minAge: null, maxAge: null,
 };
 const programCycle: ProgramCycleAssignment = {
-  programId: program.id, program: program.name,
+  programId: program.id, program: program.title,
   enrollmentRequired: true, minAge: null, maxAge: null,
   cycleId: 'cycle-1', cycle: 'Fall', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'active',
   enrolledCount: 12,
@@ -34,7 +34,7 @@ const openProgramCycle: ProgramCycleAssignment = {
   ...programCycle, cycleId: 'cycle-2', cycle: 'Winter',
   enrollmentRequired: false, startsOn: '2027-01-01', endsOn: '2027-04-01', state: 'upcoming',
 };
-/** Supplies the selected program context and permissions. @example makeProps().program.name // Art */
+/** Supplies the selected program context and permissions. @example makeProps().program.title // Art */
 const makeProps = () => ({
   program, canManageRoster: true, canViewYouthReport: true,
 });
@@ -63,7 +63,7 @@ describe('ProgramOverviewDashboardCard', () => {
 
     vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: false, ready: true, error: '', refresh: vi.fn() });
     rerender(<ProgramOverviewDashboardCard {...props} />);
-    expect(screen.getByRole('heading', { name: `${program.name} Overview` })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: `${program.title} Overview` })).toBeInTheDocument();
     expect(screen.queryByText(program.description!)).not.toBeInTheDocument();
     expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
   });
@@ -146,7 +146,7 @@ describe('ProgramOverviewDashboardCard', () => {
     const view = render(<ProgramOverviewDashboardCard {...props} />);
 
     vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [], loading: true, ready: false, error: '', refresh: vi.fn() });
-    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', name: 'Music' }} />);
+    view.rerender(<ProgramOverviewDashboardCard {...props} program={{ ...program, id: 'program-2', title: 'Music' }} />);
 
     expect(screen.getByText('Enrollment')).toBeInTheDocument();
     expect(screen.getByText('Average attendance')).toBeInTheDocument();

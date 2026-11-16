@@ -13,10 +13,10 @@ export function getProgramReferenceData(actor: AccessTokenPayload, assignedOnly 
     throw new ForbiddenError('Insufficient permissions');
   }
 
-  return sql<Array<{ id: string; name: string }>>`
-    SELECT program.id, program.name
+  return sql<Array<{ id: string; title: string }>>`
+    SELECT program.id, program.title
     FROM programs program
     WHERE ${assignedOnly ? programAccessPredicate(actor, sql`program.id`) : sql`TRUE`}
-    ORDER BY program.name, program.id
+    ORDER BY program.title, program.id
   `;
 }

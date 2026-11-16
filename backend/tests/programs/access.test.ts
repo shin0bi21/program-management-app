@@ -24,7 +24,7 @@ describe('Program authorization before missing-record responses', () => {
       tokens[name] = generateToken(user.userId, role);
       if (name === 'admin') noPermissionToken = generateToken(user.userId, role, user.email, []);
       if (name === 'assigned') {
-        const [program] = await sql`INSERT INTO programs (name) VALUES (${`Access ${randomUUID()}`}) RETURNING id`;
+        const [program] = await sql`INSERT INTO programs (title) VALUES (${`Access ${randomUUID()}`}) RETURNING id`;
         programId = program.id;
         await sql`INSERT INTO user_program_assignments (user_id, program_id) VALUES (${user.userId}, ${programId})`;
       }

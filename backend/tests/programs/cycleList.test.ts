@@ -16,7 +16,7 @@ describe('Cycle table list', () => {
     userId = admin.userId;
     token = generateToken(userId, 'admin');
     const [cycle] = await sql<{ id: string }[]>`
-      INSERT INTO program_cycles (name, starts_on, ends_on)
+      INSERT INTO program_cycles (title, starts_on, ends_on)
       VALUES (${crypto.randomUUID()}, '9998-01-01', '9998-12-31')
       RETURNING id
     `;

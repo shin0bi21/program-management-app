@@ -93,7 +93,7 @@ export async function seedTestProgramCycle(input: {
 }): Promise<SeededProgramCycle> {
   const name = input.name ?? `Test Cycle ${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const [cycle] = await sql<{ id: string }[]>`
-    INSERT INTO program_cycles (name, starts_on, ends_on)
+    INSERT INTO program_cycles (title, starts_on, ends_on)
     VALUES (
       ${name},
       ${input.startsOn ?? '2026-01-01'},

@@ -9,12 +9,12 @@ import CycleModal from './CycleModal';
 
 vi.mock('../../api/cycles.api', () => ({ setProgramCycle: vi.fn() }));
 
-const programs = [{ id: 'program-1', name: 'Skills' }] as import('../../../../../common/features/programs/types').Program[];
+const programs = [{ id: 'program-1', title: 'Skills' }] as import('../../../../../common/features/programs/types').Program[];
 
 const assignmentProps = { assignments: [{ programId: 'program-1', cycleId: 'cycle-1' }] as import('../../types').ProgramCycleAssignment[], assignmentsReady: true, assignmentsError: '', onRetryAssignments: vi.fn() };
 
 const cycle: ProgramCycle = {
-  id: 'cycle-1', name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
+  id: 'cycle-1', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', state: 'upcoming',
 };
 
 describe('CycleModal', () => {
@@ -26,13 +26,13 @@ describe('CycleModal', () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     render(<CycleModal {...assignmentProps} programs={programs} isOpen cycle={null} onClose={vi.fn()} onSaved={onSaved} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'Cycle name' }), 'Fall 2026');
+    await user.type(screen.getByRole('textbox', { name: 'Cycle Title' }), 'Fall 2026');
     await user.type(screen.getByLabelText('Starts on'), '2026-09-01');
     await user.type(screen.getByLabelText('Ends on'), '2027-01-31');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(setProgramCycle).toHaveBeenCalledWith({
-      name: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: [],
+      title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2027-01-31', programIds: [],
     });
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(screen.getByText('Cycle created successfully.')).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('CycleModal', () => {
     vi.mocked(setProgramCycle).mockResolvedValue({ cycle, updatedProgramCycles: [], createdProgramCycles: [], removedProgramCycles: [] });
     render(<CycleModal {...assignmentProps} programs={programs} isOpen cycle={cycle} onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    expect(screen.getByRole('textbox', { name: 'Cycle name' })).toHaveValue('Fall 2026');
+    expect(screen.getByRole('textbox', { name: 'Cycle Title' })).toHaveValue('Fall 2026');
     expect(screen.getByLabelText('Starts on')).toHaveValue('2026-09-01');
     expect(screen.getByLabelText('Ends on')).toHaveValue('2027-01-31');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());

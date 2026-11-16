@@ -28,7 +28,7 @@ interface ProgramCyclesModalProps {
  */
 export default function ProgramCyclesModal(props: ProgramCyclesModalProps) {
   if (!props.assignmentsReady) {
-    return <Modal isOpen title={`Assigned Cycles — ${props.program.name}`} onClose={props.onClose}>
+    return <Modal isOpen title={`Assigned Cycles — ${props.program.title}`} onClose={props.onClose}>
       {props.assignmentsError
         ? <div role="alert">{props.assignmentsError} <Button onClick={props.onRetryAssignments}>Retry assignments</Button></div>
         : <p role="status">Loading assigned cycles...</p>}
@@ -50,7 +50,7 @@ function ProgramCyclesForm({
 
   return <Modal
     isOpen
-    title={`Assigned Cycles — ${program.name}`}
+    title={`Assigned Cycles — ${program.title}`}
     onClose={onClose}
     status={workflow.submitStatus}
     statusMessage={workflow.statusMessage}
@@ -71,7 +71,7 @@ function ProgramCyclesForm({
         <Checklist
           variant="form"
           ariaLabel="Assigned cycles"
-          options={cycles}
+          options={cycles.map(({ id, title }) => ({ id, label: title }))}
           value={workflow.selectedCycleIds}
           onToggle={workflow.toggleCycle}
           disabled={!workflow.ready || workflow.locked}

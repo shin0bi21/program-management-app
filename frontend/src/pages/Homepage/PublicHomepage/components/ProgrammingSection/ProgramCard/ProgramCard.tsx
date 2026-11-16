@@ -16,7 +16,7 @@ export default function ProgramCard({ program }: ProgramCardProps) {
   return (
     <article className="program-card">
       <header className="program-card-head">
-        <h3 className="program-title">{program.name}</h3>
+        <h3 className="program-title">{program.title}</h3>
         <p className="program-age">{formatAgeRange(program.minAge, program.maxAge)}</p>
       </header>
       <div className="program-copy-block">
