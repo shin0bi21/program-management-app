@@ -10,7 +10,7 @@ const staff = [
 ];
 
 describe('useHoursSelection', () => {
-  it('aligns a selected row with dashboard staff and cycle, then clears it on staff member selection', () => {
+  it('aligns a selected row with shared staff selection, then clears it on staff member selection', () => {
     const { result } = renderHook(() => useHoursSelection({
       staff, currentUserStaff: staff[0],
     }));
@@ -19,7 +19,6 @@ describe('useHoursSelection', () => {
     act(() => result.current.selectRow(row));
     expect(result.current.selectedRowId).toBe('entry-1');
     expect(result.current.selectedStaff?.id).toBe('staff-2');
-    expect(result.current.dashboardCycleId).toBe('cycle-2');
 
     act(() => result.current.selectStaff('staff-1'));
     expect(result.current.selectedRowId).toBeNull();

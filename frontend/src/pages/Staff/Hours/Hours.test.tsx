@@ -81,32 +81,6 @@ function hoursItem(
 }
 
 /**
- * Supplies representative pay-period and cycle responses for a route scenario.
- * @param totalHours - Hours shown by each summary.
- * @param label - Category represented by the breakdown.
- * @example dashboardOverview(2) // two Meeting hours in each response
- */
-function dashboardOverview(totalHours: number, label = 'Meeting') {
-  const breakdown = totalHours ? [{ label, hours: totalHours }] : [];
-  return {
-    payPeriod: {
-      periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours, breakdown,
-    },
-    biweeklyAverage: { periodCount: 1, averageHours: totalHours, breakdown },
-  };
-}
-
-/**
- * Supplies each independent dashboard request from a scenario's existing summary fixture.
- * @param data - Pay-period totals and cycle averages for the scenario.
- * @example mockDashboardData(dashboardOverview(2)) // both cards show two hours
- */
-function mockDashboardData(data: ReturnType<typeof dashboardOverview>) {
-  vi.mocked(getHoursPayPeriodData).mockResolvedValue(data.payPeriod);
-  vi.mocked(getHoursCycleSummaryData).mockResolvedValue(data.biweeklyAverage);
-}
-
-/**
  * Opens the table with one editable saved entry for command scenarios.
  * @example mockWritableTableEntry() // Edit and Delete target entry-1
  */
@@ -171,12 +145,10 @@ describe('Hours', () => {
       ...hoursReferenceChoices,
     });
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [], nextCursor: null });
-    mockDashboardData({
-      payPeriod: {
-        periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
-      },
-      biweeklyAverage: { periodCount: 1, averageHours: 0, breakdown: [] },
+    vi.mocked(getHoursPayPeriodData).mockResolvedValue({
+      periodStart: '2026-08-02', periodEnd: '2026-08-15', totalHours: 0, breakdown: [],
     });
+    vi.mocked(getHoursCycleSummaryData).mockResolvedValue({ periodCount: 1, averageHours: 0, breakdown: [] });
     vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }, {
@@ -214,7 +186,7 @@ describe('Hours', () => {
   });
 
   // Rendered states.
-  it('shows a readable coworker row without exposing hours write controls', async () => {
+  it('supplies the selected readable coworker as shared staff context', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-1'] };
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [
       hoursItem({ id: 'entry-own', note: 'Own meeting' }),
@@ -233,15 +205,12 @@ describe('Hours', () => {
     vi.mocked(getHoursReferenceData).mockResolvedValue({
       ...hoursReferenceChoices,
     });
-    vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
-      staffId === 'staff-2' ? dashboardOverview(4, 'Administration').payPeriod : dashboardOverview(1).payPeriod
-    ));
 
     renderHours();
 
     expect(await screen.findByText('Coworker administration')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Coworker administration').closest('tr')!);
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
+    await waitFor(() => expect(getHoursPayPeriodData).toHaveBeenCalledWith('staff-2', null, { signal: expect.any(AbortSignal) }));
   });
 
   it('does not mount a fallback calendar when no cycles exist', async () => {
@@ -265,26 +234,25 @@ describe('Hours', () => {
   });
 
   // Controls and views.
-  it('retains the staff overview across view changes and filtered table results', async () => {
+  it('retains staff context across view changes and filtered table results', async () => {
     vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ date: '2026-08-09',
-        id: 'entry-list', programId: 'program-1', program: 'Soft Skills',
+        id: 'entry-list', staffId: 'staff-2', programId: 'program-1', program: 'Soft Skills',
         cycleId: 'cycle-1', cycle: 'Summer 2026', category: 'program_delivery',
         categoryLabel: 'Program Delivery', taskId: null, taskTitle: null, sessionId: null, sessionTitle: null, hours: 2, note: 'Youth workshop',
       })]);
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
-      id: 'entry-list', programId: 'program-1', program: 'Soft Skills', category: 'program_delivery',
+      id: 'entry-list', staffId: 'staff-2', programId: 'program-1', program: 'Soft Skills', category: 'program_delivery',
       categoryLabel: 'Program Delivery', hours: 2, note: 'Youth workshop',
     })], nextCursor: null });
-    mockDashboardData(dashboardOverview(2, 'Program Delivery'));
+    vi.mocked(getStaffReferences).mockResolvedValue([
+      { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
+    ]);
     renderHours();
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    await waitFor(() => expect(
-      screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article'),
-    ).toHaveTextContent('2.00'));
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Table' }));
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
 
     await screen.findByText('Youth workshop');
     const entryRow = screen.getByText('Youth workshop').closest('tr');
@@ -297,9 +265,10 @@ describe('Hours', () => {
     await waitFor(() => expect(getHoursTableData).toHaveBeenLastCalledWith(
       expect.objectContaining({ search: 'missing' }), expect.anything(), expect.anything(),
     ));
-    expect(screen.getByRole('heading', { name: 'Hours This Pay Period' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
+    expect(await screen.findByRole('button', { name: 'Alex Morgan' })).toHaveAttribute('aria-pressed', 'true');
   });
-
 
   it('reloads the calendar with the applied search and existing filters', async () => {
     renderHours();
@@ -331,20 +300,7 @@ describe('Hours', () => {
   });
 
   // Selection and coordination.
-  it('passes the selected staff and cycle to the dashboard queries', async () => {
-    preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
-    vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
-      id: 'fall-entry', cycleId: 'cycle-fall', cycle: 'Fall 2026', category: 'outreach',
-      categoryLabel: 'Outreach', hours: 4, note: 'Fall cycle work',
-    }, { date: '2026-09-03' })], nextCursor: null });
-    renderHours();
-
-    await screen.findByText('Fall cycle work');
-    await waitFor(() => expect(getHoursPayPeriodData).toHaveBeenCalledWith('staff-1', null, { signal: expect.any(AbortSignal) }));
-    await waitFor(() => expect(getHoursCycleSummaryData).toHaveBeenCalledWith('staff-1', 'cycle-fall', { signal: expect.any(AbortSignal) }));
-  });
-
-  it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
+  it('supplies shared staff context from calendar rows and table entries', async () => {
     auth.role = 'admin';
     const date = getDate();
     vi.mocked(getHoursCalendarData).mockResolvedValue([makeHoursItem({ staffId: 'staff-1', date: date,
@@ -366,9 +322,6 @@ describe('Hours', () => {
         firstName: 'Alex', lastName: 'Morgan',
       }),
     ], nextCursor: null });
-    vi.mocked(getHoursPayPeriodData).mockImplementation(async staffId => (
-      staffId === 'staff-2' ? dashboardOverview(7).payPeriod : dashboardOverview(2, 'Program Delivery').payPeriod
-    ));
     vi.mocked(getStaffReferences).mockResolvedValue([
         { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
         { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
@@ -380,11 +333,10 @@ describe('Hours', () => {
     renderHours();
 
     expect((await screen.findAllByLabelText('Alex Morgan')).length).toBeGreaterThan(0);
-    const getPeriodCard = () => screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')!;
-    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
+    await waitFor(() => expect(getHoursPayPeriodData).toHaveBeenLastCalledWith('staff-1', null, { signal: expect.any(AbortSignal) }));
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
-    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    await waitFor(() => expect(getHoursPayPeriodData).toHaveBeenLastCalledWith('staff-2', null, { signal: expect.any(AbortSignal) }));
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
@@ -392,9 +344,9 @@ describe('Hours', () => {
 
     await screen.findByText('Alex planning meeting');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
-    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
+    expect(screen.getByText('Zoe workshop').closest('tr')).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByText('Alex planning meeting').closest('tr')!);
-    await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
+    expect(screen.getByText('Alex planning meeting').closest('tr')).toHaveAttribute('aria-selected', 'true');
   });
 
   // Commands and dialogs.

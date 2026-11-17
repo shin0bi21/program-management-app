@@ -132,7 +132,6 @@ export default function Tasks() {
   });
 
   // View configuration.
-  const canLogHours = canWrite && selection.selectedTask?.writable && selection.selectedTask.state === 'open';
   const hoursModalTask = hoursModalOpen ? selection.selectedTask : null;
 
   const taskTable = (
@@ -186,6 +185,7 @@ export default function Tasks() {
       ariaLabel="Task overview and assignments"
       controls={preferences}
       loadingLabel="Loading saved task preferences…"
+
       actions={canWrite && pageData.writableStaff.length ? <Button
         disabled={pageData.referenceDataLoading || Boolean(pageData.referenceDataError)}
         onClick={() => {
@@ -210,18 +210,17 @@ export default function Tasks() {
         } : null,
         viewError,
       ]}
-      dashboard={selection.selectedStaff ? <>
+      dashboard={<>
         <TaskOverviewDashboardCard
           queryKey={TASK_QUERY_KEY}
-          staffId={selection.selectedStaff.id}
-          staffName={selection.selectedStaff.name}
-          today={today}
+          staff={selection.selectedStaff}
         />
         <TaskHoursLoggedDashboardCard
           task={selection.selectedTask}
-          onLogHours={canLogHours ? () => setHoursModalOpen(true) : undefined}
+          canWrite={canWrite}
+          onLogHours={() => setHoursModalOpen(true)}
         />
-      </> : null}
+      </>}
       table={hasCycleBounds ? taskTable : viewUnavailable}
       calendar={hasCycleBounds ? taskCalendar : viewUnavailable}
     />

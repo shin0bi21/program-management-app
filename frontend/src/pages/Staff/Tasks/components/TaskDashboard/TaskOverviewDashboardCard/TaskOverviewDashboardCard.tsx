@@ -3,56 +3,34 @@ import { useEffect, useMemo, useState } from 'react';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import type { Task } from '../../../types';
+import { getDate } from '../../../../../../common/utils/date';
+import type { StaffReference, Task } from '../../../types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import useTaskOverviewData from './hooks/useTaskOverviewData';
 import './TaskOverviewDashboardCard.css';
 
 /**
- * Queries the selected staff overview and displays its queried tasks.
- * @param props - Staff identity, local date, and page-message reporter.
- * @example <TaskOverviewDashboardCard {...overviewProps} />
+ * Queries the selected staff overview and owns its report for the current local date.
+ * Keeps an unselected card without loading tasks when no staff member is supplied.
+ * @param props - Shared staff context, query namespace, and optional page-message reporter.
+ * @example <TaskOverviewDashboardCard queryKey={['tasks']} staff={staff} />
  */
-export default function TaskOverviewDashboardCard({ queryKey, staffId, staffName, today, onMessageChange }: {
+export default function TaskOverviewDashboardCard({ queryKey, staff, onMessageChange }: {
   queryKey: readonly unknown[];
-  staffId: string;
-  staffName: string;
-  today: string;
+  staff: StaffReference | null;
   onMessageChange?: PageMessageChangeHandler;
 }) {
+  const staffId = staff?.id ?? null;
   const overviewData = useTaskOverviewData(queryKey, staffId);
-  const retryAction = useMemo(() => ({ label: 'Retry', onClick: overviewData.retry }), [overviewData.retry]);
-  usePageMessageReporter(onMessageChange, overviewData.error, retryAction);
+  const { tasks, loading, error, retry: onRetry } = overviewData;
+  const retryAction = useMemo(() => ({ label: 'Retry', onClick: onRetry }), [onRetry]);
+  usePageMessageReporter(onMessageChange, error, retryAction);
 
-  return <TaskOverviewContent
-    tasks={overviewData.tasks}
-    loading={overviewData.loading}
-    error={overviewData.error}
-    onRetry={overviewData.retry}
-    staffId={staffId}
-    staffName={staffName}
-    today={today}
-  />;
-}
-
-/**
- * Displays a staff overview and keeps its report scoped to the current staff selection.
- * @param props - Current tasks, query feedback, staff identity, and local reporting date.
- * @example <TaskOverviewContent tasks={tasks} {...reportProps} />
- */
-function TaskOverviewContent({ tasks, loading, error, onRetry, staffId, staffName, today }: {
-  tasks: readonly Task[];
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-  staffId: string;
-  staffName: string;
-  today: string;
-}) {
+  const today = getDate();
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
 
-  const unavailable = loading || Boolean(error);
+  const unavailable = !staffId || loading || Boolean(error);
   useEffect(() => setOpenStaffId(null), [staffId, unavailable]);
 
   const overview = useMemo(() => groupTasksForOverview(tasks, today), [tasks, today]);
@@ -70,10 +48,10 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, staffId, staffNam
       className="dashboard-card--short task-overview-card"
       loading={loading}
       details={[
-        { label: 'Assigned', value: error ? null : summary.assigned },
-        { label: 'Upcoming', value: error ? null : summary.upcoming },
-        { label: 'In Progress', value: error ? null : summary.inProgress },
-        { label: 'Overdue', value: error ? null : summary.overdue },
+        { label: 'Assigned', value: !staffId || error ? null : summary.assigned },
+        { label: 'Upcoming', value: !staffId || error ? null : summary.upcoming },
+        { label: 'In Progress', value: !staffId || error ? null : summary.inProgress },
+        { label: 'Overdue', value: !staffId || error ? null : summary.overdue },
       ]}
       action={<Button
         size="sm"
@@ -83,9 +61,19 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, staffId, staffNam
         onClick={() => setOpenStaffId(staffId)}
       >See Breakdown</Button>}
     >
-      {error && <UnavailableState compact title="Task overview unavailable" onRetry={onRetry} />}
+      {!staffId && <p className="dashboard-card__empty">Select a staff member to view their tasks.</p>}
+      {error && <UnavailableState
+        compact
+        title="Task overview unavailable"
+        onRetry={onRetry}
+      />}
     </DashboardCard>
-    <Modal isOpen={openStaffId === staffId && !unavailable} onClose={() => setOpenStaffId(null)} title={staffName} maxWidth="560px">
+    <Modal
+      isOpen={Boolean(staffId) && openStaffId === staffId && !unavailable}
+      onClose={() => setOpenStaffId(null)}
+      title={staff?.name ?? ''}
+      maxWidth="560px"
+    >
       <dl className="task-overview-card__report" aria-label="Task summary">
         <div><dt>Assigned</dt><dd>{summary.assigned}</dd></div>
         <div className="task-overview-card__report-upcoming"><dt>Upcoming</dt><dd>{summary.upcoming}</dd></div>
@@ -107,7 +95,12 @@ function TaskOverviewContent({ tasks, loading, error, onRetry, staffId, staffNam
           tone="warn"
           dueThisWeekIds={dueThisWeekIds}
         />
-        <TaskDueList title="Overdue" tasks={overview.overdueTasks} emptyMessage="No overdue tasks." tone="danger" />
+        <TaskDueList
+          title="Overdue"
+          tasks={overview.overdueTasks}
+          emptyMessage="No overdue tasks."
+          tone="danger"
+        />
       </div>
     </Modal>
   </>;
@@ -149,6 +142,7 @@ function currentWeekEnd(today: string) {
 
 /**
  * Orders tasks by due date and then title without changing the supplied array.
+ * @param tasks - Saved tasks to order for the report.
  * @example sortByDueDate(tasks) // earliest due task first
  */
 function sortByDueDate(tasks: readonly Task[]) {

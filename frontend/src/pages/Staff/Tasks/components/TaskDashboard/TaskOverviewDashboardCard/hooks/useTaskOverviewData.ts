@@ -5,17 +5,17 @@ import { getTaskDashboardData } from '../../../../tasks.api';
 /**
  * Loads complete overview tasks for the selected staff member.
  * @param taskQueryKey - Page namespace for staff overview queries.
- * @param staffId - Selected staff ID; an empty ID disables the request.
+ * @param staffId - Selected staff ID; null disables the request.
  * @example useTaskOverviewData(['tasks'], staffId).tasks
  */
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],
-  staffId: string,
+  staffId: string | null,
 ) {
   const query = useQuery({
     queryKey: [...taskQueryKey, 'overview', staffId],
     enabled: Boolean(staffId),
-    queryFn: ({ signal }) => getTaskDashboardData(staffId, { signal }),
+    queryFn: ({ signal }) => getTaskDashboardData(staffId!, { signal }),
   });
 
   return {

@@ -30,40 +30,70 @@ describe('TaskHoursLoggedDashboardCard', () => {
 
   it('delegates contextual task-time logging', () => {
     const onLogHours = vi.fn();
-    render(<TaskHoursLoggedDashboardCard task={{ ...task, hoursLogged: 0, loggedHoursByDate: [] }} onLogHours={onLogHours} />);
+    render(<TaskHoursLoggedDashboardCard
+      task={{ ...task, hoursLogged: 0, loggedHoursByDate: [] }}
+      canWrite
+      onLogHours={onLogHours}
+    />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
 
     expect(onLogHours).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    { state: 'open', writable: false, canWrite: true },
+    { state: 'open', writable: true, canWrite: false },
+    { state: 'completed', writable: true, canWrite: true },
+    { state: 'cancelled', writable: true, canWrite: true },
+  ] as const)('withholds logging for state=$state writable=$writable permission=$canWrite', ({ state, writable, canWrite }) => {
+    const onLogHours = vi.fn();
+    render(<TaskHoursLoggedDashboardCard
+      task={{ ...task, state, writable }}
+      canWrite={canWrite}
+      onLogHours={onLogHours}
+    />);
+
+    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
+    expect(onLogHours).not.toHaveBeenCalled();
+  });
+
   it('keeps its shell but closes an open report when the task changes or clears', () => {
     const onLogHours = vi.fn();
-    const view = render(<TaskHoursLoggedDashboardCard task={task} onLogHours={onLogHours} />);
+    const view = render(<TaskHoursLoggedDashboardCard
+      task={task}
+      canWrite
+      onLogHours={onLogHours}
+    />);
     const loggedLabel = screen.getByText('Logged');
     const breakdownAction = screen.getByRole('button', { name: 'See Breakdown' });
-    const logAction = screen.getByRole('button', { name: 'Log Hours' });
     const card = screen.getByRole('heading', { name: 'Hours Logged' }).closest('article');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog', { name: task.title })).toBeInTheDocument();
 
-    view.rerender(<TaskHoursLoggedDashboardCard task={{ ...task, id: 'task-2', title: 'New task' }} onLogHours={onLogHours} />);
+    view.rerender(<TaskHoursLoggedDashboardCard
+      task={{ ...task, id: 'task-2', title: 'New task' }}
+      canWrite
+      onLogHours={onLogHours}
+    />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Hours Logged' }).closest('article')).toBe(card);
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog', { name: 'New task' })).toBeInTheDocument();
 
-    view.rerender(<TaskHoursLoggedDashboardCard task={null} onLogHours={onLogHours} />);
+    view.rerender(<TaskHoursLoggedDashboardCard
+      task={null}
+      canWrite
+      onLogHours={onLogHours}
+    />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
     expect(screen.getByText('Logged')).toBe(loggedLabel);
     expect(loggedLabel.nextSibling).toHaveTextContent('—');
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBe(breakdownAction);
     expect(breakdownAction).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBe(logAction);
-    expect(logAction).toBeDisabled();
-    fireEvent.click(logAction);
+    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     expect(onLogHours).not.toHaveBeenCalled();
   });
-
 });
