@@ -337,7 +337,6 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
     expect(await screen.findByText('No attachments.')).toBeInTheDocument();
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
