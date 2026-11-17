@@ -13,6 +13,15 @@ vi.mock('../../../../tasks.api', () => ({
 describe('useTaskOverviewData', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('does not request tasks without selected staff', () => {
+    const client = createTestQueryClient();
+    renderHook(() => useTaskOverviewData(['tasks'], null), {
+      wrapper: createQueryClientWrapper(client),
+    });
+
+    expect(getTaskDashboardData).not.toHaveBeenCalled();
+  });
+
   it('loads tasks for the selected staff member under the page-owned query key', async () => {
     const task = makeTask();
     vi.mocked(getTaskDashboardData).mockResolvedValue([task]);

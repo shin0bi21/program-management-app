@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import Button from '../../common/components/Button/Button';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
@@ -15,7 +15,7 @@ import useLeadActions from './hooks/actions/useLeadActions';
 import useLeadData from './hooks/data/useLeadData';
 import { useLeadPreferences } from './hooks/preferences/useLeadPreferences';
 import useLeadSelection from './hooks/selection/useLeadSelection';
-import { LEAD_TABLE_KEYS, type Lead, type LeadFilters, type LeadOrigin } from './types';
+import { LEAD_TABLE_KEYS, type Lead, type LeadOrigin } from './types';
 import './Leads.css';
 
 const LEAD_SIGNUP_COHORTS_QUERY_KEY = ['lead-signup-programCycles'] as const;
@@ -45,15 +45,6 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
     data.programsError,
     LEAD_TABLE_KEYS,
   );
-
-  // Filter configuration.
-  const leadFilters = useMemo<LeadFilters | null>(() => preferences.ready ? {
-    search: preferences.search.appliedValue,
-    statuses: preferences.filters.values.statuses,
-    programIds: preferences.filters.values.programIds,
-    origins: [origin],
-    submitterRoles: preferences.filters.values.submitterRoles,
-  } : null, [origin, preferences.filters.values.programIds, preferences.filters.values.statuses, preferences.filters.values.submitterRoles, preferences.ready, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useLeadSelection();
@@ -98,18 +89,27 @@ export default function Leads({ origin }: { origin: LeadOrigin }) {
       columns={columns}
       messages={[preferences.error, data.programsError, actions.actionError, viewError]}
       dashboard={<>
-        <PrimaryContactDashboardCard contact={selection.selectedLead ? {
-          phoneNumber: selection.selectedLead.contactPhoneNumber,
-          relationship: selection.selectedLead.contactRelationship,
-        } : null} selected={selection.selectedLead !== null} />
-        <IntakeInformationDashboardCard notes={selection.selectedLead?.notes} selected={selection.selectedLead !== null} />
-        <LeadNotesDashboardCard lead={selection.selectedLead} canWrite={canWrite} />
+        <PrimaryContactDashboardCard
+          contact={selection.selectedLead ? {
+            phoneNumber: selection.selectedLead.contactPhoneNumber,
+            relationship: selection.selectedLead.contactRelationship,
+          } : null}
+          selected={selection.selectedLead !== null}
+        />
+        <IntakeInformationDashboardCard
+          notes={selection.selectedLead?.notes}
+          selected={selection.selectedLead !== null}
+        />
+        <LeadNotesDashboardCard
+          lead={selection.selectedLead}
+          canWrite={canWrite}
+        />
       </>}
       table={<LeadTable
         queryKey={tableQueryKey}
         columns={columns}
         hiddenColumnKeys={preferences.table.hiddenColumns}
-        filters={leadFilters}
+        filters={preferences.appliedFilters}
         sorting={preferences.table.sorting}
         columnWidths={preferences.table.columnWidths}
         selectedLeadId={selection.selectedLeadId}

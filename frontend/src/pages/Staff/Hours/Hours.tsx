@@ -122,14 +122,6 @@ export default function Hours() {
   });
 
   // View configuration.
-  const dashboardCycle = pageData.cycles.find(cycle => cycle.id === selection.dashboardCycleId);
-  const firstFilteredCycle = pageData.cycles.find(cycle => preferences.filters.values.cycleIds.includes(cycle.id));
-  const overviewCycle = dashboardCycle
-    ?? firstFilteredCycle
-    ?? pageData.cycles.find(cycle => cycle.state === 'active')
-    ?? pageData.cycles[0]
-    ?? null;
-
   const hoursTable = (
     <HoursTable
       queryKey={HOURS_TABLE_QUERY_KEY}
@@ -201,8 +193,15 @@ export default function Hours() {
         viewError,
       ]}
       dashboard={<>
-        <HoursPayPeriodDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} />
-        <HoursCycleSummaryDashboardCard queryKey={HOURS_QUERY_KEY} staff={selection.selectedStaff} cycle={overviewCycle} />
+        <HoursPayPeriodDashboardCard
+          queryKey={HOURS_QUERY_KEY}
+          staff={selection.selectedStaff}
+        />
+        <HoursCycleSummaryDashboardCard
+          queryKey={HOURS_QUERY_KEY}
+          staff={selection.selectedStaff}
+          cycles={pageData.cycles}
+        />
       </>}
       table={hasCycleBounds ? hoursTable : viewUnavailable}
       calendar={hasCycleBounds ? hoursCalendar : viewUnavailable}

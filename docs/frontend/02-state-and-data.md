@@ -14,8 +14,8 @@ Choose by lifetime and who changes the value. Use [Ownership](01-ownership.md) f
 
 ## Separate Page Controls from View Data
 
-1. Build one stable applied-filter object at the route using the [page controls contract](03-preferences.md#expose-page-controls).
-2. Supply it to every table and calendar.
+1. Obtain one typed `appliedFilters` object from the page preference/control hook using the [page controls contract](03-preferences.md#expose-page-controls). It includes applied page search and normalized filter fields; the route does not reconstruct it.
+2. Supply it directly to every table and calendar after controls are ready. Keep the draft search input separate from submitted, saved search.
 3. Let each view add pagination or visible range and consume page-owned sorting for its request.
 4. Keep page-wide reference data with the page and collection queries with the consuming view.
 
@@ -51,7 +51,7 @@ Calendar dates, including period bounds and navigation anchors, stay as
 Use `programId` and `cycleId` for related record identifiers, with `program` and
 `cycle` for their display values. Use the same fields in backend projections,
 API responses, queries, tables, and calendars. A Program or Cycle record
-itself keeps its own `id` and `name`. Keep display labels out of identifier fields.
+itself keeps its own `id` and `title`. Keep display labels out of identifier fields.
 
 ### API Adapters
 
@@ -97,7 +97,14 @@ calendar buffer; do not add a separate normalized record store.
 Create only the hooks the page needs. Table and calendar data hooks belong to
 their components. Compose independent cards directly in `PageContainer`'s
 `dashboard` slot. Add a domain dashboard owner only for shared queries or card
-coordination; private queries stay with each card.
+coordination; private queries stay with each card. `PageContainer` supplies the
+summary region's DOM structure and layout. Do not add a dashboard wrapper merely
+to group independent cards, forward props, resolve dates, or gate card actions.
+Each card resolves its own defaults, reporting dates, display configuration, and
+private action eligibility from shared context. Collection filters must neither
+choose dashboard defaults nor clear its selection. Keep clicked-record context and selection shared with tables,
+calendars, or forms at their nearest common owner; interpret dashboard-specific
+fallbacks inside the dashboard or card.
 
 The selected-record dashboard query flows through these owners:
 

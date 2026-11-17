@@ -10,14 +10,18 @@ import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
 
 /**
  * Loads and displays the selected staff member's cycle average, independent of the pay-period query.
- * @param props - Staff/cycle selections and query namespace.
- * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycle={cycle} />
+ * Uses the first active cycle from shared references; entry placement and collection
+ * filters do not change the reporting cycle. Without an active cycle, no summary is loaded.
+ * @param props - Shared staff, ordered cycle references, and query namespace.
+ * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycles={cycles} />
  */
-export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle }: {
+export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycles }: {
   queryKey: readonly unknown[];
   staff: StaffReference | null;
-  cycle: ProgramCycle | null;
+  cycles: readonly ProgramCycle[];
 }) {
+  const cycle = cycles.find(candidate => candidate.state === 'active') ?? null;
+
   const state = useHoursCycleSummaryData(queryKey, staff?.id ?? null, cycle?.id ?? null);
   const error = state.status === 'error' ? state.message : null;
   const retry = state.status === 'error' ? state.retry : undefined;
@@ -31,12 +35,16 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycle 
     breakdown: summary.breakdown,
   } : null;
   const emptyMessage = staff
-    ? 'Select a cycle to view its hours average.'
+    ? 'No current cycle is available.'
     : 'Select a staff member to view their cycle hours.';
 
   let content: ReactNode;
   if (state.status === 'error') {
-    content = <UnavailableState compact title="Cycle hours unavailable" onRetry={state.retry} />;
+    content = <UnavailableState
+      compact
+      title="Cycle hours unavailable"
+      onRetry={state.retry}
+    />;
   } else if (state.status === 'unavailable') {
     content = <p className="dashboard-card__empty">{emptyMessage}</p>;
   }

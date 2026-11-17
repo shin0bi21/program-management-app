@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../../../common/features/programs/types';
-import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember, type SessionListFilters } from './types';
+import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember } from './types';
 import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
@@ -49,26 +49,17 @@ export default function Sessions() {
     sessionTypes, sessionTypesLoading: referencesLoading, sessionTypesError: referencesError,
     tableKeys: SESSION_TABLE_KEYS,
   });
-  const { search, filters, table: tableControls, view } = controls;
-  const { programIds: selectedProgramIds, cycleIds, sessionTypes: selectedSessionTypes, statuses: statusFilters } = filters.values;
-
-  // Filter configuration.
-  const sessionFilters = useMemo<SessionListFilters>(() => ({
-    dateRange: filters.dateRange,
-    programIds: selectedProgramIds,
-    cycleIds,
-    sessionTypes: selectedSessionTypes,
-    statuses: statusFilters,
-    search: search.appliedValue || undefined,
-  }), [filters.dateRange, search.appliedValue, cycleIds, selectedProgramIds, selectedSessionTypes, statusFilters]);
+  const { table: tableControls, view, appliedFilters } = controls;
 
   // Selection and actions.
   const selection = useSessionSelection();
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!referencesLoading && !referencesError && selectedProgramId
       && !programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(null);
   }, [programs, referencesError, referencesLoading, selectedProgramId, setSelectedProgramId]);
+
   const selectProgram = (program: Program, source?: 'row' | 'item') => {
     if (source !== 'item') selection.clearSelectedSession();
     setSelectedProgramId(program.id);
@@ -77,17 +68,8 @@ export default function Sessions() {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
+
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
-  const applyFilter = (category: string, selected: string[]) => {
-    selection.clearSelectedSession();
-    setSelectedProgramId(null);
-    filters.apply(category, selected);
-  };
-  const clearFilters = () => {
-    selection.clearSelectedSession();
-    setSelectedProgramId(null);
-    filters.clear();
-  };
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<{ session: ProgramSession; roster: SessionRosterMember[] } | null>(null);
@@ -119,15 +101,23 @@ export default function Sessions() {
       canWrite={canWriteAttendance}
       onManage={(session, roster) => setAttendanceTarget({ session, roster })}
     />}
-    <SessionNotesDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
-    <SessionAttachmentsDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+    <SessionNotesDashboardCard
+      queryKey={SESSION_QUERY_KEY}
+      session={selectedSession}
+      canWrite={canWriteSessions}
+    />
+    <SessionAttachmentsDashboardCard
+      queryKey={SESSION_QUERY_KEY}
+      session={selectedSession}
+      canWrite={canWriteSessions}
+    />
   </>;
 
   const table = <SessionTable
     queryKey={SESSION_TABLE_QUERY_KEY}
     columns={columns}
     hiddenColumnKeys={tableControls.hiddenColumns}
-    filters={sessionFilters}
+    filters={appliedFilters}
     sorting={tableControls.sorting}
     columnWidths={tableControls.columnWidths}
     selectedSessionId={selection.selectedSessionId}
@@ -139,21 +129,18 @@ export default function Sessions() {
   />;
 
   const cycleState = <p className="page-empty">{cyclesError ? 'Cycles unavailable.' : 'No cycles available.'}</p>;
-  const hasCycleBounds = Boolean(filters.dateRange) && !cyclesError;
+  const hasCycleBounds = Boolean(appliedFilters.dateRange) && !cyclesError;
   const calendar = !hasCycleBounds
     ? cycleState
     : <SessionCalendar
-    key={JSON.stringify([sessionFilters, actions.calendarRevision])}
+    key={JSON.stringify([appliedFilters, actions.calendarRevision])}
     programs={programs}
     selectedProgramId={selectedProgram?.id}
     onProgramSelect={selectProgram}
-    filters={sessionFilters}
+    filters={appliedFilters}
     selectedSessionId={selection.selectedSessionId}
     onSelectedSessionLoaded={selection.syncSelectedSession}
-    onSessionSelect={session => {
-      setSelectedProgramId(session.programId);
-      selection.selectSession(session);
-    }}
+    onSessionSelect={selectSession}
     calendarCacheRef={actions.calendarCacheRef}
     pendingSessionIds={actions.pendingSessionIds}
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
@@ -170,11 +157,14 @@ export default function Sessions() {
         className="sessions-page"
         data-view={view}
         ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
-        controls={{ ...controls, filters: { ...filters, apply: applyFilter, clear: clearFilters } }}
+        controls={controls}
         loadingSpinner
         actions={
           canWriteSessions ? (
-            <Button onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })} disabled={!canAddSession}>
+            <Button
+              onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })}
+              disabled={!canAddSession}
+            >
               + Add
             </Button>
           ) : undefined

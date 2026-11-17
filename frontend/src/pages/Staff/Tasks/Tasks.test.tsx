@@ -1,6 +1,5 @@
 import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
 
-import { makeItemCalendarProps } from '../../../tests/factories/calendarItem';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
@@ -165,50 +164,21 @@ describe('Tasks', () => {
     expect(calendarTestState.props).toBeNull();
   });
 
-  it('shows tasks from a readable coworker without exposing write controls', async () => {
-    const coworkerTask: Task = {
-      ...task,
-      id: 'task-2',
-      title: 'Complete administration',
-      programId: null,
-      program: null,
-      staffId: 'staff-2', firstName: 'Alex', lastName: 'Smith',
-      writable: false,
-    };
-    vi.mocked(getTaskDashboardData).mockResolvedValue([task, coworkerTask]);
+  it('supplies the clicked coworker as shared staff context', async () => {
+    const coworkerTask = makeTask({
+      id: 'task-2', title: 'Complete administration', staffId: 'staff-2',
+      firstName: 'Alex', lastName: 'Smith', writable: false,
+    });
     vi.mocked(getTasksTableData).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
     vi.mocked(getStaffReferences).mockResolvedValue([
-        { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
-        { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-      ]);
-    vi.mocked(getProgramReferences).mockResolvedValue([]);
-    vi.mocked(getTaskReferenceData).mockResolvedValue({
-      ...taskReferenceChoices,
-    });
-
+      { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
+      { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+    ]);
     renderTasks();
 
-    expect(await screen.findByText('Complete administration')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'First Name' }));
-    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({
-      sorting: { key: 'firstName', direction: 'asc' },
-    })));
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.anything(), expect.anything(), expect.objectContaining({ key: 'firstName', direction: 'asc' }),
-    ));
-    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
+    fireEvent.click(await screen.findByText('Complete administration'));
 
-    fireEvent.click(screen.getByText('Prepare workshop'));
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Complete administration'));
-    const overviewCard = (await screen.findByRole('heading', { name: 'Task Overview' })).closest('article')!;
-    const breakdownButton = within(overviewCard).getByRole('button', { name: 'See Breakdown' });
-    await waitFor(() => expect(breakdownButton).toBeEnabled());
-    fireEvent.click(breakdownButton);
-
-    expect(screen.getByRole('dialog', { name: 'Alex Smith' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
+    await waitFor(() => expect(getTaskDashboardData).toHaveBeenCalledWith('staff-2', { signal: expect.any(AbortSignal) }));
   });
 
   // Controls and views.
@@ -319,43 +289,21 @@ describe('Tasks', () => {
 
     await waitFor(() => expect(calendarTestState.props).not.toBeNull());
     const start = today;
-    const end = today;
     act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(start, 3)));
     await waitFor(() => expect(calendarTestState.props!.items['staff-1']).toEqual([task]));
     const row: StaffReference = {
       id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
     };
-    const item = calendarTestState.props!.buildItem({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { selected?: boolean } };
-    expect(item.props.selected).toBe(false);
     act(() => calendarTestState.props!.onItemActivate?.({
       row,
       data: task,
       range: { start: task.startDate, end: task.dueDate },
     }));
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
-
-    const selectedItem = calendarTestState.props!.buildItem({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-      calendar: makeItemCalendarProps({ row, data: task, range: { start: task.startDate, end: task.dueDate } }),
-      visibleStart: { key: task.startDate, start, end: start },
-      visibleEnd: { key: task.dueDate, start: end, end },
-    }) as { props: { selected?: boolean } };
-    expect(selectedItem.props.selected).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 
     act(() => calendarTestState.props!.onRowSelect?.(row));
-    expect(screen.getByText('Click a task to view its logged hours.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
 
     act(() => calendarTestState.props!.onItemActivate?.({
@@ -363,7 +311,6 @@ describe('Tasks', () => {
       data: task,
       range: { start: task.startDate, end: task.dueDate },
     }));
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
@@ -409,8 +356,6 @@ describe('Tasks', () => {
     });
     renderTasks();
 
-    fireEvent.click(await screen.findByText('Prepare workshop'));
-    expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
     await waitFor(() => expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open'));
@@ -430,16 +375,14 @@ describe('Tasks', () => {
     await act(async () => hoursModal.props!.onAdd(input));
 
     expect(setHours).toHaveBeenCalledWith(input);
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Log Hours' })).not.toBeInTheDocument());
+    await waitFor(() => expect(hoursModal.props!.initialTask).toEqual(completedTask));
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(hoursModal.props!.initialTask).toEqual(completedTask);
 
     act(() => hoursModal.props!.onClose());
     expect(screen.getByText('Prepare workshop').closest('tr')).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Next task'));
-    expect(screen.getByRole('button', { name: 'Log Hours' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 

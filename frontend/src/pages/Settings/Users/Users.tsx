@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
@@ -8,7 +8,7 @@ import { type PageMessageValue } from '../../../common/components/PageMessageOve
 import SchoolModal from '../../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from '../../Youth/components/YouthModal/YouthModal';
-import { USER_TABLE_KEYS, type UserFilters } from './types';
+import { USER_TABLE_KEYS } from './types';
 import AccountModal from './components/AccountModal/AccountModal';
 import UserTable from './components/UserTable/UserTable';
 import useUserTable from './components/UserTable/hooks/useUserTable';
@@ -35,14 +35,7 @@ export default function Users() {
 
   // Page data and preferences.
   const controls = useAccountControls(isAdmin, USER_TABLE_KEYS);
-  const { search, filters, table, ready: controlsReady, error: preferencesError } = controls;
-
-  // Filter configuration.
-  const accountFilters = useMemo<UserFilters | null>(() => controlsReady ? {
-    search: search.appliedValue,
-    roles: filters.values.roles,
-    statuses: filters.values.statuses,
-  } : null, [search.appliedValue, controlsReady, filters.values.roles, filters.values.statuses]);
+  const { table, error: preferencesError } = controls;
 
   // Page-spanning account actions and cache reconciliation.
   const { revokeInvite, toggleStatus, syncSavedAccount, syncYouthInvitation } = useAccountActions({
@@ -102,7 +95,7 @@ export default function Users() {
         messages={[preferencesError, viewError]}
         table={<UserTable
           queryKey={ACCOUNTS_TABLE_QUERY_KEY}
-          filters={accountFilters}
+          filters={controls.appliedFilters}
           columns={columns}
           hiddenColumnKeys={table.hiddenColumns}
           sorting={table.sorting}

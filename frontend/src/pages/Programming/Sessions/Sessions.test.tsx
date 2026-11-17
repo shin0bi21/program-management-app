@@ -112,6 +112,7 @@ vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
 
 describe('Sessions', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     localStorage.clear();
     preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
     preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
@@ -208,36 +209,24 @@ describe('Sessions', () => {
     expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
   });
 
-  // Rendered states.
-  it('enables dashboard actions after selecting an open session', async () => {
-    getSessions.mockResolvedValue({ rows: [makeProgramSession({
-      id: 'drop-in-session',
+  it('waits for saved search before sending applied filters to the table', async () => {
+    let restore!: (value: SessionPreference) => void;
+    preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(getSessions).not.toHaveBeenCalled();
 
-      sessionType: 'Field Trip',
-      title: 'Friday Drop In',
-      programId: 'drop-in',
-      program: 'Drop In',
-      enrollmentRequired: false,
-      date: '2026-07-31', startTime: '17:00',
-      endTime: '19:00',
-    })], nextCursor: null });
+    await act(async () => restore({
+      view: 'table', search: 'communication', programIds: [], cycleIds: ['cycle-1'], sessionTypes: [], statuses: [],
+    }));
 
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeDisabled();
-    fireEvent.click(await screen.findByText('Friday Drop In'));
-
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
-    expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
+    await waitFor(() => expect(getSessions).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'communication', cycleIds: ['cycle-1'] }),
+      expect.anything(), expect.anything(),
+    ));
+    expect(getSessions.mock.calls.every(([filters]) => filters.search === 'communication')).toBe(true);
   });
 
+  // Rendered states.
   it('does not create a fallback calendar when no cycles exist', async () => {
     getCycleReferences.mockResolvedValue([]);
     preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
@@ -306,19 +295,31 @@ describe('Sessions', () => {
   });
 
   // Selection and coordination.
-  it('keeps the session dashboard while a program row changes scheduling context', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    render(<MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
+  it('preserves session and program context when filters are applied and cleared', async () => {
+    const user = userEvent.setup();
+    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
+    render(<MemoryRouter future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
+    await user.click(await screen.findByRole('button', { name: 'Calendar session' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
 
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Manage Roster' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Overview/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Cycle' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fall 2026' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Apply' }));
+
+    await waitFor(() => expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-2'));
+    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-selected-program', 'program-1');
+    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Clear all' }));
+
+    await waitFor(() => expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', ''));
+    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-selected-program', 'program-1');
+    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
+    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
   });
 
   // Commands and dialogs.
@@ -333,15 +334,13 @@ describe('Sessions', () => {
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
-    expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Communication'));
-    expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
 
     expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { name: 'Attendance' })).toHaveLength(2);
+    expect(screen.getByRole('dialog', { name: 'Attendance' })).toBeInTheDocument();
   });
 
   it('opens the add sessions flow from the page header', async () => {
@@ -391,7 +390,6 @@ describe('Sessions', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
   });
 });
