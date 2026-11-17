@@ -391,13 +391,14 @@ describe('Program cycle sessions and attendance API', () => {
   });
 
   it('uploads, edits, downloads by title, and deletes session attachments with linked youth', async () => {
+    const fileContent = Buffer.from('reflection notes');
     const uploaded = await request(app)
       .post(`/api/sessions/${sessionId}/attachments`)
       .set('Authorization', `Bearer ${staffToken}`)
       .field('title', 'Reflection worksheet')
       .field('description', 'Completed during the session.')
       .field('youthIds', JSON.stringify([youthId]))
-      .attach('file', Buffer.from('reflection notes'), {
+      .attach('file', fileContent, {
         filename: 'reflection.txt',
         contentType: 'text/plain',
       });
@@ -406,6 +407,7 @@ describe('Program cycle sessions and attendance API', () => {
     expect(uploaded.body).toEqual(expect.objectContaining({
       title: 'Reflection worksheet',
       originalFilename: 'reflection.txt',
+      fileSize: fileContent.length,
       youth: [expect.objectContaining({ youthId })],
     }));
     const attachment = uploaded.body;
@@ -423,8 +425,17 @@ describe('Program cycle sessions and attendance API', () => {
       id: attachment.id,
       title: 'Updated / worksheet.',
       description: 'Updated attachment details.',
+      fileSize: fileContent.length,
       youth: [expect.objectContaining({ youthId })],
     }));
+
+    const attachments = await request(app)
+      .get(`/api/sessions/${sessionId}/attachments`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    expect(attachments.status).toBe(200);
+    expect(attachments.body).toEqual([expect.objectContaining({
+      id: attachment.id, fileSize: fileContent.length,
+    })]);
 
     const downloaded = await request(app)
       .get(`/api/sessions/${sessionId}/attachments/${attachment.id}/file`)
