@@ -19,13 +19,13 @@ import { getErrorMessage } from '../../../../../../http/errors';
 interface SessionNoteDraft {
   category: SessionNoteCategory | '';
   details: string;
-  selectedYouthIds: string[];
+  youthIds: string[];
 }
 
 export interface UseSessionNoteModalOptions {
   session: Pick<ProgramSession, 'id' | 'enrollmentRequired'>;
   note?: SessionNote | null;
-  initialYouthId?: string;
+  youthId?: string;
   hideYouthSelection?: boolean;
   onSaved: () => void | Promise<void>;
 }
@@ -38,14 +38,14 @@ export interface UseSessionNoteModalOptions {
 export default function useSessionNoteModal({
   session,
   note = null,
-  initialYouthId,
+  youthId,
   hideYouthSelection = false,
   onSaved,
 }: UseSessionNoteModalOptions) {
   const [draft, setDraft] = useState<SessionNoteDraft>(() => ({
     category: note?.category ?? '',
     details: note?.details ?? '',
-    selectedYouthIds: note?.youth.map(youth => youth.youthId) ?? (initialYouthId ? [initialYouthId] : []),
+    youthIds: note?.youth.map(youth => youth.youthId) ?? (youthId ? [youthId] : []),
   }));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -67,9 +67,9 @@ export default function useSessionNoteModal({
   const toggleYouth = (youthId: string) => {
     setDraft(current => ({
       ...current,
-      selectedYouthIds: current.selectedYouthIds.includes(youthId)
-        ? current.selectedYouthIds.filter(id => id !== youthId)
-        : [...current.selectedYouthIds, youthId],
+      youthIds: current.youthIds.includes(youthId)
+        ? current.youthIds.filter(id => id !== youthId)
+        : [...current.youthIds, youthId],
     }));
   };
 
@@ -95,7 +95,7 @@ export default function useSessionNoteModal({
     const data = {
       category: draft.category,
       details,
-      youthIds: draft.selectedYouthIds,
+      youthIds: draft.youthIds,
     };
 
     try {

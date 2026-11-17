@@ -31,7 +31,7 @@ type HoursAddTarget = {
 };
 
 type HoursModalState =
-  | { mode: 'add'; initialValues: HoursAddTarget }
+  | { mode: 'add'; context: HoursAddTarget }
   | { mode: 'edit'; item: HoursItem }
   | null;
 
@@ -97,11 +97,11 @@ export default function Hours() {
   });
 
   const editedItem = hoursModalState?.mode === 'edit' ? hoursModalState.item : undefined;
-  const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.initialValues : undefined;
+  const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.context : undefined;
 
   // Hours modal.
-  const openAddHoursModal = useCallback((initialValues: HoursAddTarget) => {
-    setHoursModalState({ mode: 'add', initialValues });
+  const openAddHoursModal = useCallback((context: HoursAddTarget) => {
+    setHoursModalState({ mode: 'add', context });
   }, []);
 
   const openEditHoursModal = useCallback((target: HoursItem) => {
@@ -167,7 +167,7 @@ export default function Hours() {
       controls={preferences}
       loadingSpinner
       title="Hours"
-      actions={canWrite && pageData.writableStaff.length ? <ActionsMenu
+      actions={canWrite ? <ActionsMenu
         triggerLabel="+ Add"
         ariaLabel="Add hours"
         items={[
@@ -215,12 +215,11 @@ export default function Hours() {
       loadTasks={getTaskDashboardData}
       onClose={closeHoursModal}
       onAdd={submitHours}
-      initialStaffId={addHoursContext?.staffId ?? currentUserId}
-      initialDate={addHoursContext?.date}
-      initialSource={addHoursContext?.source}
+      staffId={addHoursContext?.staffId}
+      date={addHoursContext?.date}
+      source={addHoursContext?.source}
       canCompleteTask={canCompleteTask}
-      staffLocked={Boolean(editedItem || addHoursContext?.staffId)}
-      initialItem={editedItem}
+      item={editedItem}
     />
 
     <ConfirmModal

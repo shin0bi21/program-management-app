@@ -15,7 +15,6 @@ const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as
 
 const getSessions = vi.fn();
 const getSessionRoster = vi.fn();
-const getProgramCycleAssignments = vi.fn();
 const getCycleReferences = vi.fn();
 const getSessionNotes = vi.fn();
 const getSessionAttachments = vi.fn();
@@ -45,9 +44,6 @@ const preferenceApi = vi.hoisted(() => ({
   setPreference: vi.fn(),
 }));
 
-vi.mock('../Programs/api/programCycleAssignments.api', () => ({
-  getProgramCycleAssignments: (...args: unknown[]) => getProgramCycleAssignments(...args),
-}));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: (...args: unknown[]) => getCycleReferences(...args),
 }));
@@ -142,21 +138,6 @@ describe('Sessions', () => {
     }, {
       id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
     }]);
-    getProgramCycleAssignments.mockResolvedValue([
-      {
-        cycleId: 'cycle-1',
-        cycle: 'Summer 2026',
-        programId: 'program-1',
-        program: 'Soft Skills',
-
-        enrollmentRequired: true,
-        startsOn: '2020-01-01',
-        endsOn: '2100-12-31',
-        state: 'active',
-        enrolledCount: 1,
-        uniqueAttendeeCount: 0,
-      },
-    ]);
     getSessions.mockResolvedValue({ rows: [makeProgramSession({
       sessionType: 'Regular',
       title: 'Communication',
@@ -351,22 +332,16 @@ describe('Sessions', () => {
     );
 
     const addButton = await screen.findByRole('button', { name: '+ Add' });
-    await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
 
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
   });
 
-  it('allows adding a session for a selected program whose assigned cycle is completed', async () => {
+  it('prefills the add-session form with the selected calendar program', async () => {
     preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    getProgramCycleAssignments.mockResolvedValue([{
-      programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01',
-      state: 'completed', enrollmentRequired: true, enrolledCount: 0,
-    }]);
     render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
     fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
     const addButton = screen.getByRole('button', { name: '+ Add' });
-    await waitFor(() => expect(addButton).toBeEnabled());
     fireEvent.click(addButton);
     expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
     expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');

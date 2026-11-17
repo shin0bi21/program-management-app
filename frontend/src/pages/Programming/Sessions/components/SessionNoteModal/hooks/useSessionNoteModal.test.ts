@@ -50,13 +50,14 @@ describe('useSessionNoteModal', () => {
     const { result } = renderHook(() => useSessionNoteModal({
       session,
       note,
+      youthId: 'other-youth',
       onSaved,
     }), { wrapper: wrapper() });
 
     expect(result.current.draft).toEqual({
       category: 'achievement',
       details: 'Original details.',
-      selectedYouthIds: ['youth-1'],
+      youthIds: ['youth-1'],
     });
     act(() => {
       result.current.updateDetails('  Updated details.  ');
@@ -79,7 +80,7 @@ describe('useSessionNoteModal', () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useSessionNoteModal({
       session,
-      initialYouthId: 'youth-1',
+      youthId: 'youth-1',
       onSaved,
     }), { wrapper: wrapper() });
 

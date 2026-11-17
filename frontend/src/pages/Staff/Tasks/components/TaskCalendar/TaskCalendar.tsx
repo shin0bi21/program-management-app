@@ -13,7 +13,7 @@ import type {
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type { TasksFilters } from '../../tasks.api';
-import type { AddTaskModalInitialValues, Task, TaskCalendarCache, StaffReference } from '../../types';
+import type { AddTaskContext, Task, TaskCalendarCache, StaffReference } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -50,7 +50,7 @@ interface TaskCalendarProps {
 
   onTaskSelect: (task: Task) => void;
   onStaffSelect: (staffId: string) => void;
-  onAddTask: (initialValues: AddTaskModalInitialValues) => void;
+  onAddTask: (context: AddTaskContext) => void;
   onEditTask: (task: Task) => void;
   onMessageChange?: PageMessageChangeHandler;
 }

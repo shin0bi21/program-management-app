@@ -69,6 +69,14 @@ Do not create hooks merely to rename state or forward props.
   can conditionally mount its state-owning content without another visibility state.
 - Initialize once from supplied edit data or add defaults. Pass records already
   loaded by the opening view; do not fetch them again to initialize the draft.
+- Name incoming records and context by their domain meaning, such as `task`,
+  `programId`, and `date`, without `initial` or `supplied` prefixes. Keep editable
+  values together under `draft`, using the same field names (`draft.programId`,
+  `draft.date`). A form library may own the draft instead. Reserve `selected`
+  names for selection outside the form draft.
+- Order draft field declarations and initialization to match the form's DOM
+  order, including fields within conditional sections. Keep non-rendered
+  identifiers and interaction metadata separate from that field sequence.
 - Close or successful completion clears the target and unmounts the interaction.
   Preserve the shared dialog's success feedback until its close callback runs.
 - Reopening starts a fresh instance. Key the form by target identity if the target

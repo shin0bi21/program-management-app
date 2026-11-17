@@ -350,6 +350,18 @@ describe('Hours', () => {
   });
 
   // Commands and dialogs.
+  it('opens Add with no staff options so the modal owns required-field handling', async () => {
+    vi.mocked(getStaffReferences).mockResolvedValue([]);
+    preferenceHook.preference = { ...preferenceHook.preference!, view: 'table' };
+    renderHours();
+    await screen.findByRole('table', { name: 'Hours entries' });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add hours' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Hours' }));
+
+    expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
+  });
+
   it('bridges the page Add action to the shared entry modal', async () => {
     renderHours();
     await screen.findAllByLabelText('Zoe Wilson');
@@ -362,7 +374,6 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Regular Hours' }));
 
     expect(screen.getByRole('heading', { name: 'Log Hours' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
   });
 
   it('opens the contextual entry modal for a calendar staff member', async () => {
@@ -386,7 +397,6 @@ describe('Hours', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Hours')).toHaveValue(2);
     expect(screen.getByLabelText('Note')).toHaveValue('Planning meeting');
   });
 

@@ -4,6 +4,7 @@ import { setTask } from '../../../tasks.api';
 import type { TaskCategory } from '../../../types';
 import { getSubmitStatusMessage, useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
+import { getDate } from '../../../../../../common/utils/date';
 import type { TaskModalProps } from '../TaskModal';
 
 type UseTaskModalOptions = Pick<TaskModalProps,
@@ -13,16 +14,17 @@ type UseTaskModalOptions = Pick<TaskModalProps,
 
 interface TaskDraft {
   title: string;
-  details: string;
-  category: TaskCategory | '';
+  staffId: string;
   programId: string;
+  category: TaskCategory | '';
   startDate: string;
   dueDate: string;
-  staffId: string;
+  details: string;
 }
 
 /**
  * Owns one mounted task draft and its submission lock.
+ * Missing add dates default to today for the start and the start date for the due date.
  * @example useTaskModal({ target, onSaved }) // saved record updates preserve the draft
  */
 export default function useTaskModal({
@@ -30,16 +32,19 @@ export default function useTaskModal({
   onSaved,
 }: UseTaskModalOptions) {
   const task = target.mode === 'edit' ? target.task : undefined;
-  const addContext = target.mode === 'add' ? target.initialValues : undefined;
-  const [draft, setDraft] = useState<TaskDraft>(() => ({
-    title: task?.title ?? '',
-    details: task?.details ?? '',
-    category: task?.category ?? '',
-    programId: task?.programId ?? '',
-    startDate: task?.startDate ?? addContext?.startDate ?? '',
-    dueDate: task?.dueDate ?? addContext?.dueDate ?? '',
-    staffId: task?.staffId ?? addContext?.staffId ?? '',
-  }));
+  const addContext = target.mode === 'add' ? target.context : undefined;
+  const [draft, setDraft] = useState<TaskDraft>(() => {
+    const startDate = task?.startDate ?? addContext?.startDate ?? getDate();
+    return {
+      title: task?.title ?? '',
+      staffId: task?.staffId ?? addContext?.staffId ?? '',
+      programId: task?.programId ?? '',
+      category: task?.category ?? '',
+      startDate,
+      dueDate: task?.dueDate ?? addContext?.dueDate ?? startDate,
+      details: task?.details ?? '',
+    };
+  });
   const submittingRef = useRef(false);
   const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
 

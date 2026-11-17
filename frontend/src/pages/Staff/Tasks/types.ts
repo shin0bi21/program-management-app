@@ -55,13 +55,13 @@ export interface TaskCalendarCache {
   remove: (taskId: string) => void;
 }
 
-export interface AddTaskModalInitialValues {
-  startDate: string;
-  dueDate: string;
+export interface AddTaskContext {
+  startDate?: string;
+  dueDate?: string;
   staffId?: string;
 }
 
 export type TaskModalState =
-  | { mode: 'add'; initialValues: AddTaskModalInitialValues }
+  | { mode: 'add'; context: AddTaskContext }
   | { mode: 'edit'; task: Task }
   | null;

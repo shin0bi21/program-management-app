@@ -18,9 +18,47 @@ describe('single session creation', () => {
     vi.mocked(createSession).mockResolvedValue(makeProgramSession());
   });
 
+  it('does not create a session without a selected program', async () => {
+    const onSaved = vi.fn();
+    const { result } = renderHook(() => useSessionModal({ programs: [], onSaved }));
+    act(() => {
+      result.current.updateDraft('title', 'Workshop');
+      result.current.updateDraft('sessionType', 'Regular');
+    });
+
+    await act(() => result.current.submit());
+
+    expect(createSession).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('preserves the edited draft when incoming context refreshes', async () => {
+    const onSaved = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ programId, date }) => useSessionModal({ programs, programId, date, onSaved }),
+      { initialProps: { programId: 'p1', date: '2026-11-04' } },
+    );
+    act(() => {
+      result.current.selectProgram('p2');
+      result.current.updateDraft('title', 'Music workshop');
+      result.current.updateDraft('sessionType', 'Regular');
+      result.current.updateDraft('date', '2026-11-12');
+      result.current.updateDraft('startTime', '15:00');
+      result.current.updateDraft('endTime', '17:00');
+    });
+
+    rerender({ programId: 'p1', date: '2026-12-01' });
+    await act(() => result.current.submit());
+
+    expect(createSession).toHaveBeenCalledWith({
+      programId: 'p2', sessionType: 'Regular', title: 'Music workshop',
+      date: '2026-11-12', startTime: '15:00', endTime: '17:00', description: null,
+    });
+  });
+
   it('uses program times and preserves a supplied calendar date when changing programs', async () => {
     const onSaved = vi.fn();
-    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', initialDate: '2026-11-04', onSaved }));
+    const { result } = renderHook(() => useSessionModal({ programs, programId: 'p1', date: '2026-11-04', onSaved }));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '17:30', endTime: '19:30' });
     act(() => result.current.selectProgram('p2'));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '16:00', endTime: '18:00' });
@@ -39,7 +77,7 @@ describe('single session creation', () => {
 
   it('shows cycle resolution errors from the server without retrying another assignment', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('No assigned cycle covers this session date.'));
-    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved: vi.fn() }));
+    const { result } = renderHook(() => useSessionModal({ programs, programId: 'p1', onSaved: vi.fn() }));
     act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
@@ -50,7 +88,7 @@ describe('single session creation', () => {
   it('locks duplicate submissions, retains success if refresh fails, and permits retry after API failure', async () => {
     vi.mocked(createSession).mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce(makeProgramSession());
     const onSaved = vi.fn().mockRejectedValue(new Error('Refresh failed'));
-    const { result } = renderHook(() => useSessionModal({ programs, initialProgramId: 'p1', onSaved }));
+    const { result } = renderHook(() => useSessionModal({ programs, programId: 'p1', onSaved }));
     act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');

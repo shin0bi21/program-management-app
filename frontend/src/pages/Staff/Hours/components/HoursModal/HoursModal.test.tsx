@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
 import { getHoursSessions } from '../../hours.api';
+import { getUser } from '../../../../../auth/storage';
 import HoursModal from './HoursModal';
 
 vi.mock('../../hours.api', () => ({ getHoursSessions: vi.fn() }));
+vi.mock('../../../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const loadTasks = vi.fn();
 
@@ -23,10 +25,13 @@ const categories = [
 ];
 const task = makeTask();
 
+/**
+ * Opens an Hours form with reference choices and the supplied entry context.
+ * @example renderModal({ staffId: 'staff-2' }) // locked contextual staff selection
+ */
 function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {}) {
   const props: ComponentProps<typeof HoursModal> = {
     isOpen: true,
-    initialStaffId: 'staff-1',
     staff,
     programs,
     categories,
@@ -39,6 +44,7 @@ function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {})
   return props;
 }
 
+/** Submits the mounted Hours form. @example submitForm() // validates and saves the draft */
 function submitForm() {
   fireEvent.submit(document.getElementById('hours-form')!);
 }
@@ -46,12 +52,20 @@ function submitForm() {
 describe('HoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getUser).mockReturnValue({ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', email: 'zoe@example.com' });
     loadTasks.mockResolvedValue([]);
     vi.mocked(getHoursSessions).mockResolvedValue([]);
   });
 
+  it('defaults to the signed-in staff member while keeping the choice editable', () => {
+    renderModal();
+
+    expect(screen.getByRole('button', { name: 'Staff member' })).toHaveTextContent('Zoe Wilson');
+    expect(screen.getByRole('button', { name: 'Staff member' })).toBeEnabled();
+  });
+
   it('renders only options valid for regular time', () => {
-    renderModal({ initialDate: '2026-08-18', initialStaffId: 'staff-1', staffLocked: true });
+    renderModal({ date: '2026-08-18', staffId: 'staff-1' });
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Program' }));
@@ -63,12 +77,9 @@ describe('HoursModal', () => {
     expect(screen.getByRole('button', { name: 'Category' })).toHaveTextContent('Meeting');
   });
 
-  it('renders only open assigned tasks', async () => {
-    loadTasks.mockResolvedValue([
-      task,
-      makeTask({ id: 'task-complete', title: 'Completed report', state: 'completed', status: 'completed', statusLabel: 'Completed' }),
-    ]);
-    renderModal({ initialSource: 'task', initialDate: '2026-08-18' });
+  it('selects an assigned task through the rendered control', async () => {
+    loadTasks.mockResolvedValue([task]);
+    renderModal({ source: 'task', date: '2026-08-18' });
 
     await waitFor(() => expect(loadTasks).toHaveBeenCalledWith(
       'staff-1',
@@ -76,7 +87,6 @@ describe('HoursModal', () => {
     ));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Task' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Task' }));
-    expect(screen.queryByRole('menuitemradio', { name: 'Completed report' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Prepare workshop' }));
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.queryByRole('checkbox', { name: 'Task completed' })).not.toBeInTheDocument();
@@ -92,7 +102,7 @@ describe('HoursModal', () => {
         }]
         : []
     ));
-    renderModal({ initialSource: 'session' });
+    renderModal({ source: 'session' });
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
     await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
@@ -105,24 +115,23 @@ describe('HoursModal', () => {
   });
 
   it('locks the work date when opened from a calendar cell', async () => {
-    renderModal({ initialSource: 'session', initialDate: '2026-08-18', initialStaffId: 'staff-2' });
+    renderModal({ source: 'session', date: '2026-08-18', staffId: 'staff-2' });
 
     expect(screen.getByLabelText('Date')).toHaveValue('2026-08-18');
     expect(screen.getByLabelText('Date')).toBeDisabled();
   });
 
   it('locks a contextual task and its assigned staff while logging task time', async () => {
-    renderModal({ staff: [staff[0]], programs: [], initialTask: task, canCompleteTask: true });
+    renderModal({ staff: [staff[0]], programs: [], task: task, canCompleteTask: true });
 
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
-    expect(screen.getByRole('button', { name: 'Task' })).not.toHaveTextContent('Planning / Prep');
     expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
   });
 
   it('renders initialized edit values', () => {
     renderModal({
-      initialItem: makeHoursItem({
+      item: makeHoursItem({
         id: 'entry-1',
         category: 'meeting',
         categoryLabel: 'Meeting',
@@ -140,6 +149,7 @@ describe('HoursModal', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Program' })).toHaveTextContent('Soft Skills');
     expect(screen.getByLabelText('Hours')).toHaveValue(2);
     expect(screen.getByLabelText('Note')).toHaveValue('Original note');
@@ -149,7 +159,7 @@ describe('HoursModal', () => {
     let resolve!: () => void;
     const onAdd = vi.fn(() => new Promise<void>(done => { resolve = done; }));
     const onClose = vi.fn();
-    renderModal({ onAdd, onClose, initialDate: '2026-08-19' });
+    renderModal({ onAdd, onClose, date: '2026-08-19' });
     fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Meeting' }));

@@ -9,13 +9,13 @@ import { getErrorMessage } from '../../../../../../http/errors';
 interface ProgramDraft {
   title: string;
   description: string;
-  enrollmentRequired: boolean;
   minAge: string;
   maxAge: string;
   defaultDayOfWeek: ProgramWeekday | '';
   defaultStartTime: string;
   defaultEndTime: string;
   timezone: Program['timezone'];
+  enrollmentRequired: boolean;
 }
 
 interface UseProgramModalOptions {
@@ -36,13 +36,13 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
   const [draft, setDraft] = useState<ProgramDraft>(() => ({
     title: program?.title ?? '',
     description: program?.description ?? '',
-    enrollmentRequired: program?.enrollmentRequired ?? false,
     minAge: program?.minAge == null ? '' : String(program.minAge),
     maxAge: program?.maxAge == null ? '' : String(program.maxAge),
     defaultDayOfWeek: program?.defaultDayOfWeek ?? '',
     defaultStartTime: program?.defaultStartTime ?? '',
     defaultEndTime: program?.defaultEndTime ?? '',
     timezone: program?.timezone ?? 'America/Toronto',
+    enrollmentRequired: program?.enrollmentRequired ?? false,
   }));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
