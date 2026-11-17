@@ -39,8 +39,6 @@ export type LeadSubmitterRole = "guardian" | "parent" | "staff" | "youth";
 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
-export type OutreachSubmitterRole = "guardian" | "parent" | "youth";
-
 export type ProgramTimezone = "America/Toronto";
 
 export type SessionType = "Field Trip" | "Guest Speaker" | "Regular";
@@ -108,28 +106,6 @@ export interface Contacts {
   updated_by: string | null;
 }
 
-export interface ExpressionsOfInterest {
-  age: number;
-  contact_phone_number: string;
-  contact_relationship: ContactType;
-  created_at: Generated<Timestamp>;
-  created_by: string | null;
-  discovery_source: DiscoverySource;
-  id: Generated<string>;
-  notes: string | null;
-  school: string;
-  status: Generated<string>;
-  status_updated_at: Generated<Timestamp>;
-  /**
-   * Who completed the public expression-of-interest form; null only for legacy records.
-   */
-  submitted_by_role: OutreachSubmitterRole;
-  updated_at: Generated<Timestamp>;
-  updated_by: string | null;
-  youth_first_name: string;
-  youth_last_name: string;
-}
-
 export interface HomepageImages {
   alt_text: string;
   caption: string;
@@ -162,11 +138,9 @@ export interface Leads {
   created_by: string | null;
   date_of_birth: string | null;
   discovery_source: DiscoverySource;
-  expression_of_interest_id: string | null;
   id: Generated<string>;
   notes: string | null;
   origin: LeadOrigin;
-  program_of_interest_id: string | null;
   school: string;
   status: Generated<LeadStatus>;
   status_updated_at: Generated<Timestamp>;
@@ -502,7 +476,6 @@ export interface DB {
   auth_log: AuthLog;
   base_table: BaseTable;
   contacts: Contacts;
-  expressions_of_interest: ExpressionsOfInterest;
   homepage_images: HomepageImages;
   lead_notes: LeadNotes;
   leads: Leads;
