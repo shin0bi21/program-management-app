@@ -12,7 +12,10 @@ export function TaskSummary() {
 
   return <QueryClientProvider client={client}>
     <div style={{ width: 'min(100%, 360px)' }}>
-      <TaskOverviewDashboardCard queryKey={['gallery-tasks']} staffId="staff-1" staffName="Zoe Wilson" today="2026-10-01" />
+      <TaskOverviewDashboardCard
+        queryKey={['gallery-tasks']}
+        staff={{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }}
+      />
     </div>
   </QueryClientProvider>;
 }

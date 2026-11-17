@@ -78,16 +78,6 @@ export default function Sessions() {
     selection.selectSession(session);
   };
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
-  const applyFilter = (category: string, selected: string[]) => {
-    selection.clearSelectedSession();
-    setSelectedProgramId(null);
-    filters.apply(category, selected);
-  };
-  const clearFilters = () => {
-    selection.clearSelectedSession();
-    setSelectedProgramId(null);
-    filters.clear();
-  };
 
   // Attendance modal.
   const [attendanceTarget, setAttendanceTarget] = useState<{ session: ProgramSession; roster: SessionRosterMember[] } | null>(null);
@@ -119,8 +109,16 @@ export default function Sessions() {
       canWrite={canWriteAttendance}
       onManage={(session, roster) => setAttendanceTarget({ session, roster })}
     />}
-    <SessionNotesDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
-    <SessionAttachmentsDashboardCard queryKey={SESSION_QUERY_KEY} session={selectedSession} canWrite={canWriteSessions} />
+    <SessionNotesDashboardCard
+      queryKey={SESSION_QUERY_KEY}
+      session={selectedSession}
+      canWrite={canWriteSessions}
+    />
+    <SessionAttachmentsDashboardCard
+      queryKey={SESSION_QUERY_KEY}
+      session={selectedSession}
+      canWrite={canWriteSessions}
+    />
   </>;
 
   const table = <SessionTable
@@ -150,10 +148,7 @@ export default function Sessions() {
     filters={sessionFilters}
     selectedSessionId={selection.selectedSessionId}
     onSelectedSessionLoaded={selection.syncSelectedSession}
-    onSessionSelect={session => {
-      setSelectedProgramId(session.programId);
-      selection.selectSession(session);
-    }}
+    onSessionSelect={selectSession}
     calendarCacheRef={actions.calendarCacheRef}
     pendingSessionIds={actions.pendingSessionIds}
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
@@ -170,11 +165,14 @@ export default function Sessions() {
         className="sessions-page"
         data-view={view}
         ariaLabel={view === 'table' ? 'Programming sessions and overview' : 'Programming calendar and overview'}
-        controls={{ ...controls, filters: { ...filters, apply: applyFilter, clear: clearFilters } }}
+        controls={controls}
         loadingSpinner
         actions={
           canWriteSessions ? (
-            <Button onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })} disabled={!canAddSession}>
+            <Button
+              onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })}
+              disabled={!canAddSession}
+            >
               + Add
             </Button>
           ) : undefined

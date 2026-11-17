@@ -8,17 +8,19 @@ import './TaskHoursLoggedDashboardCard.css';
 
 /**
  * Displays the selected task’s logged hours and its daily breakdown dialog.
- * @param props - Loaded task context and the permitted logging action.
- * @example <TaskHoursLoggedDashboardCard task={task} onLogHours={openHours} />
+ * @param props - Shared task context, write permission, and the entry-modal action.
+ * @example <TaskHoursLoggedDashboardCard task={task} canWrite onLogHours={openHours} />
  */
-export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
+export default function TaskHoursLoggedDashboardCard({ task, canWrite = false, onLogHours }: {
   task: Task | null;
+  canWrite?: boolean;
   onLogHours?: () => void;
 }) {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
   useEffect(() => setOpenTaskId(null), [task?.id]);
 
+  const canLogHours = canWrite && task?.writable && task.state === 'open' && Boolean(onLogHours);
   const maxDailyHours = task ? Math.max(...task.loggedHoursByDate.map(entry => entry.hours), 1) : 1;
 
   return <>
@@ -27,13 +29,27 @@ export default function TaskHoursLoggedDashboardCard({ task, onLogHours }: {
       className="dashboard-card--short task-hours-breakdown-card"
       details={[{ label: 'Logged', value: task ? formatHours(task.hoursLogged) : null }]}
       action={<div className="task-hours-breakdown__actions">
-        {onLogHours && <Button size="sm" disabled={!task} onClick={onLogHours}>Log Hours</Button>}
-        <Button size="sm" variant="secondary" aria-haspopup="dialog" disabled={!task} onClick={() => task && setOpenTaskId(task.id)}>See Breakdown</Button>
+        {canLogHours && <Button
+          size="sm"
+          onClick={onLogHours}
+        >Log Hours</Button>}
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-haspopup="dialog"
+          disabled={!task}
+          onClick={() => task && setOpenTaskId(task.id)}
+        >See Breakdown</Button>
       </div>}
     >
       {!task && <p className="task-hours-breakdown__empty">Click a task to view its logged hours.</p>}
     </DashboardCard>
-    <Modal isOpen={Boolean(task) && openTaskId === task?.id} onClose={() => setOpenTaskId(null)} title={task?.title ?? 'Hours Logged'} maxWidth="520px">
+    <Modal
+      isOpen={Boolean(task) && openTaskId === task?.id}
+      onClose={() => setOpenTaskId(null)}
+      title={task?.title ?? 'Hours Logged'}
+      maxWidth="520px"
+    >
       {task && <dl className="task-hours-breakdown__details">
         <div><dt>Start</dt><dd>{formatShortDate(task.startDate)}</dd></div>
         <div><dt>End</dt><dd>{formatShortDate(task.dueDate)}</dd></div>

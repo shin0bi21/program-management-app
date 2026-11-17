@@ -47,6 +47,11 @@ export function dashboardPlan(context: ScaffoldContext, ownerPath: string, name:
       // For compact label/value summaries, use its details prop with dashboard-card--short.
       // Prefer cards directly in PageContainer's dashboard slot; keep a dashboard owner only for shared queries or coordination.
       // Cards use usePageMessageReporter without callbacks; PageContainer collects messages automatically.
+      // PageContainer owns the dashboard region's DOM layout; independent cards need no grouping component.
+      // Individual cards own reporting dates, defaults, and action eligibility.
+      // Keep this owner only for actual shared queries or interactions between cards.
+      // Never derive dashboard defaults from collection filters or clear selection when filters change.
+      // Keep selection shared with tables, calendars, or forms at their nearest common owner.
       // Keep page-wide actions in the page header.
       // Pass selectedId/data to the cards that need them; resource-summary cards may be independent.
       // Each card handles its own no-selection, missing record, loading, failure/retry, and refresh states.
