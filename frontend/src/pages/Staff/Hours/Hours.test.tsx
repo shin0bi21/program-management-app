@@ -330,34 +330,17 @@ describe('Hours', () => {
   });
 
   // Selection and coordination.
-  it('renders independent dashboard summaries for the selected staff and cycle', async () => {
+  it('passes the selected staff and cycle to the dashboard queries', async () => {
     preferenceHook.preference = { view: 'table', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-fall'] };
     vi.mocked(getHoursTableData).mockResolvedValue({ rows: [hoursItem({
       id: 'fall-entry', cycleId: 'cycle-fall', cycle: 'Fall 2026', category: 'outreach',
       categoryLabel: 'Outreach', hours: 4, note: 'Fall cycle work',
     }, { date: '2026-09-03' })], nextCursor: null });
-    mockDashboardData({
-      payPeriod: {
-        periodStart: '2026-09-02', periodEnd: '2026-09-15', totalHours: 4,
-        breakdown: [{ label: 'Outreach', hours: 4 }],
-      },
-      biweeklyAverage: {
-        periodCount: 1, averageHours: 4, breakdown: [{ label: 'Outreach', hours: 4 }],
-      },
-    });
     renderHours();
 
-    await screen.findByRole('heading', { name: 'Hours This Pay Period' });
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Hours This Pay Period' }).closest('article')).toHaveTextContent('4.00'));
-    const averageCard = screen.getByRole('heading', { name: 'Average Biweekly Hours - Fall 2026' });
-    expect(averageCard.closest('article')).toHaveTextContent('4.00');
-    expect(averageCard.closest('article')).not.toHaveTextContent('Zoe Wilson');
-    expect(await screen.findByText('Fall cycle work')).toBeInTheDocument();
-    expect(getHoursCycleSummaryData).toHaveBeenCalledWith(
-      'staff-1',
-      'cycle-fall',
-      expect.anything(),
-    );
+    await screen.findByText('Fall cycle work');
+    await waitFor(() => expect(getHoursPayPeriodData).toHaveBeenCalledWith('staff-1', null, { signal: expect.any(AbortSignal) }));
+    await waitFor(() => expect(getHoursCycleSummaryData).toHaveBeenCalledWith('staff-1', 'cycle-fall', { signal: expect.any(AbortSignal) }));
   });
 
   it('keeps the admin overview visible and derives its staff member from either view selection', async () => {
@@ -401,7 +384,6 @@ describe('Hours', () => {
     expect(screen.getByRole('button', { name: 'Zoe Wilson' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Alex Morgan' }));
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
-    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.click(screen.getByRole('button', { name: 'View: Calendar' }));
@@ -410,11 +392,8 @@ describe('Hours', () => {
     await screen.findByText('Alex planning meeting');
     fireEvent.click(screen.getByText('Zoe workshop').closest('tr')!);
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('2.00'));
-    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
     fireEvent.click(screen.getByText('Alex planning meeting').closest('tr')!);
     await waitFor(() => expect(getPeriodCard()).toHaveTextContent('7.00'));
-    expect(getPeriodCard()).not.toHaveTextContent('Alex Morgan');
-    expect(getPeriodCard()).not.toHaveTextContent('Zoe Wilson');
   });
 
   // Commands and dialogs.

@@ -10,6 +10,23 @@ vi.mock('../../../youth.api', () => ({ getYouthProfileNotes: vi.fn() }));
 describe('YouthNotesDashboardCard', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('keeps note details out of the card and opens the selected note through its callback', async () => {
+    const note: YouthProfileNote = {
+      id: 'profile-note-1', youthId: 'youth-1', category: 'general',
+      details: 'Youth profile note', createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z',
+      createdByName: 'Bilal Khan',
+    };
+    vi.mocked(getYouthProfileNotes).mockResolvedValue([note]);
+    const onSelectProfileNote = vi.fn();
+    renderWithQueryClient(<YouthNotesDashboardCard youthId="youth-1" onSelectProfileNote={onSelectProfileNote} />);
+
+    const viewNote = await screen.findByRole('button', { name: 'View profile note' });
+    expect(screen.queryByText(note.details)).not.toBeInTheDocument();
+    fireEvent.click(viewNote);
+
+    expect(onSelectProfileNote).toHaveBeenCalledWith(note);
+  });
+
   it('distinguishes loading notes from an empty selected profile', async () => {
     let finishRead!: (notes: YouthProfileNote[]) => void;
     vi.mocked(getYouthProfileNotes).mockReturnValue(new Promise(resolve => { finishRead = resolve; }));

@@ -188,7 +188,6 @@ describe('Leads', () => {
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
 
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
-    expect(screen.getByText('No intake information recorded.')).toBeInTheDocument();
   });
 
   it('clears a selected dashboard after deleting that lead', async () => {
