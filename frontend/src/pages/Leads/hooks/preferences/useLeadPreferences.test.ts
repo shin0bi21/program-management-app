@@ -41,8 +41,8 @@ describe('useLeadPreferences', () => {
     ));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.filters.values.statuses).toEqual([]);
-    expect(result.current.filters.values.programIds).toEqual([]);
+    expect(result.current.appliedFilters.statuses).toEqual([]);
+    expect(result.current.appliedFilters.programIds).toEqual([]);
 
     act(() => result.current.search.apply(' school '));
     act(() => result.current.filters.apply('statuses', ['contacted']));
@@ -56,9 +56,9 @@ describe('useLeadPreferences', () => {
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:outreach-external-leads-filters')!)).toEqual({
       hiddenColumns: ['school'], columnWidths: { firstName: 240 },
     });
-    expect(result.current.search.appliedValue).toBe('school');
-    expect(result.current.filters.values.statuses).toEqual(['contacted']);
-    expect(result.current.filters.values.submitterRoles).toEqual(['youth']);
+    expect(result.current.appliedFilters.search).toBe('school');
+    expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
+    expect(result.current.appliedFilters.submitterRoles).toEqual(['youth']);
     expect(result.current.table).toMatchObject({
       sorting: { key: 'school', direction: 'asc' }, hiddenColumns: ['school'], columnWidths: { firstName: 240 },
     });
@@ -81,7 +81,8 @@ describe('useLeadPreferences', () => {
     expect(result.current.filters.definitions).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'submitterRoles' }),
     ]));
-    expect(result.current.filters.values.submitterRoles).toEqual([]);
+    expect(result.current.appliedFilters.submitterRoles).toEqual([]);
+    expect(result.current.appliedFilters.origins).toEqual(['internal']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-internal-leads-filters', expect.objectContaining({ origins: ['internal'], submitterRoles: [] }),
     ));
@@ -99,10 +100,10 @@ describe('useLeadPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.search.appliedValue).toBe('school');
-    expect(result.current.filters.values.statuses).toEqual(['contacted']);
-    expect(result.current.filters.values.programIds).toEqual(['program-1']);
-    expect(result.current.filters.values.submitterRoles).toEqual(['parent']);
+    expect(result.current.appliedFilters.search).toBe('school');
+    expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
+    expect(result.current.appliedFilters.programIds).toEqual(['program-1']);
+    expect(result.current.appliedFilters.submitterRoles).toEqual(['parent']);
     expect(result.current.table.hiddenColumns).toEqual([]);
     expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
@@ -116,14 +117,14 @@ describe('useLeadPreferences', () => {
       useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, error, tableKeys)
     ), { initialProps: { error: 'offline' as string | null } });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.programIds).toEqual(['removed-program']);
+    expect(result.current.appliedFilters.programIds).toEqual(['removed-program']);
 
     act(() => result.current.filters.apply('statuses', ['contacted']));
     rerender({ error: null });
 
-    await waitFor(() => expect(result.current.filters.values.programIds).toEqual([]));
-    expect(result.current.filters.values.statuses).toEqual(['contacted']);
-    expect(result.current.search.appliedValue).toBe('');
+    await waitFor(() => expect(result.current.appliedFilters.programIds).toEqual([]));
+    expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
+    expect(result.current.appliedFilters.search).toBe('');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-external-leads-filters', expect.objectContaining({ programIds: [], statuses: ['contacted'], search: '' }),
     ));

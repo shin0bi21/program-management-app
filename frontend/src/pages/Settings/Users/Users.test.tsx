@@ -76,17 +76,17 @@ describe('Users', () => {
 
   it('waits for restored account filters before querying the table', async () => {
     mockUseAuth.mockReturnValue({ role: 'admin', permissions: ['read:accounts'] });
-    let restore!: (value: { statuses: string[] }) => void;
+    let restore!: (value: { statuses: string[]; search: string }) => void;
     preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
     renderPage();
 
     expect(mockUseUserTableData).not.toHaveBeenCalled();
 
-    await act(async () => restore({ statuses: ['invited'] }));
+    await act(async () => restore({ statuses: ['invited'], search: 'Jamie' }));
 
     await waitFor(() => expect(mockUseUserTableData).toHaveBeenLastCalledWith(
       ['accounts', 'table'],
-      expect.objectContaining({ statuses: ['invited'] }),
+      expect.objectContaining({ statuses: ['invited'], search: 'Jamie' }),
       expect.any(Object),
     ));
   });

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
@@ -12,14 +11,14 @@ import {
   preferenceSorting,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
-import type { LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
+import type { LeadFilters, LeadOrigin, LeadSortKey, LeadStatus, LeadSubmitterRole } from '../../types';
 
 const statuses: LeadStatus[] = ['new', 'contacted', 'eligible', 'ineligible', 'deferred', 'closed', 'signed_up'];
 const externalSubmitterRoles: LeadSubmitterRole[] = ['youth', 'parent', 'guardian'];
 const DEFAULT_SORTING: ListSort<LeadSortKey> = { key: 'created', direction: 'desc' };
 
 /**
- * Restores lead controls and restricts saved choices to the selected origin.
+ * Restores lead controls and supplies applied filters restricted to the selected origin.
  * @param origin - Lead collection whose filters are being edited.
  * @param preferenceKey - Account preference record for that collection.
  * @param programs - Available program choices.
@@ -60,9 +59,18 @@ export function useLeadPreferences(
     }] : []),
   ], [origin, programs]);
 
+  const appliedFilters: LeadFilters = {
+    search: preferences.search,
+    statuses: preferences.statuses,
+    programIds: preferences.programIds,
+    origins: preferences.origins,
+    submitterRoles: preferences.submitterRoles,
+  };
+
   return {
     ready,
     error,
+    appliedFilters,
     search: {
       appliedValue: preferences.search,
       apply: (search: string) => updatePreferences({ search }),
@@ -78,7 +86,7 @@ export function useLeadPreferences(
     }),
     table: {
       sorting: preferences.sorting,
-      setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<LeadSortKey> }),
+      setSorting: (sorting: ListSort<LeadSortKey>) => updatePreferences({ sorting }),
       columnWidths: layout.columnWidths,
       setColumnWidths: layout.setColumnWidths,
       hiddenColumns: layout.hiddenColumns,

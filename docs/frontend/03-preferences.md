@@ -61,7 +61,7 @@ See the [Hours preference hook](../../frontend/src/pages/Staff/Hours/hooks/prefe
 3. Derive bounds with [getCycleDateRange](../../frontend/src/common/features/programming/cycles/cycleDateRange.ts); do not persist a second range.
 4. Keep cycle-bounded views unavailable when loading fails or no range exists. Never substitute an unbounded collection request.
 
-Keep separate dashboard cycle focus in the controls hook; it must not silently rewrite collection filters.
+Dashboard cards own their reporting scope independently of collection filters.
 
 ## Table Layout Preferences
 
@@ -90,8 +90,13 @@ Return these groups from the page preference or control hook, without flat alias
 
 - Keep `ready`, `error`, and optional `view`/`setView` at the top level.
 - Pass the result as `controls` to [PageContainer](../../frontend/src/common/components/PageContainer/PageContainer.tsx).
-- Build applied page filters from `search.appliedValue` and `filters.values`.
-- Keep derived values such as `dateRange` outside `filters.values`; domain-derived extras may accompany the groups.
+- Expose one typed `appliedFilters` object from the same hook, using the domain's request filter contract. Include saved `search` when the page has search, together with normalized filter fields and necessary derived inputs.
+- Pass `appliedFilters` directly to each table/calendar; routes do not rebuild it or append search. Keep sorting, cursors, and visible request ranges with their view owners.
+- Persist submitted search with `preferenceText()` through `usePreferences`, alongside the existing filter fields. Keep the draft inside `SearchInput`; do not mirror applied search in local state.
+- Keep `appliedFilters` available as a normalized projection; `ready` gates its consumers through `PageContainer`. Gate any consumer outside that container separately.
+- Keep `appliedFilters` derived rather than separately stored or cached. Preserve domain field names and preference keys; do not add fields for controls a page does not have.
+- Filter category `values` remain array-valued selections for `FilterCard`. Search is part of `appliedFilters`, not that category map. Clearing filter categories preserves search; clearing search preserves category selections.
+- Derive `dateRange` from saved cycles in the hook and retain stable identity for calendar period building. Supply it in `appliedFilters` when the domain API accepts it, or as separate calendar context when it does not; never persist it.
 
 ### Apply Search
 

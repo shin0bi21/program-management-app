@@ -1,6 +1,7 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
-import type { TaskReferenceData } from '../../tasks.api';
+import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
+import type { TaskReferenceData, TasksFilters } from '../../tasks.api';
 import { useMemo } from 'react';
 
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
@@ -52,7 +53,7 @@ interface UseTaskPreferencesOptions {
 }
 
 /**
- * Restores task controls and saves submitted search, filters, view, and sorting.
+ * Restores task controls and supplies applied request filters with derived calendar bounds.
  * @param options - Reference choices, their availability, and supported table keys.
  * @example Submitting search.apply('workshop') saves the applied task search.
  */
@@ -118,13 +119,18 @@ export default function useTaskPreferences({
     { id: 'statuses' as const, label: 'Status', options: (referenceData?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
   ], [referenceData, cycles, staff, programs]);
 
-  const filterValues = useMemo(() => ({
+  const filterValues = {
     cycleIds: preferences.cycleIds,
     staffIds: preferences.staffIds,
     programIds: preferences.programIds,
     categories: preferences.categories,
     statuses: preferences.statuses,
-  }), [preferences]);
+  };
+  const appliedFilters: TasksFilters = { ...filterValues, search: preferences.search };
+  const dateRange = useMemo(
+    () => getCycleDateRange(cycles, preferences.cycleIds),
+    [cycles, preferences.cycleIds],
+  );
 
   // Table sorting.
   const setSorting = (sorting: ListSort<TaskSortKey>) => {
@@ -134,6 +140,8 @@ export default function useTaskPreferences({
   return {
     ready,
     error,
+    appliedFilters,
+    dateRange,
 
     view: preferences.view,
     setView,

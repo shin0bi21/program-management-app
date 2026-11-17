@@ -1,5 +1,4 @@
-import { getCycleDateRange } from '../../../common/features/programming/cycles/cycleDateRange';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
@@ -21,7 +20,7 @@ import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDate } from '../../../common/utils/date';
-import { getTaskDashboardData, type TasksFilters } from './tasks.api';
+import { getTaskDashboardData } from './tasks.api';
 import {
   TASK_TABLE_KEYS,
   type AddTaskModalInitialValues,
@@ -67,16 +66,6 @@ export default function Tasks() {
     cyclesLoading: pageData.cyclesLoading,
     cyclesError: Boolean(pageData.cyclesError),
   });
-
-  // Filter configuration.
-  const dateRange = useMemo(
-    () => getCycleDateRange(pageData.cycles, preferences.filters.values.cycleIds),
-    [pageData.cycles, preferences.filters.values.cycleIds],
-  );
-  const taskFilters = useMemo<TasksFilters>(() => ({
-    ...preferences.filters.values,
-    search: preferences.search.appliedValue,
-  }), [preferences.filters.values, preferences.search.appliedValue]);
 
   // Selection and actions.
   const selection = useTaskSelection({ staff: pageData.staff });
@@ -139,7 +128,7 @@ export default function Tasks() {
       queryKey={TASK_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
-      filters={taskFilters}
+      filters={preferences.appliedFilters}
       today={today}
       sorting={preferences.table.sorting}
       columnWidths={preferences.table.columnWidths}
@@ -153,10 +142,10 @@ export default function Tasks() {
 
   const taskCalendar = (
     <TaskCalendar
-      key={JSON.stringify(taskFilters)}
+      key={JSON.stringify(preferences.appliedFilters)}
       staff={pageData.staff}
-      filters={taskFilters}
-      dateRange={dateRange}
+      filters={preferences.appliedFilters}
+      dateRange={preferences.dateRange}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaffId}
       selectedTaskId={selection.selectedTaskId}
@@ -176,7 +165,7 @@ export default function Tasks() {
   );
 
   const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
-  const hasCycleBounds = Boolean(dateRange) && !pageData.cyclesError;
+  const hasCycleBounds = Boolean(preferences.dateRange) && !pageData.cyclesError;
 
   // Render.
   return <>

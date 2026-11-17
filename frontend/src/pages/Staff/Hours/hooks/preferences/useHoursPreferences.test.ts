@@ -79,7 +79,7 @@ describe('useHoursPreferences', () => {
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.definitions.some(filter => filter.id === 'staffIds')).toBe(true);
-    expect(result.current.filters.values.staffIds).toEqual(['staff-1']);
+    expect(result.current.appliedFilters.staffIds).toEqual(['staff-1']);
   });
 
   it('repairs removed options and sorting without losing valid selections', async () => {
@@ -127,20 +127,20 @@ describe('useHoursPreferences', () => {
       { initialProps: { optionsError: true, cyclesError: true } },
     );
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values).toMatchObject({
+    expect(result.current.appliedFilters).toMatchObject({
       staffIds: ['removed-staff'], programIds: ['removed-program'],
       categories: ['planning_prep'], types: ['session'], cycleIds: ['removed-cycle'],
     });
     act(() => result.current.setView('table'));
 
     rerender({ optionsError: false, cyclesError: true });
-    await waitFor(() => expect(result.current.filters.values).toMatchObject({
+    await waitFor(() => expect(result.current.appliedFilters).toMatchObject({
       staffIds: [], programIds: [], categories: [], types: [],
     }));
-    expect(result.current.filters.values.cycleIds).toEqual(['removed-cycle']);
+    expect(result.current.appliedFilters.cycleIds).toEqual(['removed-cycle']);
 
     rerender({ optionsError: false, cyclesError: false });
-    await waitFor(() => expect(result.current.filters.values.cycleIds).toEqual([]));
+    await waitFor(() => expect(result.current.appliedFilters.cycleIds).toEqual([]));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
       view: 'table', staffIds: [], programIds: [], categories: [], types: [], cycleIds: [],
@@ -155,7 +155,7 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => result.current.search.apply('workshop'));
-    expect(result.current.search.appliedValue).toBe('workshop');
+    expect(result.current.appliedFilters.search).toBe('workshop');
 
     act(() => result.current.table.setSorting({ key: 'hours', direction: 'asc' }));
     expect(result.current.table.sorting).toEqual({ key: 'hours', direction: 'asc' });
@@ -176,10 +176,10 @@ describe('useHoursPreferences', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values).toMatchObject({
+    expect(result.current.appliedFilters).toMatchObject({
       cycleIds: [], programIds: ['program-1'],
     });
-    expect(result.current.search.appliedValue).toBe('retained');
+    expect(result.current.appliedFilters.search).toBe('retained');
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenCalledWith('hours-filters', expect.not.objectContaining({ cycleId: expect.anything() })));
     const calls = vi.mocked(setPreference).mock.calls;

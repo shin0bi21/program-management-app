@@ -209,6 +209,23 @@ describe('Sessions', () => {
     expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
   });
 
+  it('waits for saved search before sending applied filters to the table', async () => {
+    let restore!: (value: SessionPreference) => void;
+    preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    expect(getSessions).not.toHaveBeenCalled();
+
+    await act(async () => restore({
+      view: 'table', search: 'communication', programIds: [], cycleIds: ['cycle-1'], sessionTypes: [], statuses: [],
+    }));
+
+    await waitFor(() => expect(getSessions).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'communication', cycleIds: ['cycle-1'] }),
+      expect.anything(), expect.anything(),
+    ));
+    expect(getSessions.mock.calls.every(([filters]) => filters.search === 'communication')).toBe(true);
+  });
+
   // Rendered states.
   it('does not create a fallback calendar when no cycles exist', async () => {
     getCycleReferences.mockResolvedValue([]);

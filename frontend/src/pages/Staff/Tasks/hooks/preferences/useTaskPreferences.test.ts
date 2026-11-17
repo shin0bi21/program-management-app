@@ -126,7 +126,7 @@ describe('useTaskPreferences', () => {
     savedPreference.preference = { view: 'table', cycleIds: ['cycle-1', 'removed-cycle'] };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
 
     act(() => result.current.filters.apply('cycleIds', []));
     expect(result.current.view).toBe('table');
@@ -145,10 +145,10 @@ describe('useTaskPreferences', () => {
 
     rerender({ cyclesLoading: false, cyclesError: true });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
+    expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1', 'removed-cycle']);
 
     rerender({ cyclesLoading: false, cyclesError: false });
-    await waitFor(() => expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']));
+    await waitFor(() => expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']));
   });
 
   it('keeps browser layout separate from account sorting and view', async () => {
@@ -179,10 +179,10 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => result.current.search.apply(' workshop '));
-    expect(result.current.search.appliedValue).toBe('workshop');
+    expect(result.current.appliedFilters.search).toBe('workshop');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: 'workshop' })));
     act(() => result.current.search.apply(''));
-    expect(result.current.search.appliedValue).toBe('');
+    expect(result.current.appliedFilters.search).toBe('');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: '' })));
   });
 
@@ -204,14 +204,14 @@ describe('useTaskPreferences', () => {
     );
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values).toMatchObject({
+    expect(result.current.appliedFilters).toMatchObject({
       staffIds: ['staff-1', 'removed-staff'],
       programIds: ['program-1', 'removed-program'],
     });
 
     rerender({ currentOptions: options, optionsError: false });
 
-    await waitFor(() => expect(result.current.filters.values).toMatchObject({
+    await waitFor(() => expect(result.current.appliedFilters).toMatchObject({
       staffIds: ['staff-1'],
       programIds: ['program-1'],
     }));

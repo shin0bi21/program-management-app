@@ -1,22 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
+  preferenceText,
   preferenceOptions,
   preferenceSorting,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
-import type { UserRole, UserSortKey, UserStatus } from '../types';
+import type { UserFilters, UserRole, UserSortKey, UserStatus } from '../types';
 
 const DEFAULT_SORTING: ListSort<UserSortKey> = { key: 'name', direction: 'asc' };
 
 /**
- * Restores account filters and layout while keeping applied search in this page session.
+ * Restores saved account search, filters, and layout and supplies applied request filters.
  * @param isAdmin - Whether role filters are available.
  * @param tableKeys - Supported sorting and layout columns.
- * @example search.apply('Alex') changes the session search without saving an account preference.
+ * @example search.apply('Alex') saves the applied account search alongside other controls.
  */
 export function useAccountControls(
   isAdmin: boolean,
@@ -27,13 +27,12 @@ export function useAccountControls(
     key: 'account-filters',
     waiting: false,
     fields: {
+      search: preferenceText(),
       statuses: preferenceOptions<UserStatus>(['invited', 'active', 'inactive']),
       roles: preferenceOptions<UserRole>(isAdmin ? ['admin', 'project_manager', 'staff', 'youth'] : []),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
     },
   });
-
-  const [appliedSearch, setAppliedSearch] = useState('');
 
   const filterCategories = useMemo(() => [
     { id: 'statuses' as const, label: 'Status', options: [
@@ -49,12 +48,19 @@ export function useAccountControls(
     ] }] : []),
   ], [isAdmin]);
 
+  const appliedFilters: UserFilters = {
+    search: preferences.search,
+    roles: preferences.roles,
+    statuses: preferences.statuses,
+  };
+
   return {
     ready,
     error,
+    appliedFilters,
     search: {
-      appliedValue: appliedSearch,
-      apply: setAppliedSearch,
+      appliedValue: preferences.search,
+      apply: (search: string) => updatePreferences({ search }),
     },
     filters: createPreferenceFilters({
       values: {
@@ -66,7 +72,7 @@ export function useAccountControls(
     }),
     table: {
       sorting: preferences.sorting,
-      setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<UserSortKey> }),
+      setSorting: (sorting: ListSort<UserSortKey>) => updatePreferences({ sorting }),
       columnWidths: layout.columnWidths,
       setColumnWidths: layout.setColumnWidths,
       hiddenColumns: layout.hiddenColumns,
