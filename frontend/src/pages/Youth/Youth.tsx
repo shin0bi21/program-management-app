@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../../auth/authContext';
 import PageContainer from '../../common/components/PageContainer/PageContainer';
 import Button from '../../common/components/Button/Button';
@@ -6,7 +6,7 @@ import { type PageMessageValue } from '../../common/components/PageMessageOverla
 import SchoolModal from '../../common/features/SchoolModal/SchoolModal';
 import useSchoolModal from '../../common/features/SchoolModal/hooks/useSchoolModal';
 import YouthModal from './components/YouthModal/YouthModal';
-import { YOUTH_TABLE_KEYS, type YouthFilters, type YouthProfile } from './types';
+import { YOUTH_TABLE_KEYS, type YouthProfile } from './types';
 import ProfileNoteDialogs from './components/ProfileNotes/ProfileNoteDialogs';
 import useProfileNotes from './components/ProfileNotes/useProfileNotes';
 import PrimaryContactDashboardCard from '../../common/features/contacts/components/PrimaryContactDashboardCard/PrimaryContactDashboardCard';
@@ -51,14 +51,7 @@ export default function Youth() {
     cyclesError,
     tableKeys: YOUTH_TABLE_KEYS,
   });
-  const { search, filters, table, ready: controlsReady, error: preferencesError } = controls;
-
-  // Filter configuration.
-  const youthFilters = useMemo<YouthFilters | null>(() => controlsReady ? {
-    search: search.appliedValue,
-    programIds: filters.values.programIds,
-    cycleIds: filters.values.cycleIds,
-  } : null, [search.appliedValue, controlsReady, filters.values.programIds, filters.values.cycleIds]);
+  const { table, error: preferencesError } = controls;
 
   // Selection and selection-dependent workflow synchronization.
   const { selectedProfile, selectedProfileId, selectProfile, updateSelectedProfile } = useYouthSelection();
@@ -145,7 +138,7 @@ export default function Youth() {
         </>}
         table={<YouthTable
           columns={youthColumns}
-          filters={youthFilters}
+          filters={controls.appliedFilters}
           hiddenColumnKeys={table.hiddenColumns}
           selectedProfileId={selectedProfileId}
           onRowSelect={selectProfile}

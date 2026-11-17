@@ -75,7 +75,7 @@ pages/Youth/Placements/
 
 ## Complete Generated Outlines
 
-1. Replace applicable prompts with domain APIs, permission rules, and record types; remove unused phases.
+1. Replace applicable prompts with domain APIs, permission rules, and record types; remove unused phases. Page preference/control hooks expose typed `appliedFilters`, including saved search when present, for direct consumption by views. Follow the [page controls contract](03-preferences.md#expose-page-controls); keep derived calendar bounds in that owner and request restoration gated by `ready`.
 2. Implement table requests in the component's `hooks/use<Domain>TableData` hook using the supplied page context. Keep the calendar range adapter and buffer with its component, extracting a private data hook when needed. Keep complete API rows in table query results and calendar buffers. Use existing cursor-list helpers for saved/deleted rows and show the shared out-of-order message with Refresh when edits leave loaded rows out of order. Invalidate membership and related queries when their data needs reloading.
 3. Pass selected IDs to dashboard cards for their focused summary or child queries. Resolve dashboard-only defaults and action policy in the dashboard owner, independently of collection filters; keep selection shared with tables, calendars, or forms at their common owner. Supply already loaded display fields as props when needed. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
 4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).

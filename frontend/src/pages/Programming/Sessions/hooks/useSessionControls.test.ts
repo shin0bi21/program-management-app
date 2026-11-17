@@ -49,6 +49,28 @@ describe('useSessionControls', () => {
     });
   });
 
+  it('restores and saves search with filters while clearing categories independently', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ search: '  workshop  ', programIds: ['program-1'], cycleIds: ['cycle-1'] });
+    const { result } = renderHook(() => useSessionControls({
+      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
+      sessionTypes, sessionTypesLoading: false, tableKeys,
+    }), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.appliedFilters).toMatchObject({ search: 'workshop', programIds: ['program-1'] });
+
+    act(() => result.current.search.apply('  communication  '));
+    act(() => result.current.filters.clear());
+
+    expect(result.current.appliedFilters).toMatchObject({ search: 'communication', programIds: [], cycleIds: [] });
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
+      expect.objectContaining({ search: 'communication', programIds: [], cycleIds: [] })));
+
+    act(() => result.current.search.apply(''));
+    expect(result.current.appliedFilters.search).toBe('');
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
+      expect.objectContaining({ search: '' })));
+  });
+
   it('ignores a legacy cohort preference while retaining valid sibling fields', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       cohortId: 'cohort-1', view: 'table', programIds: ['program-1'], statuses: ['completed'],
@@ -94,7 +116,7 @@ describe('useSessionControls', () => {
     rerender({ loading: false });
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.cycleIds).toEqual(['cycle-2']);
+    expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-2']);
   });
 
   it('repairs invalid session fields while preserving valid selections and widths', async () => {
@@ -139,7 +161,7 @@ describe('useSessionControls', () => {
     expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:session-filters')!)).toEqual({
       hiddenColumns: ['status'], columnWidths: { title: 240 },
     });
-    expect(result.current.filters.values.cycleIds).toEqual(['cycle-1']);
+    expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['completed'], view: 'table',
     })));
@@ -157,7 +179,7 @@ describe('useSessionControls', () => {
       tableKeys,
     }), { wrapper: wrapper(), initialProps: { unavailable: true } });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values).toMatchObject({
+    expect(result.current.appliedFilters).toMatchObject({
       programIds: ['saved-program'], cycleIds: ['saved-cycle'], sessionTypes: ['saved-type'],
     });
 

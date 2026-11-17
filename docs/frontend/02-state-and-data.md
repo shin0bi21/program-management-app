@@ -14,8 +14,8 @@ Choose by lifetime and who changes the value. Use [Ownership](01-ownership.md) f
 
 ## Separate Page Controls from View Data
 
-1. Build one stable applied-filter object at the route using the [page controls contract](03-preferences.md#expose-page-controls).
-2. Supply it to every table and calendar.
+1. Obtain one typed `appliedFilters` object from the page preference/control hook using the [page controls contract](03-preferences.md#expose-page-controls). It includes applied page search and normalized filter fields; the route does not reconstruct it.
+2. Supply it directly to every table and calendar after controls are ready. Keep the draft search input separate from submitted, saved search.
 3. Let each view add pagination or visible range and consume page-owned sorting for its request.
 4. Keep page-wide reference data with the page and collection queries with the consuming view.
 

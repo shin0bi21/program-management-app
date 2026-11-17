@@ -159,7 +159,7 @@ export default function useHoursPreferences({
   });
   const dateRange = useMemo(() => getCycleDateRange(cycles, preferences.cycleIds), [cycles, preferences.cycleIds]);
 
-  const appliedFilters = useMemo<HoursFilters>(() => ({
+  const appliedFilters: HoursFilters = {
     dateRange,
     staffIds: preferences.staffIds,
     categories: preferences.categories,
@@ -167,17 +167,7 @@ export default function useHoursPreferences({
     types: preferences.types,
     cycleIds: preferences.cycleIds,
     search: preferences.search,
-  }), [
-    dateRange,
-    preferences.staffIds,
-    preferences.categories,
-    preferences.programIds,
-    preferences.types,
-    preferences.cycleIds,
-    preferences.search,
-  ]);
-
-  const filters = { ...filterControls, dateRange };
+  };
 
   // View, search, and table controls.
   const setView = (view: HoursView) => {
@@ -208,7 +198,7 @@ export default function useHoursPreferences({
     view: preferences.view,
     setView,
     search,
-    filters,
+    filters: filterControls,
     table,
   };
 }

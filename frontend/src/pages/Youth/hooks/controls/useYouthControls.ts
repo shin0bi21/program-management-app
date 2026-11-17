@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import type { TableSorting } from '../../../../common/components/Table/Table.types';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
@@ -11,7 +10,7 @@ import {
   preferenceSorting,
 } from '../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
-import type { YouthSortKey } from '../../types';
+import type { YouthFilters, YouthSortKey } from '../../types';
 
 interface UseYouthControlsOptions {
   role: string | null;
@@ -27,7 +26,7 @@ interface UseYouthControlsOptions {
 const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: 'asc' };
 
 /**
- * Restores youth controls with role-specific program defaults and browser-local layout.
+ * Restores youth controls and supplies applied filters with role-specific program defaults.
  * @param options - Role, available programs and cycles, dependency status, and table keys.
  * @example A staff user without saved controls starts with their available programs selected.
  */
@@ -71,9 +70,16 @@ export function useYouthControls({
     },
   ], [programs, cycles]);
 
+  const appliedFilters: YouthFilters = {
+    search: preferences.search,
+    programIds: preferences.programIds,
+    cycleIds: preferences.cycleIds,
+  };
+
   return {
     ready,
     error,
+    appliedFilters,
     search: {
       appliedValue: preferences.search,
       apply: (search: string) => updatePreferences({ search }),
@@ -88,7 +94,7 @@ export function useYouthControls({
     }),
     table: {
       sorting: preferences.sorting,
-      setSorting: (sorting: TableSorting) => updatePreferences({ sorting: sorting as ListSort<YouthSortKey> }),
+      setSorting: (sorting: ListSort<YouthSortKey>) => updatePreferences({ sorting }),
       columnWidths: layout.columnWidths,
       setColumnWidths: layout.setColumnWidths,
       hiddenColumns: layout.hiddenColumns,

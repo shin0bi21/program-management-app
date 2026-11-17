@@ -58,6 +58,9 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // TODO: Saved preferences, when this page has durable controls.
       // Use a page hook backed by usePreferences; follow docs/frontend/03-preferences.md.
       // Return grouped search, filters, and table controls, with ready/error at the top level.
+      // Also expose typed appliedFilters at the top level for every data view.
+      // Persist submitted search with preferenceText alongside other filter fields; SearchInput owns its draft.
+      // The hook projects normalized domain filters plus applied search into appliedFilters, without storing a second copy.
       // Build filters with createPreferenceFilters; definition IDs match filters.values keys.
       // Pass the hook result as controls={controls} to PageContainer; it gates controls and content.
       // While controls.ready is false, cards and views stay unmounted; actions and messages remain available.
@@ -65,7 +68,9 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       // Keep view/setView at the top level when multiple views are supported.
 
       // TODO: Filter configuration passed to every page data view.
-      // Define one named stable object from applied search and filters; children add only view inputs.
+      // Pass controls.appliedFilters directly to tables/calendars; do not merge or append search at the route.
+      // Views add sorting, cursors, visible ranges, and cancellation at their own request boundary.
+      // The controls hook derives cycle bounds; retain dateRange identity for calendar period construction.
 
       // TODO: Selection and page-spanning actions.
       // Keep selected IDs and clicked row context needed by page workflows.

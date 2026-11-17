@@ -1,23 +1,25 @@
 import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {
+  preferenceText,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
   preferenceSorting,
 } from '../../../../common/features/Preferences/preferences';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
-import type { SessionSortKey, SessionType } from '../types';
+import type { SessionSortKey, SessionType, SessionListFilters } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
 import type { SessionStatusFilter } from '../types';
 
 type SessionView = 'calendar' | 'table';
 
 export interface SessionPreference {
+  search?: string;
   view: SessionView;
   programIds: string[];
   cycleIds: string[];
@@ -43,21 +45,21 @@ interface UseSessionControlsOptions {
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
 const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle', theme: 'title' };
 /**
- * Restores session controls and derives cycle bounds, with applied search kept in memory.
+ * Restores saved session controls and supplies applied request filters with derived cycle bounds.
  * @param options - Role, reference choices, dependency status, and supported table keys.
- * @example search.apply('workshop') updates the session search without changing saved filters.
+ * @example search.apply('workshop') saves search alongside the existing session filters.
  */
 export function useSessionControls({
   role, programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError,
   sessionTypes: sessionTypeOptions, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
-  const [appliedSearch, setAppliedSearch] = useState('');
   const layout = useTableLayout({ key: 'session-filters', tableKeys, columnKeyAliases: SESSION_COLUMN_KEY_ALIASES });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'session-filters',
     waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,
     fields: {
+      search: preferenceText(),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
       cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
@@ -66,7 +68,7 @@ export function useSessionControls({
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
     },
   });
-  const { view, programIds, cycleIds, sessionTypes, statuses, sorting } = preferences;
+  const { search, view, programIds, cycleIds, sessionTypes, statuses, sorting } = preferences;
   const dateRange = useMemo(() => getCycleDateRange(cycles, cycleIds), [cycles, cycleIds]);
 
   const filterCategories = useMemo(() => [
@@ -76,31 +78,33 @@ export function useSessionControls({
     { id: 'statuses' as const, label: 'Status', options: [{ id: 'upcoming', label: 'Upcoming' }, { id: 'completed', label: 'Completed' }] },
   ], [cycles, programs, sessionTypeOptions]);
 
+  const appliedFilters: SessionListFilters = {
+    programIds,
+    cycleIds,
+    sessionTypes,
+    statuses,
+    dateRange,
+    search,
+  };
+
   const setView = (view: SessionView) => updatePreferences({ view });
   const setSorting = (sorting: ListSort<SessionSortKey>) => updatePreferences({ sorting });
 
   return {
     ready,
     error,
+    appliedFilters,
     view,
     setView,
     search: {
-      appliedValue: appliedSearch,
-      apply: setAppliedSearch,
+      appliedValue: search,
+      apply: (search: string) => updatePreferences({ search }),
     },
-    filters: {
-      dateRange,
-      ...createPreferenceFilters({
-        values: {
-          programIds,
-          cycleIds,
-          sessionTypes,
-          statuses,
-        },
-        definitions: filterCategories,
-        updatePreferences,
-      }),
-    },
+    filters: createPreferenceFilters({
+      values: { programIds, cycleIds, sessionTypes, statuses },
+      definitions: filterCategories,
+      updatePreferences,
+    }),
     table: {
       sorting,
       setSorting,
