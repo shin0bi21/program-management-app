@@ -24,9 +24,9 @@ export function programAccessPredicate(
 /**
  * Authorizes the program scope before checking whether the required program exists.
  * Route middleware owns the operation capability; denied scope is 403, authorized absence is 404.
- * @example assertCanAccessProgram(actor, programId)
+ * @example assertProgramAccess(actor, programId)
  */
-export async function assertCanAccessProgram(actor: AccessTokenPayload, programId: string) {
+export async function assertProgramAccess(actor: AccessTokenPayload, programId: string) {
   await assertProgramScope(actor, programId);
 
   const programs = await sql`SELECT 1 FROM programs WHERE id = ${programId} LIMIT 1`;
@@ -35,9 +35,9 @@ export async function assertCanAccessProgram(actor: AccessTokenPayload, programI
 
 /**
  * Authorizes the parent program before looking up its required cycle assignment.
- * @example assertCanAccessProgramCycle(assignedStaff, programId, missingCycleId) // 404
+ * @example assertProgramCycleAccess(assignedStaff, programId, missingCycleId) // 404
  */
-export async function assertCanAccessProgramCycle(actor: AccessTokenPayload, programId: string, cycleId: string) {
+export async function assertProgramCycleAccess(actor: AccessTokenPayload, programId: string, cycleId: string) {
   await assertProgramScope(actor, programId);
 
   const assignments = await sql`
@@ -52,9 +52,9 @@ export async function assertCanAccessProgramCycle(actor: AccessTokenPayload, pro
  * Authorizes a session through its program scope. A missing flat-ID target has no
  * discoverable parent: global program readers get 404; scoped actors retain 403.
  * Route middleware owns the requested operation's capability.
- * @example assertCanAccessSession(admin, missingSessionId) // 404
+ * @example assertSessionAccess(admin, missingSessionId) // 404
  */
-export async function assertCanAccessSession(actor: AccessTokenPayload, sessionId: string) {
+export async function assertSessionAccess(actor: AccessTokenPayload, sessionId: string) {
   const hasCollectionAccess = hasGlobalProgramAccess(actor);
   const sessions = await sql`
     SELECT 1 FROM program_sessions cs

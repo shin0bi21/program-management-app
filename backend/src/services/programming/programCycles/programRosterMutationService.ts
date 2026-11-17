@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetProgramRosterInput } from '../../../validation/programmingSchemas';
 import { audit } from '../../shared/auditService';
@@ -27,7 +27,7 @@ interface EnrollmentRow extends Record<string, unknown> {
  */
 export async function setProgramRoster(programId: string, cycleId: string, data: SetProgramRosterInput, actor: AccessTokenPayload) {
   // 1. Authorize the assignment and keep program rules and cycle dates stable.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     await lockAssignmentProgram(trx, programId, actor);

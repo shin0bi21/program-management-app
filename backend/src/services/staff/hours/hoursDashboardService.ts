@@ -18,7 +18,7 @@ interface HoursCategoryTotal {
  */
 export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: HoursPayPeriodQuery) {
   // 1. Check access to the staff member.
-  await assertReadableStaff(actor, query.staffId);
+  await assertStaffReadAccess(actor, query.staffId);
 
   // 2. Find the pay period independently of the dashboard's selected cycle.
   const [payPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
@@ -64,7 +64,7 @@ export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: Ho
  */
 export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query: HoursCycleSummaryQuery) {
   // 1. Check access to the staff member before exposing cycle data.
-  await assertReadableStaff(actor, query.staffId);
+  await assertStaffReadAccess(actor, query.staffId);
 
   // 2. Count elapsed pay periods, capped at the cycle's inclusive end date.
   const [cycle] = await sql<Array<{ periodCount: number }>>`
@@ -99,9 +99,9 @@ export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query:
  * Conceals summaries for staff outside the actor's Hours visibility.
  * @param actor - Actor whose readable staff determine access.
  * @param staffId - Requested staff member ID.
- * @example await assertReadableStaff(actor, staffId) // throws 404 for an unrelated staff member
+ * @example await assertStaffReadAccess(actor, staffId) // throws 404 for an unrelated staff member
  */
-async function assertReadableStaff(actor: AccessTokenPayload, staffId: string) {
+async function assertStaffReadAccess(actor: AccessTokenPayload, staffId: string) {
   const readableStaff = await getStaffReferenceData(actor, 'hours');
   if (!readableStaff.some(staffMember => staffMember.id === staffId)) {
     throw new NotFoundError('Hours overview not found');

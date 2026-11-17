@@ -1,6 +1,6 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../../../policies/programAccessPolicy';
 import { lockAssignmentCycle, lockAssignmentProgram } from './assignmentService';
 import { rethrowEnrollmentConflict } from './enrollmentConflict';
 import type { AccessTokenPayload } from '../../../types/auth';
@@ -19,7 +19,7 @@ import { getYouthRows } from '../../youth/youthRowQuery';
  */
 export async function enrollYouth(programId: string, cycleId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
   // 1. Check access to the program cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -128,7 +128,7 @@ export async function withdrawYouth(
   actor: AccessTokenPayload,
 ) {
   // 1. Check access to the program cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 

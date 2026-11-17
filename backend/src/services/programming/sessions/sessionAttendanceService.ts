@@ -2,7 +2,7 @@ import { getYouthRows } from '../../youth/youthRowQuery';
 import { getProgramCycleRowsByKeys } from '../programCycles/programCycleRowQuery';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
-import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
+import { assertSessionAccess, programAccessPredicate } from '../../../policies/programAccessPolicy';
 import { getSessionRows } from './sessionRowQuery';
 import { buildSessionFilters } from './sessionRowFilters';
 import type { AccessTokenPayload } from '../../../types/auth';
@@ -16,7 +16,7 @@ import type { SetAttendanceInput } from '../../../validation/programmingSchemas'
  */
 export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
   // 1. Check access to the session.
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   return readSessionRoster(sessionId);
 }
 
@@ -33,7 +33,7 @@ export async function setSessionAttendance(
   actor: AccessTokenPayload,
 ) {
   // 1. Check access to the session.
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 

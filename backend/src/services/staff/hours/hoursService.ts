@@ -10,7 +10,7 @@ import type {
   HoursSessionQuery,
   UpdateHoursPlacementInput,
 } from '../../../validation/hoursSchemas';
-import { assertCanSetHours } from '../../../policies/hoursPolicy';
+import { assertHoursWriteAccess } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import {
@@ -59,8 +59,8 @@ export function getHoursReferenceData() {
  */
 export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
   // 1. Check access to the staff member.
-  assertCanSetHours(actor, query.staffId);
-  await assertActiveStaff(query.staffId);
+  assertHoursWriteAccess(actor, query.staffId);
+  await assertStaffActive(query.staffId);
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
@@ -98,8 +98,8 @@ export async function setHours(
   id?: string,
 ) {
   // 1. Check access to the staff member.
-  assertCanSetHours(actor, input.staffId);
-  await assertActiveStaff(input.staffId);
+  assertHoursWriteAccess(actor, input.staffId);
+  await assertStaffActive(input.staffId);
   const transactionId = crypto.randomUUID();
   let saved!: HoursRow;
   let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
@@ -390,9 +390,9 @@ async function completeTaskFromHours(
 /**
  * Requires an active staff account for logging time.
  * @param staffId - Staff member to check; unavailable accounts raise 404.
- * @example assertActiveStaff(staffId) // throws for inactive accounts
+ * @example assertStaffActive(staffId) // throws for inactive accounts
  */
-async function assertActiveStaff(staffId: string) {
+async function assertStaffActive(staffId: string) {
   // 1. Check that the staff account is active.
   const rows = await sql<{ id: string }[]>`
     SELECT
@@ -470,7 +470,7 @@ async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayl
     FOR UPDATE
   `;
   if (!entry) throw new NotFoundError('Logged hours not found');
-  assertCanSetHours(actor, entry.staffId);
+  assertHoursWriteAccess(actor, entry.staffId);
 
   // Authorize the locked owner before loading the full scoped record, preserving 403 for forbidden writes.
   const [row] = await getHoursRows(actor, trx`entry.id = ${id}`, trx);
