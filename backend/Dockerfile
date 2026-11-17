@@ -3,7 +3,7 @@ FROM node:24-alpine AS base
 # postgresql18-client: psql used by update_schemas.ts migrations
 # Pinned to major version 18 to match postgres:18-alpine server image.
 # Bump this only when the server image is also bumped.
-# curl: healthcheck in docker-compose.yml
+# curl: healthcheck in docker-compose.prod.yml
 RUN apk add --no-cache postgresql18-client curl
 WORKDIR /app
 
@@ -15,15 +15,14 @@ CMD ["tail", "-f", "/dev/null"]
 
 # ── Build stage — compile TypeScript ─────────────────────────────────────────
 FROM base AS builder
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm ci
-COPY tsconfig.base.json /tsconfig.base.json
-COPY backend/. .
+COPY . .
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM base AS prod
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 # Keep SQL init files, manifests, and incremental migrations beside compiled scripts.

@@ -10,6 +10,13 @@ import { planCommands, selectTests, type TestPlan } from './select-tests.ts';
 
 type PlanExpectation = Partial<TestPlan> & { commands?: ReturnType<typeof planCommands> };
 
+/**
+ * Checks selected plan fields and optional commands for a changed-path scenario.
+ * @param files - Repository-relative changed paths supplied to the shared selector.
+ * @param expected - Plan fields and runner commands owned by the scenario.
+ * @param options - Optional pull-request target controlling release packaging checks.
+ * @example assertPlan(['README.md'], { commands: [] })
+ */
 function assertPlan(
   files: string[],
   expected: PlanExpectation,
@@ -132,23 +139,25 @@ test('CI planner changes select only static verification', () => {
   ], { commands: [['static', '']] });
 });
 
-test('shared TypeScript policy validates both applications without deployment', () => {
-  assertPlan(['tsconfig.base.json'], {
-    commands: [['static', ''], ['backend-full', ''], ['frontend-full', '']],
-    deploy: false,
-    backendImage: true,
-    frontendImage: true,
-  });
+test('application build inputs validate their owning suite and production image', () => {
+  for (const file of ['backend/tsconfig.json', 'backend/tsconfig.build.json', 'backend/Dockerfile', 'backend/.dockerignore']) {
+    assertPlan([file], {
+      static: true, backendMode: 'full', frontend: false,
+      backendImage: true, frontendImage: false,
+    });
+  }
+  for (const file of ['frontend/tsconfig.json', 'frontend/tsconfig.node.json', 'frontend/Dockerfile', 'frontend/.dockerignore']) {
+    assertPlan([file], {
+      static: true, frontendMode: 'full', backend: false,
+      frontendImage: true, backendImage: false,
+    });
+  }
 });
 
 test('deployment inputs preserve production validation and image routing', () => {
   for (const file of ['scripts/deploy/main.sh', 'scripts/deploy/05-classify-changes.sh', 'nginx.conf']) {
     assertPlan([file], { deploy: true, backendImage: true, frontendImage: true, compose: true });
   }
-});
-
-test('root Docker ignore changes validate both production images', () => {
-  assertPlan(['.dockerignore'], { static: true, backendImage: true, frontendImage: true });
 });
 
 test('unrecognized repository files fail closed with the complete application plan', () => {
@@ -164,7 +173,6 @@ test('main pull requests always validate production packaging', () => {
     { baseRef: 'main' },
   );
 });
-
 
 test('new domains and shared source files use dependency discovery without registration', () => {
   for (const file of [
