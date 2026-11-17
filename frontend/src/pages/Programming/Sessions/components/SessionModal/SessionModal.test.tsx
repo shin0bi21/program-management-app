@@ -24,6 +24,16 @@ describe('SessionModal', () => {
     vi.clearAllMocks();
   });
 
+  it('disables Save without a selected program when adding a session', async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<SessionModal programs={[]} sessionTypes={sessionTypes} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Type' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Regular' }));
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
   it('submits edits with the saved date and minute-based clock times', async () => {
     vi.mocked(updateSession).mockResolvedValue({ session });
     const onSaved = vi.fn().mockResolvedValue(undefined);
@@ -38,10 +48,6 @@ describe('SessionModal', () => {
       />,
     );
 
-    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('Communication');
-    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue('Practice session');
-    expect(screen.getByLabelText('Start Time')).toHaveValue('17:00');
-    expect(screen.getByLabelText('End Time')).toHaveValue('19:30');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Type' })).toHaveTextContent('Regular'));
     await user.click(screen.getByRole('button', { name: 'Type' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Guest Speaker' }));

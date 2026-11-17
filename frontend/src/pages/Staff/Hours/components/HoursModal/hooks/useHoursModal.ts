@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { getUser } from '../../../../../../auth/storage';
 
 import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';
+import { getDate } from '../../../../../../common/utils/date';
 import type { RequestOptions } from '../../../../../../http/client';
 import { getHoursSessions, type SetHoursInput } from '../../../hours.api';
 import type {
@@ -23,14 +25,15 @@ export interface HoursTaskOption {
 }
 
 interface HoursDraft {
-  staffId: string;
   source: HoursSource;
-  programId: string;
-  date: string;
-  category: HoursCategory | '';
+
+  staffId: string;
   taskId: string;
   completeTask: boolean;
   sessionId: string;
+  programId: string;
+  category: HoursCategory | '';
+  date: string;
   hours: string;
   note: string;
 }
@@ -43,41 +46,44 @@ export interface UseHoursModalOptions {
     opts?: RequestOptions,
   ) => Promise<readonly HoursTaskOption[]>;
   onAdd: (input: SetHoursInput) => Promise<void>;
-  initialStaffId?: string;
-  initialDate?: string;
-  initialSource?: HoursSource;
-  initialTask?: HoursTaskOption;
-  initialItem?: HoursItem;
+  staffId?: string;
+  date?: string;
+  source?: HoursSource;
+  task?: HoursTaskOption;
+  item?: HoursItem;
   canCompleteTask?: boolean;
 }
 
 /**
  * Owns one mounted Hours draft, its selector choices and save feedback.
  * @param options - Supplied edit row or add context and the page's save callback.
- * @example useHoursModal({ ...options, initialItem }) // initializes the edit draft once
+ * @param options.staffId - Contextual staff ID; omitted add context defaults to the signed-in staff member.
+ * @param options.date - Contextual work date; omitted add dates default to today.
+ * @example useHoursModal({ ...options, item }) // initializes the edit draft once
  */
 export default function useHoursModal(options: UseHoursModalOptions) {
-  const { loadTasks, onAdd, initialTask, initialItem, canCompleteTask = false } = options;
+  const { loadTasks, onAdd, task, item, canCompleteTask = false } = options;
   const [draft, setDraft] = useState<HoursDraft>(() => {
-    let source = options.initialSource ?? 'regular';
-    if (initialItem?.sessionId) source = 'session';
-    if (initialTask || initialItem?.taskId) source = 'task';
+    let source = options.source ?? 'regular';
+    if (item?.sessionId) source = 'session';
+    if (task || item?.taskId) source = 'task';
 
     return {
-      staffId: initialItem?.staffId ?? initialTask?.staffId ?? options.initialStaffId ?? '',
       source,
-      programId: initialItem?.programId ?? '',
-      date: initialItem?.date ?? options.initialDate ?? '',
-      category: initialItem?.category ?? '',
-      taskId: initialTask?.id ?? initialItem?.taskId ?? '',
+
+      staffId: item?.staffId ?? task?.staffId ?? options.staffId ?? getUser()?.id ?? '',
+      taskId: task?.id ?? item?.taskId ?? '',
       completeTask: false,
-      sessionId: initialItem?.sessionId ?? '',
-      hours: initialItem ? String(initialItem.hours) : '',
-      note: initialItem?.note ?? '',
+      sessionId: item?.sessionId ?? '',
+      programId: item?.programId ?? '',
+      category: item?.category ?? '',
+      date: item?.date ?? options.date ?? getDate(),
+      hours: item ? String(item.hours) : '',
+      note: item?.note ?? '',
     };
   });
   const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
-  const taskLocked = Boolean(initialTask);
+  const taskLocked = Boolean(task);
   const submitting = submitStatus === 'submitting';
   const submitLock = useSubmitLock();
 
@@ -87,8 +93,8 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     queryFn: ({ signal }) => loadTasks(draft.staffId, { signal }),
     enabled: draft.source === 'task' && Boolean(draft.staffId) && !taskLocked,
   });
-  const taskOptions = initialTask
-    ? [initialTask]
+  const taskOptions = task
+    ? [task]
     : (taskQuery.data ?? []).filter(task => task.state === 'open');
 
   const sessionQuery = useQuery({
@@ -187,7 +193,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     } catch (cause) {
       setError(getErrorMessage(
         cause,
-        initialItem ? 'Unable to update logged hours' : 'Unable to log hours',
+        item ? 'Unable to update logged hours' : 'Unable to log hours',
       ));
       setSubmitStatus('error');
     } finally {

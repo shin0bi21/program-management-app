@@ -71,6 +71,8 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
      */
     export default function ${hookName}() {
       // TODO: Initialize once from the supplied edit record or add defaults.
+      // Name incoming context by its domain fields; keep editable values together under draft.
+      // Order draft fields and initialization to match the form's DOM order.
       // This form mounts while open; close/save completion unmounts its draft and feedback.
       // Keep validation, submission, and recovery with this mounted instance.
       // Represent mutually exclusive add/edit targets with a discriminated state plus null for closed.

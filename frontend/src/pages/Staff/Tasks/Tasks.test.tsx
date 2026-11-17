@@ -315,6 +315,16 @@ describe('Tasks', () => {
   });
 
   // Commands and dialogs.
+  it('opens Add when staff and task options are unavailable', async () => {
+    vi.mocked(getStaffReferences).mockResolvedValue([]);
+    vi.mocked(getTaskReferenceData).mockRejectedValue(new Error('Options unavailable'));
+    renderTasks();
+
+    fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
+
+    expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
+  });
+
   it('passes the selected task context into the Hours workflow', async () => {
     renderTasks();
 
@@ -322,7 +332,7 @@ describe('Tasks', () => {
     const logHours = await screen.findByRole('button', { name: 'Log Hours' });
     fireEvent.click(logHours);
 
-    expect(hoursModal.props).toMatchObject({ initialTask: task, initialStaffId: task.staffId });
+    expect(hoursModal.props?.task?.id).toBe(task.id);
   });
 
   it('reopens a completed task through the route action workflow', async () => {
@@ -375,7 +385,7 @@ describe('Tasks', () => {
     await act(async () => hoursModal.props!.onAdd(input));
 
     expect(setHours).toHaveBeenCalledWith(input);
-    await waitFor(() => expect(hoursModal.props!.initialTask).toEqual(completedTask));
+    await waitFor(() => expect(hoursModal.props!.task).toEqual(completedTask));
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 
     act(() => hoursModal.props!.onClose());

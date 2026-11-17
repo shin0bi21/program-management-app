@@ -6,6 +6,7 @@ import { makeTask } from '../../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { getHoursSessions } from '../../../hours.api';
 import useHoursModal, { type UseHoursModalOptions } from './useHoursModal';
+import { getDate } from '../../../../../../common/utils/date';
 
 vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
@@ -23,8 +24,8 @@ function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
     programs,
     loadTasks,
     onAdd: vi.fn().mockResolvedValue(undefined),
-    initialStaffId: 'staff-1',
-    initialDate: '2026-08-19',
+    staffId: 'staff-1',
+    date: '2026-08-19',
     ...overrides,
   };
   const queryClient = createTestQueryClient();
@@ -43,6 +44,13 @@ describe('useHoursModal', () => {
     vi.clearAllMocks();
     loadTasks.mockResolvedValue([]);
     vi.mocked(getHoursSessions).mockResolvedValue([]);
+  });
+
+  it('defaults the work date to today when no date is supplied', () => {
+    const date = getDate();
+    const { result } = renderWorkflow({ date: undefined });
+
+    expect(result.current.draft.date).toBe(date);
   });
 
   it('owns regular-time field transitions and reaches success after the command', async () => {
@@ -77,7 +85,7 @@ describe('useHoursModal', () => {
     ]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({
-      initialSource: 'task',
+      source: 'task',
       canCompleteTask: true,
       onAdd,
     });
@@ -106,7 +114,7 @@ describe('useHoursModal', () => {
     const task = makeTask();
     loadTasks.mockResolvedValue([task]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ initialSource: 'task', onAdd });
+    const { result } = renderWorkflow({ source: 'task', onAdd });
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
@@ -130,7 +138,7 @@ describe('useHoursModal', () => {
       date: '2026-08-20',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ initialSource: 'session', onAdd });
+    const { result } = renderWorkflow({ source: 'session', onAdd });
 
     await waitFor(() => expect(result.current.sessionOptions).toHaveLength(1));
     act(() => {
@@ -151,7 +159,7 @@ describe('useHoursModal', () => {
 
   it('rejects direct form submission when required command data is invalid', async () => {
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ initialSource: 'task', onAdd });
+    const { result } = renderWorkflow({ source: 'task', onAdd });
 
     act(() => {
       result.current.updateHours('not-a-number');

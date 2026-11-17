@@ -12,39 +12,40 @@ import { nextSessionDate } from '../../../utils/sessionSchedule';
  * @param options - Page-owned programs, optional edit session/calendar context, and save callback.
  * @example useSessionModal({ programs, session, onSaved }) // edits the supplied session without another read
  */
-export default function useSessionModal({ programs, session, initialProgramId, initialDate, onSaved }: {
+export default function useSessionModal({ programs, session, programId, date, onSaved }: {
   programs: Program[];
   session?: ProgramSession;
-  initialProgramId?: string;
-  initialDate?: string;
+  programId?: string;
+  date?: string;
   onSaved: (result: CreatedSessionResult | UpdatedSessionResult) => void | Promise<void>;
 }) {
-  const [programId, setProgramId] = useState(session?.programId ?? initialProgramId ?? '');
-  const program = programs.find(candidate => candidate.id === programId);
   const [draft, setDraft] = useState(() => {
+    const program = programs.find(candidate => candidate.id === (session?.programId ?? programId));
     return {
+      programId: session?.programId ?? programId ?? '',
       sessionType: session?.sessionType ?? '',
       title: session?.title ?? '',
-      date: session?.date ?? initialDate ?? (program ? nextSessionDate(program) : ''),
+      date: session?.date ?? date ?? (program ? nextSessionDate(program) : ''),
       startTime: session?.startTime ?? program?.defaultStartTime ?? '',
       endTime: session?.endTime ?? program?.defaultEndTime ?? '',
       description: session?.description ?? '',
     };
   });
+  const program = programs.find(candidate => candidate.id === draft.programId);
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [message, setMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
 
   const updateDraft = (key: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [key]: value }));
   const selectProgram = (id: string) => {
-    if (session || id === programId) return;
+    if (session || id === draft.programId) return;
     const nextProgram = programs.find(candidate => candidate.id === id);
     if (!nextProgram) return;
 
-    setProgramId(id);
     setDraft(current => ({
       ...current,
-      date: initialDate ?? nextSessionDate(nextProgram),
+      programId: id,
+      date: date ?? nextSessionDate(nextProgram),
       startTime: nextProgram.defaultStartTime,
       endTime: nextProgram.defaultEndTime,
     }));
@@ -73,7 +74,7 @@ export default function useSessionModal({ programs, session, initialProgramId, i
       };
       saved = session
         ? await updateSession(session.id, fields)
-        : await createSession({ ...fields, programId });
+        : await createSession({ ...fields, programId: draft.programId });
     } catch (cause) {
       setStatus('error');
       setMessage(getErrorMessage(cause, session ? 'Could not update session' : 'Could not add session'));
@@ -92,6 +93,6 @@ export default function useSessionModal({ programs, session, initialProgramId, i
     setStatus('success');
   };
 
-  return { programId, program, draft, updateDraft, selectProgram,
+  return { program, draft, updateDraft, selectProgram,
     status, message, submit, locked: status === 'submitting' || status === 'success' };
 }

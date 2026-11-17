@@ -77,7 +77,7 @@ export default function Sessions() {
 
   // Session editor with saved data or optional calendar context.
   const [sessionModalTarget, setSessionModalTarget] = useState<{
-    session?: ProgramSession; initialProgramId?: string; initialDate?: string;
+    session?: ProgramSession; programId?: string; date?: string;
   } | null>(null);
   const isSessionModalOpen = sessionModalTarget !== null;
   const closeSessionModal = () => setSessionModalTarget(null);
@@ -94,7 +94,6 @@ export default function Sessions() {
   const selectedSession = selection.selectedSession;
 
   const selectedProgram = programs.find(program => program.id === (selectedSession?.programId ?? selectedProgramId)) ?? null;
-  const canAddSession = !referencesLoading && programs.length > 0;
   const dashboard = <>
     {canReadAttendance && <SessionAttendanceDashboardCard
       session={selectedSession}
@@ -146,7 +145,7 @@ export default function Sessions() {
     onSessionMove={canWriteSessions ? actions.moveSession : undefined}
     onSessionEdit={canWriteSessions ? openEditSessionModal : undefined}
     onSessionDelete={canWriteSessions ? actions.requestDelete : undefined}
-    onAddSession={canWriteSessions ? (program, date) => setSessionModalTarget({ initialProgramId: program.id, initialDate: date }) : undefined}
+    onAddSession={canWriteSessions ? (program, date) => setSessionModalTarget({ programId: program.id, date }) : undefined}
     onMessageChange={setViewError}
   />;
 
@@ -162,8 +161,7 @@ export default function Sessions() {
         actions={
           canWriteSessions ? (
             <Button
-              onClick={() => setSessionModalTarget({ initialProgramId: selectedProgram?.id })}
-              disabled={!canAddSession}
+              onClick={() => setSessionModalTarget({ programId: selectedProgram?.id })}
             >
               + Add
             </Button>
@@ -174,7 +172,9 @@ export default function Sessions() {
           label: 'Search sessions',
           placeholder: 'Search titles, descriptions, or program cycles',
         }}
+
         columns={columns}
+
         messages={[
           controls.error,
           actions.moveError,
@@ -182,6 +182,7 @@ export default function Sessions() {
           cyclesError,
           viewError,
         ]}
+
         dashboard={dashboard}
         table={hasCycleBounds ? table : cycleState}
         calendar={calendar}
@@ -199,8 +200,8 @@ export default function Sessions() {
         programs={programs}
         sessionTypes={sessionTypes}
         session={sessionModalTarget?.session}
-        initialProgramId={sessionModalTarget?.initialProgramId}
-        initialDate={sessionModalTarget?.initialDate}
+        programId={sessionModalTarget?.programId}
+        date={sessionModalTarget?.date}
         onClose={closeSessionModal}
         onSaved={result => {
           if ('session' in result) {

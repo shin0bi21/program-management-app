@@ -37,10 +37,10 @@ export default function useSignUpLeadModal({
   lead,
   onSuccess,
 }: UseSignUpLeadModalOptions) {
-  const [selectedPairKey, setSelectedPairKey] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(lead.dateOfBirth ?? '');
-  const age = getAge(dateOfBirth);
+  const [selectedPairKey, setSelectedPairKey] = useState('');
   const [noteCategory, setNoteCategory] = useState<LeadNoteCategory | ''>('');
+  const age = getAge(dateOfBirth);
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);
   const submitLock = useSubmitLock();

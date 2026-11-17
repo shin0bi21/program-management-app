@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setTask } from '../../../tasks.api';
 import { makeTask } from '../../../../../../tests/factories/task';
 import useTaskModal from './useTaskModal';
+import { getDate } from '../../../../../../common/utils/date';
 
 vi.mock('../../../tasks.api', () => ({
   setTask: vi.fn(),
@@ -17,6 +18,15 @@ const submitEvent = {
 describe('useTaskModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it.each([undefined, '2026-08-10'])('defaults missing dates from the supplied start date %s or today', startDate => {
+    const date = startDate ?? getDate();
+    const { result } = renderHook(() => useTaskModal({
+      target: { mode: 'add', context: { startDate } }, onSaved: vi.fn(),
+    }));
+
+    expect(result.current.draft).toMatchObject({ startDate: date, dueDate: date });
+  });
+
   it('initializes and submits a new task before synchronizing its success state', async () => {
     const savedTask = makeTask();
     vi.mocked(setTask).mockResolvedValue(savedTask);
@@ -24,7 +34,7 @@ describe('useTaskModal', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-14',
           staffId: 'staff-1',
@@ -82,7 +92,7 @@ describe('useTaskModal', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-14',
           staffId: 'staff-1',
@@ -101,7 +111,7 @@ describe('useTaskModal', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {
         mode: 'add',
-        initialValues: { startDate: '2026-08-10', dueDate: '2026-08-10', staffId: 'staff-1' },
+        context: { startDate: '2026-08-10', dueDate: '2026-08-10', staffId: 'staff-1' },
       },
       onSaved: vi.fn(),
     }));
@@ -119,7 +129,7 @@ describe('useTaskModal', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-10',
           staffId: 'staff-1',
@@ -151,7 +161,7 @@ describe('useTaskModal', () => {
     const { result } = renderHook(() => useTaskModal({
       target: {
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-10',
           staffId: 'staff-1',

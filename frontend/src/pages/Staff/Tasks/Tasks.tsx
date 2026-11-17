@@ -23,7 +23,7 @@ import { getDate } from '../../../common/utils/date';
 import { getTaskDashboardData } from './tasks.api';
 import {
   TASK_TABLE_KEYS,
-  type AddTaskModalInitialValues,
+  type AddTaskContext,
   type Task,
   type TaskModalState,
 } from './types';
@@ -89,8 +89,8 @@ export default function Tasks() {
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
-  const openAddTaskModal = (initialValues: AddTaskModalInitialValues) => {
-    setTaskModalState({ mode: 'add', initialValues });
+  const openAddTaskModal = (context: AddTaskContext) => {
+    setTaskModalState({ mode: 'add', context });
   };
   const openEditTaskModal = useCallback((task: Task) => {
     setTaskModalState({ mode: 'edit', task });
@@ -175,10 +175,9 @@ export default function Tasks() {
       controls={preferences}
       loadingLabel="Loading saved task preferences…"
 
-      actions={canWrite && pageData.writableStaff.length ? <Button
-        disabled={pageData.referenceDataLoading || Boolean(pageData.referenceDataError)}
+      actions={canWrite ? <Button
         onClick={() => {
-          openAddTaskModal({ startDate: today, dueDate: today });
+          openAddTaskModal({});
         }}
       >+ Add</Button> : undefined}
 
@@ -226,9 +225,7 @@ export default function Tasks() {
 
     {hoursModalTask && <HoursModal
       isOpen
-      initialSource="task"
-      initialTask={hoursModalTask}
-      initialStaffId={hoursModalTask.staffId}
+      task={hoursModalTask}
       canCompleteTask={canWrite}
       staff={pageData.staff}
       programs={pageData.programs}

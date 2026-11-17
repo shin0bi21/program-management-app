@@ -18,7 +18,7 @@ type SessionNoteModalProps = Omit<UseSessionNoteModalOptions, 'session'> & {
 export default function SessionNoteModal({ session, ...props }: SessionNoteModalProps) {
   if (!session) return null;
 
-  const targetKey = `${session.id}:${props.note?.id ?? 'new'}:${props.initialYouthId ?? ''}`;
+  const targetKey = `${session.id}:${props.note?.id ?? 'new'}:${props.youthId ?? ''}`;
   return <SessionNoteForm key={targetKey} session={session} {...props} />;
 }
 
@@ -30,7 +30,7 @@ export default function SessionNoteModal({ session, ...props }: SessionNoteModal
 function SessionNoteForm({
   session,
   note = null,
-  initialYouthId,
+  youthId,
   hideYouthSelection = false,
   onClose,
   onSaved,
@@ -38,7 +38,7 @@ function SessionNoteForm({
   const workflow = useSessionNoteModal({
     session,
     note,
-    initialYouthId,
+    youthId,
     hideYouthSelection,
     onSaved,
   });
@@ -62,7 +62,7 @@ function SessionNoteForm({
       {!hideYouthSelection && <SessionYouthChecklist
         enrollmentRequired={session.enrollmentRequired}
         roster={workflow.roster}
-        selectedYouthIds={workflow.draft.selectedYouthIds}
+        selectedYouthIds={workflow.draft.youthIds}
         loading={workflow.rosterLoading}
         error={workflow.rosterError}
         disabled={workflow.submissionComplete}

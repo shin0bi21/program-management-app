@@ -17,8 +17,8 @@ export function useSessionAttachmentModal({ queryKey, session, attachment, onSav
   attachment: SessionAttachment | null;
   onSaved: () => void | Promise<void>;
 }) {
-  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>(() => attachment?.youth.map(youth => youth.youthId) ?? []);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>(() => attachment?.youth.map(youth => youth.youthId) ?? []);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();

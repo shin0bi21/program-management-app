@@ -9,8 +9,8 @@ describe('useContacts', () => {
     const populated = renderHook(() => useContacts(existing));
     const empty = renderHook(() => useContacts());
 
-    expect(populated.result.current.contacts).toEqual(existing);
-    expect(empty.result.current.contacts).toEqual([{
+    expect(populated.result.current.draft).toEqual(existing);
+    expect(empty.result.current.draft).toEqual([{
       id: '',
       phoneNumber: '',
       type: 'parent',
@@ -21,7 +21,7 @@ describe('useContacts', () => {
     const { result } = renderHook(() => useContacts([
       { id: 'contact-1', phoneNumber: null, type: 'sibling' },
     ]));
-    expect(result.current.contacts).toEqual([{
+    expect(result.current.draft).toEqual([{
       id: 'contact-1',
       phoneNumber: '',
       type: 'sibling',
@@ -32,13 +32,13 @@ describe('useContacts', () => {
       result.current.handleChange(0, 'type', 'guardian');
       result.current.handleAdd();
     });
-    expect(result.current.contacts).toEqual([
+    expect(result.current.draft).toEqual([
       { id: 'contact-1', phoneNumber: '519-555-0101', type: 'guardian' },
       { id: '', phoneNumber: '', type: 'parent' },
     ]);
 
     act(() => result.current.handleDelete(0));
-    expect(result.current.contacts).toEqual([{ id: '', phoneNumber: '', type: 'parent' }]);
+    expect(result.current.draft).toEqual([{ id: '', phoneNumber: '', type: 'parent' }]);
   });
 
   it('validates persisted blank contacts and emits only trimmed populated payloads', () => {
