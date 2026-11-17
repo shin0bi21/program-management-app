@@ -29,11 +29,11 @@ describe('SessionAttendanceDashboardCard', () => {
     expect(getSessionRoster).not.toHaveBeenCalled();
   });
 
-  it('summarizes marked roster statuses and delegates management', async () => {
+  it('includes unmarked roster members in the total and delegates management', async () => {
     const onManage = vi.fn();
     render(<SessionAttendanceDashboardCard session={session} canWrite onManage={onManage} />);
 
-    expect(await screen.findByText('4/5')).toBeInTheDocument();
+    expect(await screen.findByText('4/6')).toBeInTheDocument();
     expect(getSessionRoster).toHaveBeenCalledWith(session.id, { signal: expect.any(AbortSignal) });
     fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
     expect(onManage).toHaveBeenCalledWith(session, roster);
@@ -47,11 +47,11 @@ describe('SessionAttendanceDashboardCard', () => {
     expect(screen.queryByRole('button', { name: 'Manage attendance' })).not.toBeInTheDocument();
   });
 
-  it('shows an empty state when nobody has a recorded status', async () => {
+  it('counts the full roster when nobody has a recorded status', async () => {
     vi.mocked(getSessionRoster).mockResolvedValue(roster.map(member => ({ ...member, status: null })));
     render(<SessionAttendanceDashboardCard session={session} canWrite onManage={vi.fn()} />);
 
-    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
+    expect(await screen.findByText('0/6')).toBeInTheDocument();
   });
 
   it('shows recorded attendance even when nobody attended', async () => {
@@ -73,7 +73,7 @@ describe('SessionAttendanceDashboardCard', () => {
 
   it('updates from the same roster cache populated by attendance saves', async () => {
     const { queryClient } = render(<SessionAttendanceDashboardCard session={session} canWrite onManage={vi.fn()} />);
-    expect(await screen.findByText('4/5')).toBeInTheDocument();
+    expect(await screen.findByText('4/6')).toBeInTheDocument();
 
     act(() => queryClient.setQueryData(['sessions', session.id, 'roster'], [roster[0]]));
 

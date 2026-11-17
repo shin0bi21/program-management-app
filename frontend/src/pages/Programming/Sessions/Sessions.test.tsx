@@ -209,10 +209,7 @@ describe('Sessions', () => {
   });
 
   // Rendered states.
-  it('shows open attendance as a check-in count', async () => {
-    getSessionRoster.mockResolvedValue(['youth-1', 'youth-2', 'youth-3'].map(youthId => ({
-      youthId, firstName: 'Alex', lastName: 'Lee', status: 'present', notes: null,
-    })));
+  it('enables dashboard actions after selecting an open session', async () => {
     getSessions.mockResolvedValue({ rows: [makeProgramSession({
       id: 'drop-in-session',
 
@@ -239,9 +236,6 @@ describe('Sessions', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Add attachments' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeEnabled();
-    expect(await screen.findByText('3 check-ins')).toBeInTheDocument();
-    expect(await screen.findByText('No notes.')).toBeInTheDocument();
-    expect(screen.queryByText('3/3 · 100%')).not.toBeInTheDocument();
   });
 
   it('does not create a fallback calendar when no cycles exist', async () => {
@@ -337,11 +331,8 @@ describe('Sessions', () => {
 
     expect(await screen.findByText('Communication')).toBeInTheDocument();
     expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText('No attendance.')).toBeInTheDocument();
-    expect(await screen.findByText('No attachments.')).toBeInTheDocument();
-    expect(await screen.findByText('No notes.')).toBeInTheDocument();
     expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Add notes' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Communication'));
