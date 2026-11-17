@@ -130,17 +130,6 @@ container. If the backend is unhealthy, resolve that failure before treating
 the proxy as its cause. For a failed release, follow
 [deployment recovery](#recovery-boundaries).
 
-For grouped log output, run from `/home/ubuntu/my-webapp` with Node 24 and Docker
-Compose available on the Lightsail host:
-
-```bash
-node scripts/reports/log-report.ts --docker --production nginx backend --since 5m --context 4
-```
-
-The report groups failures by service and preserves request IDs and error details.
-Use `node scripts/reports/log-report.ts --help` for filters and examples; the
-[`usage()` text](../../scripts/reports/log-report.ts) is the CLI reference.
-
 ## Deployment Selection and Docker Caching
 
 The script compares the target commit with the last successful frontend, backend,
