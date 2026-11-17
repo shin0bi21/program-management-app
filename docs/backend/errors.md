@@ -180,9 +180,8 @@ background cleanup, or fire-and-forget logging, must log once:
 - Format the error with `errorForLog` from `src/errors.ts`; never dump the raw object.
 
 `errorForLog` retains error classes, codes, constraint identifiers, and source
-locations. It omits raw library messages, request bodies, query parameters,
-validation details, and arbitrary error properties. Application error messages
-must be safe at their source; do not interpolate secrets into them.
+locations for application and dependency files. Application error messages
+must be safe at their source.
 
 Never log tokens, cookies, passwords, authorization headers, raw secrets, or
 unnecessarily complete request bodies. Do not add temporary success-path

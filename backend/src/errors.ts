@@ -176,7 +176,7 @@ function errorDiagnostic(error: DiagnosticMetadata, depth: number): ErrorDiagnos
 /**
  * Extracts source locations from native stack frames while excluding messages, arguments, and URL queries.
  * @param error - Failure whose stack must begin with its complete name/message heading to be accepted.
- * @returns Up to twenty recognized absolute, file-URL, or Node locations; no locations for an unrecognized heading.
+ * @returns Up to twenty absolute or file-URL locations, excluding Node runtime frames; no locations for an unrecognized heading.
  * @example errorLocations(Object.assign(new Error('failed'), { stack: 'Error: failed\n    at /app/src/index.ts:12:4' })) // ['/app/src/index.ts:12:4']
  */
 function errorLocations(error: Error): string[] {
@@ -185,7 +185,7 @@ function errorLocations(error: Error): string[] {
   if (!stack?.startsWith(heading)) return [];
 
   // Accept only a source path ending in :line:column, optionally wrapped in parentheses.
-  const sourceLocationPattern = /(?:\(|\s)((?:\/|file:\/\/|node:)[\w./:@\\-]+:\d+:\d+)\)?$/;
+  const sourceLocationPattern = /(?:\(|\s)((?:\/|file:\/\/)[\w./:@\\-]+:\d+:\d+)\)?$/;
   const frames = stack.slice(heading.length).split('\n');
   const locations: string[] = [];
 
