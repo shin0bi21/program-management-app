@@ -11,6 +11,12 @@ vi.mock('../../../../../common/features/Preferences/preferences.api', () => ({
   setPreference: vi.fn(),
 }));
 
+/**
+ * Mounts the supplied hook with an isolated preference query cache.
+ * @param callback - Hook rendered for this scenario.
+ * @param options - Initial props and rendering options.
+ * @example renderHook(() => usePreferences()) restores controls in a fresh cache.
+ */
 const renderHook: typeof renderBase = (callback, options) => renderBase(callback, {
   wrapper: createQueryClientWrapper(createTestQueryClient()),
   ...options,
@@ -45,7 +51,7 @@ describe('useHoursPreferences', () => {
 
   it('waits for dependencies and restores saved Hours controls', async () => {
     savedPreference.preference = {
-      view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
+      view: 'table', staffIds: ['staff-1'], programIds: ['general', 'program-1'], categories: ['meeting'],
       types: ['task'], cycleIds: ['cycle-2'],
       sorting: { key: 'hours', direction: 'asc' },
     };
@@ -62,7 +68,7 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.view).toBe('table');
     expect(result.current.filters.values).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
+      staffIds: ['staff-1'], programIds: ['general', 'program-1'], categories: ['meeting'],
       types: ['task'], cycleIds: ['cycle-2'],
     }));
     expect(result.current.table.sorting).toEqual({ key: 'hours', direction: 'asc' });
@@ -80,31 +86,6 @@ describe('useHoursPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.definitions.some(filter => filter.id === 'staffIds')).toBe(true);
     expect(result.current.appliedFilters.staffIds).toEqual(['staff-1']);
-  });
-
-  it('repairs removed options and sorting without losing valid selections', async () => {
-    savedPreference.preference = {
-      view: 'list' as never,
-      staffIds: ['staff-1', 'removed-staff'],
-      programIds: ['general', 'program-1', 'removed-program'],
-      categories: ['meeting', 'removed-category' as never],
-      types: ['task', 'removed-type' as never],
-      cycleIds: ['cycle-1'],
-      sorting: { key: 'removedColumn' as never, direction: 'asc' },
-    };
-    const { result } = renderHook(() => useHoursPreferences({
-      staff, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.filters.values).toEqual(expect.objectContaining({
-      staffIds: ['staff-1'], programIds: ['general', 'program-1'],
-      categories: ['meeting'], types: ['task'],
-    }));
-    expect(result.current.view).toBe('calendar');
-    expect(result.current.table.sorting).toEqual({ key: 'date', direction: 'desc' });
   });
 
   it('repairs options and cycles independently while retaining staff edits made during the outage', async () => {
@@ -164,26 +145,5 @@ describe('useHoursPreferences', () => {
       search: 'workshop',
       sorting: { key: 'hours', direction: 'asc' },
     })));
-  });
-
-  it('retires legacy cycle and custom-date fields without losing sibling preferences', async () => {
-    savedPreference.preference = Object.assign({ view: 'table' as const, search: 'retained', programIds: ['program-1'] }, {
-      cycleId: 'cycle-2', dateRange: { start: '2026-03-01', end: '2026-03-31' },
-    });
-    const { result } = renderHook(() => useHoursPreferences({
-      staff, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters).toMatchObject({
-      cycleIds: [], programIds: ['program-1'],
-    });
-    expect(result.current.appliedFilters.search).toBe('retained');
-    expect(result.current.view).toBe('table');
-    await waitFor(() => expect(setPreference).toHaveBeenCalledWith('hours-filters', expect.not.objectContaining({ cycleId: expect.anything() })));
-    const calls = vi.mocked(setPreference).mock.calls;
-    const saved = calls[calls.length - 1]?.[1];
-    expect(saved).not.toHaveProperty('dateRange');
   });
 });

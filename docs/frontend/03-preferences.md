@@ -75,8 +75,8 @@ Dashboard cards own their reporting scope independently of collection filters.
 ### Rename a Persisted Column
 
 1. Migrate account sorting with a forward database migration.
-2. Pass a stable page-owned `columnKeyAliases` map to `useTableLayout` for local widths and visibility.
-3. Preserve existing values at the new key when both keys exist.
+2. Use the canonical column key in `tableKeys`. Browser-local layouts ignore retired keys and use default width and visibility for the renamed column.
+3. Preserve widths and visibility saved under current keys; do not reset the whole layout.
 
 ## Expose Page Controls
 

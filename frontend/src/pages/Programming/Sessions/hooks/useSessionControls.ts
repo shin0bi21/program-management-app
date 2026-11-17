@@ -1,5 +1,5 @@
-import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import { useMemo } from 'react';
+import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { Program } from '../../../../common/features/programs/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
@@ -12,9 +12,8 @@ import {
   preferenceSorting,
 } from '../../../../common/features/Preferences/preferences';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
-import type { SessionSortKey, SessionType, SessionListFilters } from '../types';
+import type { SessionSortKey, SessionType, SessionListFilters, SessionStatusFilter } from '../types';
 import type { ListSort } from '../../../../common/components/Table/Table.types';
-import type { SessionStatusFilter } from '../types';
 
 type SessionView = 'calendar' | 'table';
 
@@ -43,7 +42,7 @@ interface UseSessionControlsOptions {
 }
 
 const DEFAULT_SORTING: ListSort<SessionSortKey> = { key: 'date', direction: 'desc' };
-const SESSION_COLUMN_KEY_ALIASES = { cohort: 'cycle', theme: 'title' };
+
 /**
  * Restores saved session controls and supplies applied request filters with derived cycle bounds.
  * @param options - Role, reference choices, dependency status, and supported table keys.
@@ -54,7 +53,7 @@ export function useSessionControls({
   sessionTypes: sessionTypeOptions, sessionTypesLoading, sessionTypesError, tableKeys,
 }: UseSessionControlsOptions) {
   // Search and filters.
-  const layout = useTableLayout({ key: 'session-filters', tableKeys, columnKeyAliases: SESSION_COLUMN_KEY_ALIASES });
+  const layout = useTableLayout({ key: 'session-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'session-filters',
     waiting: role === null || programsLoading || cyclesLoading || sessionTypesLoading,

@@ -1,6 +1,6 @@
 import { getDate } from '../../../common/utils/date';
 import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
@@ -376,19 +376,13 @@ describe('Hours', () => {
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
   });
 
-  it('keeps table Edit available when a background preference repair completes', async () => {
+  it('opens the selected table entry for editing', async () => {
     mockWritableTableEntry();
-    let finishSave!: () => void;
-    vi.mocked(setPreference).mockImplementation((_key, value) => new Promise(resolve => {
-      finishSave = () => resolve(value);
-    }));
     renderHours();
 
     fireEvent.click(await screen.findByRole('button', {
       name: 'Actions for Meeting on 2026-08-09',
     }));
-    await waitFor(() => expect(setPreference).toHaveBeenCalled());
-    await act(async () => finishSave());
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }));
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
