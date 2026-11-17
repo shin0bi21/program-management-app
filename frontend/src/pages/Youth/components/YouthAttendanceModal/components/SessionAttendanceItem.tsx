@@ -6,7 +6,7 @@ import type { AttendanceStatus } from '../../../../../common/features/Attendance
 import type { SessionNote } from '../../../../Programming/Sessions/types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import AttendanceStatusSelect from '../../../../../common/features/AttendanceStatusSelect/AttendanceStatusSelect';
-import type { YouthAttendanceSession } from '../types';
+import type { AttendanceSession } from '../../../../../common/features/Attendance/attendance.api';
 import SessionNoteCard from './SessionNoteCard';
 
 /**
@@ -27,7 +27,7 @@ export default function SessionAttendanceItem({
   onEditNote,
   onUnlinkNote,
 }: {
-  session: YouthAttendanceSession;
+  session: AttendanceSession;
   enrollmentRequired: boolean;
   status: AttendanceStatus | '';
   canManageSessionNotes: boolean;

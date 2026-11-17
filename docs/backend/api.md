@@ -103,20 +103,22 @@ open-attendance participation. The [Youth filter owner](../../backend/src/servic
 preserves that cross-domain selection contract.
 
 The main Youth record includes profile fields and one active program, or null when none is active.
-The attendance dashboard loads complete attendance and session notes for the active enrolled
-program cycle from `/:id/attendance`, owned by the
-[shared attendance service](../../backend/src/services/attendanceService.ts).
-It requires Youth, attendance and session read permissions and applies program scope.
-The backend supplies attendance counts with the records, which the card passes directly to its editor;
-no active enrollment returns null. Historical cycles and open-program visits are excluded
-from this dashboard. Attendance stays separate from profile rows.
+The attendance dashboard reads attendance grouped by program/cycle from `/attendance`,
+owned by the [attendance service](../../backend/src/services/attendanceService.ts).
+Requested `youthIds` select one profile or a roster in a single request. Optional session,
+program and cycle IDs restrict the records; callers supply the selected cycle ID
+when they want current-cycle attendance. Historical attendance and recorded open-program visits remain available. Enrollment
+or scheduled sessions without attendance records do not create attendance groups. Reads require Youth, attendance and session read permissions
+and apply program scope. Attendance stays separate from profile rows.
 
-Programs reads the same cycle attendance without the Youth filter. Both dashboards
-supply their loaded data to the shared attendance report. Its PDF POST renders
-that data without another attendance query.
-Attendance counts and rates use completed, noncancelled sessions. Present and late
-count as attended; absent, excused and unmarked count as missed. The Programs
-consumer adds the cohort average in the backend; the frontend only displays it.
+Programs reads the same grouped attendance for its selected assignment. Dashboards pass
+loaded groups directly to editors and reports. Attendance saves return the same attendance
+contract alongside affected records. The PDF POST renders a supplied group without another
+attendance query.
+
+Counts and rates use completed, noncancelled sessions. Present and late count as attended;
+absent and excused count as missed. Missing records remain unmarked in the frontend
+and do not contribute to counts or rates. Each group includes its average for the returned participants.
 
 ## Programming
 

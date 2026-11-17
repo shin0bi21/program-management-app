@@ -1,8 +1,20 @@
 import { apiClient, type RequestOptions } from '../../../http/client';
 
-/** Full cycle attendance shared by dashboard consumers, editors and PDF rendering. */
+/** Attendance is always grouped by its program/cycle assignment. */
 export interface AttendanceData {
-  averageAttendance?: number | null;
+  groups: AttendanceGroup[];
+}
+
+export interface AttendanceFilters {
+  youthIds?: string[];
+  sessionId?: string;
+  programId?: string;
+  cycleId?: string;
+}
+
+/** One saved-attendance group shared unchanged by dashboards, editors and PDF rendering. */
+export interface AttendanceGroup {
+  averageAttendance: number | null;
   programCycle: {
     programId: string; cycleId: string; program: string; cycle: string; enrollmentRequired: boolean;
   };
@@ -12,7 +24,7 @@ export interface AttendanceData {
     lastName: string;
     presentCount: number;
     lateCount: number;
-    /** Completed sessions marked absent/excused or left unmarked. */
+    /** Completed sessions explicitly marked absent or excused. */
     absentCount: number;
     sessions: Array<{
       id: string;
@@ -38,25 +50,31 @@ export interface AttendanceData {
   }>;
 }
 
-/**
- * Loads complete cycle attendance for all participating youth.
- * @param programCycle - Program and cycle identifying the attendance to read.
- * @param options - Request options, including cancellation on selection changes.
- * @example getProgramCycleAttendance(assignment, { signal }) // complete cycle data before opening the report
- */
-export function getProgramCycleAttendance(programCycle: { programId: string; cycleId: string }, options?: RequestOptions) {
-  return apiClient.get<AttendanceData>(`/programs/${programCycle.programId}/cycles/${programCycle.cycleId}/attendance`, options);
-}
+export type AttendanceYouth = AttendanceGroup['youth'][number];
+export type AttendanceSession = AttendanceYouth['sessions'][number];
 
 /**
- * Loads attendance for the youth's active enrolled cycle.
- * @param youthId - Selected youth ID.
+ * Loads saved attendance grouped by program/cycle for requested youth IDs or an assignment.
+ * @param filters - Requested youth IDs and optional session/program/cycle IDs, or a cohort assignment.
  * @param options - Request options, including cancellation when selection changes.
- * @returns The same cycle attendance data used by Programs, or null when not enrolled.
- * @example getYouthAttendance(youthId, { signal }) // the shared attendance reader with a youth filter
+ * @example getAttendance({ youthIds: [youthId], cycleId }, { signal }) // the caller supplies the selected cycle ID
  */
-export function getYouthAttendance(youthId: string, options?: RequestOptions) {
-  return apiClient.get<AttendanceData | null>(`/youth/${youthId}/attendance`, options);
+export function getAttendance(
+  filters: AttendanceFilters & ({ youthIds: string[] } | { programId: string; cycleId: string }),
+  options?: RequestOptions,
+) {
+  const params = new URLSearchParams();
+  const path = filters.youthIds !== undefined
+    ? '/youth/attendance'
+    : `/programs/${filters.programId}/cycles/${filters.cycleId}/attendance`;
+  if (filters.youthIds !== undefined) {
+    params.set('youthIds', filters.youthIds.join(','));
+    if (filters.programId) params.set('programId', filters.programId);
+    if (filters.cycleId) params.set('cycleId', filters.cycleId);
+  }
+  if (filters.sessionId) params.set('sessionId', filters.sessionId);
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  return apiClient.get<AttendanceData>(`${path}${query}`, options);
 }
 
 /**
@@ -65,7 +83,7 @@ export function getYouthAttendance(youthId: string, options?: RequestOptions) {
  * @param options - Request options, including cancellation when the viewer closes.
  * @example getAttendanceReportPdf(data, { signal }) // PDF without another attendance read
  */
-export function getAttendanceReportPdf(data: AttendanceData, options?: RequestOptions) {
+export function getAttendanceReportPdf(data: AttendanceGroup, options?: RequestOptions) {
   const { programId, cycleId } = data.programCycle;
   return apiClient.postDownload(`/programs/${programId}/cycles/${cycleId}/reports/youth.pdf`, data, options);
 }
