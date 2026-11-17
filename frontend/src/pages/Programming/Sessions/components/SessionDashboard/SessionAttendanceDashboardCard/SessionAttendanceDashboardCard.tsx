@@ -50,16 +50,19 @@ export default function SessionAttendanceDashboardCard({
 }
 
 /**
- * Shows attended/marked counts for enrolled sessions and check-ins for open sessions.
- * Returns null when no roster member has a recorded status.
+ * Shows attended/roster counts for enrolled sessions and recorded check-ins for open sessions.
+ * Returns null for an empty roster or an open session without recorded check-ins.
  * @param roster - Loaded session attendees and their recorded statuses.
- * @param enrollmentRequired - Whether to display attended/marked counts instead of check-ins.
- * @example An enrolled session with 4 attendees and 5 marked records returns '4/5'.
+ * @param enrollmentRequired - Whether to count the full roster, including unmarked members.
+ * @example An enrolled session with 4 attendees and 6 roster members returns '4/6'.
  */
 function getAttendanceSummary(roster: readonly SessionRosterMember[], enrollmentRequired: boolean) {
-  const marked = roster.filter(member => member.status !== null);
-  if (!marked.length) return null;
-  if (!enrollmentRequired) return `${marked.length} check-ins`;
-  const attended = marked.filter(member => member.status === 'present' || member.status === 'late');
-  return `${attended.length}/${marked.length}`;
+  if (!roster.length) return null;
+  if (!enrollmentRequired) {
+    const marked = roster.filter(member => member.status !== null);
+    return marked.length ? `${marked.length} check-ins` : null;
+  }
+
+  const attended = roster.filter(member => member.status === 'present' || member.status === 'late');
+  return `${attended.length}/${roster.length}`;
 }
