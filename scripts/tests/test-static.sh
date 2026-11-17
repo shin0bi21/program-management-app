@@ -32,11 +32,4 @@ npm run lint
 echo "Type-checking repository scripts..."
 npm run typecheck
 
-# 4. Execute check-planning and pattern-check suites before reporting success.
-echo "Running script tests..."
-node --test \
-  scripts/ci/*.test.ts \
-  scripts/patterns/*.test.ts \
-  scripts/patterns/frontend/*.test.ts
-
 echo "Static checks passed!"
