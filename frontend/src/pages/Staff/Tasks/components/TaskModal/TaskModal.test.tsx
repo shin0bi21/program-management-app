@@ -30,7 +30,7 @@ describe('TaskModal', () => {
     render(<TaskModal
       target={{
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-10',
           staffId: 'staff-1',
@@ -54,7 +54,7 @@ describe('TaskModal', () => {
     render(<TaskModal
       target={{
         mode: 'add',
-        initialValues: {
+        context: {
           startDate: '2026-08-10',
           dueDate: '2026-08-14',
           staffId: 'staff-1',

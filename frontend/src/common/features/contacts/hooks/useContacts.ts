@@ -5,19 +5,19 @@ const EMPTY_CONTACT: ContactDraft = { id: '', phoneNumber: '', type: 'parent' };
 
 /**
  * Manages the contacts shown in a form and prepares them for saving.
- * @param initialContacts - Contacts to show when the form first opens. If omitted or empty, show one blank contact.
+ * @param contacts - Contacts to show when the form first opens. If omitted or empty, show one blank contact.
  * @returns Contacts, actions to edit them, a check for missing phone numbers, and contacts ready to save.
  * @example useContacts() // one blank parent contact
  */
-export function useContacts(initialContacts?: Array<{
+export function useContacts(contacts?: Array<{
   id: string;
   phoneNumber: string | null;
   type: ContactRelationship;
 }> | null) {
-  const [contacts, setContacts] = useState<ContactDraft[]>(() => {
-    if (!initialContacts?.length) return [{ ...EMPTY_CONTACT }];
+  const [draft, setDraft] = useState<ContactDraft[]>(() => {
+    if (!contacts?.length) return [{ ...EMPTY_CONTACT }];
 
-    return initialContacts.map(contact => ({
+    return contacts.map(contact => ({
       id: contact.id,
       phoneNumber: contact.phoneNumber ?? '',
       type: contact.type,
@@ -29,7 +29,7 @@ export function useContacts(initialContacts?: Array<{
    * @example handleAdd() // adds another parent contact
    */
   const handleAdd = () => {
-    setContacts(currentContacts => [...currentContacts, { ...EMPTY_CONTACT }]);
+    setDraft(currentContacts => [...currentContacts, { ...EMPTY_CONTACT }]);
   };
 
   /**
@@ -38,7 +38,7 @@ export function useContacts(initialContacts?: Array<{
    * @example handleDelete(0) // removes the first contact
    */
   const handleDelete = (index: number) => {
-    setContacts(currentContacts => currentContacts.filter((_, contactIndex) => contactIndex !== index));
+    setDraft(currentContacts => currentContacts.filter((_, contactIndex) => contactIndex !== index));
   };
 
   /**
@@ -49,7 +49,7 @@ export function useContacts(initialContacts?: Array<{
    * @example handleChange(0, 'type', 'guardian') // changes the first relationship
    */
   const handleChange = (index: number, field: keyof ContactDraft, value: string) => {
-    setContacts(currentContacts => {
+    setDraft(currentContacts => {
       const updatedContacts = [...currentContacts];
       updatedContacts[index] = { ...updatedContacts[index], [field]: value };
       return updatedContacts;
@@ -62,8 +62,8 @@ export function useContacts(initialContacts?: Array<{
    * @example validate() // 'Contact 1: Phone number is required' for a blank saved contact
    */
   const validate = (): string | undefined => {
-    for (let contactIndex = 0; contactIndex < contacts.length; contactIndex++) {
-      const contact = contacts[contactIndex];
+    for (let contactIndex = 0; contactIndex < draft.length; contactIndex++) {
+      const contact = draft[contactIndex];
       if (!contact.phoneNumber.trim() && contact.id) {
         return `Contact ${contactIndex + 1}: Phone number is required`;
       }
@@ -77,7 +77,7 @@ export function useContacts(initialContacts?: Array<{
    * @example getPayload() // [] when the only draft is blank
    */
   const getPayload = () =>
-    contacts
+    draft
       .filter(contact => contact.phoneNumber.trim())
       .map(contact => ({
         ...(contact.id && { id: contact.id }),
@@ -85,5 +85,5 @@ export function useContacts(initialContacts?: Array<{
         type: contact.type,
       }));
 
-  return { contacts, handleAdd, handleDelete, handleChange, validate, getPayload };
+  return { draft, handleAdd, handleDelete, handleChange, validate, getPayload };
 }

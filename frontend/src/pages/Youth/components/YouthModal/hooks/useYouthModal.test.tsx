@@ -22,7 +22,7 @@ vi.mock('../../../../../common/features/SchoolModal/hooks/useSchools', () => ({
 }));
 vi.mock('../../../../../common/features/contacts/hooks/useContacts', () => ({
   useContacts: () => ({
-    contacts: [],
+    draft: [],
     handleChange: vi.fn(),
     validate: subEntities.validateContacts,
     getPayload: subEntities.getContactPayload,

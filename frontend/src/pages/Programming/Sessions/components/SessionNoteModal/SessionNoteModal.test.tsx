@@ -51,7 +51,7 @@ describe('SessionNoteModal', () => {
     render(
       <SessionNoteModal
         session={session}
-        initialYouthId="youth-1"
+        youthId="youth-1"
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />,

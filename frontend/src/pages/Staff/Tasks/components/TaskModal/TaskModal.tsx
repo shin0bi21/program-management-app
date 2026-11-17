@@ -33,7 +33,7 @@ export default function TaskModal(props: TaskModalProps) {
   } = props;
   const modal = useTaskModal(props);
   const isEdit = target.mode === 'edit';
-  const staffId = target.mode === 'add' ? target.initialValues.staffId : undefined;
+  const staffId = target.mode === 'add' ? target.context.staffId : undefined;
 
   return (
     <Modal

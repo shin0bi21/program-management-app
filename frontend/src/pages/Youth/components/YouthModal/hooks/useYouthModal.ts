@@ -42,8 +42,8 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     defaultValues: {
       firstName: youthData?.firstName ?? '',
       lastName: youthData?.lastName ?? '',
-      email: youthData?.account?.email ?? '',
       dateOfBirth: youthData?.dateOfBirth ?? '',
+      email: youthData?.account?.email ?? '',
       schoolId: youthData?.schoolId ?? '',
       addresses: youthData?.addresses?.length ? youthData.addresses : [{ address: '' }],
     },
@@ -54,12 +54,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
 
   const addresses = watch('addresses') ?? [];
 
-  const {
-    contacts,
-    handleChange: handleContactChange,
-    validate: validateContacts,
-    getPayload: getContactPayload,
-  } = useContacts(youthData?.contacts);
+  const contactForm = useContacts(youthData?.contacts);
 
   /**
    * Saves the form and reports the profile returned by the server.
@@ -72,7 +67,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     setSubmitStatus('submitting');
     setError('');
 
-    const contactError = validateContacts();
+    const contactError = contactForm.validate();
     if (contactError) {
       setError(contactError);
       setSubmitStatus('error');
@@ -84,7 +79,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     try {
       if (mode === 'contact') {
         if (!youthData) throw new Error('Select a youth profile to update contacts.');
-        savedYouth = await setYouthContacts(youthData.id, getContactPayload());
+        savedYouth = await setYouthContacts(youthData.id, contactForm.getPayload());
       } else {
         const payload = {
           ...(youthData && { id: youthData.id }),
@@ -99,7 +94,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
               ...(address.id && { id: address.id }),
               address: address.address,
             })),
-          contacts: getContactPayload(),
+          contacts: contactForm.getPayload(),
         };
 
         savedYouth = await setYouth(payload);
@@ -128,8 +123,8 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     schoolId,
     setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
     addresses,
-    contacts,
-    handleContactChange,
+    contacts: contactForm.draft,
+    handleContactChange: contactForm.handleChange,
     // Submit state
     submitStatus,
     error,

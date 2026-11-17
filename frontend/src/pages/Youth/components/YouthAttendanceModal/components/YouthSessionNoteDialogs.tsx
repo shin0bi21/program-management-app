@@ -40,7 +40,7 @@ export default function YouthSessionNoteDialogs({
       <SessionNoteModal
         session={noteTarget ? { id: noteTarget.session.id, enrollmentRequired } : null}
         note={noteTarget?.note ?? null}
-        initialYouthId={noteTarget?.note ? undefined : youth?.id}
+        youthId={youth?.id}
         hideYouthSelection
         onClose={onCloseNote}
         onSaved={onNoteSaved}

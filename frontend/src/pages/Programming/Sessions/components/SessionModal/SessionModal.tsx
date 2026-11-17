@@ -11,8 +11,8 @@ interface SessionModalProps {
   programs: Program[];
   session?: ProgramSession;
   sessionTypes: SessionType[];
-  initialProgramId?: string;
-  initialDate?: string;
+  programId?: string;
+  date?: string;
   onClose: () => void;
   onSaved: (result: CreatedSessionResult | UpdatedSessionResult) => void | Promise<void>;
 }
@@ -31,7 +31,7 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
       submitStatus={workflow.status} submitDisabled={!workflow.draft.sessionType || (!isEdit && !workflow.program)} onClose={onClose} />}>
     <form id="session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
       {!isEdit && <FormField id="session-program" label="Program">
-        <FloatingSelect id="session-program" value={workflow.programId} onChange={workflow.selectProgram}
+        <FloatingSelect id="session-program" value={workflow.draft.programId} onChange={workflow.selectProgram}
           disabled={workflow.locked} options={options.programs.map(({ id, title }) => ({ id, label: title }))} />
       </FormField>}
       <FormField id="session-type" label="Type">
