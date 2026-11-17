@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../../common/features/programs/types';
 import type { ProgramCycleAssignment } from '../../types';
 import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
@@ -8,7 +8,7 @@ import { renderWithQueryClient as render } from '../../../../../tests/queryClien
 
 vi.mock('@tanstack/react-query', async importOriginal => ({
   ...await importOriginal<typeof import('@tanstack/react-query')>(),
-  useQuery: () => ({ data: { programCycle, youth: [], averageAttendance: 75 }, error: null, refetch: vi.fn() }),
+  useQuery: () => ({ data: { groups: [{ programCycle, youth: [], averageAttendance: 75 }] }, error: null, refetch: vi.fn() }),
 }));
 vi.mock('../../hooks/data/useProgramCycleAssignments', () => ({ useProgramCycleAssignments: vi.fn() }));
 vi.mock('../ManageRosterModal/ManageRosterModal', () => ({
@@ -41,11 +41,8 @@ const makeProps = () => ({
 
 describe('ProgramOverviewDashboardCard', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-10-27T16:00:00Z'));
     vi.mocked(useProgramCycleAssignments).mockReturnValue({ assignments: [programCycle, openProgramCycle], loading: false, ready: true, error: '', refresh: vi.fn() });
   });
-  afterEach(() => vi.useRealTimers());
 
   it('shows selection, loading, and filtered empty states without current-cycle actions', () => {
     const props = makeProps();
@@ -110,12 +107,6 @@ describe('ProgramOverviewDashboardCard', () => {
     render(<ProgramOverviewDashboardCard {...makeProps()} />);
     expect(screen.getByText('No current cycle for this program.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeDisabled();
-  });
-
-  it('allows enrollment through the final cycle date', () => {
-    vi.setSystemTime(new Date(2026, 11, 1, 21));
-    render(<ProgramOverviewDashboardCard {...makeProps()} />);
-    expect(screen.getByRole('heading', { name: 'Art - Fall Overview' })).toBeInTheDocument();
   });
 
   it('keeps the current drop-in report disabled', () => {

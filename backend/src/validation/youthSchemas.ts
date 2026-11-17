@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
 import { dateOfBirthSchema } from './dateOfBirth';
+import { attendanceQuerySchema, attendanceYouthIdsSchema } from './programmingSchemas';
 
 const youthContactSchema = z.object({
   id: z.string().uuid('Invalid contact ID').optional(),
@@ -47,19 +48,15 @@ export const youthSessionNotesSchema = z.object({
 });
 
 export const youthAttendanceSchema = z.object({
-  params: z.object({ id: z.string().uuid('Invalid youth ID') }),
+  query: attendanceQuerySchema.extend({ youthIds: attendanceYouthIdsSchema }),
 });
 
-export const youthProgramCycleAttendanceSchema = z.object({
+export const setAttendanceSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid youth ID'),
     programId: z.string().uuid('Invalid program ID'),
     cycleId: z.string().uuid('Invalid cycle ID'),
   }),
-});
-
-export const setYouthProgramCycleAttendanceSchema = z.object({
-  params: youthProgramCycleAttendanceSchema.shape.params,
   body: z.object({
     records: z.array(z.object({
       sessionId: z.string().uuid('Invalid session ID'),
@@ -72,7 +69,7 @@ export const setYouthProgramCycleAttendanceSchema = z.object({
   }),
 });
 
-export type SetYouthProgramCycleAttendanceInput = z.infer<typeof setYouthProgramCycleAttendanceSchema.shape.body>;
+export type SetAttendanceInput = z.infer<typeof setAttendanceSchema.shape.body>;
 
 export type YouthQuery = z.infer<typeof youthQuerySchema.shape.query>;
 

@@ -1,29 +1,6 @@
+import type { AttendanceSession } from '../../../../common/features/Attendance/attendance.api';
 import type { AttendanceStatus } from '../../../../common/features/AttendanceStatusSelect/types';
 import type { SessionNote } from '../../../Programming/Sessions/types';
-
-export interface YouthAttendanceSession {
-  id: string;
-  sessionType: string;
-  title: string;
-  date: string;
-  startTime: string;
-  completed: boolean;
-  cancelledAt: string | null;
-  status: AttendanceStatus | null;
-  notes: string | null;
-  sessionNotes: SessionNote[];
-}
-
-export interface YouthProgramCycleAttendance {
-  programCycle: {
-    programId: string;
-    cycleId: string;
-    cycle: string;
-    program: string;
-    enrollmentRequired: boolean;
-  };
-  sessions: YouthAttendanceSession[];
-}
 
 export interface SetYouthAttendanceRecord {
   sessionId: string;
@@ -32,11 +9,11 @@ export interface SetYouthAttendanceRecord {
 }
 
 export interface SessionNoteTarget {
-  session: YouthAttendanceSession;
+  session: AttendanceSession;
   note: SessionNote | null;
 }
 
 export interface SessionNoteUnlinkTarget {
-  session: YouthAttendanceSession;
+  session: AttendanceSession;
   note: SessionNote;
 }

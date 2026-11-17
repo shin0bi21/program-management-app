@@ -36,6 +36,7 @@ describe('SessionAttendanceItem', () => {
       onUnlinkNote={onUnlinkNote}
     />);
 
+    expect(screen.queryByText(note.details)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
     fireEvent.click(screen.getByRole('button', { name: 'Edit session note' }));
     fireEvent.click(screen.getByRole('button', { name: 'Unlink session note' }));

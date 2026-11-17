@@ -19,7 +19,7 @@ const program: Program = {
 export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
   const client = useMemo(() => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-    const queryKey = [...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: program.id }];
+    const queryKey = [...PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY, { programId: program.id, includeAllPrograms: false }];
     if (loading) {
       void queryClient.fetchQuery({ queryKey, queryFn: () => new Promise<ProgramCycleAssignment[]>(() => {}) });
     } else {
@@ -30,13 +30,13 @@ export function ProgramDashboard({ loading = false }: { loading?: boolean }) {
         enrolledCount: 12,
         uniqueAttendeeCount: 10,
       }]);
-      queryClient.setQueryData<AttendanceData>(['programs', 'cycle-attendance', program.id, 'cycle-1'], {
+      queryClient.setQueryData<AttendanceData>(['programs', 'cycle-attendance', program.id, 'cycle-1'], { groups: [{
         programCycle: {
           programId: program.id, program: program.title, cycleId: 'cycle-1', cycle: 'Current Cycle', enrollmentRequired: true,
         },
         youth: [],
         averageAttendance: 75,
-      });
+      }] });
     }
     return queryClient;
   }, [loading]);

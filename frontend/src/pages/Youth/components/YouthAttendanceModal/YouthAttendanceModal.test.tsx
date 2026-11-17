@@ -5,7 +5,7 @@ import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
 
 const api = vi.hoisted(() => ({
-  setYouthProgramCycleAttendance: vi.fn(),
+  setAttendance: vi.fn(),
 }));
 const sessionNoteApi = vi.hoisted(() => ({
   createSessionNote: vi.fn(),
@@ -37,7 +37,8 @@ const attendance = {
     program: programCycle.program,
     enrollmentRequired: programCycle.enrollmentRequired,
   },
-  sessions: [
+  averageAttendance: 50,
+  youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 1, sessions: [
     {
       id: 'session-2', sessionType: 'Workshop', title: 'Teamwork',
       date: '2026-07-21', startTime: '17:00', completed: true,
@@ -55,14 +56,14 @@ const attendance = {
         youth: [{ youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test' }],
       }],
     },
-  ],
+  ] }],
 };
 
 describe('YouthAttendanceModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.setYouthProgramCycleAttendance.mockResolvedValue({
-      ...attendance, presentCount: 1, lateCount: 0, absentCount: 1, youth: makeYouthProfile(),
+    api.setAttendance.mockResolvedValue({
+      attendance: { groups: [attendance] }, updatedYouth: makeYouthProfile(),
     });
     sessionNoteApi.createSessionNote.mockResolvedValue({});
     sessionNoteApi.unlinkSessionNoteYouth.mockResolvedValue(undefined);
@@ -72,7 +73,7 @@ describe('YouthAttendanceModal', () => {
     sessionNoteApi.updateSessionNote.mockResolvedValue({});
   });
 
-  it('shows note metadata in the row and full details on demand', async () => {
+  it('opens and closes details for the selected session note', async () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
@@ -84,25 +85,11 @@ describe('YouthAttendanceModal', () => {
       />,
     );
 
-    expect(await screen.findByText('Notes (1)')).toBeInTheDocument();
-    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Bilal Khan')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View session note' }));
     const detailsDialog = screen.getByRole('dialog', { name: 'Session Note' });
     expect(screen.getByText('Led the opening activity.')).toBeInTheDocument();
     fireEvent.click(within(detailsDialog).getByText('Close'));
-    expect(screen.getByText('Notes (0)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Notes (0)' })).not.toBeInTheDocument();
-    expect(screen.queryByText('No session notes linked to this youth.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide all notes' })).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Notes (1)' }));
-    expect(screen.queryByText('Led the opening activity.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show all notes' })).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(screen.getByRole('button', { name: 'Show all notes' }));
-    expect(screen.getByRole('button', { name: 'View session note' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Hide all notes' }));
-    expect(screen.queryByRole('button', { name: 'View session note' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Session Note' })).not.toBeInTheDocument();
   });
 
   it('adds a prelinked youth note without showing link controls', async () => {
@@ -135,8 +122,8 @@ describe('YouthAttendanceModal', () => {
     expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
   });
 
-  it('edits and unlinks session notes without deleting them', async () => {
-    const view = render(
+  it('edits a session note with the selected youth link preserved', async () => {
+    render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
         attendance={attendance}
@@ -154,26 +141,6 @@ describe('YouthAttendanceModal', () => {
       'session-1',
       'note-1',
       expect.objectContaining({ details: 'Updated participation', youthIds: ['youth-1'] }),
-    ));
-
-    view.unmount();
-    render(
-      <YouthAttendanceModal
-        youth={makeYouthProfile({ id: 'youth-1' })}
-        attendance={attendance}
-        refresh={vi.fn().mockResolvedValue(undefined)}
-        canManageSessionNotes
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />,
-    );
-    fireEvent.click(await screen.findByRole('button', { name: 'Unlink session note' }));
-    expect(screen.getByText(/The session note will remain available/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(sessionNoteApi.unlinkSessionNoteYouth).toHaveBeenCalledWith(
-      'session-1',
-      'note-1',
-      'youth-1',
     ));
   });
 
@@ -196,7 +163,7 @@ describe('YouthAttendanceModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Late' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(api.setYouthProgramCycleAttendance).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.setAttendance).toHaveBeenCalledWith(
       'youth-1',
       { programId: 'program-1', cycleId: 'cycle-1' },
       [

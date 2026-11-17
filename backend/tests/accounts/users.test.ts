@@ -668,7 +668,7 @@ describe('Accounts API', () => {
 
     it('should reject unauthorized staff from toggling active', async () => {
       const targetUser = await seedTestUser({ email: `patch-target-${Date.now()}@test.local`, role: 'staff' });
-      const staffUser = await seedTestUser({ email: `patch-actor-${Date.now()}@test.local`, role: 'staff' });
+      const staffUser = await seedTestUser({ email: `patch-user-${Date.now()}@test.local`, role: 'staff' });
       const staffToken = generateToken(staffUser.userId, 'staff', staffUser.email);
 
       const res = await request(app)

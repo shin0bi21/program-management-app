@@ -1,6 +1,6 @@
 import type { YouthAttendanceResult } from './youthAttendance.api';
 import type { FormEvent } from 'react';
-import type { YouthProgramCycleAttendance } from './types';
+import type { AttendanceGroup, AttendanceYouth } from '../../../../common/features/Attendance/attendance.api';
 import { faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../../../../common/components/Button/Button';
@@ -15,7 +15,7 @@ import './YouthAttendanceModal.css';
 
 interface YouthAttendanceModalProps {
   youth: YouthProfile | null;
-  attendance: YouthProgramCycleAttendance | null;
+  attendance: AttendanceGroup | null;
   refresh: () => Promise<unknown>;
   canManageSessionNotes?: boolean;
   onClose: () => void;
@@ -30,9 +30,12 @@ interface YouthAttendanceModalProps {
 export default function YouthAttendanceModal({ youth, attendance, ...props }: YouthAttendanceModalProps) {
   if (!youth || !attendance) return null;
 
+  const participant = attendance.youth.find(person => person.id === youth.id);
+  if (!participant) return null;
+
   const { programId, cycleId } = attendance.programCycle;
   return <AttendanceForm key={`${youth.id}:${programId}:${cycleId}`}
-    youth={youth} attendance={attendance} {...props} />;
+    youth={youth} attendance={attendance} participant={participant} {...props} />;
 }
 
 /**
@@ -40,14 +43,14 @@ export default function YouthAttendanceModal({ youth, attendance, ...props }: Yo
  * @param props - Loaded cycle attendance, youth and completion/refresh actions.
  * @example <AttendanceForm {...loadedAttendanceProps} />
  */
-function AttendanceForm({ youth, attendance, refresh, canManageSessionNotes = false, onClose, onSaved }: Omit<YouthAttendanceModalProps, 'youth' | 'attendance'> & {
-  youth: YouthProfile; attendance: YouthProgramCycleAttendance;
+function AttendanceForm({ youth, attendance, participant, refresh, canManageSessionNotes = false, onClose, onSaved }: Omit<YouthAttendanceModalProps, 'youth' | 'attendance'> & {
+  youth: YouthProfile; attendance: AttendanceGroup; participant: AttendanceYouth;
 }) {
   const { programCycle } = attendance;
   const { selections, updateStatus, save, submitStatus, statusMessage, submissionComplete } = useYouthAttendance({
     youthId: youth.id, attendance, onSaved,
   });
-  const attendanceSessions = attendance.sessions;
+  const attendanceSessions = participant.sessions;
   const sessionNotes = useYouthSessionNotes({
     youthId: youth.id,
     sessions: attendanceSessions,
@@ -73,7 +76,7 @@ function AttendanceForm({ youth, attendance, refresh, canManageSessionNotes = fa
           <ModalFormFooter
             formId="youth-attendance-form"
             submitStatus={submitStatus}
-            submitDisabled={!attendance.sessions.length}
+            submitDisabled={!participant.sessions.length}
             onClose={onClose}
           />
         )}
@@ -101,13 +104,13 @@ function AttendanceForm({ youth, attendance, refresh, canManageSessionNotes = fa
                 )}
               </div>
 
-              {attendance.sessions.length === 0 && (
+              {participant.sessions.length === 0 && (
                 <p className="page-empty">No sessions are available for this program and cycle.</p>
               )}
 
-              {attendance.sessions.length > 0 && (
+              {participant.sessions.length > 0 && (
                 <div className="youth-attendance-modal__sessions">
-                  {attendance.sessions.map(session => (
+                  {participant.sessions.map(session => (
                     <SessionAttendanceItem
                       key={session.id}
                       session={session}

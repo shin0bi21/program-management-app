@@ -7,12 +7,12 @@ import { getHoursRows } from './hoursRowQuery';
 
 /**
  * Lists matching hours entries.
- * @param actor - Actor whose staff scope constrains the hours collection.
+ * @param user - User whose staff scope constrains the hours collection.
  * @param filterValues - Validated domain/date filters, sorting, and cursor inputs.
  * @returns A bounded page with numeric hours and canonical entry details.
- * @example getHoursList(actor, filterValues) // { rows, nextCursor }
+ * @example getHoursList(user, filterValues) // { rows, nextCursor }
  */
-export function getHoursList(actor: AccessTokenPayload, filterValues: HoursTableQuery) {
+export function getHoursList(user: AccessTokenPayload, filterValues: HoursTableQuery) {
   // 1. Filter canonical hours rows by the selected values and inclusive dates.
   const appliedFilters = sql`
     ${buildHoursFilters(filterValues)}
@@ -20,7 +20,7 @@ export function getHoursList(actor: AccessTokenPayload, filterValues: HoursTable
       ? sql`entry.date BETWEEN ${filterValues.start}::date AND ${filterValues.end}::date`
       : sql`TRUE`}
   `;
-  const rowsQuery = getHoursRows(actor, appliedFilters);
+  const rowsQuery = getHoursRows(user, appliedFilters);
 
   // 2. Sort and paginate the complete rows using the selected field.
   const sortValue = {

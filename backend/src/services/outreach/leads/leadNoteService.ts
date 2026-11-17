@@ -16,7 +16,7 @@ export async function getLeadNotes(leadId: string) {
   `;
 }
 
-export async function createLeadNote(leadId: string, data: SetLeadNoteInput, actorId: string) {
+export async function createLeadNote(leadId: string, data: SetLeadNoteInput, userId: string) {
   const transactionId = crypto.randomUUID();
   const noteId = await sql.begin(async rawTx => {
     const tx = asTransactionSql(rawTx);
@@ -25,10 +25,10 @@ export async function createLeadNote(leadId: string, data: SetLeadNoteInput, act
 
     const notes = await tx<{ id: string }[]>`
       INSERT INTO lead_notes (lead_id, category, details, created_by, updated_by)
-      VALUES (${leadId}, 'follow_up', ${data.details}, ${actorId}, ${actorId})
+      VALUES (${leadId}, 'follow_up', ${data.details}, ${userId}, ${userId})
       RETURNING id
     `;
-    await audit(tx, actorId, transactionId, 'lead_notes', notes[0].id, 'INSERT', null, {
+    await audit(tx, userId, transactionId, 'lead_notes', notes[0].id, 'INSERT', null, {
       leadId,
       category: 'follow_up',
       details: data.details,
@@ -46,7 +46,7 @@ export async function updateLeadNoteDetails(
   leadId: string,
   noteId: string,
   data: UpdateLeadNoteInput,
-  actorId: string,
+  userId: string,
 ) {
   const transactionId = crypto.randomUUID();
 
@@ -61,10 +61,10 @@ export async function updateLeadNoteDetails(
 
     await tx`
       UPDATE lead_notes
-      SET details = ${data.details}, updated_by = ${actorId}, updated_at = NOW()
+      SET details = ${data.details}, updated_by = ${userId}, updated_at = NOW()
       WHERE id = ${noteId} AND lead_id = ${leadId}
     `;
-    await audit(tx, actorId, transactionId, 'lead_notes', noteId, 'UPDATE',
+    await audit(tx, userId, transactionId, 'lead_notes', noteId, 'UPDATE',
       { details: notes[0].details }, { details: data.details });
   });
 
@@ -74,7 +74,7 @@ export async function updateLeadNoteDetails(
   return note;
 }
 
-export async function deleteLeadNote(leadId: string, noteId: string, actorId: string) {
+export async function deleteLeadNote(leadId: string, noteId: string, userId: string) {
   const transactionId = crypto.randomUUID();
 
   return sql.begin(async rawTx => {
@@ -86,7 +86,7 @@ export async function deleteLeadNote(leadId: string, noteId: string, actorId: st
     `;
     if (!notes.length) throw new NotFoundError('Lead note not found');
 
-    await audit(tx, actorId, transactionId, 'lead_notes', noteId, 'DELETE', notes[0], null);
+    await audit(tx, userId, transactionId, 'lead_notes', noteId, 'DELETE', notes[0], null);
     return { id: noteId };
   });
 }

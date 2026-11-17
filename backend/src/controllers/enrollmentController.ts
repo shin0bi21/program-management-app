@@ -6,11 +6,11 @@ import { setProgramRoster } from '../services/programming/programCycles/programR
 import type { EnrollYouthInput, SetProgramRosterInput } from '../validation/programmingSchemas';
 
 /**
- * Reads the actor established by authentication middleware.
+ * Reads the user established by authentication middleware.
  * @param req - Request after authenticateToken has run.
- * @example actor(req).userId // authenticated account ID
+ * @example user(req).userId // authenticated account ID
  */
-const actor = (req: Request) => (req as AuthRequest).user!;
+const user = (req: Request) => (req as AuthRequest).user!;
 
 /**
  * Enrolls a validated youth batch in the requested assignment.
@@ -19,7 +19,7 @@ const actor = (req: Request) => (req as AuthRequest).user!;
  * @example A valid enrollment returns status 201.
  */
 export const handleEnrollYouth = async (req: Request, res: Response) => {
-  res.status(201).json(await enrollYouth(req.params.programId, req.params.cycleId, req.body as EnrollYouthInput, actor(req)));
+  res.status(201).json(await enrollYouth(req.params.programId, req.params.cycleId, req.body as EnrollYouthInput, user(req)));
 };
 
 /**
@@ -29,7 +29,7 @@ export const handleEnrollYouth = async (req: Request, res: Response) => {
  * @example Withdrawal sets the current business date without deleting attendance.
  */
 export const handleWithdrawYouth = async (req: Request, res: Response) => {
-  res.json(await withdrawYouth(req.params.programId, req.params.cycleId, req.params.youthId, actor(req)));
+  res.json(await withdrawYouth(req.params.programId, req.params.cycleId, req.params.youthId, user(req)));
 };
 
 /**
@@ -39,5 +39,5 @@ export const handleWithdrawYouth = async (req: Request, res: Response) => {
  * @example A body of { youthIds: [] } withdraws all current members.
  */
 export const handleSetProgramRoster = async (req: Request, res: Response) => {
-  res.json(await setProgramRoster(req.params.programId, req.params.cycleId, req.body as SetProgramRosterInput, actor(req)));
+  res.json(await setProgramRoster(req.params.programId, req.params.cycleId, req.body as SetProgramRosterInput, user(req)));
 };

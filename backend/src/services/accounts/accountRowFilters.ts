@@ -5,11 +5,11 @@ import type { AccountQuery } from '../../validation/accountSchemas';
 
 /**
  * Builds filters for table and calendar items.
- * @param actor - Actor whose role limits visible accounts.
+ * @param user - User whose role limits visible accounts.
  * @param filterValues - Validated role, status, and search selections.
- * @example buildAccountFilters(actor, filterValues) // scoped account filters
+ * @example buildAccountFilters(user, filterValues) // scoped account filters
  */
-export function buildAccountFilters(actor: AccessTokenPayload, filterValues: AccountQuery) {
+export function buildAccountFilters(user: AccessTokenPayload, filterValues: AccountQuery) {
   // 1. Collect the selected filters.
   const filters = [];
   if (filterValues.roles.length) {
@@ -24,7 +24,7 @@ export function buildAccountFilters(actor: AccessTokenPayload, filterValues: Acc
   }
 
   // 2. Apply the filters within account access.
-  let appliedFilters = accountAccessPredicate(actor, sql`ur.name`);
+  let appliedFilters = accountAccessPredicate(user, sql`ur.name`);
   for (const filter of filters) {
     appliedFilters = sql`${appliedFilters} AND ${filter}`;
   }

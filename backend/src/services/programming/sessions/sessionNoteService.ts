@@ -1,6 +1,6 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
+import { assertSessionAccess, programAccessPredicate } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionNoteInput,
@@ -10,11 +10,11 @@ import type {
 /**
  * Lists notes and linked youth for an accessible session.
  * @param sessionId - Session whose notes are requested.
- * @param actor - User whose session access is enforced.
- * @example getSessionNotes(sessionId, actor) // notes ordered newest first
+ * @param user - User whose session access is enforced.
+ * @example getSessionNotes(sessionId, user) // notes ordered newest first
  */
-export async function getSessionNotes(sessionId: string, actor: AccessTokenPayload) {
-  await assertCanAccessSession(actor, sessionId);
+export async function getSessionNotes(sessionId: string, user: AccessTokenPayload) {
+  await assertSessionAccess(user, sessionId);
   return sql`
     SELECT
       sn.id,
@@ -49,15 +49,15 @@ export async function getSessionNotes(sessionId: string, actor: AccessTokenPaylo
  * Creates a note and eligible youth links in one transaction.
  * @param sessionId - Accessible session receiving the note.
  * @param data - Validated note content and roster youth IDs.
- * @param actor - User checked for access and recorded as author.
- * @example createSessionNote(sessionId, data, actor) // saved note with linked youth
+ * @param user - User checked for access and recorded as author.
+ * @example createSessionNote(sessionId, data, user) // saved note with linked youth
  */
 export async function createSessionNote(
   sessionId: string,
   data: CreateSessionNoteInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   const noteId = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
@@ -88,8 +88,8 @@ export async function createSessionNote(
         ${sessionId},
         ${data.category},
         ${data.details},
-        ${actor.userId},
-        ${actor.userId}
+        ${user.userId},
+        ${user.userId}
       )
       RETURNING id
     `;
@@ -104,7 +104,7 @@ export async function createSessionNote(
     return notes[0].id;
   });
 
-  const notes = await getSessionNotes(sessionId, actor);
+  const notes = await getSessionNotes(sessionId, user);
   const createdNote = notes.find(note => note.id === noteId);
   if (!createdNote) throw new NotFoundError('Session note not found after creation');
   return createdNote;
@@ -115,16 +115,16 @@ export async function createSessionNote(
  * @param sessionId - Accessible session owning the note.
  * @param noteId - Existing note; a missing target is a not-found error.
  * @param data - Validated replacement content and youth IDs.
- * @param actor - User checked for access and recorded as updater.
- * @example updateSessionNote(sessionId, noteId, data, actor) // complete saved note
+ * @param user - User checked for access and recorded as updater.
+ * @example updateSessionNote(sessionId, noteId, data, user) // complete saved note
  */
 export async function updateSessionNote(
   sessionId: string,
   noteId: string,
   data: UpdateSessionNoteInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const notes = await trx<{ id: string; enrollmentRequired: boolean }[]>`
@@ -150,7 +150,7 @@ export async function updateSessionNote(
       SET category = ${data.category},
           details = ${data.details},
           updated_at = NOW(),
-          updated_by = ${actor.userId}
+          updated_by = ${user.userId}
       WHERE id = ${noteId}
     `;
     await trx`DELETE FROM session_note_has_youth WHERE note_id = ${noteId}`;
@@ -163,7 +163,7 @@ export async function updateSessionNote(
     }
   });
 
-  const notes = await getSessionNotes(sessionId, actor);
+  const notes = await getSessionNotes(sessionId, user);
   const updatedNote = notes.find(note => note.id === noteId);
   if (!updatedNote) throw new NotFoundError('Session note not found after update');
   return updatedNote;
@@ -173,15 +173,15 @@ export async function updateSessionNote(
  * Deletes a note belonging to an accessible session.
  * @param sessionId - Session whose access is checked.
  * @param noteId - Note to remove; missing targets are not-found errors.
- * @param actor - User requesting deletion.
- * @example deleteSessionNote(sessionId, noteId, actor) // removes the note
+ * @param user - User requesting deletion.
+ * @example deleteSessionNote(sessionId, noteId, user) // removes the note
  */
 export async function deleteSessionNote(
   sessionId: string,
   noteId: string,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   const deleted = await sql`
     DELETE FROM session_notes
     WHERE id = ${noteId}
@@ -196,16 +196,16 @@ export async function deleteSessionNote(
  * @param sessionId - Accessible session owning the note.
  * @param noteId - Note whose link changes.
  * @param youthId - Linked youth; missing links are not-found errors.
- * @param actor - User requesting the change.
- * @example unlinkYouthFromSessionNote(sessionId, noteId, youthId, actor) // preserves other links
+ * @param user - User requesting the change.
+ * @example unlinkYouthFromSessionNote(sessionId, noteId, youthId, user) // preserves other links
  */
 export async function unlinkYouthFromSessionNote(
   sessionId: string,
   noteId: string,
   youthId: string,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   const unlinked = await sql`
     DELETE FROM session_note_has_youth sny
     USING session_notes sn
@@ -219,15 +219,15 @@ export async function unlinkYouthFromSessionNote(
 }
 
 /**
- * Lists a youth profile's linked notes within the actor's program scope.
+ * Lists a youth profile's linked notes within the user's program scope.
  * @param youthId - Required youth profile whose notes are requested.
- * @param actor - User whose program scope restricts the result.
+ * @param user - User whose program scope restricts the result.
  * @param programCycle - Optional program and cycle pair restricting the notes.
- * @example listSessionNotesForYouth(youthId, actor) // accessible notes across cycles
+ * @example listSessionNotesForYouth(youthId, user) // accessible notes across cycles
  */
 export async function listSessionNotesForYouth(
   youthId: string,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   programCycle?: { programId: string; cycleId: string },
 ) {
   const profiles = await sql`SELECT 1 FROM youth_profiles WHERE user_id = ${youthId} LIMIT 1`;
@@ -270,7 +270,7 @@ export async function listSessionNotesForYouth(
     LEFT JOIN users author ON author.id = sn.created_by
     LEFT JOIN session_note_has_youth linked_note ON linked_note.note_id = sn.id
     LEFT JOIN users linked_youth ON linked_youth.id = linked_note.youth_id
-    WHERE ${programAccessPredicate(actor, sql`p.id`)}
+    WHERE ${programAccessPredicate(user, sql`p.id`)}
       AND ${programCycle ? sql`cs.program_id = ${programCycle.programId} AND cs.cycle_id = ${programCycle.cycleId}` : sql`TRUE`}
     GROUP BY sn.id, author.id, cs.id, cycle.id, p.id
     ORDER BY cs.date DESC, cs.start_time DESC, sn.created_at DESC

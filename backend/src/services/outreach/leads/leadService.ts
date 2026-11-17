@@ -24,11 +24,11 @@ export async function getLead(id: string, query = sql) {
 /**
  * Upserts and audits intake details independently of any linked Youth profile.
  * @param data - Validated intake fields; omitted notes are stored as null.
- * @param actorId - Staff user recorded on the save.
+ * @param userId - Staff user recorded on the save.
  * @param id - Lead identity; an absent or unknown ID creates intake. Signed-up intake remains editable.
- * @example setLead(data, actorId, id) // creates or replaces intake at this ID
+ * @example setLead(data, userId, id) // creates or replaces intake at this ID
  */
-export async function setLead(data: CreateLeadInput, actorId: string, id?: string) {
+export async function setLead(data: CreateLeadInput, userId: string, id?: string) {
   return sql.begin(async rawTx => {
     const trx = asTransactionSql(rawTx);
 
@@ -42,7 +42,7 @@ export async function setLead(data: CreateLeadInput, actorId: string, id?: strin
       discoverySource: data.discoverySource,
       notes: data.notes ?? null,
       dateOfBirth: data.dateOfBirth,
-      updatedBy: actorId,
+      updatedBy: userId,
     };
 
     // 2. Save intake while retaining an existing lead's origin and workflow metadata.
@@ -55,7 +55,7 @@ export async function setLead(data: CreateLeadInput, actorId: string, id?: strin
         ...(id ? { id } : {}),
         origin: 'internal',
         submittedByRole: 'staff',
-        createdBy: actorId,
+        createdBy: userId,
         ...values,
       })}
       ON CONFLICT (id) DO UPDATE
@@ -71,7 +71,7 @@ export async function setLead(data: CreateLeadInput, actorId: string, id?: strin
     if (!record) throw new InternalServerError('Lead save returned no record');
 
     // 3. Record the database's before and after values within the same transaction.
-    await audit(trx, actorId, crypto.randomUUID(), 'leads', record.id,
+    await audit(trx, userId, crypto.randomUUID(), 'leads', record.id,
       record.oldData ? 'UPDATE' : 'INSERT', record.oldData, record.newData);
 
     // 4. Return the canonical row before committing the save.
@@ -133,10 +133,10 @@ export async function createExternalLead(
  * Updates an unconverted lead's status and audits the change in one transaction.
  * @param id - Lead ID; missing records are 404 and converted records are 409.
  * @param data - Validated destination status.
- * @param actorId - Staff user recorded on the update and audit.
- * @example await updateLeadStatus(id, data, actorId) // canonical saved lead
+ * @param userId - Staff user recorded on the update and audit.
+ * @example await updateLeadStatus(id, data, userId) // canonical saved lead
  */
-export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, actorId: string) {
+export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, userId: string) {
   // 1. Assign one audit transaction to the status change.
   const transactionId = crypto.randomUUID();
 
@@ -166,14 +166,14 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
           ELSE NOW()
         END,
         updated_at = NOW(),
-        updated_by = ${actorId}
+        updated_by = ${userId}
       WHERE id = ${id}
     `;
     const [updated] = await getLeadRows(trx`lead.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Updated lead record is unavailable');
 
     // 5. Audit the status transition in the same transaction.
-    await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE', { ...lead }, { ...updated });
+    await audit(trx, userId, transactionId, 'leads', id, 'UPDATE', { ...lead }, { ...updated });
     return updated;
   });
 }
@@ -182,13 +182,13 @@ export async function updateLeadStatus(id: string, data: UpdateLeadStatusInput, 
  * Converts an unconverted intake into a youth profile and optional program enrollment atomically.
  * @param id - Lead ID, locked until conversion completes; missing leads are 404 and invalid states are 409.
  * @param data - Validated birthdate override, optional program/cycle, and note category.
- * @param actor - Staff actor for audit ownership and permission-gated assignment response data.
+ * @param user - Staff user for audit ownership and permission-gated assignment response data.
  * @returns The converted lead and, when readable, its updated program-cycle row.
- * @example await signUpLead(id, data, actor) // { lead, updatedProgramCycle? }
+ * @example await signUpLead(id, data, user) // { lead, updatedProgramCycle? }
  */
-export async function signUpLead(id: string, data: SignUpLeadInput, actor: AccessTokenPayload) {
+export async function signUpLead(id: string, data: SignUpLeadInput, user: AccessTokenPayload) {
   // 1. Start the lead signup.
-  const actorId = actor.userId;
+  const userId = user.userId;
   const transactionId = crypto.randomUUID();
 
   return sql.begin(async rawTx => {
@@ -214,7 +214,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
 
     // 4. Lock and validate the optional destination enrollment.
     if (data.programId && data.cycleId) {
-      // Lead conversion may enroll in an eligible program outside the actor’s assigned programs.
+      // Lead conversion may enroll in an eligible program outside the user’s assigned programs.
       await trx`
         SELECT id
         FROM programs
@@ -263,8 +263,8 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
           FROM user_roles
           WHERE name = 'youth'
         ),
-        ${actorId},
-        ${actorId}
+        ${userId},
+        ${userId}
       )
       RETURNING id
     `;
@@ -272,7 +272,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     const youthId = users[0].id;
 
     // 6. Record the new youth account.
-    await audit(trx, actorId, transactionId, 'users', youthId, 'INSERT', null, {
+    await audit(trx, userId, transactionId, 'users', youthId, 'INSERT', null, {
       id: youthId,
       firstName: lead.youthFirstName,
       lastName: lead.youthLastName,
@@ -290,9 +290,9 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     // 8. Create and audit the youth profile.
     await trx`
       INSERT INTO youth_profiles (user_id, date_of_birth, school_id, created_by, updated_by)
-      VALUES (${youthId}, ${dateOfBirth}, ${schoolId}, ${actorId}, ${actorId})
+      VALUES (${youthId}, ${dateOfBirth}, ${schoolId}, ${userId}, ${userId})
     `;
-    await audit(trx, actorId, transactionId, 'youth_profiles', youthId, 'INSERT', null, {
+    await audit(trx, userId, transactionId, 'youth_profiles', youthId, 'INSERT', null, {
       userId: youthId,
       dateOfBirth,
       schoolId,
@@ -302,7 +302,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     if (lead.notes?.trim()) {
       await trx`
         INSERT INTO youth_profile_notes (youth_id, category, details, created_by, updated_by)
-        VALUES (${youthId}, ${data.noteCategory}, ${lead.notes.trim()}, ${actorId}, ${actorId})
+        VALUES (${youthId}, ${data.noteCategory}, ${lead.notes.trim()}, ${userId}, ${userId})
       `;
     }
 
@@ -312,13 +312,13 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
         INSERT INTO program_enrollments (
           program_id, cycle_id, youth_id, created_by, updated_by
         )
-        VALUES (${data.programId}, ${data.cycleId}, ${youthId}, ${actorId}, ${actorId})
+        VALUES (${data.programId}, ${data.cycleId}, ${youthId}, ${userId}, ${userId})
         RETURNING
           id,
           enrolled_on
       `;
       if (!enrollments.length) throw new InternalServerError('Enrollment creation returned no record');
-      await audit(trx, actorId, transactionId, 'program_enrollments', enrollments[0].id, 'INSERT', null, {
+      await audit(trx, userId, transactionId, 'program_enrollments', enrollments[0].id, 'INSERT', null, {
         id: enrollments[0].id,
         programId: data.programId,
         cycleId: data.cycleId,
@@ -331,7 +331,7 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
     await setContacts(youthId, [{
       phoneNumber: lead.contactPhoneNumber,
       type: lead.contactRelationship,
-    }], actorId, transactionId, trx);
+    }], userId, transactionId, trx);
 
     // 12. Mark the intake converted and audit its new youth link.
     await trx`
@@ -341,18 +341,18 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
         converted_youth_id = ${youthId},
         status_updated_at = NOW(),
         updated_at = NOW(),
-        updated_by = ${actorId}
+        updated_by = ${userId}
       WHERE id = ${id}
     `;
-    await audit(trx, actorId, transactionId, 'leads', id, 'UPDATE',
+    await audit(trx, userId, transactionId, 'leads', id, 'UPDATE',
       { status: lead.status, convertedYouthId: null, dateOfBirth: lead.dateOfBirth },
       { dateOfBirth, status: 'signed_up', convertedYouthId: youthId });
 
     // 13. Return the lead and affected rows.
     const [leadRecord] = await getLeadRows(trx`lead.id = ${id}`, trx);
     if (!leadRecord) throw new InternalServerError('Converted lead record is unavailable');
-    const [updatedProgramCycle] = data.programId && data.cycleId && actor.permissions.includes('read:programs')
-      ? await getProgramCycleRowsByKeys(trx, actor, [{ programId: data.programId, cycleId: data.cycleId }])
+    const [updatedProgramCycle] = data.programId && data.cycleId && user.permissions.includes('read:programs')
+      ? await getProgramCycleRowsByKeys(trx, user, [{ programId: data.programId, cycleId: data.cycleId }])
       : [];
     return { lead: leadRecord, ...(updatedProgramCycle ? { updatedProgramCycle } : {}) };
   });
@@ -361,10 +361,10 @@ export async function signUpLead(id: string, data: SignUpLeadInput, actor: Acces
 /**
  * Deletes an unconverted lead and audits its previous row in one transaction.
  * @param id - Lead ID; missing records are 404 and converted records are 409.
- * @param actorId - Staff user recorded as the audit actor.
- * @example await deleteLead(id, actorId) // { id }
+ * @param userId - Staff user recorded as the audit user.
+ * @example await deleteLead(id, userId) // { id }
  */
-export async function deleteLead(id: string, actorId: string) {
+export async function deleteLead(id: string, userId: string) {
   // 1. Assign one audit transaction to the deletion.
   const transactionId = crypto.randomUUID();
 
@@ -390,7 +390,7 @@ export async function deleteLead(id: string, actorId: string) {
       FROM leads
       WHERE id = ${id}
     `;
-    await audit(trx, actorId, transactionId, 'leads', id, 'DELETE', { ...lead }, null);
+    await audit(trx, userId, transactionId, 'leads', id, 'DELETE', { ...lead }, null);
     return { id };
   });
 }

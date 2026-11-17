@@ -1,6 +1,6 @@
 import { sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 
 export interface ProgramCycleRosterYouthRow {
@@ -22,15 +22,15 @@ export interface ProgramCycleRosterYouthRow {
  * Lists age-eligible youth available for this enrollment period and retained members.
  * @param programId - Enrollment-based program whose roster is being edited.
  * @param cycleId - Assigned cycle that bounds a new enrollment.
- * @param actor - Actor whose program access must be checked.
+ * @param user - User whose program access must be checked.
  * @param query - Database client or transaction used for the roster read.
  * @returns Available candidates and retained youth, with date-only birth dates and ages in years.
  * @throws ConflictError when the program does not use enrollment.
- * @example getProgramRosterYouth(programId, cycleId, actor) // excludes conflicting programs
+ * @example getProgramRosterYouth(programId, cycleId, user) // excludes conflicting programs
  */
-export async function getProgramRosterYouth(programId: string, cycleId: string, actor: AccessTokenPayload, query = sql) {
+export async function getProgramRosterYouth(programId: string, cycleId: string, user: AccessTokenPayload, query = sql) {
   // 1. Check the selected enrollment-based program and cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(user, programId, cycleId);
 
   const ageInYears = query`EXTRACT(YEAR FROM AGE(CURRENT_DATE, profile.date_of_birth))::int`;
   const [programCycle] = await query<Array<{

@@ -95,17 +95,17 @@ export function programCycleKeysPredicate(keys: readonly ProgramCycleKey[]) {
 /**
  * Loads accessible rows for selected program-cycle pairs.
  * @param database - Database client for the read.
- * @param actor - User requesting the rows.
+ * @param user - User requesting the rows.
  * @param keys - Program and cycle IDs to load.
- * @example getProgramCycleRowsByKeys(trx, actor, keys)
+ * @example getProgramCycleRowsByKeys(trx, user, keys)
  */
-export function getProgramCycleRowsByKeys(database: typeof sql, actor: AccessTokenPayload, keys: readonly ProgramCycleKey[]) {
+export function getProgramCycleRowsByKeys(database: typeof sql, user: AccessTokenPayload, keys: readonly ProgramCycleKey[]) {
   if (!keys.length) return Promise.resolve([] as ProgramCycleRow[]);
 
   return database<ProgramCycleRow[]>`
     ${getProgramCycleRows(database`
       ${programCycleKeysPredicate(keys)}
-      AND ${programAccessPredicate(actor, database`pc.program_id`)}
+      AND ${programAccessPredicate(user, database`pc.program_id`)}
     `, database)}
     ORDER BY pc.program_id, pc.cycle_id
   `;

@@ -10,7 +10,7 @@ import type {
   HoursSessionQuery,
   UpdateHoursPlacementInput,
 } from '../../../validation/hoursSchemas';
-import { assertCanSetHours } from '../../../policies/hoursPolicy';
+import { assertHoursWriteAccess } from '../../../policies/hoursPolicy';
 import { canWriteTaskFor } from '../../../policies/taskPolicy';
 import { getTask } from '../tasks/taskService';
 import {
@@ -25,14 +25,14 @@ import { buildHoursFilters } from './hoursRowFilters';
 
 /**
  * Lists hours matching the calendar filters.
- * @param actor - Actor whose staff scope limits the results.
+ * @param user - User whose staff scope limits the results.
  * @param query - Validated calendar filters.
- * @example getHoursCalendarData(actor, query) // matching entries
+ * @example getHoursCalendarData(user, query) // matching entries
  */
-export async function getHoursCalendarData(actor: AccessTokenPayload, query: HoursCalendarQuery) {
+export async function getHoursCalendarData(user: AccessTokenPayload, query: HoursCalendarQuery) {
   // 1. Load hours matching the calendar filters.
   return sql<HoursRow[]>`
-    ${getHoursRows(actor, sql`
+    ${getHoursRows(user, sql`
       ${query.start && query.end
         ? sql`entry.date BETWEEN ${query.start}::date AND ${query.end}::date`
         : sql`TRUE`}
@@ -53,14 +53,14 @@ export function getHoursReferenceData() {
 
 /**
  * Lists assigned sessions available for logging hours.
- * @param actor - Actor who must be allowed to log time for this staff member.
+ * @param user - User who must be allowed to log time for this staff member.
  * @param query - Staff member and work date.
- * @example getHoursSessions(actor, query) // matching session options
+ * @example getHoursSessions(user, query) // matching session options
  */
-export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSessionQuery) {
+export async function getHoursSessions(user: AccessTokenPayload, query: HoursSessionQuery) {
   // 1. Check access to the staff member.
-  assertCanSetHours(actor, query.staffId);
-  await assertActiveStaff(query.staffId);
+  assertHoursWriteAccess(user, query.staffId);
+  await assertStaffActive(query.staffId);
 
   // 2. Load assigned sessions for the work date.
   return sql<Array<{
@@ -88,18 +88,18 @@ export async function getHoursSessions(actor: AccessTokenPayload, query: HoursSe
 /**
  * Creates or updates an hours entry and returns its affected rows.
  * @param input - Validated time entry.
- * @param actor - Actor whose write access is enforced.
+ * @param user - User whose write access is enforced.
  * @param id - Existing entry ID; omit to create.
- * @example setHours(input, actor, id) // saved entry and affected tasks
+ * @example setHours(input, user, id) // saved entry and affected tasks
  */
 export async function setHours(
   input: SetHoursInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   id?: string,
 ) {
   // 1. Check access to the staff member.
-  assertCanSetHours(actor, input.staffId);
-  await assertActiveStaff(input.staffId);
+  assertHoursWriteAccess(user, input.staffId);
+  await assertStaffActive(input.staffId);
   const transactionId = crypto.randomUUID();
   let saved!: HoursRow;
   let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
@@ -110,21 +110,21 @@ export async function setHours(
     const scope = await resolveHoursScope(input, trx);
     await assertProgramExists(scope.programId, trx);
     const cycleId = await resolveCycleForDate(scope.date, scope.programId, trx);
-    const existing = id ? await getOwnedEntry(trx, id, actor) : null;
+    const existing = id ? await getOwnedEntry(trx, id, user) : null;
 
     // 3. Save the hours entry.
     const savedId = id
-      ? await updateHoursRecord(trx, id, input, scope, cycleId, actor.userId)
-      : await insertHoursRecord(trx, input, scope, cycleId, actor.userId);
-    [saved] = await getHoursRows(actor, trx`entry.id = ${savedId}`, trx);
+      ? await updateHoursRecord(trx, id, input, scope, cycleId, user.userId)
+      : await insertHoursRecord(trx, input, scope, cycleId, user.userId);
+    [saved] = await getHoursRows(user, trx`entry.id = ${savedId}`, trx);
     if (!saved) throw new InternalServerError('Saved hours record is unavailable');
 
     // 4. Complete the task if requested and record the change.
     const completeTask = !id && input.source === 'task' && input.completeTask;
-    await completeTaskFromHours(scope.taskId, completeTask, input.staffId, trx, actor, transactionId);
+    await completeTaskFromHours(scope.taskId, completeTask, input.staffId, trx, user, transactionId);
     await audit(
       trx,
-      actor.userId,
+      user.userId,
       transactionId,
       'time_entries',
       saved.id,
@@ -134,7 +134,7 @@ export async function setHours(
     );
 
     // 5. Load the affected tasks.
-    updatedTasks = await getAffectedTasks([existing?.taskId, scope.taskId], actor, trx);
+    updatedTasks = await getAffectedTasks([existing?.taskId, scope.taskId], user, trx);
   });
   return {
     ...saved,
@@ -146,13 +146,13 @@ export async function setHours(
  * Moves an hours entry to another work date.
  * @param id - Entry to move.
  * @param input - Validated destination date.
- * @param actor - Actor whose write access is enforced.
- * @example updateHoursPlacement(id, input, actor) // updated entry and affected tasks
+ * @param user - User whose write access is enforced.
+ * @example updateHoursPlacement(id, input, user) // updated entry and affected tasks
  */
 export async function updateHoursPlacement(
   id: string,
   input: UpdateHoursPlacementInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
   const transactionId = crypto.randomUUID();
   let updated!: HoursRow;
@@ -161,7 +161,7 @@ export async function updateHoursPlacement(
     const trx = asTransactionSql(tx);
 
     // 1. Load the entry and check access.
-    const existing = await getOwnedEntry(trx, id, actor);
+    const existing = await getOwnedEntry(trx, id, user);
     if (existing.sessionId && input.date !== existing.date) {
       throw new ConflictError('Session time must stay on the session date');
     }
@@ -172,16 +172,16 @@ export async function updateHoursPlacement(
       UPDATE time_entries
       SET date = ${input.date},
         cycle_id = ${cycleId},
-        updated_by = ${actor.userId},
+        updated_by = ${user.userId},
         updated_at = NOW()
       WHERE id = ${id}
     `;
-    [updated] = await getHoursRows(actor, trx`entry.id = ${id}`, trx);
+    [updated] = await getHoursRows(user, trx`entry.id = ${id}`, trx);
     if (!updated) throw new InternalServerError('Updated hours record is unavailable');
 
     // 3. Record the change and load affected tasks.
-    await audit(trx, actor.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
-    updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
+    await audit(trx, user.userId, transactionId, 'time_entries', id, 'UPDATE', { ...existing }, { ...updated });
+    updatedTasks = await getAffectedTasks([existing.taskId], user, trx);
   });
   return {
     ...updated,
@@ -192,17 +192,17 @@ export async function updateHoursPlacement(
 /**
  * Deletes an accessible hours entry and returns affected tasks.
  * @param id - Entry to delete.
- * @param actor - Actor whose write access is enforced.
- * @example deleteHours(id, actor) // deletion result
+ * @param user - User whose write access is enforced.
+ * @example deleteHours(id, user) // deletion result
  */
-export async function deleteHours(id: string, actor: AccessTokenPayload) {
+export async function deleteHours(id: string, user: AccessTokenPayload) {
   const transactionId = crypto.randomUUID();
   let updatedTasks: Awaited<ReturnType<typeof getTask>>[] = [];
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 1. Load the entry and check access.
-    const existing = await getOwnedEntry(trx, id, actor);
+    const existing = await getOwnedEntry(trx, id, user);
 
     // 2. Delete the entry and record the change.
     await trx`
@@ -210,10 +210,10 @@ export async function deleteHours(id: string, actor: AccessTokenPayload) {
       FROM time_entries
       WHERE id = ${id}
     `;
-    await audit(trx, actor.userId, transactionId, 'time_entries', id, 'DELETE', { ...existing }, null);
+    await audit(trx, user.userId, transactionId, 'time_entries', id, 'DELETE', { ...existing }, null);
 
     // 3. Load the affected tasks.
-    updatedTasks = await getAffectedTasks([existing.taskId], actor, trx);
+    updatedTasks = await getAffectedTasks([existing.taskId], user, trx);
   });
   return { message: 'Logged hours deleted', ...(updatedTasks.length ? { updatedTasks } : {}) };
 }
@@ -226,15 +226,15 @@ type ResolvedHoursScope = Awaited<ReturnType<typeof resolveHoursScope>>;
  * @param input - Validated entry.
  * @param scope - Resolved source and work date.
  * @param cycleId - Cycle covering the work date.
- * @param actorId - Actor recorded on the entry.
- * @example insertHoursRecord(trx, input, scope, cycleId, actorId) // new ID
+ * @param userId - User recorded on the entry.
+ * @example insertHoursRecord(trx, input, scope, cycleId, userId) // new ID
  */
 async function insertHoursRecord(
   trx: typeof sql,
   input: SetHoursInput,
   scope: ResolvedHoursScope,
   cycleId: string,
-  actorId: string,
+  userId: string,
 ) {
   // 1. Save the hours entry.
   const [created] = await trx<{ id: string }[]>`
@@ -244,7 +244,7 @@ async function insertHoursRecord(
     )
     VALUES (
       ${input.staffId}, ${scope.programId}, ${cycleId}, ${scope.category}, ${scope.taskId},
-      ${scope.sessionId}, ${scope.date}, ${input.hours}, ${input.note}, ${actorId}, ${actorId}
+      ${scope.sessionId}, ${scope.date}, ${input.hours}, ${input.note}, ${userId}, ${userId}
     )
     RETURNING id
   `;
@@ -259,8 +259,8 @@ async function insertHoursRecord(
  * @param input - Validated entry.
  * @param scope - Resolved source and work date.
  * @param cycleId - Cycle covering the work date.
- * @param actorId - Actor recorded on the entry.
- * @example updateHoursRecord(trx, id, input, scope, cycleId, actorId) // saved ID
+ * @param userId - User recorded on the entry.
+ * @example updateHoursRecord(trx, id, input, scope, cycleId, userId) // saved ID
  */
 async function updateHoursRecord(
   trx: typeof sql,
@@ -268,7 +268,7 @@ async function updateHoursRecord(
   input: SetHoursInput,
   scope: ResolvedHoursScope,
   cycleId: string,
-  actorId: string,
+  userId: string,
 ) {
   // 1. Save the changed hours entry.
   const [updated] = await trx<{ id: string }[]>`
@@ -282,7 +282,7 @@ async function updateHoursRecord(
       date = ${scope.date},
       hours = ${input.hours},
       note = ${input.note},
-      updated_by = ${actorId},
+      updated_by = ${userId},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING id
@@ -358,41 +358,41 @@ async function resolveHoursScope(input: SetHoursInput, trx: typeof sql) {
  * @param completeTask - Whether completion was requested.
  * @param staffId - Staff member who owns the task.
  * @param trx - Owning transaction.
- * @param actor - Actor whose task-write access is enforced.
+ * @param user - User whose task-write access is enforced.
  * @param transactionId - Audit group for this save.
- * @example completeTaskFromHours(taskId, false, staffId, trx, actor, transactionId) // no change
+ * @example completeTaskFromHours(taskId, false, staffId, trx, user, transactionId) // no change
  */
 async function completeTaskFromHours(
   taskId: string | null,
   completeTask: boolean,
   staffId: string,
   trx: typeof sql,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   transactionId: string,
 ) {
   // 1. Complete the task when requested.
   if (!taskId || !completeTask) return;
-  if (!canWriteTaskFor(actor, staffId)) {
+  if (!canWriteTaskFor(user, staffId)) {
     throw new ForbiddenError('Task write permission is required to complete a task');
   }
   await trx`
     UPDATE tasks
     SET state = 'completed',
       completed_at = NOW(),
-      updated_by = ${actor.userId},
+      updated_by = ${user.userId},
       updated_at = NOW()
     WHERE id = ${taskId}
   `;
-  await audit(trx, actor.userId, transactionId, 'tasks', taskId, 'UPDATE',
+  await audit(trx, user.userId, transactionId, 'tasks', taskId, 'UPDATE',
     { state: 'open', staffId }, { state: 'completed', staffId });
 }
 
 /**
  * Requires an active staff account for logging time.
  * @param staffId - Staff member to check; unavailable accounts raise 404.
- * @example assertActiveStaff(staffId) // throws for inactive accounts
+ * @example assertStaffActive(staffId) // throws for inactive accounts
  */
-async function assertActiveStaff(staffId: string) {
+async function assertStaffActive(staffId: string) {
   // 1. Check that the staff account is active.
   const rows = await sql<{ id: string }[]>`
     SELECT
@@ -455,13 +455,13 @@ async function resolveCycleForDate(date: string, programId: string | null, query
 }
 
 /**
- * Loads and locks an hours entry the actor can change.
+ * Loads and locks an hours entry the user can change.
  * @param trx - Owning transaction.
  * @param id - Entry to lock.
- * @param actor - Actor whose write access is enforced.
- * @example getOwnedEntry(trx, id, actor) // locked entry
+ * @param user - User whose write access is enforced.
+ * @example getOwnedEntry(trx, id, user) // locked entry
  */
-async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayload) {
+async function getOwnedEntry(trx: typeof sql, id: string, user: AccessTokenPayload) {
   // 1. Load the entry and check access.
   const [entry] = await trx<Array<{ staffId: string }>>`
     SELECT staff_id
@@ -470,29 +470,29 @@ async function getOwnedEntry(trx: typeof sql, id: string, actor: AccessTokenPayl
     FOR UPDATE
   `;
   if (!entry) throw new NotFoundError('Logged hours not found');
-  assertCanSetHours(actor, entry.staffId);
+  assertHoursWriteAccess(user, entry.staffId);
 
   // Authorize the locked owner before loading the full scoped record, preserving 403 for forbidden writes.
-  const [row] = await getHoursRows(actor, trx`entry.id = ${id}`, trx);
+  const [row] = await getHoursRows(user, trx`entry.id = ${id}`, trx);
   if (!row) throw new InternalServerError('Locked hours record is unavailable');
   return row;
 }
 
 /**
- * Loads affected tasks when the actor can read tasks.
+ * Loads affected tasks when the user can read tasks.
  * @param taskIds - Previous and new linked tasks; missing IDs are ignored.
- * @param actor - Actor whose read access is enforced.
+ * @param user - User whose read access is enforced.
  * @param trx - Owning transaction.
- * @example getAffectedTasks([taskId, taskId], actor, trx) // one task
+ * @example getAffectedTasks([taskId, taskId], user, trx) // one task
  */
 async function getAffectedTasks(
   taskIds: Array<string | null | undefined>,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   trx: typeof sql,
 ) {
   // 1. Load each affected task once.
-  if (!actor.permissions.includes('read:tasks')) return [];
+  if (!user.permissions.includes('read:tasks')) return [];
 
   const ids = [...new Set(taskIds.filter((id): id is string => Boolean(id)))];
-  return Promise.all(ids.map(id => getTask(id, actor, trx)));
+  return Promise.all(ids.map(id => getTask(id, user, trx)));
 }

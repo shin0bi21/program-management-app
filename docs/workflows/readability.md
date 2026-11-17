@@ -6,8 +6,19 @@ Clarity over conciseness, during implementation and review.
 
 - Name intermediate values and decisions instead of packing several operations inline.
 - Include units where relevant: `durationMinutes`, `totalCents`.
+- Call the signed-in account `user`. Use `userId` for its ID, or `currentUserId`
+  when `userId` already identifies the target account in the same scope.
 - Avoid repeated derivation and chains of lookups, fallbacks, and transformations.
 - Keep simple, immediately understandable expressions inline.
+- Name throwing guards `assert<Resource><Condition or Operation>`, with the
+  resource first: `assertProgramCycleAccess`, `assertStaffReadAccess`,
+  `assertAccountCreationAccess`, or `assertStaffActive`.
+- Reserve `can…`, `is…`, and `has…` for boolean checks. Assertions return normally
+  when their condition holds and throw when it fails; avoid `assertCan…` names.
+- Keep descriptive condition names such as `assertProgramExists`,
+  `assertAssignmentUnused`, and `assertYouthEligibility`. General script and test
+  assertions such as `assertInside` and `assertOrdered` may name the condition
+  directly.
 
 ```ts
 const hasEditPermission = permissions.includes('records:edit');

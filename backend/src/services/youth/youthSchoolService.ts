@@ -8,18 +8,18 @@ export { getSchoolReferenceData as getSchools } from '../referenceData/schoolRef
  * Creates a school or updates the required target, returning its stored row.
  * Missing targets are 404; duplicate names are 409, including concurrent writes.
  * @param data - Validated school name and optional ID; omit the ID to create a school.
- * @param actorId - Existing user recorded as the creator or latest editor.
+ * @param userId - Existing user recorded as the creator or latest editor.
  * @returns The saved school's ID and name after the write completes.
- * @example await setSchool({ name: 'Central School' }, actorId) // { id: newId, name: 'Central School' }
+ * @example await setSchool({ name: 'Central School' }, userId) // { id: newId, name: 'Central School' }
  */
-export async function setSchool(data: SetSchoolInput, actorId: string) {
+export async function setSchool(data: SetSchoolInput, userId: string) {
   const { id, name } = data;
 
   try {
     if (id) {
       const [school] = await sql`
         UPDATE schools
-        SET name = ${name}, updated_by = ${actorId}, updated_at = NOW()
+        SET name = ${name}, updated_by = ${userId}, updated_at = NOW()
         WHERE id = ${id}
         RETURNING id, name
       `;
@@ -30,7 +30,7 @@ export async function setSchool(data: SetSchoolInput, actorId: string) {
 
     const [school] = await sql`
       INSERT INTO schools (name, created_by, updated_by)
-      VALUES (${name}, ${actorId}, ${actorId})
+      VALUES (${name}, ${userId}, ${userId})
       RETURNING id, name
     `;
     if (!school) throw new InternalServerError('School creation returned no record');

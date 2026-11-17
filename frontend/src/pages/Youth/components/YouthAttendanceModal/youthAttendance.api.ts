@@ -2,13 +2,12 @@ import type { YouthProfile } from '../../types';
 import type { ProgramSession } from '../../../Programming/Sessions/types';
 import type { ProgramCycleAssignment } from '../../../Programming/Programs/types';
 import { apiClient } from '../../../../http/client';
-import type { SetYouthAttendanceRecord, YouthProgramCycleAttendance } from './types';
+import type { SetYouthAttendanceRecord } from './types';
+import type { AttendanceData } from '../../../../common/features/Attendance/attendance.api';
 
-export interface YouthAttendanceResult extends YouthProgramCycleAttendance {
-  presentCount: number;
-  lateCount: number;
-  absentCount: number;
-  youth: YouthProfile;
+export interface YouthAttendanceResult {
+  attendance: AttendanceData;
+  updatedYouth: YouthProfile;
   updatedSessions?: ProgramSession[];
   updatedProgramCycle?: ProgramCycleAssignment;
 }
@@ -18,9 +17,9 @@ export interface YouthAttendanceResult extends YouthProgramCycleAttendance {
  * @param youthId - Youth whose session statuses are being saved.
  * @param programCycle - Program/cycle pair displayed by the editor.
  * @param records - Complete eligible session list with saved status and notes.
- * @example setYouthProgramCycleAttendance(youthId, assignment, records)
+ * @example setAttendance(youthId, assignment, records)
  */
-export function setYouthProgramCycleAttendance(
+export function setAttendance(
   youthId: string,
   programCycle: { programId: string; cycleId: string },
   records: SetYouthAttendanceRecord[],

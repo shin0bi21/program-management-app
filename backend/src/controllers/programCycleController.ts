@@ -2,26 +2,26 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { getProgramRosterYouth } from '../services/programming/programCycles/programRosterService';
 import { listProgramCycles } from '../services/programming/programCycles/programCycleListService';
-import { getProgramCycleAttendance } from '../services/attendanceService';
+import { getAttendance, type AttendanceFilters } from '../services/attendanceService';
 import { renderAttendanceReportPdf } from '../reports/attendanceReportPdf';
-import { assertCanAccessProgramCycle } from '../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../policies/programAccessPolicy';
 import type { ProgramCycleQuery, AttendanceReportInput } from '../validation/programmingSchemas';
 
 /**
- * Returns the authenticated actor for the scoped program operation.
+ * Returns the authenticated user for the scoped program operation.
  * @param req - Request already accepted by authentication middleware.
- * @example actor(req).userId // signed-in account ID
+ * @example user(req).userId // signed-in account ID
  */
-const actor = (req: Request) => (req as AuthRequest).user!;
+const user = (req: Request) => (req as AuthRequest).user!;
 
 /**
  * Lists program-cycle assignments using validated filters.
  * @param req - Authenticated request with parsed program-cycle filters.
- * @param res - Receives the actor's visible assignments.
+ * @param res - Receives the user's visible assignments.
  * @example handleGetProgramCycles(req, res)
  */
 export const handleGetProgramCycles = async (req: Request, res: Response) => {
-  res.json(await listProgramCycles(actor(req), req.query as unknown as ProgramCycleQuery));
+  res.json(await listProgramCycles(user(req), req.query as unknown as ProgramCycleQuery));
 };
 
 /**
@@ -31,17 +31,18 @@ export const handleGetProgramCycles = async (req: Request, res: Response) => {
  * @example handleGetProgramRosterYouth(req, res)
  */
 export const handleGetProgramRosterYouth = async (req: Request, res: Response) => {
-  res.json(await getProgramRosterYouth(req.params.programId, req.params.cycleId, actor(req)));
+  res.json(await getProgramRosterYouth(req.params.programId, req.params.cycleId, user(req)));
 };
 
 /**
- * Returns full attendance for the validated cycle.
+ * Returns saved attendance for the validated cycle and requested youth/session filters.
  * @param req - Authenticated cycle request.
  * @param res - Receives the complete attendance data consumed by dashboards and reports.
  * @example handleGetProgramCycleAttendance(req, res)
  */
 export const handleGetProgramCycleAttendance = async (req: Request, res: Response) => {
-  res.json(await getProgramCycleAttendance(req.params.programId, req.params.cycleId, actor(req)));
+  const filters = req.query as AttendanceFilters;
+  res.json(await getAttendance(user(req), { ...filters, programId: req.params.programId, cycleId: req.params.cycleId }));
 };
 
 /**
@@ -51,7 +52,7 @@ export const handleGetProgramCycleAttendance = async (req: Request, res: Respons
  * @example handleGetAttendanceReportPdf(req, res) // renders without another attendance read
  */
 export const handleGetAttendanceReportPdf = async (req: Request, res: Response) => {
-  await assertCanAccessProgramCycle(actor(req), req.params.programId, req.params.cycleId);
+  await assertProgramCycleAccess(user(req), req.params.programId, req.params.cycleId);
   const pdf = await renderAttendanceReportPdf(req.body as AttendanceReportInput);
   const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Attendance Report.pdf';
 

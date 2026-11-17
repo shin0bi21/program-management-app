@@ -56,8 +56,22 @@ export const updateCycleSchema = z.object({
 export const deleteCycleSchema = z.object({
   params: z.object({ cycleId: z.string().uuid('Invalid cycle ID') }),
 });
+export const attendanceYouthIdsSchema = z.preprocess(value => {
+  if (value === '') return [];
+  if (typeof value === 'string') return value.split(',');
+  return value;
+}, z.array(z.string().uuid('Invalid youth ID')).max(250));
+
+export const attendanceQuerySchema = z.object({
+  youthIds: attendanceYouthIdsSchema.optional(),
+  programId: z.string().uuid('Invalid program ID').optional(),
+  cycleId: z.string().uuid('Invalid cycle ID').optional(),
+  sessionId: z.string().uuid('Invalid session ID').optional(),
+}).strict();
+
 export const programCycleAttendanceSchema = z.object({
   params: programCycleParams,
+  query: attendanceQuerySchema.omit({ programId: true, cycleId: true }),
 });
 
 export const attendanceReportSchema = z.object({

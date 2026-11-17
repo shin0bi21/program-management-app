@@ -9,8 +9,7 @@ import {
   handleGetYouthProfileNotes,
   handleSetYouthProfileNote,
   handleDeleteYouthProfileNote,
-  handleGetYouthProgramCycleAttendance,
-  handleSetYouthProgramCycleAttendance,
+  handleSetAttendance,
 } from '../controllers/youthController';
 import { authenticateToken, requirePermission } from '../middleware/authMiddleware';
 import { generalLimiter } from '../middleware/rateLimiter';
@@ -22,18 +21,16 @@ import {
   youthQuerySchema,
   youthAttendanceSchema,
   youthSessionNotesSchema,
-  youthProgramCycleAttendanceSchema,
-  setYouthProgramCycleAttendanceSchema,
+  setAttendanceSchema,
 } from '../validation/youthSchemas';
 import { createYouthProfileNoteSchema, deleteYouthProfileNoteSchema, updateYouthProfileNoteSchema, youthProfileNotesSchema } from '../validation/youthProfileNoteSchemas';
 
 const router = Router();
 
 router.get('/', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthQuerySchema), asyncHandler(handleGetYouth));
-router.get('/:id/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(youthAttendanceSchema), asyncHandler(handleGetYouthAttendance));
+router.get('/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(youthAttendanceSchema), asyncHandler(handleGetYouthAttendance));
 router.get('/:id/session-notes', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), generalLimiter, validateRequest(youthSessionNotesSchema), asyncHandler(handleGetYouthSessionNotes));
-router.get('/:id/programs/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('read:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(youthProgramCycleAttendanceSchema), asyncHandler(handleGetYouthProgramCycleAttendance));
-router.put('/:id/programs/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('write:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(setYouthProgramCycleAttendanceSchema), asyncHandler(handleSetYouthProgramCycleAttendance));
+router.put('/:id/programs/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:youth_profiles'), requirePermission('write:attendance'), requirePermission('read:sessions'), generalLimiter, validateRequest(setAttendanceSchema), asyncHandler(handleSetAttendance));
 router.get('/:id/notes', authenticateToken, requirePermission('read:youth_profiles'), generalLimiter, validateRequest(youthProfileNotesSchema), asyncHandler(handleGetYouthProfileNotes));
 router.post('/:id/notes', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(createYouthProfileNoteSchema), asyncHandler(handleSetYouthProfileNote));
 router.put('/:id/notes/:noteId', authenticateToken, requirePermission('write:youth_profiles'), generalLimiter, validateRequest(updateYouthProfileNoteSchema), asyncHandler(handleSetYouthProfileNote));

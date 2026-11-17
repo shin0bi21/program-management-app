@@ -3,8 +3,8 @@ import type { AttendanceStatus } from '../../../../../common/features/Attendance
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../http/errors';
-import { setYouthProgramCycleAttendance, type YouthAttendanceResult } from '../youthAttendance.api';
-import type { YouthProgramCycleAttendance } from '../types';
+import { setAttendance, type YouthAttendanceResult } from '../youthAttendance.api';
+import type { AttendanceGroup } from '../../../../../common/features/Attendance/attendance.api';
 
 /**
  * Edits one mounted attendance draft supplied by the dashboard.
@@ -17,12 +17,13 @@ export default function useYouthAttendance({
   onSaved,
 }: {
   youthId: string;
-  attendance: YouthProgramCycleAttendance;
+  attendance: AttendanceGroup;
   onSaved: (result: YouthAttendanceResult) => void | Promise<void>;
 }) {
+  const sessions = attendance.youth.find(person => person.id === youthId)?.sessions ?? [];
   const { tryLock, unlock } = useSubmitLock();
   const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
-    attendance.sessions.map(session => [session.id, session.status ?? '']),
+    sessions.map(session => [session.id, session.status ?? '']),
   ));
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -42,17 +43,17 @@ export default function useYouthAttendance({
    * @example await save()
    */
   const save = async () => {
-    if (attendance.sessions.length === 0 || !tryLock()) return;
+    if (sessions.length === 0 || !tryLock()) return;
 
     const { programId, cycleId } = attendance.programCycle;
     setSubmitStatus('submitting');
     setStatusMessage('Saving youth attendance...');
     let saved: YouthAttendanceResult;
     try {
-      saved = await setYouthProgramCycleAttendance(
+      saved = await setAttendance(
         youthId,
         { programId, cycleId },
-        attendance.sessions.map(session => ({
+        sessions.map(session => ({
           sessionId: session.id,
           status: selections[session.id] || null,
           notes: session.notes,

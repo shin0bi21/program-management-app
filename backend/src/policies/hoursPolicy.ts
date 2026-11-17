@@ -3,31 +3,31 @@ import { ForbiddenError } from '../errors';
 import type { AccessTokenPayload } from '../types/auth';
 import { sharedStaffReadPredicate } from './staffPolicy';
 
-/** Allows hours writes for administrators or the actor when write access is granted. @example hoursWriteScopePredicate(actor, sql`entry.staff_id`) */
-export function hoursWriteScopePredicate(actor: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
-  if (!actor.permissions.includes('write:hours')) return sql`FALSE`;
-  return actor.role === 'admin' ? sql`TRUE` : sql`${staffId} = ${actor.userId}`;
+/** Allows hours writes for administrators or the user when write access is granted. @example hoursWriteScopePredicate(user, sql`entry.staff_id`) */
+export function hoursWriteScopePredicate(user: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
+  if (!user.permissions.includes('write:hours')) return sql`FALSE`;
+  return user.role === 'admin' ? sql`TRUE` : sql`${staffId} = ${user.userId}`;
 }
 
-/** Checks hours write access for a staff member. @example canSetHours(actor, actor.userId) */
-export function canSetHours(actor: AccessTokenPayload, staffId: string) {
-  return actor.permissions.includes('write:hours')
-    && (actor.role === 'admin' || actor.userId === staffId);
+/** Checks hours write access for a staff member. @example canSetHours(user, user.userId) */
+export function canSetHours(user: AccessTokenPayload, staffId: string) {
+  return user.permissions.includes('write:hours')
+    && (user.role === 'admin' || user.userId === staffId);
 }
 
-/** Supplies staff visibility for hours workflows. @example hoursStaffReadScopePredicate(actor, sql`staff.id`) */
-export function hoursStaffReadScopePredicate(actor: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
-  return sharedStaffReadPredicate(actor, staffId);
+/** Supplies staff visibility for hours workflows. @example hoursStaffReadScopePredicate(user, sql`staff.id`) */
+export function hoursStaffReadScopePredicate(user: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
+  return sharedStaffReadPredicate(user, staffId);
 }
 
-/** Restricts hours records to readable staff. @example hoursReadScopePredicate(actor, sql`entry.staff_id`) */
-export function hoursReadScopePredicate(actor: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
-  return hoursStaffReadScopePredicate(actor, staffId);
+/** Restricts hours records to readable staff. @example hoursReadScopePredicate(user, sql`entry.staff_id`) */
+export function hoursReadScopePredicate(user: AccessTokenPayload, staffId: ReturnType<typeof sql>) {
+  return hoursStaffReadScopePredicate(user, staffId);
 }
 
-/** Rejects writes outside the actor's hours scope. @example assertCanSetHours(actor, staffId) // throws 403 when forbidden */
-export function assertCanSetHours(actor: AccessTokenPayload, staffId: string) {
-  if (!canSetHours(actor, staffId)) {
+/** Rejects writes outside the user's hours scope. @example assertHoursWriteAccess(user, staffId) // throws 403 when forbidden */
+export function assertHoursWriteAccess(user: AccessTokenPayload, staffId: string) {
+  if (!canSetHours(user, staffId)) {
     throw new ForbiddenError('Staff can only manage their own logged hours');
   }
 }

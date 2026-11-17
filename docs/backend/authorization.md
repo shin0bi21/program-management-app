@@ -4,10 +4,10 @@
 
 Separate these decisions explicitly:
 
-- **Route capability:** Which permission allows an actor to attempt the operation?
-- **Resource visibility:** Which resource rows may the actor discover?
+- **Route capability:** Which permission allows a user to attempt the operation?
+- **Resource visibility:** Which resource rows may the user discover?
 - **Record visibility:** Does a visible resource expose every record or only records matching additional domain metadata?
-- **Mutation scope:** Which visible records may the actor create, update, move, or delete?
+- **Mutation scope:** Which visible records may the user create, update, move, or delete?
 - **UI capability:** Which controls and interaction mechanics must be available for each returned resource or record?
 
 Do not infer one decision from another. In particular, shared program membership may make an entire coworker resource visible without filtering that coworker's records by program, and readable data does not imply writable data. Ask the user when any dimension is product-specific or ambiguous.
@@ -28,7 +28,7 @@ Do not infer one decision from another. In particular, shared program membership
 - Return `404` rather than `403` when the established contract conceals whether an out-of-scope record exists.
 - Derive explicit capability fields such as `writable` from the same policy used by mutations when consumers need resource- or record-specific behavior.
 - Reuse the same capability for add targets, cell actions, item mechanics, row menus, modal choices, dashboard actions, and cross-resource moves.
-- When readable resources include non-writable coworkers, initialize personal workflows and dashboards from the actor's writable resource rather than incidental response order. Still allow explicit selection of readable coworkers for read-only dashboards when the product requires it.
+- When readable resources include non-writable coworkers, initialize personal workflows and dashboards from the user's writable resource rather than incidental response order. Still allow explicit selection of readable coworkers for read-only dashboards when the product requires it.
 
 ## Avoid Authority Leaks
 
@@ -51,13 +51,13 @@ require a separate unrestricted existence query. Preserve explicitly established
 concealment contracts until the owning feature's policy is deliberately changed.
 
 For program and session operations, administrators and project managers have global
-program scope; other actors need a program assignment. Known program IDs are
+program scope; other users need a program assignment. Known program IDs are
 authorized from that scope before the program or cycle assignment is loaded.
 A missing program-cycle assignment therefore returns 404 to assigned staff.
 
 A direct session URL carries no parent program ID. Its scoped lookup grants access
-only to authorized sessions. When no session matches, global program actors get
-404; scoped actors get 403 because authority over a missing session's parent
+only to authorized sessions. When no session matches, global program users get
+404; scoped users get 403 because authority over a missing session's parent
 cannot be established. Do not probe an inaccessible session to distinguish it
 from a missing one. Route capability checks still run first in every case.
 
