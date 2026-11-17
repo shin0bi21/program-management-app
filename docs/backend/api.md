@@ -88,8 +88,7 @@ Lead signup copies the stored or corrected DOB into the Youth profile and saves
 any correction on the Lead in one audited transaction. A legacy Lead with unknown
 DOB must supply it. Signup controls the `signed_up` status; follow-up notes and
 other allowed status changes are independent. The [Lead service](../../backend/src/services/outreach/leads/leadService.ts)
-owns signup. Preserve [historical audit interpretation](database.md#historical-snapshots)
-when changing retired fields.
+owns signup.
 
 The focused contacts endpoint preserves unrelated profile data, including a
 legacy null DOB, and returns the authoritative profile. Primary contacts also
