@@ -4,7 +4,7 @@ import { audit } from '../../shared/auditService';
 import { ConflictError, NotFoundError, InternalServerError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type { OpenTaskQuery, SetTaskInput, TaskPlacementInput } from '../../../validation/taskSchemas';
-import { assertCanAssignTaskTo, taskWriteScopePredicate } from '../../../policies/taskPolicy';
+import { assertTaskWriteAccess, taskWriteScopePredicate } from '../../../policies/taskPolicy';
 import { getTaskRows, type TaskRow } from './taskRowQuery';
 import { TASK_CATEGORY_OPTIONS, TASK_STATUS_OPTIONS } from './taskReferenceData';
 
@@ -58,14 +58,14 @@ export function getTaskReferenceData() {
 export async function setTask(input: SetTaskInput, actor: AccessTokenPayload, id?: string) {
   // 1. Check the task change and assignee.
   if (id) return updateTaskRecord(id, input, actor);
-  assertCanAssignTaskTo(actor, input.staffId);
+  assertTaskWriteAccess(actor, input.staffId);
   const transactionId = crypto.randomUUID();
 
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
-    await assertActiveStaff(input.staffId, trx);
+    await assertStaffActive(input.staffId, trx);
     await assertProgramExists(input.programId, trx);
 
     // 3. Save the task.
@@ -103,7 +103,7 @@ export async function updateTaskPlacement(
   actor: AccessTokenPayload,
 ) {
   // 1. Check the destination assignee.
-  if (input.staffId) assertCanAssignTaskTo(actor, input.staffId);
+  if (input.staffId) assertTaskWriteAccess(actor, input.staffId);
   const transactionId = crypto.randomUUID();
 
   return sql.begin(async tx => {
@@ -127,7 +127,7 @@ export async function updateTaskPlacement(
     const nextStaffId = input.staffId ?? existing.staffId;
     const assigneeChanged = nextStaffId !== existing.staffId;
     if (assigneeChanged) {
-      await assertActiveStaff(nextStaffId, trx);
+      await assertStaffActive(nextStaffId, trx);
       if (existing.hoursLogged > 0) {
         throw new ConflictError('Only open tasks without logged time can be reassigned');
       }
@@ -269,14 +269,14 @@ export async function deleteTask(id: string, actor: AccessTokenPayload) {
  */
 async function updateTaskRecord(id: string, input: SetTaskInput, actor: AccessTokenPayload) {
   // 1. Check the assignee.
-  assertCanAssignTaskTo(actor, input.staffId);
+  assertTaskWriteAccess(actor, input.staffId);
   const transactionId = crypto.randomUUID();
 
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Check the selected staff member and program.
-    await assertActiveStaff(input.staffId, trx);
+    await assertStaffActive(input.staffId, trx);
     await assertProgramExists(input.programId, trx);
 
     // 3. Lock the task and check whether it can be edited.
@@ -332,9 +332,9 @@ function isTerminalTask(task: TaskRow) {
  * Requires an active staff account.
  * @param staffId - Assignee to check.
  * @param trx - Transaction owning the task change.
- * @example assertActiveStaff(staffId, trx) // throws 404 when unavailable
+ * @example assertStaffActive(staffId, trx) // throws 404 when unavailable
  */
-async function assertActiveStaff(staffId: string, trx: typeof sql) {
+async function assertStaffActive(staffId: string, trx: typeof sql) {
   const staff = await trx<{ id: string }[]>`
     SELECT
       staff.id

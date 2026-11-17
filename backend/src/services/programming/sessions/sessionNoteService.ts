@@ -1,6 +1,6 @@
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessSession, programAccessPredicate } from '../../../policies/programAccessPolicy';
+import { assertSessionAccess, programAccessPredicate } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionNoteInput,
@@ -14,7 +14,7 @@ import type {
  * @example getSessionNotes(sessionId, actor) // notes ordered newest first
  */
 export async function getSessionNotes(sessionId: string, actor: AccessTokenPayload) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   return sql`
     SELECT
       sn.id,
@@ -57,7 +57,7 @@ export async function createSessionNote(
   data: CreateSessionNoteInput,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   const noteId = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const sessions = await trx<{ id: string; enrollmentRequired: boolean }[]>`
@@ -124,7 +124,7 @@ export async function updateSessionNote(
   data: UpdateSessionNoteInput,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const notes = await trx<{ id: string; enrollmentRequired: boolean }[]>`
@@ -181,7 +181,7 @@ export async function deleteSessionNote(
   noteId: string,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   const deleted = await sql`
     DELETE FROM session_notes
     WHERE id = ${noteId}
@@ -205,7 +205,7 @@ export async function unlinkYouthFromSessionNote(
   youthId: string,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   const unlinked = await sql`
     DELETE FROM session_note_has_youth sny
     USING session_notes sn

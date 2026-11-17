@@ -1,6 +1,6 @@
 import { sql } from '../../../db/client';
 import { ConflictError, NotFoundError } from '../../../errors';
-import { assertCanAccessProgramCycle } from '../../../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 
 export interface ProgramCycleRosterYouthRow {
@@ -30,7 +30,7 @@ export interface ProgramCycleRosterYouthRow {
  */
 export async function getProgramRosterYouth(programId: string, cycleId: string, actor: AccessTokenPayload, query = sql) {
   // 1. Check the selected enrollment-based program and cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
 
   const ageInYears = query`EXTRACT(YEAR FROM AGE(CURRENT_DATE, profile.date_of_birth))::int`;
   const [programCycle] = await query<Array<{

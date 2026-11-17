@@ -4,7 +4,7 @@ import { getProgramRosterYouth } from '../services/programming/programCycles/pro
 import { listProgramCycles } from '../services/programming/programCycles/programCycleListService';
 import { getProgramCycleAttendance } from '../services/attendanceService';
 import { renderAttendanceReportPdf } from '../reports/attendanceReportPdf';
-import { assertCanAccessProgramCycle } from '../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../policies/programAccessPolicy';
 import type { ProgramCycleQuery, AttendanceReportInput } from '../validation/programmingSchemas';
 
 /**
@@ -51,7 +51,7 @@ export const handleGetProgramCycleAttendance = async (req: Request, res: Respons
  * @example handleGetAttendanceReportPdf(req, res) // renders without another attendance read
  */
 export const handleGetAttendanceReportPdf = async (req: Request, res: Response) => {
-  await assertCanAccessProgramCycle(actor(req), req.params.programId, req.params.cycleId);
+  await assertProgramCycleAccess(actor(req), req.params.programId, req.params.cycleId);
   const pdf = await renderAttendanceReportPdf(req.body as AttendanceReportInput);
   const fallbackFilename = pdf.filename.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '-') || 'Attendance Report.pdf';
 

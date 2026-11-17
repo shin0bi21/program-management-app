@@ -6,7 +6,7 @@ import { getProgramCycleRowsByKeys } from '../programming/programCycles/programC
 import { programAccessPredicate } from '../../policies/programAccessPolicy';
 import { asTransactionSql, sql } from '../../db/client';
 import { ConflictError, NotFoundError } from '../../errors';
-import { assertCanAccessProgramCycle } from '../../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../types/auth';
 import type { SetYouthProgramCycleAttendanceInput } from '../../validation/youthSchemas';
 import { getProgramCycleAttendance } from '../attendanceService';
@@ -75,7 +75,7 @@ export async function getYouthProgramCycleAttendance(
   actor: AccessTokenPayload,
 ) {
   // 1. Require the youth and applicable enrollment before reading shared attendance.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   await getYouthProgramCycleContext(youthId, programId, cycleId);
 
   // 2. Use the cycle attendance reader with this youth's filter.
@@ -108,7 +108,7 @@ export async function setYouthProgramCycleAttendance(
   actor: AccessTokenPayload,
 ) {
   // 1. Check access to the program cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
 
   const updatedRows = await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
