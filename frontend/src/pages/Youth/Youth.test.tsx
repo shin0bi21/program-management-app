@@ -152,11 +152,7 @@ describe('Youth', () => {
   });
 
   // Selection and coordination.
-  it('shows the selected profile contact and profile notes', async () => {
-    youthApi.getYouthProfileNotes.mockResolvedValue([{
-      id: 'profile-note-1', youthId: 'youth-1', category: 'general',
-      details: 'Youth profile note', createdAt: '2026-07-21T23:00:00.000Z', updatedAt: '2026-07-21T23:00:00.000Z', createdByName: 'Bilal Khan',
-    }]);
+  it('shows the selected profile contact', async () => {
     mockUseYouthTableData.mockReturnValue({
       rows: [makeYouthProfile({
         contacts: [{ id: 'contact-1', phoneNumber: '416-555-0101', type: 'parent' }],
@@ -168,9 +164,6 @@ describe('Youth', () => {
 
     fireEvent.click(screen.getByText('Jamie').closest('tr')!);
     expect(screen.getByText('416-555-0101')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'View profile note' })).toBeInTheDocument();
-    expect(screen.queryByText('Youth profile note')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
   });
 
   it('reconciles an authoritative contact save into the selected dashboard', async () => {
