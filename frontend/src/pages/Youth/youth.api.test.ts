@@ -17,6 +17,7 @@ describe('youth API', () => {
       search: '  Alex + Lee  ',
       programIds: ['program-1'],
       cycleIds: ['cycle-1', 'cycle-2'],
+      schoolIds: ['school-1', 'school-2'],
     }, undefined, {
       key: 'firstName',
       direction: 'asc',
@@ -24,7 +25,7 @@ describe('youth API', () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      '/youth?search=Alex+%2B+Lee&programIds=program-1&cycleIds=cycle-1%2Ccycle-2&sort=firstName&direction=asc&paginate=true&cursor=cursor-1',
+      '/youth?search=Alex+%2B+Lee&programIds=program-1&cycleIds=cycle-1%2Ccycle-2&schoolIds=school-1%2Cschool-2&sort=firstName&direction=asc&paginate=true&cursor=cursor-1',
     );
   });
 

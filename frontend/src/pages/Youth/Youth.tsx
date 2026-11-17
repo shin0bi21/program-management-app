@@ -40,7 +40,11 @@ export default function Youth() {
     && permissions.includes('read:sessions');
 
   // Page data and preferences.
-  const { programs, programsLoading, programsError, cycles, cyclesLoading, cyclesError } = useYouthData(role === 'staff');
+  const {
+    programs, programsLoading, programsError,
+    cycles, cyclesLoading, cyclesError,
+    schools, schoolsLoading, schoolsError,
+  } = useYouthData(role === 'staff');
   const controls = useYouthControls({
     role,
     programs,
@@ -49,6 +53,9 @@ export default function Youth() {
     cycles,
     cyclesLoading,
     cyclesError,
+    schools,
+    schoolsLoading,
+    schoolsError,
     tableKeys: YOUTH_TABLE_KEYS,
   });
   const { table, error: preferencesError } = controls;
@@ -103,6 +110,7 @@ export default function Youth() {
           preferencesError,
           programsError,
           cyclesError,
+          schoolsError,
           viewError,
         ]}
         dashboard={<>

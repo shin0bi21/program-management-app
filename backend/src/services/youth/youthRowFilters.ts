@@ -2,12 +2,12 @@ import { sql } from '../../db/client';
 import type { YouthQuery } from '../../validation/youthSchemas';
 
 /**
- * Builds program, cycle, and search conditions for the youth profile query.
- * @param filterValues - Selected program IDs, cycle IDs, and search text after request validation.
+ * Builds program, cycle, school, and search conditions for the youth profile query.
+ * @param filterValues - Selected program, cycle, and school IDs and search text after request validation.
  * @example buildYouthFilters(filterValues) // SQL conditions for canonical youth rows
  */
 export function buildYouthFilters(filterValues: YouthQuery) {
-  // 1. Match the selected program and cycle together.
+  // 1. Collect the selected filters.
   const filters = [];
 
   if (filterValues.programIds.length || filterValues.cycleIds.length) {
@@ -43,7 +43,10 @@ export function buildYouthFilters(filterValues: YouthQuery) {
       )`);
   }
 
-  // 2. Match the search text.
+  if (filterValues.schoolIds.length) {
+    filters.push(sql`profile.school_id = ANY(${sql.array(filterValues.schoolIds)}::uuid[])`);
+  }
+
   if (filterValues.search) {
     const search = `%${escapeLikePattern(filterValues.search)}%`;
     filters.push(sql`(
@@ -70,7 +73,7 @@ export function buildYouthFilters(filterValues: YouthQuery) {
       )`);
   }
 
-  // 3. Apply the selected filters.
+  // 2. Apply the selected filters.
   let appliedFilters = sql`TRUE`;
   for (const filter of filters) {
     appliedFilters = sql`${appliedFilters} AND ${filter}`;
