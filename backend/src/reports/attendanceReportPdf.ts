@@ -50,7 +50,7 @@ export async function renderAttendanceReportPdf(report: AttendanceReportInput) {
   } else {
     report.youth.forEach((youth, index) => {
       if (index) doc.addPage();
-      drawYouth(doc, youth);
+      drawYouth(doc, youth, report.programCycle.enrollmentRequired);
     });
   }
   doc.end();
@@ -264,9 +264,10 @@ function drawNotes(doc: PDFKit.PDFDocument, sessions: Sessions) {
 /**
  * Draws one youth using their completed, noncancelled session records.
  * @param youth - Supplied profile and attendance, including original status labels and notes.
- * @example drawYouth(doc, report.youth[0]) // breakdown, timeline and notes from the same records
+ * @param enrollmentRequired - Whether unmarked eligible sessions count as missed attendance.
+ * @example drawYouth(doc, report.youth[0], report.programCycle.enrollmentRequired) // breakdown, timeline and notes from the same records
  */
-function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
+function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth, enrollmentRequired: boolean) {
   const sessions = youth.sessions
     .filter(session => session.cancelledAt === null && session.completed)
     .sort((first, second) => first.date.localeCompare(second.date) || first.startTime.localeCompare(second.startTime));
@@ -277,7 +278,8 @@ function drawYouth(doc: PDFKit.PDFDocument, youth: ReportYouth) {
   resetTextFlow(doc);
   doc.moveDown(0.8).fontSize(9).text('Attendance Breakdown', margin, doc.y, { width: contentWidth });
   doc.moveDown(0.5);
-  drawBreakdown(doc, sessions, colors);
+  const countedSessions = enrollmentRequired ? sessions : sessions.filter(session => session.status !== null);
+  drawBreakdown(doc, countedSessions, colors);
   ensureSpace(doc, 215);
   resetTextFlow(doc);
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#1f2937')

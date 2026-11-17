@@ -1,7 +1,8 @@
+import type { AttendanceSession } from '../../../../../common/features/Attendance/attendance.api';
 import { useState } from 'react';
 import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
-import type { SessionNoteTarget, SessionNoteUnlinkTarget, YouthAttendanceSession } from '../types';
+import type { SessionNoteTarget, SessionNoteUnlinkTarget } from '../types';
 
 /**
  * Coordinates note targets and expansion within one mounted attendance interaction.
@@ -14,7 +15,7 @@ export default function useYouthSessionNotes({
   refresh,
 }: {
   youthId: string;
-  sessions: YouthAttendanceSession[];
+  sessions: AttendanceSession[];
   refresh: () => Promise<unknown>;
 }) {
   const [noteTarget, setNoteTarget] = useState<SessionNoteTarget | null>(null);
@@ -52,7 +53,7 @@ export default function useYouthSessionNotes({
    * Opens a blank note linked to the supplied attendance session.
    * @example addNote(session)
    */
-  const addNote = (session: YouthAttendanceSession) => setNoteTarget({ session, note: null });
+  const addNote = (session: AttendanceSession) => setNoteTarget({ session, note: null });
   /**
    * Opens details for the supplied saved note.
    * @example viewNote(note)
@@ -67,7 +68,7 @@ export default function useYouthSessionNotes({
    * Opens the supplied saved note within its attendance session.
    * @example editNote(session, note)
    */
-  const editNote = (session: YouthAttendanceSession, note: SessionNote) => setNoteTarget({ session, note });
+  const editNote = (session: AttendanceSession, note: SessionNote) => setNoteTarget({ session, note });
   /**
    * Clears the note editor target and unmounts its draft.
    * @example closeNote()
@@ -91,7 +92,7 @@ export default function useYouthSessionNotes({
    * Captures the supplied session/note link for confirmation.
    * @example requestUnlink(session, note)
    */
-  const requestUnlink = (session: YouthAttendanceSession, note: SessionNote) => {
+  const requestUnlink = (session: AttendanceSession, note: SessionNote) => {
     setUnlinkTarget({ session, note });
   };
   /**

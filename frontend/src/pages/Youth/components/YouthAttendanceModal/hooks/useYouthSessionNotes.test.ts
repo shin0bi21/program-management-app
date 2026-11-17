@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
-import type { YouthAttendanceSession } from '../types';
+import type { AttendanceSession } from '../../../../../common/features/Attendance/attendance.api';
 import useYouthSessionNotes from './useYouthSessionNotes';
 
 vi.mock('../../../../Programming/Sessions/sessions.api', () => ({
@@ -21,7 +21,7 @@ const note: SessionNote = {
   createdByName: 'Admin User',
   youth: [],
 };
-const session: YouthAttendanceSession = {
+const session: AttendanceSession = {
   id: 'session-1',
   sessionType: 'Regular',
   title: 'Communication',
@@ -49,6 +49,8 @@ describe('useYouthSessionNotes', () => {
     expect(result.current.allExpanded).toBe(true);
     act(() => result.current.toggleAll());
     expect(result.current.isExpanded('session-1')).toBe(false);
+    act(() => result.current.toggleSession('session-1'));
+    expect(result.current.allExpanded).toBe(true);
 
     act(() => result.current.requestUnlink(session, note));
     expect(result.current.isChildOpen).toBe(true);

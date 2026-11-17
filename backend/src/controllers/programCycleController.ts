@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 import { getProgramRosterYouth } from '../services/programming/programCycles/programRosterService';
 import { listProgramCycles } from '../services/programming/programCycles/programCycleListService';
-import { getProgramCycleAttendance } from '../services/attendanceService';
+import { getAttendance, type AttendanceFilters } from '../services/attendanceService';
 import { renderAttendanceReportPdf } from '../reports/attendanceReportPdf';
 import { assertProgramCycleAccess } from '../policies/programAccessPolicy';
 import type { ProgramCycleQuery, AttendanceReportInput } from '../validation/programmingSchemas';
@@ -35,13 +35,14 @@ export const handleGetProgramRosterYouth = async (req: Request, res: Response) =
 };
 
 /**
- * Returns full attendance for the validated cycle.
+ * Returns saved attendance for the validated cycle and requested youth/session filters.
  * @param req - Authenticated cycle request.
  * @param res - Receives the complete attendance data consumed by dashboards and reports.
  * @example handleGetProgramCycleAttendance(req, res)
  */
 export const handleGetProgramCycleAttendance = async (req: Request, res: Response) => {
-  res.json(await getProgramCycleAttendance(req.params.programId, req.params.cycleId, user(req)));
+  const filters = req.query as AttendanceFilters;
+  res.json(await getAttendance(user(req), { ...filters, programId: req.params.programId, cycleId: req.params.cycleId }));
 };
 
 /**

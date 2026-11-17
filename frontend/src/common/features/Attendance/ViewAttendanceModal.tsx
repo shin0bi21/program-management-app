@@ -1,10 +1,10 @@
 import ViewFileModal from '../ViewFileModal/ViewFileModal';
 import useViewFileModal from '../ViewFileModal/hooks/useViewFileModal';
 
-import { getAttendanceReportPdf, type AttendanceData } from './attendance.api';
+import { getAttendanceReportPdf, type AttendanceGroup } from './attendance.api';
 
 interface ViewAttendanceModalProps {
-  data: AttendanceData;
+  data: AttendanceGroup;
   onClose: () => void;
 }
 

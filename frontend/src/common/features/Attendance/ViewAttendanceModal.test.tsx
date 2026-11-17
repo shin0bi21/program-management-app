@@ -8,7 +8,7 @@ vi.mock('./attendance.api', () => ({ getAttendanceReportPdf: api.getReportPdf })
 
 const programCycle = { programId: 'program-1', cycleId: 'cycle-1', program: 'Soft Skills', cycle: 'Summer 2026', enrollmentRequired: true };
 
-const attendance = { programCycle, youth: [] };
+const attendance = { programCycle, averageAttendance: null, youth: [] };
 
 describe('ViewAttendanceModal', () => {
   beforeEach(() => {

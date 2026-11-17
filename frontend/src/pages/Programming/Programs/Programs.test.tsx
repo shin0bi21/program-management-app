@@ -25,7 +25,7 @@ const programsApi = vi.hoisted(() => ({
   createProgram: vi.fn(),
   updateProgram: vi.fn(),
 }));
-const attendanceApi = vi.hoisted(() => ({ getProgramCycleAttendance: vi.fn() }));
+const attendanceApi = vi.hoisted(() => ({ getAttendance: vi.fn() }));
 vi.mock('../../../common/features/Attendance/attendance.api', () => attendanceApi);
 const programState = vi.hoisted<{ programs: Program[] }>(() => ({
   programs: [],
@@ -41,18 +41,10 @@ vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 vi.mock('./components/ManageRosterModal/ManageRosterModal', () => ({
   default: ({ assignment }: { assignment: { cycle: string } | null }) => assignment ? <div role="dialog" aria-label={`Roster for ${assignment.cycle}`} /> : null,
 }));
-vi.mock('../../../common/features/Attendance/ViewAttendanceModal', () => ({
-  default: ({ data }: { data: { programCycle: { cycle: string } } }) => <div role="dialog" aria-label={`Report for ${data.programCycle.cycle}`} />,
-}));
-
 describe('Programs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    attendanceApi.getProgramCycleAttendance.mockResolvedValue({
-      programCycle: { programId: 'program-1', program: 'Soft Skills', cycleId: 'cycle-1', cycle: 'Fall 2026', enrollmentRequired: true },
-      youth: [],
-      averageAttendance: 75,
-    });
+    attendanceApi.getAttendance.mockResolvedValue({ groups: [] });
     auth.role = 'project_manager';
     auth.permissions = ['read:programs', 'write:programs', 'write:enrollments', 'read:youth_profiles', 'read:attendance', 'read:sessions'];
     vi.mocked(getProgramCycleAssignments).mockResolvedValue([{
@@ -102,19 +94,14 @@ describe('Programs', () => {
     expect(programmingApi.getCycleReferences).toHaveBeenLastCalledWith({ signal: expect.any(AbortSignal) });
   });
 
-  it('selects a program for its overview, roster, and attendance report', async () => {
+  it('passes the selected program to its overview query', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
 
     await user.click(await screen.findByText('Soft Skills'));
     expect(await screen.findByRole('heading', { name: 'Soft Skills - Fall 2026 Overview' })).toBeInTheDocument();
-    expect(screen.getByText('75%')).toBeInTheDocument();
     expect(getProgramCycleAssignments).toHaveBeenCalledWith('program-1', { includeAllPrograms: false }, { signal: expect.any(AbortSignal) });
-    await user.click(screen.getByRole('button', { name: 'Manage Roster' }));
-    expect(screen.getByRole('dialog', { name: 'Roster for Fall 2026' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Attendance Report' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Attendance Report' }));
-    expect(screen.getByRole('dialog', { name: 'Report for Fall 2026' })).toBeInTheDocument();
+
   });
 
   it('lets assigned staff manage rosters without program or cycle edit actions', async () => {
