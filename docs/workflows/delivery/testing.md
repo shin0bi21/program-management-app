@@ -191,7 +191,9 @@ queries/services, with representative API checks. Database preservation and reco
 belong to workers tested against disposable databases. A UI test cannot prove SQL
 behavior; do not duplicate a shared matrix at each consumer.
 
-- Repository-tool tests live beside scripts, except reports. Reports have no
+- Repository-tool tests live beside scripts, except reports and scaffolding.
+  Scaffolding has no automated tests; keep it in lint and typechecking, and
+  inspect representative generated output while changing templates. Reports have no
   automated tests; keep them in lint and typechecking, and inspect representative
   command output while changing them. Register other new TypeScript script
   folders in root lint and `scripts/tests/test-static.sh`.

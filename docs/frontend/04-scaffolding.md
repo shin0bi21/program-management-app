@@ -1,7 +1,7 @@
 # Scaffolding
 
 Run commands from the repository root with the local Node dependencies installed.
-The generator and its tests live in `scripts/scaffold/frontend/`.
+The generator lives in `scripts/scaffold/frontend/`.
 
 ## Choose a Preset
 
