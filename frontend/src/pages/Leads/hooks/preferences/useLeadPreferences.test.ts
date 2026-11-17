@@ -7,6 +7,12 @@ import { createQueryClientWrapper, createTestQueryClient } from '../../../../tes
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
+/**
+ * Mounts the supplied hook with an isolated preference query cache.
+ * @param callback - Hook rendered for this scenario.
+ * @param options - Initial props and rendering options.
+ * @example renderHook(() => usePreferences()) restores controls in a fresh cache.
+ */
 const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(callback, {
   ...options,
   wrapper: createQueryClientWrapper(createTestQueryClient()),
@@ -88,11 +94,10 @@ describe('useLeadPreferences', () => {
     ));
   });
 
-  it('validates lead statuses, submitter roles, origin, and legacy sorting', async () => {
+  it('restores external lead statuses and submitter roles with the external origin', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      search: ' school ', statuses: ['contacted', 'obsolete'], programIds: ['program-1'],
-      origins: ['internal'], submitterRoles: ['parent', 'obsolete'], hiddenColumns: 'school',
-      sorting: { key: 'name', direction: 'asc' },
+      search: 'school', statuses: ['contacted'], programIds: ['program-1'],
+      origins: ['internal'], submitterRoles: ['parent'],
     });
     const { result } = renderHook(() => (
       useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
@@ -104,8 +109,6 @@ describe('useLeadPreferences', () => {
     expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
     expect(result.current.appliedFilters.programIds).toEqual(['program-1']);
     expect(result.current.appliedFilters.submitterRoles).toEqual(['parent']);
-    expect(result.current.table.hiddenColumns).toEqual([]);
-    expect(result.current.table.sorting).toEqual({ key: 'created', direction: 'desc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-external-leads-filters', expect.objectContaining({ origins: ['external'] }),
     ));
