@@ -280,7 +280,7 @@ jobs:
           persist-credentials: false
 
       - name: Build backend production image
-        run: docker build -f backend/Dockerfile --target prod .
+        run: docker build --target prod backend
 
   production-frontend-image:
     name: Frontend Production Image
@@ -295,7 +295,7 @@ jobs:
           persist-credentials: false
 
       - name: Build frontend/nginx production image
-        run: docker build -f frontend/Dockerfile --tag be-original-frontend-ci .
+        run: docker build --tag be-original-frontend-ci frontend
 
       - name: Validate production nginx configuration
         run: |

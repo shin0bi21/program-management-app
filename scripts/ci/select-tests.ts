@@ -3,7 +3,10 @@
 /**
  * SELECT TESTS — shared check planning for local runners and GitHub Actions.
  *
- * Flow: validate options → read changed paths → classify checks → emit a plan.
+ * Flow:
+ *   1. Validate output options and handle help
+ *   2. Read changed paths and classify checks
+ *   3. Emit the requested plan representation
  * Reads newline-delimited paths from stdin. Prints JSON or local commands, or
  * appends outputs to --github-output FILE. Does not run the selected checks.
  *
@@ -72,6 +75,7 @@ Without an output option, print JSON. GitHub output takes precedence over comman
 
 /**
  * Parses output options and target branch tokens; missing values and unknown flags throw.
+ * @param args - CLI tokens after the script path.
  * @example parseArgs(['--commands']).commands // true
  */
 function parseArgs(args: string[]): CliOptions {
@@ -170,6 +174,7 @@ function emptyPlan(): TestPlan {
 // fallback is every local application check rather than an incomplete subset.
 /**
  * Mutates a plan to require static, deployment, and full application checks for an unknown owner.
+ * @param plan - Mutable plan whose coverage must include every application layer.
  * @example enableFullApplication(plan) // plan.backendMode and plan.frontendMode become 'full'
  */
 function enableFullApplication(plan: TestPlan): void {
@@ -185,6 +190,8 @@ function enableFullApplication(plan: TestPlan): void {
 // production checks. This function is the shared policy for local and CI runs.
 /**
  * Classifies repository-relative paths into local and CI checks; unknown owners select full application coverage.
+ * @param files - Changed paths relative to the repository root.
+ * @param options - Target branch; main always requires production packaging checks.
  * @example selectTests(['README.md']).backend // false
  */
 export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?: string } = {}): TestPlan {
@@ -205,19 +212,6 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
       plan.backendImage = true;
       plan.frontendImage = true;
       plan.compose = true;
-      continue;
-    }
-
-    // Shared compiler policy can affect both applications; the root config
-    // owns repository scripts only.
-    if (file === 'tsconfig.base.json') {
-      plan.static = true;
-      plan.backend = true;
-      plan.backendMode = 'full';
-      plan.frontend = true;
-      plan.frontendMode = 'full';
-      plan.backendImage = true;
-      plan.frontendImage = true;
       continue;
     }
 
@@ -266,7 +260,7 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
     if (file.startsWith('backend/')) {
       plan.static = true;
       plan.backend = true;
-      const affectsBackendImage = /^backend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file);
+      const affectsBackendImage = /^backend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json|tsconfig(?:\.build)?\.json)$/.test(file);
       if (affectsBackendImage) {
         plan.backendImage = true;
       }
@@ -297,7 +291,7 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
 
       plan.static = true;
       plan.frontend = true;
-      const affectsFrontendImage = /^frontend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json)$/.test(file);
+      const affectsFrontendImage = /^frontend\/(?:Dockerfile|\.dockerignore|package(?:-lock)?\.json|tsconfig(?:\.node)?\.json)$/.test(file);
       if (affectsFrontendImage) {
         plan.frontendImage = true;
       }
@@ -307,14 +301,6 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
       } else {
         plan.frontendMode = 'full';
       }
-      continue;
-    }
-
-    // Both production Dockerfiles use the repository root as their context.
-    if (file === '.dockerignore') {
-      plan.static = true;
-      plan.backendImage = true;
-      plan.frontendImage = true;
       continue;
     }
 
@@ -345,6 +331,7 @@ export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?
 // Convert the plan into stable commands consumed by the local test-app runner.
 /**
  * Returns ordered local runner commands, retaining space-delimited inputs for related backend tests.
+ * @param plan - Selected checks and application suite modes.
  * @example planCommands(selectTests(['README.md'])) // []
  */
 export function planCommands(plan: TestPlan): PlanCommand[] {
@@ -363,6 +350,7 @@ export function planCommands(plan: TestPlan): PlanCommand[] {
 // Convert the same plan to names suitable for GitHub job outputs.
 /**
  * Maps a completed plan to GitHub job output names without writing an output file.
+ * @param plan - Selected checks to expose to downstream GitHub jobs.
  * @example githubOutputs(emptyPlan()).backend_mode // 'none'
  */
 function githubOutputs(plan: TestPlan): Record<string, string | boolean> {

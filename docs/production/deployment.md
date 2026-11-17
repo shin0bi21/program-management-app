@@ -140,7 +140,7 @@ and infrastructure revisions in `.deploy-state/`:
 | Frontend | Build and replace nginx/frontend |
 | Backend | Build, validate migrations, replace backend, and check health |
 | Database files (including schema/data init and baseline manifest) | Snapshot and apply migrations before backend replacement |
-| Production infrastructure or shared TypeScript policy | Conservative full flow |
+| Production infrastructure | Conservative full flow |
 | Recognized documentation, local-test, data-refresh, or report tooling paths only | No production container rebuild |
 
 Unknown paths and missing revision markers select the full flow. A selected build

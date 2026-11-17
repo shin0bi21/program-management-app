@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "strict": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
-}

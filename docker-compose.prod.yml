@@ -1,14 +1,13 @@
-# Production compose — used by deploy.sh via COMPOSE_FILE=docker-compose.prod.yml
+# Production compose — used by scripts/deploy/main.sh via COMPOSE_FILE=docker-compose.prod.yml
 #
 # Services: backend (compiled), nginx (contains the built frontend), db
 # Excluded vs dev: no frontend dev server, no db_test, no code volumes, no debug port
-# deploy.sh rebuilds only the images affected by changes since the last deploy
+# scripts/deploy/main.sh rebuilds only the images affected by changes since the last deploy
 
 services:
   nginx:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
     container_name: myapp_nginx
     restart: always
     ports:
@@ -23,8 +22,7 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
       target: prod
     container_name: myapp_backend
     restart: always

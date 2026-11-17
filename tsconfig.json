@@ -1,6 +1,9 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "strict": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "target": "ES2023",
     "lib": ["ES2024"],
     "module": "Node16",

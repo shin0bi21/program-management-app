@@ -89,9 +89,8 @@ docker compose down
 | Change or task | Command |
 |---|---|
 | Frontend React, TypeScript, or CSS | No command normally; Vite reloads it |
-| Frontend Vite configuration or `.env` | `docker compose restart frontend` |
-| Backend TypeScript | `docker compose restart backend` |
-| Shared `tsconfig.base.json` | `docker compose restart frontend backend` |
+| Frontend Vite or TypeScript configuration, or `.env` | `docker compose restart frontend` |
+| Backend TypeScript or compiler configuration | `docker compose restart backend` |
 | Root `.env` used by the backend | `docker compose up -d --force-recreate backend` |
 | Pull frontend lockfile changes | `docker compose exec frontend npm ci`, then restart frontend |
 | Pull backend lockfile changes | `docker compose exec backend npm ci`, then restart backend |

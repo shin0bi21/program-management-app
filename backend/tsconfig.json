@@ -1,6 +1,9 @@
 {
-  "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "strict": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "target": "es2018",
     "module": "Node16",
     "lib": ["esnext"],

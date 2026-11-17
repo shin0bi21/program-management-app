@@ -40,6 +40,9 @@ protection a stable required-check identity.
 [`scripts/ci/select-tests.ts`](../../../scripts/ci/select-tests.ts) selects checks
 for GitHub Actions and the local changed-suite runner.
 
+Production images use application-local build contexts (`backend/` and `frontend/`),
+with each application's Dockerfile and `.dockerignore`.
+
 ### Changed-Path Routing
 
 The shared selector applies these rules locally and in CI:
@@ -48,7 +51,7 @@ The shared selector applies these rules locally and in CI:
 - Documentation and Starlight changes run the separate docs workflow. Its Node 24
   install and build use `docs/package-lock.json`, independently of app dependencies.
 - Repository automation changes run static and changed pattern checks.
-- Root script TypeScript configuration runs static checks; shared TypeScript policy runs static checks plus full backend and frontend verification.
+- Root script TypeScript configuration runs static checks. Each application owns its compiler settings; changing an application TypeScript config runs its full suite and production image build.
 - Backend source and test paths select related tests through Jest's dependency graph.
 - Shared test setup, database changes, dependencies, configuration, other backend inputs, and deleted graph inputs run the full backend suite.
 - Frontend source changes use Vitest's dependency graph to select changed owners and importing consumers; dependency, configuration, and runner changes run all frontend tests.
