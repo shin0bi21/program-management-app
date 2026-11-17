@@ -8,15 +8,15 @@ const programLabelPermissions: readonly Permission[] = [
   'read:youth_profiles', 'read:outreach', 'read:accounts', 'write:accounts',
 ];
 
-export function getProgramReferenceData(actor: AccessTokenPayload, assignedOnly = false) {
-  if (!assignedOnly && !actor.permissions.some(permission => programLabelPermissions.includes(permission))) {
+export function getProgramReferenceData(user: AccessTokenPayload, assignedOnly = false) {
+  if (!assignedOnly && !user.permissions.some(permission => programLabelPermissions.includes(permission))) {
     throw new ForbiddenError('Insufficient permissions');
   }
 
   return sql<Array<{ id: string; title: string }>>`
     SELECT program.id, program.title
     FROM programs program
-    WHERE ${assignedOnly ? programAccessPredicate(actor, sql`program.id`) : sql`TRUE`}
+    WHERE ${assignedOnly ? programAccessPredicate(user, sql`program.id`) : sql`TRUE`}
     ORDER BY program.title, program.id
   `;
 }

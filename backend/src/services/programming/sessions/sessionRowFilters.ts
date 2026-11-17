@@ -15,7 +15,7 @@ interface SessionRowFilters extends Partial<Pick<SessionListQuery,
  * @param filterValues - Validated session filters; date bounds must be supplied together.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @returns A composable filtered query without ordering or pagination.
- * @example buildSessionFilters(getSessionRows(actor), { ids: [sessionId] }) // only that accessible session
+ * @example buildSessionFilters(getSessionRows(user), { ids: [sessionId] }) // only that accessible session
  */
 export function buildSessionFilters(
   rowsQuery: PendingQuery<SessionRow[]>,

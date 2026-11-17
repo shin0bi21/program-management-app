@@ -9,15 +9,15 @@ import { getYouthRows, type YouthRow } from './youth/youthRowQuery';
 import { getProgramRows, programRowColumns, type ProgramRow } from './programming/programs/programRowQuery';
 
 /**
- * Lists all program lookup rows by title, optionally restricted to the actor's program scope.
- * @param actor - Actor whose program scope applies when assignedOnly is true.
- * @param assignedOnly - Whether to limit results to programs the actor can access.
+ * Lists all program lookup rows by title, optionally restricted to the user's program scope.
+ * @param user - User whose program scope applies when assignedOnly is true.
+ * @param assignedOnly - Whether to limit results to programs the user can access.
  * @example await getPrograms(assignedStaff, true) // Only programs assigned to this staff member.
  */
-export function getPrograms(actor: AccessTokenPayload, assignedOnly = false) {
+export function getPrograms(user: AccessTokenPayload, assignedOnly = false) {
   // 1. Load matching programs.
   return sql<ProgramRow[]>`
-    ${getProgramRows(assignedOnly ? programAccessPredicate(actor, sql`p.id`) : sql`TRUE`)}
+    ${getProgramRows(assignedOnly ? programAccessPredicate(user, sql`p.id`) : sql`TRUE`)}
     ORDER BY title ASC
   `;
 }
@@ -61,11 +61,11 @@ export async function createProgram(data: CreateProgramInput) {
  * The caller must authorize the write; missing programs are 404 and duplicate titles are 409.
  * @param id - Program to lock and update.
  * @param data - Validated replacement settings.
- * @param actor - Actor whose permissions determine related response rows.
- * @returns The saved program and related rows gated by the actor's read permissions.
- * @example await updateProgram(programId, { ...validatedSettings, title: 'Leadership' }, writeOnlyActor) // Related row arrays are empty.
+ * @param user - User whose permissions determine related response rows.
+ * @returns The saved program and related rows gated by the user's read permissions.
+ * @example await updateProgram(programId, { ...validatedSettings, title: 'Leadership' }, writeOnlyUser) // Related row arrays are empty.
  */
-export async function updateProgram(id: string, data: UpdateProgramInput, actor: AccessTokenPayload) {
+export async function updateProgram(id: string, data: UpdateProgramInput, user: AccessTokenPayload) {
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -127,10 +127,10 @@ export async function updateProgram(id: string, data: UpdateProgramInput, actor:
       WHERE program_id = ${id}
       ORDER BY cycle_id
     `;
-    const updatedProgramCycles = actor.permissions.includes('read:programs')
-      ? await getProgramCycleRowsByKeys(trx, actor, keys) : [];
+    const updatedProgramCycles = user.permissions.includes('read:programs')
+      ? await getProgramCycleRowsByKeys(trx, user, keys) : [];
     let updatedYouth: YouthRow[] = [];
-    if (actor.permissions.includes('read:youth_profiles')) {
+    if (user.permissions.includes('read:youth_profiles')) {
       const youthIds = await getProgramCycleYouthIds(trx, keys);
       updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
     }

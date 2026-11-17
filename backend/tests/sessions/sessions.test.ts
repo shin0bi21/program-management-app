@@ -709,7 +709,7 @@ describe('Program cycle sessions and attendance API', () => {
     ]));
   });
 
-  it('limits attendance mutation side-loaded rows to the actor capabilities', async () => {
+  it('limits attendance mutation side-loaded rows to the user capabilities', async () => {
     const attendanceWriter = generateToken(staffId, 'staff', undefined, ['write:attendance']);
     const response = await request(app).put(`/api/sessions/${sessionId}/attendance`)
       .set('Authorization', `Bearer ${attendanceWriter}`)

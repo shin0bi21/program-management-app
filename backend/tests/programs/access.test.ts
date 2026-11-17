@@ -48,9 +48,9 @@ describe('Program authorization before missing-record responses', () => {
 
   it.each([
     ['admin', 404], ['manager', 404], ['assigned', 403], ['unassigned', 403],
-  ])('returns the authorized missing-program result for %s', async (actor, status) => {
+  ])('returns the authorized missing-program result for %s', async (user, status) => {
     const response = await request(app).post('/api/sessions')
-      .set('Authorization', `Bearer ${tokens[actor]}`)
+      .set('Authorization', `Bearer ${tokens[user]}`)
       .send({ programId: missingId, sessionType: 'Regular',
         title: 'Missing program', date: '2026-06-01' });
 
@@ -59,10 +59,10 @@ describe('Program authorization before missing-record responses', () => {
 
   it.each([
     ['admin', 404], ['manager', 404], ['assigned', 404], ['unassigned', 403],
-  ])('uses known parent authority for a missing cycle requested by %s', async (actor, status) => {
+  ])('uses known parent authority for a missing cycle requested by %s', async (user, status) => {
     const response = await request(app)
       .get(`/api/programs/${programId}/cycles/${missingId}/roster`)
-      .set('Authorization', `Bearer ${tokens[actor]}`);
+      .set('Authorization', `Bearer ${tokens[user]}`);
 
     expect(response.status).toBe(status);
     if (status === 404) expect(response.body.error).toBe('Program cycle not found');
@@ -70,11 +70,11 @@ describe('Program authorization before missing-record responses', () => {
 
   it.each([
     ['admin', 200, 404], ['manager', 200, 404], ['assigned', 200, 403], ['unassigned', 403, 403],
-  ])('preserves session visibility and missing-parent authority for %s', async (actor, existingStatus, missingStatus) => {
+  ])('preserves session visibility and missing-parent authority for %s', async (user, existingStatus, missingStatus) => {
     const existing = await request(app).get(`/api/sessions/${sessionId}/notes`)
-      .set('Authorization', `Bearer ${tokens[actor]}`);
+      .set('Authorization', `Bearer ${tokens[user]}`);
     const missing = await request(app).get(`/api/sessions/${missingId}/notes`)
-      .set('Authorization', `Bearer ${tokens[actor]}`);
+      .set('Authorization', `Bearer ${tokens[user]}`);
 
     expect(existing.status).toBe(existingStatus);
     expect(missing.status).toBe(missingStatus);

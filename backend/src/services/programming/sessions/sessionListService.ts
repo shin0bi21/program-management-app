@@ -7,14 +7,14 @@ import { buildSessionFilters } from './sessionRowFilters';
 
 /**
  * Lists matching sessions.
- * @param actor - Actor whose program access scopes the rows; callers enforce route permissions.
+ * @param user - User whose program access scopes the rows; callers enforce route permissions.
  * @param filterValues - Validated list filters; unpaged calendar ranges default to ascending order.
  * @returns A page of up to 50 rows when paginate=true, otherwise the complete matching rows.
- * @example listSessions(actor, filterValues) // { rows, nextCursor } when filterValues.paginate is set
+ * @example listSessions(user, filterValues) // { rows, nextCursor } when filterValues.paginate is set
  */
-export function listSessions(actor: AccessTokenPayload, filterValues: SessionListQuery) {
+export function listSessions(user: AccessTokenPayload, filterValues: SessionListQuery) {
   // 1. Filter the canonical, access-scoped session rows.
-  const filteredRows = buildSessionFilters(getSessionRows(actor), filterValues);
+  const filteredRows = buildSessionFilters(getSessionRows(user), filterValues);
   const direction = filterValues.paginate === undefined && filterValues.start ? 'asc' : filterValues.direction;
 
   // 2. Choose the session sort and delegate cursor execution and response shaping.

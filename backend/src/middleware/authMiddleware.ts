@@ -50,16 +50,16 @@ export const authenticateToken = asyncHandler(async (req, _res, next) => {
 
 /**
  * Requires every listed endpoint capability after authentication; missing capabilities are 403.
- * @param required - Permissions the authenticated actor must all hold.
+ * @param required - Permissions the authenticated user must all hold.
  * @returns Middleware rejecting unauthenticated requests with 401 and continuing authorized requests.
  * @example router.use(authenticateToken, requirePermission('read:accounts'));
  */
 export const requirePermission = (...required: Permission[]) =>
   asyncHandler(async (req, _res, next) => {
-    const actor = (req as AuthRequest).user;
-    if (!actor) throw new UnauthorizedError('Not authenticated');
+    const user = (req as AuthRequest).user;
+    if (!user) throw new UnauthorizedError('Not authenticated');
 
-    const hasAll = required.every(permission => actor.permissions.includes(permission));
+    const hasAll = required.every(permission => user.permissions.includes(permission));
     if (!hasAll) throw new ForbiddenError('Insufficient permissions');
 
     next();
@@ -74,9 +74,9 @@ export const requirePermission = (...required: Permission[]) =>
  */
 export const requireAnyPermission = (...required: Permission[]) =>
   asyncHandler(async (req, _res, next) => {
-    const actor = (req as AuthRequest).user;
-    if (!actor) throw new UnauthorizedError('Not authenticated');
-    if (!required.some(permission => actor.permissions.includes(permission))) {
+    const user = (req as AuthRequest).user;
+    if (!user) throw new UnauthorizedError('Not authenticated');
+    if (!required.some(permission => user.permissions.includes(permission))) {
       throw new ForbiddenError('Insufficient permissions');
     }
 

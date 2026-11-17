@@ -11,9 +11,9 @@ export const handleGetCycleReferenceData = async (_req: Request, res: Response) 
 };
 
 export const handleGetProgramReferenceData = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as ProgramReferenceDataQuery;
-  res.json(await getProgramReferenceData(actor, query.assignedOnly));
+  res.json(await getProgramReferenceData(user, query.assignedOnly));
 };
 
 export const handleGetStaffReferenceData = async (req: Request, res: Response) => {

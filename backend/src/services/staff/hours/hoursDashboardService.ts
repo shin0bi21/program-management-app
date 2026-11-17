@@ -12,13 +12,13 @@ interface HoursCategoryTotal {
 
 /**
  * Summarizes accessible staff hours for the pay period containing the requested date.
- * @param actor - Actor whose staff access is enforced.
+ * @param user - User whose staff access is enforced.
  * @param query - Staff member and optional date; omission uses the database's current date.
- * @example getHoursPayPeriodData(actor, { staffId }) // current pay-period total and breakdown
+ * @example getHoursPayPeriodData(user, { staffId }) // current pay-period total and breakdown
  */
-export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: HoursPayPeriodQuery) {
+export async function getHoursPayPeriodData(user: AccessTokenPayload, query: HoursPayPeriodQuery) {
   // 1. Check access to the staff member.
-  await assertStaffReadAccess(actor, query.staffId);
+  await assertStaffReadAccess(user, query.staffId);
 
   // 2. Find the pay period independently of the dashboard's selected cycle.
   const [payPeriod] = await sql<Array<{ periodStart: string; periodEnd: string }>>`
@@ -58,13 +58,13 @@ export async function getHoursPayPeriodData(actor: AccessTokenPayload, query: Ho
 
 /**
  * Summarizes accessible staff hours as a biweekly average for one cycle.
- * @param actor - Actor whose staff access is enforced.
+ * @param user - User whose staff access is enforced.
  * @param query - Staff member and cycle whose entries contribute to the average.
- * @example getHoursCycleSummaryData(actor, { staffId, cycleId }) // cycle average and breakdown
+ * @example getHoursCycleSummaryData(user, { staffId, cycleId }) // cycle average and breakdown
  */
-export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query: HoursCycleSummaryQuery) {
+export async function getHoursCycleSummaryData(user: AccessTokenPayload, query: HoursCycleSummaryQuery) {
   // 1. Check access to the staff member before exposing cycle data.
-  await assertStaffReadAccess(actor, query.staffId);
+  await assertStaffReadAccess(user, query.staffId);
 
   // 2. Count elapsed pay periods, capped at the cycle's inclusive end date.
   const [cycle] = await sql<Array<{ periodCount: number }>>`
@@ -96,13 +96,13 @@ export async function getHoursCycleSummaryData(actor: AccessTokenPayload, query:
 }
 
 /**
- * Conceals summaries for staff outside the actor's Hours visibility.
- * @param actor - Actor whose readable staff determine access.
+ * Conceals summaries for staff outside the user's Hours visibility.
+ * @param user - User whose readable staff determine access.
  * @param staffId - Requested staff member ID.
- * @example await assertStaffReadAccess(actor, staffId) // throws 404 for an unrelated staff member
+ * @example await assertStaffReadAccess(user, staffId) // throws 404 for an unrelated staff member
  */
-async function assertStaffReadAccess(actor: AccessTokenPayload, staffId: string) {
-  const readableStaff = await getStaffReferenceData(actor, 'hours');
+async function assertStaffReadAccess(user: AccessTokenPayload, staffId: string) {
+  const readableStaff = await getStaffReferenceData(user, 'hours');
   if (!readableStaff.some(staffMember => staffMember.id === staffId)) {
     throw new NotFoundError('Hours overview not found');
   }

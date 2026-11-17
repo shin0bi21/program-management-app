@@ -14,17 +14,17 @@ import { getYouthRows } from '../../youth/youthRowQuery';
  * @param programId - Enrollment program.
  * @param cycleId - Assigned cycle.
  * @param data - Validated youth IDs.
- * @param actor - User whose program access is checked.
- * @example enrollYouth(programId, cycleId, data, actor)
+ * @param user - User whose program access is checked.
+ * @example enrollYouth(programId, cycleId, data, user)
  */
-export async function enrollYouth(programId: string, cycleId: string, data: EnrollYouthInput, actor: AccessTokenPayload) {
+export async function enrollYouth(programId: string, cycleId: string, data: EnrollYouthInput, user: AccessTokenPayload) {
   // 1. Check access to the program cycle.
-  await assertProgramCycleAccess(actor, programId, cycleId);
+  await assertProgramCycleAccess(user, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Lock and check the program assignment.
-    await lockAssignmentProgram(trx, programId, actor);
+    await lockAssignmentProgram(trx, programId, user);
 
     await lockAssignmentCycle(trx, cycleId);
 
@@ -83,8 +83,8 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
         ${programId},
         ${cycleId},
         selected.youth_id,
-        ${actor.userId},
-        ${actor.userId}
+        ${user.userId},
+        ${user.userId}
       FROM UNNEST(${sql.array(data.youthIds)}::uuid[]) AS selected(youth_id)
       ORDER BY selected.youth_id
       ON CONFLICT (program_id, cycle_id, youth_id) DO UPDATE SET
@@ -104,11 +104,11 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
     `;
 
     // 5. Return the affected rows.
-    const [updatedProgramCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
+    const [updatedProgramCycle] = await getProgramCycleRowsByKeys(trx, user, [{ programId, cycleId }]);
     return {
       enrollments,
       programCycle: updatedProgramCycle,
-      updatedYouth: actor.permissions.includes('read:youth_profiles')
+      updatedYouth: user.permissions.includes('read:youth_profiles')
         ? await getYouthRows(trx`youth.id = ANY(${trx.array(data.youthIds)}::uuid[])`, trx) : [],
     };
   }).catch(rethrowEnrollmentConflict);
@@ -119,21 +119,21 @@ export async function enrollYouth(programId: string, cycleId: string, data: Enro
  * @param programId - Enrollment program.
  * @param cycleId - Assigned cycle.
  * @param youthId - Youth with an active enrollment.
- * @param actor - User whose program access is checked.
- * @example withdrawYouth(programId, cycleId, youthId, actor)
+ * @param user - User whose program access is checked.
+ * @example withdrawYouth(programId, cycleId, youthId, user)
  */
 export async function withdrawYouth(
   programId: string, cycleId: string,
   youthId: string,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
   // 1. Check access to the program cycle.
-  await assertProgramCycleAccess(actor, programId, cycleId);
+  await assertProgramCycleAccess(user, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Lock the program assignment.
-    await lockAssignmentProgram(trx, programId, actor);
+    await lockAssignmentProgram(trx, programId, user);
     await lockAssignmentCycle(trx, cycleId);
     await trx`
       SELECT program_id
@@ -146,7 +146,7 @@ export async function withdrawYouth(
     const [enrollment] = await trx`
       UPDATE program_enrollments
       SET withdrawn_on = CURRENT_DATE,
-          updated_at = NOW(), updated_by = ${actor.userId}
+          updated_at = NOW(), updated_by = ${user.userId}
       WHERE program_id = ${programId} AND cycle_id = ${cycleId} AND youth_id = ${youthId} AND withdrawn_on IS NULL
       RETURNING
         id,
@@ -161,11 +161,11 @@ export async function withdrawYouth(
     if (!enrollment) throw new NotFoundError('Active program enrollment not found');
 
     // 4. Return the affected rows.
-    const [programCycle] = await getProgramCycleRowsByKeys(trx, actor, [{ programId, cycleId }]);
+    const [programCycle] = await getProgramCycleRowsByKeys(trx, user, [{ programId, cycleId }]);
     return {
       enrollment,
       programCycle,
-      updatedYouth: actor.permissions.includes('read:youth_profiles')
+      updatedYouth: user.permissions.includes('read:youth_profiles')
         ? await getYouthRows(trx`youth.id = ${youthId}`, trx) : [],
     };
   }).catch(rethrowEnrollmentConflict);

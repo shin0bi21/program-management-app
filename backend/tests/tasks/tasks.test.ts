@@ -151,18 +151,18 @@ describe('Tasks API', () => {
       expect(created.status).toBe(201);
       createdIds.push(created.body.id);
     }
-    const actor: AccessTokenPayload = {
+    const user: AccessTokenPayload = {
       userId: firstStaffId, email: 'scope-check@test.local', role: 'staff',
       permissions: ['read:tasks'], tokenType: 'access', jti: 'scope-check', iat: 0, exp: 1,
     };
 
-    const ownAndShared = await getTaskRows(actor);
+    const ownAndShared = await getTaskRows(user);
     expect(ownAndShared.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
       .toEqual(createdIds.slice(0, 2).sort());
-    expect(await getTaskRows(actor, sql`task.id = ${createdIds[2]}`)).toEqual([]);
-    const broadFilter = await getTaskRows(actor, sql`TRUE OR task.id = ${createdIds[2]}`);
+    expect(await getTaskRows(user, sql`task.id = ${createdIds[2]}`)).toEqual([]);
+    const broadFilter = await getTaskRows(user, sql`TRUE OR task.id = ${createdIds[2]}`);
     expect(broadFilter.some(row => row.id === createdIds[2])).toBe(false);
-    const adminRows = await getTaskRows({ ...actor, userId: adminId, role: 'admin' });
+    const adminRows = await getTaskRows({ ...user, userId: adminId, role: 'admin' });
     expect(adminRows.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
       .toEqual([...createdIds].sort());
   });

@@ -138,13 +138,13 @@ export async function submitPublicLead(data: PublicLeadInput) {
  * Removes written files if upload persistence fails. Callers authorize homepage writes.
  * @param data - Validated caption used for both the caption and accessible alt text.
  * @param file - In-memory JPEG, PNG, or WebP upload; omission or invalid bytes are 400.
- * @param actor - Authorized user recorded as creator and updater.
- * @example await createHomepageImage(data, file, actor) // complete row with generated URLs
+ * @param user - Authorized user recorded as creator and updater.
+ * @example await createHomepageImage(data, file, user) // complete row with generated URLs
  */
 export async function createHomepageImage(
   data: CreateHomepageImageInput,
   file: Express.Multer.File | undefined,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
   // 1. Validate the uploaded image type.
   if (!file) throw new BadRequestError('An image file is required');
@@ -195,8 +195,8 @@ export async function createHomepageImage(
         ${data.caption},
         ${data.caption},
         COALESCE(MAX(display_order), -1) + 1,
-        ${actor.userId},
-        ${actor.userId}
+        ${user.userId},
+        ${user.userId}
       FROM homepage_images
       RETURNING ${homepageImageRowColumns}
     `;
@@ -212,17 +212,17 @@ export async function createHomepageImage(
  * Updates the caption and alt text and returns the complete saved image; missing images are 404.
  * @param imageId - Image whose saved caption and alt text change.
  * @param data - Validated replacement caption.
- * @param actor - Authorized user recorded as updater.
- * @example await updateHomepageImage(imageId, { caption: 'Youth workshop.' }, actor) // complete updated row
+ * @param user - Authorized user recorded as updater.
+ * @example await updateHomepageImage(imageId, { caption: 'Youth workshop.' }, user) // complete updated row
  */
-export async function updateHomepageImage(imageId: string, data: UpdateHomepageImageInput, actor: AccessTokenPayload) {
+export async function updateHomepageImage(imageId: string, data: UpdateHomepageImageInput, user: AccessTokenPayload) {
   const rows = await sql<HomepageImageRow[]>`
     UPDATE homepage_images AS image
     SET
       alt_text = ${data.caption},
       caption = ${data.caption},
       updated_at = NOW(),
-      updated_by = ${actor.userId}
+      updated_by = ${user.userId}
     WHERE image.id = ${imageId}
     RETURNING ${homepageImageRowColumns}
   `;
@@ -233,10 +233,10 @@ export async function updateHomepageImage(imageId: string, data: UpdateHomepageI
 /**
  * Replaces display order atomically after checking that every homepage image is included.
  * @param imageIds - Complete, distinct list of image IDs in the requested order.
- * @param actor - Authorized user recorded as updater.
- * @example await reorderHomepageImages({ imageIds }, actor) // saved image IDs in the requested order
+ * @param user - Authorized user recorded as updater.
+ * @example await reorderHomepageImages({ imageIds }, user) // saved image IDs in the requested order
  */
-export async function reorderHomepageImages({ imageIds }: ReorderHomepageImagesInput, actor: AccessTokenPayload) {
+export async function reorderHomepageImages({ imageIds }: ReorderHomepageImagesInput, user: AccessTokenPayload) {
   return sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
 
@@ -256,7 +256,7 @@ export async function reorderHomepageImages({ imageIds }: ReorderHomepageImagesI
       SET
         display_order = ordered.display_order,
         updated_at = NOW(),
-        updated_by = ${actor.userId}
+        updated_by = ${user.userId}
       FROM (
         SELECT image_id, (ordinality - 1)::int AS display_order
         FROM unnest(${trx.array(imageIds)}::uuid[]) WITH ORDINALITY AS item(image_id, ordinality)

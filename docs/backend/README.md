@@ -11,7 +11,7 @@ Dependencies flow from routes through middleware and controllers to services and
 
 ## Development Flow
 
-1. Define stored data, invariants, authorized actors, record scope, API shapes, and important failures.
+1. Define stored data, invariants, authorized users, record scope, API shapes, and important failures.
 2. Add a forward-only migration when persistence changes and regenerate database types through the migration workflow.
 3. Add or change the policy when access depends on the record.
 4. Put SQL, business rules, transactions, locking, policy checks, audits, and external coordination in the service owner.

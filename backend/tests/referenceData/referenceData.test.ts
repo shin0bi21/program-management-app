@@ -181,11 +181,11 @@ describe('Page-authorized reference data', () => {
     for (const suffix of ['', '?feature=schools']) {
       expect((await get(`/reference-data/staff${suffix}`, ['read:tasks'])).status).toBe(400);
     }
-    const actor: AccessTokenPayload = {
+    const user: AccessTokenPayload = {
       userId: staffId, role: 'staff', permissions: ['read:hours'], email: 'reference@test.local',
       jti: 'reference-service-test', tokenType: 'access', iat: 0, exp: 1,
     };
-    expect(() => getStaffReferenceData(actor, 'tasks')).toThrow('Insufficient permissions');
+    expect(() => getStaffReferenceData(user, 'tasks')).toThrow('Insufficient permissions');
   });
 
   it('keeps feature-local choices separate from shared lookups', async () => {

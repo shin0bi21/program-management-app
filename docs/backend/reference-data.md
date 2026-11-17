@@ -15,7 +15,7 @@ validation where applicable, and the normal error middleware still apply.
 |---|---|---|
 | `GET /reference-data/cycles` | `id`, `title`, `startsOn`, `endsOn`, `state` | Any consuming capability listed below |
 | `GET /reference-data/programs` | `id`, `title` | Any consuming capability below, or `write:accounts` |
-| `GET /reference-data/programs?assignedOnly=true` | Assigned program IDs and titles | Any authenticated actor; the program-access policy determines assignments |
+| `GET /reference-data/programs?assignedOnly=true` | Assigned program IDs and titles | Any authenticated user; the program-access policy determines assignments |
 | `GET /reference-data/staff?feature=tasks` | Identity, display name, role, `writable` | `read:tasks`, with task read/write scope |
 | `GET /reference-data/staff?feature=hours` | Identity, display name, role, `writable` | `read:hours`, with hours read/write scope |
 | `GET /reference-data/schools` | `id`, `name` | Any of `read:schools`, `write:schools`, `read:youth_profiles` |

@@ -33,15 +33,15 @@ interface SessionNoteRow {
 
 /**
  * Loads complete attendance and linked notes for an authorized program cycle.
- * @param programId - Program whose assignment must be visible to the actor.
+ * @param programId - Program whose assignment must be visible to the user.
  * @param cycleId - Assigned cycle to read, including upcoming and cancelled sessions.
- * @param actor - Signed-in account whose program scope is checked.
+ * @param user - Signed-in account whose program scope is checked.
  * @param youthId - Optional youth filter; omitted reads all participating youth.
- * @example getProgramCycleAttendance(programId, cycleId, actor, youthId) // same data for dashboards, editing and reports
+ * @example getProgramCycleAttendance(programId, cycleId, user, youthId) // same data for dashboards, editing and reports
  */
-export async function getProgramCycleAttendance(programId: string, cycleId: string, actor: AccessTokenPayload, youthId?: string) {
+export async function getProgramCycleAttendance(programId: string, cycleId: string, user: AccessTokenPayload, youthId?: string) {
   // 1. Require access to the selected program-cycle assignment.
-  await assertProgramCycleAccess(actor, programId, cycleId);
+  await assertProgramCycleAccess(user, programId, cycleId);
   const [programCycle] = await sql<AttendanceReportInput['programCycle'][]>`
     SELECT
       assignment.program_id,

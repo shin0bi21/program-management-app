@@ -7,19 +7,19 @@ import { buildTaskFilters, resolveTaskDateRange } from './taskRowFilters';
 
 /**
  * Lists matching tasks.
- * @param actor - Actor whose staff scope controls reads and per-row write capabilities.
+ * @param user - User whose staff scope controls reads and per-row write capabilities.
  * @param filterValues - Validated task filters, derived-status sorting, and cursor inputs.
  * @returns A bounded page with logged-hour details; unavailable or disjoint date bounds return an empty page.
- * @example getTaskList(actor, filterValues) // { rows, nextCursor }
+ * @example getTaskList(user, filterValues) // { rows, nextCursor }
  */
-export async function getTaskList(actor: AccessTokenPayload, filterValues: TaskListQuery) {
+export async function getTaskList(user: AccessTokenPayload, filterValues: TaskListQuery) {
   // 1. Load the matching tasks.
   const range = await resolveTaskDateRange(filterValues);
   const appliedFilters = buildTaskFilters(filterValues);
   const dateFilter = range
     ? sql`task.start_date <= ${range.end}::date AND task.due_date >= ${range.start}::date`
     : sql`FALSE`;
-  const rowsQuery = getTaskRows(actor, sql`
+  const rowsQuery = getTaskRows(user, sql`
     ${appliedFilters}
     AND ${dateFilter}
   `);

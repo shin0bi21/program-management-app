@@ -7,14 +7,14 @@ import { buildProgramFilters } from './programRowFilters';
 
 /**
  * Lists programs matching the selected scope.
- * @param actor - User requesting the programs.
+ * @param user - User requesting the programs.
  * @param filterValues - Validated scope and pagination options.
  * @returns A page of matching programs.
- * @example getProgramList(actor, filterValues) // { rows, nextCursor }
+ * @example getProgramList(user, filterValues) // { rows, nextCursor }
  */
-export function getProgramList(actor: AccessTokenPayload, filterValues: ProgramListQuery) {
+export function getProgramList(user: AccessTokenPayload, filterValues: ProgramListQuery) {
   // 1. Find matching programs.
-  const appliedFilters = buildProgramFilters(actor, filterValues);
+  const appliedFilters = buildProgramFilters(user, filterValues);
   const rowsQuery = getProgramRows(appliedFilters);
 
   // 2. Return the requested page.

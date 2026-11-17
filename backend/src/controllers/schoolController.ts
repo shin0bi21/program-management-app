@@ -8,8 +8,8 @@ export const handleGetSchools = async (req: Request, res: Response) => {
 };
 
 export const handleSetSchool = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  const school = await setSchool(req.body as SetSchoolInput, actorId);
+  const userId = (req as AuthRequest).user!.userId;
+  const school = await setSchool(req.body as SetSchoolInput, userId);
   res.json(school);
 };
 

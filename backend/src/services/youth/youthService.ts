@@ -39,11 +39,11 @@ export interface SetYouthInput {
  * Creates or updates a youth profile and saves its addresses, contacts, and audit history.
  * An ID selects a required, locked youth target; it never creates a replacement.
  * @param data - Validated profile fields. Omit id to create a youth; include it to update one.
- * @param actorId - ID of the signed-in user to record in the audit history.
+ * @param currentUserId - ID of the signed-in user to record in the audit history.
  * @returns The saved profile with its current participation, addresses, and contacts.
- * @example setYouthProfile({ id: youthId, firstName: 'Sam', lastName: 'Lee' }, actorId)
+ * @example setYouthProfile({ id: youthId, firstName: 'Sam', lastName: 'Lee' }, currentUserId)
  */
-export async function setYouthProfile(data: SetYouthInput, actorId: string) {
+export async function setYouthProfile(data: SetYouthInput, currentUserId: string) {
   // 1. Prepare the profile change.
   const { id, firstName, lastName, dateOfBirth, schoolId, addresses, contacts } = data;
   const transactionId = crypto.randomUUID();
@@ -91,7 +91,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
       persistedUserId = users[0].id;
       await audit(
         trx,
-        actorId,
+        currentUserId,
         transactionId,
         'users',
         persistedUserId,
@@ -107,7 +107,7 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
       `;
       await audit(
         trx,
-        actorId,
+        currentUserId,
         transactionId,
         'youth_profiles',
         persistedUserId,
@@ -132,22 +132,22 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
 
       if (!newUsers[0]) throw new InternalServerError('Youth creation returned no user');
       persistedUserId = newUsers[0].id;
-      await audit(trx, actorId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
+      await audit(trx, currentUserId, transactionId, 'users', persistedUserId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName });
 
       await trx`
         INSERT INTO youth_profiles (user_id, date_of_birth, school_id)
         VALUES (${persistedUserId}, ${dateOfBirth ?? null}, ${schoolId || null})
       `;
-      await audit(trx, actorId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth ?? null, schoolId: schoolId || null });
+      await audit(trx, currentUserId, transactionId, 'youth_profiles', persistedUserId, 'INSERT', null, { userId: persistedUserId, dateOfBirth: dateOfBirth ?? null, schoolId: schoolId || null });
     }
 
     // 3. Save the supplied addresses and contacts.
     if (id) {
-      await setAddresses(persistedUserId, addresses || [], actorId, transactionId, trx);
-      await setContacts(persistedUserId, contacts || [], actorId, transactionId, trx);
+      await setAddresses(persistedUserId, addresses || [], currentUserId, transactionId, trx);
+      await setContacts(persistedUserId, contacts || [], currentUserId, transactionId, trx);
     } else {
-      if (addresses && addresses.length > 0) await setAddresses(persistedUserId, addresses, actorId, transactionId, trx);
-      if (contacts && contacts.length > 0) await setContacts(persistedUserId, contacts, actorId, transactionId, trx);
+      if (addresses && addresses.length > 0) await setAddresses(persistedUserId, addresses, currentUserId, transactionId, trx);
+      if (contacts && contacts.length > 0) await setContacts(persistedUserId, contacts, currentUserId, transactionId, trx);
     }
 
     return persistedUserId;
@@ -161,10 +161,10 @@ export async function setYouthProfile(data: SetYouthInput, actorId: string) {
  * Replaces a youth's contacts after checking submitted contact IDs.
  * @param id - ID of the youth whose contacts should be replaced.
  * @param data - Complete list of contacts to keep; an empty list removes all active contacts.
- * @param actorId - ID of the signed-in user to record in the audit history.
- * @example setYouthContacts(youthId, data, actorId)
+ * @param currentUserId - ID of the signed-in user to record in the audit history.
+ * @example setYouthContacts(youthId, data, currentUserId)
  */
-export async function setYouthContacts(id: string, data: SetYouthContactsInput, actorId: string) {
+export async function setYouthContacts(id: string, data: SetYouthContactsInput, currentUserId: string) {
   const transactionId = crypto.randomUUID();
 
   // 1. Normalize the submitted contact IDs.
@@ -200,7 +200,7 @@ export async function setYouthContacts(id: string, data: SetYouthContactsInput, 
     if (hasUnavailableContact) throw new NotFoundError('One or more youth contacts were not found');
 
     // 4. Save the replacement contacts.
-    await setContacts(id, contacts, actorId, transactionId, trx);
+    await setContacts(id, contacts, currentUserId, transactionId, trx);
   });
 
   // 5. Return the saved profile.

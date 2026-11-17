@@ -14,10 +14,10 @@ export async function getYouthProfileNotes(youthId: string) {
     ORDER BY note.created_at DESC
   `;
 }
-export function setYouthProfileNote(youthId: string, data: SetYouthProfileNoteInput, actorId: string, noteId?: string) {
+export function setYouthProfileNote(youthId: string, data: SetYouthProfileNoteInput, userId: string, noteId?: string) {
   return noteId
-    ? updateYouthProfileNoteRecord(youthId, noteId, data, actorId)
-    : insertYouthProfileNote(youthId, data, actorId);
+    ? updateYouthProfileNoteRecord(youthId, noteId, data, userId)
+    : insertYouthProfileNote(youthId, data, userId);
 }
 
 export async function deleteYouthProfileNote(youthId: string, noteId: string) {
@@ -25,21 +25,21 @@ export async function deleteYouthProfileNote(youthId: string, noteId: string) {
   if (!rows.length) throw new NotFoundError('Profile note not found');
 }
 
-async function insertYouthProfileNote(youthId: string, data: SetYouthProfileNoteInput, actorId: string) {
+async function insertYouthProfileNote(youthId: string, data: SetYouthProfileNoteInput, userId: string) {
   await assertYouthExists(youthId);
   const rows = await sql`
     INSERT INTO youth_profile_notes (youth_id, category, details, created_by, updated_by)
-    VALUES (${youthId}, ${data.category}, ${data.details}, ${actorId}, ${actorId}) RETURNING id
+    VALUES (${youthId}, ${data.category}, ${data.details}, ${userId}, ${userId}) RETURNING id
   `;
   if (!rows[0]) throw new InternalServerError('Profile note creation returned no record');
   const note = (await getYouthProfileNotes(youthId)).find(note => note.id === rows[0].id);
   if (!note) throw new NotFoundError('Profile note not found');
   return note;
 }
-async function updateYouthProfileNoteRecord(youthId: string, noteId: string, data: SetYouthProfileNoteInput, actorId: string) {
+async function updateYouthProfileNoteRecord(youthId: string, noteId: string, data: SetYouthProfileNoteInput, userId: string) {
   const rows = await sql`
     UPDATE youth_profile_notes SET category = ${data.category}, details = ${data.details},
-      updated_by = ${actorId}, updated_at = NOW()
+      updated_by = ${userId}, updated_at = NOW()
     WHERE id = ${noteId} AND youth_id = ${youthId} RETURNING id
   `;
   if (!rows.length) throw new NotFoundError('Profile note not found');
