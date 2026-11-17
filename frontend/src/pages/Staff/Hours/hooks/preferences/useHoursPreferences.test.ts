@@ -74,17 +74,18 @@ describe('useHoursPreferences', () => {
     }));
   });
 
-  it('removes an admin-only saved staff filter for a staff user', async () => {
+  it.each(['staff', 'project_manager', 'admin'])('retains readable staff selections and removes unavailable IDs for %s', async role => {
     savedPreference.preference = {
-      view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
+      view: 'calendar', staffIds: ['staff-1', 'staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
     };
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'staff', staff, programs, cycles, categories, types, loadingDependencies: false,
+      role, staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.staffIds).toEqual([]);
+    expect(result.current.filters.definitions.some(filter => filter.id === 'staffIds')).toBe(true);
+    expect(result.current.filters.values.staffIds).toEqual(['staff-1']);
   });
 
   it('repairs removed options and sorting without losing valid selections', async () => {
@@ -112,7 +113,7 @@ describe('useHoursPreferences', () => {
     expect(result.current.table.sorting).toEqual({ key: 'date', direction: 'desc' });
   });
 
-  it('repairs options and cycles independently while retaining edits made during the outage', async () => {
+  it('repairs options and cycles independently while retaining staff edits made during the outage', async () => {
     savedPreference.preference = {
       staffIds: ['removed-staff'],
       programIds: ['removed-program'],
@@ -122,7 +123,7 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ optionsError, cyclesError }) => useHoursPreferences({
-        role: 'admin',
+        role: 'staff',
         staff: optionsError ? [] : staff,
         programs: optionsError ? [] : programs,
         categories: optionsError ? [] : categories,
