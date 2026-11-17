@@ -8,7 +8,7 @@ import type { AccessTokenPayload, UserRole } from '../../types/auth';
 import type { SetAccountInput } from '../../validation/accountSchemas';
 import { sendStaffInvite, sendYouthInvite, sendInviteEmailChanged, sendEmailChangedOldAddress, sendEmailChangedNewAddress } from '../../utils/emailService';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../errors';
-import { assertCanCreateAccount, assertCanManageAccount } from '../../policies/accountPolicy';
+import { assertAccountCreationAccess, assertAccountManagementAccess } from '../../policies/accountPolicy';
 import { getAccountRows, type AccountRow } from './accountRowQuery';
 import { requireEnv } from '../../utils/env';
 
@@ -28,9 +28,9 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
   // 1. Check authority over the current account and requested role.
   const { id, firstName, lastName, email, role = 'staff', programIds } = data;
   if (id) {
-    assertCanManageAccount(actor, await getAccountRole(id));
+    assertAccountManagementAccess(actor, await getAccountRole(id));
   }
-  assertCanCreateAccount(actor, role);
+  assertAccountCreationAccess(actor, role);
   const transactionId = crypto.randomUUID();
   const actorId = actor.userId;
 
@@ -300,7 +300,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
  */
 export async function toggleAccountStatus(userId: string, actor: AccessTokenPayload) {
   // 1. Check authority over the account.
-  assertCanManageAccount(actor, await getAccountRole(userId));
+  assertAccountManagementAccess(actor, await getAccountRole(userId));
   const transactionId = crypto.randomUUID();
   const actorId = actor.userId;
 
@@ -367,7 +367,7 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 export async function revokeAccountInvite(userId: string, actor: AccessTokenPayload) {
   // 1. Check authority over the invited account.
   const targetRole = await getAccountRole(userId);
-  assertCanManageAccount(actor, targetRole);
+  assertAccountManagementAccess(actor, targetRole);
   const transactionId = crypto.randomUUID();
   const actorId = actor.userId;
 

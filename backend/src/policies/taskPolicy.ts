@@ -28,8 +28,8 @@ export function taskStaffReadScopePredicate(actor: AccessTokenPayload, staffId: 
   return sharedStaffReadPredicate(actor, staffId);
 }
 
-/** Rejects assignments outside the actor's task write scope. @example assertCanAssignTaskTo(actor, staffId) // throws 403 when forbidden */
-export function assertCanAssignTaskTo(actor: AccessTokenPayload, staffId: string) {
+/** Rejects assignments outside the actor's task write scope. @example assertTaskWriteAccess(actor, staffId) // throws 403 when forbidden */
+export function assertTaskWriteAccess(actor: AccessTokenPayload, staffId: string) {
   if (!canWriteTaskFor(actor, staffId)) {
     throw new ForbiddenError('Staff can only manage their own tasks');
   }

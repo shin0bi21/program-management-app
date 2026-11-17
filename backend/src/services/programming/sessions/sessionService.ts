@@ -1,7 +1,7 @@
 import { SESSION_TYPES } from '../../../types/programming';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
-import { assertCanAccessProgramCycle, assertCanAccessProgram, assertCanAccessSession } from '../../../policies/programAccessPolicy';
+import { assertProgramCycleAccess, assertProgramAccess, assertSessionAccess } from '../../../policies/programAccessPolicy';
 import { lockAssignmentProgram } from '../programCycles/assignmentService';
 import { getSessionRows } from './sessionRowQuery';
 import { buildSessionFilters } from './sessionRowFilters';
@@ -36,7 +36,7 @@ export function getSessionTypes() {
  */
 export async function createProgramSession(programId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
   // 1. Check access to the program.
-  await assertCanAccessProgram(actor, programId);
+  await assertProgramAccess(actor, programId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -81,7 +81,7 @@ export async function createProgramSession(programId: string, data: CreateSessio
 export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
 
   // 1. Check access to the assigned program and cycle.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -119,7 +119,7 @@ export async function createSession(programId: string, cycleId: string, data: Cr
 export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
 
   // 1. Check access to the session.
-  await assertCanAccessSession(actor, id);
+  await assertSessionAccess(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -176,7 +176,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
 export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
 
   // 1. Check access to the session.
-  await assertCanAccessSession(actor, id);
+  await assertSessionAccess(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -272,7 +272,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
  */
 export async function deleteSession(id: string, actor: AccessTokenPayload) {
   // 1. Check access to the session.
-  await assertCanAccessSession(actor, id);
+  await assertSessionAccess(actor, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 

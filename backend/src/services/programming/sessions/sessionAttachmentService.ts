@@ -3,7 +3,7 @@ import { mkdir, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { asTransactionSql, sql } from '../../../db/client';
 import { BadRequestError, ConflictError, InternalServerError, NotFoundError } from '../../../errors';
-import { assertCanAccessSession } from '../../../policies/programAccessPolicy';
+import { assertSessionAccess } from '../../../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import type {
   CreateSessionAttachmentInput,
@@ -35,7 +35,7 @@ const safeDownloadTitle = (title: string) => title
   .trim() || 'attachment';
 
 export async function getSessionAttachments(sessionId: string, actor: AccessTokenPayload) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   return sql`
     SELECT sa.id, sa.session_id, sa.title, sa.description, sa.original_filename,
       sa.mime_type, sa.file_size, sa.created_at, sa.updated_at,
@@ -60,7 +60,7 @@ export async function createSessionAttachment(
   file: Express.Multer.File | undefined,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   if (!file) throw new BadRequestError('An attachment file is required');
   const extension = supportedTypes.get(file.mimetype);
   if (!extension) throw new BadRequestError('Unsupported attachment file type');
@@ -115,7 +115,7 @@ export async function updateSessionAttachment(
   data: UpdateSessionAttachmentInput,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   await sql.begin(async tx => {
     const trx = asTransactionSql(tx);
     const attachments = await trx<{ id: string; enrollmentRequired: boolean }[]>`
@@ -158,7 +158,7 @@ export async function deleteSessionAttachment(
   attachmentId: string,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   const existing = await sql<{ storageKey: string }[]>`
     SELECT storage_key FROM session_attachments
     WHERE id = ${attachmentId} AND session_id = ${sessionId}
@@ -184,7 +184,7 @@ export async function getSessionAttachmentFile(
   attachmentId: string,
   actor: AccessTokenPayload,
 ) {
-  await assertCanAccessSession(actor, sessionId);
+  await assertSessionAccess(actor, sessionId);
   const rows = await sql<{ storageKey: string; title: string; mimeType: string }[]>`
     SELECT storage_key, title, mime_type FROM session_attachments
     WHERE id = ${attachmentId} AND session_id = ${sessionId}

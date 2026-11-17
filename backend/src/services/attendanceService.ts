@@ -1,6 +1,6 @@
 import { sql } from '../db/client';
 import { NotFoundError } from '../errors';
-import { assertCanAccessProgramCycle } from '../policies/programAccessPolicy';
+import { assertProgramCycleAccess } from '../policies/programAccessPolicy';
 import type { AccessTokenPayload } from '../types/auth';
 import type { AttendanceReportInput } from '../validation/programmingSchemas';
 
@@ -41,7 +41,7 @@ interface SessionNoteRow {
  */
 export async function getProgramCycleAttendance(programId: string, cycleId: string, actor: AccessTokenPayload, youthId?: string) {
   // 1. Require access to the selected program-cycle assignment.
-  await assertCanAccessProgramCycle(actor, programId, cycleId);
+  await assertProgramCycleAccess(actor, programId, cycleId);
   const [programCycle] = await sql<AttendanceReportInput['programCycle'][]>`
     SELECT
       assignment.program_id,

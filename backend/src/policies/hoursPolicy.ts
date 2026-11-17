@@ -25,8 +25,8 @@ export function hoursReadScopePredicate(actor: AccessTokenPayload, staffId: Retu
   return hoursStaffReadScopePredicate(actor, staffId);
 }
 
-/** Rejects writes outside the actor's hours scope. @example assertCanSetHours(actor, staffId) // throws 403 when forbidden */
-export function assertCanSetHours(actor: AccessTokenPayload, staffId: string) {
+/** Rejects writes outside the actor's hours scope. @example assertHoursWriteAccess(actor, staffId) // throws 403 when forbidden */
+export function assertHoursWriteAccess(actor: AccessTokenPayload, staffId: string) {
   if (!canSetHours(actor, staffId)) {
     throw new ForbiddenError('Staff can only manage their own logged hours');
   }
