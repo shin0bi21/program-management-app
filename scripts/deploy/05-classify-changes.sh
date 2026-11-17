@@ -1,5 +1,8 @@
 # shellcheck shell=bash
 
+# Selects infrastructure work from changed paths between recorded and target revisions.
+# Reads INFRASTRUCTURE_REVISION and TARGET_SHA; sets INFRASTRUCTURE_CHANGED.
+# Example: a backend/Dockerfile change selects the full deployment flow.
 classify_infrastructure_changes() {
   # 1. Missing infrastructure history requires the full deployment flow.
   if [ -z "$INFRASTRUCTURE_REVISION" ]; then
@@ -11,7 +14,7 @@ classify_infrastructure_changes() {
   local path
   while IFS= read -r path; do
     case "$path" in
-      .dockerignore|tsconfig.base.json|frontend/Dockerfile|frontend/.dockerignore|backend/Dockerfile|backend/.dockerignore|docker-compose.prod.yml|nginx.conf|scripts/deploy/*)
+      frontend/Dockerfile|frontend/.dockerignore|backend/Dockerfile|backend/.dockerignore|docker-compose.prod.yml|nginx.conf|scripts/deploy/*)
         INFRASTRUCTURE_CHANGED=true
         ;;
       frontend/*|backend/*|.agents/*|.github/*|docs/*|AGENTS.md|README.md|.gitignore|.codexignore|.openaiignore)
@@ -28,6 +31,9 @@ classify_infrastructure_changes() {
   done < <(git diff --name-only "$INFRASTRUCTURE_REVISION" "$TARGET_SHA")
 }
 
+# Selects application and migration work using each component's recorded revision.
+# Reads revision globals and TARGET_SHA; updates the four component change flags.
+# Example: a backend/src change selects backend work without migrations.
 classify_changes() {
   # 1. Compare each component with its own last successful revision.
   if revision_changed "$FRONTEND_REVISION" \
@@ -57,6 +63,9 @@ classify_changes() {
   fi
 }
 
+# Prints the selected target and component flags without changing deployment state.
+# Reads TARGET_SHA and the component change flags.
+# Example: preview prints Frontend: true when frontend work is selected.
 print_deployment_summary() {
   echo ""
   echo "=========================================="

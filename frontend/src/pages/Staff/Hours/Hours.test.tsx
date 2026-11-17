@@ -187,21 +187,22 @@ describe('Hours', () => {
   });
 
   // Entry and readiness.
-  it('does not show staff their redundant Staff filter', async () => {
+  it('lets staff filter hours by a readable coworker', async () => {
+    vi.mocked(getStaffReferences).mockResolvedValue([
+      { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
+      { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: false },
+    ]);
     renderHours();
 
     expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: /Staff/ })).not.toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByRole('menuitem', { name: /Staff/ }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Morgan' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
 
-  it('keeps the Staff filter for admins', async () => {
-    auth.role = 'admin';
-    renderHours();
-
-    expect((await screen.findAllByLabelText('Zoe Wilson')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.getByRole('menuitem', { name: /Staff/ })).toBeInTheDocument();
+    await waitFor(() => expect(getHoursCalendarData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ staffIds: ['staff-2'] }), expect.anything(), expect.anything(),
+    ));
   });
 
   it('loads cycle and staff references for hours-only readers', async () => {

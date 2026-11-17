@@ -27,13 +27,48 @@ export interface ErrorResponse {
   error: string;
   /** Field-level validation failures, when supplied by the error. */
   details?: ValidationDetail[];
-  /** Incoming `X-Request-ID` or a generated identifier; included when request middleware supplied one. */
-  requestId?: string;
+  /** Incoming `X-Request-ID` or generated identifier guaranteed by the first middleware. */
+  requestId: string;
 }
 
 /** Standard HTTP errors may carry field-level validation details. */
 export interface ApplicationError extends createError.HttpError {
   details?: ValidationDetail[];
+}
+
+/** Standard Error plus metadata supplied by the database and HTTP parsers. */
+interface ErrorWithMetadata extends Error {
+  code?: string;
+  type?: string;
+  status?: number;
+}
+
+/** Error metadata inspected for safe logging; unrecognized fields are omitted. */
+interface DiagnosticMetadata extends Error {
+  code?: unknown;
+  constraint_name?: unknown;
+  table_name?: unknown;
+  column_name?: unknown;
+  status?: unknown;
+  responseCode?: unknown;
+}
+
+/** Safe identifiers and nested causes shared by request and background error logs. */
+interface ErrorDiagnosticMetadata {
+  code?: string;
+  constraint?: string;
+  table?: string;
+  column?: string;
+  responseCode?: number;
+  cause?: ErrorDiagnostic;
+}
+
+/** Error identity and source locations, separate from shared diagnostic metadata. */
+interface ErrorDiagnostic {
+  name: string;
+  status?: number;
+  locations: string[];
+  metadata: ErrorDiagnosticMetadata;
 }
 
 export const UNEXPECTED_ERROR_MESSAGE = 'An unexpected error occurred';
@@ -42,12 +77,8 @@ const POSTGRES_CONNECTION_CODES = new Set([
   '57P03', '08000', '08001', '08003', '08004', '08006', '53300',
 ]);
 
-/** Standard Error plus metadata supplied by the database and HTTP parsers. */
-interface ErrorWithMetadata extends Error {
-  code?: string;
-  type?: string;
-  status?: number;
-}
+const MAX_LOG_CAUSE_DEPTH = 4;
+const MAX_LOG_LOCATIONS = 20;
 
 /**
  * Converts parser and database failures to HTTP errors, preserving existing HTTP errors.
@@ -108,39 +139,15 @@ export function isUniqueViolation(error: unknown, constraintName: string): boole
   return databaseError.code === '23505' && databaseError.constraint_name === constraintName;
 }
 
-interface DiagnosticMetadata extends Error {
-  code?: unknown;
-  constraint_name?: unknown;
-  table_name?: unknown;
-  column_name?: unknown;
-  status?: unknown;
-  responseCode?: unknown;
-}
-
-interface ErrorDiagnostic {
-  name: string;
-  code?: string;
-  constraint?: string;
-  table?: string;
-  column?: string;
-  status?: number;
-  responseCode?: number;
-  locations: string[];
-  cause?: ErrorDiagnostic;
-}
-
-const MAX_LOG_CAUSE_DEPTH = 4;
-const MAX_LOG_LOCATIONS = 20;
-
 /**
  * Formats bounded diagnostic metadata for logs without including error messages or submitted data.
  * The original error is unchanged; callers must keep any accompanying log description safe.
  * @param error - Failure whose primitive identifiers, source locations, and Error causes should be logged.
  * @returns Indented JSON preceded by a newline, with at most four cause links and twenty locations per error.
- * @example JSON.parse(errorForLog(Object.assign(new Error('private'), { code: '23505' }))).code // '23505'
+ * @example JSON.parse(errorForLog(Object.assign(new Error('private'), { code: '23505' }))).metadata.code // '23505'
  */
 export function errorForLog(error: Error): string {
-  const diagnostic = errorDiagnostic(error, 0);
+  const diagnostic = errorDiagnostic(error);
   const lines = JSON.stringify(diagnostic, null, 2).split('\n');
 
   return `\n${lines.map(line => `  ${line}`).join('\n')}`;
@@ -149,25 +156,27 @@ export function errorForLog(error: Error): string {
 /**
  * Collects recognized diagnostic identifiers and source locations, omitting messages and arbitrary fields.
  * @param error - Failure to inspect without modifying it; only Error instances in its cause chain are followed.
- * @param depth - Number of cause links already traversed, starting at zero; traversal stops at four.
- * @returns Selected metadata with a bounded nested cause, when present.
- * @example errorDiagnostic(Object.assign(new Error('duplicate'), { code: '23505' }), 0).code // '23505'
+ * @param depth - Number of cause links already traversed; defaults to zero and stops at four.
+ * @returns Error identity, source locations, and safe metadata with a bounded nested cause.
+ * @example errorDiagnostic(Object.assign(new Error('duplicate'), { code: '23505' })).metadata.code // '23505'
  */
-function errorDiagnostic(error: DiagnosticMetadata, depth: number): ErrorDiagnostic {
+export function errorDiagnostic(error: DiagnosticMetadata, depth = 0): ErrorDiagnostic {
+  const metadata: ErrorDiagnosticMetadata = {};
   const diagnostic: ErrorDiagnostic = {
     name: error.constructor.name,
     locations: errorLocations(error),
+    metadata,
   };
 
-  if (typeof error.code === 'string') diagnostic.code = error.code;
-  if (typeof error.constraint_name === 'string') diagnostic.constraint = error.constraint_name;
-  if (typeof error.table_name === 'string') diagnostic.table = error.table_name;
-  if (typeof error.column_name === 'string') diagnostic.column = error.column_name;
+  if (typeof error.code === 'string') metadata.code = error.code;
+  if (typeof error.constraint_name === 'string') metadata.constraint = error.constraint_name;
+  if (typeof error.table_name === 'string') metadata.table = error.table_name;
+  if (typeof error.column_name === 'string') metadata.column = error.column_name;
   if (typeof error.status === 'number') diagnostic.status = error.status;
-  if (typeof error.responseCode === 'number') diagnostic.responseCode = error.responseCode;
+  if (typeof error.responseCode === 'number') metadata.responseCode = error.responseCode;
 
   if (depth < MAX_LOG_CAUSE_DEPTH && error.cause instanceof Error) {
-    diagnostic.cause = errorDiagnostic(error.cause, depth + 1);
+    metadata.cause = errorDiagnostic(error.cause, depth + 1);
   }
 
   return diagnostic;

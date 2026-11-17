@@ -12,7 +12,7 @@ Middleware owns reusable HTTP request-chain behavior. It may authenticate a requ
 | `backend/src/middleware/rateLimiter.ts` | Apply general or operation-specific request limits and forward typed failures |
 | `backend/src/middleware/routeMiddleware.ts` | Wrap Express 4 async handlers, assign request IDs, and validate request input |
 | `backend/src/errors.ts` | Classify failures and create typed validation errors |
-| `backend/src/middleware/errorMiddleware.ts` | Log classified failures and serialize the canonical error response through `handleError` and `sendError` |
+| `backend/src/middleware/errorMiddleware.ts` | Log classified failures and serialize the canonical error response through `handleError` |
 | `backend/src/middleware/fileUpload.ts` | Parse the standard bounded in-memory `file` upload and translate parser failures into typed errors |
 | `backend/src/validation/` | Own Zod schemas consumed by `validateRequest` |
 | `backend/src/services/` and `backend/src/policies/` | Own business decisions, authoritative reads, and record-level access |

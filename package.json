@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "report:ci-history": "node scripts/reports/ci-history-report.ts",
-    "report:logs": "node scripts/reports/log-report.ts",
     "report:loc": "node scripts/reports/loc-report.ts",
     "scaffold:frontend": "node scripts/scaffold/frontend/index.ts",
     "report:changes": "node scripts/reports/file-changes-report.ts",

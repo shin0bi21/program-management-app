@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
@@ -20,7 +20,7 @@ import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
 import { getTaskDashboardData } from '../Tasks/tasks.api';
-import { HOURS_TABLE_KEYS, type HoursItem, type HoursFilters } from './types';
+import { HOURS_TABLE_KEYS, type HoursItem } from './types';
 
 import './Hours.css';
 
@@ -49,7 +49,7 @@ export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions.
-  const { permissions, role } = useAuth();
+  const { permissions } = useAuth();
   const currentUserId = getUser()?.id;
   const canWrite = permissions.includes('write:hours');
   const canCompleteTask = permissions.includes('write:tasks');
@@ -61,7 +61,6 @@ export default function Hours() {
   );
 
   const preferences = useHoursPreferences({
-    role,
     staff: pageData.staff,
     programs: pageData.programs,
     cycles: pageData.cycles,
@@ -74,25 +73,6 @@ export default function Hours() {
     cyclesError: Boolean(pageData.cyclesError),
     tableKeys: HOURS_TABLE_KEYS,
   });
-
-  // Filter configuration.
-  const hoursFilters = useMemo<HoursFilters>(() => ({
-    dateRange: preferences.filters.dateRange,
-    staffIds: preferences.filters.values.staffIds,
-    categories: preferences.filters.values.categories,
-    programIds: preferences.filters.values.programIds,
-    types: preferences.filters.values.types,
-    cycleIds: preferences.filters.values.cycleIds,
-    search: preferences.search.appliedValue,
-  }), [
-    preferences.filters.dateRange,
-    preferences.filters.values.categories,
-    preferences.filters.values.cycleIds,
-    preferences.filters.values.programIds,
-    preferences.filters.values.staffIds,
-    preferences.filters.values.types,
-    preferences.search.appliedValue,
-  ]);
 
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
 
@@ -155,7 +135,7 @@ export default function Hours() {
       queryKey={HOURS_TABLE_QUERY_KEY}
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
-      filters={hoursFilters}
+      filters={preferences.appliedFilters}
       sorting={preferences.table.sorting}
       columnWidths={preferences.table.columnWidths}
       selectedRowId={selection.selectedRowId}
@@ -168,9 +148,9 @@ export default function Hours() {
 
   const hoursCalendar = (
     <HoursCalendar
-      key={JSON.stringify(hoursFilters)}
+      key={JSON.stringify(preferences.appliedFilters)}
       staff={pageData.staff}
-      filters={hoursFilters}
+      filters={preferences.appliedFilters}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
       calendarIndexRef={actions.calendarIndexRef}
@@ -185,7 +165,7 @@ export default function Hours() {
   );
 
   const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
-  const hasCycleBounds = Boolean(hoursFilters.dateRange) && !pageData.cyclesError;
+  const hasCycleBounds = Boolean(preferences.appliedFilters.dateRange) && !pageData.cyclesError;
 
   // Render.
   return <>

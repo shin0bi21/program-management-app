@@ -43,10 +43,7 @@ describe('useHoursPreferences', () => {
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
   });
 
-  it('waits for dependencies and restores admin preferences alongside the local layout', async () => {
-    localStorage.setItem('table-layout:v1:user-1:hours-filters', JSON.stringify({
-      hiddenColumns: ['note'], columnWidths: { note: 240 },
-    }));
+  it('waits for dependencies and restores saved Hours controls', async () => {
     savedPreference.preference = {
       view: 'table', staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleIds: ['cycle-2'],
@@ -54,7 +51,7 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ loading }) => useHoursPreferences({
-        role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: loading,
+        staff, programs, cycles, categories, types, loadingDependencies: loading,
         optionsError: false, cyclesError: false, tableKeys,
       }),
       { initialProps: { loading: true } },
@@ -68,23 +65,21 @@ describe('useHoursPreferences', () => {
       staffIds: ['staff-1'], programIds: ['program-1'], categories: ['meeting'],
       types: ['task'], cycleIds: ['cycle-2'],
     }));
-    expect(result.current.table).toEqual(expect.objectContaining({
-      hiddenColumns: ['note'], columnWidths: { note: 240 },
-      sorting: { key: 'hours', direction: 'asc' },
-    }));
+    expect(result.current.table.sorting).toEqual({ key: 'hours', direction: 'asc' });
   });
 
-  it('removes an admin-only saved staff filter for a staff user', async () => {
+  it('retains readable staff selections and removes unavailable IDs', async () => {
     savedPreference.preference = {
-      view: 'calendar', staffIds: ['staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
+      view: 'calendar', staffIds: ['staff-1', 'staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
     };
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'staff', staff, programs, cycles, categories, types, loadingDependencies: false,
+      staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.filters.values.staffIds).toEqual([]);
+    expect(result.current.filters.definitions.some(filter => filter.id === 'staffIds')).toBe(true);
+    expect(result.current.filters.values.staffIds).toEqual(['staff-1']);
   });
 
   it('repairs removed options and sorting without losing valid selections', async () => {
@@ -98,7 +93,7 @@ describe('useHoursPreferences', () => {
       sorting: { key: 'removedColumn' as never, direction: 'asc' },
     };
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
+      staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
@@ -112,7 +107,7 @@ describe('useHoursPreferences', () => {
     expect(result.current.table.sorting).toEqual({ key: 'date', direction: 'desc' });
   });
 
-  it('repairs options and cycles independently while retaining edits made during the outage', async () => {
+  it('repairs options and cycles independently while retaining staff edits made during the outage', async () => {
     savedPreference.preference = {
       staffIds: ['removed-staff'],
       programIds: ['removed-program'],
@@ -122,7 +117,6 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ optionsError, cyclesError }) => useHoursPreferences({
-        role: 'admin',
         staff: optionsError ? [] : staff,
         programs: optionsError ? [] : programs,
         categories: optionsError ? [] : categories,
@@ -153,42 +147,31 @@ describe('useHoursPreferences', () => {
     })));
   });
 
-  it('keeps applied search and account sorting separate from browser layout', async () => {
+  it('applies and saves search and sorting changes', async () => {
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
+      staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    expect(result.current.view).toBe('calendar');
-
     act(() => result.current.search.apply('workshop'));
     expect(result.current.search.appliedValue).toBe('workshop');
 
-    act(() => {
-      result.current.table.setHiddenColumns(['note']);
-      result.current.table.setColumnWidths({ note: 280 });
-      result.current.table.setSorting({ key: 'hours', direction: 'asc' });
-    });
+    act(() => result.current.table.setSorting({ key: 'hours', direction: 'asc' }));
+    expect(result.current.table.sorting).toEqual({ key: 'hours', direction: 'asc' });
 
-    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:hours-filters')!)).toEqual({
-      hiddenColumns: ['note'], columnWidths: { note: 280 },
-    });
-    expect(result.current.table).toMatchObject({
-      hiddenColumns: ['note'], columnWidths: { note: 280 }, sorting: { key: 'hours', direction: 'asc' },
-    });
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('hours-filters', expect.objectContaining({
       search: 'workshop',
       sorting: { key: 'hours', direction: 'asc' },
     })));
-
   });
+
   it('retires legacy cycle and custom-date fields without losing sibling preferences', async () => {
     savedPreference.preference = Object.assign({ view: 'table' as const, search: 'retained', programIds: ['program-1'] }, {
       cycleId: 'cycle-2', dateRange: { start: '2026-03-01', end: '2026-03-31' },
     });
     const { result } = renderHook(() => useHoursPreferences({
-      role: 'admin', staff, programs, cycles, categories, types, loadingDependencies: false,
+      staff, programs, cycles, categories, types, loadingDependencies: false,
       optionsError: false, cyclesError: false, tableKeys,
     }));
 
@@ -203,5 +186,4 @@ describe('useHoursPreferences', () => {
     const saved = calls[calls.length - 1]?.[1];
     expect(saved).not.toHaveProperty('dateRange');
   });
-
 });

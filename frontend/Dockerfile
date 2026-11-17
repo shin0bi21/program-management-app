@@ -2,11 +2,10 @@ FROM node:24-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY tsconfig.base.json /tsconfig.base.json
-COPY frontend/. .
+COPY . .
 RUN npm run build
 
 FROM nginx:alpine
