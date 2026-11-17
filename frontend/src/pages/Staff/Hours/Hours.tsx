@@ -49,7 +49,7 @@ export default function Hours() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions.
-  const { permissions, role } = useAuth();
+  const { permissions } = useAuth();
   const currentUserId = getUser()?.id;
   const canWrite = permissions.includes('write:hours');
   const canCompleteTask = permissions.includes('write:tasks');
@@ -61,7 +61,6 @@ export default function Hours() {
   );
 
   const preferences = useHoursPreferences({
-    role,
     staff: pageData.staff,
     programs: pageData.programs,
     cycles: pageData.cycles,
