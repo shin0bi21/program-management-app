@@ -152,7 +152,7 @@ describe('Youth API', () => {
       expect(res.body.error).toMatch(/expired/i);
     });
 
-    describe('cycle filters', () => {
+    describe('profile filters', () => {
       let openProgramId: string;
       let current: { programId: string; cycleId: string };
       let past: { programId: string; cycleId: string };
@@ -160,6 +160,7 @@ describe('Youth API', () => {
       let otherProgramId: string;
       let sessionId: string;
       const surname = `CycleFilter${randomUUID().replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`;
+      const schools: string[] = [];
       const youthIds: string[] = [];
       const youth: Record<string, string> = {};
 
@@ -192,6 +193,15 @@ describe('Youth API', () => {
           youth[name] = response.body.id;
           youthIds.push(response.body.id);
         }
+        for (const name of ['East', 'West']) {
+          const [school] = await sql<{ id: string }[]>`
+            INSERT INTO schools (name) VALUES (${`${name} ${surname}`}) RETURNING id
+          `;
+          schools.push(school.id);
+        }
+        await sql`UPDATE youth_profiles SET school_id = ${schools[0]} WHERE user_id IN (${youth.Current}, ${youth.Both})`;
+        await sql`UPDATE youth_profiles SET school_id = ${schools[1]} WHERE user_id IN (${youth.Past}, ${youth.Cross})`;
+
         await sql`
           INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
           VALUES
@@ -221,6 +231,7 @@ describe('Youth API', () => {
         await sql`DELETE FROM attendance_records WHERE session_id = ${sessionId}`;
         await sql`DELETE FROM program_sessions WHERE id = ${sessionId}`;
         for (const id of youthIds) await deleteTestYouth(id);
+        for (const id of schools) await sql`DELETE FROM schools WHERE id = ${id}`;
         await sql`DELETE FROM program_cycle_assignments WHERE program_id = ${otherProgramId} AND cycle_id = ${past.cycleId}`;
         for (const programCycle of [current, past, open]) await deleteTestProgramCycle(programCycle.programId, programCycle.cycleId);
       });
@@ -285,10 +296,66 @@ describe('Youth API', () => {
         expect(ids(unrestricted.body)).toEqual([...youthIds].sort());
       });
 
-      it('rejects malformed cycle identifiers and more than 20 selections', async () => {
-        for (const cycleIds of ['invalid', Array.from({ length: 21 }, () => randomUUID()).join(',')]) {
-          const response = await list({ cycleIds });
+      it.each(['cycleIds', 'schoolIds'])('rejects malformed %s and more than 20 selections', async field => {
+        for (const value of ['invalid', Array.from({ length: 21 }, () => randomUUID()).join(',')]) {
+          const response = await list({ [field]: value });
           expect(response.status).toBe(400);
+        }
+      });
+
+      it('matches any selected school and leaves schoolless youth visible when omitted', async () => {
+        const selected = await list({ search: surname, schoolIds: schools.join(',') });
+        expect(selected.status).toBe(200);
+        expect(ids(selected.body)).toEqual([youth.Current, youth.Both, youth.Past, youth.Cross].sort());
+
+        const unrestricted = await list({ search: surname });
+        expect(unrestricted.status).toBe(200);
+        expect(ids(unrestricted.body)).toEqual([...youthIds].sort());
+
+        const missing = await list({ schoolIds: randomUUID() });
+        expect(missing.status).toBe(200);
+        expect(missing.body).toEqual([]);
+      });
+
+      it('combines school, program, cycle, and search before paginating', async () => {
+        const extraYouth = await sql<{ id: string }[]>`
+          INSERT INTO users (first_name, last_name, role_id)
+          SELECT 'School page', ${surname}, role.id
+          FROM user_roles role
+          CROSS JOIN generate_series(1, 49)
+          WHERE role.name = 'youth'
+          RETURNING id
+        `;
+        const extraIds = extraYouth.map(row => row.id);
+        try {
+          await sql`
+            INSERT INTO youth_profiles (user_id, school_id)
+            SELECT id, ${schools[0]}
+            FROM users
+            WHERE id = ANY(${sql.array(extraIds)}::uuid[])
+          `;
+          await sql`
+            INSERT INTO program_enrollments (program_id, cycle_id, youth_id, enrolled_on)
+            SELECT ${current.programId}, ${current.cycleId}, id, DATE '2020-01-01'
+            FROM users
+            WHERE id = ANY(${sql.array(extraIds)}::uuid[])
+          `;
+          const query = {
+            schoolIds: schools[0], programIds: current.programId, cycleIds: current.cycleId,
+            search: surname, paginate: 'true', sort: 'firstName',
+          };
+          const first = await list(query);
+          expect(first.status).toBe(200);
+          expect(first.body.rows).toHaveLength(50);
+          expect(first.body.nextCursor).toEqual(expect.any(String));
+
+          const next = await list({ ...query, cursor: first.body.nextCursor });
+          expect(next.status).toBe(200);
+          expect(next.body.rows).toHaveLength(1);
+          expect(next.body.nextCursor).toBeNull();
+          expect(ids([...first.body.rows, ...next.body.rows])).toEqual([youth.Both, youth.Current, ...extraIds].sort());
+        } finally {
+          for (const id of extraIds) await deleteTestYouth(id);
         }
       });
 
