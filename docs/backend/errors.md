@@ -55,7 +55,7 @@ authoritative where they deliberately conceal inaccessible records with `404`.
 | File | What lives there |
 |---|---|
 | `src/errors.ts` | Standard HTTP constructors, classification, validation-error creation, response/detail types, constraint recognition, safe diagnostics |
-| `src/middleware/errorMiddleware.ts` | `handleError`, `sendError` |
+| `src/middleware/errorMiddleware.ts` | `handleError` logs failures and sends error responses |
 | `src/middleware/routeMiddleware.ts` | `asyncHandler`, `requestId` (UUID middleware), `validateRequest` (Zod → 400 with field details) |
 | `src/types/` | TypeScript shape declarations only — no runtime logic |
 
@@ -154,8 +154,15 @@ serializes the response.
 
 ## Trace Failures
 
-The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`, including request ID, method, path, status, error class, message, and safe diagnostic fields from the classified error and its causes. Raw unexpected
-messages use the generic application message in logs. If headers were already sent, it logs without attempting another response.
+The handler logs 4xx failures with `console.warn` and 5xx failures with `console.error`.
+Each request log is one JSON object: `error` is the standard HTTP status label
+(for example, `Internal Server Error`), `details` is the safe explanation, and
+`trace` starts with the method and path followed by source locations. Node runtime
+frames and query strings are excluded. The object also includes `requestId`,
+`status`, and safe diagnostic identifiers and causes when present. Raw unexpected
+messages use the generic application message in logs. If headers were already
+sent, it logs at error severity without attempting another response. API response
+fields remain governed by the response contract above.
 
 `requestId` runs first and reuses an incoming `X-Request-ID` containing 1–128 ASCII
 letters, digits, hyphens, or underscores; otherwise it generates a UUID. It returns
@@ -180,8 +187,10 @@ background cleanup, or fire-and-forget logging, must log once:
 - Format the error with `errorForLog` from `src/errors.ts`; never dump the raw object.
 
 `errorForLog` retains error classes, codes, constraint identifiers, and source
-locations for application and dependency files. Application error messages
-must be safe at their source.
+locations for application and dependency files. Each diagnostic separates `name`,
+`status`, and `locations` from its safe `metadata`, including bounded nested causes.
+Request logs reuse that metadata alongside the HTTP label and request trace.
+Application error messages must be safe at their source.
 
 Never log tokens, cookies, passwords, authorization headers, raw secrets, or
 unnecessarily complete request bodies. Do not add temporary success-path

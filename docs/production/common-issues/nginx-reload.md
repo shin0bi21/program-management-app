@@ -19,10 +19,10 @@ docker compose -f docker-compose.prod.yml exec -T backend curl -fsS http://local
 ## If a Command Fails
 
 If a command fails, the remaining commands do not run. Read the terminal error,
-then run this on Lightsail with Node 24 available:
+then inspect recent service logs on Lightsail:
 
 ```bash
-node scripts/reports/log-report.ts --docker nginx backend --since 5m --context 0
+docker compose -f docker-compose.prod.yml logs --since=5m --tail=100 nginx backend
 ```
 
 ## After Reloading

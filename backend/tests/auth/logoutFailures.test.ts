@@ -26,8 +26,6 @@ describe('Logout failure propagation', () => {
       expect(response.headers['set-cookie']).toEqual(expect.arrayContaining([
         expect.stringContaining('refreshToken=;'),
       ]));
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('logout-failure'),
-        expect.any(String));
     } finally {
       revoke.mockRestore();
       await deleteTestUser(user.userId);

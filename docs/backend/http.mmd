@@ -76,7 +76,7 @@ sequenceDiagram
       HTTP->>SERVER: Retry request once
       Note over HTTP,SERVER: Retry then follows the same success/error handling
     else Application or middleware error
-      SERVER->>SERVER: handleError → sendError
+      SERVER->>SERVER: handleError logs failure and prepares response
       SERVER-->>HTTP: 4xx / 5xx<br/>{ error, details?, requestId }
       HTTP-->>UI: Throw ApiError
     end

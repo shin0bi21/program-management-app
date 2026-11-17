@@ -31,10 +31,6 @@ bash scripts/dev/check-dev-env.sh
 
 A nonzero exit reports warnings; the check does not change the environment.
 
-For large captured logs or filtered Docker output, use the
-[log report](../../scripts/reports/log-report.ts). Run
-`npm run report:logs -- --help` for filters and examples.
-
 ## Trace a Client or API Failure
 
 1. In the browser developer tools, inspect the failing request under
@@ -49,13 +45,13 @@ For large captured logs or filtered Docker output, use the
      details, and request ID.
    - A React render failure is handled by the app `ErrorBoundary`, while async
      and event-handler failures must be handled by their owning workflow.
-3. Search the backend log using the request ID:
+3. Inspect recent backend logs and locate the request ID:
 
    ```bash
-   docker compose logs backend | rg '<request-id>'
+   docker compose logs --since=5m backend
    ```
 
-   Read the matching stack and underlying cause to locate the failure.
+   Read the matching trace and underlying cause to locate the failure.
 
 4. If there is no request ID, use [Logs and Diagnostics](#logs-and-diagnostics)
    to confirm service state and inspect recent logs.
