@@ -105,7 +105,7 @@ For every isolated branch:
 4. Poll at 60-second intervals, reporting each status change. Do not use an unbounded watch command that can conceal a stale check state.
 5. If the same expected check remains pending for two polls, inspect its Actions run directly with `gh run view <run-id> --json status,conclusion,jobs`. If the run is complete but the PR check rollup is still pending, re-query the PR once after one more minute; never treat the completed job as merge permission until the PR's required-check record also passes.
 6. After three unchanged polls, or if Actions is degraded or checks never register, preserve the branch and report a concrete CI-status blocker instead of waiting indefinitely or bypassing branch protection.
-7. Merge only into `develop` after checks pass and verify that the pull request is merged.
+7. Squash-merge only into `develop` after checks pass (`gh pr merge <number> --squash`) and verify that the pull request is merged. Use one commit per concern; never use a regular merge commit or rebase merge for feature PRs into `develop`. Production release merges remain governed by the separate deployment workflow.
 8. Return the main checkout to `develop`, fast-forward from `origin/develop`, and verify it is clean and equals its upstream. For linked-worktree shipping, synchronize the base in the main checkout; do not try to check out `develop` in two worktrees.
 
 Never prepare a batch of concern branches from the pre-merge base. Logical splitting happens upfront; physical branch preparation and shipping happen one concern at a time.

@@ -89,6 +89,11 @@ Review test scope and value against [Test Ownership](../../../docs/workflows/del
 including existing tests in changed files. For each case, identify the owned
 behavior and meaningful regression it detects; report misplaced, redundant, or
 implementation-coupled coverage as findings, even when the suite passes.
+For page suites that compose dashboards, compare summary, formatting, empty-state,
+and detail-display assertions with the dashboard suites. Keep those assertions
+with the dashboard owner; page suites cover permissions, selected context,
+mutation reconciliation, and dialog coordination. Verify owner coverage before
+removing a page assertion, and move distinct coverage rather than losing it.
 Reuse exact-diff test evidence and run missing focused verification where feasible.
 Record commands, tested revision/fingerprint, and gaps. Passing diagnostics do
 not replace the pattern comparison or behavioral trace.
