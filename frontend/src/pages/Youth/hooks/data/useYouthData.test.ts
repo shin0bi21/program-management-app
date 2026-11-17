@@ -1,15 +1,16 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
-import { getCycleReferences, getProgramReferences } from '../../../../common/features/referenceData/referenceData.api';
+import { getCycleReferences, getProgramReferences, getSchoolReferences } from '../../../../common/features/referenceData/referenceData.api';
 import useYouthData from './useYouthData';
 
-vi.mock('../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn() }));
+vi.mock('../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getSchoolReferences: vi.fn() }));
 
 describe('useYouthData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getProgramReferences).mockResolvedValue([]);
+    vi.mocked(getSchoolReferences).mockResolvedValue([]);
   });
 
   it.each([true, false])('preserves assignedOnly=%s and the shared cycle query contract', async assignedOnly => {

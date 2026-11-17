@@ -100,7 +100,9 @@ for the implementation.
 
 Program and cycle filters must match the same nonwithdrawn enrollment or
 open-attendance participation. The [Youth filter owner](../../backend/src/services/youth/youthRowFilters.ts)
-preserves that cross-domain selection contract.
+preserves that cross-domain selection contract. School selections match any supplied
+`schoolIds` and combine with search, Program, and Cycle before pagination. Omitting
+school selections leaves profiles unrestricted by school, including those without one.
 
 The main Youth record includes profile fields and one active program, or null when none is active.
 The attendance dashboard reads attendance grouped by program/cycle from `/attendance`,

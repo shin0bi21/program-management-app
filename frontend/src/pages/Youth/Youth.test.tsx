@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Youth from './Youth';
 import type { SchoolAction, SchoolSelection } from '../../common/features/SchoolModal/types';
-import { getCycleReferences } from '../../common/features/referenceData/referenceData.api';
+import { getCycleReferences, getSchoolReferences } from '../../common/features/referenceData/referenceData.api';
 import { makeYouthProfile } from '../../tests/factories/youth';
 import { renderWithQueryClient as render } from '../../tests/queryClientTestUtils';
 
@@ -81,6 +81,7 @@ describe('Youth', () => {
     vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
     }]);
+    vi.mocked(getSchoolReferences).mockResolvedValue([{ id: 'school-1', name: 'Central School' }]);
     youthApi.getYouthProfileNotes.mockResolvedValue([]);
     attendanceApi.getAttendance.mockResolvedValue({ groups: [] });
     youthApi.setYouthProfileNote.mockReset();
@@ -129,7 +130,7 @@ describe('Youth', () => {
   });
 
   // Controls and views.
-  it('passes restored filters to the youth table and coordinates clearing the cycle', async () => {
+  it('passes restored filters to the youth table and coordinates applying School', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       search: 'Jamie',
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['active'],
@@ -139,15 +140,16 @@ describe('Youth', () => {
     expect(screen.queryByRole('menuitem', { name: 'ProgramCycle' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /^Program/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /^Status/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitem', { name: /^Cycle/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^School/ }));
 
     expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'],
+      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: [],
     });
 
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Central School' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
     await waitFor(() => expect(mockUseYouthTableData).toHaveBeenLastCalledWith({
-      search: 'Jamie', programIds: ['program-1'], cycleIds: [],
+      search: 'Jamie', programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
     }));
   });
 

@@ -65,10 +65,17 @@ export function getYouth(
     : apiClient.get<YouthProfile[]>(path);
 }
 
+/**
+ * Adds applied Youth selections to the list request, omitting empty restrictions.
+ * @param params - Request parameters to extend.
+ * @param filters - Search text and selected program, cycle, and school IDs.
+ * @example applyYouthFilters(params, { schoolIds: ['school-1'] }) // schoolIds=school-1
+ */
 function applyYouthFilters(params: URLSearchParams, filters: YouthFilters) {
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.programIds?.length) params.set('programIds', filters.programIds.join(','));
   if (filters.cycleIds?.length) params.set('cycleIds', filters.cycleIds.join(','));
+  if (filters.schoolIds?.length) params.set('schoolIds', filters.schoolIds.join(','));
 }
 
 export function setYouth(data: SetYouthInput) {

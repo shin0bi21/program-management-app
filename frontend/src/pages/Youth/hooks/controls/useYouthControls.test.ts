@@ -29,6 +29,7 @@ const programs: Program[] = [{
 const cycles: ProgramCycle[] = [{
   id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 }];
+const schools = [{ id: 'school-1', name: 'Central School' }, { id: 'school-2', name: 'West School' }];
 const tableKeys = YOUTH_TABLE_KEYS;
 
 describe('useYouthControls', () => {
@@ -45,7 +46,9 @@ describe('useYouthControls', () => {
       ({ role }: { role: string | null }) => useYouthControls({
         role,
         programs,
-        programsLoading: false, cycles, cyclesLoading: false,
+        programsLoading: false,
+        cycles, cyclesLoading: false,
+        schools, schoolsLoading: false,
         tableKeys,
       }),
       { initialProps: { role: null as string | null } },
@@ -70,7 +73,9 @@ describe('useYouthControls', () => {
     const { result } = renderHook(() => useYouthControls({
       role: 'staff',
       programs,
-      programsLoading: false, cycles, cyclesLoading: false,
+      programsLoading: false,
+      cycles, cyclesLoading: false,
+      schools, schoolsLoading: false,
       tableKeys,
     }));
 
@@ -91,7 +96,9 @@ describe('useYouthControls', () => {
       sorting: { key: removedColumn, direction: 'desc' },
     });
     const { result } = renderHook(() => useYouthControls({
-      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false, tableKeys,
+      role: 'admin', programs, programsLoading: false,
+      cycles, cyclesLoading: false,
+      schools, schoolsLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -125,30 +132,60 @@ describe('useYouthControls', () => {
     expect(result.current.table).toMatchObject({ hiddenColumns: ['school'], columnWidths: { firstName: 240 } });
   });
 
-  it('restores search and saves only applied or cleared search with the other filters', async () => {
+  it('restores search and schools and saves applied and cleared filters', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'],
+      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
     });
     const { result } = renderHook(() => useYouthControls({
-      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false, tableKeys,
+      role: 'admin', programs, programsLoading: false,
+      cycles, cyclesLoading: false,
+      schools, schoolsLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters.search).toBe('Jamie');
+    expect(result.current.appliedFilters).toMatchObject({ search: 'Jamie', schoolIds: ['school-1'] });
 
     act(() => result.current.search.apply('  Alex Lee  '));
     expect(result.current.appliedFilters.search).toBe('Alex Lee');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        search: 'Alex Lee', programIds: ['program-1'], cycleIds: ['cycle-1'],
+        search: 'Alex Lee', programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
       }),
     ));
+
+    act(() => result.current.filters.apply('schoolIds', ['school-1', 'school-2']));
+    expect(result.current.appliedFilters.schoolIds).toEqual(['school-1', 'school-2']);
+    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
+      'youth-profile-filters', expect.objectContaining({ schoolIds: ['school-1', 'school-2'] }),
+    ));
+
+    act(() => result.current.filters.clear());
+    expect(result.current.appliedFilters).toEqual({ search: 'Alex Lee', programIds: [], cycleIds: [], schoolIds: [] });
 
     act(() => result.current.search.apply(''));
     expect(result.current.appliedFilters.search).toBe('');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ search: '', cycleIds: ['cycle-1'] }),
+      'youth-profile-filters', expect.objectContaining({ search: '', cycleIds: [], schoolIds: [] }),
     ));
+  });
+
+  it('waits for schools, preserves saved IDs on failure, and repairs them after recovery', async () => {
+    preferenceApi.getPreference.mockResolvedValue({ schoolIds: ['school-1', 'removed-school'] });
+    const { result, rerender } = renderHook(
+      ({ loading, error }: { loading: boolean; error: string }) => useYouthControls({
+        role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
+        schools, schoolsLoading: loading, schoolsError: error, tableKeys,
+      }),
+      { initialProps: { loading: true, error: '' } },
+    );
+
+    expect(result.current.ready).toBe(false);
+    rerender({ loading: false, error: 'Could not load schools' });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.appliedFilters.schoolIds).toEqual(['school-1', 'removed-school']);
+
+    rerender({ loading: false, error: '' });
+    await waitFor(() => expect(result.current.appliedFilters.schoolIds).toEqual(['school-1']));
   });
 
   it('repairs removed cycles and ignores obsolete statuses', async () => {
@@ -156,7 +193,9 @@ describe('useYouthControls', () => {
       statuses: ['inactive'], programIds: ['program-1'], cycleIds: ['cycle-1', 'removed-cycle'],
     });
     const { result } = renderHook(() => useYouthControls({
-      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false, tableKeys,
+      role: 'admin', programs, programsLoading: false,
+      cycles, cyclesLoading: false,
+      schools, schoolsLoading: false, tableKeys,
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -172,7 +211,7 @@ describe('useYouthControls', () => {
     preferenceApi.getPreference.mockResolvedValue({ programIds: ['program-1'], cycleIds: ['cycle-1'] });
     const { result, rerender } = renderHook(
       ({ loading, error }: { loading: boolean; error: string }) => useYouthControls({
-        role: 'admin', programs, programsLoading: false, cycles: [],
+        role: 'admin', programs, programsLoading: false, schools, schoolsLoading: false, cycles: [],
         cyclesLoading: loading, cyclesError: error, tableKeys,
       }),
       { initialProps: { loading: true, error: '' } },

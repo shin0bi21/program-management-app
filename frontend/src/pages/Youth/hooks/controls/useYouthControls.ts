@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
+import type { ProgramReference, SchoolReference } from '../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
@@ -20,6 +20,9 @@ interface UseYouthControlsOptions {
   cycles: ProgramCycle[];
   cyclesLoading: boolean;
   cyclesError?: string | null;
+  schools: SchoolReference[];
+  schoolsLoading: boolean;
+  schoolsError?: string | null;
   tableKeys: readonly YouthSortKey[];
 }
 
@@ -27,7 +30,7 @@ const DEFAULT_SORTING: ListSort<YouthSortKey> = { key: 'firstName', direction: '
 
 /**
  * Restores youth controls and supplies applied filters with role-specific program defaults.
- * @param options - Role, available programs and cycles, dependency status, and table keys.
+ * @param options - Role, available programs, cycles, and schools, dependency status, and table keys.
  * @example A staff user without saved controls starts with their available programs selected.
  */
 export function useYouthControls({
@@ -38,12 +41,15 @@ export function useYouthControls({
   cycles,
   cyclesLoading,
   cyclesError,
+  schools,
+  schoolsLoading,
+  schoolsError,
   tableKeys,
 }: UseYouthControlsOptions) {
   const layout = useTableLayout({ key: 'youth-profile-filters', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'youth-profile-filters',
-    waiting: programsLoading || cyclesLoading || role === null,
+    waiting: programsLoading || cyclesLoading || schoolsLoading || role === null,
     fields: {
       search: preferenceText(),
       programIds: preferenceIds(
@@ -52,6 +58,9 @@ export function useYouthControls({
       ),
       cycleIds: preferenceIds(
         cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id),
+      ),
+      schoolIds: preferenceIds(
+        schoolsLoading || schoolsError ? undefined : schools.map(school => school.id),
       ),
       sorting: preferenceSorting(tableKeys, DEFAULT_SORTING),
     },
@@ -68,12 +77,18 @@ export function useYouthControls({
       label: 'Cycle',
       options: cycles.map(({ id, title }) => ({ id, label: title })),
     },
-  ], [programs, cycles]);
+    {
+      id: 'schoolIds' as const,
+      label: 'School',
+      options: schools.map(({ id, name }) => ({ id, label: name })),
+    },
+  ], [programs, cycles, schools]);
 
   const appliedFilters: YouthFilters = {
     search: preferences.search,
     programIds: preferences.programIds,
     cycleIds: preferences.cycleIds,
+    schoolIds: preferences.schoolIds,
   };
 
   return {
@@ -88,6 +103,7 @@ export function useYouthControls({
       values: {
         programIds: preferences.programIds,
         cycleIds: preferences.cycleIds,
+        schoolIds: preferences.schoolIds,
       },
       definitions: filterCategories,
       updatePreferences,
