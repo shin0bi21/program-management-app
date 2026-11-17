@@ -9,23 +9,23 @@ import { listAccounts } from '../services/accounts/accountListService';
 import type { AccountQuery } from '../validation/accountSchemas';
 
 export const handleGetAccounts = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const filters = req.query as unknown as AccountQuery;
-  res.json(await listAccounts(actor, filters));
+  res.json(await listAccounts(user, filters));
 };
 
 export const handleSetAccount = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.status(201).json(await setAccount(req.body, actor));
+  const user = (req as AuthRequest).user!;
+  res.status(201).json(await setAccount(req.body, user));
 };
 
 export const handleRevokeAccountInvite = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  await revokeAccountInvite(req.params.id, actor);
+  const user = (req as AuthRequest).user!;
+  await revokeAccountInvite(req.params.id, user);
   res.status(200).json({ message: 'Account invitation successfully revoked' });
 };
 
 export const handleToggleAccountStatus = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.json(await toggleAccountStatus(req.params.id, actor));
+  const user = (req as AuthRequest).user!;
+  res.json(await toggleAccountStatus(req.params.id, user));
 };

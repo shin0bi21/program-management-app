@@ -43,7 +43,7 @@ the date-derived status `upcoming`, `in_progress` (label “In Progress”), or
 `overdue`; list and calendar filters use those derived values. Saved task filters
 belong to the `task-preferences` key.
 
-Task-linked hours mutations include `updatedTasks` when the actor has
+Task-linked hours mutations include `updatedTasks` when the user has
 `read:tasks`. This includes old and new tasks when an entry is reassigned. Hours
 table, calendar, and create/update/placement responses share one complete entry
 shape; deletion returns the affected task rows. Calendar grouping belongs to the

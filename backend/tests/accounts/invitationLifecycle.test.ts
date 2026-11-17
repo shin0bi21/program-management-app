@@ -154,14 +154,14 @@ it('consumes an activation link only once when password resets overlap', async (
 });
 
 /**
- * Runs a scenario with a credential-free youth profile and a staff actor, then removes both users.
+ * Runs a scenario with a credential-free youth profile and a staff user, then removes both users.
  * @example withYouthAccount(async fixture => { await inviteYouth(fixture, 'alex@test.local'); });
  */
 async function withYouthAccount(run: (fixture: YouthAccountFixture) => Promise<void>): Promise<void> {
   const userIds: string[] = [];
   try {
-    const actor = await seedTestUser({ role: 'staff' });
-    userIds.push(actor.userId);
+    const user = await seedTestUser({ role: 'staff' });
+    userIds.push(user.userId);
     const youth = await seedTestUser({ role: 'youth' });
     userIds.push(youth.userId);
     await sql`DELETE FROM user_credentials WHERE user_id = ${youth.userId}`;
@@ -169,7 +169,7 @@ async function withYouthAccount(run: (fixture: YouthAccountFixture) => Promise<v
 
     await run({
       youthId: youth.userId,
-      authorization: `Bearer ${generateToken(actor.userId, 'staff', actor.email)}`,
+      authorization: `Bearer ${generateToken(user.userId, 'staff', user.email)}`,
     });
   } finally {
     for (const userId of userIds.reverse()) await deleteTestUser(userId);

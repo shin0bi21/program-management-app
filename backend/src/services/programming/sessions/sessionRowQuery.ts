@@ -27,12 +27,12 @@ export interface SessionRow {
 
 /**
  * Builds rows for table and calendar items.
- * @param actor - User requesting the rows.
+ * @param user - User requesting the rows.
  * @param query - Database client; pass trx inside a transaction.
- * @example getSessionRows(actor, trx)
+ * @example getSessionRows(user, trx)
  */
 export function getSessionRows(
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   query = sql,
 ) {
   return query<SessionRow[]>`
@@ -63,6 +63,6 @@ export function getSessionRows(
     FROM program_sessions session
     INNER JOIN program_cycles cycle ON cycle.id = session.cycle_id
     INNER JOIN programs program ON program.id = session.program_id
-    WHERE ${programAccessPredicate(actor, query`session.program_id`)}
+    WHERE ${programAccessPredicate(user, query`session.program_id`)}
   `;
 }

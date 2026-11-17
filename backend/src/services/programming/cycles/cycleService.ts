@@ -13,14 +13,14 @@ export { getCycleReferenceData as getProgramCycles } from '../../referenceData/c
 /**
  * Saves cycle metadata and replaces its program assignments in one transaction.
  * @param data - Validated date range, title, and complete set of unique program IDs.
- * @param actor - Actor recorded on writes and used to scope response rows.
+ * @param user - User recorded on writes and used to scope response rows.
  * @param id - Existing cycle to update; omitted when creating.
  * @returns The saved cycle and affected rows.
- * @example setProgramCycle(data, actor, cycleId) // update an existing cycle
+ * @example setProgramCycle(data, user, cycleId) // update an existing cycle
  */
-export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessTokenPayload, id?: string) {
+export async function setProgramCycle(data: SetProgramCycleInput, user: AccessTokenPayload, id?: string) {
   // 1. Update the cycle when an ID is supplied.
-  if (id) return updateProgramCycleRecord(id, data, actor);
+  if (id) return updateProgramCycleRecord(id, data, user);
 
   // 2. Check the selected programs.
   return sql.begin(async tx => {
@@ -37,7 +37,7 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
     // 3. Save the cycle.
     const [cycle] = await trx<{ id: string }[]>`
       INSERT INTO program_cycles (title, starts_on, ends_on, created_by, updated_by)
-      VALUES (${data.title}, ${data.startsOn}, ${data.endsOn}, ${actor.userId}, ${actor.userId})
+      VALUES (${data.title}, ${data.startsOn}, ${data.endsOn}, ${user.userId}, ${user.userId})
       RETURNING id
     `;
     if (!cycle) throw new InternalServerError('Cycle creation returned no record');
@@ -45,7 +45,7 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
     // 4. Assign the selected programs.
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
-      SELECT program_id, ${cycle.id}, ${actor.userId}, ${actor.userId}
+      SELECT program_id, ${cycle.id}, ${user.userId}, ${user.userId}
       FROM UNNEST(${sql.array(data.programIds)}::uuid[]) AS selected(program_id)
       RETURNING program_id, cycle_id
     `;
@@ -53,8 +53,8 @@ export async function setProgramCycle(data: SetProgramCycleInput, actor: AccessT
     // 5. Return the saved cycle and affected rows.
     return {
       cycle: await requireCycleRow(trx, cycle.id),
-      updatedProgramCycles: actor.permissions.includes('read:programs')
-        ? await getProgramCycleRowsByKeys(trx, actor, created) : [],
+      updatedProgramCycles: user.permissions.includes('read:programs')
+        ? await getProgramCycleRowsByKeys(trx, user, created) : [],
       createdProgramCycles: created,
       removedProgramCycles: [] as ProgramCycleKey[],
       updatedYouth: [],
@@ -111,11 +111,11 @@ export async function deleteProgramCycle(id: string) {
  * Updates a cycle without removing used assignments or excluding existing sessions.
  * @param id - Required cycle to update.
  * @param data - Validated replacement dates, title, and assignments.
- * @param actor - Actor recorded on writes and used to scope response rows.
+ * @param user - User recorded on writes and used to scope response rows.
  * @returns The saved cycle, assignment changes, and permission-gated program-cycle and youth rows.
- * @example updateProgramCycleRecord(cycleId, data, actor) // update dates and assignments
+ * @example updateProgramCycleRecord(cycleId, data, user) // update dates and assignments
  */
-async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, actor: AccessTokenPayload) {
+async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, user: AccessTokenPayload) {
   // 1. Check the selected programs.
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
@@ -172,7 +172,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
         starts_on = ${data.startsOn},
         ends_on = ${data.endsOn},
         updated_at = NOW(),
-        updated_by = ${actor.userId}
+        updated_by = ${user.userId}
       WHERE id = ${id}
     `;
     for (const programCycle of removed) {
@@ -185,7 +185,7 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
     }
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
-      SELECT program_id, ${id}, ${actor.userId}, ${actor.userId}
+      SELECT program_id, ${id}, ${user.userId}, ${user.userId}
       FROM UNNEST(${sql.array(data.programIds)}::uuid[]) AS selected(program_id)
       ON CONFLICT (program_id, cycle_id) DO NOTHING
       RETURNING program_id, cycle_id
@@ -195,15 +195,15 @@ async function updateProgramCycleRecord(id: string, data: SetProgramCycleInput, 
 
     // 6. Return the saved cycle and affected rows.
     let updatedYouth: YouthRow[] = [];
-    if (actor.permissions.includes('read:youth_profiles')) {
+    if (user.permissions.includes('read:youth_profiles')) {
       const youthIds = await getProgramCycleYouthIds(trx, affectedProgramCycles);
       updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
     }
 
     return {
       cycle: await requireCycleRow(trx, id),
-      updatedProgramCycles: actor.permissions.includes('read:programs')
-        ? await getProgramCycleRowsByKeys(trx, actor, affectedProgramCycles) : [],
+      updatedProgramCycles: user.permissions.includes('read:programs')
+        ? await getProgramCycleRowsByKeys(trx, user, affectedProgramCycles) : [],
       createdProgramCycles: created,
       removedProgramCycles: removed,
       updatedYouth,

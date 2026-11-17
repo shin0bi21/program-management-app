@@ -9,14 +9,14 @@ import type { AccessTokenPayload } from '../../../types/auth';
 import type { SetAttendanceInput } from '../../../validation/programmingSchemas';
 
 /**
- * Loads eligible and previously recorded attendees within the actor's session scope.
+ * Loads eligible and previously recorded attendees within the user's session scope.
  * @param sessionId - Session whose roster is needed.
- * @param actor - Actor whose program access is enforced; callers enforce route permissions.
- * @example getSessionRoster(sessionId, actor) // includes saved attendees after a date move
+ * @param user - User whose program access is enforced; callers enforce route permissions.
+ * @example getSessionRoster(sessionId, user) // includes saved attendees after a date move
  */
-export async function getSessionRoster(sessionId: string, actor: AccessTokenPayload) {
+export async function getSessionRoster(sessionId: string, user: AccessTokenPayload) {
   // 1. Check access to the session.
-  await assertSessionAccess(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   return readSessionRoster(sessionId);
 }
 
@@ -24,16 +24,16 @@ export async function getSessionRoster(sessionId: string, actor: AccessTokenPayl
  * Saves a session roster and returns affected records.
  * @param sessionId - Session to lock and update.
  * @param data - Validated replacement attendance.
- * @param actor - User whose session access is checked.
- * @example setSessionAttendance(sessionId, data, actor)
+ * @param user - User whose session access is checked.
+ * @example setSessionAttendance(sessionId, data, user)
  */
 export async function setSessionAttendance(
   sessionId: string,
   data: SetAttendanceInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
 ) {
   // 1. Check access to the session.
-  await assertSessionAccess(actor, sessionId);
+  await assertSessionAccess(user, sessionId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -48,7 +48,7 @@ export async function setSessionAttendance(
       FROM program_sessions session
       INNER JOIN programs program ON program.id = session.program_id
       WHERE session.id = ${sessionId}
-        AND ${programAccessPredicate(actor, sql`session.program_id`)}
+        AND ${programAccessPredicate(user, sql`session.program_id`)}
       FOR UPDATE OF session
     `;
     if (!sessions.length) throw new NotFoundError('Session not found');
@@ -111,7 +111,7 @@ export async function setSessionAttendance(
           session_id, youth_id, status, notes, marked_at, marked_by
         )
         VALUES (
-          ${sessionId}, ${record.youthId}, ${record.status}, ${record.notes ?? null}, NOW(), ${actor.userId}
+          ${sessionId}, ${record.youthId}, ${record.status}, ${record.notes ?? null}, NOW(), ${user.userId}
         )
         ON CONFLICT (session_id, youth_id) DO UPDATE SET
           status = EXCLUDED.status,
@@ -123,14 +123,14 @@ export async function setSessionAttendance(
     }
 
     // 5. Return the saved roster and affected rows.
-    const [session] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [sessionId] }, trx);
+    const [session] = await buildSessionFilters(getSessionRows(user, trx), { ids: [sessionId] }, trx);
     if (!session) throw new InternalServerError('Saved attendance session is unavailable');
     const roster = await readSessionRoster(sessionId, trx);
-    const updatedYouth = actor.permissions.includes('read:youth_profiles')
+    const updatedYouth = user.permissions.includes('read:youth_profiles')
       ? await getYouthRows(trx`youth.id = ANY(${trx.array(affectedYouthIds)}::uuid[])`, trx)
       : undefined;
-    const updatedProgramCycle = actor.permissions.includes('read:programs')
-      ? (await getProgramCycleRowsByKeys(trx, actor, [sessions[0]]))[0]
+    const updatedProgramCycle = user.permissions.includes('read:programs')
+      ? (await getProgramCycleRowsByKeys(trx, user, [sessions[0]]))[0]
       : undefined;
     return { roster, session, updatedYouth, updatedProgramCycle };
   });

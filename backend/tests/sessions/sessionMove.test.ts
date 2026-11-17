@@ -51,7 +51,7 @@ describe('Future session date moves', () => {
   });
 
   /**
-   * Requests a date move as the authorized fixture actor unless a scoped token is supplied.
+   * Requests a date move as the authorized fixture user unless a scoped token is supplied.
    * @example move('2030-03-10') // keeps the current session's clock times
    */
   const move = (date: string, authToken = token) => request(app).put(`/api/sessions/${sessionId}/date`)

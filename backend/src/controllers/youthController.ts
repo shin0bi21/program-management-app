@@ -45,19 +45,19 @@ export const handleSetYouth = async (req: Request, res: Response) => {
  * @example handleSetYouthContacts(req, res)
  */
 export const handleSetYouthContacts = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.json(await setYouthContacts(req.params.id, req.body as SetYouthContactsInput, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.json(await setYouthContacts(req.params.id, req.body as SetYouthContactsInput, userId));
 };
 
 /**
- * Returns notes linked to the selected youth within the signed-in actor's program scope.
+ * Returns notes linked to the selected youth within the signed-in user's program scope.
  * @param req - Authenticated request with validated Youth parameters and input.
  * @param res - Receives the operation's JSON result.
  * @example handleGetYouthSessionNotes(req, res)
  */
 export const handleGetYouthSessionNotes = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.json(await listSessionNotesForYouth(req.params.id, actor));
+  const user = (req as AuthRequest).user!;
+  res.json(await listSessionNotesForYouth(req.params.id, user));
 };
 
 /**
@@ -67,8 +67,8 @@ export const handleGetYouthSessionNotes = async (req: Request, res: Response) =>
  * @example handleGetYouthAttendance(req, res)
  */
 export const handleGetYouthAttendance = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.json(await getYouthAttendance(req.params.id, actor));
+  const user = (req as AuthRequest).user!;
+  res.json(await getYouthAttendance(req.params.id, user));
 };
 
 /**
@@ -78,8 +78,8 @@ export const handleGetYouthAttendance = async (req: Request, res: Response) => {
  * @example handleGetYouthProgramCycleAttendance(req, res)
  */
 export const handleGetYouthProgramCycleAttendance = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.json(await getYouthProgramCycleAttendance(req.params.id, req.params.programId, req.params.cycleId, actor));
+  const user = (req as AuthRequest).user!;
+  res.json(await getYouthProgramCycleAttendance(req.params.id, req.params.programId, req.params.cycleId, user));
 };
 
 /**
@@ -89,13 +89,13 @@ export const handleGetYouthProgramCycleAttendance = async (req: Request, res: Re
  * @example handleSetYouthProgramCycleAttendance(req, res)
  */
 export const handleSetYouthProgramCycleAttendance = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   res.json(await setYouthProgramCycleAttendance(
     req.params.id,
     req.params.programId,
     req.params.cycleId,
     req.body as SetYouthProgramCycleAttendanceInput,
-    actor,
+    user,
   ));
 };
 
@@ -106,8 +106,8 @@ export const handleSetYouthProgramCycleAttendance = async (req: Request, res: Re
  * @example handleInviteYouth(req, res)
  */
 export const handleInviteYouth = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  const account = await inviteYouthAccount(req.params.id, req.body.email, actorId);
+  const userId = (req as AuthRequest).user!.userId;
+  const account = await inviteYouthAccount(req.params.id, req.body.email, userId);
   res.status(201).json(account);
 };
 
@@ -127,9 +127,9 @@ export const handleGetYouthProfileNotes = async (req: Request, res: Response) =>
  * @example handleSetYouthProfileNote(req, res)
  */
 export const handleSetYouthProfileNote = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
+  const userId = (req as AuthRequest).user!.userId;
   const noteId = req.params.noteId;
-  res.status(noteId ? 200 : 201).json(await setYouthProfileNote(req.params.id, req.body as SetYouthProfileNoteInput, actorId, noteId));
+  res.status(noteId ? 200 : 201).json(await setYouthProfileNote(req.params.id, req.body as SetYouthProfileNoteInput, userId, noteId));
 };
 /**
  * Deletes the selected profile note and returns successful completion.

@@ -5,14 +5,14 @@ import type { ProgramListQuery } from '../../../validation/programSchemas';
 
 /**
  * Builds filters for table and calendar items.
- * @param actor - Actor whose assignments limit assigned-program reads.
+ * @param user - User whose assignments limit assigned-program reads.
  * @param filterValues - Validated discovery scope; route permissions govern all-program reads.
- * @example buildProgramFilters(actor, filterValues) // accessible program scope
+ * @example buildProgramFilters(user, filterValues) // accessible program scope
  */
-export function buildProgramFilters(actor: AccessTokenPayload, filterValues: ProgramListQuery) {
+export function buildProgramFilters(user: AccessTokenPayload, filterValues: ProgramListQuery) {
   // 1. Apply the selected program scope.
   if (filterValues.scope === 'assigned') {
-    return programAccessPredicate(actor, sql`p.id`);
+    return programAccessPredicate(user, sql`p.id`);
   }
   return sql`TRUE`;
 }

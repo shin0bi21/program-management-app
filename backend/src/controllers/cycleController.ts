@@ -6,7 +6,7 @@ import { listCycles } from '../services/programming/cycles/cycleListService';
 
 import type { SetProgramCycleInput, CycleListQuery } from '../validation/programmingSchemas';
 
-const actor = (req: Request) => (req as AuthRequest).user!;
+const user = (req: Request) => (req as AuthRequest).user!;
 
 /**
  * Returns cycle choices.
@@ -30,7 +30,7 @@ export const handleGetCycleList = async (req: Request, res: Response) => {
  */
 export const handleSetProgramCycle = async (req: Request, res: Response) => {
   const cycleId = req.params.cycleId;
-  res.status(cycleId ? 200 : 201).json(await setProgramCycle(req.body as SetProgramCycleInput, actor(req), cycleId));
+  res.status(cycleId ? 200 : 201).json(await setProgramCycle(req.body as SetProgramCycleInput, user(req), cycleId));
 };
 
 /**

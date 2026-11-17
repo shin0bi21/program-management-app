@@ -9,14 +9,14 @@ import { getProgramCycleRowsByKeys, getProgramCycleYouthIds, type ProgramCycleKe
  * Replaces a program's cycle assignments and returns affected rows.
  * @param programId - Program whose assignments change.
  * @param cycleIds - Complete set of selected cycle IDs.
- * @param actor - User whose program access is checked.
- * @example setProgramCycles(programId, [], actor) // remove unused assignments
+ * @param user - User whose program access is checked.
+ * @example setProgramCycles(programId, [], user) // remove unused assignments
  */
-export async function setProgramCycles(programId: string, cycleIds: string[], actor: AccessTokenPayload) {
+export async function setProgramCycles(programId: string, cycleIds: string[], user: AccessTokenPayload) {
   // 1. Check access and lock the program.
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
-    await lockAssignmentProgram(trx, programId, actor);
+    await lockAssignmentProgram(trx, programId, user);
 
     // 2. Check the selected cycles.
     const cycles = await trx<{ id: string }[]>`
@@ -49,7 +49,7 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
     }
     const created = await trx<ProgramCycleKey[]>`
       INSERT INTO program_cycle_assignments (program_id, cycle_id, created_by, updated_by)
-      SELECT ${programId}, cycle_id, ${actor.userId}, ${actor.userId}
+      SELECT ${programId}, cycle_id, ${user.userId}, ${user.userId}
       FROM UNNEST(${sql.array(cycleIds)}::uuid[]) AS selected(cycle_id)
       ON CONFLICT (program_id, cycle_id) DO NOTHING
       RETURNING program_id, cycle_id
@@ -59,7 +59,7 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
 
     // 5. Return the affected rows.
     let updatedYouth: YouthRow[] = [];
-    if (actor.permissions.includes('read:youth_profiles')) {
+    if (user.permissions.includes('read:youth_profiles')) {
       const youthIds = await getProgramCycleYouthIds(trx, keys);
       updatedYouth = await getYouthRows(trx`youth.id = ANY(${trx.array(youthIds)}::uuid[])`, trx);
     }
@@ -67,8 +67,8 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
     return {
       programId,
       cycleIds: cycles.map(cycle => cycle.id),
-      updatedProgramCycles: actor.permissions.includes('read:programs')
-        ? await getProgramCycleRowsByKeys(trx, actor, keys) : [],
+      updatedProgramCycles: user.permissions.includes('read:programs')
+        ? await getProgramCycleRowsByKeys(trx, user, keys) : [],
       createdProgramCycles: created,
       removedProgramCycles: removed,
       updatedYouth,
@@ -80,14 +80,14 @@ export async function setProgramCycles(programId: string, cycleIds: string[], ac
  * Locks an accessible program inside the caller's transaction.
  * @param trx - Transaction holding the lock.
  * @param programId - Program to lock.
- * @param actor - User whose access is checked.
- * @example lockAssignmentProgram(trx, programId, actor)
+ * @param user - User whose access is checked.
+ * @example lockAssignmentProgram(trx, programId, user)
  */
-export async function lockAssignmentProgram(trx: typeof sql, programId: string, actor: AccessTokenPayload) {
+export async function lockAssignmentProgram(trx: typeof sql, programId: string, user: AccessTokenPayload) {
   const programs = await trx`
     SELECT program.id
     FROM programs program
-    WHERE program.id = ${programId} AND ${programAccessPredicate(actor, sql`program.id`)}
+    WHERE program.id = ${programId} AND ${programAccessPredicate(user, sql`program.id`)}
     FOR UPDATE
   `;
   if (!programs.length) throw new NotFoundError('Program not found');

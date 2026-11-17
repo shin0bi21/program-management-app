@@ -17,7 +17,7 @@ import type {
   UpdateHomepageImageInput,
 } from '../validation/homepageSchemas';
 
-const actor = (req: Request) => (req as AuthRequest).user!;
+const user = (req: Request) => (req as AuthRequest).user!;
 
 export const handleGetPublicHomepageImages = async (_req: Request, res: Response) => {
   res.json(await getPublicHomepageImages());
@@ -32,11 +32,11 @@ export const handleGetManagedHomepage = async (_req: Request, res: Response) => 
 };
 
 export const handleCreateHomepageImage = async (req: Request, res: Response) => {
-  res.status(201).json(await createHomepageImage(req.body as CreateHomepageImageInput, req.file, actor(req)));
+  res.status(201).json(await createHomepageImage(req.body as CreateHomepageImageInput, req.file, user(req)));
 };
 
 export const handleUpdateHomepageImage = async (req: Request, res: Response) => {
-  res.json(await updateHomepageImage(req.params.imageId, req.body as UpdateHomepageImageInput, actor(req)));
+  res.json(await updateHomepageImage(req.params.imageId, req.body as UpdateHomepageImageInput, user(req)));
 };
 
 export const handleDeleteHomepageImage = async (req: Request, res: Response) => {
@@ -45,7 +45,7 @@ export const handleDeleteHomepageImage = async (req: Request, res: Response) => 
 };
 
 export const handleReorderHomepageImages = async (req: Request, res: Response) => {
-  res.json(await reorderHomepageImages(req.body as ReorderHomepageImagesInput, actor(req)));
+  res.json(await reorderHomepageImages(req.body as ReorderHomepageImagesInput, user(req)));
 };
 
 export const handleGetHomepageImageFile = async (req: Request, res: Response) => {

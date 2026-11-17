@@ -6,12 +6,12 @@ import { getTaskRows, type TaskRow } from './taskRowQuery';
 
 /**
  * Loads accessible tasks overlapping the requested calendar range.
- * @param actor - Actor whose staff scope limits the rows.
+ * @param user - User whose staff scope limits the rows.
  * @param query - Validated date and task filters.
- * @example getTasksCalendarData(actor, query) // complete matching tasks
+ * @example getTasksCalendarData(user, query) // complete matching tasks
  */
 export async function getTasksCalendarData(
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   query: TaskCalendarQuery,
 ) {
   // 1. Find the requested dates.
@@ -21,7 +21,7 @@ export async function getTasksCalendarData(
   // 2. Load matching tasks.
   const appliedFilters = buildTaskFilters(query);
   return sql<TaskRow[]>`
-    ${getTaskRows(actor, sql`
+    ${getTaskRows(user, sql`
       task.start_date <= ${range.end}::date
       AND task.due_date >= ${range.start}::date
       AND ${appliedFilters}

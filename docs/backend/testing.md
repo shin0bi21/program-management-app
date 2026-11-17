@@ -13,7 +13,7 @@
 
 - Cover authentication, route permission, validation, success, not-found concealment, conflict, destructive behavior, and stable error responses as applicable.
 - Exercise route permissions with tokens that explicitly lack the required capability; role-default tokens do not prove the middleware contract.
-- For scoped resources, test administrator, own, shared-readable, and unrelated actors. Include a record whose metadata does not match the relationship granting resource visibility.
+- For scoped resources, test administrator, own, shared-readable, and unrelated users. Include a record whose metadata does not match the relationship granting resource visibility.
 - Test policy behavior through public endpoints plus focused policy/service tests only when public coverage cannot isolate the rule.
 - Verify transactions roll back all durable writes and audit records on failure. Cover external-side-effect compensation or retry behavior when present.
 - Test status transitions, assignment changes, and relationship changes independently from broad full-update happy paths.

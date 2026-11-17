@@ -7,20 +7,20 @@ import type { AccessTokenPayload } from '../../types/auth';
 import type { StaffReferenceFeature } from '../../validation/referenceDataSchemas';
 
 /**
- * Lists active staff visible to the actor with feature-specific write access.
- * @param actor - Signed-in user who must have the feature's read permission.
+ * Lists active staff visible to the user with feature-specific write access.
+ * @param user - Signed-in user who must have the feature's read permission.
  * @param feature - Tasks or Hours policy used to determine writability.
- * @example getStaffReferenceData(actor, 'hours') // readable staff with Hours capabilities
+ * @example getStaffReferenceData(user, 'hours') // readable staff with Hours capabilities
  */
-export function getStaffReferenceData(actor: AccessTokenPayload, feature: StaffReferenceFeature) {
+export function getStaffReferenceData(user: AccessTokenPayload, feature: StaffReferenceFeature) {
   // 1. Require read access and derive write access for the requested feature.
-  if (!actor.permissions.includes(feature === 'tasks' ? 'read:tasks' : 'read:hours')) {
+  if (!user.permissions.includes(feature === 'tasks' ? 'read:tasks' : 'read:hours')) {
     throw new ForbiddenError('Insufficient permissions');
   }
 
   const writable = feature === 'tasks'
-    ? taskWriteScopePredicate(actor, sql`staff.id`)
-    : hoursWriteScopePredicate(actor, sql`staff.id`);
+    ? taskWriteScopePredicate(user, sql`staff.id`)
+    : hoursWriteScopePredicate(user, sql`staff.id`);
 
   // 2. Load active staff within the shared visibility policy.
   return sql<Array<{ id: string; firstName: string; lastName: string; role: string; name: string; writable: boolean }>>`
@@ -37,7 +37,7 @@ export function getStaffReferenceData(actor: AccessTokenPayload, feature: StaffR
     INNER JOIN user_roles role ON role.id = staff.role_id
     INNER JOIN user_credentials credentials ON credentials.user_id = staff.id
     WHERE role.name IN ('admin', 'project_manager', 'staff') AND credentials.status = 'active'
-      AND ${sharedStaffReadPredicate(actor, sql`staff.id`)}
+      AND ${sharedStaffReadPredicate(user, sql`staff.id`)}
     ORDER BY staff.first_name, staff.last_name, staff.id
   `;
 }

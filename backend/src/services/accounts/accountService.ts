@@ -16,23 +16,23 @@ const FRONTEND_URL = requireEnv('FRONTEND_URL');
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
- * Creates an invited employee account or updates one after checking actor authority.
+ * Creates an invited employee account or updates one after checking user authority.
  * Required emails are awaited after commit, so delivery failures do not roll back the account.
  * @param data - Validated employee fields; omitted role defaults to staff. Omitted programIds preserves
  * existing assignments on update; an empty list clears them.
- * @param actor - Actor whose role permissions are checked and whose ID is audited.
+ * @param user - User whose role permissions are checked and whose ID is audited.
  * @returns The complete account row, including its role, status, and ordered program IDs.
  * @example setAccount({ firstName: 'Alex', lastName: 'Lee', email: 'alex@example.org' }, admin) // invited staff account
  */
-export async function setAccount(data: SetAccountInput, actor: AccessTokenPayload) {
+export async function setAccount(data: SetAccountInput, user: AccessTokenPayload) {
   // 1. Check authority over the current account and requested role.
   const { id, firstName, lastName, email, role = 'staff', programIds } = data;
   if (id) {
-    assertAccountManagementAccess(actor, await getAccountRole(id));
+    assertAccountManagementAccess(user, await getAccountRole(id));
   }
-  assertAccountCreationAccess(actor, role);
+  assertAccountCreationAccess(user, role);
   const transactionId = crypto.randomUUID();
-  const actorId = actor.userId;
+  const currentUserId = user.userId;
 
   // 2. Resolve the requested role.
   const roles = await sql<{ id: string }[]>`
@@ -101,7 +101,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       // 7. Audit the employee update.
       await audit(
         trx,
-        actorId,
+        currentUserId,
         transactionId,
         'users',
         userId,
@@ -140,7 +140,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
 
       // 11. Replace program assignments when supplied.
       if (programIds !== undefined) {
-        await replaceUserProgramAssignments(trx, userId, programIds, actorId);
+        await replaceUserProgramAssignments(trx, userId, programIds, currentUserId);
       }
     }).catch(rethrowAccountEmailConflict);
 
@@ -185,7 +185,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       userId = newUsers[0].id;
 
       // 16. Audit the employee creation.
-      await audit(trx, actorId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
+      await audit(trx, currentUserId, transactionId, 'users', userId, 'INSERT', null, { id: newUsers[0].id, firstName: newUsers[0].firstName, lastName: newUsers[0].lastName, role });
 
       // 17. Create credentials with invited status.
       await trx<DbRow<UserCredentials>[]>`
@@ -200,7 +200,7 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
       `;
 
       // 19. Save the initial program assignments.
-      await replaceUserProgramAssignments(trx, userId, programIds ?? [], actorId);
+      await replaceUserProgramAssignments(trx, userId, programIds ?? [], currentUserId);
     }).catch(rethrowAccountEmailConflict);
 
     // 20. Send the employee invitation after commit.
@@ -220,11 +220,11 @@ export async function setAccount(data: SetAccountInput, actor: AccessTokenPayloa
  * Callers authorize the invitation; email failures reject after the account has been saved.
  * @param userId - Existing youth profile receiving login credentials; missing profiles are 404.
  * @param email - Validated invitation address; duplicate accounts or addresses are 409.
- * @param actorId - User recorded in the account audit.
+ * @param currentUserId - User recorded in the account audit.
  * @returns The invited email and status for the youth profile response.
- * @example inviteYouthAccount(youthId, 'alex@example.org', actorId) // { email: 'alex@example.org', status: 'invited' }
+ * @example inviteYouthAccount(youthId, 'alex@example.org', currentUserId) // { email: 'alex@example.org', status: 'invited' }
  */
-export async function inviteYouthAccount(userId: string, email: string, actorId: string) {
+export async function inviteYouthAccount(userId: string, email: string, currentUserId: string) {
   // 1. Prepare an invitation token and a password that cannot be used to sign in.
   const transactionId = crypto.randomUUID();
   const unusableHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
@@ -272,7 +272,7 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
     `;
 
     // 7. Audit the credential creation.
-    await audit(trx, actorId, transactionId, 'user_credentials', userId, 'INSERT', null, {
+    await audit(trx, currentUserId, transactionId, 'user_credentials', userId, 'INSERT', null, {
       userId,
       email,
       status: 'invited',
@@ -294,15 +294,15 @@ export async function inviteYouthAccount(userId: string, email: string, actorId:
  * Toggles an authorized account between active and inactive and audits the change.
  * Pending invitations are rejected with 409.
  * @param userId - Required account whose status changes.
- * @param actor - Actor whose authority is checked and whose ID is audited.
+ * @param user - User whose authority is checked and whose ID is audited.
  * @returns The complete account row with its committed status.
- * @example toggleAccountStatus(activeYouthId, staffActor) // account row with status: 'inactive'
+ * @example toggleAccountStatus(activeYouthId, staffUser) // account row with status: 'inactive'
  */
-export async function toggleAccountStatus(userId: string, actor: AccessTokenPayload) {
+export async function toggleAccountStatus(userId: string, user: AccessTokenPayload) {
   // 1. Check authority over the account.
-  assertAccountManagementAccess(actor, await getAccountRole(userId));
+  assertAccountManagementAccess(user, await getAccountRole(userId));
   const transactionId = crypto.randomUUID();
-  const actorId = actor.userId;
+  const currentUserId = user.userId;
 
   let result!: AccountRow;
 
@@ -343,7 +343,7 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
 
     // 5. Audit the status change.
     await audit(
-      trx, actorId, transactionId, 'user_credentials', userId, 'UPDATE',
+      trx, currentUserId, transactionId, 'user_credentials', userId, 'UPDATE',
       { userId, status: existing.status },
       { userId, status: newStatus }
     );
@@ -361,15 +361,15 @@ export async function toggleAccountStatus(userId: string, actor: AccessTokenPayl
  * Revokes an authorized pending invitation, invalidates its reset links, and audits the deletion.
  * Youth profiles survive credential deletion; employee users are deleted with their dependent records.
  * @param userId - Required invited account; activated accounts are 409.
- * @param actor - Actor whose authority is checked and whose ID is audited.
- * @example revokeAccountInvite(invitedYouthId, staffActor) // removes credentials and preserves the youth profile
+ * @param user - User whose authority is checked and whose ID is audited.
+ * @example revokeAccountInvite(invitedYouthId, staffUser) // removes credentials and preserves the youth profile
  */
-export async function revokeAccountInvite(userId: string, actor: AccessTokenPayload) {
+export async function revokeAccountInvite(userId: string, user: AccessTokenPayload) {
   // 1. Check authority over the invited account.
   const targetRole = await getAccountRole(userId);
-  assertAccountManagementAccess(actor, targetRole);
+  assertAccountManagementAccess(user, targetRole);
   const transactionId = crypto.randomUUID();
-  const actorId = actor.userId;
+  const currentUserId = user.userId;
 
   await sql.begin(async (tx) => {
     const trx = asTransactionSql(tx);
@@ -402,7 +402,7 @@ export async function revokeAccountInvite(userId: string, actor: AccessTokenPayl
 
     // 5. Audit the invitation removal.
     await audit(
-      trx, actorId, transactionId, 'users', userId, 'DELETE',
+      trx, currentUserId, transactionId, 'users', userId, 'DELETE',
       { id: existing.id, firstName: existing.firstName, lastName: existing.lastName, status: existing.status },
       null
     );
@@ -474,14 +474,14 @@ async function getAccountRole(userId: string): Promise<UserRole> {
  * @param trx - Existing transaction that rolls back deletion if validation or insertion fails.
  * @param staffId - Account receiving the replacement assignments.
  * @param programIds - Distinct validated program IDs; an empty list clears assignments.
- * @param actorId - Actor recorded as assignment creator.
- * @example replaceUserProgramAssignments(trx, staffId, [], actorId) // clears all program assignments
+ * @param currentUserId - User recorded as assignment creator.
+ * @example replaceUserProgramAssignments(trx, staffId, [], currentUserId) // clears all program assignments
  */
 async function replaceUserProgramAssignments(
   trx: typeof sql,
   staffId: string,
   programIds: string[],
-  actorId: string,
+  currentUserId: string,
 ) {
   // 1. Clear the previous program assignments.
   await trx`
@@ -504,7 +504,7 @@ async function replaceUserProgramAssignments(
   // 3. Save the replacement program assignments.
   await trx`
     INSERT INTO user_program_assignments (user_id, program_id, created_by)
-    SELECT ${staffId}, selected.program_id, ${actorId}
+    SELECT ${staffId}, selected.program_id, ${currentUserId}
     FROM UNNEST(${trx.array(programIds)}::uuid[]) AS selected(program_id)
   `;
 }

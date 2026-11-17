@@ -47,15 +47,15 @@ export const taskStatus = sql`
 `;
 
 /**
- * Builds canonical task rows within the actor's readable staff scope.
- * @param actor - Actor whose staff scope is always enforced.
+ * Builds canonical task rows within the user's readable staff scope.
+ * @param user - User whose staff scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
  * @returns Complete rows with labels, numeric totals, date-ordered daily hours, and policy-derived write access.
- * @example getTaskRows(actor, appliedFilters, trx)
+ * @example getTaskRows(user, appliedFilters, trx)
  */
-export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
-  // 1. Read complete task records within the actor's staff scope.
+export function getTaskRows(user: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
+  // 1. Read complete task records within the user's staff scope.
   return query<TaskRow[]>`
     SELECT
       task.id,
@@ -96,11 +96,11 @@ export function getTaskRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE
           GROUP BY entry.date
         ) daily
       ) AS logged_hours_by_date,
-      ${taskWriteScopePredicate(actor, query`task.staff_id`)} AS writable
+      ${taskWriteScopePredicate(user, query`task.staff_id`)} AS writable
     FROM tasks task
     INNER JOIN users staff ON staff.id = task.staff_id
     LEFT JOIN programs program ON program.id = task.program_id
-    WHERE ${taskReadScopePredicate(actor, query`task.staff_id`)}
+    WHERE ${taskReadScopePredicate(user, query`task.staff_id`)}
       AND (${appliedFilters})
   `;
 }

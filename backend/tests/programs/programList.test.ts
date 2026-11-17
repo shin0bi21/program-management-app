@@ -59,7 +59,7 @@ describe('Programs table list', () => {
   });
 
   /**
-   * Requests programs visible to the selected test actor.
+   * Requests programs visible to the selected test user.
    * @param token - Defaults to the assigned staff member's access token.
    * @example await list(adminToken) // programs visible to the administrator
    */

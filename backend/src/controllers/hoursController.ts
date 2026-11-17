@@ -17,9 +17,9 @@ import type { HoursTableQuery, HoursCycleSummaryQuery, HoursPayPeriodQuery, Hour
  * @example handleGetHoursCalendarData(req, res)
  */
 export async function handleGetHoursCalendarData(req: Request, res: Response) {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as HoursCalendarQuery;
-  res.json(await getHoursCalendarData(actor, query));
+  res.json(await getHoursCalendarData(user, query));
 }
 
 /**
@@ -27,9 +27,9 @@ export async function handleGetHoursCalendarData(req: Request, res: Response) {
  * @example handleGetHoursTableData(req, res)
  */
 export async function handleGetHoursTableData(req: Request, res: Response) {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as HoursTableQuery;
-  res.json(await getHoursList(actor, query));
+  res.json(await getHoursList(user, query));
 }
 
 /**
@@ -45,9 +45,9 @@ export async function handleGetHoursReferenceData(_req: Request, res: Response) 
  * @example handleGetHoursPayPeriodData(req, res)
  */
 export async function handleGetHoursPayPeriodData(req: Request, res: Response) {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as HoursPayPeriodQuery;
-  res.json(await getHoursPayPeriodData(actor, query));
+  res.json(await getHoursPayPeriodData(user, query));
 }
 
 /**
@@ -55,9 +55,9 @@ export async function handleGetHoursPayPeriodData(req: Request, res: Response) {
  * @example handleGetHoursCycleSummaryData(req, res)
  */
 export async function handleGetHoursCycleSummaryData(req: Request, res: Response) {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as HoursCycleSummaryQuery;
-  res.json(await getHoursCycleSummaryData(actor, query));
+  res.json(await getHoursCycleSummaryData(user, query));
 }
 
 /**
@@ -65,9 +65,9 @@ export async function handleGetHoursCycleSummaryData(req: Request, res: Response
  * @example handleGetHoursSessions(req, res)
  */
 export async function handleGetHoursSessions(req: Request, res: Response) {
-  const actor = (req as AuthRequest).user!;
+  const user = (req as AuthRequest).user!;
   const query = req.query as unknown as HoursSessionQuery;
-  res.json(await getHoursSessions(actor, query));
+  res.json(await getHoursSessions(user, query));
 }
 
 /**

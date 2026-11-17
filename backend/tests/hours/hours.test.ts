@@ -119,18 +119,18 @@ describe('Hours API', () => {
         expect(created.status).toBe(201);
         createdIds.push(created.body.id);
       }
-      const actor: AccessTokenPayload = {
+      const user: AccessTokenPayload = {
         userId: firstStaffId, email: 'hours-scope@test.local', role: 'staff',
         permissions: ['read:hours'], tokenType: 'access', jti: 'hours-scope', iat: 0, exp: 1,
       };
 
-      const ownAndShared = await getHoursRows(actor);
+      const ownAndShared = await getHoursRows(user);
       expect(ownAndShared.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
         .toEqual(createdIds.slice(0, 2).sort());
-      expect(await getHoursRows(actor, sql`entry.id = ${createdIds[2]}`)).toEqual([]);
-      const broadFilter = await getHoursRows(actor, sql`TRUE OR entry.id = ${createdIds[2]}`);
+      expect(await getHoursRows(user, sql`entry.id = ${createdIds[2]}`)).toEqual([]);
+      const broadFilter = await getHoursRows(user, sql`TRUE OR entry.id = ${createdIds[2]}`);
       expect(broadFilter.some(row => row.id === createdIds[2])).toBe(false);
-      const adminRows = await getHoursRows({ ...actor, userId: adminId, role: 'admin' });
+      const adminRows = await getHoursRows({ ...user, userId: adminId, role: 'admin' });
       expect(adminRows.filter(row => createdIds.includes(row.id)).map(row => row.id).sort())
         .toEqual([...createdIds].sort());
 
@@ -858,7 +858,7 @@ describe('Hours API', () => {
     const payload = { source: 'task', staffId: firstStaffId, date, hours: 2, note };
     /**
      * Loads an authoritative task for comparing cross-domain mutation responses.
-     * @param id - Task created by this test and readable by its staff actor.
+     * @param id - Task created by this test and readable by its staff user.
      * @example await taskRecord(tasks[0]) // current saved task, including logged hours
      */
     const taskRecord = async (id: string) => {

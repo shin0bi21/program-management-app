@@ -49,15 +49,15 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
 )`;
 
 /**
- * Builds canonical hours rows within the actor's readable staff scope.
- * @param actor - Actor whose staff scope is always enforced.
+ * Builds canonical hours rows within the user's readable staff scope.
+ * @param user - User whose staff scope is always enforced.
  * @param appliedFilters - SQL filters supplied by the service.
  * @param query - Database client; pass trx inside a transaction.
  * @returns Complete rows with category labels and numeric hours; storage allows more than 0 and at most 24 hours with two decimal places.
- * @example getHoursRows(actor, appliedFilters, trx)
+ * @example getHoursRows(user, appliedFilters, trx)
  */
-export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
-  // 1. Build complete hours rows within the actor’s staff scope.
+export function getHoursRows(user: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
+  // 1. Build complete hours rows within the user’s staff scope.
   return query<HoursRow[]>`
     SELECT
       entry.id,
@@ -96,7 +96,7 @@ export function getHoursRows(actor: AccessTokenPayload, appliedFilters = sql`TRU
     INNER JOIN program_cycles cycle ON cycle.id = entry.cycle_id
     LEFT JOIN tasks task ON task.id = entry.task_id
     LEFT JOIN program_sessions session ON session.id = entry.session_id
-    WHERE ${hoursReadScopePredicate(actor, query`entry.staff_id`)}
+    WHERE ${hoursReadScopePredicate(user, query`entry.staff_id`)}
       AND (${appliedFilters})
   `;
 }

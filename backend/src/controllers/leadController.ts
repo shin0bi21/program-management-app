@@ -20,8 +20,8 @@ export const handleGetLeads = async (req: Request, res: Response) => {
  * @example handleCreateLead(req, res)
  */
 export const handleCreateLead = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.status(201).json(await setLead(req.body as CreateLeadInput, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.status(201).json(await setLead(req.body as CreateLeadInput, userId));
 };
 
 /**
@@ -29,8 +29,8 @@ export const handleCreateLead = async (req: Request, res: Response) => {
  * @example handleUpdateLead(req, res)
  */
 export const handleUpdateLead = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.json(await setLead(req.body as UpdateLeadInput, actorId, req.params.id));
+  const userId = (req as AuthRequest).user!.userId;
+  res.json(await setLead(req.body as UpdateLeadInput, userId, req.params.id));
 };
 
 /**
@@ -38,8 +38,8 @@ export const handleUpdateLead = async (req: Request, res: Response) => {
  * @example handleUpdateLeadStatus(req, res)
  */
 export const handleUpdateLeadStatus = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.json(await updateLeadStatus(req.params.id, req.body as UpdateLeadStatusInput, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.json(await updateLeadStatus(req.params.id, req.body as UpdateLeadStatusInput, userId));
 };
 
 /**
@@ -47,8 +47,8 @@ export const handleUpdateLeadStatus = async (req: Request, res: Response) => {
  * @example handleSignUpLead(req, res)
  */
 export const handleSignUpLead = async (req: Request, res: Response) => {
-  const actor = (req as AuthRequest).user!;
-  res.status(201).json(await signUpLead(req.params.id, req.body as SignUpLeadInput, actor));
+  const user = (req as AuthRequest).user!;
+  res.status(201).json(await signUpLead(req.params.id, req.body as SignUpLeadInput, user));
 };
 
 /**
@@ -56,8 +56,8 @@ export const handleSignUpLead = async (req: Request, res: Response) => {
  * @example handleDeleteLead(req, res)
  */
 export const handleDeleteLead = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.json(await deleteLead(req.params.id, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.json(await deleteLead(req.params.id, userId));
 };
 
 /**
@@ -73,8 +73,8 @@ export const handleGetLeadNotes = async (req: Request, res: Response) => {
  * @example handleSetLeadNote(req, res)
  */
 export const handleSetLeadNote = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.status(201).json(await createLeadNote(req.params.id, req.body as SetLeadNoteInput, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.status(201).json(await createLeadNote(req.params.id, req.body as SetLeadNoteInput, userId));
 };
 
 /**
@@ -82,12 +82,12 @@ export const handleSetLeadNote = async (req: Request, res: Response) => {
  * @example handleUpdateLeadNote(req, res)
  */
 export const handleUpdateLeadNote = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
+  const userId = (req as AuthRequest).user!.userId;
   res.json(await updateLeadNoteDetails(
     req.params.id,
     req.params.noteId,
     req.body as UpdateLeadNoteInput,
-    actorId,
+    userId,
   ));
 };
 
@@ -96,6 +96,6 @@ export const handleUpdateLeadNote = async (req: Request, res: Response) => {
  * @example handleDeleteLeadNote(req, res)
  */
 export const handleDeleteLeadNote = async (req: Request, res: Response) => {
-  const actorId = (req as AuthRequest).user!.userId;
-  res.json(await deleteLeadNote(req.params.id, req.params.noteId, actorId));
+  const userId = (req as AuthRequest).user!.userId;
+  res.json(await deleteLeadNote(req.params.id, req.params.noteId, userId));
 };

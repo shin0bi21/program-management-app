@@ -28,20 +28,20 @@ export function getSessionTypes() {
 
 /**
  * Creates a scheduled session in the one cycle covering its date; ambiguous assignments are 409.
- * @param programId - Program the actor must be allowed to access.
+ * @param programId - Program the user must be allowed to access.
  * @param data - Validated session settings, with optional schedule defaults.
- * @param actor - Actor used for authorization and write metadata.
+ * @param user - User used for authorization and write metadata.
  * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createProgramSession(programId, { sessionType, title: 'Cooking', date: '2027-01-15' }, actor) // session in the cycle covering January 15
+ * @example await createProgramSession(programId, { sessionType, title: 'Cooking', date: '2027-01-15' }, user) // session in the cycle covering January 15
  */
-export async function createProgramSession(programId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
+export async function createProgramSession(programId: string, data: CreateSessionInput, user: AccessTokenPayload) {
   // 1. Check access to the program.
-  await assertProgramAccess(actor, programId);
+  await assertProgramAccess(user, programId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Lock the program before resolving cycle assignments.
-    await lockAssignmentProgram(trx, programId, actor);
+    await lockAssignmentProgram(trx, programId, user);
 
     // 3. Load program defaults and resolve the session date.
     const schedule = await getProgramSchedule(programId, trx);
@@ -65,28 +65,28 @@ export async function createProgramSession(programId: string, data: CreateSessio
     }
 
     // 5. Save the session and return affected cycle rows.
-    return createScheduledSession(trx, programId, assignments[0].cycleId, data, actor, schedule, date);
+    return createScheduledSession(trx, programId, assignments[0].cycleId, data, user, schedule, date);
   }).catch(rethrowSessionConflict);
 }
 
 /**
  * Creates a session in a required program-cycle assignment; dates outside that cycle are 409.
  * @param programId - Program owning the session.
- * @param cycleId - Assigned cycle the actor must be allowed to access.
+ * @param cycleId - Assigned cycle the user must be allowed to access.
  * @param data - Validated session settings, with optional schedule defaults.
- * @param actor - Actor used for authorization and write metadata.
+ * @param user - User used for authorization and write metadata.
  * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createSession(programId, cycleId, { sessionType, title: 'Cooking', date: '2027-01-15' }, actor) // January 15 session using program default times
+ * @example await createSession(programId, cycleId, { sessionType, title: 'Cooking', date: '2027-01-15' }, user) // January 15 session using program default times
  */
-export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, actor: AccessTokenPayload) {
+export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, user: AccessTokenPayload) {
 
   // 1. Check access to the assigned program and cycle.
-  await assertProgramCycleAccess(actor, programId, cycleId);
+  await assertProgramCycleAccess(user, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
     // 2. Lock the program, cycle, and assignment.
-    await lockSessionAssignment(trx, programId, cycleId, actor);
+    await lockSessionAssignment(trx, programId, cycleId, user);
 
     // 3. Load the cycle date bounds.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
@@ -105,21 +105,21 @@ export async function createSession(programId: string, cycleId: string, data: Cr
     }
 
     // 5. Save the session within the validated cycle.
-    return createScheduledSession(trx, programId, cycleId, data, actor, schedule, date);
+    return createScheduledSession(trx, programId, cycleId, data, user, schedule, date);
   }).catch(rethrowSessionConflict);
 }
 
 /**
  * Updates an accessible session; missing targets are 404 and dates outside its cycle are 409.
- * @param id - Session the actor must be allowed to access.
+ * @param id - Session the user must be allowed to access.
  * @param data - Validated replacement session fields.
- * @param actor - Actor used for authorization, write metadata, and response scope.
- * @example await updateSession(sessionId, { title: 'Cooking', date: '2027-01-15', startTime: '17:00', endTime: '18:00' }, actor) // returns the saved session with its existing type and cleared description
+ * @param user - User used for authorization, write metadata, and response scope.
+ * @example await updateSession(sessionId, { title: 'Cooking', date: '2027-01-15', startTime: '17:00', endTime: '18:00' }, user) // returns the saved session with its existing type and cleared description
  */
-export async function updateSession(id: string, data: UpdateSessionInput, actor: AccessTokenPayload) {
+export async function updateSession(id: string, data: UpdateSessionInput, user: AccessTokenPayload) {
 
   // 1. Check access to the session.
-  await assertSessionAccess(actor, id);
+  await assertSessionAccess(user, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -132,7 +132,7 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
     if (!session) throw new NotFoundError('Session not found');
 
     // 3. Lock the program, cycle, and assignment.
-    await lockSessionAssignment(trx, session.programId, session.cycleId, actor);
+    await lockSessionAssignment(trx, session.programId, session.cycleId, user);
 
     // 4. Validate the replacement date against the locked cycle.
     const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
@@ -151,18 +151,18 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
       SET session_type = COALESCE(${data.sessionType ?? null}, session_type),
           title = ${data.title},
           date = ${data.date}, start_time = ${data.startTime}, end_time = ${data.endTime},
-          description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${actor.userId}
+          description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${user.userId}
       WHERE id = ${id}
       RETURNING id
     `;
     if (!rows.length) throw new NotFoundError('Session not found');
 
     // 6. Load the complete saved session for the response.
-    const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
+    const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
     // 7. Load affected cycle rows and return them with the updated session.
-    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(actor, [saved], trx) };
+    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [saved], trx) };
   }).catch(rethrowSessionConflict);
 }
 
@@ -170,13 +170,13 @@ export async function updateSession(id: string, data: UpdateSessionInput, actor:
  * Moves a session between future dates while preserving clock times and recorded history.
  * @param id - Accessible, non-cancelled session to move.
  * @param date - Authoritative YYYY-MM-DD destination, strictly after today.
- * @param actor - Actor used for authorization, write metadata, and response scope.
- * @example await moveSessionDate(sessionId, '2030-03-10', actor) // preserves both saved clock times
+ * @param user - User used for authorization, write metadata, and response scope.
+ * @example await moveSessionDate(sessionId, '2030-03-10', user) // preserves both saved clock times
  */
-export async function moveSessionDate(id: string, date: string, actor: AccessTokenPayload) {
+export async function moveSessionDate(id: string, date: string, user: AccessTokenPayload) {
 
   // 1. Check access to the session.
-  await assertSessionAccess(actor, id);
+  await assertSessionAccess(user, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -189,7 +189,7 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
     if (!lookup) throw new NotFoundError('Session not found');
 
     // 3. Lock the program before resolving the destination cycle.
-    await lockAssignmentProgram(trx, lookup.programId, actor);
+    await lockAssignmentProgram(trx, lookup.programId, user);
 
     // 4. Lock the session and check its saved date against today's date.
     const [session] = await trx<{
@@ -250,29 +250,29 @@ export async function moveSessionDate(id: string, date: string, actor: AccessTok
       UPDATE program_sessions
       SET cycle_id = ${assignments[0].cycleId},
         date = ${date},
-        updated_at = NOW(), updated_by = ${actor.userId}
+        updated_at = NOW(), updated_by = ${user.userId}
       WHERE id = ${id}
       RETURNING id
     `;
 
     // 8. Load the complete moved session for the response.
-    const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [id] }, trx);
+    const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [id] }, trx);
     if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
     // 9. Load affected cycle rows and return them with the moved session.
-    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(actor, [{ programId: lookup.programId, cycleId: session.cycleId }, saved], trx) };
+    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [{ programId: lookup.programId, cycleId: session.cycleId }, saved], trx) };
   }).catch(rethrowSessionConflict);
 }
 
 /**
  * Deletes an accessible session without attendance, notes, attachments, or logged hours; dependencies are 409.
  * @param id - Required session to delete.
- * @param actor - Actor whose session access and response scope are enforced.
- * @example await deleteSession(sessionId, actor) // removes an unrecorded session and returns { id: sessionId, updatedProgramCycles }
+ * @param user - User whose session access and response scope are enforced.
+ * @example await deleteSession(sessionId, user) // removes an unrecorded session and returns { id: sessionId, updatedProgramCycles }
  */
-export async function deleteSession(id: string, actor: AccessTokenPayload) {
+export async function deleteSession(id: string, user: AccessTokenPayload) {
   // 1. Check access to the session.
-  await assertSessionAccess(actor, id);
+  await assertSessionAccess(user, id);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
 
@@ -285,7 +285,7 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
     if (!lookup) throw new NotFoundError('Session not found');
 
     // 3. Lock the program, cycle, and assignment.
-    await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, actor);
+    await lockSessionAssignment(trx, lookup.programId, lookup.cycleId, user);
 
     // 4. Lock the session before checking deletion dependencies.
     const [session] = await trx<ProgramCycleKey[]>`
@@ -348,7 +348,7 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
     `;
 
     // 10. Load affected cycle rows and return them with the deleted session ID.
-    return { id, updatedProgramCycles: await getUpdatedProgramCycles(actor, [session], trx) };
+    return { id, updatedProgramCycles: await getUpdatedProgramCycles(user, [session], trx) };
   });
 }
 
@@ -357,12 +357,12 @@ export async function deleteSession(id: string, actor: AccessTokenPayload) {
  * @param trx - Existing transaction owning all acquired locks.
  * @param programId - Program to authorize and lock first.
  * @param cycleId - Cycle whose assignment must remain present.
- * @param actor - Actor whose program access must be enforced.
- * @example await lockSessionAssignment(trx, programId, cycleId, actor) // an absent assignment throws 404; locks last until the transaction ends
+ * @param user - User whose program access must be enforced.
+ * @example await lockSessionAssignment(trx, programId, cycleId, user) // an absent assignment throws 404; locks last until the transaction ends
  */
-async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, actor: AccessTokenPayload) {
+async function lockSessionAssignment(trx: typeof sql, programId: string, cycleId: string, user: AccessTokenPayload) {
   // 1. Authorize and lock the program.
-  await lockAssignmentProgram(trx, programId, actor);
+  await lockAssignmentProgram(trx, programId, user);
 
   // 2. Lock the required cycle.
   await trx`
@@ -423,17 +423,17 @@ async function getProgramSchedule(programId: string, query = sql): Promise<Progr
  * @param programId - Program owning the session.
  * @param cycleId - Previously verified assigned cycle.
  * @param data - Validated session details and optional time overrides.
- * @param actor - Actor recorded on writes and used to scope response rows.
+ * @param user - User recorded on writes and used to scope response rows.
  * @param schedule - Program clock defaults used when a request omits times.
  * @param date - Authoritative supplied date or resolved default YYYY-MM-DD date.
- * @example await createScheduledSession(trx, programId, cycleId, { sessionType, title: 'Cooking' }, actor, schedule, '2027-01-15') // inserts January 15 using schedule defaults
+ * @example await createScheduledSession(trx, programId, cycleId, { sessionType, title: 'Cooking' }, user, schedule, '2027-01-15') // inserts January 15 using schedule defaults
  */
 async function createScheduledSession(
   trx: typeof sql,
   programId: string,
   cycleId: string,
   data: CreateSessionInput,
-  actor: AccessTokenPayload,
+  user: AccessTokenPayload,
   schedule: ProgramSchedule,
   date: string,
 ) {
@@ -450,31 +450,31 @@ async function createScheduledSession(
     ) VALUES (
       ${programId}, ${cycleId}, ${data.sessionType}, ${data.title},
       ${date}, ${startTime}, ${endTime},
-      ${data.description ?? null}, ${actor.userId}, ${actor.userId}
+      ${data.description ?? null}, ${user.userId}, ${user.userId}
     )
     RETURNING id
   `;
   if (!session) throw new InternalServerError('Session creation returned no record');
 
   // 3. Load the complete created session for the response.
-  const [saved] = await buildSessionFilters(getSessionRows(actor, trx), { ids: [session.id] }, trx);
+  const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [session.id] }, trx);
   if (!saved) throw new InternalServerError('Saved session record is unavailable');
 
   // 4. Load affected cycle rows and return them with the created session.
-  return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(actor, [{ programId, cycleId }], trx) };
+  return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [{ programId, cycleId }], trx) };
 }
 
 /**
- * Returns affected cycle rows when the actor can read programs; otherwise returns undefined.
- * @param actor - Actor whose read permission and row scope apply.
+ * Returns affected cycle rows when the user can read programs; otherwise returns undefined.
+ * @param user - User whose read permission and row scope apply.
  * @param keys - Program-cycle pairs affected by the session operation.
  * @param query - Defaults to the shared client; pass trx to join an existing transaction.
  * @example getUpdatedProgramCycles(sessionOnlyWriter, [{ programId, cycleId }], trx) // undefined without read:programs
  */
-function getUpdatedProgramCycles(actor: AccessTokenPayload, keys: ProgramCycleKey[], query = sql) {
-  // 1. Load affected cycle rows only when the actor can read programs.
-  return actor.permissions.includes('read:programs')
-    ? getProgramCycleRowsByKeys(query, actor, keys)
+function getUpdatedProgramCycles(user: AccessTokenPayload, keys: ProgramCycleKey[], query = sql) {
+  // 1. Load affected cycle rows only when the user can read programs.
+  return user.permissions.includes('read:programs')
+    ? getProgramCycleRowsByKeys(query, user, keys)
     : undefined;
 }
 
