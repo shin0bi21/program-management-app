@@ -38,7 +38,6 @@ interface HoursPreferences {
 export type StoredHoursPreferences = Partial<HoursPreferences>;
 
 interface UseHoursPreferencesOptions {
-  role: string | null;
   staff: readonly StaffReference[];
   programs: readonly HoursProgram[];
   cycles: readonly CycleReference[];
@@ -54,11 +53,10 @@ interface UseHoursPreferencesOptions {
 
 /**
  * Restores hours controls and supplies applied filters with cycle-derived calendar bounds.
- * @param options - Role, available filter choices, dependency status, and table keys.
+ * @param options - Available filter choices, dependency status, and table keys.
  * @example Submitting search.apply('workshop') saves the applied hours search.
  */
 export default function useHoursPreferences({
-  role,
   staff,
   programs,
   cycles,
@@ -75,15 +73,19 @@ export default function useHoursPreferences({
   const availableStaffIds = !loadingDependencies && !staffError
     ? staff.map(member => member.id)
     : undefined;
+
   const availableProgramIds = !loadingDependencies && !programsError
     ? ['general', ...programs.map(program => program.id)]
     : undefined;
+
   const availableCycleIds = !loadingDependencies && !cyclesError
     ? cycles.map(cycle => cycle.id)
     : undefined;
+
   const availableCategories = !loadingDependencies && !optionsError
     ? categories.map(category => category.id)
     : null;
+
   const availableTypes = !loadingDependencies && !optionsError
     ? types.map(type => type.id)
     : null;
@@ -91,7 +93,7 @@ export default function useHoursPreferences({
   // Saved controls.
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'hours-filters',
-    waiting: loadingDependencies || role === null,
+    waiting: loadingDependencies,
     fields: {
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
