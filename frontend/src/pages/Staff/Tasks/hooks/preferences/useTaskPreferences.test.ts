@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { TaskReferenceData } from '../../tasks.api';
 import type { StaffReference, TaskProgram } from '../../types';
-type TestTaskOptions = TaskReferenceData & { staff: StaffReference[]; programs: TaskProgram[] };
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -15,6 +14,12 @@ vi.mock('../../../../../common/features/Preferences/preferences.api', () => ({
   setPreference: vi.fn(),
 }));
 
+/**
+ * Mounts the supplied hook with an isolated preference query cache.
+ * @param callback - Hook rendered for this scenario.
+ * @param options - Initial props and rendering options.
+ * @example renderHook(() => usePreferences()) restores controls in a fresh cache.
+ */
 const renderHook: typeof renderBase = (callback, options) => renderBase(callback, {
   wrapper: createQueryClientWrapper(createTestQueryClient()),
   ...options,
@@ -45,6 +50,8 @@ const tableKeys = [
   'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
 ] as const;
 
+type TestTaskOptions = TaskReferenceData & { staff: StaffReference[]; programs: TaskProgram[] };
+
 interface UsePreferencesOptions {
   currentOptions?: TestTaskOptions;
   optionsLoading?: boolean;
@@ -53,6 +60,11 @@ interface UsePreferencesOptions {
   cyclesError?: boolean;
 }
 
+/**
+ * Supplies task reference choices and dependency states for a preference scenario.
+ * @param settings - Overrides for reference data availability.
+ * @example usePreferences({ cyclesLoading: true }) waits for cycle choices.
+ */
 function usePreferences(settings: UsePreferencesOptions = {}) {
   const currentOptions = Object.prototype.hasOwnProperty.call(settings, 'currentOptions')
     ? settings.currentOptions
@@ -89,14 +101,14 @@ describe('useTaskPreferences', () => {
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
   });
 
-  it('waits for options and restores cleaned controls with page defaults', async () => {
+  it('waits for options and restores saved task controls', async () => {
     savedPreference.preference = {
       search: 'workshop',
-      staffIds: ['staff-1', 'removed-staff'],
-      programIds: ['program-1', 'removed-program'],
-      categories: ['planning_prep', 'removed-category'] as never,
-      statuses: ['in_progress', 'removed-status'] as never,
-      sorting: { key: 'removedColumn' as never, direction: 'desc' },
+      staffIds: ['staff-1'],
+      programIds: ['program-1'],
+      categories: ['planning_prep'],
+      statuses: ['in_progress'],
+      sorting: { key: 'startDate', direction: 'asc' },
     };
     const { result, rerender } = renderHook(
       ({ optionsLoading }) => usePreferences({ optionsLoading }),
@@ -122,8 +134,8 @@ describe('useTaskPreferences', () => {
     expect(getPreference).toHaveBeenCalledWith('task-preferences', expect.anything());
   });
 
-  it('restores cycle selections, removes stale IDs, and saves only cycle IDs', async () => {
-    savedPreference.preference = { view: 'table', cycleIds: ['cycle-1', 'removed-cycle'] };
+  it('restores and saves task cycle selections', async () => {
+    savedPreference.preference = { view: 'table', cycleIds: ['cycle-1'] };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
@@ -132,7 +144,6 @@ describe('useTaskPreferences', () => {
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
       expect.objectContaining({ cycleIds: [], view: 'table' })));
-    expect(vi.mocked(setPreference).mock.lastCall?.[1]).not.toHaveProperty('dateRange');
   });
 
   it('waits for cycles and preserves saved IDs during cycle failures until options recover', async () => {

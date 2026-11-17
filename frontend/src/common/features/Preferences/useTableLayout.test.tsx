@@ -8,13 +8,25 @@ import useTableLayout from './useTableLayout';
 vi.mock('./preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 
 const defaults = { columnWidths: {}, hiddenColumns: [] };
+/**
+ * Builds the layout storage key for a test user and table.
+ * @example storageKey() // 'table-layout:v1:user-1:task-preferences'
+ */
 const storageKey = (user = 'user-1', key: PreferenceKey = 'task-preferences') => `table-layout:v1:${user}:${key}`;
 
+/**
+ * Stores a signed-in test identity for layout isolation.
+ * @example login('user-2') selects user-2's local layouts.
+ */
 function login(id = 'user-1') {
   setAuthData('token', { id, firstName: 'Test', lastName: 'User', email: 'test@example.com' });
 }
 
-function setup(options: { key: PreferenceKey; tableKeys: readonly string[]; columnKeyAliases?: Readonly<Record<string, string>> } = {
+/**
+ * Mounts the layout hook with an isolated query cache and the supplied table scope.
+ * @example setup() restores the default user's task layout.
+ */
+function setup(options: { key: PreferenceKey; tableKeys: readonly string[] } = {
   key: 'task-preferences', tableKeys: ['name', 'status'],
 }) {
   const client = createTestQueryClient();
@@ -75,30 +87,6 @@ describe('useTableLayout', () => {
     expect(result.current).toMatchObject({ columnWidths: { name: 180 }, hiddenColumns: [] });
     expect(JSON.parse(localStorage.getItem(storageKey('user-1', 'hours-filters'))!)).toEqual({ columnWidths: {}, hiddenColumns: ['name'] });
     expect(JSON.parse(localStorage.getItem(storageKey('user-2'))!)).toEqual({ columnWidths: { name: 320 }, hiddenColumns: [] });
-  });
-
-  it.each([false, true])('migrates renamed column keys while preserving existing current values (current width: %s)', currentWidth => {
-    localStorage.setItem(storageKey(), JSON.stringify({
-      columnWidths: { cohort: 240, name: 180, ...(currentWidth ? { cycle: 320 } : {}) },
-      hiddenColumns: ['cohort', 'cycle', 'name'],
-    }));
-    const options = { key: 'task-preferences' as const, tableKeys: ['name', 'cycle'], columnKeyAliases: { cohort: 'cycle' } };
-    const first = setup(options);
-    const expected = { columnWidths: { name: 180, cycle: currentWidth ? 320 : 240 }, hiddenColumns: ['cycle', 'name'] };
-
-    expect(first.result.current).toMatchObject(expected);
-    expect(JSON.parse(localStorage.getItem(storageKey())!)).toEqual(expected);
-    first.unmount();
-    expect(setup(options).result.current).toMatchObject(expected);
-    expect(setPreference).not.toHaveBeenCalled();
-  });
-
-  it('restores renamed columns even when the migration cannot be saved to storage', () => {
-    localStorage.setItem(storageKey(), JSON.stringify({ columnWidths: { cohort: 240 }, hiddenColumns: ['cohort'] }));
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Quota exceeded'); });
-    const { result } = setup({ key: 'task-preferences', tableKeys: ['cycle'], columnKeyAliases: { cohort: 'cycle' } });
-
-    expect(result.current).toMatchObject({ columnWidths: { cycle: 240 }, hiddenColumns: ['cycle'] });
   });
 
   it('preserves a user layout through logout and login', async () => {

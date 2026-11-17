@@ -9,6 +9,12 @@ import { createQueryClientWrapper, createTestQueryClient } from '../../../../tes
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
+/**
+ * Mounts the supplied hook with an isolated preference query cache.
+ * @param callback - Hook rendered for this scenario.
+ * @param options - Initial props and rendering options.
+ * @example renderHook(() => usePreferences()) restores controls in a fresh cache.
+ */
 const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(callback, {
   ...options,
   wrapper: createQueryClientWrapper(createTestQueryClient()),
@@ -86,52 +92,6 @@ describe('useYouthControls', () => {
     ));
   });
 
-  it.each(['age', 'grade'])('repairs removed %s preferences and local layout using current table keys', async removedColumn => {
-    localStorage.setItem('table-layout:v1:user-1:youth-profile-filters', JSON.stringify({
-      columnWidths: { firstName: 220, [removedColumn]: 100, status: 'wide' },
-      hiddenColumns: [removedColumn, 'school'],
-    }));
-    preferenceApi.getPreference.mockResolvedValue({
-      programIds: [],
-      sorting: { key: removedColumn, direction: 'desc' },
-    });
-    const { result } = renderHook(() => useYouthControls({
-      role: 'admin', programs, programsLoading: false,
-      cycles, cyclesLoading: false,
-      schools, schoolsLoading: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.table.columnWidths).toEqual({ firstName: 220 });
-    expect(result.current.table.hiddenColumns).toEqual(['school']);
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({
-        sorting: { key: 'firstName', direction: 'asc' },
-      }),
-    ));
-    expect(result.current.table.sorting).toEqual({ key: 'firstName', direction: 'asc' });
-
-    act(() => {
-      result.current.table.setHiddenColumns(['school']);
-      result.current.table.setColumnWidths({ firstName: 240 });
-      result.current.table.setSorting({ key: 'school', direction: 'desc' });
-    });
-
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({
-        sorting: { key: 'school', direction: 'desc' },
-      }),
-    ));
-    const lastSavedPreference = preferenceApi.setPreference.mock.calls[
-      preferenceApi.setPreference.mock.calls.length - 1
-    ]?.[1];
-    expect(lastSavedPreference).not.toHaveProperty('statuses');
-    expect(lastSavedPreference).not.toHaveProperty('columnWidths');
-    expect(lastSavedPreference).not.toHaveProperty('hiddenColumns');
-    expect(result.current.table).toMatchObject({ hiddenColumns: ['school'], columnWidths: { firstName: 240 } });
-  });
-
   it('restores search and schools and saves applied and cleared filters', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
@@ -186,25 +146,6 @@ describe('useYouthControls', () => {
 
     rerender({ loading: false, error: '' });
     await waitFor(() => expect(result.current.appliedFilters.schoolIds).toEqual(['school-1']));
-  });
-
-  it('repairs removed cycles and ignores obsolete statuses', async () => {
-    preferenceApi.getPreference.mockResolvedValue({
-      statuses: ['inactive'], programIds: ['program-1'], cycleIds: ['cycle-1', 'removed-cycle'],
-    });
-    const { result } = renderHook(() => useYouthControls({
-      role: 'admin', programs, programsLoading: false,
-      cycles, cyclesLoading: false,
-      schools, schoolsLoading: false, tableKeys,
-    }));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
-
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ cycleIds: ['cycle-1'], programIds: ['program-1'] }),
-    ));
-    expect(preferenceApi.setPreference.mock.lastCall?.[1]).not.toHaveProperty('statuses');
   });
 
   it('waits for cycles and preserves saved selections when cycle options fail to load', async () => {

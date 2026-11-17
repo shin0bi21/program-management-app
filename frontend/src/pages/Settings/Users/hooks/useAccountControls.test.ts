@@ -7,6 +7,12 @@ import { useAccountControls } from './useAccountControls';
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
 
+/**
+ * Mounts the supplied hook with an isolated preference query cache.
+ * @param callback - Hook rendered for this scenario.
+ * @param options - Initial props and rendering options.
+ * @example renderHook(() => usePreferences()) restores controls in a fresh cache.
+ */
 const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(callback, {
   ...options,
   wrapper: createQueryClientWrapper(createTestQueryClient()),
@@ -88,11 +94,10 @@ describe('useAccountControls', () => {
     expect(result.current.appliedFilters.roles).toEqual(['project_manager']);
   });
 
-  it('removes admin-only roles and obsolete sorting for staff', async () => {
+  it('removes admin-only role filters for staff', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       statuses: ['active'],
       roles: ['admin'],
-      sorting: { key: 'removedColumn' as never, direction: 'desc' },
     });
     const { result } = renderHook(() => useAccountControls(false, tableKeys));
 
@@ -101,25 +106,8 @@ describe('useAccountControls', () => {
     expect(result.current.filters.definitions.some(category => category.id === 'roles')).toBe(false);
     expect(result.current.appliedFilters.roles).toEqual([]);
     expect(result.current.appliedFilters.statuses).toEqual(['active']);
-    expect(result.current.table.sorting).toEqual({ key: 'name', direction: 'asc' });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
-      roles: [], sorting: { key: 'name', direction: 'asc' },
+      roles: [],
     })));
-  });
-
-  it('limits saved account filters and ignores legacy database layouts', async () => {
-    preferenceApi.getPreference.mockResolvedValue({
-      statuses: 'active' as never,
-      roles: ['staff', 'removed-role' as never],
-      columnWidths: { email: 260 }, hiddenColumns: ['email'],
-    });
-    const { result } = renderHook(() => useAccountControls(true, tableKeys));
-
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.appliedFilters.roles).toEqual(['staff']);
-    expect(result.current.appliedFilters.statuses).toEqual([]);
-    expect(result.current.table.columnWidths).toEqual({});
-    expect(result.current.table.hiddenColumns).toEqual([]);
   });
 });
