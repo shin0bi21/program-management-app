@@ -1,6 +1,5 @@
-import { formatShortDate } from '../../../../common/utils/date';
+import { formatShortDate, getDate } from '../../../../common/utils/date';
 import FormField from '../../../../common/components/FormField/FormField';
-import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
 import FloatingSelect from '../../../../common/components/FloatingSelect/FloatingSelect';
 import Button from '../../../../common/components/Button/Button';
 import Modal from '../../../../common/components/Modal/Modal';
@@ -12,8 +11,6 @@ import type { LeadSignUpResult } from '../../leads.api';
 import useSignUpLeadModal, { type LeadNoteCategory } from './useSignUpLeadModal';
 
 import './SignUpLeadModal.css';
-
-
 
 const noteCategoryOptions: Array<{ id: LeadNoteCategory; name: string }> = [
   { id: 'general', name: 'General' },
@@ -43,7 +40,6 @@ export default function SignUpLeadModal({ lead, ...props }: SignUpLeadModalProps
  * @example <SignUpForm queryKey={queryKey} lead={lead} onClose={close} onSuccess={sync} />
  */
 function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModalProps, 'lead'> & { lead: Lead }) {
-  const birthDateBounds = getDateOfBirthBounds();
   const workflow = useSignUpLeadModal({
     queryKey,
     lead,
@@ -114,7 +110,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
         </section>
 
         <FormField id="sign-up-dateOfBirth" label="Date of Birth *">
-          <input id="sign-up-dateOfBirth" type="date" required {...birthDateBounds} value={workflow.dateOfBirth} onChange={event => workflow.changeDateOfBirth(event.target.value)} disabled={workflow.submissionComplete} />
+          <input id="sign-up-dateOfBirth" type="date" required max={getDate(-1)} value={workflow.dateOfBirth} onChange={event => workflow.changeDateOfBirth(event.target.value)} disabled={workflow.submissionComplete} />
         </FormField>
 
         <section className="sign-up-lead-enrollment" aria-labelledby="sign-up-lead-enrollment-title">

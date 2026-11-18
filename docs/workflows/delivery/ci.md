@@ -31,7 +31,7 @@ change classification
 ```
 
 Release pull requests to `main` run `Enforce develop → main only`, both production
-image builds, and Compose validation. They skip static/script tests and backend
+image builds, and Compose validation. They skip static checks and backend
 and frontend verification: changes have already passed the selected checks on
 pull requests into protected `develop`. Compose validation runs independently of
 the skipped quality job. Keeping branch enforcement in its own job gives branch
@@ -58,7 +58,7 @@ The shared selector applies these rules locally and in CI:
 - Changed production inputs select deployment planning, image builds, and Compose validation.
 - Unrecognized paths on pull requests to `develop` fail closed to the full local application plan until deliberately classified.
 
-Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate production packaging; the workflow skips static/script and application verification jobs while preserving their check identities. Local changed-suite selection still includes application checks when comparing against `main`.
+Jobs use job-level conditions rather than workflow path filters so required check names remain present while unrelated application runners are skipped. Pull requests to `main` always validate production packaging; the workflow skips static and application verification jobs while preserving their check identities. Local changed-suite selection still includes application checks when comparing against `main`.
 
 ## Pattern Checks
 

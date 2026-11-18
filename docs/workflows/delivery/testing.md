@@ -106,7 +106,12 @@ largest supported viewport; functional assertions alone do not establish them.
   when they form the behavior being tested.
 - Group substantial suites by owner behavior: initialization, inputs, outcomes,
   failures, and cleanup where applicable. Keep boundary cases beside their success
-  case. Route suites follow readiness, domain controls, then commands/dialogs.
+  case. Route suites follow entry/readiness, controls/views, selection/coordination,
+  then commands/dialogs. Omit groups the route does not need.
+- Arrange substantial route files as imports, typed child boundaries, fixtures,
+  per-test setup, and behavior cases. Put local render and interaction helpers
+  below the suite in caller order. Consolidate repeated setup and actions without
+  hiding scenario decisions or assertions in a general test framework.
 - Use short section comments or describe blocks when they help navigation. Keep
   small suites flat; do not add empty lifecycle sections.
 
@@ -172,6 +177,18 @@ Choose the narrowest owner for each assertion:
 - Cross a boundary only to verify integration or coordination owned by that suite.
   Use real children or small typed stubs without bypassing the tested boundary;
   use explicit API fixtures rather than simulating server logic.
+- In route suites, keep page controls, selection, and actions real. When isolating
+  a child, type its stub from the component's props, capture domain inputs, and
+  invoke its existing events. Do not implement child filtering, queries, layout,
+  validation, or eligibility in the stub. Preserve existing representative
+  integration checks that prove added route coordination; do not add scenarios
+  merely to populate a scaffold.
+- PageContainer and its controls own filter-menu application/clearing, search
+  draft submission, and view-menu interactions. Route suites invoke the public
+  controls passed to the container and verify domain inputs or coordination;
+  do not repeat those UI sequences in local filter/search/view helpers. When
+  observing container props, retain its real rendering and readiness behavior
+  rather than implementing that behavior in a stub.
 - Cover errors, lifecycle, permissions, and eligibility where owned. For example,
   a child verifies that Delete emits a record; its route verifies confirmation
   invokes the correct mutation. Omit incidental heading, input, or menu checks
@@ -191,10 +208,13 @@ queries/services, with representative API checks. Database preservation and reco
 belong to workers tested against disposable databases. A UI test cannot prove SQL
 behavior; do not duplicate a shared matrix at each consumer.
 
-- Repository-tool tests live beside scripts, except reports. Reports have no
-  automated tests; keep them in lint and typechecking, and inspect representative
-  command output while changing them. Register other new TypeScript script
-  folders in root lint and `scripts/tests/test-static.sh`.
+- Deployment safety tests stay in `scripts/tests/test-deploy.sh` and run through
+  the full application runner and CI when deployment inputs change. Other
+  repository scripts have no automated test suites. Keep scripts in lint and
+  typechecking, validate shell scripts with syntax checks and ShellCheck, and
+  inspect representative command output when changing them. Use the change report
+  and `test-app.sh --plan-changed` to inspect CI selection. Register new TypeScript
+  script folders in root lint; `scripts/tests/test-static.sh` runs script typechecking.
 - Backend suites live in `backend/tests/<domain>/`; reuse `backend/tests/shared/`.
   Mount new routes in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 - TanStack Query tests use `frontend/src/tests/queryClientTestUtils.tsx` with a

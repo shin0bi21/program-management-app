@@ -1,316 +1,253 @@
-import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
-
+import type { ComponentProps } from 'react';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import {
-  deleteTask,
-  getTaskDashboardData,
-  getTaskReferenceData,
-  getTasksCalendarData,
-  getTasksTableData,
-  updateTaskState,
-} from './tasks.api';
-import { setHours } from '../Hours/hours.api';
-import type { TimelineCalendarProps } from '../../../common/components/TimelineCalendar/types';
-import { buildInitialDayPeriods } from '../../../common/components/TimelineCalendar/utils/periods';
-import type { Task, StaffReference } from './types';
-import { getDate } from '../../../common/utils/date';
-import { makeTask } from '../../../tests/factories/task';
-import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
-import Tasks from './Tasks';
-import HoursModal from '../Hours/components/HoursModal/HoursModal';
-import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
-import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
 
-type TaskCalendarProps = TimelineCalendarProps<StaffReference, Task>;
-const hoursModal = vi.hoisted(() => ({ props: null as ComponentProps<typeof HoursModal> | null }));
+import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
+import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
+import { makeTask } from '../../../tests/factories/task';
+import { makeHoursItem } from '../../../tests/factories/hours';
+import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
+import { setHours } from '../Hours/hours.api';
+import type HoursModal from '../Hours/components/HoursModal/HoursModal';
+import Tasks from './Tasks';
+import type TaskCalendar from './components/TaskCalendar/TaskCalendar';
+import type TaskTable from './components/TaskTable/TaskTable';
+import type useTaskTable from './components/TaskTable/hooks/useTaskTable';
+import type TaskModal from './components/TaskModal/TaskModal';
+import type TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard';
+import type TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
+import { deleteTask, getTaskReferenceData, updateTaskState } from './tasks.api';
+import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
+import type { StaffReference } from './types';
+
+// Observe the public controls while retaining the real container's rendering and readiness behavior.
+vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
+  const original = await importOriginal<typeof import('../../../common/components/PageContainer/PageContainer')>();
+  return { default: vi.fn(original.default) };
+});
+
+const children = vi.hoisted(() => ({
+  calendar: null as ComponentProps<typeof TaskCalendar> | null,
+  table: null as ComponentProps<typeof TaskTable> | null,
+  taskModal: null as ComponentProps<typeof TaskModal> | null,
+  overview: null as ComponentProps<typeof TaskOverviewDashboardCard> | null,
+  hoursCard: null as ComponentProps<typeof TaskHoursLoggedDashboardCard> | null,
+  hoursModal: null as ComponentProps<typeof HoursModal> | null,
+  tableActions: null as Parameters<typeof useTaskTable>[0] | null,
+}));
+
+// Observe route inputs and invoke child events without implementing child behavior.
+vi.mock('./components/TaskCalendar/TaskCalendar', () => ({
+  default: (props: ComponentProps<typeof TaskCalendar>) => {
+    children.calendar = props;
+    return <div data-testid="task-calendar" />;
+  },
+}));
+vi.mock('./components/TaskTable/TaskTable', () => ({
+  default: (props: ComponentProps<typeof TaskTable>) => {
+    children.table = props;
+    return <div data-testid="task-table" />;
+  },
+}));
+vi.mock('./components/TaskModal/TaskModal', () => ({
+  default: (props: ComponentProps<typeof TaskModal>) => {
+    children.taskModal = props;
+    return <div role="dialog" aria-label="Task editor" />;
+  },
+}));
+vi.mock('./components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard', () => ({
+  default: (props: ComponentProps<typeof TaskOverviewDashboardCard>) => {
+    children.overview = props;
+    return null;
+  },
+}));
+vi.mock('./components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard', () => ({
+  default: (props: ComponentProps<typeof TaskHoursLoggedDashboardCard>) => {
+    children.hoursCard = props;
+    return null;
+  },
+}));
 vi.mock('../Hours/components/HoursModal/HoursModal', () => ({
   default: (props: ComponentProps<typeof HoursModal>) => {
-    hoursModal.props = props;
+    children.hoursModal = props;
     return <div role="dialog" aria-label="Log Hours" />;
   },
 }));
-const calendarTestState = vi.hoisted(() => ({
-  view: 'table' as 'table' | 'calendar',
-  props: null as TaskCalendarProps | null,
+vi.mock('./components/TaskTable/hooks/useTaskTable', () => ({
+  default: (options: Parameters<typeof useTaskTable>[0]) => {
+    children.tableActions = options;
+    return { columns: [] };
+  },
 }));
-const currentPreference: StoredTaskPreferences = {
-  view: 'table',
-  staffIds: [],
-  programIds: [],
-  categories: [],
-  statuses: [],
-};
-const taskReferenceChoices = {
-  categories: [
-    { id: 'planning_prep' as const, name: 'Planning / Prep' },
-    { id: 'outreach' as const, name: 'Outreach' },
-  ],
-  statuses: [
-    { id: 'in_progress' as const, name: 'In Progress' },
-    { id: 'completed' as const, name: 'Completed' },
-  ],
-};
-
 vi.mock('./tasks.api', () => ({
-  getTaskDashboardData: vi.fn(), getTaskReferenceData: vi.fn(), getTasksCalendarData: vi.fn(), getTasksTableData: vi.fn(),
-  setTask: vi.fn(), updateTaskPlacement: vi.fn(),
-  updateTaskState: vi.fn(), deleteTask: vi.fn(),
+  getTaskDashboardData: vi.fn(), getTaskReferenceData: vi.fn(),
+  updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
 vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
-vi.mock('../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
-  default: (props: TaskCalendarProps) => {
-    calendarTestState.props = props;
-    return <div aria-label="Task calendar">
-      {props.rows.map((row, index) => <div key={row.id}>{props.renderRow({ row, index })}</div>)}
-    </div>;
-  },
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
+  getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),
 }));
 
-const today = getDate();
-const task = makeTask({ startDate: today, dueDate: today });
+const preferenceState: { value: StoredTaskPreferences } = { value: {} };
+const staffMember: StaffReference = {
+  id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
+};
+const coworker: StaffReference = {
+  id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
+};
+const task = makeTask();
 const auth: AuthContextValue = {
   isAuthenticated: true, loading: false, role: 'staff',
-  permissions: ['read:tasks', 'write:tasks', 'read:programs'],
-  login: vi.fn(), logout: vi.fn(),
+  permissions: ['read:tasks', 'write:tasks', 'read:programs'], login: vi.fn(), logout: vi.fn(),
 };
-
-/** Reads the latest route preference save. @example getLastSavedPreference()?.sorting */
-function getLastSavedPreference() {
-  return vi.mocked(setPreference).mock.lastCall?.[1];
-}
-
-/**
- * Opens Tasks with an isolated query client and the supplied account.
- * @param authValue - Account permissions used by the scenario.
- * @example renderTasks() // opens Tasks as the default staff member
- */
-function renderTasks(authValue: AuthContextValue = auth) {
-  return renderWithQueryClient(
-    <MemoryRouter><AuthContext.Provider value={authValue}><Tasks /></AuthContext.Provider></MemoryRouter>,
-  );
-}
 
 describe('Tasks', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    localStorage.clear();
+    Object.assign(children, {
+      calendar: null, table: null, taskModal: null, overview: null,
+      hoursCard: null, hoursModal: null, tableActions: null,
+    });
+    preferenceState.value = { view: 'table', staffIds: [], programIds: [], categories: [], statuses: [] };
+    vi.mocked(getPreference).mockImplementation(async () => preferenceState.value);
+    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getCycleReferences).mockResolvedValue([{
       id: 'cycle-1', title: 'Long cycle', startsOn: '2025-01-01', endsOn: '2027-12-31', state: 'active',
     }]);
-    calendarTestState.view = 'table';
-    calendarTestState.props = null;
-    vi.mocked(getPreference).mockImplementation(async () => ({ ...currentPreference, view: calendarTestState.view }));
-    vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
-    vi.mocked(getTasksCalendarData).mockResolvedValue([task]);
-    vi.mocked(getTaskDashboardData).mockResolvedValue([task]);
-    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task], nextCursor: null });
-    vi.mocked(getStaffReferences).mockResolvedValue([{ id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
+    vi.mocked(getStaffReferences).mockResolvedValue([staffMember]);
     vi.mocked(getProgramReferences).mockResolvedValue([]);
     vi.mocked(getTaskReferenceData).mockResolvedValue({
-      ...taskReferenceChoices,
+      categories: [{ id: 'planning_prep', name: 'Planning / Prep' }],
+      statuses: [{ id: 'in_progress', name: 'In Progress' }],
     });
     vi.mocked(deleteTask).mockResolvedValue();
-    vi.mocked(updateTaskState).mockResolvedValue({
-      ...task,
-      state: 'completed',
-      status: 'completed',
-      statusLabel: 'Completed',
-      completedAt: '2026-08-11T12:00:00.000Z',
-    });
   });
 
   // Entry and readiness.
   it('loads shared references for task-only readers without program permissions', async () => {
-    calendarTestState.view = 'calendar';
+    preferenceState.value.view = 'calendar';
     const restrictedAuth: AuthContextValue = { ...auth, permissions: ['read:tasks'] };
     renderTasks(restrictedAuth);
 
-    expect(await screen.findByLabelText('Task calendar')).toBeInTheDocument();
+    await screen.findByTestId('task-calendar');
+    expect(children.calendar?.canWrite).toBe(false);
     expect(screen.queryByRole('button', { name: '+ Add' })).not.toBeInTheDocument();
   });
 
-  // Rendered states.
   it.each(['empty', 'failed'])('does not widen table queries when cycles are %s', async state => {
     if (state === 'empty') vi.mocked(getCycleReferences).mockResolvedValue([]);
     else vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
     renderTasks();
 
     expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
-    expect(getTasksTableData).not.toHaveBeenCalled();
-    expect(getTasksCalendarData).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('task-table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('task-calendar')).not.toBeInTheDocument();
   });
 
   it('shows an empty calendar without mounting an unbounded timeline when no cycles exist', async () => {
-    calendarTestState.view = 'calendar';
+    preferenceState.value.view = 'calendar';
     vi.mocked(getCycleReferences).mockResolvedValue([]);
     renderTasks();
 
     expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
-    expect(calendarTestState.props).toBeNull();
-    expect(getTasksCalendarData).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('task-calendar')).not.toBeInTheDocument();
   });
 
   it('reports cycle failures without mounting an unbounded timeline', async () => {
-    calendarTestState.view = 'calendar';
+    preferenceState.value.view = 'calendar';
     vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle request failed'));
     renderTasks();
 
     expect(await screen.findByText('Cycles unavailable.')).toBeInTheDocument();
     expect(screen.getByText('Unable to load cycles.')).toBeInTheDocument();
-    expect(calendarTestState.props).toBeNull();
-  });
-
-  it('supplies the clicked coworker as shared staff context', async () => {
-    const coworkerTask = makeTask({
-      id: 'task-2', title: 'Complete administration', staffId: 'staff-2',
-      firstName: 'Alex', lastName: 'Smith', writable: false,
-    });
-    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [coworkerTask, task], nextCursor: null });
-    vi.mocked(getStaffReferences).mockResolvedValue([
-      { id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false },
-      { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-    ]);
-    renderTasks();
-
-    fireEvent.click(await screen.findByText('Complete administration'));
-
-    await waitFor(() => expect(getTaskDashboardData).toHaveBeenCalledWith('staff-2', { signal: expect.any(AbortSignal) }));
+    expect(screen.queryByTestId('task-calendar')).not.toBeInTheDocument();
   });
 
   // Controls and views.
-  it('sends multiple selected cycle IDs to the table query', async () => {
+  it('supplies multiple selected cycle IDs to the table', async () => {
     vi.mocked(getCycleReferences).mockResolvedValue([
       { id: 'cycle-1', title: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
       { id: 'cycle-2', title: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
     ]);
-    vi.mocked(getPreference).mockResolvedValue({ ...currentPreference, cycleIds: ['cycle-1', 'cycle-2'] });
+    preferenceState.value.cycleIds = ['cycle-1', 'cycle-2'];
     renderTasks();
 
-    await screen.findByRole('table', { name: 'Tasks' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
-      expect.anything(), expect.anything()));
+    await screen.findByTestId('task-table');
+    expect(children.table?.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']);
   });
 
-  it('sends an empty cycle selection for all cycles and applies a selected cycle to the query', async () => {
+  it('supplies all cycles initially and applies a selected cycle to the table', async () => {
     renderTasks();
+    await screen.findByTestId('task-table');
+    expect(children.table?.filters.cycleIds).toEqual([]);
 
-    await screen.findByRole('table', { name: 'Tasks' });
-    await waitFor(() => expect(getTasksTableData).toHaveBeenCalledWith(expect.objectContaining({
-      cycleIds: [],
-    }), expect.anything(), expect.anything()));
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Long cycle' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(expect.objectContaining({
-      cycleIds: ['cycle-1'],
-    }), expect.anything(), expect.anything()));
-    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ cycleIds: ['cycle-1'] })));
-    expect(getLastSavedPreference()).not.toHaveProperty('dateRange');
+    act(() => pageControls().filters!.apply('cycleIds', ['cycle-1']));
+
+    await waitFor(() => expect(children.table?.filters.cycleIds).toEqual(['cycle-1']));
   });
 
-  it('sends the applied staff filter to the table request', async () => {
-    const coworker = {
-      id: 'staff-2', firstName: 'Alex', lastName: 'Smith', name: 'Alex Smith', role: 'staff', writable: false,
-    };
-    vi.mocked(getStaffReferences).mockResolvedValue([coworker, { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true }]);
-    vi.mocked(getProgramReferences).mockResolvedValue([]);
-    vi.mocked(getTaskReferenceData).mockResolvedValue({
-      ...taskReferenceChoices,
-    });
+  it('shares the applied staff filter across table and calendar views', async () => {
+    vi.mocked(getStaffReferences).mockResolvedValue([staffMember, coworker]);
     renderTasks();
+    await screen.findByTestId('task-table');
 
-    await screen.findByRole('table', { name: 'Tasks' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Staff' }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Alex Smith' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    act(() => pageControls().filters!.apply('staffIds', [coworker.id]));
+    await waitFor(() => expect(children.table?.filters.staffIds).toEqual([coworker.id]));
+    act(() => pageControls().setView!('calendar'));
 
-    await waitFor(() => expect(getTasksTableData).toHaveBeenLastCalledWith(
-      expect.objectContaining({ staffIds: ['staff-2'] }),
-      expect.anything(),
-      expect.anything(),
-    ));
-    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ staffIds: ['staff-2'] })));
-
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
-    await waitFor(() => expect(calendarTestState.props?.rows).toEqual([coworker]));
+    await screen.findByTestId('task-calendar');
+    expect(children.calendar?.filters.staffIds).toEqual([coworker.id]);
   });
 
   it('keeps applied search active when switching from table to calendar', async () => {
     renderTasks();
+    await screen.findByTestId('task-table');
 
-    const search = await screen.findByRole('textbox', { name: 'Search tasks' });
-    fireEvent.change(search, { target: { value: 'missing' } });
-    fireEvent.keyDown(search, { key: 'Enter' });
-    fireEvent.click(screen.getByRole('button', { name: 'View: Table' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Calendar' }));
+    act(() => pageControls().search!.apply('missing'));
+    act(() => pageControls().setView!('calendar'));
 
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(task.startDate, 3)));
-    await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
-      expect.objectContaining({ search: 'missing' }),
-      expect.anything(), expect.anything(),
-    ));
+    await screen.findByTestId('task-calendar');
+    expect(children.calendar?.filters.search).toBe('missing');
   });
 
-  it('reloads the calendar range when applied search changes', async () => {
-    calendarTestState.view = 'calendar';
+  it('supplies changed applied search to the calendar', async () => {
+    preferenceState.value.view = 'calendar';
     renderTasks();
+    await screen.findByTestId('task-calendar');
 
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const periods = buildInitialDayPeriods(task.startDate, 3);
-    act(() => calendarTestState.props!.onInitialPeriods?.(periods));
-    await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalled());
-    vi.mocked(getTasksCalendarData).mockClear();
+    act(() => pageControls().search!.apply('workshop'));
 
-    const search = screen.getByRole('textbox', { name: 'Search tasks' });
-    fireEvent.change(search, { target: { value: 'workshop' } });
-    fireEvent.keyDown(search, { key: 'Enter' });
-
-    await waitFor(() => expect(getLastSavedPreference()).toEqual(expect.objectContaining({ search: 'workshop' })));
-    act(() => calendarTestState.props!.onInitialPeriods?.(periods));
-    await waitFor(() => expect(getTasksCalendarData).toHaveBeenCalledWith(
-      expect.objectContaining({ search: 'workshop' }),
-      expect.anything(), expect.anything(),
-    ));
+    await waitFor(() => expect(children.calendar?.filters.search).toBe('workshop'));
   });
 
   // Selection and coordination.
+  it('supplies the clicked coworker as shared staff context', async () => {
+    vi.mocked(getStaffReferences).mockResolvedValue([staffMember, coworker]);
+    renderTasks();
+    await screen.findByTestId('task-table');
+
+    act(() => children.table!.onTaskSelect(makeTask({ staffId: coworker.id, writable: false })));
+
+    expect(children.overview?.staff?.id).toBe(coworker.id);
+  });
 
   it('closes the hours dialog when selection clears and keeps it closed on reselection', async () => {
-    calendarTestState.view = 'calendar';
+    preferenceState.value.view = 'calendar';
     renderTasks();
-
-    await waitFor(() => expect(calendarTestState.props).not.toBeNull());
-    const start = today;
-    act(() => calendarTestState.props!.onInitialPeriods?.(buildInitialDayPeriods(start, 3)));
-    await waitFor(() => expect(calendarTestState.props!.items['staff-1']).toEqual([task]));
-    const row: StaffReference = {
-      id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
-    };
-    act(() => calendarTestState.props!.onItemActivate?.({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
+    await screen.findByTestId('task-calendar');
+    act(() => children.calendar!.onTaskSelect(task));
+    act(() => children.hoursCard!.onLogHours!());
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 
-    act(() => calendarTestState.props!.onRowSelect?.(row));
+    act(() => children.calendar!.onStaffSelect(staffMember.id));
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
 
-    act(() => calendarTestState.props!.onItemActivate?.({
-      row,
-      data: task,
-      range: { start: task.startDate, end: task.dueDate },
-    }));
+    act(() => children.calendar!.onTaskSelect(task));
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
@@ -322,77 +259,55 @@ describe('Tasks', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
 
-    expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Task editor' })).toBeInTheDocument();
+    expect(children.taskModal?.target).toEqual({ mode: 'add', context: {} });
   });
 
   it('passes the selected task context into the Hours workflow', async () => {
     renderTasks();
+    await screen.findByTestId('task-table');
 
-    fireEvent.click(await screen.findByText('Prepare workshop'));
-    const logHours = await screen.findByRole('button', { name: 'Log Hours' });
-    fireEvent.click(logHours);
+    act(() => children.table!.onTaskSelect(task));
+    act(() => children.hoursCard!.onLogHours!());
 
-    expect(hoursModal.props?.task?.id).toBe(task.id);
+    expect(children.hoursModal?.task).toBe(task);
   });
 
   it('reopens a completed task through the route action workflow', async () => {
-    const completedTask = {
-      ...task,
-      state: 'completed' as const,
-      status: 'completed' as const,
-      statusLabel: 'Completed',
-      completedAt: '2026-08-11T12:00:00.000Z',
-      hoursLogged: 1,
-    };
-    vi.mocked(getTaskDashboardData).mockResolvedValue([completedTask]);
-    vi.mocked(getTasksTableData)
-      .mockResolvedValueOnce({ rows: [completedTask], nextCursor: null })
-      .mockResolvedValue({
-        rows: [{
-          ...completedTask,
-          state: 'open',
-          status: 'in_progress',
-          statusLabel: 'In Progress',
-          completedAt: null,
-        }],
-        nextCursor: null,
-      });
-    vi.mocked(updateTaskState).mockResolvedValue({
-      ...completedTask,
-      state: 'open',
-      status: 'in_progress',
-      statusLabel: 'In Progress',
-      completedAt: null,
-    });
+    const completedTask = makeTask({ state: 'completed', status: 'completed', hoursLogged: 1 });
+    const reopened = makeTask({ state: 'open', status: 'in_progress', hoursLogged: 1 });
+    vi.mocked(updateTaskState).mockResolvedValue(reopened);
     renderTasks();
+    await screen.findByTestId('task-table');
+    act(() => children.table!.onTaskSelect(completedTask));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Reopen task' }));
-    await waitFor(() => expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open'));
-    await waitFor(() => expect(screen.getByRole('cell', { name: 'In Progress' })).toBeInTheDocument());
+    await act(async () => children.tableActions!.actions.setState(completedTask, 'open'));
+
+    expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open');
+    expect(children.hoursCard?.task).toBe(reopened);
   });
 
   it('keeps the hours target current after completion and preserves selection when closed', async () => {
-    const nextTask = makeTask({ id: 'task-2', title: 'Next task' });
-    const completedTask = { ...task, state: 'completed' as const, status: 'completed' as const };
-    vi.mocked(setHours).mockResolvedValue({ updatedTasks: [completedTask] } as Awaited<ReturnType<typeof setHours>>);
-    vi.mocked(getTasksTableData).mockResolvedValue({ rows: [task, nextTask], nextCursor: null });
+    const completedTask = makeTask({ state: 'completed', status: 'completed' });
+    vi.mocked(setHours).mockResolvedValue({ ...makeHoursItem(), updatedTasks: [completedTask] });
     renderTasks();
+    await screen.findByTestId('task-table');
+    act(() => children.table!.onTaskSelect(task));
+    act(() => children.hoursCard!.onLogHours!());
+    const input = { source: 'task' as const, staffId: task.staffId, taskId: task.id,
+      date: task.startDate, hours: 1, note: 'Done', completeTask: true };
 
-    fireEvent.click(await screen.findByText('Prepare workshop'));
-    fireEvent.click(screen.getByRole('button', { name: 'Log Hours' }));
-    const input = { source: 'task' as const, staffId: task.staffId, taskId: task.id, date: today, hours: 1, note: 'Done', completeTask: true };
-    await act(async () => hoursModal.props!.onAdd(input));
+    await act(async () => children.hoursModal!.onAdd(input));
 
     expect(setHours).toHaveBeenCalledWith(input);
-    await waitFor(() => expect(hoursModal.props!.task).toEqual(completedTask));
+    expect(children.hoursModal?.task).toBe(completedTask);
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 
-    act(() => hoursModal.props!.onClose());
-    expect(screen.getByText('Prepare workshop').closest('tr')).toHaveAttribute('aria-selected', 'true');
+    act(() => children.hoursModal!.onClose());
+    expect(children.table?.selectedTaskId).toBe(task.id);
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Next task'));
+    act(() => children.table!.onTaskSelect(makeTask({ id: 'task-2', title: 'Next task' })));
     expect(screen.queryByRole('dialog', { name: 'Log Hours' })).not.toBeInTheDocument();
   });
 
@@ -401,15 +316,15 @@ describe('Tasks', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
 
-    expect(screen.getByRole('heading', { name: 'Add Task' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Task editor' })).toBeInTheDocument();
+    expect(children.taskModal?.target).toEqual({ mode: 'add', context: {} });
   });
 
   it('owns delete confirmation and delegates the confirmed task deletion', async () => {
     renderTasks();
+    await screen.findByTestId('task-table');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Prepare workshop' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-
+    act(() => children.tableActions!.actions.requestDelete(task));
     const confirmation = screen.getByRole('dialog', { name: 'Delete Task' });
     expect(confirmation).toHaveTextContent('Delete “Prepare workshop”?');
     fireEvent.click(within(confirmation).getByRole('button', { name: 'Confirm' }));
@@ -418,4 +333,20 @@ describe('Tasks', () => {
   });
 });
 
-vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));
+/** Opens Tasks with real page controls and an isolated query cache.
+ * @param authValue - Account permissions used by the scenario.
+ * @example renderTasks() // opens Tasks as the default staff member
+ */
+function renderTasks(authValue: AuthContextValue = auth) {
+  return renderWithQueryClient(
+    <MemoryRouter><AuthContext.Provider value={authValue}><Tasks /></AuthContext.Provider></MemoryRouter>,
+  );
+}
+
+/** Returns the latest page controls supplied to the real PageContainer.
+ * Requires the route to have rendered its container.
+ * @example pageControls().search?.appliedValue // current domain search text
+ */
+function pageControls() {
+  return vi.mocked(PageContainer).mock.lastCall![0].controls!;
+}

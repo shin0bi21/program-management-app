@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { updateProgram } from '../../api/programs.api';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import ProgramModal from './ProgramModal';
 
 vi.mock('../../api/programs.api', () => ({

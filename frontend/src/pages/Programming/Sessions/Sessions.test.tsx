@@ -1,381 +1,335 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../common/features/programs/types';
+import PageContainer from '../../../common/components/PageContainer/PageContainer';
+
+import type { Program } from '../Programs/types';
 import type { SessionPreference } from './hooks/useSessionControls';
-import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
+import type { SessionRosterMember } from './types';
 import Sessions from './Sessions';
+import { getCycleReferences } from '../../../common/features/referenceData/referenceData.api';
 import { referenceDataKeys } from '../../../common/features/referenceData/hooks/useReferenceData';
 import { makeProgramSession } from '../../../tests/factories/session';
-import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
+import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
+import { getSessionReferenceData } from './sessions.api';
+import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
+import type SessionTable from './components/SessionTable/SessionTable';
+import type SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
+import type SessionNotesDashboardCard from './components/SessionDashboard/SessionNotesDashboardCard/SessionNotesDashboardCard';
+import type SessionAttachmentsDashboardCard from './components/SessionDashboard/SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard';
+import type SessionModal from './components/SessionModal/SessionModal';
+import type SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 
-const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
+// Observe the public controls while retaining the real container's rendering and readiness behavior.
+vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
+  const original = await importOriginal<typeof import('../../../common/components/PageContainer/PageContainer')>();
+  return { default: vi.fn(original.default) };
+});
 
-const getSessions = vi.fn();
-const getSessionRoster = vi.fn();
-const getCycleReferences = vi.fn();
-const getSessionNotes = vi.fn();
-const getSessionAttachments = vi.fn();
-const getSessionTypes = vi.fn();
-const deleteSession = vi.fn();
-const createSession = vi.fn();
-const auth = vi.hoisted<{ role: string; permissions: string[] }>(() => ({
-  role: 'admin',
-  permissions: ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'],
-}));
-const programState = vi.hoisted<{ programs: Program[] }>(() => ({
-  programs: [{
-    id: 'program-1',
-    title: 'Soft Skills',
-    description: null,
-
-    defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
-
-    enrollmentRequired: true,
-    minAge: 12,
-    maxAge: 15,
-  }],
-}));
-const preferenceApi = vi.hoisted(() => ({
-  value: null as SessionPreference | null,
-  getPreference: vi.fn(),
-  setPreference: vi.fn(),
+const children = vi.hoisted(() => ({
+  calendar: null as ComponentProps<typeof SessionCalendar> | null,
+  table: null as ComponentProps<typeof SessionTable> | null,
+  attendance: null as ComponentProps<typeof SessionAttendanceDashboardCard> | null,
+  notes: null as ComponentProps<typeof SessionNotesDashboardCard> | null,
+  attachments: null as ComponentProps<typeof SessionAttachmentsDashboardCard> | null,
+  editor: null as ComponentProps<typeof SessionModal> | null,
+  attendanceModal: null as ComponentProps<typeof SessionAttendanceModal> | null,
 }));
 
-vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
-  getCycleReferences: (...args: unknown[]) => getCycleReferences(...args),
-}));
-
-vi.mock('./sessions.api', () => ({
-  getSessionReferenceData: async () => ({ programs: programState.programs, sessionTypes: await getSessionTypes() }),
-  getSessionTypes: (...args: unknown[]) => getSessionTypes(...args),
-  getSessions: (...args: unknown[]) => getSessions(...args),
-  getSessionRoster: (...args: unknown[]) => getSessionRoster(...args),
-  getSessionNotes: (...args: unknown[]) => getSessionNotes(...args),
-  getSessionAttachments: (...args: unknown[]) => getSessionAttachments(...args),
-  createSessionNote: vi.fn(),
-  createSession: (...args: unknown[]) => createSession(...args),
-  setSessionAttendance: vi.fn(),
-  deleteSession: (...args: unknown[]) => deleteSession(...args),
-}));
-
-vi.mock('../../../auth/authContext', () => ({
-  useAuth: () => auth,
-}));
-vi.mock('../../../common/features/Preferences/preferences.api', () => ({
-  getPreference: preferenceApi.getPreference,
-  setPreference: preferenceApi.setPreference,
-}));
-
+// Child stubs expose only page inputs and events; their queries and form behavior stay with their owners.
 vi.mock('./components/SessionCalendar/SessionCalendar', () => ({
-  default: function SessionCalendarStub({
-    onSessionSelect,
-    onSessionMove,
-    selectedProgramId,
-    onAddSession,
-    programs,
-    onProgramSelect,
-    filters,
-  }: ComponentProps<typeof SessionCalendar>) {
-    return (
-      <div data-testid="sessions-calendar-view" data-selected-program={selectedProgramId ?? ''} data-can-move={Boolean(onSessionMove)} data-cycle-ids={filters.cycleIds?.join(',')} data-date-range={JSON.stringify(filters.dateRange)}>
-        <button type="button" onClick={() => onProgramSelect?.(programs[0])}>Program row</button>
-        <button type="button" onClick={() => onProgramSelect?.(programs[0], 'item')}>Item owning row</button>
-        {onAddSession && <button type="button" onClick={() => onAddSession(programs[0], '2026-07-29')}>Calendar date</button>}
-        <button
-          type="button"
-          onClick={() => {
-            const session = makeProgramSession({
-              sessionType: 'Regular',
-              title: 'Communication',
-              programId: 'program-1',
-              program: 'Soft Skills',
-              date: '2026-07-28', startTime: '17:00',
-              endTime: '19:30',
-              description: 'Planned communication exercise',
-            });
-            onSessionSelect(session);
-          }}
-        >
-          Calendar session
-        </button>
-      </div>
-    );
+  default: (props: ComponentProps<typeof SessionCalendar>) => {
+    children.calendar = props;
+    return <div data-testid="sessions-calendar" />;
   },
 }));
+vi.mock('./components/SessionTable/SessionTable', () => ({
+  default: (props: ComponentProps<typeof SessionTable>) => {
+    children.table = props;
+    return <div data-testid="sessions-table" />;
+  },
+}));
+vi.mock('./components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard', () => ({
+  default: (props: ComponentProps<typeof SessionAttendanceDashboardCard>) => {
+    children.attendance = props;
+    return <div data-testid="session-attendance" />;
+  },
+}));
+vi.mock('./components/SessionDashboard/SessionNotesDashboardCard/SessionNotesDashboardCard', () => ({
+  default: (props: ComponentProps<typeof SessionNotesDashboardCard>) => {
+    children.notes = props;
+    return null;
+  },
+}));
+vi.mock('./components/SessionDashboard/SessionAttachmentsDashboardCard/SessionAttachmentsDashboardCard', () => ({
+  default: (props: ComponentProps<typeof SessionAttachmentsDashboardCard>) => {
+    children.attachments = props;
+    return null;
+  },
+}));
+vi.mock('./components/SessionModal/SessionModal', () => ({
+  default: (props: ComponentProps<typeof SessionModal>) => {
+    children.editor = props;
+    return <div role="dialog" aria-label="Session editor" />;
+  },
+}));
+vi.mock('./components/SessionAttendanceModal/SessionAttendanceModal', () => ({
+  default: (props: ComponentProps<typeof SessionAttendanceModal>) => {
+    children.attendanceModal = props;
+    return props.session ? <div role="dialog" aria-label="Attendance" /> : null;
+  },
+}));
+vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn() }));
+vi.mock('./sessions.api', () => ({ getSessionReferenceData: vi.fn(), deleteSession: vi.fn(), moveSessionDate: vi.fn() }));
+const auth = vi.hoisted(() => ({ role: 'admin', permissions: [] as string[] }));
+vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
+const preferences = vi.hoisted(() => ({
+  value: null as SessionPreference | null, getPreference: vi.fn(), setPreference: vi.fn(),
+}));
+vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+  getPreference: preferences.getPreference, setPreference: preferences.setPreference,
+}));
+
+const program: Program = {
+  id: 'program-1', title: 'Soft Skills', description: null, defaultDayOfWeek: 'tuesday',
+  defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
+  enrollmentRequired: true, minAge: 12, maxAge: 15,
+};
+const session = makeProgramSession({ programId: program.id, program: program.title });
+const roster: SessionRosterMember[] = [
+  { youthId: 'youth-1', firstName: 'Maya', lastName: 'Thompson', status: null, notes: null },
+];
 
 describe('Sessions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     localStorage.clear();
-    preferenceApi.value = { view: 'table', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    preferenceApi.getPreference.mockImplementation(async () => preferenceApi.value);
-    preferenceApi.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
-      preferenceApi.value = value;
-      return value;
+    Object.assign(children, {
+      calendar: null, table: null, attendance: null, notes: null, attachments: null, editor: null, attendanceModal: null,
     });
     auth.role = 'admin';
     auth.permissions = ['read:programs', 'read:sessions', 'write:sessions', 'read:attendance', 'write:attendance'];
-    programState.programs = [{
-      id: 'program-1',
-      title: 'Soft Skills',
-      description: null,
-
-      defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
-
-      enrollmentRequired: true,
-      minAge: 12,
-      maxAge: 15,
-    }];
-    getSessionTypes.mockResolvedValue([
-      { id: 'Regular', name: 'Regular' },
-      { id: 'Field Trip', name: 'Field Trip' },
+    preferences.value = { view: 'table', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
+    preferences.getPreference.mockImplementation(async () => preferences.value);
+    preferences.setPreference.mockImplementation(async (_key: string, value: SessionPreference) => {
+      preferences.value = value;
+      return value;
+    });
+    vi.mocked(getSessionReferenceData).mockResolvedValue({
+      programs: [program], sessionTypes: [{ id: 'Regular', name: 'Regular' }, { id: 'Field Trip', name: 'Field Trip' }],
+    });
+    vi.mocked(getCycleReferences).mockResolvedValue([
+      { id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active' },
+      { id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming' },
     ]);
-    getCycleReferences.mockResolvedValue([{
-      id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
-    }, {
-      id: 'cycle-2', title: 'Fall 2026', startsOn: '2026-09-01', endsOn: '2026-12-01', state: 'upcoming',
-    }]);
-    getSessions.mockResolvedValue({ rows: [makeProgramSession({
-      sessionType: 'Regular',
-      title: 'Communication',
-      programId: 'program-1',
-      program: 'Soft Skills',
-      date: '2026-07-28', startTime: '17:00',
-      endTime: '19:30',
-      description: 'Planned communication exercise',
-    })], nextCursor: null });
-    getSessionRoster.mockResolvedValue([
-      {
-        youthId: 'youth-1',
-        firstName: 'Maya',
-        lastName: 'Thompson',
-        status: null,
-        notes: null,
-      },
-    ]);
-    getSessionNotes.mockResolvedValue([]);
-    getSessionAttachments.mockResolvedValue([]);
-    deleteSession.mockReset();
-    deleteSession.mockResolvedValue({ id: 'session-1' });
   });
 
   // Entry and readiness.
   it('keeps session filters and the calendar available with session read permission alone', async () => {
     auth.permissions = ['read:sessions'];
-    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    preferences.value!.view = 'calendar';
+    renderPage();
+    await screen.findByTestId('sessions-calendar');
 
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-date-range', JSON.stringify({
-      start: '2026-07-01', end: '2026-12-01',
-    }));
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar session' }));
-    await waitFor(() => expect(getSessionNotes).toHaveBeenCalledWith(expect.any(String), expect.anything()));
-    expect(screen.queryByRole('heading', { name: 'Attendance' })).not.toBeInTheDocument();
-    expect(getSessionRoster).not.toHaveBeenCalled();
+    act(() => children.calendar!.onSessionSelect(session));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Cycle' }));
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' })).toBeInTheDocument();
+    expect(children.notes?.session).toBe(session);
+    expect(screen.queryByTestId('session-attendance')).not.toBeInTheDocument();
+    expect(children.calendar?.filters.dateRange).toEqual({ start: '2026-07-01', end: '2026-12-01' });
   });
 
   it('enables calendar moves only for session writers', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    const view = render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'true');
+    preferences.value!.view = 'calendar';
+    const view = renderPage();
+    await screen.findByTestId('sessions-calendar');
+    expect(children.calendar?.onSessionMove).toEqual(expect.any(Function));
+
     auth.permissions = auth.permissions.filter(permission => permission !== 'write:sessions');
-    view.rerender(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-can-move', 'false');
+    view.rerender(page());
+
+    expect(children.calendar?.onSessionMove).toBeUndefined();
   });
 
-  it('waits for saved search before sending applied filters to the table', async () => {
+  it('waits for saved search before supplying applied filters to the table', async () => {
     let restore!: (value: SessionPreference) => void;
-    preferenceApi.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    expect(getSessions).not.toHaveBeenCalled();
+    preferences.getPreference.mockReturnValueOnce(new Promise(resolve => { restore = resolve; }));
+    renderPage();
+    expect(children.table).toBeNull();
 
     await act(async () => restore({
       view: 'table', search: 'communication', programIds: [], cycleIds: ['cycle-1'], sessionTypes: [], statuses: [],
     }));
 
-    await waitFor(() => expect(getSessions).toHaveBeenCalledWith(
-      expect.objectContaining({ search: 'communication', cycleIds: ['cycle-1'] }),
-      expect.anything(), expect.anything(),
-    ));
-    expect(getSessions.mock.calls.every(([filters]) => filters.search === 'communication')).toBe(true);
+    await screen.findByTestId('sessions-table');
+    expect(children.table?.filters).toEqual(expect.objectContaining({ search: 'communication', cycleIds: ['cycle-1'] }));
   });
 
-  // Rendered states.
   it('does not create a fallback calendar when no cycles exist', async () => {
-    getCycleReferences.mockResolvedValue([]);
-    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    vi.mocked(getCycleReferences).mockResolvedValue([]);
+    preferences.value!.view = 'calendar';
+    renderPage();
+
     expect(await screen.findByText('No cycles available.')).toBeInTheDocument();
-    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar')).not.toBeInTheDocument();
   });
 
-  it.each(['empty', 'failed'] as const)('does not fetch an unbounded table when cycle metadata is %s', async state => {
-    getSessions.mockClear();
-    if (state === 'empty') getCycleReferences.mockResolvedValue([]);
-    else getCycleReferences.mockRejectedValue(new Error('Cycle service unavailable'));
-
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+  it.each(['empty', 'failed'] as const)('does not mount an unbounded table when cycle metadata is %s', async state => {
+    if (state === 'empty') vi.mocked(getCycleReferences).mockResolvedValue([]);
+    else vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle service unavailable'));
+    renderPage();
 
     expect(await screen.findByText(state === 'empty' ? 'No cycles available.' : 'Cycles unavailable.')).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
-    expect(getSessions).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('sessions-table')).not.toBeInTheDocument();
   });
 
   it.each(['table', 'calendar'] as const)('blocks the %s after cycle refresh fails even with cached dates', async view => {
-    preferenceApi.value = { ...preferenceApi.value!, view };
-    const { queryClient } = render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+    preferences.value!.view = view;
+    const { queryClient } = renderPage();
+    await screen.findByTestId(`sessions-${view}`);
+    vi.mocked(getCycleReferences).mockRejectedValue(new Error('Cycle refresh unavailable'));
 
-    if (view === 'table') await screen.findByRole('table', { name: 'Sessions' });
-    else await screen.findByTestId('sessions-calendar-view');
-
-    getCycleReferences.mockRejectedValue(new Error('Cycle refresh unavailable'));
-    await act(async () => {
-      await queryClient.refetchQueries({ queryKey: referenceDataKeys.cycles });
-    });
+    await act(async () => queryClient.refetchQueries({ queryKey: referenceDataKeys.cycles }));
 
     expect(queryClient.getQueryData(referenceDataKeys.cycles)).not.toEqual([]);
     expect(await screen.findByText('Cycles unavailable.')).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Sessions' })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sessions-calendar-view')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sessions-calendar')).not.toBeInTheDocument();
   });
 
   // Controls and views.
-  it('sends multiple selected cycles to the table and calendar', async () => {
-    const user = userEvent.setup();
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
+  it('supplies multiple selected cycles to the table and calendar', async () => {
+    renderPage();
+    await screen.findByTestId('sessions-table');
 
-    await user.click(await screen.findByRole('button', { name: 'Filters' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Cycle' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Summer 2026' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fall 2026' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    act(() => pageControls().filters!.apply('cycleIds', ['cycle-1', 'cycle-2']));
+    await waitFor(() => expect(children.table?.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']));
+    act(() => pageControls().setView!('calendar'));
 
-    await waitFor(() => expect(getSessions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ cycleIds: ['cycle-1', 'cycle-2'] }),
-      expect.any(Object), expect.any(Object),
-    ));
-    expect(getSessions.mock.lastCall?.[0]).not.toHaveProperty('cycleId');
-    await waitFor(() => expect(preferenceApi.value?.cycleIds).toEqual(['cycle-1', 'cycle-2']));
-
-    await user.click(screen.getByRole('button', { name: 'View: Table' }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Calendar' }));
-    expect(await screen.findByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-1,cycle-2');
+    await screen.findByTestId('sessions-calendar');
+    expect(children.calendar?.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']);
   });
 
   it('offers cycle filters without a separate custom-date control', async () => {
-    render(<MemoryRouter future={routerFuture}><Sessions /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: 'Date Range' })).not.toBeInTheDocument();
+    renderPage();
+    await screen.findByTestId('sessions-table');
+
+    expect(pageControls().filters!.definitions.some(group => group.id === 'dateRange')).toBe(false);
   });
 
   // Selection and coordination.
   it('preserves session and program context when filters are applied and cleared', async () => {
-    const user = userEvent.setup();
-    preferenceApi.value = { ...preferenceApi.value!, view: 'calendar' };
-    render(<MemoryRouter future={routerFuture}><Sessions /><LocationProbe /></MemoryRouter>);
-    await user.click(await screen.findByRole('button', { name: 'Calendar session' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
+    preferences.value!.view = 'calendar';
+    renderPage();
+    await screen.findByTestId('sessions-calendar');
+    act(() => children.calendar!.onSessionSelect(session));
 
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Cycle' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fall 2026' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    act(() => pageControls().filters!.apply('cycleIds', ['cycle-2']));
+    await waitFor(() => expect(children.calendar?.filters.cycleIds).toEqual(['cycle-2']));
+    expect(children.calendar?.selectedProgramId).toBe(program.id);
+    expect(screen.getByTestId('location')).toHaveTextContent(`session=${session.id}`);
+    expect(children.attendance?.session).toBe(session);
 
-    await waitFor(() => expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', 'cycle-2'));
-    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-selected-program', 'program-1');
-    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+    act(() => pageControls().filters!.clear());
 
-    await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-
-    await waitFor(() => expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-cycle-ids', ''));
-    expect(screen.getByTestId('sessions-calendar-view')).toHaveAttribute('data-selected-program', 'program-1');
-    expect(screen.getByTestId('location')).toHaveTextContent('session=session-1');
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
-  });
-
-  // Commands and dialogs.
-  it('highlights a linked session and opens attendance from its dashboard', async () => {
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions?session=session-1']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText('Communication')).toBeInTheDocument();
-    expect(screen.getByText('Communication').closest('tr')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByText('Planned communication exercise')).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
-
-    fireEvent.click(screen.getByText('Communication'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Manage attendance' }));
-
-    expect(await screen.findByText('Maya Thompson')).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Attendance' })).toBeInTheDocument();
-  });
-
-  it('opens the add sessions flow from the page header', async () => {
-    render(
-      <MemoryRouter initialEntries={['/programming/sessions']} future={routerFuture}>
-        <Sessions />
-      </MemoryRouter>,
-    );
-
-    const addButton = await screen.findByRole('button', { name: '+ Add' });
-    fireEvent.click(addButton);
-
-    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
-  });
-
-  it('prefills the add-session form with the selected calendar program', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Program row' }));
-    const addButton = screen.getByRole('button', { name: '+ Add' });
-    fireEvent.click(addButton);
-    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Program')).toHaveTextContent('Soft Skills');
-    expect(screen.getByLabelText('Program')).toBeEnabled();
-  });
-
-  it('opens the add-session form from a calendar cell', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Calendar date' }));
-    expect(screen.getByRole('heading', { name: 'Add Session' })).toBeInTheDocument();
+    await waitFor(() => expect(children.calendar?.filters.cycleIds).toEqual([]));
+    expect(children.calendar?.selectedProgramId).toBe(program.id);
+    expect(screen.getByTestId('location')).toHaveTextContent(`session=${session.id}`);
+    expect(children.attendance?.session).toBe(session);
   });
 
   it('preserves item selection through its owning row and clears it on direct program selection', async () => {
-    preferenceApi.value = { view: 'calendar', programIds: [], cycleIds: [], sessionTypes: [], statuses: [] };
-    render(<MemoryRouter initialEntries={['/programming']} future={routerFuture}><Sessions /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Calendar session' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
+    preferences.value!.view = 'calendar';
+    renderPage();
+    await screen.findByTestId('sessions-calendar');
+    act(() => children.calendar!.onSessionSelect(session));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Item owning row' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled());
+    act(() => children.calendar!.onProgramSelect!(program, 'item'));
+    expect(children.attendance?.session).toBe(session);
+    act(() => children.calendar!.onProgramSelect!(program));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Program row' }));
-    expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+    expect(children.attendance?.session).toBeNull();
+    expect(screen.getByTestId('location')).not.toHaveTextContent('session=');
+  });
+
+  // Commands and dialogs.
+  it('restores a linked session and opens attendance with its dashboard context', async () => {
+    renderPage(`/programming/sessions?session=${session.id}`);
+    await screen.findByTestId('sessions-table');
+    expect(children.table?.selectedSessionId).toBe(session.id);
+    act(() => children.table!.onSelectedSessionLoaded!(session));
+
+    act(() => children.attendance!.onManage(session, roster));
+
+    expect(screen.getByRole('dialog', { name: 'Attendance' })).toBeInTheDocument();
+    expect(children.attendanceModal?.session).toBe(session);
+    expect(children.attendanceModal?.roster).toBe(roster);
+  });
+
+  it('opens the add sessions flow from the page header', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: '+ Add' }));
+
+    expect(screen.getByRole('dialog', { name: 'Session editor' })).toBeInTheDocument();
+    expect(children.editor?.session).toBeUndefined();
+  });
+
+  it('supplies the selected calendar program to the add-session form', async () => {
+    preferences.value!.view = 'calendar';
+    renderPage();
+    await screen.findByTestId('sessions-calendar');
+    act(() => children.calendar!.onProgramSelect!(program));
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
+
+    expect(children.editor?.programId).toBe(program.id);
+  });
+
+  it('opens the add-session form with the calendar cell context', async () => {
+    preferences.value!.view = 'calendar';
+    renderPage();
+    await screen.findByTestId('sessions-calendar');
+
+    act(() => children.calendar!.onAddSession!(program, '2026-07-29'));
+
+    expect(screen.getByRole('dialog', { name: 'Session editor' })).toBeInTheDocument();
+    expect(children.editor?.programId).toBe(program.id);
+    expect(children.editor?.date).toBe('2026-07-29');
   });
 });
 
-/**
- * Displays the router path and query string so tests can observe selection-link changes.
+/** Opens Sessions at the scenario URL with real controls and isolated queries.
+ * @param path - Route including any linked session identity.
+ * @example renderPage('/programming/sessions?session=session-1')
+ */
+function renderPage(path = '/programming/sessions') {
+  return renderWithQueryClient(page(path));
+}
+
+/** Supplies the same router context for initial rendering and permission rerenders.
+ * @param path - Initial route including any selection query string.
+ * @example page() // Sessions with a visible URL probe
+ */
+function page(path = '/programming/sessions') {
+  return <MemoryRouter initialEntries={[path]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Sessions /><LocationProbe />
+  </MemoryRouter>;
+}
+
+/** Displays the current route so selection-link changes are observable.
  * Must render inside a router.
- * @example At /programming/sessions?session=session-1, displays that path and query string.
+ * @example At /programming/sessions?session=session-1, displays that URL.
  */
 function LocationProbe() {
   const location = useLocation();
-
   return <span data-testid="location">{location.pathname}{location.search}</span>;
+}
+
+/** Returns the latest page controls supplied to the real PageContainer.
+ * Requires the route to have rendered its container.
+ * @example pageControls().search?.appliedValue // current domain search text
+ */
+function pageControls() {
+  return vi.mocked(PageContainer).mock.lastCall![0].controls!;
 }

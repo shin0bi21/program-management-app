@@ -8,7 +8,7 @@ import { useAuth } from '../../../../auth/authContext';
 import type { YouthProfile } from '../../types';
 import type { SchoolAction, SchoolSelection } from '../../../../common/features/SchoolModal/types';
 import { useYouthModal } from './hooks/useYouthModal';
-import { getDateOfBirthBounds } from '../../../../common/features/youth/dateOfBirth';
+import { getDate } from '../../../../common/utils/date';
 import './YouthModal.css';
 
 interface YouthModalProps {
@@ -68,7 +68,6 @@ function YouthForm({
   } = useYouthModal({ youthData, onClose, onSuccess, inviteYouth, mode });
 
   const contactOnly = mode === 'contact';
-  const birthDateBounds = getDateOfBirthBounds();
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   let title = 'Add Youth Profile';
 
@@ -92,6 +91,7 @@ function YouthForm({
   } else if (submitStatus === 'error') {
     modalStatusMessage = error;
   }
+  /** Opens school management while preserving the current selection. @example manageSchool({ type: 'add' }) */
   const manageSchool = (action: SchoolAction) => {
     onManageSchool?.(action, { schoolId: schoolId ?? '', onChange: setSchoolId });
   };
@@ -131,7 +131,7 @@ function YouthForm({
 
             <div className="form-row">
               <FormField id="dateOfBirth" label="Date of Birth (optional)" error={errors.dateOfBirth?.message}>
-                <input id="dateOfBirth" type="date" {...birthDateBounds} disabled={submissionComplete} {...register('dateOfBirth')} />
+                <input id="dateOfBirth" type="date" max={getDate(-1)} disabled={submissionComplete} {...register('dateOfBirth')} />
               </FormField>
             </div>
 

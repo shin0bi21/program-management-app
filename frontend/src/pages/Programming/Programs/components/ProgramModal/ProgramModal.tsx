@@ -3,7 +3,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program, ProgramWeekday } from '../../../../../common/features/programs/types';
+import type { Program, ProgramWeekday } from '../../types';
 import useProgramModal from './hooks/useProgramModal';
 
 interface ProgramModalProps {

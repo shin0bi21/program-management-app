@@ -2,8 +2,9 @@
  * Builds collection-page source outlines in memory; this module does not write files.
  * Flow:
  * 1. Validate page segments and derive the page/data destinations.
- * 2. Format route, page data owner, and test outlines.
- * 3. Return the plan for the CLI's shared conflict checks and publication.
+ * 2. Format the route component outline.
+ * 3. Format page tests, the reference data owner, and its test outline.
+ * 4. Return the plan for the CLI's shared conflict checks and publication.
  */
 import { join } from 'node:path';
 
@@ -12,6 +13,7 @@ import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
 /**
  * Plans a collection page, its reference data owner, and their test outlines without writing files.
  * Rejects paths deeper than one route family or segments that are not PascalCase.
+ * @param context - Validated frontend destinations and in-memory source formatter.
  * @param pagePath - A page name, optionally prefixed by a route family, such as Staff/Schedules.
  * @returns Four formatted source files keyed by their destination paths under pages/.
  * @example pagePlan(context, 'Staff/Schedules') // Plans Schedules.tsx, useSchedulesData.ts, and their tests.
@@ -109,14 +111,17 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import { describe, it } from 'vitest';
 
     // Follow docs/workflows/delivery/testing.md for test ownership and assertions.
+    // Order: imports, typed child boundaries, fixtures, per-test setup, then the behavior groups below.
+    // Keep page controls, selection, actions, and PageContainer real; observe public props when needed.
+    // Invoke control callbacks to check domain inputs; shared controls own filter/search/view UI sequences.
+    // Use small ComponentProps-typed child stubs for inputs/events without copying child behavior.
+    // Keep existing representative coordination checks; do not add scenarios just to fill this outline.
     // Shared page-message suites own aggregation, cleanup, dismissal, severity, and action state.
     // Test only domain message choices and recovery actions here; omit generic reporter callback assertions.
     describe('${name}', () => {
       // Entry and readiness.
       it.todo('shows only the page actions allowed by the current permissions');
       it.todo('waits for domain reference dependencies before restoring saved controls');
-
-      // Rendered states.
       it.todo('connects a page-owned failure to its domain recovery action');
 
       // Controls and views.
@@ -131,6 +136,8 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
       it.todo('opens page-owned dialogs from their public entry points');
       it.todo('connects confirmed actions to the owning page workflow');
     });
+    // Put local render and interaction helpers below the suite in caller order.
+    // Each test starts with fresh state; consolidate page-owned setup/actions without hiding assertions.
     `,
   );
 
@@ -161,8 +168,10 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     import { describe, it } from 'vitest';
 
     describe('${hookName}', () => {
-      // Keep cases only for reference sources this page actually composes.
-      it.todo('exposes required reference rows with their loading and error states');
+      // Keep cases only for added domain decisions or transformations, not unchanged reference aliases.
+      // Remove this test outline when the hook only forwards shared reference results.
+      // Shared reference hooks own request defaults, cancellation, cache, loading, and retry mechanics.
+      it.todo('derives domain reference choices from the composed records');
       it.todo('applies domain inputs and enabled gates to composed reference hooks');
     });
     `,

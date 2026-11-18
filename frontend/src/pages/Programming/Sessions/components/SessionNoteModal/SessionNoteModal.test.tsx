@@ -85,7 +85,7 @@ describe('SessionNoteModal', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
-  it('locks every form interaction while submission is pending', async () => {
+  it('passes the pending submission state to the shared note form', async () => {
     let resolve!: (value: unknown) => void;
     api.createSessionNote.mockReturnValue(new Promise(done => { resolve = done; }));
     render(<SessionNoteModal session={session} onClose={vi.fn()} onSaved={vi.fn()} />);
@@ -98,8 +98,6 @@ describe('SessionNoteModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(api.createSessionNote).toHaveBeenCalledOnce());
 
-    expect(screen.getByRole('textbox', { name: 'Note *' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
     await act(async () => resolve({}));

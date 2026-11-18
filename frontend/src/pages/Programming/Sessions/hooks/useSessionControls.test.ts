@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
-import type { Program } from '../../../../common/features/programs/types';
+import type { Program } from '../../Programs/types';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 import type { SessionType } from '../types';
 import { useSessionControls } from './useSessionControls';
@@ -33,10 +33,7 @@ describe('useSessionControls', () => {
    */
   const wrapper = () => createQueryClientWrapper(createTestQueryClient());
 
-  it('restores account preferences and the browser-local table layout', async () => {
-    localStorage.setItem('table-layout:v1:user-1:session-filters', JSON.stringify({
-      columnWidths: { title: 240, cycle: 260 }, hiddenColumns: ['cycle', 'status'],
-    }));
+  it('restores session filters, view, and sorting', async () => {
     preferenceApi.getPreference.mockResolvedValue({
       view: 'table', programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'],
       sorting: { key: 'title', direction: 'asc' },
@@ -49,7 +46,7 @@ describe('useSessionControls', () => {
     expect(result.current).toMatchObject({
       view: 'table',
       filters: { values: { programIds: ['program-1'], cycleIds: ['cycle-1'], sessionTypes: ['Regular'], statuses: ['completed'] } },
-      table: { sorting: { key: 'title', direction: 'asc' }, columnWidths: { title: 240, cycle: 260 }, hiddenColumns: ['cycle', 'status'] },
+      table: { sorting: { key: 'title', direction: 'asc' } },
     });
   });
 
@@ -102,13 +99,8 @@ describe('useSessionControls', () => {
       result.current.filters.apply('programIds', ['program-1']);
       result.current.filters.apply('statuses', ['completed']);
       result.current.setView('table');
-      result.current.table.setHiddenColumns(['status']);
-      result.current.table.setColumnWidths({ title: 240 });
     });
 
-    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:session-filters')!)).toEqual({
-      hiddenColumns: ['status'], columnWidths: { title: 240 },
-    });
     expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters', expect.objectContaining({
       programIds: ['program-1'], cycleIds: ['cycle-1'], statuses: ['completed'], view: 'table',

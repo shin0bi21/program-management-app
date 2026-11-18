@@ -1,7 +1,7 @@
 import type { ProgramCycleAssignmentChanges } from './programCycleAssignments.api';
 import { apiClient, type RequestOptions } from '../../../../http/client';
 import type { CursorPage, CursorRequest } from '../../../../query/types';
-import type { Program, ProgramWeekday } from '../../../../common/features/programs/types';
+import type { Program, ProgramWeekday } from '../types';
 
 export interface CreateProgramInput {
   title: string;

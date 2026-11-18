@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
-import type { Program } from '../../../../../common/features/programs/types';
-import type { ProgramCycleAssignment } from '../../types';
+import type { Program, ProgramCycleAssignment } from '../../types';
 import { PROGRAM_CYCLE_ASSIGNMENTS_QUERY_KEY } from '../../hooks/actions/programCycleAssignmentCache';
 import type { AttendanceData } from '../../../../../common/features/Attendance/attendance.api';
 

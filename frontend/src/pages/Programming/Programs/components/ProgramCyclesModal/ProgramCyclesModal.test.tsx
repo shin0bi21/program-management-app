@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import ProgramCyclesModal from './ProgramCyclesModal';
 
 const workflow = vi.hoisted(() => ({

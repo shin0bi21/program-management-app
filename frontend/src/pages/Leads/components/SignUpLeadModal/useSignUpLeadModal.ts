@@ -14,7 +14,7 @@ import { getErrorMessage } from '../../../../http/errors';
 import { signUpLead } from '../../leads.api';
 import type { Lead } from '../../types';
 import type { LeadSignUpResult } from '../../leads.api';
-import { dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
+import { outreachFormSchema } from '../../../../common/features/OutreachForm/outreachFormSchema';
 
 export type LeadNoteCategory = 'general' | 'health' | 'preference';
 
@@ -64,7 +64,7 @@ export default function useSignUpLeadModal({
   });
 
   const visibleProgramCycles = useMemo(() => {
-    if (!dateOfBirthSchema.safeParse(dateOfBirth).success) return [];
+    if (!outreachFormSchema.shape.dateOfBirth.safeParse(dateOfBirth).success) return [];
 
     const ageEligible = programCycles.filter(programCycle => (
       typeof age === 'number'
@@ -76,8 +76,12 @@ export default function useSignUpLeadModal({
       : ageEligible.filter(programCycle => programCycle.programId === lead.recommendedProgramId);
   }, [programCycles, lead, showAllPrograms, age, dateOfBirth]);
 
+  /**
+   * Revalidates the current draft and creates the profile before refreshing its owner.
+   * @example await submit() // reports validation, save, or refresh feedback
+   */
   const submit = async () => {
-    const birthDateResult = dateOfBirthSchema.safeParse(dateOfBirth);
+    const birthDateResult = outreachFormSchema.shape.dateOfBirth.safeParse(dateOfBirth);
     if (!birthDateResult.success) {
       setError(birthDateResult.error.issues[0].message);
       setSubmitStatus('error');

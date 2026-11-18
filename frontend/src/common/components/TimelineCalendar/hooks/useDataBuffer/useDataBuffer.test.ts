@@ -72,21 +72,6 @@ describe('useDataBuffer', () => {
     expect(result.current.items.staff).toBe(items.staff);
   });
 
-  it('retries the operation that produced the current load error', async () => {
-    const load = vi.fn()
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce({});
-    const periods = buildInitialDayPeriods('2026-08-09', 3);
-    const { result } = renderHook(() => useDataBuffer<Item>({ load, getItemId: item => item.id }));
-
-    act(() => result.current.initialize(periods));
-    await waitFor(() => expect(result.current.error).toBe('offline'));
-    act(() => result.current.retry());
-
-    await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(result.current.error).toBeNull());
-  });
-
   it('keeps initialization failures visible when an edge was built while loading and retries real requests', async () => {
     let rejectInitial!: (error: Error) => void;
     const load = vi.fn()

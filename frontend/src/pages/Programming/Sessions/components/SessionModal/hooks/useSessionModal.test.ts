@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { Program } from '../../../../Programs/types';
 import { makeProgramSession } from '../../../../../../tests/factories/session';
 import { createSession } from '../../../sessions.api';
 import useSessionModal from './useSessionModal';

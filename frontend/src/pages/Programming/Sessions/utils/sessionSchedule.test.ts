@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
-import type { Program } from '../../../../common/features/programs/types';
+import type { Program } from '../../Programs/types';
 import { nextSessionDate } from './sessionSchedule';
 
 const program: Program = {

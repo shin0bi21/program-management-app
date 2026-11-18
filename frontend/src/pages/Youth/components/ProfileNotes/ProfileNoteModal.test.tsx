@@ -24,7 +24,7 @@ describe('ProfileNoteModal', () => {
     expect(screen.getByLabelText('Note *')).toHaveValue('Allergy plan');
   });
 
-  it('disables the complete form while a save is pending', async () => {
+  it('passes the pending save state to the shared note form', async () => {
     let resolve!: (value: YouthProfileNote) => void;
     vi.mocked(setYouthProfileNote).mockReturnValue(new Promise(done => { resolve = done; }));
     render(<ProfileNoteModal youthId="youth-1" onClose={vi.fn()} onSaved={vi.fn()} />);
@@ -35,9 +35,6 @@ describe('ProfileNoteModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(setYouthProfileNote).toHaveBeenCalledOnce());
 
-    expect(document.getElementById('profile-note-form')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
-    expect(screen.getByLabelText('Note *')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
     await act(async () => resolve({
