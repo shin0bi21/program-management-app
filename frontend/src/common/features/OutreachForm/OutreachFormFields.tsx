@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import FloatingSelect from '../../components/FloatingSelect/FloatingSelect';
 import FormField from '../../components/FormField/FormField';
 import type { OutreachFormValues } from './outreachFormSchema';
-import { getDateOfBirthBounds } from '../youth/dateOfBirth';
+import { getDate } from '../../utils/date';
 import './OutreachForm.css';
 
 const contactRelationshipOptions = [
@@ -46,7 +46,7 @@ export default function OutreachFormFields<T extends OutreachFormValues & FieldV
         <FormField id={id('youthLastName')} label="Last Name *" error={errors.youthLastName?.message as string | undefined}><input id={id('youthLastName')} autoComplete="family-name" disabled={disabled} {...register(field('youthLastName'))} /></FormField>
       </div>
       <div className="form-row">
-        <FormField id={id('dateOfBirth')} label="Date of Birth *" error={errors.dateOfBirth?.message as string | undefined}><input id={id('dateOfBirth')} type="date" {...getDateOfBirthBounds()} required disabled={disabled} {...register(field('dateOfBirth'))} /></FormField>
+        <FormField id={id('dateOfBirth')} label="Date of Birth *" error={errors.dateOfBirth?.message as string | undefined}><input id={id('dateOfBirth')} type="date" max={getDate(-1)} required disabled={disabled} {...register(field('dateOfBirth'))} /></FormField>
         <FormField id={id('school')} label="School *" error={errors.school?.message as string | undefined}><input id={id('school')} disabled={disabled} {...register(field('school'))} /></FormField>
       </div>
       {programField && <div className="form-row">{programField}</div>}

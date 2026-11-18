@@ -1,10 +1,13 @@
 import { z } from 'zod';
-import { dateOfBirthSchema } from '../youth/dateOfBirth';
+import { getDate } from '../../utils/date';
+import { isDateKey } from '../../utils/dateRange';
 
 export const outreachFormSchema = z.object({
   youthFirstName: z.string().trim().min(1, 'First name is required').max(120, 'First name is too long'),
   youthLastName: z.string().trim().min(1, 'Last name is required').max(120, 'Last name is too long'),
-  dateOfBirth: dateOfBirthSchema,
+  dateOfBirth: z.string().min(1, 'Date of birth is required')
+    .pipe(z.string().refine(isDateKey, { message: 'Enter a valid date of birth', abort: true }))
+    .refine(value => value < getDate(), 'Date of birth must be before today'),
   school: z.string().trim().min(1, 'School is required'),
   contactPhoneNumber: z.string().trim().min(1, 'Contact phone number is required'),
   contactRelationship: z.enum(['parent', 'guardian', 'sibling'], { error: 'Relationship is required' }),

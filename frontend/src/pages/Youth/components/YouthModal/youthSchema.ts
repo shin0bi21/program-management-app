@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { dateOfBirthSchema } from '../../../../common/features/youth/dateOfBirth';
+import { outreachFormSchema } from '../../../../common/features/OutreachForm/outreachFormSchema';
 
 export const youthSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required').max(120, 'First name is too long'),
   lastName: z.string().trim().min(1, 'Last name is required').max(120, 'Last name is too long'),
   email: z.union([z.literal(''), z.string().email('Invalid email address')]),
-  dateOfBirth: z.union([z.literal(''), dateOfBirthSchema]),
+  dateOfBirth: z.union([z.literal(''), outreachFormSchema.shape.dateOfBirth]),
   schoolId: z.string().optional(),
   addresses: z.array(z.object({
     id: z.string().optional(),
