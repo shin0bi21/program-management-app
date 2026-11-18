@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { Program } from '../../../../Programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';

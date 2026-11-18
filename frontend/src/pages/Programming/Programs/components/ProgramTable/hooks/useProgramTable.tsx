@@ -3,8 +3,7 @@ import { useMemo } from 'react';
 import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { ProgramCycleAssignment } from '../../../types';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { ProgramCycleAssignment, Program } from '../../../types';
 
 interface ProgramCycleStatus {
   assignments: readonly Pick<ProgramCycleAssignment, 'programId' | 'state'>[];

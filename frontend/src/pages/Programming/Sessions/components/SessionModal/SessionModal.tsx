@@ -4,7 +4,7 @@ import FloatingSelect from '../../../../../common/components/FloatingSelect/Floa
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../../Programs/types';
 import useSessionModal from './hooks/useSessionModal';
 
 interface SessionModalProps {

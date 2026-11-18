@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../common/features/programs/types';
+import type { Program } from '../Programs/types';
 import type { SessionPreference } from './hooks/useSessionControls';
 import type SessionCalendar from './components/SessionCalendar/SessionCalendar';
 import Sessions from './Sessions';

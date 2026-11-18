@@ -9,7 +9,7 @@ import CycleModal from './CycleModal';
 
 vi.mock('../../api/cycles.api', () => ({ setProgramCycle: vi.fn() }));
 
-const programs = [{ id: 'program-1', title: 'Skills' }] as import('../../../../../common/features/programs/types').Program[];
+const programs = [{ id: 'program-1', title: 'Skills' }] as import('../../types').Program[];
 
 const assignmentProps = { assignments: [{ programId: 'program-1', cycleId: 'cycle-1' }] as import('../../types').ProgramCycleAssignment[], assignmentsReady: true, assignmentsError: '', onRetryAssignments: vi.fn() };
 

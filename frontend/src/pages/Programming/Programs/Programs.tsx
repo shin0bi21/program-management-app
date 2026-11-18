@@ -4,7 +4,7 @@ import PageContainer from '../../../common/components/PageContainer/PageContaine
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import type { Program } from '../../../common/features/programs/types';
+import type { Program } from './types';
 import type { ProgramFilters } from './api/programs.api';
 import CycleModal from './components/CycleModal/CycleModal';
 import CycleTable from './components/CycleTable/CycleTable';

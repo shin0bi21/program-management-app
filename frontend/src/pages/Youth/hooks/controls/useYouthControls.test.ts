@@ -1,7 +1,7 @@
 import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { YOUTH_TABLE_KEYS } from '../../types';
 import { useYouthControls } from './useYouthControls';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
@@ -20,18 +20,7 @@ const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(
   wrapper: createQueryClientWrapper(createTestQueryClient()),
 });
 
-const programs: Program[] = [{
-  id: 'program-1',
-  title: 'Soft Skills',
-  description: null,
-  enrollmentRequired: true,
-  minAge: 12,
-  maxAge: 15,
-  defaultDayOfWeek: 'tuesday',
-  defaultStartTime: '17:00',
-  defaultEndTime: '19:30',
-  timezone: 'America/Toronto',
-}];
+const programs: ProgramReference[] = [{ id: 'program-1', title: 'Soft Skills' }];
 const cycles: ProgramCycle[] = [{
   id: 'cycle-1', title: 'Summer 2026', startsOn: '2026-07-01', endsOn: '2026-09-01', state: 'active',
 }];

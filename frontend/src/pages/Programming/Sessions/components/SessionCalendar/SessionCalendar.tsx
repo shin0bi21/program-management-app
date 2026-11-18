@@ -10,7 +10,7 @@ import type {
   ItemMoveContext,
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../../Programs/types';
 import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import { getSessions } from '../../sessions.api';
 import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
 import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import type { Program } from '../../../../common/features/programs/types';
+import type { Program } from '../../Programs/types';
 import usePreferences from '../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
 import {

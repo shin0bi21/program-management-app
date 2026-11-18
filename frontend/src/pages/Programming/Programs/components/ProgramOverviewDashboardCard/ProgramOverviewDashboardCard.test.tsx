@@ -1,7 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../../../common/features/programs/types';
-import type { ProgramCycleAssignment } from '../../types';
+import type { Program, ProgramCycleAssignment } from '../../types';
 import ProgramOverviewDashboardCard from './ProgramOverviewDashboardCard';
 import { useProgramCycleAssignments } from '../../hooks/data/useProgramCycleAssignments';
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';

@@ -1,10 +1,9 @@
-import type { ProgramCycleAssignment } from '../../types';
+import type { ProgramCycleAssignment, Program } from '../../types';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 import Button from '../../../../../common/components/Button/Button';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program } from '../../../../../common/features/programs/types';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import useProgramCyclesModal from './hooks/useProgramCyclesModal';
 
