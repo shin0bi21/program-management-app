@@ -61,15 +61,3 @@ export function checkFrontendOwnership(
     }
   }
 }
-
-/**
- * Appends a finding when frontend architecture guidance is placed in a source README.
- * @example checkCentralizedFrontendDocumentation([], 'docs/frontend/README.md') // no findings
- */
-export function checkCentralizedFrontendDocumentation(violations: Findings, file: string): void {
-  if (file.startsWith('frontend/src/') && file.endsWith('/README.md')) {
-    violations.push(
-      `${file}:1 frontend architecture and integration guidance belongs under docs/, not beside source code.`,
-    );
-  }
-}

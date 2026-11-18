@@ -62,9 +62,8 @@ Jobs use job-level conditions rather than workflow path filters so required chec
 
 ## Pattern Checks
 
-The quality job checks dependency direction, centralized frontend HTTP and docs,
-focused endpoint methods, Express async-handler wrapping, route-validated
-controller queries, and migration immutability. The checker does not enforce
+The quality job checks dependency direction, centralized frontend HTTP, Express
+async-handler wrapping, and migration immutability. The checker does not enforce
 all architecture conventions or require test files.
 
 ## Diagnose a Failed Check
