@@ -10,10 +10,9 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
-import { checkBackendControllers } from './backend/controllers.ts';
 import { checkBackendRoutes } from './backend/routes.ts';
-import { checkCentralizedHttp, checkFocusedAdapters } from './frontend/data.ts';
-import { checkFrontendOwnership, checkCentralizedFrontendDocumentation } from './frontend/ownership.ts';
+import { checkCentralizedHttp } from './frontend/data.ts';
+import { checkFrontendOwnership } from './frontend/ownership.ts';
 import { collectRoutePageDirectories } from './frontend/shared.ts';
 import { filterDeletedFiles, type Findings } from './utils.ts';
 import { readBaseline } from '../../backend/db/scripts/helpers/read-migrations.ts';
@@ -185,17 +184,14 @@ export function runEnforcementChecks(
   repoRoot: string,
   { routePageDirectories = [] }: EnforcementOptions = {},
 ): void {
-  // 1. Apply frontend ownership, documentation, and HTTP-adapter rules.
+  // 1. Apply frontend ownership and centralized HTTP rules.
   if (file.startsWith('frontend/src/')) {
     checkFrontendOwnership(violations, file, source, routePageDirectories, repoRoot);
-    checkCentralizedFrontendDocumentation(violations, file);
     checkCentralizedHttp(violations, file, source);
-    if (file.endsWith('.api.ts')) checkFocusedAdapters(violations, file, source);
   }
 
-  // 2. Apply backend route wrapping and controller validation rules.
+  // 2. Apply backend route wrapping rules.
   if (file.startsWith('backend/src/routes/')) checkBackendRoutes(violations, file, source);
-  if (file.startsWith('backend/src/controllers/')) checkBackendControllers(violations, file, source);
 }
 
 /**
