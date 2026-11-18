@@ -1,5 +1,5 @@
 import { Temporal } from 'temporal-polyfill';
-import type { Program } from '../../../../common/features/programs/types';
+import type { Program } from '../../Programs/types';
 
 const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 

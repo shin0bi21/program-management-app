@@ -1,7 +1,7 @@
 import type { useProgramCycleAssignments } from '../../hooks/data/useProgramCycleAssignments';
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { ProgramFilters } from '../../api/programs.api';
 import useProgramTableData from './hooks/useProgramTableData';

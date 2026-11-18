@@ -4,7 +4,7 @@ import PageContainer from '../../../common/components/PageContainer/PageContaine
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
-import type { Program } from '../../../common/features/programs/types';
+import type { Program } from '../Programs/types';
 import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember } from './types';
 import SessionModal from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';

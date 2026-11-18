@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import { referenceDataKeys } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';

@@ -5,7 +5,7 @@ import {
   createProgram,
   updateProgram,
 } from '../../../api/programs.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { Program } from '../../../types';
 import useProgramModal from './useProgramModal';
 
 vi.mock('../../../api/programs.api', () => ({

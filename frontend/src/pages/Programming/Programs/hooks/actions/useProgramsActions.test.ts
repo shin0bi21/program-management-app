@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deleteProgramCycle } from '../../api/cycles.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import { referenceDataKeys } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import useProgramsActions from './useProgramsActions';
 

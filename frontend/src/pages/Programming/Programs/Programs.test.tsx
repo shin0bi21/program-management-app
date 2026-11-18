@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../common/features/programs/types';
+import type { Program } from './types';
 import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 import { getProgramCycleAssignments } from './api/programCycleAssignments.api';
 import Programs from './Programs';
@@ -163,13 +163,15 @@ describe('Programs', () => {
     expect(programsApi.getProgramList).toHaveBeenCalledOnce();
   });
 
-  it('creates programs from the Programs header', async () => {
+  it('refreshes the program list after creation and returns to the page', async () => {
     const user = userEvent.setup();
     const created = {
       id: 'program-2', title: 'Job Readiness', description: null, enrollmentRequired: true, minAge: 16, maxAge: 19, defaultDayOfWeek: 'tuesday' as const, defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto',
     };
     programsApi.createProgram.mockResolvedValue({ program: created, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] });
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Programs /></MemoryRouter>);
+    await screen.findByRole('cell', { name: 'Soft Skills' });
+    programsApi.getProgramList.mockResolvedValue({ rows: [...programState.programs, created], nextCursor: null });
 
     await user.click(screen.getByRole('button', { name: '+ Add Program' }));
     await user.type(screen.getByRole('textbox', { name: 'Program Title' }), 'Job Readiness');
@@ -181,8 +183,8 @@ describe('Programs', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Maximum Age' }), '19');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(programsApi.createProgram).toHaveBeenCalledOnce());
-    expect(await screen.findByText('Program added successfully.')).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: created.title })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
   });
 
   it('keeps the cycle query alive while editing and returns to the saved row without refetching', async () => {

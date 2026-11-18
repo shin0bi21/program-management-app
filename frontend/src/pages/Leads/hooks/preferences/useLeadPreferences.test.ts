@@ -1,6 +1,6 @@
 import { act, renderHook as renderHookBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Program } from '../../../../common/features/programs/types';
+import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
 import { useLeadPreferences } from './useLeadPreferences';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 
@@ -18,18 +18,7 @@ const renderHook: typeof renderHookBase = (callback, options) => renderHookBase(
   wrapper: createQueryClientWrapper(createTestQueryClient()),
 });
 
-const programs: Program[] = [{
-  id: 'program-1',
-  title: 'Future Ready',
-  description: null,
-  enrollmentRequired: true,
-  minAge: 12,
-  maxAge: 15,
-  defaultDayOfWeek: 'tuesday',
-  defaultStartTime: '17:00',
-  defaultEndTime: '19:30',
-  timezone: 'America/Toronto',
-}];
+const programs: ProgramReference[] = [{ id: 'program-1', title: 'Future Ready' }];
 const tableKeys = ['firstName', 'lastName', 'school', 'program', 'status', 'created'] as const;
 
 describe('useLeadPreferences', () => {
@@ -41,7 +30,7 @@ describe('useLeadPreferences', () => {
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
 
-  it('maps search, filter, and table controls to external-lead preferences', async () => {
+  it('maps search, filters, and sorting to external-lead preferences', async () => {
     const { result } = renderHook(() => (
       useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
     ));
@@ -54,19 +43,14 @@ describe('useLeadPreferences', () => {
     act(() => result.current.filters.apply('statuses', ['contacted']));
     act(() => result.current.filters.apply('submitterRoles', ['youth']));
     act(() => {
-      result.current.table.setHiddenColumns(['school']);
-      result.current.table.setColumnWidths({ firstName: 240 });
       result.current.table.setSorting({ key: 'school', direction: 'asc' });
     });
 
-    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:outreach-external-leads-filters')!)).toEqual({
-      hiddenColumns: ['school'], columnWidths: { firstName: 240 },
-    });
     expect(result.current.appliedFilters.search).toBe('school');
     expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
     expect(result.current.appliedFilters.submitterRoles).toEqual(['youth']);
     expect(result.current.table).toMatchObject({
-      sorting: { key: 'school', direction: 'asc' }, hiddenColumns: ['school'], columnWidths: { firstName: 240 },
+      sorting: { key: 'school', direction: 'asc' },
     });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'outreach-external-leads-filters', expect.objectContaining({

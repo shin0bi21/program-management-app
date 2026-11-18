@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import PageContainer from '../../../../../common/components/PageContainer/PageContainer';
-import type { Program } from '../../../../../common/features/programs/types';
+import type { Program } from '../../types';
 import CycleTable from '../CycleTable/CycleTable';
 import ProgramTable from './ProgramTable';
 

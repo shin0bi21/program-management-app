@@ -1,6 +1,6 @@
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import { getProgramList, type ProgramFilters } from '../../../api/programs.api';
-import type { Program } from '../../../../../../common/features/programs/types';
+import type { Program } from '../../../types';
 
 /**
  * Loads complete program table rows for the supplied scope.

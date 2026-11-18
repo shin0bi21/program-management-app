@@ -1,6 +1,5 @@
 import type { YouthProfile } from '../../Youth/types';
-import type { ProgramCycleAssignment } from '../Programs/types';
-import type { Program } from '../../../common/features/programs/types';
+import type { ProgramCycleAssignment, Program } from '../Programs/types';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';

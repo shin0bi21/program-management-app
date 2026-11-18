@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import type { Program } from '../../../../common/features/programs/types';
+import type { Program } from '../types';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
 
 export default function useProgramsModals() {

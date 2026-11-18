@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { createProgram, updateProgram, type CreateProgramInput, type ProgramMutationResult } from '../../../api/programs.api';
-import type { Program, ProgramWeekday } from '../../../../../../common/features/programs/types';
+import type { Program, ProgramWeekday } from '../../../types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
