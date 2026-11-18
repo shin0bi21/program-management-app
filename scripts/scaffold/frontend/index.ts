@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Plan and optionally create frontend scaffold files; see usage() for commands.
+// Flow: validate the request, check destinations, then preview or write files.
+
 import { lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -7,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { Project, QuoteKind } from 'ts-morph';
 
 import { calendarPlan } from './calendar.ts';
-import { dashboardPlan } from './dashboard.ts';
+import { dashboardCardPlan } from './dashboard-card.ts';
 import { modalPlan } from './modal.ts';
 import { pagePlan } from './page.ts';
 import { tablePlan } from './table.ts';
@@ -135,7 +138,7 @@ function usage(): string {
   npm run scaffold:frontend -- modal <owner-path> <NameModal> [--dry-run]
   npm run scaffold:frontend -- table <owner-path> <NameTable> [--dry-run]
   npm run scaffold:frontend -- calendar <owner-path> <NameCalendar> [--dry-run]
-  npm run scaffold:frontend -- dashboard <owner-path> <NameDashboard> [--dry-run]
+  npm run scaffold:frontend -- dashboard <owner-path> <NameDashboardCard> [--dry-run]
 
 Every preset generates implementation files and colocated test outlines together.
 
@@ -145,7 +148,7 @@ Examples:
   npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal
   npm run scaffold:frontend -- table frontend/src/pages/Staff/Schedules/components ScheduleTable
   npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/components ScheduleCalendar
-  npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboard --dry-run`;
+  npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboardCard --dry-run`;
 }
 
 /**
@@ -278,7 +281,7 @@ function parseRequest(context: ScaffoldContext, argv: string[]): { dryRun: boole
   if (kind === 'modal' && args.length === 2) return { dryRun, plan: modalPlan(context, args[0], args[1]) };
   if (kind === 'table' && args.length === 2) return { dryRun, plan: tablePlan(context, args[0], args[1]) };
   if (kind === 'calendar' && args.length === 2) return { dryRun, plan: calendarPlan(context, args[0], args[1]) };
-  if (kind === 'dashboard' && args.length === 2) return { dryRun, plan: dashboardPlan(context, args[0], args[1]) };
+  if (kind === 'dashboard' && args.length === 2) return { dryRun, plan: dashboardCardPlan(context, args[0], args[1]) };
   throw new Error(usage());
 }
 
@@ -313,6 +316,10 @@ export function scaffoldFrontend(argv: string[]): string[] {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (process.argv.length === 3 && ['--help', '-h'].includes(process.argv[2])) {
+    console.log(usage());
+    process.exit(0);
+  }
   try {
     const files = scaffoldFrontend(process.argv.slice(2));
     console.log(files.join('\n'));
