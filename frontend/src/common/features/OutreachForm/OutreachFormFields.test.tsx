@@ -2,8 +2,7 @@
 import { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
-import { describe, expect, it } from 'vitest';
-import { getDateOfBirthBounds } from '../youth/dateOfBirth';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import OutreachFormFields from './OutreachFormFields';
 import type { OutreachFormValues } from './outreachFormSchema';
 
@@ -34,15 +33,18 @@ function TestForm({ showRelationshipError = false }: { showRelationshipError?: b
 }
 
 describe('OutreachFormFields', () => {
-  it('exposes the supported program age range to browser validation', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('requires a past birthdate without a minimum age in browser validation', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 28, 12));
     render(<TestForm />);
 
     const input = screen.getByLabelText('Date of Birth *');
-    const bounds = getDateOfBirthBounds();
     expect(input).toHaveAttribute('type', 'date');
     expect(input).toBeRequired();
     expect(input).not.toHaveAttribute('min');
-    expect(input).toHaveAttribute('max', bounds.max);
+    expect(input).toHaveAttribute('max', '2026-10-27');
   });
 
   it('associates controlled select errors with the visible trigger', async () => {

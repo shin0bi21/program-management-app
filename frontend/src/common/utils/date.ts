@@ -39,7 +39,11 @@ export function formatShortDateRange(start: string, end: string): string {
   return shortDateFormatter.formatRange(Temporal.PlainDate.from(start), Temporal.PlainDate.from(end)).replace('–', ' – ');
 }
 
-/** Returns today's local calendar date. @example getDate() // '2026-11-10' */
-export function getDate(): string {
-  return Temporal.Now.plainDateISO().toString();
+/**
+ * Returns the local calendar date with an optional whole-day offset.
+ * @param dayOffset - Calendar days from today; negative values select earlier dates.
+ * @example getDate(-1) // yesterday's YYYY-MM-DD date
+ */
+export function getDate(dayOffset = 0): string {
+  return Temporal.Now.plainDateISO().add({ days: dayOffset }).toString();
 }

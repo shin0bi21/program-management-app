@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
-import { formatHours, formatShortDate, formatShortDateRange } from './date';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { formatHours, formatShortDate, formatShortDateRange, getDate } from './date';
 
 describe('formatHours', () => {
   it('formats and pluralizes hour durations', () => {
@@ -36,5 +36,20 @@ describe('formatShortDate', () => {
 describe('formatShortDateRange', () => {
   it('collapses repeated month and year information', () => {
     expect(formatShortDateRange('2026-07-29', '2026-08-11')).toBe('Jul 29 – Aug 11, 2026');
+  });
+});
+
+describe('getDate', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it.each([
+    [2026, 9, 28, '2026-10-28', '2026-10-27'],
+    [2028, 2, 1, '2028-03-01', '2028-02-29'],
+  ] as const)('offsets local calendar days from %s/%s/%s', (year, month, day, today, yesterday) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(year, month, day, 12));
+
+    expect(getDate()).toBe(today);
+    expect(getDate(-1)).toBe(yesterday);
   });
 });
