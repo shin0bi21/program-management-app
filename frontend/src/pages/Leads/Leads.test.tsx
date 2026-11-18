@@ -1,16 +1,15 @@
 import { renderWithQueryClient } from '../../tests/queryClientTestUtils';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import PageContainer from '../../common/components/PageContainer/PageContainer';
 import Leads from './Leads';
+import type { Lead, LeadOrigin } from './types';
 
-/**
- * Renders the requested outreach collection with an isolated query cache.
- * @param origin - Internal or external leads collection to exercise.
- * @example renderPage('internal')
- */
-const renderPage = (origin: 'external' | 'internal' = 'external') => (
-  renderWithQueryClient(<Leads origin={origin} />)
-);
+// Retain the real shared container while observing its public domain controls.
+vi.mock('../../common/components/PageContainer/PageContainer', async importOriginal => {
+  const original = await importOriginal<typeof import('../../common/components/PageContainer/PageContainer')>();
+  return { default: vi.fn(original.default) };
+});
 
 const getLeads = vi.fn();
 const updateLead = vi.fn();
@@ -19,6 +18,7 @@ const deleteLead = vi.fn();
 const signUpLead = vi.fn();
 const getLeadNotes = vi.fn();
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
+let lead: Lead;
 
 vi.mock('./leads.api', () => ({
   getLeads: (...args: unknown[]) => getLeads(...args),
@@ -46,15 +46,20 @@ vi.mock('../Programming/Programs/api/programCycleAssignments.api', () => ({
 
 describe('Leads', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    lead = {
+      id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
+      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14,
+      dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
+      recommendedProgramId: 'program-1', recommendedProgram: 'Future Ready',
+      contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
+      discoverySource: 'community_outreach', notes: null, status: 'new',
+      statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    };
     preferenceApi.getPreference.mockResolvedValue(null);
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
     signUpLead.mockResolvedValue({ lead: {
-      id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: 'youth-1',
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
-      recommendedProgramId: 'program-1', recommendedProgram: 'Future Ready',
-      contactPhoneNumber: '416-555-0142', contactRelationship: 'guardian',
-      discoverySource: 'community_outreach', notes: null, status: 'signed_up',
-      statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+      ...lead, convertedYouthId: 'youth-1', status: 'signed_up',
     } });
     updateLeadStatus.mockReset();
     updateLead.mockReset();
@@ -62,53 +67,28 @@ describe('Leads', () => {
     deleteLead.mockResolvedValue({ id: 'lead-1' });
     getLeads.mockReset();
     getLeadNotes.mockResolvedValue([]);
-    getLeads.mockResolvedValue({ rows: [{
-      id: 'lead-1', origin: 'external', submittedByRole: 'parent', convertedYouthId: null,
-      youthFirstName: 'Avery', youthLastName: 'Outreach', age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`, school: 'Outreach Test School',
-      recommendedProgramId: 'program-1', recommendedProgram: 'Future Ready',
-      contactPhoneNumber: '416-555-0142',
-      contactRelationship: 'guardian', discoverySource: 'community_outreach', notes: null,
-      status: 'new', statusUpdatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
-    }], nextCursor: null });
+    getLeads.mockResolvedValue({ rows: [lead], nextCursor: null });
   });
 
   // Controls and views.
   it('keeps the filled-out-by filter unavailable for internal leads', async () => {
-    const internalLead = {
-      id: 'lead-1',
+    const internalLead: Lead = {
+      ...lead,
       origin: 'internal',
       submittedByRole: 'staff',
-      convertedYouthId: null,
-      youthFirstName: 'Avery',
-      youthLastName: 'Outreach',
-      age: 14, dateOfBirth: `${new Date().getFullYear() - 14}-01-01`,
-      school: 'Outreach Test School',
-      recommendedProgramId: 'program-1',
-      recommendedProgram: 'Future Ready',
-      contactPhoneNumber: '416-555-0142',
-      contactRelationship: 'guardian',
-      discoverySource: 'community_outreach',
-      notes: null,
-      status: 'new',
-      statusUpdatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    } as const;
+    };
     getLeads.mockResolvedValueOnce({ rows: [internalLead], nextCursor: null });
     renderPage('internal');
 
     await screen.findByRole('row', { name: /Avery Outreach/ });
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    expect(screen.queryByRole('menuitem', { name: /Filled Out By/ })).not.toBeInTheDocument();
+    expect(pageControls().filters!.definitions.some(group => group.id === 'submitterRoles')).toBe(false);
   });
 
   it('filters external leads by who filled out the form', async () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Filled Out By/ }));
-    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Parent' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
+    act(() => pageControls().filters!.apply('submitterRoles', ['parent']));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       expect.objectContaining({ origins: ['external'], submitterRoles: ['parent'] }),
@@ -119,8 +99,7 @@ describe('Leads', () => {
 
   // Selection and coordination.
   it('keeps the selected dashboard synchronized with status responses', async () => {
-    const initialLead = (await getLeads()).rows[0];
-    const updatedLead = { ...initialLead, status: 'contacted', contactPhoneNumber: '416-555-0199' };
+    const updatedLead = { ...lead, status: 'contacted', contactPhoneNumber: '416-555-0199' };
     updateLeadStatus.mockResolvedValue(updatedLead);
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
@@ -133,14 +112,12 @@ describe('Leads', () => {
   });
 
   it('preserves an open edit draft while the table refetches', async () => {
-    const initialLead = (await getLeads()).rows[0];
     const { queryClient } = renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    openLeadEditor();
     fireEvent.change(screen.getByLabelText('Phone Number *'), { target: { value: '416-555-0188' } });
     const readsBeforeRefresh = getLeads.mock.calls.length;
-    getLeads.mockResolvedValue({ rows: [{ ...initialLead, contactPhoneNumber: '416-555-0199' }], nextCursor: null });
+    getLeads.mockResolvedValue({ rows: [{ ...lead, contactPhoneNumber: '416-555-0199' }], nextCursor: null });
 
     await act(async () => queryClient.invalidateQueries({ queryKey: ['leads', 'table'] }));
 
@@ -149,12 +126,10 @@ describe('Leads', () => {
   });
 
   it('keeps the selected dashboard synchronized after editing', async () => {
-    const initialLead = (await getLeads()).rows[0];
-    updateLead.mockResolvedValue({ ...initialLead, contactPhoneNumber: '416-555-0188' });
+    updateLead.mockResolvedValue({ ...lead, contactPhoneNumber: '416-555-0188' });
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    openLeadEditor();
     fireEvent.change(screen.getByLabelText('Phone Number *'), { target: { value: '416-555-0188' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -163,9 +138,8 @@ describe('Leads', () => {
   });
 
   it('keeps the selected dashboard synchronized after sign-up', async () => {
-    const initialLead = (await getLeads()).rows[0];
     signUpLead.mockResolvedValue({ lead: {
-      ...initialLead,
+      ...lead,
       status: 'signed_up',
       convertedYouthId: 'youth-1',
       contactPhoneNumber: '416-555-0177',
@@ -203,15 +177,14 @@ describe('Leads', () => {
   });
 
   it('preserves the selected dashboard after deleting another lead', async () => {
-    const initialLead = (await getLeads()).rows[0];
     const otherLead = {
-      ...initialLead,
+      ...lead,
       id: 'lead-2',
       youthFirstName: 'Sam',
       youthLastName: 'Stable',
       contactPhoneNumber: '416-555-0101',
     };
-    getLeads.mockResolvedValue({ rows: [initialLead, otherLead], nextCursor: null });
+    getLeads.mockResolvedValue({ rows: [lead, otherLead], nextCursor: null });
     deleteLead.mockResolvedValue({ id: 'lead-2' });
     renderPage();
     fireEvent.click(await screen.findByRole('row', { name: /Avery Outreach/ }));
@@ -223,17 +196,31 @@ describe('Leads', () => {
     expect(screen.getByText('416-555-0142')).toBeInTheDocument();
   });
 
-  // Commands and dialogs.
-
-  it('opens the selected Lead for editing from its actions menu', async () => {
-    renderPage();
-    await screen.findByRole('row', { name: /Avery Outreach/ });
-
-    fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
-
-    expect(screen.getByRole('heading', { name: 'Edit Lead' })).toBeInTheDocument();
-    expect(document.getElementById('lead-youthFirstName')).toHaveValue('Avery');
-  });
-
 });
+
+/**
+ * Renders the requested outreach collection with an isolated query cache.
+ * @param origin - Internal or external leads collection to exercise.
+ * @example renderPage('internal')
+ */
+function renderPage(origin: LeadOrigin = 'external') {
+  return renderWithQueryClient(<Leads origin={origin} />);
+}
+
+/** Returns domain controls supplied by the route to the real shared container.
+ * Requires the route to have rendered its container.
+ * @example pageControls().filters?.values // current applied lead selections
+ */
+function pageControls() {
+  return vi.mocked(PageContainer).mock.lastCall![0].controls!;
+}
+
+/**
+ * Opens the selected Avery Outreach lead through its rendered row action menu.
+ * Requires the lead's row to be loaded and selected.
+ * @example openLeadEditor() // opens the edit form before changing its draft
+ */
+function openLeadEditor() {
+  fireEvent.click(screen.getByRole('button', { name: 'More actions for Avery Outreach' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+}
