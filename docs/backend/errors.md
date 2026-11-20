@@ -169,7 +169,7 @@ letters, digits, hyphens, or underscores; otherwise it generates a UUID. It retu
 the ID in the response header and error body. Use that ID to correlate a client
 report with server logs.
 
-Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it. For tracing browser and API failures, see [Debugging](../workflows/debugging.md).
+Outside tests, uncaught exceptions and unhandled rejections are logged and terminate the process so Docker can restart it.
 
 ## Logging Rules
 
