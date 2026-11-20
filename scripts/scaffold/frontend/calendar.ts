@@ -25,18 +25,24 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
   const title = name.replace(/Calendar$/, '');
   const pageName = basename(dirname(owner));
   const pageDataImport = context.relativeImport(directory, join(dirname(owner), `hooks/data/use${pageName}Data`));
+
   // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
+    import type { ReactElement } from 'react';
     import type { ${pageName}Data } from '${pageDataImport}';
+
+    interface ${name}Props {
+      data: ${pageName}Data;
+    }
 
     /**
      * Displays a placeholder for the ${title} calendar until its domain data is connected.
      * @param props.data - Reference context supplied by the page.
      * @example <${name} data={data} /> shows the ${title} calendar setup prompt.
      */
-    export default function ${name}({ data }: { data: ${pageName}Data }) {
+    export default function ${name}({ data }: ${name}Props): ReactElement {
       // Define domain types, constants, and pure identity/range helpers outside the component.
 
       // Own the range adapter/useDataBuffer here, or extract a private hooks/use${name}Data.
@@ -68,6 +74,7 @@ export function calendarPlan(context: ScaffoldContext, ownerPath: string, name: 
     }
     `,
   );
+
   // 3. Format the companion sources and colocated test outlines.
   const test = context.sourceFile(
     join(directory, `${name}.test.tsx`),

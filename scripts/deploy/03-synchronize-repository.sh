@@ -1,9 +1,14 @@
 # shellcheck shell=bash
+# Require a clean checkout, fetch main, and re-execute the pinned target tooling.
 
+# Replace this process with the fetched deploy script, preserving its arguments.
+# Example: reexecute_deploy # inherits the deployment lock descriptor
 reexecute_deploy() {
   exec "$SCRIPT_PATH" "$@"
 }
 
+# Require a clean checkout and pin remote main; a changed target re-executes fresh tooling.
+# Example: synchronize_repository # sets TARGET_SHA or replaces this process
 synchronize_repository() {
   # 1. Reuse the pinned target after re-executing freshly fetched tooling.
   if [ "${DEPLOY_BOOTSTRAPPED:-false}" = true ]; then
@@ -14,7 +19,7 @@ synchronize_repository() {
   echo "Pulling latest code..."
   # 2. Reject local changes before fetching or replacing checkout contents.
   if [ -n "$(git status --porcelain)" ]; then
-    echo "ERROR: Working tree has uncommitted changes. Resolve before deploying:"
+    echo "ERROR: Working tree has uncommitted changes. Resolve before deploying:" >&2
     git status --short
     exit 1
   fi

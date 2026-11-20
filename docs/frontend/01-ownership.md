@@ -43,6 +43,9 @@ Do not collect descendant hooks at a parent merely because it renders those desc
 - Keep component-, hook-, and page-only types beside their owner.
 - Use page-root `types.ts` only for contracts consumed by sibling page units.
 
+Follow [TypeScript Contracts](../coding-standards/typescript-contracts.md)
+for explicit boundary inputs and returns, named object contracts, and local inference.
+
 ## Rendered Components
 
 1. Extract a region when it has a clear name and independent contract.

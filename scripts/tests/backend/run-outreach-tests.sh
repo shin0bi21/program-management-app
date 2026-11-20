@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the outreach suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 

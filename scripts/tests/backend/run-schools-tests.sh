@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the schools suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -17,6 +18,6 @@ if docker compose exec -T backend npm run test:schools; then
   echo "Schools tests passed!"
 else
   echo ""
-  echo "Schools tests failed! See output above."
+  echo "Schools tests failed! See output above." >&2
   exit 1
 fi

@@ -1,11 +1,16 @@
 # shellcheck shell=bash disable=SC2034
+# Load environment and component revision markers; publish revisions after successful work.
 
+# Load repository environment values and create the configured revision-marker directory.
+# Example: load_environment # prepares STATE_DIR
 load_environment() {
   # shellcheck source=/dev/null
   [ ! -f .env ] || { set -a; source .env; set +a; }
   mkdir -p "$STATE_DIR"
 }
 
+# Print a component marker only when it still resolves to a commit; missing history prints nothing.
+# Example: read_revision frontend
 read_revision() {
   # 1. Read the selected component marker without requiring one to exist.
   local component="$1"
@@ -22,6 +27,8 @@ read_revision() {
   fi
 }
 
+# Atomically publish a successfully deployed component revision under STATE_DIR.
+# Example: write_revision frontend "$TARGET_SHA"
 write_revision() {
   local component="$1"
   local revision="$2"
@@ -34,12 +41,16 @@ write_revision() {
   mv "$temp_marker" "$STATE_DIR/${component}-revision"
 }
 
+# Read each component revision, retaining empty values for unavailable deployment history.
+# Example: load_revision_state # populates the three revision globals
 load_revision_state() {
   FRONTEND_REVISION="$(read_revision frontend)"
   BACKEND_REVISION="$(read_revision backend)"
   INFRASTRUCTURE_REVISION="$(read_revision infrastructure)"
 }
 
+# Succeed when history is missing or the supplied paths differ from TARGET_SHA.
+# Example: revision_changed "$BACKEND_REVISION" backend/src
 revision_changed() {
   local revision="$1"
   shift

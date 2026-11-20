@@ -5,7 +5,7 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 ## Function Design Recipe
 
 1. **Data:** define meanings, units, valid values, and constraints; reuse domain definitions.
-2. **Contract:** specify input/output types, preconditions, guarantees, and relevant errors or side effects.
+2. **Contract:** follow [TypeScript Contracts](typescript-contracts.md) for input/output types; document preconditions, guarantees, and relevant errors or side effects.
 3. **Purpose:** state what the function does and how its parameters contribute.
 4. **Examples:** work out concrete inputs and expected outputs.
 5. **Template:** plan the branches, traversal, or calculation from the data.
@@ -16,7 +16,7 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 
 - Place function documentation immediately above the function: purpose first,
   then `@param` for meaningful inputs, `@returns` when needed, and `@example`.
-- Express types in TypeScript; document parameter meanings and additional constraints in JSDoc.
+- Use JSDoc for meanings and constraints that the [source types](typescript-contracts.md) cannot express; do not repeat type declarations in comments.
 - State what the function displays, supplies, or changes in plain terms. Explain
   the result before its mechanism; keep the purpose to one or two sentences.
 - Explain what meaningful inputs represent, rather than repeating their types.
@@ -37,22 +37,10 @@ Follow the [Waterloo CS135 design recipe](https://student.cs.uwaterloo.ca/~cs135
 
 ## Helpers
 
-- Require **purpose, contract, and at least one illustrative example**, including small helpers.
-- Waterloo encourages the full recipe for helpers but does not require it.
-- Exercise private helpers through their public owner when appropriate; do not export them solely for tests.
-- An `@example` documents behavior; executable tests verify it.
-
-```ts
-/**
- * Converts a duration in minutes to seconds.
- * @param durationMinutes - A non-negative finite duration in minutes.
- * @returns The equivalent duration in seconds.
- * @example minutesToSeconds(1.5) // 90
- */
-function minutesToSeconds(durationMinutes: number): number {
-  return durationMinutes * 60;
-}
-```
+Apply the same purpose, contract, and example requirements to private helpers.
+The full design recipe is optional for helpers. An `@example` illustrates
+behavior; follow [Test Ownership](../workflows/delivery/testing.md#test-ownership)
+for executable coverage without exporting helpers solely for tests.
 
 ## Complete Example
 

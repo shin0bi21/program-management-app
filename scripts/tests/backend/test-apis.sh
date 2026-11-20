@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, run every API suite, then report completion.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 

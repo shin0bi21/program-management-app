@@ -1,3 +1,7 @@
+/**
+ * Plans a modal, mounted form hook, and their test outlines in memory.
+ * Flow: 1. Validate ownership. 2. Format sources and tests. 3. Return destinations.
+ */
 import { join } from 'node:path';
 
 import type { ScaffoldContext, ScaffoldPlan } from './index.ts';
@@ -19,10 +23,12 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     join(context.frontendRoot, 'common/components/Modal/Modal'),
   );
   const hookName = `use${name}`;
+
   // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
+    import type { ReactElement } from 'react';
     import Modal from '${modalImport}';
 
     import ${hookName} from './hooks/${hookName}';
@@ -36,7 +42,7 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
      * Displays the ${name} form placeholder with feedback supplied by its workflow hook.
      * @example <${name} isOpen onClose={closeModal} />
      */
-    export default function ${name}({ isOpen, onClose }: ${name}Props) {
+    export default function ${name}({ isOpen, onClose }: ${name}Props): ReactElement | null {
       return isOpen ? <${name}Form onClose={onClose} /> : null;
     }
 
@@ -61,15 +67,21 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     }
     `,
   );
+
   // 3. Format the companion sources and colocated test outlines.
   const hook = context.sourceFile(
     join(directory, `hooks/${hookName}.ts`),
     `
+    interface ${name}Result {
+      submitStatus: 'idle';
+      statusMessage: undefined;
+    }
+
     /**
      * Supplies idle submission feedback until the ${name} workflow is implemented.
      * @example ${hookName}() // { submitStatus: 'idle', statusMessage: undefined }
      */
-    export default function ${hookName}() {
+    export default function ${hookName}(): ${name}Result {
       // TODO: Initialize once from the supplied edit record or add defaults.
       // Name incoming context by its domain fields; keep editable values together under draft.
       // Order draft fields and initialization to match the form's DOM order.

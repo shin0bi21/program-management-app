@@ -6,8 +6,20 @@
 set -euo pipefail
 umask 077
 
+# Print explicit target and baseline-reuse modes before maintenance resources are acquired.
+# Example: bash scripts/dev/collapse-database.sh --help
 usage() {
-  printf '%s\n' 'Usage: bash scripts/dev/collapse-database.sh --environment local|production --apply [--reuse-baseline]'
+  cat <<'USAGE'
+Usage: bash scripts/dev/collapse-database.sh --environment local --apply
+       bash scripts/dev/collapse-database.sh --environment production --reuse-baseline --apply
+
+Rebuild the selected database and baseline through the backend maintenance worker.
+  --environment local|production  Required target; uses that target's Compose stack.
+  --apply                         Required acknowledgement of database replacement.
+  --reuse-baseline                Use reviewed baseline files instead of generating them.
+  -h, --help                      Show this help before acquiring maintenance resources.
+Recovery files and the previous database are retained for inspection.
+USAGE
 }
 
 # 1. Require an explicit environment and apply mode before selecting the Compose stack.
@@ -50,13 +62,13 @@ case "$endpoint" in
 esac
 
 lock="$repo/.deploy-state/database-collapse.lock"
-mkdir -p "$(dirname "$lock")"
-mkdir "$lock" || { printf 'ERROR: Another collapse holds %s.\n' "$lock" >&2; exit 1; }
 
 work=''
 paused=false
 committed=false
 
+# Run the named backend maintenance phase with retained recovery and migration-file mounts.
+# Example: run_phase prepare # uses environment, work, and reuse
 run_phase() {
   # 1. Select the compiled or local worker and requested maintenance phase.
   local phase="$1"
@@ -78,15 +90,21 @@ run_phase() {
     backend "${command[@]}" "${arguments[@]}"
 }
 
+# Stop the selected backend before database replacement or rollback.
+# Example: stop_backend
 stop_backend() {
   "${compose[@]}" stop backend
 }
 
+# Start the existing backend container without rebuilding or recreating it.
+# Example: start_backend
 start_backend() {
   # Start the existing container so collapse cannot rebuild or recreate it.
   "${compose[@]}" start backend
 }
 
+# Require a successful backend health response within the fixed retry bound.
+# Example: wait_for_backend_health
 wait_for_backend_health() {
   # 1. Poll backend health within the fixed retry bound.
   local attempt
@@ -132,6 +150,8 @@ finish() {
   rm -rf "$lock"
   exit "$status"
 }
+mkdir -p "$(dirname "$lock")"
+mkdir "$lock" || { printf 'ERROR: Another collapse holds %s.\n' "$lock" >&2; exit 1; }
 trap finish EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM

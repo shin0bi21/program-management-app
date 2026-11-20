@@ -34,10 +34,12 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     directory,
     join(context.frontendRoot, 'common/components/PageContainer/PageContainer'),
   );
+
   // 2. Format the route and its test outline.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
+    import type { ReactElement } from 'react';
     import PageContainer from '${pageContainerImport}';
     import ${hookName} from './hooks/data/${hookName}';
 
@@ -45,7 +47,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
      * Coordinates shared ${name} context and supplies the collection page layout.
      * @example <${name} />
      */
-    export default function ${name}() {
+    export default function ${name}(): ReactElement {
       const pageData = ${hookName}();
       // TODO: Set up page controls, selection, actions, and messages as needed.
       // TODO: Pass domain context to dashboard cards and body views that need it.
@@ -69,6 +71,7 @@ export function pagePlan(context: ScaffoldContext, pagePath: string): ScaffoldPl
     `,
   );
 
+  // 3. Format shared reference data and its test outline.
   const hook = context.sourceFile(
     join(directory, `hooks/data/${hookName}.ts`),
     `

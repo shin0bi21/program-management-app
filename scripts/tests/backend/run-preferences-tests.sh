@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the preferences suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -17,6 +18,6 @@ if docker compose exec -T backend npm run test:preferences; then
   echo "Preferences tests passed!"
 else
   echo ""
-  echo "Preferences tests failed! See output above."
+  echo "Preferences tests failed! See output above." >&2
   exit 1
 fi

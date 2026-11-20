@@ -1,5 +1,8 @@
 # shellcheck shell=bash
+# Coordinate image, migration, service, and revision phases selected by main.sh.
 
+# Validate selected migration work before replacing and health-checking the backend.
+# Example: deploy_backend # uses MIGRATIONS_CHANGED
 deploy_backend() {
   # 1. Validate the database, applying migrations only when their files changed.
   require_database
@@ -15,10 +18,14 @@ deploy_backend() {
   restart_backend
 }
 
+# Replace and verify nginx after its image has been built by the deployment owner.
+# Example: deploy_frontend
 deploy_frontend() {
   restart_frontend
 }
 
+# Build both images, apply guarded migrations, then replace backend and nginx.
+# Example: deploy_infrastructure
 deploy_infrastructure() {
   echo ""
   echo "Infrastructure changed; running the full deployment flow."
@@ -31,12 +38,16 @@ deploy_infrastructure() {
   restart_frontend
 }
 
+# Publish TARGET_SHA for every component after the complete deployment succeeds.
+# Example: record_all_revisions
 record_all_revisions() {
   write_revision backend "$TARGET_SHA"
   write_revision frontend "$TARGET_SHA"
   write_revision infrastructure "$TARGET_SHA"
 }
 
+# Print the successfully deployed target after required gates and markers complete.
+# Example: deployment_complete
 deployment_complete() {
   echo ""
   echo "=========================================="

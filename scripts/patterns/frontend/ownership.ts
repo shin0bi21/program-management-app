@@ -3,11 +3,16 @@ import { resolveImport } from '../utils.ts';
 import type { Findings } from '../utils.ts';
 import { findRoutePageDirectory } from './shared.ts';
 
+interface ModuleReference {
+  line: number;
+  modulePath: string;
+}
+
 /**
  * Extracts static import and re-export module paths with one-based source line locations.
  * @example moduleReferences('a.ts', "export * from './b';")[0].modulePath // './b'
  */
-function moduleReferences(file: string, source: string): Array<{ line: number; modulePath: string }> {
+function moduleReferences(file: string, source: string): ModuleReference[] {
   // 1. Parse static module declarations, including re-exports.
   const sourceFile = parseSourceFile(file, source);
   // 2. Retain module specifiers with their original source line numbers.

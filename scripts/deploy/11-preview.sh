@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# Fetch and classify remote main inside temporary Git storage without deploying.
 
 # The subshell confines the temporary Git context and cleanup trap to this preview.
 preview_deployment() (

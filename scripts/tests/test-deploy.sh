@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
+# Verify deployment classification and preview behavior using disposable Git fixtures.
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TEST_ROOT="$(mktemp -d /tmp/myapp-deployment-test.XXXXXX)"
+REEXECUTED_ARGUMENTS=''
+trap 'rm -rf -- "$TEST_ROOT"; if [ -n "$REEXECUTED_ARGUMENTS" ]; then rm -f -- "$REEXECUTED_ARGUMENTS"; fi' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 TEST_REPO="$TEST_ROOT/checkout"
 REEXECUTED_ARGUMENTS="$(mktemp /tmp/myapp-deployment-arguments.XXXXXX)"
-trap 'rm -rf -- "$TEST_ROOT"; rm -f -- "$REEXECUTED_ARGUMENTS"' EXIT
 
 mkdir -p "$TEST_REPO"
 git -C "$TEST_REPO" init -q
@@ -47,7 +52,7 @@ for required_function in \
   load_revision_state classify_changes print_deployment_summary preview_deployment deploy_backend \
   deploy_frontend deploy_infrastructure cleanup; do
   declare -F "$required_function" > /dev/null || {
-    echo "FAIL: deploy component did not define $required_function"
+    echo "FAIL: deploy component did not define $required_function" >&2
     exit 1
   }
 done
@@ -77,7 +82,7 @@ done
 )
 
 [ "$(tr -d '\n' < "$REEXECUTED_ARGUMENTS")" = "0" ] || {
-  echo "FAIL: repository bootstrap did not preserve deploy arguments"
+  echo "FAIL: repository bootstrap did not preserve deploy arguments" >&2
   exit 1
 }
 
@@ -110,10 +115,10 @@ assert_plan() {
   classify_changes
 
   # 3. Compare every component flag with the scenario expectations.
-  [ "$FRONTEND_CHANGED" = "$expected_frontend" ] || { echo "FAIL: $label frontend"; exit 1; }
-  [ "$BACKEND_CHANGED" = "$expected_backend" ] || { echo "FAIL: $label backend"; exit 1; }
-  [ "$MIGRATIONS_CHANGED" = "$expected_migrations" ] || { echo "FAIL: $label migrations"; exit 1; }
-  [ "$INFRASTRUCTURE_CHANGED" = "$expected_infrastructure" ] || { echo "FAIL: $label infrastructure"; exit 1; }
+  [ "$FRONTEND_CHANGED" = "$expected_frontend" ] || { echo "FAIL: $label frontend" >&2; exit 1; }
+  [ "$BACKEND_CHANGED" = "$expected_backend" ] || { echo "FAIL: $label backend" >&2; exit 1; }
+  [ "$MIGRATIONS_CHANGED" = "$expected_migrations" ] || { echo "FAIL: $label migrations" >&2; exit 1; }
+  [ "$INFRASTRUCTURE_CHANGED" = "$expected_infrastructure" ] || { echo "FAIL: $label infrastructure" >&2; exit 1; }
 }
 
 write_test_file frontend/src/app.tsx "export default 'frontend';"
@@ -163,16 +168,16 @@ assert_plan documentation-only "$DOCUMENTATION_REVISION_SHA" "$INFRASTRUCTURE_RE
 
   MIGRATIONS_CHANGED=false
   deploy_backend > /dev/null
-  [ "${steps[*]}" = "database status backend" ] || { echo "FAIL: backend deployment steps"; exit 1; }
+  [ "${steps[*]}" = "database status backend" ] || { echo "FAIL: backend deployment steps" >&2; exit 1; }
 
   steps=()
   MIGRATIONS_CHANGED=true
   deploy_backend > /dev/null
-  [ "${steps[*]}" = "database migrate backend" ] || { echo "FAIL: backend migration deployment steps"; exit 1; }
+  [ "${steps[*]}" = "database migrate backend" ] || { echo "FAIL: backend migration deployment steps" >&2; exit 1; }
 
   steps=()
   deploy_infrastructure > /dev/null
-  [ "${steps[*]}" = "build-backend build-frontend migrate backend frontend" ] || { echo "FAIL: infrastructure deployment steps"; exit 1; }
+  [ "${steps[*]}" = "build-backend build-frontend migrate backend frontend" ] || { echo "FAIL: infrastructure deployment steps" >&2; exit 1; }
 )
 
 # Preview must see a remote commit absent from the checkout without changing it.
@@ -201,6 +206,8 @@ for tool in docker flock; do
   chmod +x "$TEST_ROOT/bin/$tool"
 done
 
+# Print ordered checksums of the disposable checkout to detect preview mutations.
+# Example: snapshot_checkout > "$TEST_ROOT/before"
 snapshot_checkout() {
   (
     cd "$TEST_REPO" || exit
@@ -210,6 +217,8 @@ snapshot_checkout() {
   )
 }
 
+# Run the real preview against disposable remotes with deployment tools blocked.
+# Example: run_preview > "$TEST_ROOT/output"
 run_preview() {
   DEPLOY_REPO_ROOT="$TEST_REPO" DEPLOY_LOCKFILE="$TEST_ROOT/deploy.lock" \
     GIT_CONFIG_GLOBAL="$TEST_ROOT/gitconfig" TMPDIR="$TEST_ROOT/temporary" PATH="$TEST_ROOT/bin:$PATH" \
@@ -219,11 +228,11 @@ run_preview() {
 assert_preview_unchanged() {
   # 1. Compare checkout contents before and after preview.
   snapshot_checkout > "$TEST_ROOT/after"
-  cmp "$TEST_ROOT/before" "$TEST_ROOT/after" || { echo "FAIL: preview changed checkout or deployment state"; exit 1; }
+  cmp "$TEST_ROOT/before" "$TEST_ROOT/after" || { echo "FAIL: preview changed checkout or deployment state" >&2; exit 1; }
   # 2. Verify the lock, hooks, and temporary directory also remain unchanged.
-  [ "$(cat "$TEST_ROOT/deploy.lock")" = 'existing lock' ] || { echo "FAIL: preview changed deploy lock"; exit 1; }
-  [ ! -e "$TEST_ROOT/hook-called" ] || { echo "FAIL: preview ran a Git hook"; exit 1; }
-  [ -z "$(ls -A "$TEST_ROOT/temporary")" ] || { echo "FAIL: preview left temporary files"; exit 1; }
+  [ "$(cat "$TEST_ROOT/deploy.lock")" = 'existing lock' ] || { echo "FAIL: preview changed deploy lock" >&2; exit 1; }
+  [ ! -e "$TEST_ROOT/hook-called" ] || { echo "FAIL: preview ran a Git hook" >&2; exit 1; }
+  [ -z "$(ls -A "$TEST_ROOT/temporary")" ] || { echo "FAIL: preview left temporary files" >&2; exit 1; }
 }
 
 snapshot_checkout > "$TEST_ROOT/before"
@@ -247,17 +256,49 @@ assert_preview_unchanged
 git -C "$TEST_REPO" config protocol.file.allow never
 snapshot_checkout > "$TEST_ROOT/before"
 if run_preview > "$TEST_ROOT/output" 2>&1; then
-  echo "FAIL: preview ignored the repository transport policy"
+  echo "FAIL: preview ignored the repository transport policy" >&2
   exit 1
 fi
 grep -q "transport 'file' not allowed" "$TEST_ROOT/output"
 assert_preview_unchanged
 
 if bash "$PROJECT_ROOT/scripts/deploy/main.sh" --plan > "$TEST_ROOT/output" 2>&1; then
-  echo "FAIL: retired --plan argument is still accepted"
+  echo "FAIL: retired --plan argument is still accepted" >&2
   exit 1
 fi
 grep -q "Unknown deploy argument '--plan'" "$TEST_ROOT/output"
 assert_preview_unchanged
 
-echo "Deployment classification and read-only preview tests passed!"
+# Help must return before logging, locking, fetching, or reading deployment environment.
+DEPLOY_REPO_ROOT="$TEST_REPO" DEPLOY_LOCKFILE="$TEST_ROOT/deploy.lock" \
+  PATH="$TEST_ROOT/bin:$PATH" bash "$PROJECT_ROOT/scripts/deploy/main.sh" --help > "$TEST_ROOT/output"
+grep -q '^Usage:' "$TEST_ROOT/output"
+grep -q -- '--preview' "$TEST_ROOT/output"
+assert_preview_unchanged
+
+# Interruptions must reach EXIT cleanup with a failing signal status.
+for signal_name in INT TERM; do
+  case "$signal_name" in
+    INT) expected_status=130 ;;
+    TERM) expected_status=143 ;;
+  esac
+  signal_status=0
+  DEPLOY_REPO_ROOT="$TEST_REPO" bash -c '
+    source "$1"
+    DEPLOY_LOCK_HELD=true
+    # Preserve the output path when cleanup is invoked without positional arguments.
+    cleanup_output="$2"
+    cleanup() {
+      local status=$?
+      trap - EXIT INT TERM
+      printf "%s\n" "$status" > "$cleanup_output"
+      exit "$status"
+    }
+    initialize_process >/dev/null
+    kill -s "$3" "$$"
+  ' sh "$PROJECT_ROOT/scripts/deploy/main.sh" "$TEST_ROOT/signal-status" "$signal_name" || signal_status=$?
+  [ "$signal_status" -eq "$expected_status" ] || { echo "FAIL: $signal_name exit status" >&2; exit 1; }
+  [ "$(cat "$TEST_ROOT/signal-status")" = "$expected_status" ] || { echo "FAIL: $signal_name cleanup status" >&2; exit 1; }
+done
+
+echo "Deployment classification, preview, help, and interruption tests passed!"

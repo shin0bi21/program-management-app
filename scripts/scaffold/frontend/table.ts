@@ -25,17 +25,19 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
   const hookName = `use${name}Data`;
   const title = name.replace(/Table$/, '');
   const dataDirectory = join(directory, 'hooks');
+
   // 2. Format the component source without writing destination files.
   const component = context.sourceFile(
     join(directory, `${name}.tsx`),
     `
+    import type { ReactElement } from 'react';
     import ${hookName} from '${context.relativeImport(directory, join(dataDirectory, hookName))}';
 
     /**
      * Displays a placeholder for the ${title} collection until shared Table wiring is implemented.
      * @example <${name} /> displays the table integration prompt.
      */
-    export default function ${name}() {
+    export default function ${name}(): ReactElement {
       const table = ${hookName}();
 
       return (
@@ -46,6 +48,7 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     }
     `,
   );
+
   // 3. Format the companion sources and colocated test outlines.
   const hook = context.sourceFile(
     join(dataDirectory, `${hookName}.ts`),
@@ -53,12 +56,17 @@ export function tablePlan(context: ScaffoldContext, ownerPath: string, name: str
     // TODO: Replace this outline with the complete domain API row type.
     interface ${title}Row { id: string }
 
+    interface ${title}TableData {
+      rows: ${title}Row[];
+      loading: boolean;
+    }
+
     /**
      * Supplies complete ${title} rows for the table's applied controls.
      * @returns An empty row list with loading disabled; no request is made yet.
      * @example ${hookName}() returns { rows: [], loading: false }.
      */
-    export default function ${hookName}() {
+    export default function ${hookName}(): ${title}TableData {
       // TODO: Use useInfiniteListQuery<${title}Row> under a table-only query prefix.
       // Receive applied filters/sorting and any required page reference context as arguments.
       // Cache complete API rows directly; do not create a normalized record store.
