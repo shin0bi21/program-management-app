@@ -33,6 +33,16 @@ export interface Task {
   writable: boolean;
 }
 
+// Applied controls shared by task collection views.
+export interface TasksFilters {
+  cycleIds: string[];
+  search: string;
+  staffIds: string[];
+  programIds: string[];
+  categories: TaskCategory[];
+  statuses: TaskStatus[];
+}
+
 // Shared task data contracts.
 export type { StaffReference, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
 

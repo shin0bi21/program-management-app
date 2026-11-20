@@ -2,13 +2,13 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { getTasksTableData } from '../../../tasks.api';
+import { getTasksTableData } from '../api/taskTable.api';
 import useTaskTableData from './useTaskTableData';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
   default: vi.fn(() => ({ rows: [] })),
 }));
-vi.mock('../../../tasks.api', () => ({ getTasksTableData: vi.fn() }));
+vi.mock('../api/taskTable.api', () => ({ getTasksTableData: vi.fn() }));
 
 const filters = {
   cycleIds: ['cycle-1'],

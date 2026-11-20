@@ -1,8 +1,8 @@
 import { useRef, useState, type FormEvent } from 'react';
 
-import { setTask } from '../../../tasks.api';
+import { setTask, type SetTaskInput } from '../../../api/tasks.api';
 import type { TaskCategory } from '../../../types';
-import { getSubmitStatusMessage, useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
+import { getSubmitStatusMessage, useSubmitStatus, type SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
 import type { TaskModalProps } from '../TaskModal';
@@ -22,6 +22,16 @@ interface TaskDraft {
   details: string;
 }
 
+interface TaskModalResult {
+  draft: TaskDraft;
+  updateDraft: <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => void;
+  updateStartDate: (value: string) => void;
+  submissionComplete: boolean;
+  status: SubmitStatus;
+  statusMessage: string | undefined;
+  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+}
+
 /**
  * Owns one mounted task draft and its submission lock.
  * Missing add dates default to today for the start and the start date for the due date.
@@ -30,7 +40,7 @@ interface TaskDraft {
 export default function useTaskModal({
   target,
   onSaved,
-}: UseTaskModalOptions) {
+}: UseTaskModalOptions): TaskModalResult {
   const task = target.mode === 'edit' ? target.task : undefined;
   const addContext = target.mode === 'add' ? target.context : undefined;
   const [draft, setDraft] = useState<TaskDraft>(() => {
@@ -70,7 +80,7 @@ export default function useTaskModal({
     setError('');
 
     try {
-      const input = {
+      const input: SetTaskInput = {
         title: draft.title.trim(),
         details: draft.details.trim() || null,
         category: draft.category,

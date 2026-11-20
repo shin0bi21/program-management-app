@@ -1,16 +1,15 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type MutableRefObject } from 'react';
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
 import {
   deleteTask,
-  updateTaskPlacement,
   updateTaskState,
-} from '../../tasks.api';
-import type { Task } from '../../types';
-
-import type { TaskCalendarCache } from '../../types';
+} from '../../api/tasks.api';
+import { updateTaskPlacement } from '../../components/TaskCalendar/api/taskCalendar.api';
+import type { Task, TaskCalendarCache } from '../../types';
 
 const EMPTY_CALENDAR_CACHE: TaskCalendarCache = {
   upsert: () => undefined,
@@ -25,6 +24,22 @@ interface TaskActionHandlers {
   onTaskRemoved?: (taskId: string) => void;
 }
 
+interface TaskActionsResult {
+  actionError: string;
+  calendarCacheRef: MutableRefObject<TaskCalendarCache>;
+  isTaskPending: (taskId: string) => boolean;
+  syncTask: (task: Task, operation?: 'create' | 'update') => void;
+  deleteTask: (task: Task) => Promise<void>;
+  setTaskRange: (
+    task: Task,
+    nextRange: DateRange,
+    action: 'move' | 'resize',
+    staffId?: string,
+  ) => Promise<Task | null>;
+  setState: (task: Task, state: Task['state']) => Promise<void>;
+  logHours: (input: SetHoursInput) => Promise<void>;
+}
+
 /**
  * Reconciles task actions and Hours logged from Tasks.
  * @param options - Query prefixes and callbacks that update temporary selection context.
@@ -36,11 +51,11 @@ export default function useTaskActions({
   hoursQueryKey,
   onTaskRemoved,
   onTaskSynced,
-}: TaskActionHandlers) {
+}: TaskActionHandlers): TaskActionsResult {
   // Action state and shared cache dependency.
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState('');
-  const calendarCacheRef = useRef<TaskCalendarCache>(EMPTY_CALENDAR_CACHE);
+  const calendarCacheRef = useRef(EMPTY_CALENDAR_CACHE);
   const pendingTaskIdsRef = useRef(new Set<string>());
   const [pendingTaskIds, setPendingTaskIds] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -99,9 +114,9 @@ export default function useTaskActions({
 
   const setTaskRange = useCallback(async (
     task: Task,
-    nextRange: { start: string; end: string },
+    nextRange: DateRange,
     action: 'move' | 'resize',
-    staffId = task.staffId,
+    staffId: string = task.staffId,
   ) => {
     setActionError('');
 

@@ -2,7 +2,7 @@ import { act, renderHook as renderBase, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
-import type { TaskReferenceData } from '../../tasks.api';
+import type { TaskReferenceData } from '../../api/tasks.api';
 import type { StaffReference, TaskProgram } from '../../types';
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 

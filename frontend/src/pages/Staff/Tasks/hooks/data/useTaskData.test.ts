@@ -3,11 +3,11 @@ import { getCycleReferences, getProgramReferences, getStaffReferences } from '..
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getTaskReferenceData } from '../../tasks.api';
+import { getTaskReferenceData } from '../../api/tasks.api';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import useTaskData from './useTaskData';
 
-vi.mock('../../tasks.api', () => ({
+vi.mock('../../api/tasks.api', () => ({
   getTaskReferenceData: vi.fn(),
 }));
 vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn() }));

@@ -2,14 +2,32 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
-import { getTaskReferenceData } from '../../tasks.api';
+import { getTaskReferenceData, type TaskReferenceData } from '../../api/tasks.api';
+import type { CycleReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { StaffReference, TaskProgram } from '../../types';
+
+interface TaskDataResult {
+  cycles: CycleReference[];
+  cyclesLoading: boolean;
+  cyclesError: string;
+  referenceData: TaskReferenceData | undefined;
+  referenceDataLoading: boolean;
+  referenceDataError: Error | null;
+  staff: StaffReference[];
+  staffLoading: boolean;
+  staffError: string;
+  programs: TaskProgram[];
+  programsLoading: boolean;
+  programsError: string;
+  writableStaff: StaffReference[];
+}
 
 /**
  * Supplies shared staff, program, cycle, and task choices.
  * @param referenceDataQueryKey - Cache key for task categories and lifecycle statuses.
  * @example const { staff, cycles } = useTaskData(['task-reference-data'])
  */
-export default function useTaskData(referenceDataQueryKey: readonly unknown[]) {
+export default function useTaskData(referenceDataQueryKey: readonly unknown[]): TaskDataResult {
   const query = useQuery({
     queryKey: referenceDataQueryKey,
     queryFn: ({ signal }) => getTaskReferenceData({ signal }),

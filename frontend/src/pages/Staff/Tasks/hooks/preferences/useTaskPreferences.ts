@@ -1,8 +1,10 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
-import type { TaskReferenceData, TasksFilters } from '../../tasks.api';
+import type { TaskReferenceData } from '../../api/tasks.api';
 import { useMemo } from 'react';
+import type { DateRange } from '../../../../../common/utils/dateRange';
+import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
 
 import usePreferences from '../../../../../common/features/Preferences/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
@@ -19,6 +21,7 @@ import {
   type TaskCategory,
   type TaskStatus,
   type TaskSortKey,
+  type TasksFilters,
 } from '../../types';
 
 type TasksView = 'calendar' | 'table';
@@ -52,6 +55,25 @@ interface UseTaskPreferencesOptions {
   cyclesError: boolean;
 }
 
+type TaskFilterValues = Omit<TasksFilters, 'search'>;
+
+type TaskTableControls = ReturnType<typeof useTableLayout> & {
+  sorting: ListSort<TaskSortKey>;
+  setSorting: (sorting: ListSort<TaskSortKey>) => void;
+};
+
+interface TaskPreferencesResult {
+  ready: boolean;
+  error: string | null;
+  appliedFilters: TasksFilters;
+  dateRange: DateRange | undefined;
+  view: TasksView;
+  setView: (view: TasksView) => void;
+  search: PageSearchControls;
+  filters: ReturnType<typeof createPreferenceFilters<TaskFilterValues>>;
+  table: TaskTableControls;
+}
+
 /**
  * Restores task controls and supplies applied request filters with derived calendar bounds.
  * @param options - Reference choices, their availability, and supported table keys.
@@ -71,7 +93,7 @@ export default function useTaskPreferences({
   cycles,
   cyclesLoading,
   cyclesError,
-}: UseTaskPreferencesOptions) {
+}: UseTaskPreferencesOptions): TaskPreferencesResult {
   const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
   const layout = useTableLayout({ key: 'task-preferences', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
@@ -119,7 +141,7 @@ export default function useTaskPreferences({
     { id: 'statuses' as const, label: 'Status', options: (referenceData?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
   ], [referenceData, cycles, staff, programs]);
 
-  const filterValues = {
+  const filterValues: TaskFilterValues = {
     cycleIds: preferences.cycleIds,
     staffIds: preferences.staffIds,
     programIds: preferences.programIds,

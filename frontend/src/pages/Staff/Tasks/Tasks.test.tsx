@@ -19,7 +19,7 @@ import type useTaskTable from './components/TaskTable/hooks/useTaskTable';
 import type TaskModal from './components/TaskModal/TaskModal';
 import type TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 import type TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
-import { deleteTask, getTaskReferenceData, updateTaskState } from './tasks.api';
+import { deleteTask, getTaskReferenceData, updateTaskState } from './api/tasks.api';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
 import type { StaffReference } from './types';
 
@@ -82,10 +82,11 @@ vi.mock('./components/TaskTable/hooks/useTaskTable', () => ({
     return { columns: [] };
   },
 }));
-vi.mock('./tasks.api', () => ({
-  getTaskDashboardData: vi.fn(), getTaskReferenceData: vi.fn(),
-  updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(), deleteTask: vi.fn(),
+vi.mock('./api/tasks.api', () => ({
+  getOpenTasks: vi.fn(), getTaskReferenceData: vi.fn(),
+  updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
+vi.mock('./components/TaskCalendar/api/taskCalendar.api', () => ({ updateTaskPlacement: vi.fn() }));
 vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
 vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
