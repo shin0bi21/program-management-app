@@ -5,7 +5,6 @@ have separate stopping points; production release requires explicit authorizatio
 
 | Task | Guide |
 |---|---|
-| Trace local failures, inspect logs, or attach the debugger | [Debugging](../debugging.md) |
 | Populate the local stack with production records | [Refresh Local Data](refresh-data.md) |
 | Replace migration history with a current PostgreSQL init | [Collapse Database History](collapse-database.md) |
 | Choose focused tests and understand suite ownership | [Testing](testing.md) |

@@ -198,6 +198,24 @@ If the backend exits during `db:migrate` or `seed:admin`:
    existing administrator passwords; changing `ADMIN_PASSWORD` in `.env` does
    not reset an account that already exists.
 
-If the same failure remains, use [Logs and Diagnostics](../workflows/debugging.md#logs-and-diagnostics)
-to investigate the failing service. Do not reset database volumes to fix a
-startup error if they contain work you need.
+If the same failure remains, use the environment checks below. Do not reset
+database volumes if they contain work you need.
+
+## Check the Local Environment
+
+From the project root, run the check for the problem you are investigating.
+Commands using `docker compose exec` require the named service to be running.
+
+| Check | Command | Expected Result |
+|---|---|---|
+| Container state | `docker compose ps -a` | Frontend, backend, and database are running. |
+| Recent startup errors | `docker compose logs --tail=100 frontend backend db` | No unresolved startup errors. |
+| Database readiness | `docker compose exec db pg_isready` | Database is accepting connections. |
+| Backend health | `curl --fail --max-time 3 http://localhost:5001/health` | Successful health response; use your replacement port if changed. |
+| Migration status | `docker compose exec backend npm run db:status` | Zero pending migrations and no drift errors. |
+| Backend dependencies | `docker compose exec backend npm ls --depth=0` | Dependency list without missing or invalid package errors. |
+| Frontend dependencies | `docker compose exec frontend npm ls --depth=0` | Dependency list without missing or invalid package errors. |
+
+These checks do not apply migrations, install packages, or restart services.
+For failures, use the matching fix above or the
+[local migration procedure](../backend/database.md#apply-local-migrations).
