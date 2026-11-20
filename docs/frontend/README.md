@@ -17,7 +17,7 @@ for a new feature, or go directly to the guide matching your task.
 
 1. Find the source owner below.
 2. Read its types, function documentation, and colocated tests for inputs and behavior.
-3. Update contracts at that source owner using the [design recipe](../workflows/documentation.md).
+3. Update contracts at that source owner using the [design recipe](../coding-standards/documentation.md).
 
 | Surface | Source owner |
 |---|---|

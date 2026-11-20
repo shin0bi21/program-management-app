@@ -74,7 +74,7 @@ comment before its conditional block, and leave a blank line between steps.
 Do not number every statement or explain SQL mechanics in the step label.
 
 Keep function contracts brief; explain important constraints and include one
-small example. Follow [Code Documentation](../workflows/documentation.md).
+small example. Follow [Code Documentation](../coding-standards/documentation.md).
 
 ## Save a Full Record
 

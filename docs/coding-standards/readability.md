@@ -49,17 +49,6 @@ return records.length === 0 ? 'empty' : 'ready';
 - Follow actual dependencies; validate before mutation where required.
 - Keep related statements together. Omit unused phases and empty section headings.
 
-## Data Shapes and Boundaries
-
-- Prioritize consistent domain shapes, field names, units, and formats across persistence, APIs, frontend state, and forms.
-- Format values for display without introducing artificial domain data. For example, do not turn a date-only value into a timestamp just to format it.
-- Convert representations only at boundaries that require it. Keep necessary conversions explicit and local to that boundary, with one canonical representation for the domain value.
-- Raise concerns when an existing contract or dependency would require conflicting shapes or extra adapters. Propose the simpler contract instead of silently adding conversions, duplicate representations, or compatibility layers to keep implementation moving.
-- Resolve issues within the authorized scope and flag broader decisions for discussion.
-
-Follow [Dates and Times](date-and-time.md) for canonical date/time shapes and
-the boundaries where timezone conversion is required.
-
 ## Abstractions
 
 - Extract helpers for distinct responsibilities or contracts; keep cohesive flows together.
@@ -67,4 +56,5 @@ the boundaries where timezone conversion is required.
 - Add memoization, callback indirection, or caching only for a required identity
   contract or demonstrated benefit.
 
-See [Code Documentation](documentation.md) for contracts and comments.
+See [TypeScript Contracts](typescript-contracts.md) for typing and data shapes,
+and [Code Documentation](documentation.md) for comments and examples.

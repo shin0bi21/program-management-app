@@ -177,7 +177,7 @@ function repositoryFiles(repoRoot: string): string[] {
  * @example countLines('// heading\nconst x = 1;\n', 'ts') // 1
  * @example countLines('// heading\nconst x = 1;\n', 'ts', false) // 2
  */
-export function countLines(text: string, extension: string, ignoreComments = true): number {
+export function countLines(text: string, extension: string, ignoreComments: boolean = true): number {
   // 1. Select comment syntax and retain block state across lines.
   const supportsSlashComments = extension === 'ts' || extension === 'tsx';
   const supportsBlockComments = supportsSlashComments || extension === 'css' || extension === 'sql';

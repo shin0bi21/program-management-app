@@ -41,9 +41,10 @@ Follow the narrowest applicable contract; keep the rules in those owners:
 |---|---|
 | Frontend structure and composition | [Ownership](../../../docs/frontend/01-ownership.md), [scaffolding](../../../docs/frontend/04-scaffolding.md#maintain-the-pattern), and the focused [frontend guide](../../../docs/frontend/README.md#find-the-right-guide) |
 | Backend behavior and layers | [Backend routing](../../../docs/backend/README.md), then the affected policy/service/data/API guide |
-| Naming, expressions, function phases, spacing | [Code Readability](../../../docs/workflows/readability.md) |
-| Function purposes, contracts, examples, comments | [Code Documentation](../../../docs/workflows/documentation.md) |
-| Runnable scripts and helpers | [Script Structure](../../../docs/workflows/scripts.md) |
+| Naming, expressions, function phases, spacing | [Code Readability](../../../docs/coding-standards/readability.md) |
+| Boundary types, inference, and data shapes | [TypeScript Contracts](../../../docs/coding-standards/typescript-contracts.md) |
+| Function purposes, contracts, examples, comments | [Code Documentation](../../../docs/coding-standards/documentation.md) |
+| Runnable scripts and helpers | [Script Structure](../../../docs/coding-standards/scripts.md) |
 | Tests and evidence reuse | [Testing](../../../docs/workflows/delivery/testing.md#test-ownership) |
 | Workflow or CI behavior | The affected [delivery guide](../../../docs/workflows/delivery/README.md) |
 

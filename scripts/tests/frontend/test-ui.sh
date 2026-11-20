@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Run the complete frontend suite and report success only after it passes.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 

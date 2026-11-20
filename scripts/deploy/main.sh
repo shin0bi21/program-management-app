@@ -15,6 +15,8 @@ for deploy_part in "$DEPLOY_PARTS_DIR"/[0-9][0-9]-*.sh; do
 done
 unset deploy_part
 
+# Validate the request, select preview or deployment, then run selected phases and record success.
+# Example: main --preview # classifies remote main without deploying
 main() {
   # 1. Validate arguments and handle preview before acquiring deployment resources.
   parse_arguments "$@"
@@ -48,7 +50,6 @@ main() {
   fi
 
   # 5. Build required artifacts before replacing either running service.
-  # Build every required artifact before changing a running service.
   [ "$BACKEND_CHANGED" = false ] || build_backend_image
   [ "$FRONTEND_CHANGED" = false ] || build_frontend_image
 
@@ -64,7 +65,6 @@ main() {
   fi
 
   # 7. Advance unchanged component markers and report completion.
-  # Components with no changes are also current at TARGET_SHA.
   [ "$BACKEND_CHANGED" = true ] || write_revision backend "$TARGET_SHA"
   [ "$FRONTEND_CHANGED" = true ] || write_revision frontend "$TARGET_SHA"
   write_revision infrastructure "$TARGET_SHA"

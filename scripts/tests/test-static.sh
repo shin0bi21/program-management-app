@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Check shell syntax and ShellCheck, then lint sources and typecheck tooling.
 set -euo pipefail
 cd "$(dirname "$0")/../.." || exit
 
@@ -9,7 +10,7 @@ while IFS= read -r -d '' file; do
 done < <(find scripts -type f -name '*.sh' -print0)
 
 if [ "${#shell_files[@]}" -eq 0 ]; then
-  echo "ERROR: No shell scripts found"
+  echo "ERROR: No shell scripts found" >&2
   exit 1
 fi
 
@@ -18,7 +19,7 @@ echo "Checking shell syntax..."
 bash -n "${shell_files[@]}"
 
 if ! command -v shellcheck > /dev/null 2>&1; then
-  echo "ERROR: shellcheck is required"
+  echo "ERROR: shellcheck is required" >&2
   exit 1
 fi
 

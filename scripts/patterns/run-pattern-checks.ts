@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Usage: node scripts/patterns/run-pattern-checks.ts [--changed [BASE_REF] | --all]
-// Read-only: discover repository files, apply pattern rules, and report violations.
+// Inspect repository patterns without changing files; see usage() for commands.
+// Flow: 1. Validate options. 2. Discover files. 3. Apply owner rules. 4. Report findings.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,17 +27,17 @@ interface EnforcementOptions {
 }
 
 /**
- * Prints supported pattern-check modes and comparison-base defaults.
- * @example usage() // prints --changed and --all options
+ * Supplies supported pattern-check modes and comparison-base defaults.
+ * @example usage().includes('--changed') // true
  */
-function usage(): void {
-  console.log(`Usage: node scripts/patterns/run-pattern-checks.ts [--changed [BASE_REF] | --all]
+function usage(): string {
+  return `Usage: node scripts/patterns/run-pattern-checks.ts [--changed [BASE_REF] | --all]
 
   --changed   Check committed and working-tree changes (default).
   BASE_REF    Compare committed changes with this revision. Defaults to the
               development branch, the remote default branch, or HEAD.
   --all       Check every tracked and untracked repository source file.
-  -h, --help  Show this help.`);
+  -h, --help  Show this help.`;
 }
 
 /**
@@ -56,8 +56,17 @@ function defaultBaseRef(): string {
   // 1. Honor an explicit comparison base from the environment.
   if (process.env.CHECK_PATTERNS_BASE_REF) return process.env.CHECK_PATTERNS_BASE_REF;
   // 2. Prefer origin/develop, then the remote default branch or HEAD.
-  try { git(['rev-parse', '--verify', '--quiet', 'origin/develop']); return 'origin/develop'; } catch { /* fall through */ }
-  try { return git(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']) || 'HEAD'; } catch { return 'HEAD'; }
+  try {
+    git(['rev-parse', '--verify', '--quiet', 'origin/develop']);
+    return 'origin/develop';
+  } catch {
+    // A local-only checkout may have no remote development reference.
+  }
+  try {
+    return git(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']) || 'HEAD';
+  } catch {
+    return 'HEAD';
+  }
 }
 
 /**
@@ -67,11 +76,14 @@ function defaultBaseRef(): string {
 function parseArguments(argv: string[]): CheckOptions {
   // 1. Recognize the default mode, help, and supported argument combinations.
   if (!argv.length) return { mode: 'changed', baseRef: defaultBaseRef() };
-  if (argv[0] === '-h' || argv[0] === '--help') { usage(); process.exit(0); }
+  if (argv[0] === '-h' || argv[0] === '--help') {
+    console.log(usage());
+    process.exit(0);
+  }
   if (argv[0] === '--all' && argv.length === 1) return { mode: 'all' };
   if (argv[0] === '--changed' && argv.length <= 2) return { mode: 'changed', baseRef: argv[1] ?? defaultBaseRef() };
   // 2. Print usage and fail when the requested combination is invalid.
-  usage();
+  console.error(usage());
   process.exit(2);
 }
 
@@ -90,7 +102,13 @@ function uniqueLines(output: string): string[] {
 function collectChangedFiles(baseRef: string): string[] {
   // 1. Resolve a valid comparison commit and its common ancestor with HEAD.
   let mergeBase: string;
-  try { git(['rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`]); mergeBase = git(['merge-base', baseRef, 'HEAD']); } catch { console.error(`ERROR: Base revision '${baseRef}' does not exist.`); process.exit(2); }
+  try {
+    git(['rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`]);
+    mergeBase = git(['merge-base', baseRef, 'HEAD']);
+  } catch {
+    console.error(`ERROR: Base revision '${baseRef}' does not exist.`);
+    process.exit(2);
+  }
   // 2. Combine committed, unstaged, staged, and untracked paths without duplicates.
   return uniqueLines([
     git(['diff', '--name-only', '--diff-filter=ACMRD', `${mergeBase}...HEAD`]),
@@ -226,5 +244,10 @@ function main(): void {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  try {
+    main();
+  } catch (error: unknown) {
+    console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+  }
 }

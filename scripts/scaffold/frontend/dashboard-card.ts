@@ -23,13 +23,14 @@ export function dashboardCardPlan(context: ScaffoldContext, ownerPath: string, n
   const testPath = join(directory, `${name}.test.tsx`);
 
   const component = context.sourceFile(componentPath, `
+    import type { ReactElement } from 'react';
     import { DashboardCard } from '${shellImport}';
 
     /**
      * Displays this dashboard card's domain summary.
      * @example <${name} />
      */
-    export default function ${name}() {
+    export default function ${name}(): ReactElement {
       // TODO: Add the inputs, content, and actions this card needs.
       // Add a private query hook only if the card needs its own data.
       return <DashboardCard title="TODO: Card title">TODO: Card content</DashboardCard>;

@@ -8,6 +8,8 @@ set -euo pipefail
 umask 077
 # Container-side shell and Node snippets intentionally defer environment expansion.
 
+# Print source and import modes before allocating resources or contacting production.
+# Example: bash scripts/dev/import-data.sh --help
 usage() {
   cat <<'USAGE'
 Usage: bash scripts/dev/import-data.sh --host SSH_TARGET [--identity KEY_PATH] (--validate-only | --apply)
@@ -16,9 +18,12 @@ Downloads live data into a private temporary file and prepares a new local datab
 --validate-only validates the complete import without replacing the current database.
 --apply switches the local backend to the prepared database and retains the old database.
 No Desktop archive is created. Real names and notes are retained; uploads are not copied.
+  -h, --help  Show this help before starting the operation.
 USAGE
 }
 
+# Print a failure to stderr; registered EXIT cleanup performs any needed rollback.
+# Example: fail "docker is required"
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
   exit 1
@@ -63,7 +68,6 @@ command -v docker >/dev/null 2>&1 || fail 'docker is required'
 command -v node >/dev/null 2>&1 || fail 'node is required'
 
 # 2. Restrict mutation to local development Docker and acquire the refresh lock.
-# Every mutation is restricted to the repository development Compose stack on a local socket.
 case "${DOCKER_HOST:-unix://local}" in unix://*) ;; *) fail 'A local Unix Docker socket is required' ;; esac
 refresh_endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
 case "$refresh_endpoint" in unix://*) ;; *) fail 'Remote Docker contexts are not supported' ;; esac
@@ -72,8 +76,6 @@ refresh_repo="$(cd "$(dirname "$0")/../.." && pwd -P)"
 compose=(docker compose --project-directory "$refresh_repo" -f "$refresh_repo/docker-compose.yml")
 
 refresh_lock="${TMPDIR:-/tmp}/my-webapp-refresh-$(printf '%s' "$refresh_repo" | cksum | cut -d ' ' -f 1).lock"
-mkdir "$refresh_lock" 2>/dev/null || fail "Another refresh holds $refresh_lock; remove a stale lock only after checking no refresh is running"
-printf '%s\n' "$$" > "$refresh_lock/pid"
 
 refresh_work=''
 refresh_stage=''
@@ -86,16 +88,22 @@ refresh_backend_stopped=false
 refresh_keep_stage=false
 refresh_env_changed=false
 
+# Run supplied psql arguments against the local administration database, stopping on SQL errors.
+# Example: psql_admin -v database_name="$refresh_stage" # SQL arrives on stdin
 psql_admin() {
   "${compose[@]}" exec -T db sh -c 'exec psql -X --set=ON_ERROR_STOP=1 --username="$POSTGRES_USER" --dbname=postgres "$@"' sh "$@"
 }
 
+# Rename local databases through parameterized psql identifier variables.
+# Example: rename_database "$refresh_stage" "$refresh_target"
 rename_database() {
   psql_admin -v old_name="$1" -v new_name="$2" <<'SQL'
 SELECT format('ALTER DATABASE %I RENAME TO %I', :'old_name', :'new_name') \gexec
 SQL
 }
 
+# Set database connection access and terminate sessions before a name switch.
+# Example: set_connections "$refresh_target" false
 set_connections() {
   psql_admin -v database_name="$1" -v allowed="$2" <<'SQL'
 SELECT format('ALTER DATABASE %I ALLOW_CONNECTIONS %s', :'database_name', :'allowed') \gexec
@@ -105,6 +113,8 @@ WHERE datname = :'database_name' AND pid <> pg_backend_pid();
 SQL
 }
 
+# Recreate the local backend and require outbound isolation and successful health.
+# Example: start_backend # returns failure after bounded readiness attempts
 start_backend() {
   # 1. Recreate the backend with its current local environment.
   "${compose[@]}" up -d --no-deps --force-recreate backend
@@ -137,6 +147,8 @@ fetch("http://127.0.0.1:5001/health")
   return 1
 }
 
+# Reverse a failed cutover and restart the original database; preserve state on failure.
+# Example: rollback_database # uses refresh_target, refresh_stage, and refresh_backup
 rollback_database() {
   # 1. Stop the backend before reversing database names.
   printf 'Restoring the previous local database name...\n' >&2
@@ -158,6 +170,8 @@ rollback_database() {
   start_backend
 }
 
+# Preserve status, restore failed cutovers, and release disposable files and the owned lock.
+# Example: cleanup # invoked by the refresh EXIT trap
 cleanup() {
   # 1. Preserve the operation status and restore signing configuration on failure.
   local result=$?
@@ -197,9 +211,11 @@ cleanup() {
   exit "$result"
 }
 
+mkdir "$refresh_lock" 2>/dev/null || fail "Another refresh holds $refresh_lock; remove a stale lock only after checking no refresh is running"
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+printf '%s\n' "$$" > "$refresh_lock/pid"
 
 # 3. Validate the target database and local integration isolation before downloading live data.
 refresh_target="$("${compose[@]}" exec -T db sh -c 'printf "%s" "$POSTGRES_DB"')"
@@ -288,7 +304,6 @@ rename_database "$refresh_stage" "$refresh_target" >/dev/null
 refresh_activated=true
 
 # 9. Rotate local signing keys before verifying the replacement backend.
-# Rotate local signing keys so copied production or previous local JWTs cannot authenticate.
 cp -p "$refresh_repo/.env" "$refresh_work/local-env-backup"
 refresh_env_changed=true
 

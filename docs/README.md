@@ -30,8 +30,8 @@ scripts locally.
 
 ## Maintain Content and Navigation
 
-Edit the source guides in `backend/`, `frontend/`, `local-development/`,
-`production/`, and `workflows/`. Do not edit or commit the generated copies in
+Edit the source guides in `backend/`, `coding-standards/`, `frontend/`,
+`local-development/`, `production/`, and `workflows/`. Do not edit or commit the generated copies in
 `src/content/docs/`. The sidebar follows the source directories and headings;
 folder README files appear first, and other entries are alphabetical.
 

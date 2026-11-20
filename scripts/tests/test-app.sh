@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
+# Select full or changed checks and run them in the planned order. See usage().
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Print full, changed, and planning modes without starting tests or containers.
+# Example: bash scripts/tests/test-app.sh --help
 usage() {
   cat <<'EOF'
 Usage: bash scripts/tests/test-app.sh [--full | --changed [BASE_REF] | --plan-changed [BASE_REF]]
@@ -19,6 +22,8 @@ Usage: bash scripts/tests/test-app.sh [--full | --changed [BASE_REF] | --plan-ch
 EOF
 }
 
+# Run deployment safety checks, backend APIs, and frontend tests in order.
+# Example: run_full_suite
 run_full_suite() {
   echo ""
   echo "=========================================="
@@ -37,6 +42,8 @@ run_full_suite() {
   echo "=========================================="
 }
 
+# Prepare services and run related paths; deleted inputs fall back to all backend tests.
+# Example: run_related_backend_tests src/routes/tasks/index.ts
 run_related_backend_tests() {
   # 1. Require graph inputs before preparing backend test services.
   if [ "$#" -eq 0 ]; then
@@ -59,11 +66,15 @@ run_related_backend_tests() {
   docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand --findRelatedTests "$@"
 }
 
+# Run Vitest dependency selection against the supplied comparison revision.
+# Example: run_related_frontend_tests origin/develop
 run_related_frontend_tests() {
   local base_ref="$1"
   (cd frontend && npm test -- --changed "$base_ref")
 }
 
+# Print the environment override or an available integration reference, falling back to HEAD.
+# Example: default_base_ref
 default_base_ref() {
   # 1. Prefer an explicit environment override.
   if [ -n "${TEST_APP_BASE_REF:-}" ]; then
@@ -88,6 +99,8 @@ default_base_ref() {
   printf '%s\n' "HEAD"
 }
 
+# Print deduplicated branch and working-tree paths against a valid comparison base.
+# Example: collect_changed_files origin/develop
 collect_changed_files() {
   # 1. Validate the comparison revision before collecting changed paths.
   local base_ref="$1"
@@ -108,6 +121,8 @@ collect_changed_files() {
   } | awk 'NF && !seen[$0]++'
 }
 
+# Select affected checks; print the plan or execute it with child stdin isolated.
+# Example: run_changed_suites origin/develop true # planning only
 run_changed_suites() {
   # 1. Collect changed paths and stop when there is no selected work.
   local base_ref="$1"

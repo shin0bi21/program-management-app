@@ -88,7 +88,7 @@ pages/Youth/Placements/
 3. Pass selected IDs to dashboard cards for their focused summary or child queries. Resolve dashboard-only defaults and action policy in the dashboard owner, independently of collection filters; keep selection shared with tables, calendars, or forms at their common owner. Supply already loaded display fields as props when needed. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
 4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
 5. Keep generated `it.todo` outlines only for behavior the feature owns, following [Test Ownership](../workflows/delivery/testing.md#test-ownership).
-6. Document completed functions using the [design recipe](../workflows/documentation.md).
+6. Document completed functions using the [design recipe](../coding-standards/documentation.md).
 
 ## Maintain the Pattern
 

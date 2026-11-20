@@ -26,6 +26,11 @@ export interface ScaffoldPlan {
   files: Map<string, string>;
 }
 
+interface ScaffoldRequest {
+  dryRun: boolean;
+  plan: ScaffoldPlan;
+}
+
 export interface ScaffoldContext {
   repoRoot: string;
   frontendRoot: string;
@@ -36,6 +41,29 @@ export interface ScaffoldContext {
   pageComponentsOwner: (ownerPath: string, label: string) => string;
   relativeImport: (fromDirectory: string, target: string) => string;
   sourceFile: (path: string, text: string) => string;
+}
+
+/**
+ * Supplies frontend preset commands and preview examples without creating files.
+ * @example usage().includes('--dry-run') // true
+ */
+function usage(): string {
+  return `Usage:
+  npm run scaffold:frontend -- page <PagePath> [--dry-run]
+  npm run scaffold:frontend -- modal <owner-path> <NameModal> [--dry-run]
+  npm run scaffold:frontend -- table <owner-path> <NameTable> [--dry-run]
+  npm run scaffold:frontend -- calendar <owner-path> <NameCalendar> [--dry-run]
+  npm run scaffold:frontend -- dashboard <owner-path> <NameDashboardCard> [--dry-run]
+
+Every preset generates implementation files and colocated test outlines together.
+
+Examples:
+  npm run scaffold:frontend -- page Leads
+  npm run scaffold:frontend -- page Staff/Schedules
+  npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal
+  npm run scaffold:frontend -- table frontend/src/pages/Staff/Schedules/components ScheduleTable
+  npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/components ScheduleCalendar
+  npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboardCard --dry-run`;
 }
 
 /**
@@ -126,29 +154,6 @@ function isFeatureModalOwner(parts: string[]): boolean {
   // 2. Require a feature components directory with valid nested owner names.
   const [feature, components, ...nestedOwners] = parts.slice(4);
   return Boolean(feature) && components === 'components' && isPascalCasePath(nestedOwners);
-}
-
-/**
- * Supplies frontend preset commands and preview examples without creating files.
- * @example usage().includes('--dry-run') // true
- */
-function usage(): string {
-  return `Usage:
-  npm run scaffold:frontend -- page <PagePath> [--dry-run]
-  npm run scaffold:frontend -- modal <owner-path> <NameModal> [--dry-run]
-  npm run scaffold:frontend -- table <owner-path> <NameTable> [--dry-run]
-  npm run scaffold:frontend -- calendar <owner-path> <NameCalendar> [--dry-run]
-  npm run scaffold:frontend -- dashboard <owner-path> <NameDashboardCard> [--dry-run]
-
-Every preset generates implementation files and colocated test outlines together.
-
-Examples:
-  npm run scaffold:frontend -- page Leads
-  npm run scaffold:frontend -- page Staff/Schedules
-  npm run scaffold:frontend -- modal frontend/src/pages/Staff/Schedules/components ScheduleModal
-  npm run scaffold:frontend -- table frontend/src/pages/Staff/Schedules/components ScheduleTable
-  npm run scaffold:frontend -- calendar frontend/src/pages/Staff/Schedules/components ScheduleCalendar
-  npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboardCard --dry-run`;
 }
 
 /**
@@ -270,7 +275,7 @@ function createContext(): ScaffoldContext {
  * Builds a validated preset plan from CLI tokens, rejecting unknown presets or incorrect argument counts.
  * @example parseRequest(context, ['page', 'Hours', '--dry-run']).dryRun // true
  */
-function parseRequest(context: ScaffoldContext, argv: string[]): { dryRun: boolean; plan: ScaffoldPlan } {
+function parseRequest(context: ScaffoldContext, argv: string[]): ScaffoldRequest {
   // 1. Separate preview mode from the preset and positional arguments.
   const dryRun = argv.includes('--dry-run');
   const positional = argv.filter(argument => argument !== '--dry-run');
