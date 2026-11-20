@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setTask } from '../../tasks.api';
+import { setTask } from '../../api/tasks.api';
 import { makeTask } from '../../../../../tests/factories/task';
 
 import TaskModal from './TaskModal';
 
-vi.mock('../../tasks.api', () => ({
+vi.mock('../../api/tasks.api', () => ({
   setTask: vi.fn(),
 }));
 

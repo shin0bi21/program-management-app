@@ -1,8 +1,15 @@
 import { useCallback, useEffect, type MutableRefObject } from 'react';
 import { useDataBuffer } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
-import { getTasksCalendarData, type TasksFilters } from '../../../tasks.api';
-import type { Task, TaskCalendarCache } from '../../../types';
+import { getTasksCalendarData } from '../api/taskCalendar.api';
+import type { Task, TaskCalendarCache, TasksFilters } from '../../../types';
+
+type TaskCalendarBuffer = ReturnType<typeof useDataBuffer<Task>>;
+
+interface TaskCalendarDataResult {
+  calendar: TaskCalendarBuffer;
+  visibleItems: TaskCalendarBuffer['items'];
+}
 
 /**
  * Loads complete task rows into the calendar range buffer.
@@ -14,7 +21,7 @@ import type { Task, TaskCalendarCache } from '../../../types';
 export default function useTaskCalendarData(
   filters: TasksFilters,
   calendarCacheRef: MutableRefObject<TaskCalendarCache>,
-) {
+): TaskCalendarDataResult {
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const tasks = await getTasksCalendarData(filters, { start: start.key, end: end.key }, { signal });
     signal.throwIfAborted();
@@ -56,7 +63,7 @@ export default function useTaskCalendarData(
 }
 
 /** Identifies a task membership. @example getTaskId({ id: 'task-1' }) // 'task-1' */
-function getTaskId(task: { id: string }) {
+function getTaskId(task: Pick<Task, 'id'>) {
   return task.id;
 }
 /** Uses a task's inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */

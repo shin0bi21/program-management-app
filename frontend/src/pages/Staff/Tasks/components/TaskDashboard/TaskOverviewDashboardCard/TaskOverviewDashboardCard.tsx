@@ -1,5 +1,5 @@
 import { Temporal } from 'temporal-polyfill';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
@@ -10,17 +10,29 @@ import UnavailableState from '../../../../../../common/components/UnavailableSta
 import useTaskOverviewData from './hooks/useTaskOverviewData';
 import './TaskOverviewDashboardCard.css';
 
+interface TaskOverviewDashboardCardProps {
+  queryKey: readonly unknown[];
+  staff: StaffReference | null;
+  onMessageChange?: PageMessageChangeHandler;
+}
+
+interface TaskDueListProps {
+  title: string;
+  tasks: readonly Task[];
+  emptyMessage: string;
+  tone?: 'neutral' | 'info' | 'warn' | 'danger';
+  dueThisWeekIds?: ReadonlySet<string>;
+}
+
 /**
  * Queries the selected staff overview and owns its report for the current local date.
  * Keeps an unselected card without loading tasks when no staff member is supplied.
  * @param props - Shared staff context, query namespace, and optional page-message reporter.
  * @example <TaskOverviewDashboardCard queryKey={['tasks']} staff={staff} />
  */
-export default function TaskOverviewDashboardCard({ queryKey, staff, onMessageChange }: {
-  queryKey: readonly unknown[];
-  staff: StaffReference | null;
-  onMessageChange?: PageMessageChangeHandler;
-}) {
+export default function TaskOverviewDashboardCard({
+  queryKey, staff, onMessageChange,
+}: TaskOverviewDashboardCardProps): ReactElement {
   const staffId = staff?.id ?? null;
   const overviewData = useTaskOverviewData(queryKey, staffId);
   const { tasks, loading, error, retry: onRetry } = overviewData;
@@ -156,13 +168,9 @@ function sortByDueDate(tasks: readonly Task[]) {
  * @param props - Section heading, ordered tasks, empty wording, tone, and optional highlighted IDs.
  * @example <TaskDueList title="Overdue" tasks={tasks} emptyMessage="No overdue tasks." />
  */
-function TaskDueList({ title, tasks, emptyMessage, tone = 'neutral', dueThisWeekIds }: {
-  title: string;
-  tasks: readonly Task[];
-  emptyMessage: string;
-  tone?: 'neutral' | 'info' | 'warn' | 'danger';
-  dueThisWeekIds?: ReadonlySet<string>;
-}) {
+function TaskDueList({
+  title, tasks, emptyMessage, tone = 'neutral', dueThisWeekIds,
+}: TaskDueListProps) {
   return <section className={`task-overview-card__task-section task-overview-card__task-section--${tone}`}>
     <h3>{title}</h3>
     {tasks.length ? <ul>

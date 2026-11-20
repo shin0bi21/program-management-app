@@ -1,7 +1,9 @@
-import { getTasksTableData, type TasksFilters } from '../../../tasks.api';
+import { getTasksTableData } from '../api/taskTable.api';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import type { Task, TaskSortKey } from '../../../types';
+import type { Task, TasksFilters, TaskSortKey } from '../../../types';
+
+type TaskTableDataResult = ReturnType<typeof useInfiniteListQuery<Task>>;
 
 /**
  * Loads complete task rows in the selected server order.
@@ -16,7 +18,7 @@ export default function useTaskTableData(
   filters: TasksFilters,
   sorting: ListSort<TaskSortKey>,
   today: string,
-) {
+): TaskTableDataResult {
   return useInfiniteListQuery<Task>({
     ordering: { direction: sorting.direction, getValue: task => getTaskSortValue(task, sorting.key) },
     queryKey: [...queryKey, filters, sorting, today],
@@ -33,7 +35,7 @@ export default function useTaskTableData(
  * @param key - Selected table column.
  * @example getTaskSortValue(task, 'title') // lower-case title
  */
-export function getTaskSortValue(task: Task, key: TaskSortKey) {
+export function getTaskSortValue(task: Task, key: TaskSortKey): string | null {
   return {
     firstName: task.firstName.toLowerCase(),
     lastName: task.lastName.toLowerCase(),

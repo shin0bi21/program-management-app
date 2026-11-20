@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { CellContext } from '@tanstack/react-table';
 
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { Task } from '../../../types';
@@ -11,10 +12,19 @@ interface UseTaskTableOptions {
   actions: TaskTableActions;
 }
 
+interface TaskTableResult {
+  columns: TableColumnDef<Task>[];
+}
+
+/**
+ * Supplies task columns and permitted row actions for the table.
+ * @param options - Write capability and page-coordinated task commands.
+ * @example useTaskTable({ canWrite, actions }).columns
+ */
 export default function useTaskTable({
   canWrite,
   actions,
-}: UseTaskTableOptions) {
+}: UseTaskTableOptions): TaskTableResult {
   const { isTaskPending, setState, edit, requestDelete } = actions;
 
   const columns = useMemo<TableColumnDef<Task>[]>(() => [
@@ -72,7 +82,7 @@ export default function useTaskTable({
       size: 40,
       enableResizing: false,
       enableHiding: false,
-      cell: ({ row }: { row: { original: Task } }) => <TaskActionsMenu
+      cell: ({ row }: CellContext<Task, unknown>) => <TaskActionsMenu
         task={row.original}
         isTaskPending={isTaskPending}
         setState={setState}

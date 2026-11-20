@@ -19,7 +19,7 @@ import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
-import { getTaskDashboardData } from '../Tasks/tasks.api';
+import { getOpenTasks } from '../Tasks/api/tasks.api';
 import { HOURS_TABLE_KEYS, type HoursItem } from './types';
 
 import './Hours.css';
@@ -212,7 +212,7 @@ export default function Hours() {
       staff={pageData.writableStaff}
       programs={pageData.programs}
       categories={pageData.categories}
-      loadTasks={getTaskDashboardData}
+      loadTasks={getOpenTasks}
       onClose={closeHoursModal}
       onAdd={submitHours}
       staffId={addHoursContext?.staffId}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
@@ -6,16 +6,20 @@ import { formatHours, formatShortDate } from '../../../../../../common/utils/dat
 import type { Task } from '../../../types';
 import './TaskHoursLoggedDashboardCard.css';
 
+interface TaskHoursLoggedDashboardCardProps {
+  task: Task | null;
+  canWrite?: boolean;
+  onLogHours?: () => void;
+}
+
 /**
  * Displays the selected task’s logged hours and its daily breakdown dialog.
  * @param props - Shared task context, write permission, and the entry-modal action.
  * @example <TaskHoursLoggedDashboardCard task={task} canWrite onLogHours={openHours} />
  */
-export default function TaskHoursLoggedDashboardCard({ task, canWrite = false, onLogHours }: {
-  task: Task | null;
-  canWrite?: boolean;
-  onLogHours?: () => void;
-}) {
+export default function TaskHoursLoggedDashboardCard({
+  task, canWrite = false, onLogHours,
+}: TaskHoursLoggedDashboardCardProps): ReactElement {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
   useEffect(() => setOpenTaskId(null), [task?.id]);

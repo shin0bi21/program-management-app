@@ -1,18 +1,23 @@
 import { renderWithQueryClient as render } from '../../../../../tests/queryClientTestUtils';
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
-import type { MutableRefObject } from 'react';
+import type { ComponentProps, MutableRefObject, ReactElement } from 'react';
 import { act, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
-import { getTasksCalendarData } from '../../tasks.api';
+import { getTasksCalendarData } from './api/taskCalendar.api';
 import type { Task, StaffReference } from '../../types';
 import { makeTask } from '../../../../../tests/factories/task';
 import type { TaskCalendarCache } from '../../types';
 import TaskCalendar, { type TaskCalendarActions } from './TaskCalendar';
+import type TaskItem from './TaskItem/TaskItem';
 
 type CalendarProps = TimelineCalendarProps<StaffReference, Task>;
+type RenderCalendarOptions = Partial<Pick<ComponentProps<typeof TaskCalendar>,
+  'staff' | 'canWrite' | 'selectedTaskId'
+>> & { staffIds?: string[] };
+
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
@@ -21,7 +26,7 @@ vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', ()
     return <div aria-label="Task calendar">{props.rows.map(staffMember => <span key={staffMember.id}>{staffMember.name}</span>)}</div>;
   },
 }));
-vi.mock('../../tasks.api', () => ({ getTasksCalendarData: vi.fn() }));
+vi.mock('./api/taskCalendar.api', () => ({ getTasksCalendarData: vi.fn() }));
 
 const staffMember: StaffReference = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
@@ -30,50 +35,6 @@ const coworker: StaffReference = {
   id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true,
 };
 const task = makeTask();
-
-/** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
-function renderCalendar({
-  staff = [staffMember, coworker],
-  staffIds = [] as string[],
-  canWrite = true,
-  selectedTaskId = null as string | null,
-} = {}) {
-  const actions: TaskCalendarActions = {
-    isTaskPending: vi.fn(() => false),
-    requestDelete: vi.fn(),
-    setState: vi.fn().mockResolvedValue(undefined),
-    setTaskRange: vi.fn().mockImplementation(async (
-      currentTask,
-      nextRange,
-      _action,
-      staffId = currentTask.staffId,
-    ) => ({
-      ...currentTask,
-      startDate: nextRange.start,
-      dueDate: nextRange.end,
-      staffId,
-      firstName: staffId === coworker.id ? coworker.firstName : currentTask.firstName,
-      lastName: staffId === coworker.id ? coworker.lastName : currentTask.lastName,
-    })),
-  };
-  const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {
-    current: { upsert: vi.fn(), remove: vi.fn() },
-  };
-  const callbacks = {
-    onTaskSelect: vi.fn(), onStaffSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
-  };
-  const rendered = render(<TaskCalendar
-    staff={staff}
-    filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
-    canWrite={canWrite}
-    selectedStaffId="staff-1"
-    selectedTaskId={selectedTaskId}
-    actions={actions}
-    calendarCacheRef={calendarCacheRef}
-    {...callbacks}
-  />);
-  return { ...rendered, actions, calendarCacheRef, ...callbacks };
-}
 
 describe('TaskCalendar', () => {
   beforeEach(() => {
@@ -111,6 +72,15 @@ describe('TaskCalendar', () => {
 
   it('emits narrow resize and cross-staff member move commands with selection changes', async () => {
     const rendered = renderCalendar();
+    const resizedTask = makeTask({ startDate: '2026-08-11', dueDate: '2026-08-13' });
+    const movedTask = makeTask({
+      startDate: '2026-08-12', dueDate: '2026-08-14', staffId: coworker.id,
+      firstName: coworker.firstName, lastName: coworker.lastName,
+    });
+    vi.mocked(rendered.actions.setTaskRange)
+      .mockResolvedValueOnce(resizedTask)
+      .mockResolvedValueOnce(movedTask);
+
     await act(async () => calendarState.props?.onItemResize?.({
       row: staffMember,
       item: task,
@@ -132,13 +102,8 @@ describe('TaskCalendar', () => {
     expect(rendered.actions.setTaskRange).toHaveBeenNthCalledWith(
       2, task, { start: '2026-08-12', end: '2026-08-14' }, 'move', 'staff-2',
     );
-    expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      startDate: '2026-08-11', dueDate: '2026-08-13',
-    }));
-    expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      startDate: '2026-08-12', dueDate: '2026-08-14',
-      staffId: 'staff-2',
-    }));
+    expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(1, resizedTask);
+    expect(rendered.onTaskSelect).toHaveBeenNthCalledWith(2, movedTask);
     expect(rendered.onStaffSelect).not.toHaveBeenCalled();
   });
 
@@ -152,6 +117,27 @@ describe('TaskCalendar', () => {
     });
 
     expect(rendered.onTaskSelect).toHaveBeenCalledWith(task);
+  });
+
+  it('marks only the task matching the selected ID as selected', () => {
+    const tasks = [task, makeTask({ id: 'task-2' })];
+    renderCalendar({ selectedTaskId: task.id });
+
+    const selectedFlags = tasks.map(data => {
+      const range = { start: data.startDate, end: data.dueDate };
+      const element = calendarState.props!.buildItem({
+        row: staffMember,
+        data,
+        range,
+        calendar: makeItemCalendarProps({ row: staffMember, data, range }),
+        visibleStart: { key: data.startDate, start: data.startDate, end: data.startDate },
+        visibleEnd: { key: data.dueDate, start: data.dueDate, end: data.dueDate },
+      }) as ReactElement<ComponentProps<typeof TaskItem>>;
+
+      return element.props.selected;
+    });
+
+    expect(selectedFlags).toEqual([true, false]);
   });
 
   it('keeps the current selection when a range mutation fails', async () => {
@@ -171,7 +157,7 @@ describe('TaskCalendar', () => {
   });
 
   it('builds lifecycle actions from task state and write capability', async () => {
-    const rendered = renderCalendar({ selectedTaskId: 'task-1' });
+    const rendered = renderCalendar();
     const openTask: Task = { ...task, state: 'open', hoursLogged: 1 };
     const element = calendarState.props?.buildItem({
       row: staffMember,
@@ -180,12 +166,11 @@ describe('TaskCalendar', () => {
       calendar: makeItemCalendarProps({ row: staffMember, data: openTask, range: { start: openTask.startDate, end: openTask.dueDate } }),
       visibleStart: { key: openTask.startDate, start: openTask.startDate, end: openTask.dueDate },
       visibleEnd: { key: openTask.dueDate, start: openTask.startDate, end: openTask.dueDate },
-    }) as { props: { selected: boolean; onComplete: () => void; onCancel: () => void; onEdit: () => void } };
+    }) as ReactElement<ComponentProps<typeof TaskItem>>;
 
-    expect(element.props.selected).toBe(true);
-    act(() => element.props.onComplete());
-    act(() => element.props.onCancel());
-    act(() => element.props.onEdit());
+    act(() => element.props.onComplete!());
+    act(() => element.props.onCancel!());
+    act(() => element.props.onEdit!());
     expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'completed');
     expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'cancelled');
     expect(rendered.onEditTask).toHaveBeenCalledWith(openTask);
@@ -234,7 +219,7 @@ describe('TaskCalendar', () => {
     })).toBe(true);
   });
 
-  it('opens a row-scoped add target only for writable staff', () => {
+  it('opens a row-scoped add target for writable staff', () => {
     const rendered = renderCalendar();
     const periods = buildInitialDayPeriods('2026-08-10', 3);
     calendarState.props?.onCellActivate?.({ row: staffMember, rowIndex: 0, period: periods[1], items: [] });
@@ -256,3 +241,35 @@ describe('TaskCalendar', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });
+
+/** Renders a calendar with permitted action stubs. @example renderCalendar({ canWrite: false }) */
+function renderCalendar({
+  staff = [staffMember, coworker],
+  staffIds = [],
+  canWrite = true,
+  selectedTaskId = null,
+}: RenderCalendarOptions = {}) {
+  const actions: TaskCalendarActions = {
+    isTaskPending: vi.fn(() => false),
+    requestDelete: vi.fn(),
+    setState: vi.fn().mockResolvedValue(undefined),
+    setTaskRange: vi.fn().mockResolvedValue(null),
+  };
+  const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {
+    current: { upsert: vi.fn(), remove: vi.fn() },
+  };
+  const callbacks = {
+    onTaskSelect: vi.fn(), onStaffSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
+  };
+  const rendered = render(<TaskCalendar
+    staff={staff}
+    filters={{ cycleIds: [], search: '', staffIds, programIds: [], categories: [], statuses: [] }}
+    canWrite={canWrite}
+    selectedStaffId="staff-1"
+    selectedTaskId={selectedTaskId}
+    actions={actions}
+    calendarCacheRef={calendarCacheRef}
+    {...callbacks}
+  />);
+  return { ...rendered, actions, calendarCacheRef, ...callbacks };
+}

@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
@@ -20,7 +21,7 @@ import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
 import { getDate } from '../../../common/utils/date';
-import { getTaskDashboardData } from './tasks.api';
+import { getOpenTasks } from './api/tasks.api';
 import {
   TASK_TABLE_KEYS,
   type AddTaskContext,
@@ -40,7 +41,7 @@ const HOURS_QUERY_KEY = ['hours'] as const;
  * Coordinates task controls, selected row context, drafts, and query views.
  * @example <Tasks /> // staff task route
  */
-export default function Tasks() {
+export default function Tasks(): ReactElement {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions.
@@ -230,7 +231,7 @@ export default function Tasks() {
       staff={pageData.staff}
       programs={pageData.programs}
       categories={pageData.referenceData?.categories ?? []}
-      loadTasks={getTaskDashboardData}
+      loadTasks={getOpenTasks}
       onAdd={actions.logHours}
       onClose={closeHoursModal}
     />}

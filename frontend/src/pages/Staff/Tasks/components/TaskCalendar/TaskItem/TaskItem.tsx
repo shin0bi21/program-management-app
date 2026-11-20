@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import { formatHours } from '../../../../../../common/utils/date';
@@ -5,7 +6,25 @@ import type { Task } from '../../../types';
 import TaskStatusLabel from '../../TaskStatusLabel/TaskStatusLabel';
 import './TaskItem.css';
 
-export default function TaskItem<TRow, TItemData>({ calendar, task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete }: { calendar?: ItemCalendarProps<TRow, TItemData>; task: Task; selected?: boolean; onComplete?: () => void; onCancel?: () => void; onReopen?: () => void; onEdit?: () => void; onDelete?: () => void }) {
+interface TaskItemProps<TRow, TItemData> {
+  calendar?: ItemCalendarProps<TRow, TItemData>;
+  task: Task;
+  selected?: boolean;
+  onComplete?: () => void;
+  onCancel?: () => void;
+  onReopen?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+/**
+ * Displays a task's status, assignment dates, logged hours, and permitted actions.
+ * @param props - Saved task, calendar placement, selection, and available commands.
+ * @example <TaskItem task={task} selected onEdit={openEditor} />
+ */
+export default function TaskItem<TRow, TItemData>({
+  calendar, task, selected = false, onComplete, onCancel, onReopen, onEdit, onDelete,
+}: TaskItemProps<TRow, TItemData>): ReactElement {
   const className = `task-item--${task.status}`;
 
   return <Item
