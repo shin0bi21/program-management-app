@@ -64,3 +64,21 @@ test('keeps popup actions reachable by keyboard without selecting a value', asyn
   await expect(component.getByLabel('Selected value')).toHaveText('0');
   await expect(trigger).toBeFocused();
 });
+
+test('Escape closes the dropdown without discarding its parent editor draft', async ({ page, mount }) => {
+  const component = await mount('Modal/DropdownEditor');
+  await component.getByRole('button', { name: 'Open editor' }).click();
+  const editor = page.getByRole('dialog', { name: 'Editor', exact: true });
+  const name = editor.getByRole('textbox', { name: 'Name', exact: true });
+  await name.fill('unsaved draft');
+  const trigger = editor.getByRole('button', { name: 'Choice', exact: true });
+  await trigger.click();
+
+  await page.keyboard.press('Escape');
+
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(name).toHaveValue('unsaved draft');
+  await page.keyboard.press('Escape');
+  await expect(editor).toHaveCount(0);
+});

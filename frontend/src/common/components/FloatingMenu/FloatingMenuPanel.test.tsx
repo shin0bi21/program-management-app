@@ -45,15 +45,15 @@ describe('FloatingMenuPanel', () => {
     const items = ['First', 'Second', 'Third'].map(name => screen.getByRole('menuitem', { name }));
 
     items[0].focus();
-    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
     expect(items[1]).toHaveFocus();
-    fireEvent.keyDown(document, { key: 'End' });
+    fireEvent.keyDown(document.activeElement!, { key: 'End' });
     expect(items[2]).toHaveFocus();
-    fireEvent.keyDown(document, { key: 'ArrowDown' });
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
     expect(items[0]).toHaveFocus();
-    fireEvent.keyDown(document, { key: 'ArrowUp' });
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
     expect(items[2]).toHaveFocus();
-    fireEvent.keyDown(document, { key: 'Home' });
+    fireEvent.keyDown(document.activeElement!, { key: 'Home' });
     expect(items[0]).toHaveFocus();
   });
 
@@ -61,14 +61,14 @@ describe('FloatingMenuPanel', () => {
     const onClose = vi.fn();
     renderPanel(onClose);
 
-    fireEvent.keyDown(document, { key });
+    fireEvent.keyDown(screen.getByRole('menuitem', { name: 'First' }), { key });
 
     expect(onClose).toHaveBeenCalledOnce();
   });
 });
 
 describe('floating form keyboard interaction', () => {
-  it('preserves native input keys and Tab between fields while retaining Escape dismissal', () => {
+  it('leaves form keys and Tab between fields to the controls', () => {
     const onClose = vi.fn();
     render(<FloatingMenuPanel menuRef={createRef<HTMLDivElement>()} position={{ top: 0, left: 0 }}
       onClose={onClose} keyboardMode="form" ariaLabel="Dates">
@@ -80,7 +80,5 @@ describe('floating form keyboard interaction', () => {
     expect(fireEvent.keyDown(input, { key: 'ArrowDown' })).toBe(true);
     fireEvent.keyDown(input, { key: 'Tab' });
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.keyDown(input, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledOnce();
   });
 });

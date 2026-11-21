@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useId, useRef } from 'react';
+import { type KeyboardEvent, type ReactElement, type ReactNode, useEffect, useId, useRef } from 'react';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import useModalFocusTrap from './hooks/useModalFocusTrap';
 import './Modal.css';
@@ -20,6 +20,7 @@ interface ModalProps {
 
 /**
  * Displays a dialog that keeps focus inside it and restores focus when it closes.
+ * Escape bubbling from content is consumed here; child popups consume their own Escape first.
  * @param props.status - Submission feedback; submitting/success block user dismissal.
  * @param props.statusMessage - Feedback text shown above the dialog content.
  * @param props.successDelay - Milliseconds before closing after success (1000); 0 disables it.
@@ -42,7 +43,7 @@ export default function Modal({
   disableClose = false,
   dismissible = true,
   ariaDescribedBy,
-}: ModalProps) {
+}: ModalProps): ReactElement | null {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const titleId = useId();
   const closeDisabled = !dismissible || disableClose || status === 'submitting' || status === 'success';
@@ -50,7 +51,7 @@ export default function Modal({
   // Use the latest close callback without restarting the success countdown.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const containerRef = useModalFocusTrap({ isOpen, disableClose: closeDisabled, onClose });
+  const containerRef = useModalFocusTrap({ isOpen });
 
   useEffect(() => {
     if (isOpen && status === 'success' && successDelay > 0) {
@@ -62,12 +63,25 @@ export default function Modal({
     };
   }, [isOpen, status, successDelay]);
 
+  /**
+   * Consumes Escape at this dialog, including while dismissal is locked.
+   * @example A locked child modal keeps Escape from closing its enclosing modal.
+   */
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (!closeDisabled) onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div
         ref={containerRef}
+        onKeyDown={handleKeyDown}
         className="modal-container"
         role="dialog"
         aria-modal="true"

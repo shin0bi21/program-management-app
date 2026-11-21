@@ -28,7 +28,7 @@ export interface UseFloatingMenuReturn {
   close: () => void;
   toggle: () => void;
   position: FloatingPosition | null;
-  menuRef: RefObject<HTMLDivElement | null>;
+  menuRef: RefObject<HTMLDivElement>;
 }
 
 /**

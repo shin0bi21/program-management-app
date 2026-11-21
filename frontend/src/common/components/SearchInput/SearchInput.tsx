@@ -1,4 +1,4 @@
-import { useRef, useState, type InputHTMLAttributes, type KeyboardEvent } from 'react';
+import { useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactElement } from 'react';
 import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Button from '../Button/Button';
@@ -15,7 +15,8 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
  * Displays a search field with Clear and an optional Search action.
  * Always owns its textbox draft; callbacks report edits, submissions, and clearing.
  * Clear applies an empty string through the same submission handler and focuses the input.
- * Keeps typing and navigation keys inside the input; Escape and Tab bubble for dismissal and focus navigation.
+ * Escape blurs the input without changing its draft; a caller may handle it first to dismiss a containing popup.
+ * Tab bubbles for focus navigation; other input keys stay inside the field.
  * @param props.appliedValue - Active search displayed until the user starts editing.
  * @param props.onChange - Receives edited text; also receives Clear when onApply is omitted.
  * @param props.onApply - Receives trimmed text on Search/Enter; omit for live filtering.
@@ -31,7 +32,7 @@ export default function SearchInput({
   disabled,
   onKeyDown,
   ...inputProps
-}: SearchInputProps) {
+}: SearchInputProps): ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const searchValue = draft ?? appliedValue ?? '';
@@ -49,14 +50,20 @@ export default function SearchInput({
   };
 
   /**
-   * Contains input keys except Escape/Tab, then runs caller navigation and applies unhandled Enter.
+   * Runs caller navigation, then blurs on unhandled Escape or applies unhandled Enter.
    * @example A prevented Enter skips onApply; an unhandled Enter invokes it when supplied.
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Escape' && event.key !== 'Tab') event.stopPropagation();
+    if (event.key !== 'Tab') event.stopPropagation();
 
     onKeyDown?.(event);
     if (event.defaultPrevented) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.currentTarget.blur();
+      return;
+    }
 
     if (event.key === 'Enter') {
       event.preventDefault();
