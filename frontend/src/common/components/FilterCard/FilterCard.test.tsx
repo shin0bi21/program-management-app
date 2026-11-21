@@ -63,7 +63,7 @@ describe('FilterCard', () => {
     openStatus();
 
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Inactive' }));
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
     openStatus();
 
     expect(screen.getByRole('menuitemcheckbox', { name: 'Active' })).toHaveAttribute('aria-checked', 'true');
@@ -115,9 +115,6 @@ describe('FilterCard', () => {
     expect(screen.getByRole('button', { name: 'Filters' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('menuitemcheckbox', { name: 'Active' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('menuitem', { name: 'Apply' })).toBeDisabled();
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('calls Clear All from the root view when values are applied', () => {

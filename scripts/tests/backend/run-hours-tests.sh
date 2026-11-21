@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the hours suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -6,5 +7,6 @@ cd "$(dirname "$0")/../../.." || exit
 if [[ "${BACKEND_TEST_ENV_READY:-}" != "1" ]]; then
   source scripts/tests/backend/_docker-health.sh
 fi
+
 # 2. Run the selected backend suite and propagate its exit status.
 docker compose exec -e NODE_ENV=test backend npm run test:hours

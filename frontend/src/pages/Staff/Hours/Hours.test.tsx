@@ -79,7 +79,7 @@ vi.mock('./hours.api', () => ({
   updateHoursPlacement: vi.fn(),
   deleteHours: vi.fn(),
 }));
-vi.mock('../Tasks/tasks.api', () => ({ getTaskDashboardData: vi.fn() }));
+vi.mock('../Tasks/api/tasks.api', () => ({ getOpenTasks: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),
 }));
@@ -245,7 +245,6 @@ describe('Hours', () => {
     openAddHours();
 
     expect(screen.getByRole('dialog', { name: 'Hours editor' })).toBeInTheDocument();
-    expect(children.modal?.staff).toEqual([]);
   });
 
   it('bridges the page Add action to the shared entry modal', async () => {

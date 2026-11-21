@@ -1,7 +1,9 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteTask, updateTaskPlacement, updateTaskState } from '../../tasks.api';
+import { deleteTask, updateTaskState } from '../../api/tasks.api';
+import { updateTaskPlacement } from '../../components/TaskCalendar/api/taskCalendar.api';
 import type { Task } from '../../types';
 import { setHours } from '../../../Hours/hours.api';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
@@ -9,44 +11,13 @@ import { makeTask } from '../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import useTaskActions from './useTaskActions';
 
-vi.mock('../../tasks.api', () => ({
-  deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(),
+vi.mock('../../api/tasks.api', () => ({
+  deleteTask: vi.fn(), updateTaskState: vi.fn(),
 }));
+vi.mock('../../components/TaskCalendar/api/taskCalendar.api', () => ({ updateTaskPlacement: vi.fn() }));
 vi.mock('../../../Hours/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
-
-/** Supplies controlled async completion. @example const request = deferred<Task>() // resolve after starting the action */
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>(done => { resolve = done; });
-  return { promise, resolve };
-}
-
-/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
-function renderActions(client = createTestQueryClient()) {
-  const onTaskRemoved = vi.fn();
-  const onTaskSynced = vi.fn();
-  const result = renderHook(() => useTaskActions({
-    taskQueryKey: ['tasks'], taskTableQueryKey: ['tasks', 'table'], hoursQueryKey: ['hours'],
-    onTaskRemoved,
-    onTaskSynced,
-  }), { wrapper: createQueryClientWrapper(client) });
-  const upsertCalendarTask = vi.fn();
-  const removeCalendarTask = vi.fn();
-  result.result.current.calendarCacheRef.current = {
-    upsert: upsertCalendarTask,
-    remove: removeCalendarTask,
-  };
-  return {
-    ...result,
-    client,
-    onTaskRemoved,
-    onTaskSynced,
-    upsertCalendarTask,
-    removeCalendarTask,
-  };
-}
 
 describe('useTaskActions', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -230,3 +201,35 @@ describe('useTaskActions', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
 });
+
+/** Supplies controlled async completion. @example const request = deferred<Task>() // resolve after starting the action */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
+function renderActions(client: QueryClient = createTestQueryClient()) {
+  const onTaskRemoved = vi.fn();
+  const onTaskSynced = vi.fn();
+  const result = renderHook(() => useTaskActions({
+    taskQueryKey: ['tasks'], taskTableQueryKey: ['tasks', 'table'], hoursQueryKey: ['hours'],
+    onTaskRemoved,
+    onTaskSynced,
+  }), { wrapper: createQueryClientWrapper(client) });
+  const upsertCalendarTask = vi.fn();
+  const removeCalendarTask = vi.fn();
+  result.result.current.calendarCacheRef.current = {
+    upsert: upsertCalendarTask,
+    remove: removeCalendarTask,
+  };
+  return {
+    ...result,
+    client,
+    onTaskRemoved,
+    onTaskSynced,
+    upsertCalendarTask,
+    removeCalendarTask,
+  };
+}

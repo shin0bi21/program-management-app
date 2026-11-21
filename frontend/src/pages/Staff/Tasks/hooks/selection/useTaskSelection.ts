@@ -6,6 +6,17 @@ interface UseTaskSelectionOptions {
   staff: StaffReference[];
 }
 
+interface TaskSelectionResult {
+  selectedStaffId: string | null;
+  selectedStaff: StaffReference | null;
+  selectedTaskId: string | null;
+  selectedTask: Task | null;
+  selectTask: (task: Task) => void;
+  selectStaff: (staffId: string) => void;
+  removeSelectedTask: (taskId: string) => void;
+  onTaskSynced: (task: Task) => void;
+}
+
 /**
  * Keeps the clicked task as temporary selection context for dashboards.
  * @param options - Current staff choices supplied by the page.
@@ -13,7 +24,7 @@ interface UseTaskSelectionOptions {
  */
 export default function useTaskSelection({
   staff,
-}: UseTaskSelectionOptions) {
+}: UseTaskSelectionOptions): TaskSelectionResult {
   const [staffId, setStaffId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const selectedStaffId = selectedTask?.staffId ?? staffId;

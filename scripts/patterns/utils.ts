@@ -6,7 +6,7 @@ export type Findings = string[];
  * Converts a zero-based source character offset to a one-based line number.
  * @example lineNumber('a\nb', 2) // 2
  */
-export function lineNumber(source: string, index = 0): number {
+export function lineNumber(source: string, index: number = 0): number {
   return source.slice(0, index).split('\n').length;
 }
 

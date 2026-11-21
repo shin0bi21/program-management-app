@@ -1,4 +1,5 @@
 # shellcheck shell=bash
+# Classify component and infrastructure changes, then print the selected deployment plan.
 
 # Selects infrastructure work from changed paths between recorded and target revisions.
 # Reads INFRASTRUCTURE_REVISION and TARGET_SHA; sets INFRASTRUCTURE_CHANGED.

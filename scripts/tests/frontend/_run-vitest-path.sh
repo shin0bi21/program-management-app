@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Validate a frontend test owner, skip empty owners, then run its suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -28,6 +29,6 @@ if (cd frontend && npm test -- "$TARGET"); then
   echo "${LABEL} frontend tests passed!"
 else
   echo ""
-  echo "${LABEL} frontend tests failed! See output above."
+  echo "${LABEL} frontend tests failed! See output above." >&2
   exit 1
 fi

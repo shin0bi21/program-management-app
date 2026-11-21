@@ -134,7 +134,6 @@ const execute = promisify(execFile);
  * @example usage().includes('--start YYYY-MM-DD') // true
  */
 function usage(): string {
-
   // 1. Describe commands, filters, and evidence limits in the CLI reference.
   return `Usage: npm run report:ci-history -- --start 2026-09-01
        npm run report:ci-history -- --start 2026-09-01 --dev
@@ -175,7 +174,6 @@ No matches exits successfully.`;
  * @example parseArgs(['--start', '2026-09-01', '--dev']).start // '2026-09-01T00:00:00Z'
  */
 export function parseArgs(argv: string[]): Options {
-
   // 1. Start with successful attempts and an open-ended UTC window.
   const options: Options = {
     branch: null, start: '', end: new Date().toISOString(), outcome: 'success',
@@ -259,7 +257,6 @@ export function parseArgs(argv: string[]): Options {
  * @example validDate('2026-02-30') // false
  */
 function validDate(value: string): boolean {
-
   // 1. Require an ISO calendar date that survives a UTC round trip.
   return /^\d{4}-\d{2}-\d{2}$/.test(value)
     && Number.isFinite(Date.parse(value))
@@ -278,7 +275,6 @@ function validDate(value: string): boolean {
  * @example await collectHistory('example/project', parseArgs(['--start', '2026-09-01', '--main']))
  */
 export async function collectHistory(repository: string, options: Options, request: Request = github): Promise<Run[]> {
-
   // 1. Prepare the query window and collection state for the selected branches.
   const base = `repos/${repository}`;
   const range = encodeURIComponent(`${options.start}..${options.end}`);
@@ -352,7 +348,6 @@ export async function collectHistory(repository: string, options: Options, reque
  * @example await collectAttempt(workflow, 1, context) // First attempt, even when the latest run is a rerun.
  */
 async function collectAttempt(workflow: Workflow, attempt: number, context: AttemptContext): Promise<Run | null> {
-
   // 1. Read the explicit collection context for this workflow attempt.
   const { base, branch, options, request, changeSha, pullRequest, changeComparisons } = context;
 
@@ -436,7 +431,6 @@ async function collectAttempt(workflow: Workflow, attempt: number, context: Atte
  * @example await requestComparison('repos/example/project/compare/abc...def', request) // true when def contains abc
  */
 async function requestComparison(endpoint: string, request: Request): Promise<boolean> {
-
   // 1. Read the comparison and reject statuses outside GitHub's ancestry contract.
   const comparison = JSON.parse(await request(endpoint)) as { status: string };
   if (!['ahead', 'identical', 'behind', 'diverged'].includes(comparison.status)) {
@@ -454,7 +448,6 @@ async function requestComparison(endpoint: string, request: Request): Promise<bo
  * @example await optionalLog('repos/example/project/actions/jobs/1/logs', request) // null for expired logs
  */
 async function optionalLog(endpoint: string, request: Request): Promise<string | null> {
-
   // 1. Read the log, treating only missing or expired output as unavailable evidence.
   try {
     return await request(endpoint);
@@ -470,7 +463,6 @@ async function optionalLog(endpoint: string, request: Request): Promise<string |
  * @example elapsedSeconds({ started_at: null, completed_at: null }) // null
  */
 function elapsedSeconds(item: Pick<Step, 'started_at' | 'completed_at'>): number | null {
-
   // 1. Preserve missing timestamps instead of interpreting them as zero duration.
   if (!item.started_at || !item.completed_at) return null;
 
@@ -484,7 +476,6 @@ function elapsedSeconds(item: Pick<Step, 'started_at' | 'completed_at'>): number
  * @example jobTiming(job).testSeconds // Sum of executed test-step seconds, never skipped steps
  */
 function jobTiming(job: Job): JobTiming {
-
   // 1. Initialize phase totals, keeping absent step metadata unknown.
   const initialSeconds = job.steps ? 0 : null;
   const timing: JobTiming = {
@@ -529,7 +520,6 @@ function jobTiming(job: Job): JobTiming {
  * @example testSummary('> jest --runInBand\nTests: 12 passed, 12 total', 'backend').mode // 'full'
  */
 function testSummary(log: string | null, component: 'backend' | 'frontend'): TestSummary {
-
   // 1. Keep scope and counts unknown until the log supplies explicit evidence.
   const result: TestSummary = {
     component, mode: 'unknown', suites: null, cases: null, logAvailable: log !== null,
@@ -567,8 +557,7 @@ function testSummary(log: string | null, component: 'backend' | 'frontend'): Tes
  * @returns Raw response text, or slurped JSON pages when pagination is enabled.
  * @example await github('repos/example/project/actions/runs?per_page=100', true) // JSON pages
  */
-async function github(endpoint: string, paginate = false): Promise<string> {
-
+async function github(endpoint: string, paginate: boolean = false): Promise<string> {
   // 1. Choose paginated JSON or raw output, preserving terminal-formatted logs.
   const flags = paginate ? ['--paginate', '--slurp'] : ['--allow-escape-sequences'];
 
@@ -584,7 +573,6 @@ async function github(endpoint: string, paginate = false): Promise<string> {
  * @example deploymentFlags('Frontend: true') // undefined: three components are missing
  */
 function deploymentFlags(log: string): Run['flags'] {
-
   // 1. Read each component's last flag, leaving incomplete logs unclassified.
   const flags = {} as Record<Component, boolean>;
   for (const component of COMPONENTS) {
@@ -605,7 +593,6 @@ function deploymentFlags(log: string): Run['flags'] {
  * @example filterRuns([], parseArgs(['--start', '2026-09-01'])) // []
  */
 export function filterRuns(runs: Run[], options: Options): Run[] {
-
   // 1. Expand component dependencies and resolve the inclusive date boundaries.
   const selected = new Set(options.types);
   const expected: Record<Component, boolean> = {
@@ -640,7 +627,6 @@ export function filterRuns(runs: Run[], options: Options): Run[] {
  * @example renderReport([], parseArgs(['--start', '2026-09-01', '--dev'])).includes('No completed attempts match.') // true
  */
 export function renderReport(history: Run[], options: Options): string {
-
   // 1. Select and sort attempts, then describe the requested comparison window.
   const runs = filterRuns(history, options).sort((left, right) => left.createdAt.localeCompare(right.createdAt)
     || left.runId - right.runId || left.attempt - right.attempt);
@@ -701,7 +687,6 @@ export function renderReport(history: Run[], options: Options): string {
  * @example timingRows(runs)[0][0] // 'Group'
  */
 function timingRows(runs: Run[]): string[][] {
-
   // 1. Select the timing columns available in this outcome group.
   const metrics = (['queueSeconds', 'runnerSeconds'] as const).filter(key => runs.some(run => run[key] != null));
   const metricHeaders = metrics.map(key => key === 'queueSeconds' ? 'Queue median' : 'Runner median');
@@ -730,7 +715,6 @@ function timingRows(runs: Run[]): string[][] {
  * @example changeGroup({ containsChange: null }) // 'Unknown ancestry'
  */
 function changeGroup(run: Pick<Run, 'containsChange'>): string {
-
   // 1. Label exact ancestry while preserving missing evidence as unknown.
   if (run.containsChange === true) return 'Contains commit';
   if (run.containsChange === false) return 'Lacks commit';
@@ -743,7 +727,6 @@ function changeGroup(run: Pick<Run, 'containsChange'>): string {
  * @example table([['Runs'], ['2']]) // ['Runs', '2']
  */
 function table(rows: string[][]): string[] {
-
   // 1. Measure column widths across the header and all supplied rows.
   const widths = rows[0].map((_, index) => Math.max(...rows.map(row => row[index].length)));
 
@@ -758,7 +741,6 @@ function table(rows: string[][]): string[] {
  * @example developmentTimings([], options) // []
  */
 function developmentTimings(runs: Run[], options: Options): string[] {
-
   // 1. Group jobs by identity, actual test scope, and optional commit ancestry.
   const groups = new Map<string, JobTiming[]>();
   for (const run of runs) {
@@ -800,7 +782,6 @@ function developmentTimings(runs: Run[], options: Options): string[] {
  * @example developmentAttempts([], options) // []
  */
 function developmentAttempts(runs: Run[], options: Options): string[] {
-
   // 1. Omit the evidence section when no development job metadata was collected.
   if (!runs.some(run => run.jobs)) return [];
 
@@ -829,7 +810,6 @@ function developmentAttempts(runs: Run[], options: Options): string[] {
  * @example median([10, 40]) // 25
  */
 function median(values: number[]): number {
-
   // 1. Sort a copy so the caller's measurements retain their original order.
   const sorted = [...values].sort((left, right) => left - right);
   const middle = Math.floor(sorted.length / 2);
@@ -845,7 +825,6 @@ function median(values: number[]): number {
  * @example duration(null) // '—'
  */
 function duration(seconds: number | null): string {
-
   // 1. Display unavailable durations explicitly.
   if (seconds === null) return '—';
 
@@ -860,22 +839,26 @@ function duration(seconds: number | null): string {
 
 // 6. Read-only CLI
 
+/**
+ * Validates CLI filters, resolves the repository, collects history, and prints the report.
+ * Help returns before contacting GitHub; collection failures reach the entrypoint.
+ * @example main() // with --help, prints the reference without running gh
+ */
+async function main(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
+
+  const { stdout } = await execute('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
+  const history = await collectHistory(stdout.trim(), options);
+  console.log(renderReport(history, options));
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  try {
-
-    // 1. Parse arguments before accessing GitHub, allowing help to run offline.
-    const options = parseArgs(process.argv.slice(2));
-    if (options.help) console.log(usage());
-    else {
-
-      // 2. Resolve the repository, collect matching history, and print the report.
-      const { stdout } = await execute('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
-      console.log(renderReport(await collectHistory(stdout.trim(), options), options));
-    }
-  } catch (error: unknown) {
-
-    // 3. Report collection or validation failures through stderr and the exit status.
+  main().catch((error: unknown) => {
     console.error(`ci-history-report: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
-  }
+  });
 }

@@ -3,11 +3,16 @@ import { resolveImport } from '../utils.ts';
 import type { Findings } from '../utils.ts';
 import { findRoutePageDirectory } from './shared.ts';
 
+interface ModuleReference {
+  line: number;
+  modulePath: string;
+}
+
 /**
  * Extracts static import and re-export module paths with one-based source line locations.
  * @example moduleReferences('a.ts', "export * from './b';")[0].modulePath // './b'
  */
-function moduleReferences(file: string, source: string): Array<{ line: number; modulePath: string }> {
+function moduleReferences(file: string, source: string): ModuleReference[] {
   // 1. Parse static module declarations, including re-exports.
   const sourceFile = parseSourceFile(file, source);
   // 2. Retain module specifiers with their original source line numbers.
@@ -59,17 +64,5 @@ export function checkFrontendOwnership(
     if (/^frontend\/src\/pages\/[^/]+\/common\//.test(file) && targetRoute) {
       violations.push(`${file}:${line} page-family common code cannot import a route page's private code (${modulePath}).`);
     }
-  }
-}
-
-/**
- * Appends a finding when frontend architecture guidance is placed in a source README.
- * @example checkCentralizedFrontendDocumentation([], 'docs/frontend/README.md') // no findings
- */
-export function checkCentralizedFrontendDocumentation(violations: Findings, file: string): void {
-  if (file.startsWith('frontend/src/') && file.endsWith('/README.md')) {
-    violations.push(
-      `${file}:1 frontend architecture and integration guidance belongs under docs/, not beside source code.`,
-    );
   }
 }

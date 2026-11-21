@@ -1,11 +1,10 @@
+import type { ReactElement } from 'react';
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { TasksFilters } from '../../tasks.api';
-import type { Task } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
-import { TASK_TABLE_KEYS, type TaskSortKey } from '../../types';
+import { TASK_TABLE_KEYS, type Task, type TasksFilters, type TaskSortKey } from '../../types';
 import useTaskTableData from './hooks/useTaskTableData';
 
 interface TaskTableProps {
@@ -31,7 +30,7 @@ interface TaskTableProps {
 export default function TaskTable({
   queryKey, columns, hiddenColumnKeys, filters, today, sorting, columnWidths,
   selectedTaskId, onTaskSelect, onSortingChange, onColumnWidthsChange, onMessageChange,
-}: TaskTableProps) {
+}: TaskTableProps): ReactElement {
   const query = useTaskTableData(queryKey, filters, sorting, today);
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
   const hasFilters = filters.staffIds.length > 0

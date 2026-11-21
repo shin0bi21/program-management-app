@@ -2,12 +2,12 @@ import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setTask } from '../../../tasks.api';
+import { setTask } from '../../../api/tasks.api';
 import { makeTask } from '../../../../../../tests/factories/task';
 import useTaskModal from './useTaskModal';
 import { getDate } from '../../../../../../common/utils/date';
 
-vi.mock('../../../tasks.api', () => ({
+vi.mock('../../../api/tasks.api', () => ({
   setTask: vi.fn(),
 }));
 

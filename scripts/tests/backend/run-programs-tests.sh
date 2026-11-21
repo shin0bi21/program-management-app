@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the programs suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -17,6 +18,6 @@ if docker compose exec -T backend npm run test:programs; then
   echo "Programs tests passed!"
 else
   echo ""
-  echo "Programs tests failed! See output above."
+  echo "Programs tests failed! See output above." >&2
   exit 1
 fi

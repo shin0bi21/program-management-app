@@ -1,8 +1,10 @@
+import type { ReactElement } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
+import type { TaskReferenceData } from '../../api/tasks.api';
 import type { Task, TaskCategory, TaskModalState, TaskProgram, StaffReference } from '../../types';
 
 import useTaskModal from './hooks/useTaskModal';
@@ -13,7 +15,7 @@ export interface TaskModalProps {
   target: Exclude<TaskModalState, null>;
   staff: readonly StaffReference[];
   programs: readonly TaskProgram[];
-  categories: ReadonlyArray<{ id: TaskCategory; name: string }>;
+  categories: Readonly<TaskReferenceData['categories']>;
   onSaved: (task: Task) => void;
   onClose: () => void;
 }
@@ -23,7 +25,7 @@ export interface TaskModalProps {
  * @param props - Edit/add target, page reference choices, and close/save callbacks.
  * @example <TaskModal target={{ mode: 'edit', task }} {...options} />
  */
-export default function TaskModal(props: TaskModalProps) {
+export default function TaskModal(props: TaskModalProps): ReactElement {
   const {
     target,
     staff,

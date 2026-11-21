@@ -95,14 +95,6 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
               <dd>{workflow.age !== null ? formatShortDate(workflow.dateOfBirth) : '—'}</dd>
             </div>
             <div>
-              <dt>Age</dt>
-              <dd>{workflow.age ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>School</dt>
-              <dd>{lead.school}</dd>
-            </div>
-            <div>
               <dt>Eligible Program</dt>
               <dd>{lead.recommendedProgram || 'Not available'}</dd>
             </div>

@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useMemo, type MutableRefObject } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
@@ -12,8 +13,7 @@ import type {
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import type { TasksFilters } from '../../tasks.api';
-import type { AddTaskContext, Task, TaskCalendarCache, StaffReference } from '../../types';
+import type { AddTaskContext, Task, TaskCalendarCache, StaffReference, TasksFilters } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -32,7 +32,7 @@ export interface TaskCalendarActions {
   setState: (task: Task, state: Task['state']) => Promise<void>;
   setTaskRange: (
     task: Task,
-    nextRange: { start: string; end: string },
+    nextRange: DateRange,
     action: 'move' | 'resize',
     staffId?: string,
   ) => Promise<Task | null>;
@@ -74,7 +74,7 @@ export default function TaskCalendar({
   onAddTask,
   onEditTask,
   onMessageChange,
-}: TaskCalendarProps) {
+}: TaskCalendarProps): ReactElement {
   const { staffIds } = filters;
   const { calendar, visibleItems } = useTaskCalendarData(filters, calendarCacheRef);
 
@@ -207,18 +207,14 @@ function getStaffId(staffMember: StaffReference) {
 function renderStaffRow({ row }: RenderRowContext<StaffReference>) {
   return <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>;
 }
-
-
 /** Identifies a task. @example getTaskId(task) // task.id */
-function getTaskId(task: { id: string }) {
+function getTaskId(task: Pick<Task, 'id'>) {
   return task.id;
 }
 /** Reads inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
 function getTaskRange(task: Task) {
   return { start: task.startDate, end: task.dueDate };
 }
-
-
 /**
  * Allows reassignment only for open tasks without logged hours.
  * @example canReassignTask(task) // false after time has been logged

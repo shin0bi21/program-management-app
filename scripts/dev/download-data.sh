@@ -5,6 +5,8 @@
 set -euo pipefail
 umask 077
 
+# Print source and private destination options without contacting production.
+# Example: bash scripts/dev/download-data.sh --help
 usage() {
   cat <<'USAGE'
 Usage: bash scripts/dev/download-data.sh --host SSH_TARGET --destination DIRECTORY [--identity KEY_PATH] [--container NAME]
@@ -13,9 +15,12 @@ Stream a PostgreSQL custom-format archive over SSH into an existing local direct
 The source database is read-only. This command does not restore data or copy uploads.
 SSH_TARGET can be a configured SSH alias or user@hostname. Default backend container: myapp_backend.
 The deployed backend must include the snapshot-data exporter.
+  -h, --help  Show this help before starting the operation.
 USAGE
 }
 
+# Report invalid arguments to stderr and exit before acquiring a snapshot.
+# Example: fail "Missing value for --host"
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 # 1. Parse snapshot source, destination, and optional SSH settings.

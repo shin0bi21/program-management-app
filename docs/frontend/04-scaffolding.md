@@ -11,16 +11,16 @@ The `page` preset targets authenticated collection routes using
 
 | Command after `npm run scaffold:frontend --` | Generated files |
 |---|---|
-| `page <PagePath>` | Route component, page reference-data owner, and their tests |
+| `page <PagePath>` | Route component, reference-data owner, and their test outlines |
 | `table <owner-path> <NameTable>` | Table component, component-owned table-data hook, and their tests |
 | `modal <owner-path> <NameModal>` | Form component, workflow hook, and their tests |
 | `calendar <owner-path> <NameCalendar>` | Calendar range/buffer adapter and its test |
-| `dashboard <owner-path> <NameDashboard>` | Dashboard component and its test |
+| `dashboard <owner-path> <NameDashboardCard>` | Dashboard card and its test |
 
 Compose independent dashboard cards directly in `PageContainer`'s `dashboard`
-slot. Use the `dashboard` preset only when cards share queries or need additional
-coordination. Layout grouping, reporting dates, and individual card action rules
-belong to `PageContainer` or the cards and do not justify a dashboard wrapper.
+slot. Use the `dashboard` preset for a page-owned card. Add a shared owner
+only when cards share queries or require coordination. Layout grouping, reporting
+dates, and individual card action rules belong to `PageContainer` or the cards.
 Descendants report page feedback through `usePageMessageReporter`;
 keep page-owned failures in the container's `messages` prop. See the source
 contracts linked from the frontend overview for reporting inputs and lifecycle.
@@ -30,7 +30,7 @@ contracts linked from the frontend overview for reporting inputs and lifecycle.
 - Page paths contain a PascalCase page name, optionally preceded by one PascalCase route family.
 - Component names use PascalCase with a domain prefix and the suffix shown above.
 - Owner paths are relative to the repository root.
-- Tables, calendars, and dashboards accept a root or route-family page's `components/` directory.
+- Tables, calendars, and dashboard cards accept a root or route-family page's `components/` directory.
 - Modals also accept nested component owners, a route family's `common/components/`, `frontend/src/common/features`, or a feature's `components/` directory and its nested component owners.
 
 ## Scaffold a Page
@@ -43,12 +43,20 @@ contracts linked from the frontend overview for reporting inputs and lifecycle.
    ```
 
 2. Check the listed paths, then remove `--dry-run` to generate the files.
-3. Compose required page-wide reference lookups in `hooks/data/use<Domain>Data.ts`, including their loading and error states.
+3. Compose required page-wide reference lookups in `hooks/data/use<Domain>Data.ts`, including their loading and error states. Remove the outline if the page does not need shared references.
 4. Pass required reference context down to views and dashboard cards. Descendant data hooks own their ordinary query results and consume supplied references instead of repeating page reference queries.
 5. Add table, calendar, dashboard, or modal presets only as needed.
 6. Connect generated components to their parent and register the route; presets do neither.
 
+The route calls the page data hook and configures `PageContainer`'s header,
+messages, optional dashboard, and table or calendar. Pass cards directly to the
+dashboard slot and keep page-wide controls, selection, and coordination in the
+route or its hooks. Follow the [page data flow](02-state-and-data.md#page-data-flow)
+and [page controls](03-preferences.md#expose-page-controls) contracts when completing it.
+
 Every preset refuses to overwrite existing files. If a destination exists, choose a new name or edit the existing owner.
+
+Preview a card with `npm run scaffold:frontend -- dashboard frontend/src/pages/Staff/Schedules/components ScheduleDashboardCard --dry-run`. Remove `--dry-run` to create the card and its test outline.
 
 ### Add a Calendar
 
@@ -80,7 +88,7 @@ pages/Youth/Placements/
 3. Pass selected IDs to dashboard cards for their focused summary or child queries. Resolve dashboard-only defaults and action policy in the dashboard owner, independently of collection filters; keep selection shared with tables, calendars, or forms at their common owner. Supply already loaded display fields as props when needed. Add a private `use<Domain>DashboardData` only when sibling cards share a query; private card queries stay with their card.
 4. Add optional presentation hooks, row/action components, and browser stories only when needed, following [Ownership](01-ownership.md).
 5. Keep generated `it.todo` outlines only for behavior the feature owns, following [Test Ownership](../workflows/delivery/testing.md#test-ownership).
-6. Document completed functions using the [design recipe](../workflows/documentation.md).
+6. Document completed functions using the [design recipe](../coding-standards/documentation.md).
 
 ## Maintain the Pattern
 

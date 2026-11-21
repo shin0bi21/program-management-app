@@ -3,6 +3,8 @@
 # Sourced by main.sh; configuration and the EXIT rollback trap belong to the
 # deployment lifecycle. ROLLBACK_NEEDED covers migration apply and post-status.
 
+# Require database configuration and a running database container before database work.
+# Example: require_database # exits on unavailable DB_CONTAINER
 require_database() {
   # 1. Require configured database identifiers before inspecting the container.
   : "${DB_USER:?DB_USER not set — check .env}"
@@ -10,11 +12,13 @@ require_database() {
 
   # 2. Abort before exporting if the database container is unavailable.
   if [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || true)" != true ]; then
-    echo "ERROR: DB container '$DB_CONTAINER' is not running"
+    echo "ERROR: DB container '$DB_CONTAINER' is not running" >&2
     exit 1
   fi
 }
 
+# Export and verify a private rollback archive; cleanup owns SNAPSHOT and SNAPSHOT_TMP.
+# Example: take_database_snapshot # runs before migration status and apply
 take_database_snapshot() {
   # 1. Verify the database and export to a temporary compressed snapshot.
   require_database
@@ -26,7 +30,7 @@ take_database_snapshot() {
 
   # 2. Reject empty or corrupt output before publishing the snapshot path.
   if ! gzip -t "$SNAPSHOT_TMP" 2>/dev/null || [ ! -s "$SNAPSHOT_TMP" ]; then
-    echo "ERROR: Snapshot is empty or corrupt — aborting"
+    echo "ERROR: Snapshot is empty or corrupt — aborting" >&2
     exit 1
   fi
 
@@ -35,10 +39,14 @@ take_database_snapshot() {
   echo "Snapshot saved and verified."
 }
 
+# Validate production migration history without applying pending migrations.
+# Example: run_migration_status
 run_migration_status() {
   docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js --dry-run
 }
 
+# Snapshot, validate, apply, and revalidate migrations with rollback armed around apply.
+# Example: run_migration_flow # clears ROLLBACK_NEEDED only after post-status succeeds
 run_migration_flow() {
   # 1. Capture recovery data and validate existing migration history before applying files.
   take_database_snapshot

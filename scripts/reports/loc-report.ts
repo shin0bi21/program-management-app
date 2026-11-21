@@ -13,7 +13,7 @@
  * dependency/build directories and symlinks. TS/TSX .test and .spec files have
  * separate rows. No files are changed.
  *
- * Blank lines are always excluded. Comments are excluded by default using line
+ * Blank lines are always excluded. Comments are excluded using line
  * prefixes and block endings, without parsing strings, templates, or Markdown
  * code fences; a comment block's closing line is excluded even if code follows.
  * See usage() for parameter details and examples.
@@ -43,7 +43,6 @@ const LABELS: Record<string, string> = {
 
 interface ReportOptions {
   extensions: string[];
-  ignoreComments: boolean;
   help: boolean;
 }
 
@@ -59,71 +58,53 @@ interface ReportRow {
 /**
  * Supplies commands and options for the CLI help output.
  * @returns Help text without printing it or scanning repository files.
- * @example usage().includes('--include-comments') // true
+ * @example usage().includes('--sql') // true
  */
 function usage(): string {
   return `Usage: npm run report:loc
        npm run report:loc -- all
-       npm run report:loc -- ts tsx sql
-       npm run report:loc -- all --include-comments
+       npm run report:loc -- --sql
 
-  app                Count TS and TSX files (default).
   all                Count TS, TSX, CSS, SQL, and Markdown files.
-  EXTENSION...       Count exact, case-sensitive extensions without dots.
-  --include-comments Count comments as well as code.
+  --ts, --tsx        Count only TypeScript or React files.
+  --css, --sql, --md Count only CSS, SQL, or Markdown files.
   -h, --help         Show this help.
 
-Do not combine app or all with other extensions.`;
+Without a filter, count TS and TSX. Use only one filter.
+Requires Git. Excludes blank and comment lines; separates TS/TSX source and tests.`;
 }
 
 /**
- * Resolves LOC modes, extensions, and flags from args.
- * @param args - CLI tokens after the script name; omit the mode to count TS/TSX.
- * @returns Selected extensions, comment filtering enabled by default, and the help flag.
- * @throws When a flag is unknown or a preset mode is combined with another type.
- * @example parseArgs([]) // { extensions: ['ts', 'tsx'], ignoreComments: true, help: false }
- * @example parseArgs(['all', '--include-comments']).ignoreComments // false
+ * Selects the default TS/TSX report, all file types, or one language filter.
+ * @param args - CLI tokens after the script name; omit the filter to count TS/TSX.
+ * @returns Selected extensions and whether help was requested.
+ * @throws When an argument is unknown or more than one filter is supplied.
+ * @example parseArgs([]) // { extensions: ['ts', 'tsx'], help: false }
+ * @example parseArgs(['--sql']).extensions // ['sql']
  */
 function parseArgs(args: string[]): ReportOptions {
-  // 1. Default to source counting and gather requested types separately from flags.
-  const options: ReportOptions = { extensions: [], ignoreComments: true, help: false };
-  const requestedTypes: string[] = [];
+  const filters = args.filter(argument => argument !== '-h' && argument !== '--help');
 
-  // 2. Apply flags and reject malformed extension tokens.
-  for (const argument of args) {
-    switch (argument) {
-      case '--include-comments':
-        options.ignoreComments = false;
-        break;
-
-      case '-h':
-      case '--help':
-        options.help = true;
-        break;
-
-      default:
-        if (!/^[a-zA-Z0-9]+$/.test(argument)) {
-          throw new Error(`Unknown argument: ${argument}`);
-        }
-
-        requestedTypes.push(argument);
-    }
+  if (filters.length > 1) {
+    throw new Error('Use only one file-type filter.');
   }
 
-  // 3. Resolve a standalone preset or deduplicate explicit extensions.
-  const mode = requestedTypes[0] ?? 'app';
+  const filter = filters[0];
+  let extensions = APP_EXTENSIONS;
 
-  if (mode === 'app' || mode === 'all') {
-    if (requestedTypes.length > 1) {
-      throw new Error('Use app, all, or a list of extensions.');
+  if (filter === 'all') {
+    extensions = ALL_EXTENSIONS;
+  } else if (filter !== undefined) {
+    const extension = filter.slice(2);
+
+    if (!filter.startsWith('--') || !ALL_EXTENSIONS.includes(extension)) {
+      throw new Error(`Unknown argument: ${filter}`);
     }
 
-    options.extensions = mode === 'app' ? APP_EXTENSIONS : ALL_EXTENSIONS;
-  } else {
-    options.extensions = [...new Set(requestedTypes)];
+    extensions = [extension];
   }
 
-  return options;
+  return { extensions, help: args.includes('-h') || args.includes('--help') };
 }
 
 // ============================================================================
@@ -169,31 +150,24 @@ function repositoryFiles(repoRoot: string): string[] {
 // ============================================================================
 
 /**
- * Counts nonblank lines in text, optionally filtering comment lines by file type.
+ * Counts nonblank lines in text, excluding comment lines by file type.
  * @param text - File contents; comment detection uses trimmed line prefixes, not a parser.
  * @param extension - Lowercase extension without a dot; unknown types only skip blank lines.
- * @param ignoreComments - Excludes comment starts and block continuations when true (default).
  * @returns A non-negative line count; inline comments on code lines do not remove the line.
  * @example countLines('// heading\nconst x = 1;\n', 'ts') // 1
- * @example countLines('// heading\nconst x = 1;\n', 'ts', false) // 2
  */
-export function countLines(text: string, extension: string, ignoreComments = true): number {
+export function countLines(text: string, extension: string): number {
   // 1. Select comment syntax and retain block state across lines.
   const supportsSlashComments = extension === 'ts' || extension === 'tsx';
   const supportsBlockComments = supportsSlashComments || extension === 'css' || extension === 'sql';
   let blockCommentEnd: string | null = null;
   let total = 0;
 
-  // 2. Skip blanks and apply the requested comment policy to each line.
+  // 2. Skip blank and comment lines.
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
 
     if (!line) continue;
-
-    if (!ignoreComments) {
-      total += 1;
-      continue;
-    }
 
     // A block that started on a comment line excludes its entire closing line too.
     if (blockCommentEnd) {
@@ -239,10 +213,10 @@ export function countLines(text: string, extension: string, ignoreComments = tru
 /**
  * Counts selected repository file types, separating TS/TSX source from tests.
  * @param repoRoot - Repository directory to inspect without changing files.
- * @param options - Requested extensions and comment policy; help is handled by the CLI.
+ * @param options - Requested extensions; help is handled by the CLI.
  * @returns Rows in extension order, with a test row after each TS/TSX source row.
  * @throws When repository discovery or file reading fails.
- * @example collectRows(repoRoot, { extensions: [], ignoreComments: true, help: false }) // []
+ * @example collectRows(repoRoot, { extensions: [], help: false }) // []
  */
 export function collectRows(repoRoot: string, options: ReportOptions): ReportRow[] {
   // 1. Allocate source and test totals for each selected extension.
@@ -256,7 +230,7 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
     if (!count) continue;
 
     const text = readFileSync(resolve(repoRoot, path), 'utf8');
-    const lines = countLines(text, extension, options.ignoreComments);
+    const lines = countLines(text, extension);
     const isTest = /\.(?:test|spec)\.(?:ts|tsx)$/.test(path);
 
     if (isTest) {
@@ -282,15 +256,12 @@ export function collectRows(repoRoot: string, options: ReportOptions): ReportRow
 /**
  * Formats rows as a table with the counting policy and summed total.
  * @param rows - Report labels and non-negative line counts in display order.
- * @param ignoreComments - Selects the note describing the policy used to count rows.
  * @returns Report text with leading/trailing newlines; does not print or recount files.
- * @example formatReport([], true).includes('TOTAL                     0') // true
+ * @example formatReport([]).includes('TOTAL                     0') // true
  */
-function formatReport(rows: ReportRow[], ignoreComments: boolean): string {
+function formatReport(rows: ReportRow[]): string {
   // 1. Describe the counting policy and compute the combined total.
-  const note = ignoreComments
-    ? 'Excludes blank lines and lines starting or continuing comments.'
-    : 'Excludes blank lines; includes comments.';
+  const note = 'Excludes blank lines and lines starting or continuing comments.';
 
   const divider = formatRow('--------------------', '------');
   const total = rows.reduce((sum, row) => sum + row.lines, 0);
@@ -336,7 +307,7 @@ function main(): void {
   const rows = collectRows(REPO_ROOT, options);
 
   // Step 3. Print the category breakdown and total.
-  console.log(formatReport(rows, options.ignoreComments));
+  console.log(formatReport(rows));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Prepare backend test services, then run the auth suite.
 set -euo pipefail
 cd "$(dirname "$0")/../../.." || exit
 
@@ -17,6 +18,6 @@ if docker compose exec -T backend npm run test:auth; then
   echo "Auth tests passed!"
 else
   echo ""
-  echo "Auth tests failed! See output above."
+  echo "Auth tests failed! See output above." >&2
   exit 1
 fi

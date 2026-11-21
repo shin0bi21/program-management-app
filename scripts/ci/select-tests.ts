@@ -10,9 +10,7 @@
  * Reads newline-delimited paths from stdin. Prints JSON or local commands, or
  * appends outputs to --github-output FILE. Does not run the selected checks.
  *
- * Usage:
- *   git diff --name-only HEAD | node scripts/ci/select-tests.ts --commands
- *   node scripts/ci/select-tests.ts --help
+ * See usage() for commands and output options.
  */
 
 // ============================================================================
@@ -43,6 +41,10 @@ export interface TestPlan {
   compose: boolean;
 }
 
+interface TestSelectionOptions {
+  baseRef?: string;
+}
+
 type PlanCommand = [command: string, value: string];
 
 // ============================================================================
@@ -61,7 +63,9 @@ interface CliOptions {
  * @example usage().includes('--commands') // true
  */
 function usage(): string {
-  return `Usage: node scripts/ci/select-tests.ts [--base-ref REF] [--commands | --github-output FILE]
+  return `Usage: git diff --name-only HEAD | node scripts/ci/select-tests.ts --commands
+       git diff --name-only HEAD | node scripts/ci/select-tests.ts --base-ref main
+       node scripts/ci/select-tests.ts --help
 
 Read newline-delimited changed paths from stdin and plan checks without running them.
 
@@ -194,7 +198,7 @@ function enableFullApplication(plan: TestPlan): void {
  * @param options - Target branch; main always requires production packaging checks.
  * @example selectTests(['README.md']).backend // false
  */
-export function selectTests(files: string[], { baseRef = 'develop' }: { baseRef?: string } = {}): TestPlan {
+export function selectTests(files: string[], { baseRef = 'develop' }: TestSelectionOptions = {}): TestPlan {
   // Step 1. Start with no checks; paths can only add coverage.
   const plan = emptyPlan();
   const backendChangedPaths = new Set<string>();
@@ -339,11 +343,13 @@ export function planCommands(plan: TestPlan): PlanCommand[] {
   const commands: PlanCommand[] = [];
   if (plan.deploy) commands.push(['deploy', '']);
   if (plan.static) commands.push(['static', '']);
+
   // 2. Select full or related application commands from the shared plan.
   if (plan.backendMode === 'full') commands.push(['backend-full', '']);
   if (plan.backendMode === 'related') commands.push(['backend-related', plan.backendChangedPaths.join(' ')]);
   if (plan.frontendMode === 'full') commands.push(['frontend-full', '']);
   if (plan.frontendMode === 'related') commands.push(['frontend-related', '']);
+
   return commands;
 }
 

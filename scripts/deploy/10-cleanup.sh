@@ -1,5 +1,7 @@
 # shellcheck shell=bash
 
+# Preserve exit status, attempt armed database rollback, then release temporary deployment resources.
+# Example: cleanup # invoked by the deployment EXIT trap
 cleanup() {
   # 1. Preserve the original exit status and disable recursive cleanup traps.
   local exit_code=$?
@@ -8,7 +10,7 @@ cleanup() {
   # 2. Attempt database restoration only while the migration rollback guard is armed.
   if [ "$ROLLBACK_NEEDED" = true ] && [ -n "$SNAPSHOT" ] && [ -s "$SNAPSHOT" ]; then
     echo ""
-    echo "Migration failed — restoring database from pre-migration snapshot..."
+    echo "Migration failed — restoring database from pre-migration snapshot..." >&2
 
     docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d postgres \
       -v dbname="$DB_NAME" \
@@ -22,7 +24,7 @@ cleanup() {
     if gunzip -c "$SNAPSHOT" | docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME"; then
       echo "Database restored."
     else
-      echo "ERROR: Restore failed — manual intervention required"
+      echo "ERROR: Restore failed — manual intervention required" >&2
     fi
   fi
 

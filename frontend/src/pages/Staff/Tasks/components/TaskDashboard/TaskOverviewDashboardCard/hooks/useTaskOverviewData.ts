@@ -1,6 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getTaskDashboardData } from '../../../../tasks.api';
+import { getOpenTasks } from '../../../../api/tasks.api';
+
+import type { Task } from '../../../../types';
+
+interface TaskOverviewDataResult {
+  tasks: Task[];
+  loading: boolean;
+  error: string | null;
+  retry: UseQueryResult<Task[], Error>['refetch'];
+}
 
 /**
  * Loads complete overview tasks for the selected staff member.
@@ -11,11 +20,11 @@ import { getTaskDashboardData } from '../../../../tasks.api';
 export default function useTaskOverviewData(
   taskQueryKey: readonly unknown[],
   staffId: string | null,
-) {
+): TaskOverviewDataResult {
   const query = useQuery({
     queryKey: [...taskQueryKey, 'overview', staffId],
     enabled: Boolean(staffId),
-    queryFn: ({ signal }) => getTaskDashboardData(staffId!, { signal }),
+    queryFn: ({ signal }) => getOpenTasks(staffId!, { signal }),
   });
 
   return {

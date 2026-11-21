@@ -32,6 +32,11 @@ import { planCommands, selectTests, type TestPlan } from '../ci/select-tests.ts'
 
 const DEFAULT_REPO_ROOT = resolve(import.meta.dirname, '../..');
 
+interface InspectChangesOptions {
+  repoRoot?: string;
+  baseRef?: string;
+}
+
 interface BaseChange {
   path: string;
   status: string;
@@ -455,7 +460,7 @@ function stashInventory(repoRoot: string): StashEntry[] {
 export function inspectChanges({
   repoRoot = DEFAULT_REPO_ROOT,
   baseRef,
-}: { repoRoot?: string; baseRef?: string } = {}): Snapshot {
+}: InspectChangesOptions = {}): Snapshot {
   // Step 1. Resolve and validate the comparison base.
   const resolvedRepoRoot = resolve(repoRoot);
   const selectedBase = baseRef ?? resolveDefaultBase(resolvedRepoRoot);
