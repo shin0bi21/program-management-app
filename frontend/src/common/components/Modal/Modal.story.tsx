@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import Modal from './Modal';
+import FloatingSelect from '../FloatingSelect/FloatingSelect';
 
-export function Interactive() {
+export function Interactive(): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -20,7 +21,7 @@ export function Interactive() {
   );
 }
 
-export function CloseDisabled() {
+export function CloseDisabled(): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -33,7 +34,7 @@ export function CloseDisabled() {
   );
 }
 
-export function Submitting() {
+export function Submitting(): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -46,7 +47,7 @@ export function Submitting() {
   );
 }
 
-export function SuccessDelay() {
+export function SuccessDelay(): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -65,7 +66,7 @@ export function SuccessDelay() {
   );
 }
 
-export function Success() {
+export function Success(): ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -76,4 +77,23 @@ export function Success() {
       </Modal>
     </div>
   );
+}
+
+/**
+ * Opens an editor with a dropdown so Escape dismissal can be checked across the portal.
+ * @example Escape closes the choice popup before a second Escape closes the editor.
+ */
+export function DropdownEditor(): ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState('one');
+
+  return <div>
+    <button type="button" onClick={() => setIsOpen(true)}>Open editor</button>
+    <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Editor">
+      <label htmlFor="editor-name">Name</label>
+      <input id="editor-name" defaultValue="unfinished" />
+      <FloatingSelect id="editor-choice" ariaLabel="Choice" value={value} onChange={setValue}
+        options={[{ id: 'one', label: 'One' }]} />
+    </Modal>
+  </div>;
 }

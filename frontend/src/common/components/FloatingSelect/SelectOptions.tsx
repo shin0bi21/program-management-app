@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import { useSelectOptions } from './hooks/useSelectOptions';
 import SearchInput from '../SearchInput/SearchInput';
 import type { FloatingSelectOption, FloatingSelectOptionAction } from './FloatingSelect';
@@ -33,7 +33,7 @@ export default function SelectOptions({
   optionActions,
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
-}: SelectOptionsProps) {
+}: SelectOptionsProps): ReactElement {
   const {
     changeSearch,
     matches,
@@ -48,10 +48,16 @@ export default function SelectOptions({
   const actions = activeOption && optionActions ? optionActions(activeOption) : [];
 
   /**
-   * Selects an existing highlight on Enter or moves it with vertical arrows.
+   * Dismisses the popup on Escape, selects a highlight on Enter, or moves it with arrows.
    * @example Enter with no matching options never emits a new free-text value.
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault();
       if (activeOption) onSelect(activeOption.id);

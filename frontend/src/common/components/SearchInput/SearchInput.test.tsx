@@ -82,7 +82,7 @@ describe('SearchInput', () => {
     expect(clear).toBeDisabled();
   });
 
-  it('contains input keys, allows Escape and Tab to bubble, and honors caller-prevented Enter', () => {
+  it('blurs on Escape, preserves its draft, bubbles Tab, and honors caller-prevented Enter', () => {
     const onParentKeyDown = vi.fn();
     const onApply = vi.fn();
     render(<div onKeyDown={onParentKeyDown}>
@@ -98,9 +98,13 @@ describe('SearchInput', () => {
     expect(onParentKeyDown).not.toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();
 
-    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(true);
+    fireEvent.change(input, { target: { value: 'unfinished' } });
+    input.focus();
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false);
+    expect(input).not.toHaveFocus();
+    expect(input).toHaveValue('unfinished');
     expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
-    expect(onParentKeyDown.mock.calls.map(([event]) => event.key)).toEqual(['Escape', 'Tab']);
+    expect(onParentKeyDown.mock.calls.map(([event]) => event.key)).toEqual(['Tab']);
   });
 
   it('disables the input and both actions together', () => {

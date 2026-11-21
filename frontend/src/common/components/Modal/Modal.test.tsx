@@ -1,5 +1,5 @@
-// Scope: verifies Modal-owned delayed-success closure and timer cleanup.
-import { act, render, screen } from '@testing-library/react';
+// Scope: verifies Modal-owned dismissal, nested-dialog coordination, and delayed-success closure.
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Modal from './Modal';
@@ -145,5 +145,37 @@ describe('Modal success lifecycle', () => {
 
     expect(screen.getByRole('dialog', { name: 'Session expired' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Modal Escape ownership', () => {
+  it.each(['idle', 'submitting'] as const)('contains child-modal Escape during %s', status => {
+    const onParentClose = vi.fn();
+    const onChildClose = vi.fn();
+    render(<Modal isOpen title="Parent" onClose={onParentClose}>
+      <Modal isOpen title="Child" onClose={onChildClose} status={status} successDelay={0}>
+        <input aria-label="Child name" />
+      </Modal>
+    </Modal>);
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Child name' }), { key: 'Escape' });
+
+    expect(onParentClose).not.toHaveBeenCalled();
+    expect(onChildClose).toHaveBeenCalledTimes(status === 'idle' ? 1 : 0);
+  });
+
+  it('ignores keys outside the dialog and retains explicit dismissal guards', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<Modal isOpen title="Editor" onClose={onClose}>Content</Modal>);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(<Modal isOpen title="Editor" onClose={onClose} disableClose>Content</Modal>);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(<Modal isOpen title="Editor" onClose={onClose} dismissible={false}>Content</Modal>);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

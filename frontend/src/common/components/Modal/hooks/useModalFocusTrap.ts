@@ -1,9 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 interface UseModalFocusTrapOptions {
   isOpen: boolean;
-  disableClose: boolean;
-  onClose: () => void;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -15,24 +13,22 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-export default function useModalFocusTrap({
-  isOpen,
-  disableClose,
-  onClose,
-}: UseModalFocusTrapOptions) {
+/**
+ * Focuses an open dialog, wraps its Tab navigation, and restores its opener on cleanup.
+ * @example Tab on the final control returns focus to the first control in the dialog.
+ */
+export default function useModalFocusTrap({ isOpen }: UseModalFocusTrapOptions): RefObject<HTMLDivElement> {
   const containerRef = useRef<HTMLDivElement>(null);
-  const disableCloseRef = useRef(disableClose);
-  const onCloseRef = useRef(onClose);
-  disableCloseRef.current = disableClose;
-  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const container = containerRef.current;
+    if (!container) return undefined;
+
     const getFocusableItems = () => Array.from(
-      container?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [],
+      container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
     );
 
     getFocusableItems()[0]?.focus();
@@ -41,19 +37,11 @@ export default function useModalFocusTrap({
       const openDialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
       if (openDialogs[openDialogs.length - 1] !== container) return;
 
-      if (event.key === 'Escape') {
-        if (!disableCloseRef.current) {
-          event.preventDefault();
-          onCloseRef.current();
-        }
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab' || event.defaultPrevented) return;
       const items = getFocusableItems();
       if (items.length === 0) {
         event.preventDefault();
-        container?.focus();
+        container.focus();
         return;
       }
 
@@ -68,9 +56,9 @@ export default function useModalFocusTrap({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    container.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('keydown', handleKeyDown);
       previouslyFocused?.focus();
     };
   }, [isOpen]);
