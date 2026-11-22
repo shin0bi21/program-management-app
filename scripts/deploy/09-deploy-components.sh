@@ -1,29 +1,6 @@
 # shellcheck shell=bash
 # Coordinate image, migration, service, and revision phases selected by main.sh.
 
-# Validate selected migration work before replacing and health-checking the backend.
-# Example: deploy_backend # uses MIGRATIONS_CHANGED
-deploy_backend() {
-  # 1. Validate the database, applying migrations only when their files changed.
-  require_database
-  if [ "$MIGRATIONS_CHANGED" = true ]; then
-    run_migration_flow
-  else
-    echo ""
-    echo "No migration files changed; validating current migration status..."
-    run_migration_status
-  fi
-
-  # 2. Replace the backend only after migration status succeeds.
-  restart_backend
-}
-
-# Replace and verify nginx after its image has been built by the deployment owner.
-# Example: deploy_frontend
-deploy_frontend() {
-  restart_frontend
-}
-
 # Build both images, apply guarded migrations, then replace backend and nginx.
 # Example: deploy_infrastructure
 deploy_infrastructure() {
@@ -53,4 +30,27 @@ deployment_complete() {
   echo "=========================================="
   echo "Deploy complete: $(git log -1 --oneline "$TARGET_SHA")"
   echo "=========================================="
+}
+
+# Validate selected migration work before replacing and health-checking the backend.
+# Example: deploy_backend # uses MIGRATIONS_CHANGED
+deploy_backend() {
+  # 1. Validate the database, applying migrations only when their files changed.
+  require_database
+  if [ "$MIGRATIONS_CHANGED" = true ]; then
+    run_migration_flow
+  else
+    echo ""
+    echo "No migration files changed; validating current migration status..."
+    run_migration_status
+  fi
+
+  # 2. Replace the backend only after migration status succeeds.
+  restart_backend
+}
+
+# Replace and verify nginx after its image has been built by the deployment owner.
+# Example: deploy_frontend
+deploy_frontend() {
+  restart_frontend
 }

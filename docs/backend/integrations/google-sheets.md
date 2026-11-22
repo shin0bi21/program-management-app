@@ -56,6 +56,9 @@ Use `getSheetsClient()` from the same module for operations outside these helper
 
 ## Add a Script
 
+Follow [Script Structure](../../coding-standards/scripts.md) for workflow placement,
+CLI help, helper order, and the runtime entrypoint guard.
+
 Place Sheets scripts under `backend/integrations/googleSheets/`. For example,
 `backend/integrations/googleSheets/read-roster.ts`:
 
@@ -64,18 +67,31 @@ import 'dotenv/config';
 import { readSheet } from './index';
 import { errorForLog } from '../../src/errors';
 
-async function main() {
-  const spreadsheetId = process.argv[2];
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.length === 1 && ['-h', '--help'].includes(args[0])) {
+    console.log(usage());
+    return;
+  }
+  if (args.length !== 1 || args[0].startsWith('-')) throw new Error(usage());
+
+  const spreadsheetId = args[0];
   if (!spreadsheetId) throw new Error('Provide a spreadsheet ID');
 
   const rows = await readSheet({ spreadsheetId, range: 'Sheet1!A2:F' });
   console.log(`Read ${rows.length} rows`);
 }
 
-main().catch((error: Error) => {
-  console.error('[GoogleSheets] Error reading roster', errorForLog(error));
-  process.exitCode = 1;
-});
+function usage(): string {
+  return 'Usage: npx tsx integrations/googleSheets/read-roster.ts <spreadsheet-id> | --help';
+}
+
+if (require.main === module) {
+  main().catch((error: Error) => {
+    console.error('[GoogleSheets] Error reading roster', errorForLog(error));
+    process.exitCode = 1;
+  });
+}
 ```
 
 Run it with `docker compose exec backend npx tsx integrations/googleSheets/read-roster.ts <spreadsheet-id>`.

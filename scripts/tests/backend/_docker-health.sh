@@ -14,12 +14,89 @@ set -euo pipefail
 MAX_RETRIES=30
 RETRY_INTERVAL=2
 
-# 1. Record existing container ownership before preparing the test environment.
-_CONTAINERS_WERE_RUNNING=false
-if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
-  _CONTAINERS_WERE_RUNNING=true
-fi
+# Prepare test services when sourced; preserve any pre-existing development stack.
+# Example: source scripts/tests/backend/_docker-health.sh
+prepare_test_environment() {
+  # 1. Record existing container ownership before preparing the test environment.
+  _CONTAINERS_WERE_RUNNING=false
+  if docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "backend"; then
+    _CONTAINERS_WERE_RUNNING=true
+  fi
 
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  echo "=========================================="
+  echo "Starting backend test services..."
+  echo "=========================================="
+  # 2. Start backend and test database services.
+  docker compose up -d backend db_test
+
+  # 3. Wait for the development database within the configured retry bound.
+  echo ""
+  echo "Waiting for database..."
+  retries=0
+  until docker compose exec -T db pg_isready -U root -d myapp_db > /dev/null 2>&1; do
+    retries=$((retries + 1))
+    if [ $retries -ge $MAX_RETRIES ]; then
+      echo "Database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
+      exit 1
+    fi
+    printf "."
+    sleep $RETRY_INTERVAL
+  done
+  echo ""
+  echo "Database is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
+  # 4. Wait for the temporary test database before applying migrations.
+  echo ""
+  echo "Waiting for test database..."
+  retries=0
+  until docker compose exec -T db_test pg_isready -U root -d myapp_db_test > /dev/null 2>&1; do
+    retries=$((retries + 1))
+    if [ $retries -ge $MAX_RETRIES ]; then
+      echo "Test database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
+      exit 1
+    fi
+    printf "."
+    sleep $RETRY_INTERVAL
+  done
+  echo ""
+  echo "Test database is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
+  # 5. Wait for the backend listener, printing logs if readiness fails.
+  echo ""
+  echo "Waiting for backend..."
+  retries=0
+  until docker compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || (echo > /dev/tcp/localhost/5001) 2>/dev/null" 2>/dev/null; do
+    retries=$((retries + 1))
+    if [ $retries -ge $MAX_RETRIES ]; then
+      echo "Backend failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
+      echo ""
+      echo "Backend container logs:"
+      docker compose logs --tail=30 backend
+      exit 1
+    fi
+    printf "."
+    sleep $RETRY_INTERVAL
+  done
+  echo ""
+  echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
+
+  # 6. Apply test migrations before handing control to the suite runner.
+  echo ""
+  echo "Migrating test database..."
+  docker compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
+    echo "Test DB migration failed" >&2
+    docker compose exec -T backend npm run db:migrate:test
+    exit 1
+  }
+  echo "Test database migrated"
+}
+
+# Preserve the suite status and stop only containers started by this preparation.
+# Example: cleanup # called by the caller shell's EXIT trap
 cleanup() {
   # 1. Preserve the test exit status and report failures before cleaning up.
   local exit_code=$?
@@ -41,73 +118,5 @@ cleanup() {
   fi
   exit "$exit_code"
 }
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
 
-echo "=========================================="
-echo "Starting backend test services..."
-echo "=========================================="
-# 2. Start backend and test database services.
-docker compose up -d backend db_test
-
-# 3. Wait for the development database within the configured retry bound.
-echo ""
-echo "Waiting for database..."
-retries=0
-until docker compose exec -T db pg_isready -U root -d myapp_db > /dev/null 2>&1; do
-  retries=$((retries + 1))
-  if [ $retries -ge $MAX_RETRIES ]; then
-    echo "Database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
-    exit 1
-  fi
-  printf "."
-  sleep $RETRY_INTERVAL
-done
-echo ""
-echo "Database is ready (after ~$((retries * RETRY_INTERVAL))s)"
-
-# 4. Wait for the temporary test database before applying migrations.
-echo ""
-echo "Waiting for test database..."
-retries=0
-until docker compose exec -T db_test pg_isready -U root -d myapp_db_test > /dev/null 2>&1; do
-  retries=$((retries + 1))
-  if [ $retries -ge $MAX_RETRIES ]; then
-    echo "Test database failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
-    exit 1
-  fi
-  printf "."
-  sleep $RETRY_INTERVAL
-done
-echo ""
-echo "Test database is ready (after ~$((retries * RETRY_INTERVAL))s)"
-
-# 5. Wait for the backend listener, printing logs if readiness fails.
-echo ""
-echo "Waiting for backend..."
-retries=0
-until docker compose exec -T backend sh -c "nc -z localhost 5001 2>/dev/null || (echo > /dev/tcp/localhost/5001) 2>/dev/null" 2>/dev/null; do
-  retries=$((retries + 1))
-  if [ $retries -ge $MAX_RETRIES ]; then
-    echo "Backend failed to become ready after $((MAX_RETRIES * RETRY_INTERVAL))s" >&2
-    echo ""
-    echo "Backend container logs:"
-    docker compose logs --tail=30 backend
-    exit 1
-  fi
-  printf "."
-  sleep $RETRY_INTERVAL
-done
-echo ""
-echo "Backend is ready (after ~$((retries * RETRY_INTERVAL))s)"
-
-# 6. Apply test migrations before handing control to the suite runner.
-echo ""
-echo "Migrating test database..."
-docker compose exec -T backend npm run db:migrate:test > /dev/null 2>&1 || {
-  echo "Test DB migration failed" >&2
-  docker compose exec -T backend npm run db:migrate:test
-  exit 1
-}
-echo "Test database migrated"
+prepare_test_environment

@@ -6,9 +6,7 @@
 import { lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-
 import { Project, QuoteKind } from 'ts-morph';
-
 import { calendarPlan } from './calendar.ts';
 import { dashboardCardPlan } from './dashboard-card.ts';
 import { modalPlan } from './modal.ts';
@@ -16,6 +14,7 @@ import { pagePlan } from './page.ts';
 import { tablePlan } from './table.ts';
 
 const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/;
+
 const FORMAT_SETTINGS = {
   convertTabsToSpaces: true,
   ensureNewLineAtEndOfFile: true,
@@ -44,6 +43,20 @@ export interface ScaffoldContext {
 }
 
 /**
+ * Prints help or generates the requested scaffold and reports its paths.
+ * @example main() // with --help, prints usage without creating files.
+ */
+function main(): void {
+  if (process.argv.length === 3 && ['--help', '-h'].includes(process.argv[2])) {
+    console.log(usage());
+    return;
+  }
+
+  const files = scaffoldFrontend(process.argv.slice(2));
+  console.log(files.join('\n'));
+}
+
+/**
  * Supplies frontend preset commands and preview examples without creating files.
  * @example usage().includes('--dry-run') // true
  */
@@ -67,93 +80,33 @@ Examples:
 }
 
 /**
- * Converts platform path separators to forward slashes for imports and CLI output.
- * @example toPosix('frontend/src') // 'frontend/src'
+ * Plans frontend implementation and test files, rejecting overwrites; dry-run returns paths without writing.
+ * @example scaffoldFrontend(['page', 'Hours', '--dry-run']) // planned repository-relative paths
  */
-function toPosix(path: string): string {
-  return path.split(sep).join('/');
-}
+export function scaffoldFrontend(argv: string[]): string[] {
+  // 1. Validate the request and every planned destination before creating files.
+  const context = createContext();
+  const { dryRun, plan } = parseRequest(context, argv);
+  plan.files.forEach((_contents, path) => {
+    context.assertInside(path, context.frontendRoot, 'Scaffold destination');
+  });
 
-/**
- * Checks whether a destination exists, including symlinks; errors other than missing paths propagate.
- * @example pathExists('/missing/file.ts') // false
- */
-function pathExists(path: string): boolean {
-  try {
-    lstatSync(path);
-    return true;
-  } catch (cause) {
-    if (cause instanceof Error && 'code' in cause && cause.code === 'ENOENT') return false;
-    throw cause;
+  // 2. Reject existing destinations so scaffolding never overwrites an owner.
+  const conflicts = [...plan.files.keys()].filter(pathExists);
+  if (conflicts.length) {
+    throw new Error(`Refusing to overwrite existing files:\n${conflicts.map(toPosix).join('\n')}`);
   }
-}
 
-/**
- * Accepts path segments containing only PascalCase names; an empty list is valid.
- * @example isPascalCasePath(['Staff', 'Schedules']) // true
- */
-function isPascalCasePath(parts: string[]): boolean {
-  return parts.every(part => PASCAL_CASE.test(part));
-}
+  // 3. Return repository-relative destinations immediately for a dry run.
+  const plannedFiles = [...plan.files.keys()].map(path => toPosix(relative(context.repoRoot, path)));
+  if (dryRun) return plannedFiles;
 
-/**
- * Checks repository-relative segments for a root or route-family page components directory.
- * @example isDirectPageComponentsOwner('frontend/src/pages/Staff/Hours/components'.split('/')) // true
- */
-function isDirectPageComponentsOwner(parts: string[]): boolean {
-  // 1. Separate page segments from the components directory.
-  const pageParts = parts.slice(3, -1);
-  // 2. Accept only root pages or one route family with PascalCase names.
-  return parts.slice(0, 3).join('/') === 'frontend/src/pages'
-    && parts.at(-1) === 'components'
-    && (pageParts.length === 1 || pageParts.length === 2)
-    && isPascalCasePath(pageParts);
-}
-
-/**
- * Accepts a root page or a route-family page/common pair for modal ownership.
- * @example isModalPagePath(['Staff', 'common']) // true
- */
-function isModalPagePath(parts: string[]): boolean {
-  // 1. Accept a root page or reject unsupported route-family depth.
-  if (parts.length === 1) return isPascalCasePath(parts);
-  if (parts.length !== 2 || !PASCAL_CASE.test(parts[0])) return false;
-
-  // 2. Allow either family-common ownership or a named child page.
-  return parts[1] === 'common' || PASCAL_CASE.test(parts[1]);
-}
-
-/**
- * Checks page modal ownership, allowing PascalCase nested components beneath a page or family-common owner.
- * @example isPageModalOwner('frontend/src/pages/Staff/Hours/components/HourTable'.split('/')) // true
- */
-function isPageModalOwner(parts: string[]): boolean {
-  // 1. Restrict modal ownership to a page components subtree.
-  if (parts.slice(0, 3).join('/') !== 'frontend/src/pages') return false;
-
-  const ownerParts = parts.slice(3);
-  const componentsIndex = ownerParts.indexOf('components');
-  if (componentsIndex < 1) return false;
-
-  // 2. Validate the page path and every nested component owner.
-  const pageParts = ownerParts.slice(0, componentsIndex);
-  const nestedOwners = ownerParts.slice(componentsIndex + 1);
-  return isModalPagePath(pageParts) && isPascalCasePath(nestedOwners);
-}
-
-/**
- * Checks common-feature modal ownership, allowing the shared root or nested feature components.
- * @example isFeatureModalOwner('frontend/src/common/features'.split('/')) // true
- */
-function isFeatureModalOwner(parts: string[]): boolean {
-  // 1. Accept the common-features root or a subtree beneath it.
-  if (parts.slice(0, 4).join('/') !== 'frontend/src/common/features') return false;
-
-  if (parts.length === 4) return true;
-
-  // 2. Require a feature components directory with valid nested owner names.
-  const [feature, components, ...nestedOwners] = parts.slice(4);
-  return Boolean(feature) && components === 'components' && isPascalCasePath(nestedOwners);
+  // 4. Create missing directories and publish each file exclusively.
+  plan.files.forEach((contents, path) => {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, contents, { flag: 'wx' });
+  });
+  return plannedFiles;
 }
 
 /**
@@ -272,6 +225,82 @@ function createContext(): ScaffoldContext {
 }
 
 /**
+ * Converts platform path separators to forward slashes for imports and CLI output.
+ * @example toPosix('frontend/src') // 'frontend/src'
+ */
+function toPosix(path: string): string {
+  return path.split(sep).join('/');
+}
+
+/**
+ * Checks repository-relative segments for a root or route-family page components directory.
+ * @example isDirectPageComponentsOwner('frontend/src/pages/Staff/Hours/components'.split('/')) // true
+ */
+function isDirectPageComponentsOwner(parts: string[]): boolean {
+  // 1. Separate page segments from the components directory.
+  const pageParts = parts.slice(3, -1);
+  // 2. Accept only root pages or one route family with PascalCase names.
+  return parts.slice(0, 3).join('/') === 'frontend/src/pages'
+    && parts.at(-1) === 'components'
+    && (pageParts.length === 1 || pageParts.length === 2)
+    && isPascalCasePath(pageParts);
+}
+
+/**
+ * Accepts path segments containing only PascalCase names; an empty list is valid.
+ * @example isPascalCasePath(['Staff', 'Schedules']) // true
+ */
+function isPascalCasePath(parts: string[]): boolean {
+  return parts.every(part => PASCAL_CASE.test(part));
+}
+
+/**
+ * Checks page modal ownership, allowing PascalCase nested components beneath a page or family-common owner.
+ * @example isPageModalOwner('frontend/src/pages/Staff/Hours/components/HourTable'.split('/')) // true
+ */
+function isPageModalOwner(parts: string[]): boolean {
+  // 1. Restrict modal ownership to a page components subtree.
+  if (parts.slice(0, 3).join('/') !== 'frontend/src/pages') return false;
+
+  const ownerParts = parts.slice(3);
+  const componentsIndex = ownerParts.indexOf('components');
+  if (componentsIndex < 1) return false;
+
+  // 2. Validate the page path and every nested component owner.
+  const pageParts = ownerParts.slice(0, componentsIndex);
+  const nestedOwners = ownerParts.slice(componentsIndex + 1);
+  return isModalPagePath(pageParts) && isPascalCasePath(nestedOwners);
+}
+
+/**
+ * Accepts a root page or a route-family page/common pair for modal ownership.
+ * @example isModalPagePath(['Staff', 'common']) // true
+ */
+function isModalPagePath(parts: string[]): boolean {
+  // 1. Accept a root page or reject unsupported route-family depth.
+  if (parts.length === 1) return isPascalCasePath(parts);
+  if (parts.length !== 2 || !PASCAL_CASE.test(parts[0])) return false;
+
+  // 2. Allow either family-common ownership or a named child page.
+  return parts[1] === 'common' || PASCAL_CASE.test(parts[1]);
+}
+
+/**
+ * Checks common-feature modal ownership, allowing the shared root or nested feature components.
+ * @example isFeatureModalOwner('frontend/src/common/features'.split('/')) // true
+ */
+function isFeatureModalOwner(parts: string[]): boolean {
+  // 1. Accept the common-features root or a subtree beneath it.
+  if (parts.slice(0, 4).join('/') !== 'frontend/src/common/features') return false;
+
+  if (parts.length === 4) return true;
+
+  // 2. Require a feature components directory with valid nested owner names.
+  const [feature, components, ...nestedOwners] = parts.slice(4);
+  return Boolean(feature) && components === 'components' && isPascalCasePath(nestedOwners);
+}
+
+/**
  * Builds a validated preset plan from CLI tokens, rejecting unknown presets or incorrect argument counts.
  * @example parseRequest(context, ['page', 'Hours', '--dry-run']).dryRun // true
  */
@@ -291,43 +320,22 @@ function parseRequest(context: ScaffoldContext, argv: string[]): ScaffoldRequest
 }
 
 /**
- * Plans frontend implementation and test files, rejecting overwrites; dry-run returns paths without writing.
- * @example scaffoldFrontend(['page', 'Hours', '--dry-run']) // planned repository-relative paths
+ * Checks whether a destination exists, including symlinks; errors other than missing paths propagate.
+ * @example pathExists('/missing/file.ts') // false
  */
-export function scaffoldFrontend(argv: string[]): string[] {
-  // 1. Validate the request and every planned destination before creating files.
-  const context = createContext();
-  const { dryRun, plan } = parseRequest(context, argv);
-  plan.files.forEach((_contents, path) => {
-    context.assertInside(path, context.frontendRoot, 'Scaffold destination');
-  });
-
-  // 2. Reject existing destinations so scaffolding never overwrites an owner.
-  const conflicts = [...plan.files.keys()].filter(pathExists);
-  if (conflicts.length) {
-    throw new Error(`Refusing to overwrite existing files:\n${conflicts.map(toPosix).join('\n')}`);
+function pathExists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (cause) {
+    if (cause instanceof Error && 'code' in cause && cause.code === 'ENOENT') return false;
+    throw cause;
   }
-
-  // 3. Return repository-relative destinations immediately for a dry run.
-  const plannedFiles = [...plan.files.keys()].map(path => toPosix(relative(context.repoRoot, path)));
-  if (dryRun) return plannedFiles;
-
-  // 4. Create missing directories and publish each file exclusively.
-  plan.files.forEach((contents, path) => {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, contents, { flag: 'wx' });
-  });
-  return plannedFiles;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.length === 3 && ['--help', '-h'].includes(process.argv[2])) {
-    console.log(usage());
-    process.exit(0);
-  }
   try {
-    const files = scaffoldFrontend(process.argv.slice(2));
-    console.log(files.join('\n'));
+    main();
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

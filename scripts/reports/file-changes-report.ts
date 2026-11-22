@@ -13,22 +13,13 @@
  * See usage() for parameter details and examples.
  */
 
-// ============================================================================
-// 1. Imports
-// ============================================================================
-
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
-
 import { planCommands, selectTests, type TestPlan } from '../ci/select-tests.ts';
-
-// ============================================================================
-// 2. Configuration and report contracts
-// ============================================================================
 
 const DEFAULT_REPO_ROOT = resolve(import.meta.dirname, '../..');
 
@@ -82,30 +73,27 @@ interface Snapshot {
   stashes: StashEntry[];
 }
 
-// ============================================================================
-// 3. CLI arguments — see usage() for commands, options, and defaults.
-// ============================================================================
-
-/**
- * Supplies commands, options, and base-selection defaults for terminal help.
- * @example usage().includes('--json') // true
- */
-function usage(): string {
-  return `Usage: npm run report:changes
-       npm run report:changes -- --json --base origin/develop
-
-  --json           Print the complete machine-readable snapshot.
-  --base BASE_REF  Compare against this revision instead of the default base.
-  -h, --help       Show this help.
-
-Base selection: --base, then INSPECT_CHANGES_BASE_REF, origin/develop, the remote default
-branch, then HEAD.`;
-}
-
 interface CliOptions {
   json: boolean;
   baseRef?: string;
   help?: boolean;
+}
+
+/**
+ * Prints help or an inspection report using process arguments; errors reach the entrypoint.
+ * @example main() // with --help, prints usage without inspecting Git
+ */
+function main(): void {
+  // Step 1. Validate CLI arguments and handle help.
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
+
+  // Step 2. Collect the snapshot, then print the requested representation.
+  const snapshot = inspectChanges({ baseRef: options.baseRef });
+  console.log(options.json ? JSON.stringify(snapshot, null, 2) : formatHuman(snapshot));
 }
 
 /**
@@ -152,33 +140,89 @@ function parseArgs(args: string[]): CliOptions {
   return options;
 }
 
-// ============================================================================
-// 4. Git access and comparison base
-// ============================================================================
-
 /**
- * Runs Git synchronously in the requested repository; failed commands throw.
- * @param repoRoot - Repository directory passed to Git's -C option.
- * @param args - Git subcommand and arguments, passed without a shell.
- * @param encoding - Text decoding, or 'buffer' to preserve binary output.
- * @returns Captured stdout without trimming.
- * @example git('/repo', ['branch', '--show-current']) // 'develop\n' on develop
+ * Supplies commands, options, and base-selection defaults for terminal help.
+ * @example usage().includes('--json') // true
  */
-function git(repoRoot: string, args: string[], encoding: BufferEncoding | 'buffer' = 'utf8'): string | Buffer {
-  return execFileSync('git', ['-C', repoRoot, ...args], {
-    encoding: encoding === 'buffer' ? null : encoding,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+function usage(): string {
+  return `Usage: npm run report:changes
+       npm run report:changes -- --json --base origin/develop
+
+  --json           Print the complete machine-readable snapshot.
+  --base BASE_REF  Compare against this revision instead of the default base.
+  -h, --help       Show this help.
+
+Base selection: --base, then INSPECT_CHANGES_BASE_REF, origin/develop, the remote default
+branch, then HEAD.`;
 }
 
 /**
- * Reads trimmed Git output for metadata whose boundary whitespace is insignificant.
- * @param repoRoot - Repository in which to run the command.
- * @param args - Git subcommand and arguments; command failures propagate.
- * @example gitText('/repo', ['branch', '--show-current']) // 'develop' on develop
+ * Collects branch and workspace changes, fingerprints, and suggested checks without running them.
+ * Requires an existing HEAD and a comparison base with a common ancestor; Git and file errors propagate.
+ * @param options - repoRoot selects the repository (default: this checkout); baseRef overrides default base selection.
+ * @returns A read-only inventory of paths, branch context, check selection, and stashes.
+ * @example inspectChanges({ repoRoot: '/repo', baseRef: 'HEAD' }).changes.paths // [] in a clean checkout
  */
-function gitText(repoRoot: string, args: string[]): string {
-  return String(git(repoRoot, args)).trim();
+export function inspectChanges({
+  repoRoot = DEFAULT_REPO_ROOT,
+  baseRef,
+}: InspectChangesOptions = {}): Snapshot {
+  // Step 1. Resolve and validate the comparison base.
+  const resolvedRepoRoot = resolve(repoRoot);
+  const selectedBase = baseRef ?? resolveDefaultBase(resolvedRepoRoot);
+  assertBaseRef(resolvedRepoRoot, selectedBase);
+
+  const mergeBase = gitText(resolvedRepoRoot, ['merge-base', selectedBase, 'HEAD']);
+
+  // Step 2. Collect branch commits and staged, unstaged, and untracked changes.
+  const baseChanges = parseDiffNameStatus(String(git(resolvedRepoRoot, [
+    'diff', '--name-status', '-z', '--find-renames', `${mergeBase}...HEAD`,
+  ])));
+  const workingTreeChanges = parseWorkingTreeStatus(String(git(resolvedRepoRoot, [
+    'status', '--porcelain=v1', '-z', '--untracked-files=all',
+  ])));
+
+  // Step 3. Keep both sides of renames so routing sees every affected owner.
+  const paths = [...new Set([
+    ...baseChanges.flatMap(change => [change.originalPath, change.path]),
+    ...workingTreeChanges.flatMap(change => [change.originalPath, change.path]),
+  ].filter((path): path is string => Boolean(path)))].sort();
+
+  // Step 4. Read branch context and select checks using the shared CI policy.
+  const branch = gitText(resolvedRepoRoot, ['branch', '--show-current']) || null;
+  const head = gitText(resolvedRepoRoot, ['rev-parse', 'HEAD']);
+  const upstream = upstreamState(resolvedRepoRoot);
+
+  // The selector treats main as a release base, including origin/main.
+  const testBaseRef = /(^|\/)main$/.test(selectedBase) ? 'main' : selectedBase;
+  const testPlan = selectTests(paths, { baseRef: testBaseRef });
+
+  // Step 5. Fingerprint the content, classify paths, and inventory stashes.
+  const workspaceFingerprint = fingerprint(resolvedRepoRoot, mergeBase, paths, workingTreeChanges);
+  const classifications = classifyPaths(paths);
+  const stashes = stashInventory(resolvedRepoRoot);
+  const commands = planCommands(testPlan).map(([command, value]) => ({
+    command,
+    ...(value ? { value } : {}),
+  }));
+
+  // Step 6. Assemble the report without running any selected checks.
+  return {
+    schemaVersion: 1,
+    git: {
+      branch, head, baseRef: selectedBase, mergeBase, ...upstream,
+      fingerprint: workspaceFingerprint,
+    },
+    changes: { paths, base: baseChanges, workingTree: workingTreeChanges },
+    classifications,
+    verification: {
+      plan: testPlan,
+      commands,
+      requiresPatternCheck: paths.length > 0,
+      requiresDiffCheck: paths.length > 0,
+    },
+    stashes,
+  };
 }
 
 /**
@@ -208,6 +252,31 @@ function resolveDefaultBase(repoRoot: string): string {
 }
 
 /**
+ * Runs Git synchronously in the requested repository; failed commands throw.
+ * @param repoRoot - Repository directory passed to Git's -C option.
+ * @param args - Git subcommand and arguments, passed without a shell.
+ * @param encoding - Text decoding, or 'buffer' to preserve binary output.
+ * @returns Captured stdout without trimming.
+ * @example git('/repo', ['branch', '--show-current']) // 'develop\n' on develop
+ */
+function git(repoRoot: string, args: string[], encoding: BufferEncoding | 'buffer' = 'utf8'): string | Buffer {
+  return execFileSync('git', ['-C', repoRoot, ...args], {
+    encoding: encoding === 'buffer' ? null : encoding,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+/**
+ * Reads trimmed Git output for metadata whose boundary whitespace is insignificant.
+ * @param repoRoot - Repository in which to run the command.
+ * @param args - Git subcommand and arguments; command failures propagate.
+ * @example gitText('/repo', ['branch', '--show-current']) // 'develop' on develop
+ */
+function gitText(repoRoot: string, args: string[]): string {
+  return String(git(repoRoot, args)).trim();
+}
+
+/**
  * Rejects a comparison revision that cannot resolve to a commit.
  * @param repoRoot - Repository containing the comparison history.
  * @param baseRef - Git revision to validate; an invalid revision throws a descriptive error.
@@ -220,10 +289,6 @@ function assertBaseRef(repoRoot: string, baseRef: string): void {
     throw new Error(`Base revision '${baseRef}' does not exist.`);
   }
 }
-
-// ============================================================================
-// 5. Changed-file parsing
-// ============================================================================
 
 /**
  * Decodes changed paths and rename/copy sources without trimming filenames.
@@ -297,10 +362,6 @@ function parseWorkingTreeStatus(output: string): WorkingTreeChange[] {
   return changes;
 }
 
-// ============================================================================
-// 6. Branch context
-// ============================================================================
-
 /**
  * Reads the configured upstream and commit divergence from HEAD.
  * @param repoRoot - Repository whose current branch is inspected.
@@ -322,10 +383,6 @@ function upstreamState(repoRoot: string): Pick<Snapshot['git'], 'upstream' | 'ah
     .map(Number);
   return { upstream, ahead, behind };
 }
-
-// ============================================================================
-// 7. Content fingerprint, path classifications, and stashes
-// ============================================================================
 
 /**
  * Hashes tracked changes plus untracked contents, modes, link text, and affected paths.
@@ -446,83 +503,6 @@ function stashInventory(repoRoot: string): StashEntry[] {
   });
 }
 
-// ============================================================================
-// 8. Snapshot workflow
-// ============================================================================
-
-/**
- * Collects branch and workspace changes, fingerprints, and suggested checks without running them.
- * Requires an existing HEAD and a comparison base with a common ancestor; Git and file errors propagate.
- * @param options - repoRoot selects the repository (default: this checkout); baseRef overrides default base selection.
- * @returns A read-only inventory of paths, branch context, check selection, and stashes.
- * @example inspectChanges({ repoRoot: '/repo', baseRef: 'HEAD' }).changes.paths // [] in a clean checkout
- */
-export function inspectChanges({
-  repoRoot = DEFAULT_REPO_ROOT,
-  baseRef,
-}: InspectChangesOptions = {}): Snapshot {
-  // Step 1. Resolve and validate the comparison base.
-  const resolvedRepoRoot = resolve(repoRoot);
-  const selectedBase = baseRef ?? resolveDefaultBase(resolvedRepoRoot);
-  assertBaseRef(resolvedRepoRoot, selectedBase);
-
-  const mergeBase = gitText(resolvedRepoRoot, ['merge-base', selectedBase, 'HEAD']);
-
-  // Step 2. Collect branch commits and staged, unstaged, and untracked changes.
-  const baseChanges = parseDiffNameStatus(String(git(resolvedRepoRoot, [
-    'diff', '--name-status', '-z', '--find-renames', `${mergeBase}...HEAD`,
-  ])));
-  const workingTreeChanges = parseWorkingTreeStatus(String(git(resolvedRepoRoot, [
-    'status', '--porcelain=v1', '-z', '--untracked-files=all',
-  ])));
-
-  // Step 3. Keep both sides of renames so routing sees every affected owner.
-  const paths = [...new Set([
-    ...baseChanges.flatMap(change => [change.originalPath, change.path]),
-    ...workingTreeChanges.flatMap(change => [change.originalPath, change.path]),
-  ].filter((path): path is string => Boolean(path)))].sort();
-
-  // Step 4. Read branch context and select checks using the shared CI policy.
-  const branch = gitText(resolvedRepoRoot, ['branch', '--show-current']) || null;
-  const head = gitText(resolvedRepoRoot, ['rev-parse', 'HEAD']);
-  const upstream = upstreamState(resolvedRepoRoot);
-
-  // The selector treats main as a release base, including origin/main.
-  const testBaseRef = /(^|\/)main$/.test(selectedBase) ? 'main' : selectedBase;
-  const testPlan = selectTests(paths, { baseRef: testBaseRef });
-
-  // Step 5. Fingerprint the content, classify paths, and inventory stashes.
-  const workspaceFingerprint = fingerprint(resolvedRepoRoot, mergeBase, paths, workingTreeChanges);
-  const classifications = classifyPaths(paths);
-  const stashes = stashInventory(resolvedRepoRoot);
-  const commands = planCommands(testPlan).map(([command, value]) => ({
-    command,
-    ...(value ? { value } : {}),
-  }));
-
-  // Step 6. Assemble the report without running any selected checks.
-  return {
-    schemaVersion: 1,
-    git: {
-      branch, head, baseRef: selectedBase, mergeBase, ...upstream,
-      fingerprint: workspaceFingerprint,
-    },
-    changes: { paths, base: baseChanges, workingTree: workingTreeChanges },
-    classifications,
-    verification: {
-      plan: testPlan,
-      commands,
-      requiresPatternCheck: paths.length > 0,
-      requiresDiffCheck: paths.length > 0,
-    },
-    stashes,
-  };
-}
-
-// ============================================================================
-// 9. Report output and CLI workflow
-// ============================================================================
-
 /**
  * Formats a snapshot as terminal lines with paths, selected commands, and stash count.
  * @param snapshot - Completed inspection result; stash descriptions remain available in JSON only.
@@ -548,27 +528,6 @@ function formatHuman(snapshot: Snapshot): string {
   lines.push(`Stashes: ${snapshot.stashes.length}`);
   return lines.join('\n');
 }
-
-/**
- * Prints help or an inspection report using process arguments; errors reach the entrypoint.
- * @example main() // with --help, prints usage without inspecting Git
- */
-function main(): void {
-  // Step 1. Validate CLI arguments and handle help.
-  const options = parseArgs(process.argv.slice(2));
-  if (options.help) {
-    console.log(usage());
-    return;
-  }
-
-  // Step 2. Collect the snapshot, then print the requested representation.
-  const snapshot = inspectChanges({ baseRef: options.baseRef });
-  console.log(options.json ? JSON.stringify(snapshot, null, 2) : formatHuman(snapshot));
-}
-
-// ============================================================================
-// 10. Entrypoint
-// ============================================================================
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {

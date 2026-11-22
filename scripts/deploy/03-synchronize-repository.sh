@@ -1,12 +1,6 @@
 # shellcheck shell=bash
 # Require a clean checkout, fetch main, and re-execute the pinned target tooling.
 
-# Replace this process with the fetched deploy script, preserving its arguments.
-# Example: reexecute_deploy # inherits the deployment lock descriptor
-reexecute_deploy() {
-  exec "$SCRIPT_PATH" "$@"
-}
-
 # Require a clean checkout and pin remote main; a changed target re-executes fresh tooling.
 # Example: synchronize_repository # sets TARGET_SHA or replaces this process
 synchronize_repository() {
@@ -35,4 +29,10 @@ synchronize_repository() {
     reexecute_deploy "$@"
   fi
   echo "Deploying commit: $(git log -1 --oneline "$TARGET_SHA")"
+}
+
+# Replace this process with the fetched deploy script, preserving its arguments.
+# Example: reexecute_deploy # inherits the deployment lock descriptor
+reexecute_deploy() {
+  exec "$SCRIPT_PATH" "$@"
 }

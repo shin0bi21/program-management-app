@@ -4,17 +4,9 @@
  * and orders schema/data migrations in one stream. It never connects to a DB.
  */
 
-// ============================================================================
-// 1. Imports
-// ============================================================================
-
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-
-// ============================================================================
-// 2. Baseline and ledger contracts
-// ============================================================================
 
 export type InitFiles = {
   readonly schema: 'schema/init.sql';
@@ -41,60 +33,42 @@ export const INIT_FILES: InitFiles = {
 
 const initFilePaths = Object.values(INIT_FILES);
 
-// ============================================================================
-// 3. Checksums and ledger paths
-// ============================================================================
-
 /**
- * Hashes the complete file bytes as SHA-256 hexadecimal; filesystem errors propagate.
- * @example calculateChecksum('/repo/backend/db/schema/init.sql') // 64 lowercase hexadecimal characters
+ * Returns init files followed by increments in filename order; inconsistent layouts and duplicate filenames throw.
+ * @example listMigrationFiles('/empty/db') // [] when no manifest, init, or migration files exist
  */
-export function calculateChecksum(filepath: string): string {
-  return crypto.createHash('sha256').update(fs.readFileSync(filepath)).digest('hex');
-}
-
-/**
- * Accepts a single SQL filename without directory separators or leading punctuation.
- * @example isValidMigrationFilename('../init.sql') // false
- */
-function isValidMigrationFilename(value: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9_.-]*\.sql$/.test(value);
-}
-
-/**
- * Resolves a known init, schema/data increment, or legacy filename under the supplied database root; other versions throw.
- * @example migrationFilePath('/repo/db', '001_init.sql') // '/repo/db/migrations/001_init.sql'
- */
-export function migrationFilePath(root: string, version: string): string {
-  // 1. Accept known init files before checking incremental migration layouts.
-  if (initFilePaths.some(file => file === version)) return path.join(root, version);
-
-  // 2. Validate current schema/data paths or a single legacy filename.
-  const current = /^(schema|data)\/migrations\/([^/]+)$/.exec(version);
-  if (current && isValidMigrationFilename(current[2])) return path.join(root, version);
-  if (isValidMigrationFilename(version)) return path.join(root, 'migrations', version);
-
-  // 3. Reject all other layouts, including escaping paths.
-  throw new Error(`Invalid migration version: ${version}`);
-}
-
-// ============================================================================
-// 4. Baseline validation
-// ============================================================================
-
-/**
- * Validates a nonempty list of simple schema.table names excluding the migration ledger; invalid values throw.
- * @example validateSeedTables(['public.user_roles']) // ['public.user_roles']
- */
-export function validateSeedTables(tables: unknown): string[] {
-  if (!Array.isArray(tables) || tables.length === 0
-    || tables.some(table => typeof table !== 'string'
-      || !/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/.test(table)
-      || table === 'public.schema_migrations')) {
-    throw new Error('Seed tables must be explicit schema.table identifiers excluding the ledger');
+export function listMigrationFiles(root: string): string[] {
+  // 1. Require a consistent baseline or legacy layout.
+  const baseline = readBaseline(root);
+  const legacy = listSqlFiles(root, 'migrations');
+  if (baseline && legacy.length) throw new Error('A baseline cannot coexist with legacy migration files');
+  if (!baseline && initFilePaths.some(file => fs.existsSync(path.join(root, file)))) {
+    throw new Error('Init files require a complete baseline.json manifest');
   }
 
-  return tables;
+  // 2. Gather schema, data, and legacy files into one incremental stream.
+  const incremental = [
+    ...legacy,
+    ...listSqlFiles(root, 'schema/migrations'),
+    ...listSqlFiles(root, 'data/migrations'),
+  ];
+
+  // 3. Reject duplicate filenames across schema and data directories.
+  const names = new Set<string>();
+  for (const version of incremental) {
+    const name = path.basename(version);
+    if (names.has(name)) throw new Error(`Migration filenames must be unique across schema and data: ${name}`);
+    names.add(name);
+  }
+
+  // 4. Order by filename and place baseline init files before all increments.
+  incremental.sort((left, right) => {
+    const leftName = path.basename(left);
+    const rightName = path.basename(right);
+    if (leftName === rightName) return 0;
+    return leftName < rightName ? -1 : 1;
+  });
+  return [...(baseline ? initFilePaths : []), ...incremental];
 }
 
 /**
@@ -140,9 +114,53 @@ export function readBaseline(root: string): Baseline | null {
   return baseline;
 }
 
-// ============================================================================
-// 5. File discovery and execution order
-// ============================================================================
+/**
+ * Validates a nonempty list of simple schema.table names excluding the migration ledger; invalid values throw.
+ * @example validateSeedTables(['public.user_roles']) // ['public.user_roles']
+ */
+export function validateSeedTables(tables: unknown): string[] {
+  if (!Array.isArray(tables) || tables.length === 0
+    || tables.some(table => typeof table !== 'string'
+      || !/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/.test(table)
+      || table === 'public.schema_migrations')) {
+    throw new Error('Seed tables must be explicit schema.table identifiers excluding the ledger');
+  }
+
+  return tables;
+}
+
+/**
+ * Hashes the complete file bytes as SHA-256 hexadecimal; filesystem errors propagate.
+ * @example calculateChecksum('/repo/backend/db/schema/init.sql') // 64 lowercase hexadecimal characters
+ */
+export function calculateChecksum(filepath: string): string {
+  return crypto.createHash('sha256').update(fs.readFileSync(filepath)).digest('hex');
+}
+
+/**
+ * Resolves a known init, schema/data increment, or legacy filename under the supplied database root; other versions throw.
+ * @example migrationFilePath('/repo/db', '001_init.sql') // '/repo/db/migrations/001_init.sql'
+ */
+export function migrationFilePath(root: string, version: string): string {
+  // 1. Accept known init files before checking incremental migration layouts.
+  if (initFilePaths.some(file => file === version)) return path.join(root, version);
+
+  // 2. Validate current schema/data paths or a single legacy filename.
+  const current = /^(schema|data)\/migrations\/([^/]+)$/.exec(version);
+  if (current && isValidMigrationFilename(current[2])) return path.join(root, version);
+  if (isValidMigrationFilename(version)) return path.join(root, 'migrations', version);
+
+  // 3. Reject all other layouts, including escaping paths.
+  throw new Error(`Invalid migration version: ${version}`);
+}
+
+/**
+ * Accepts a single SQL filename without directory separators or leading punctuation.
+ * @example isValidMigrationFilename('../init.sql') // false
+ */
+function isValidMigrationFilename(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9_.-]*\.sql$/.test(value);
+}
 
 /**
  * Lists validated regular SQL files in a database-relative directory; missing directories yield an empty list.
@@ -161,47 +179,6 @@ function listSqlFiles(root: string, directory: string): string[] {
     return directory === 'migrations' ? file : `${directory}/${file}`;
   });
 }
-
-/**
- * Returns init files followed by increments in filename order; inconsistent layouts and duplicate filenames throw.
- * @example listMigrationFiles('/empty/db') // [] when no manifest, init, or migration files exist
- */
-export function listMigrationFiles(root: string): string[] {
-  // 1. Require a consistent baseline or legacy layout.
-  const baseline = readBaseline(root);
-  const legacy = listSqlFiles(root, 'migrations');
-  if (baseline && legacy.length) throw new Error('A baseline cannot coexist with legacy migration files');
-  if (!baseline && initFilePaths.some(file => fs.existsSync(path.join(root, file)))) {
-    throw new Error('Init files require a complete baseline.json manifest');
-  }
-
-  // 2. Gather schema, data, and legacy files into one incremental stream.
-  const incremental = [
-    ...legacy,
-    ...listSqlFiles(root, 'schema/migrations'),
-    ...listSqlFiles(root, 'data/migrations'),
-  ];
-  
-  // 3. Reject duplicate filenames across schema and data directories.
-  const names = new Set<string>();
-  for (const version of incremental) {
-    const name = path.basename(version);
-    if (names.has(name)) throw new Error(`Migration filenames must be unique across schema and data: ${name}`);
-    names.add(name);
-  }
-
-  // 4. Order by filename and place baseline init files before all increments.
-  incremental.sort((left, right) => {
-    const a = path.basename(left);
-    const b = path.basename(right);
-    return a < b ? -1 : a > b ? 1 : 0;
-  });
-  return [...(baseline ? initFilePaths : []), ...incremental];
-}
-
-// ============================================================================
-// 6. Applied-history validation
-// ============================================================================
 
 /**
  * Compares applied versions and non-null checksums with repository files, returning drift descriptions without mutation.
