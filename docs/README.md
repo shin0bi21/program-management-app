@@ -31,7 +31,7 @@ scripts locally.
 ## Maintain Content and Navigation
 
 Edit the source guides in `backend/`, `coding-standards/`, `frontend/`,
-`local-development/`, `production/`, and `workflows/`. Do not edit or commit the generated copies in
+`local-development/`, and `workflows/`. Do not edit or commit the generated copies in
 `src/content/docs/`. The sidebar follows the source directories and headings;
 folder README files appear first, and other entries are alphabetical.
 
@@ -40,6 +40,9 @@ Number setup guides in execution order and use short title-case headings.
 When moving or merging guides, update repository links and skill references,
 preserve linked section IDs or update their callers, and run the repository link
 check and docs build. Source paths define website URLs; do not add legacy redirects.
+
+Production runbooks in `docs/production/` are local, ignored files and are excluded
+from the public documentation site. Keep a private backup; new clones do not include them.
 
 ## Write and Maintain a Guide
 

@@ -12,7 +12,7 @@ import process from 'node:process';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-export const documentationDirectories = ['docs/backend', 'docs/coding-standards', 'docs/frontend', 'docs/local-development', 'docs/production', 'docs/workflows'];
+export const documentationDirectories = ['docs/backend', 'docs/coding-standards', 'docs/frontend', 'docs/local-development', 'docs/workflows'];
 
 export const DEFAULT_REPOSITORY_SLUG = 'shin0bi21/be-original';
 
