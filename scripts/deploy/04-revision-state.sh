@@ -9,6 +9,14 @@ load_environment() {
   mkdir -p "$STATE_DIR"
 }
 
+# Read each component revision, retaining empty values for unavailable deployment history.
+# Example: load_revision_state # populates the three revision globals
+load_revision_state() {
+  FRONTEND_REVISION="$(read_revision frontend)"
+  BACKEND_REVISION="$(read_revision backend)"
+  INFRASTRUCTURE_REVISION="$(read_revision infrastructure)"
+}
+
 # Print a component marker only when it still resolves to a commit; missing history prints nothing.
 # Example: read_revision frontend
 read_revision() {
@@ -39,14 +47,6 @@ write_revision() {
   printf '%s\n' "$revision" > "$temp_marker"
   # 2. Publish the marker atomically after the component succeeds.
   mv "$temp_marker" "$STATE_DIR/${component}-revision"
-}
-
-# Read each component revision, retaining empty values for unavailable deployment history.
-# Example: load_revision_state # populates the three revision globals
-load_revision_state() {
-  FRONTEND_REVISION="$(read_revision frontend)"
-  BACKEND_REVISION="$(read_revision backend)"
-  INFRASTRUCTURE_REVISION="$(read_revision infrastructure)"
 }
 
 # Succeed when history is missing or the supplied paths differ from TARGET_SHA.

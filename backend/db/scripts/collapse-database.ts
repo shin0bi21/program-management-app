@@ -3,18 +3,14 @@
 /**
  * DATABASE COLLAPSE — database/file worker for the host maintenance wrapper.
  *
- * Usage: npx tsx db/scripts/collapse-database.ts --phase prepare|commit|rollback|cleanup
- *   --work-directory /maintenance --apply [--reuse-baseline]
+ * Flow: validate arguments/help, load recovery state, execute one phase, and
+ * retain recovery files. See usage() for commands and required configuration.
  *
  * DATABASE_URL identifies the server and target. MIGRATION_FILES_ROOT selects
  * writable migration files. The caller stops the application, owns the operation
  * lock, and verifies health between prepare and commit. Recovery files are private
  * and retained; this worker never starts containers or removes the old database.
  */
-
-// ============================================================================
-// 1. Imports and operation contracts
-// ============================================================================
 
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -26,7 +22,13 @@ import { requireEnv } from '../../src/utils/env';
 import { dumpDatabase, snapshotData } from './helpers/snapshot-data';
 
 type Phase = 'prepare' | 'commit' | 'rollback' | 'cleanup';
-interface Options { phase: Phase; work: string; reuse: boolean }
+
+interface Options {
+  phase: Phase;
+  work: string;
+  reuse: boolean;
+}
+
 interface State {
   format: 1;
   id: string;
@@ -46,51 +48,43 @@ interface State {
 }
 
 const initFilePaths = Object.values(initFiles);
+
 const ledger = 'public.schema_migrations';
+
 const fileGroups = ['migrations', 'schema', 'data', 'baseline.json'];
 
-// ============================================================================
-// 2. Export comparison and source-history checks
-// ============================================================================
-
 /**
- * Removes pg_dump comments and randomized psql restriction keys for schema comparison, preserving SQL content.
- * @example normalizeDump('-- exported\nSELECT 1;') // 'SELECT 1;'
+ * Prints help or dispatches one explicitly authorized maintenance phase.
+ * @example main() // with --help, prints requirements without reading environment or state.
  */
-export function normalizeDump(sql: string): string {
-  // pg_dump randomizes psql restriction keys and includes version/date comments.
-  return sql.split('\n').filter(line => !line.startsWith('--') && !/^\\(?:un)?restrict\b/.test(line))
-    .join('\n').trim();
-}
-
-/**
- * Requires identical migration versions and checksums with no duplicates; order does not affect comparison and mismatches throw.
- * @example verifyHistory([], []) // returns normally
- */
-export function verifyHistory(records: Migration[], expected: Migration[]): void {
-  // 1. Index actual and expected versions to detect duplicate history entries.
-  const actual = new Map(records.map(row => [row.version, row.checksum]));
-  const expectedVersions = new Set(expected.map(row => row.version));
-  // 2. Require identical versions and checksums at the collapse boundary.
-  if (actual.size !== records.length || expectedVersions.size !== expected.length || actual.size !== expected.length
-    || expected.some(row => !actual.has(row.version) || actual.get(row.version) !== row.checksum)) {
-    throw new Error('Migration history does not match the collapse boundary. Apply the matching migrations first.');
+function main(): void {
+  const args = process.argv.slice(2);
+  if (args.length === 1 && ['-h', '--help'].includes(args[0])) {
+    console.log(usage());
+    return;
   }
+
+  const options = parseArgs(args);
+  collapse(options);
 }
 
 /**
- * Reads the validated migration catalog under databaseFiles and computes a checksum for every version.
- * @example migrationInventory('/repo/db') // ordered version/checksum pairs
+ * Describes maintenance phases and resource ownership before configuration is read.
+ * @example usage().includes('--work-directory') // true
  */
-function migrationInventory(databaseFiles: string): Migration[] {
-  return listMigrationFiles(databaseFiles).map(version => ({
-    version, checksum: checksum(migrationFilePath(databaseFiles, version)),
-  }));
-}
+function usage(): string {
+  return `Usage: npx tsx db/scripts/collapse-database.ts --phase PHASE --work-directory DIRECTORY --apply [--reuse-baseline]
 
-// ============================================================================
-// 3. CLI parsing and private recovery state
-// ============================================================================
+  --phase PHASE               prepare, commit, rollback, or cleanup.
+  --work-directory DIRECTORY  Required absolute private recovery directory.
+  --apply                     Required acknowledgement of maintenance work.
+  --reuse-baseline            Reuse reviewed baseline artifacts.
+  -h, --help                  Show help without accessing database or recovery files.
+
+Requires DATABASE_URL, MIGRATION_FILES_ROOT and PostgreSQL client tools.
+The host wrapper owns the lock, application downtime and health gates.
+Recovery files and the old database are retained for inspection.`;
+}
 
 /**
  * Parses one maintenance phase and an absolute recovery directory; requires explicit --apply and rejects invalid options.
@@ -173,6 +167,47 @@ export function collapse(options: Options): void {
     ...(url.searchParams.has('sslmode') ? { PGSSLMODE: url.searchParams.get('sslmode')! } : {}),
   };
 
+  try {
+    // 4. Reconcile persisted flags with PostgreSQL before dispatching the requested phase.
+    if (state.rollbackFailed && options.phase !== 'rollback') {
+      throw new Error('Retry rollback before continuing this operation');
+    }
+
+    // Database renames and filesystem state cannot share a transaction. Recover
+    // completed rename/create steps if the process stopped before saving a flag.
+    if (state.phase !== 'committed' && state.phase !== 'rolled-back') {
+      const names = new Set(psql('postgres', `SELECT datname FROM pg_database WHERE datname IN
+        ('${target}', '${capture}', '${stage}', '${backup}');`).split('\n'));
+      state.captured = names.has(capture);
+      state.staged = names.has(stage) || (names.has(backup) && names.has(target));
+      state.oldRenamed = names.has(backup);
+      state.switched = names.has(backup) && names.has(target) && !names.has(stage);
+      saveState();
+    }
+
+    // 5. Execute one maintenance phase using the recovered operation state.
+    if (options.phase === 'prepare') prepare();
+    else if (options.phase === 'commit') commit();
+    else if (options.phase === 'rollback') rollback();
+    else cleanup();
+  } catch (error) {
+    // 6. Attempt automatic recovery only before the committed write boundary.
+    if ((options.phase === 'prepare' || options.phase === 'commit') && state.phase !== 'committed') {
+      try { rollback(); }
+      catch {
+        state.rollbackFailed = true;
+        saveState();
+        throw new Error('Collapse failed and automatic rollback failed; preserve recovery files and databases');
+      }
+    } else if (options.phase === 'rollback' && state.phase !== 'committed') {
+      state.rollbackFailed = true;
+      saveState();
+    }
+    throw error;
+  }
+
+  // Phase helpers share this operation's recovery state and private connection settings.
+
   /**
    * Atomically replaces the private operation state so later phases can recover interrupted work.
    * @example saveState() // persists the current operation flags
@@ -185,9 +220,13 @@ export function collapse(options: Options): void {
     renameSync(temporary, stateFile);
   }
 
-  // ========================================================================
-  // 4. PostgreSQL command helpers
-  // ========================================================================
+  /**
+   * Executes SQL against an operation database with fail-fast psql settings and returns trimmed output.
+   * @example psql(target, 'SELECT 1') // '1'
+   */
+  function psql(database: string, sql: string): string {
+    return runPsql(database, ['-X', '-qAt', '--set=ON_ERROR_STOP=1'], sql).trim();
+  }
 
   /**
    * Runs psql against an operation database with optional SQL or file input; failures retain private diagnostics and owned input files are closed.
@@ -212,154 +251,6 @@ export function collapse(options: Options): void {
       if (inputFd !== undefined) closeSync(inputFd);
     }
   }
-
-  /**
-   * Executes SQL against an operation database with fail-fast psql settings and returns trimmed output.
-   * @example psql(target, 'SELECT 1') // '1'
-   */
-  function psql(database: string, sql: string): string {
-    return runPsql(database, ['-X', '-qAt', '--set=ON_ERROR_STOP=1'], sql).trim();
-  }
-
-  /**
-   * Sets connection access for a validated operation database and terminates existing sessions; command failures throw.
-   * @example connections(stage, false) // prevents new connections and disconnects current sessions
-   */
-  function connections(database: string, allow: boolean): void {
-    psql('postgres', `ALTER DATABASE "${database}" ALLOW_CONNECTIONS ${allow};
-      SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid();`);
-  }
-
-  /**
-   * Exports the selected operation database to a new private file using the requested pg_dump arguments.
-   * @example dump(capture, '/maintenance/schema.sql', ['--schema-only']) // writes a new schema export
-   */
-  function dump(database: string, file: string, args: string[]): void {
-    const connection = new URL(databaseUrl);
-    connection.pathname = `/${database}`;
-    dumpDatabase(connection.toString(), file, ['--no-owner', '--no-acl', '--no-tablespaces', ...args]);
-  }
-
-  /**
-   * Recursively copies regular migration artifacts, rejecting symlinks; recovery copies stay private and modeReference restores checkout permissions.
-   * @example copyMigrationFiles('/source/schema', '/maintenance/schema') // creates a private artifact copy
-   */
-  function copyMigrationFiles(source: string, target: string, modeReference?: string): void {
-    // 1. Inspect source artifacts and optional checkout permissions without following symlinks.
-    const entry = lstatSync(source);
-    const reference = modeReference && existsSync(modeReference) ? lstatSync(modeReference) : undefined;
-    // 2. Copy directory children recursively and restore the requested directory mode.
-    if (entry.isDirectory()) {
-      mkdirSync(target, { recursive: true, mode: 0o700 });
-      for (const name of readdirSync(source)) {
-        copyMigrationFiles(join(source, name), join(target, name), modeReference && join(modeReference, name));
-      }
-      const mode = modeReference ? (reference ?? lstatSync(databaseFiles)).mode & 0o7777 : 0o700;
-      chmodSync(target, mode);
-      return;
-    }
-    // 3. Reject other file types before writing a new private regular file.
-    if (!entry.isFile()) throw new Error('Migration artifacts must be regular files or directories');
-
-    // Recovery copies stay private; publication and rollback take checkout modes
-    // from the saved originals. Explicit chmod preserves them even under a strict umask.
-    writeFileSync(target, readFileSync(source), { mode: 0o600, flag: 'wx' });
-    const mode = modeReference
-      ? (reference ?? lstatSync(join(work, 'previous-files', 'baseline.json'))).mode & 0o7777
-      : 0o600;
-    chmodSync(target, mode);
-  }
-
-  /**
-   * Loads a SQL file atomically into an operation database; restoringData defers foreign keys and revalidates them before commit.
-   * @example load(stage, '/maintenance/data.sql', true) // restores data and validates its foreign keys
-   */
-  function load(database: string, file: string, restoringData = false): void {
-    // 1. Configure an atomic SQL load, optionally deferring foreign-key enforcement.
-    const args = ['-X', '-q', '--set=ON_ERROR_STOP=1', '--single-transaction'];
-    if (restoringData) args.push('-c', "SET LOCAL session_replication_role = 'replica'");
-    args.push('-f', '-');
-    // 2. Revalidate all restored foreign-key rows before committing the data load.
-    if (restoringData) {
-      // COPY may contain cycles; recreate validated FKs to check every restored row.
-      args.push('-c', `SET LOCAL session_replication_role = 'origin'; DO $$
-        DECLARE constraint_row record;
-        BEGIN
-          FOR constraint_row IN SELECT conrelid::regclass AS relation, conname,
-            pg_get_constraintdef(oid) AS definition FROM pg_constraint
-            WHERE contype = 'f' AND convalidated AND connamespace IN
-              (SELECT oid FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema')
-          LOOP
-            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', constraint_row.relation, constraint_row.conname);
-            EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s', constraint_row.relation, constraint_row.conname, constraint_row.definition);
-          END LOOP;
-        END $$;`);
-    }
-    // 3. Load the complete file and validation SQL in the same transaction.
-    runPsql(database, args, undefined, file);
-  }
-
-  /**
-   * Loads an exported schema into a temporary database and dumps its current-server representation; always drops the temporary database.
-   * @example renderSourceSchema('/maintenance/schema.sql', '/maintenance/canonical.sql') // writes canonical schema SQL
-   */
-  function renderSourceSchema(inputFile: string, outputFile: string): void {
-    // 1. Render the exported schema through the current PostgreSQL parser.
-    psql('postgres', `CREATE DATABASE "${schemaReference}" TEMPLATE template0;`);
-    try {
-      load(schemaReference, inputFile);
-      dump(schemaReference, outputFile, ['--schema-only']);
-    } finally {
-      // 2. Remove the temporary schema reference even when rendering fails.
-      psql('postgres', `DROP DATABASE "${schemaReference}" WITH (FORCE);`);
-    }
-  }
-
-  /**
-   * Returns deterministic per-table row counts and content hashes, excluding the migration ledger.
-   * @example fingerprints(capture) === fingerprints(stage) // true when business table contents match
-   */
-  function fingerprints(database: string): string {
-    return psql(database, `SELECT format(
-      'SELECT %L, count(*), md5(coalesce(string_agg(md5(to_jsonb(t)::text), '''' ORDER BY md5(to_jsonb(t)::text)), '''')) FROM %I.%I t;',
-      schemaname || '.' || tablename, schemaname, tablename)
-      FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-        AND (schemaname || '.' || tablename) <> '${ledger}' ORDER BY schemaname, tablename
-      \u005cgexec`);
-  }
-
-  /**
-   * Returns ordered sequence values and call state, excluding the migration ledger sequence.
-   * @example sequenceStates(capture) === sequenceStates(stage) // true when preserved sequence states match
-   */
-  function sequenceStates(database: string): string {
-    return psql(database, `SELECT format('SELECT %L, last_value, is_called FROM %I.%I;',
-      schemaname || '.' || sequencename, schemaname, sequencename)
-      FROM pg_sequences WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-        AND (schemaname || '.' || sequencename) <> coalesce(pg_get_serial_sequence('${ledger}', 'id'), '')
-      ORDER BY schemaname, sequencename
-      \u005cgexec`);
-  }
-
-  /**
-   * Restores saved migration artifact groups and permissions, then records that candidate files are no longer published.
-   * @example restoreFiles() // restores the pre-collapse source artifacts
-   */
-  function restoreFiles(): void {
-    // 1. Restore original artifact groups and their saved checkout modes.
-    const saved = join(work, 'previous-files');
-    for (const name of fileGroups) {
-      rmSync(join(databaseFiles, name), { recursive: true, force: true });
-      if (existsSync(join(saved, name))) copyMigrationFiles(join(saved, name), join(databaseFiles, name), join(saved, name));
-    }
-    // 2. Persist that candidate source artifacts are no longer published.
-    state.published = false;
-    saveState();
-  }
-
-  // ========================================================================
-  // 5. Prepare the verified candidate without publishing source files
-  // ========================================================================
 
   /**
    * Captures and verifies the source, builds a replacement, and switches it read-only for caller health checks; interrupted preparation requires rollback.
@@ -494,9 +385,125 @@ export function collapse(options: Options): void {
     console.log('Candidate prepared read-only; verify backend health before commit.');
   }
 
-  // ========================================================================
-  // 6. Commit publication after the caller verifies provisional health
-  // ========================================================================
+  /**
+   * Recursively copies regular migration artifacts, rejecting symlinks; recovery copies stay private and modeReference restores checkout permissions.
+   * @example copyMigrationFiles('/source/schema', '/maintenance/schema') // creates a private artifact copy
+   */
+  function copyMigrationFiles(source: string, target: string, modeReference?: string): void {
+    // 1. Inspect source artifacts and optional checkout permissions without following symlinks.
+    const entry = lstatSync(source);
+    const reference = modeReference && existsSync(modeReference) ? lstatSync(modeReference) : undefined;
+    // 2. Copy directory children recursively and restore the requested directory mode.
+    if (entry.isDirectory()) {
+      mkdirSync(target, { recursive: true, mode: 0o700 });
+      for (const name of readdirSync(source)) {
+        copyMigrationFiles(join(source, name), join(target, name), modeReference && join(modeReference, name));
+      }
+      const mode = modeReference ? (reference ?? lstatSync(databaseFiles)).mode & 0o7777 : 0o700;
+      chmodSync(target, mode);
+      return;
+    }
+    // 3. Reject other file types before writing a new private regular file.
+    if (!entry.isFile()) throw new Error('Migration artifacts must be regular files or directories');
+
+    // Recovery copies stay private; publication and rollback take checkout modes
+    // from the saved originals. Explicit chmod preserves them even under a strict umask.
+    writeFileSync(target, readFileSync(source), { mode: 0o600, flag: 'wx' });
+    const mode = modeReference
+      ? (reference ?? lstatSync(join(work, 'previous-files', 'baseline.json'))).mode & 0o7777
+      : 0o600;
+    chmodSync(target, mode);
+  }
+
+  /**
+   * Sets connection access for a validated operation database and terminates existing sessions; command failures throw.
+   * @example connections(stage, false) // prevents new connections and disconnects current sessions
+   */
+  function connections(database: string, allow: boolean): void {
+    psql('postgres', `ALTER DATABASE "${database}" ALLOW_CONNECTIONS ${allow};
+      SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid();`);
+  }
+
+  /**
+   * Exports the selected operation database to a new private file using the requested pg_dump arguments.
+   * @example dump(capture, '/maintenance/schema.sql', ['--schema-only']) // writes a new schema export
+   */
+  function dump(database: string, file: string, args: string[]): void {
+    const connection = new URL(databaseUrl);
+    connection.pathname = `/${database}`;
+    dumpDatabase(connection.toString(), file, ['--no-owner', '--no-acl', '--no-tablespaces', ...args]);
+  }
+
+  /**
+   * Loads an exported schema into a temporary database and dumps its current-server representation; always drops the temporary database.
+   * @example renderSourceSchema('/maintenance/schema.sql', '/maintenance/canonical.sql') // writes canonical schema SQL
+   */
+  function renderSourceSchema(inputFile: string, outputFile: string): void {
+    // 1. Render the exported schema through the current PostgreSQL parser.
+    psql('postgres', `CREATE DATABASE "${schemaReference}" TEMPLATE template0;`);
+    try {
+      load(schemaReference, inputFile);
+      dump(schemaReference, outputFile, ['--schema-only']);
+    } finally {
+      // 2. Remove the temporary schema reference even when rendering fails.
+      psql('postgres', `DROP DATABASE "${schemaReference}" WITH (FORCE);`);
+    }
+  }
+
+  /**
+   * Loads a SQL file atomically into an operation database; restoringData defers foreign keys and revalidates them before commit.
+   * @example load(stage, '/maintenance/data.sql', true) // restores data and validates its foreign keys
+   */
+  function load(database: string, file: string, restoringData = false): void {
+    // 1. Configure an atomic SQL load, optionally deferring foreign-key enforcement.
+    const args = ['-X', '-q', '--set=ON_ERROR_STOP=1', '--single-transaction'];
+    if (restoringData) args.push('-c', "SET LOCAL session_replication_role = 'replica'");
+    args.push('-f', '-');
+    // 2. Revalidate all restored foreign-key rows before committing the data load.
+    if (restoringData) {
+      // COPY may contain cycles; recreate validated FKs to check every restored row.
+      args.push('-c', `SET LOCAL session_replication_role = 'origin'; DO $$
+        DECLARE constraint_row record;
+        BEGIN
+          FOR constraint_row IN SELECT conrelid::regclass AS relation, conname,
+            pg_get_constraintdef(oid) AS definition FROM pg_constraint
+            WHERE contype = 'f' AND convalidated AND connamespace IN
+              (SELECT oid FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema')
+          LOOP
+            EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', constraint_row.relation, constraint_row.conname);
+            EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s', constraint_row.relation, constraint_row.conname, constraint_row.definition);
+          END LOOP;
+        END $$;`);
+    }
+    // 3. Load the complete file and validation SQL in the same transaction.
+    runPsql(database, args, undefined, file);
+  }
+
+  /**
+   * Returns deterministic per-table row counts and content hashes, excluding the migration ledger.
+   * @example fingerprints(capture) === fingerprints(stage) // true when business table contents match
+   */
+  function fingerprints(database: string): string {
+    return psql(database, `SELECT format(
+      'SELECT %L, count(*), md5(coalesce(string_agg(md5(to_jsonb(t)::text), '''' ORDER BY md5(to_jsonb(t)::text)), '''')) FROM %I.%I t;',
+      schemaname || '.' || tablename, schemaname, tablename)
+      FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        AND (schemaname || '.' || tablename) <> '${ledger}' ORDER BY schemaname, tablename
+      \u005cgexec`);
+  }
+
+  /**
+   * Returns ordered sequence values and call state, excluding the migration ledger sequence.
+   * @example sequenceStates(capture) === sequenceStates(stage) // true when preserved sequence states match
+   */
+  function sequenceStates(database: string): string {
+    return psql(database, `SELECT format('SELECT %L, last_value, is_called FROM %I.%I;',
+      schemaname || '.' || sequencename, schemaname, sequencename)
+      FROM pg_sequences WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        AND (schemaname || '.' || sequencename) <> coalesce(pg_get_serial_sequence('${ledger}', 'id'), '')
+      ORDER BY schemaname, sequencename
+      \u005cgexec`);
+  }
 
   /**
    * Publishes verified artifacts and records commit before enabling writes; an already committed operation retries activation only.
@@ -558,10 +565,6 @@ export function collapse(options: Options): void {
     console.log(`Collapse committed; previous database retained: ${backup}`);
   }
 
-  // ========================================================================
-  // 7. Restore the original state or remove disposable staging databases
-  // ========================================================================
-
   /**
    * Restores original files, names, and access before commit; rejects committed operations and accepts repeated successful rollback.
    * @example rollback() // restores the original target and records rolled-back state
@@ -593,6 +596,22 @@ export function collapse(options: Options): void {
   }
 
   /**
+   * Restores saved migration artifact groups and permissions, then records that candidate files are no longer published.
+   * @example restoreFiles() // restores the pre-collapse source artifacts
+   */
+  function restoreFiles(): void {
+    // 1. Restore original artifact groups and their saved checkout modes.
+    const saved = join(work, 'previous-files');
+    for (const name of fileGroups) {
+      rmSync(join(databaseFiles, name), { recursive: true, force: true });
+      if (existsSync(join(saved, name))) copyMigrationFiles(join(saved, name), join(databaseFiles, name), join(saved, name));
+    }
+    // 2. Persist that candidate source artifacts are no longer published.
+    state.published = false;
+    saveState();
+  }
+
+  /**
    * Drops disposable comparison and staging databases only after commit or rollback; failed rollback blocks cleanup and the original backup is retained.
    * @example cleanup() // removes temporary databases while retaining recovery files
    */
@@ -615,54 +634,47 @@ export function collapse(options: Options): void {
       saveState();
     }
   }
+}
 
-  try {
-    // 4. Reconcile persisted flags with PostgreSQL before dispatching the requested phase.
-    if (state.rollbackFailed && options.phase !== 'rollback') {
-      throw new Error('Retry rollback before continuing this operation');
-    }
-
-    // Database renames and filesystem state cannot share a transaction. Recover
-    // completed rename/create steps if the process stopped before saving a flag.
-    if (state.phase !== 'committed' && state.phase !== 'rolled-back') {
-      const names = new Set(psql('postgres', `SELECT datname FROM pg_database WHERE datname IN
-        ('${target}', '${capture}', '${stage}', '${backup}');`).split('\n'));
-      state.captured = names.has(capture);
-      state.staged = names.has(stage) || (names.has(backup) && names.has(target));
-      state.oldRenamed = names.has(backup);
-      state.switched = names.has(backup) && names.has(target) && !names.has(stage);
-      saveState();
-    }
-
-    // 5. Execute one maintenance phase using the recovered operation state.
-    if (options.phase === 'prepare') prepare();
-    else if (options.phase === 'commit') commit();
-    else if (options.phase === 'rollback') rollback();
-    else cleanup();
-  } catch (error) {
-    // 6. Attempt automatic recovery only before the committed write boundary.
-    if ((options.phase === 'prepare' || options.phase === 'commit') && state.phase !== 'committed') {
-      try { rollback(); }
-      catch {
-        state.rollbackFailed = true;
-        saveState();
-        throw new Error('Collapse failed and automatic rollback failed; preserve recovery files and databases');
-      }
-    } else if (options.phase === 'rollback' && state.phase !== 'committed') {
-      state.rollbackFailed = true;
-      saveState();
-    }
-    throw error;
+/**
+ * Requires identical migration versions and checksums with no duplicates; order does not affect comparison and mismatches throw.
+ * @example verifyHistory([], []) // returns normally
+ */
+export function verifyHistory(records: Migration[], expected: Migration[]): void {
+  // 1. Index actual and expected versions to detect duplicate history entries.
+  const actual = new Map(records.map(row => [row.version, row.checksum]));
+  const expectedVersions = new Set(expected.map(row => row.version));
+  // 2. Require identical versions and checksums at the collapse boundary.
+  if (actual.size !== records.length || expectedVersions.size !== expected.length || actual.size !== expected.length
+    || expected.some(row => !actual.has(row.version) || actual.get(row.version) !== row.checksum)) {
+    throw new Error('Migration history does not match the collapse boundary. Apply the matching migrations first.');
   }
 }
 
-// ============================================================================
-// 8. Entrypoint
-// ============================================================================
+/**
+ * Reads the validated migration catalog under databaseFiles and computes a checksum for every version.
+ * @example migrationInventory('/repo/db') // ordered version/checksum pairs
+ */
+function migrationInventory(databaseFiles: string): Migration[] {
+  return listMigrationFiles(databaseFiles).map(version => ({
+    version, checksum: checksum(migrationFilePath(databaseFiles, version)),
+  }));
+}
+
+/**
+ * Removes pg_dump comments and randomized psql restriction keys for schema comparison, preserving SQL content.
+ * @example normalizeDump('-- exported\nSELECT 1;') // 'SELECT 1;'
+ */
+export function normalizeDump(sql: string): string {
+  // pg_dump randomizes psql restriction keys and includes version/date comments.
+  return sql.split('\n').filter(line => !line.startsWith('--') && !/^\\(?:un)?restrict\b/.test(line))
+    .join('\n').trim();
+}
 
 if (require.main === module) {
-  try { collapse(parseArgs(process.argv.slice(2))); }
-  catch (error) {
+  try {
+    main();
+  } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }

@@ -3,14 +3,6 @@ import { dirname, relative, resolve, sep } from 'node:path';
 export type Findings = string[];
 
 /**
- * Converts a zero-based source character offset to a one-based line number.
- * @example lineNumber('a\nb', 2) // 2
- */
-export function lineNumber(source: string, index: number = 0): number {
-  return source.slice(0, index).split('\n').length;
-}
-
-/**
  * Appends file-and-line findings for every match of a global pattern; resets its search cursor first.
  * @example addMatches(findings, 'a.ts', 'fetch()', /fetch/g, 'Use the client') // appends 'a.ts:1 Use the client'
  */
@@ -21,6 +13,14 @@ export function addMatches(violations: Findings, file: string, source: string, p
   for (const match of source.matchAll(pattern)) {
     violations.push(`${file}:${lineNumber(source, match.index)} ${message}`);
   }
+}
+
+/**
+ * Converts a zero-based source character offset to a one-based line number.
+ * @example lineNumber('a\nb', 2) // 2
+ */
+export function lineNumber(source: string, index: number = 0): number {
+  return source.slice(0, index).split('\n').length;
 }
 
 /**

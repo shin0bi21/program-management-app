@@ -18,10 +18,12 @@ import { execFile } from 'node:child_process';
 import { promisify, stripVTControlCharacters } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-// 1. Types, interfaces, and shared constants
+// Types, interfaces, and shared constants
 
 type Branch = 'dev' | 'main';
+
 type Component = 'frontend' | 'backend' | 'migrations' | 'infrastructure';
+
 type TestMode = 'full' | 'related' | 'unknown';
 
 interface TestSummary {
@@ -115,7 +117,9 @@ interface AttemptContext {
 }
 
 const COMPONENTS: Component[] = ['frontend', 'backend', 'migrations', 'infrastructure'];
+
 const TEST_STEP_NAMES = new Set(['Run tests', 'Run related tests', 'Test deployment planning']);
+
 const CHECK_STEP_PREFIXES = [
   'Type check',
   'Run static checks',
@@ -125,46 +129,26 @@ const CHECK_STEP_PREFIXES = [
   'Verify generated database types are committed',
   'Validate production',
 ];
+
 const execute = promisify(execFile);
 
-// 2. CLI usage, argument parsing, and validation
+// Read-only CLI
 
 /**
- * Returns the CLI reference printed by --help.
- * @example usage().includes('--start YYYY-MM-DD') // true
+ * Validates CLI filters, resolves the repository, collects history, and prints the report.
+ * Help returns before contacting GitHub; collection failures reach the entrypoint.
+ * @example main() // with --help, prints the reference without running gh
  */
-function usage(): string {
-  // 1. Describe commands, filters, and evidence limits in the CLI reference.
-  return `Usage: npm run report:ci-history -- --start 2026-09-01
-       npm run report:ci-history -- --start 2026-09-01 --dev
-       npm run report:ci-history -- --start 2026-11-02 --end 2026-11-06 --dev --change 0a06f196b --all
-       npm run report:ci-history -- --start 2026-09-01 --end 2026-09-30 --main --type frontend --exclusive
+async function main(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
 
-  --start YYYY-MM-DD  Required inclusive start date (UTC).
-  --end YYYY-MM-DD    Inclusive end date; defaults to now.
-  --dev              Development PR checks only.
-  --change SHA       Group development runs by exact commit ancestry. Requires --dev.
-  --main             Production deployments only; default shows both views.
-  --success          Successful attempts only; timings use first attempts (default).
-  --failures         Failed attempts only; excludes cancellations.
-  --all              All outcomes, including cancellations.
-  --type COMPONENT   Deployment component; repeat to require multiple components. Requires --main.
-  --exclusive        Require exactly the selected component combination.
-  --help             Show this help.
-
-Components: frontend, backend, migrations, infrastructure.
-Migrations include backend; infrastructure includes all four components when matching --exclusive.
-Deployments without component logs remain Unclassified and are excluded by component filters.
-
-Requires authenticated GitHub CLI access (gh auth login). Dates select workflow creation time.
-If GitHub's 1,000-run query limit is reached, narrow the date range.
---all shows success rate excluding cancellations. Outcome flags are mutually exclusive.
-Development output includes job phases, full/related test groups, test counts, and per-attempt PR/head context.
-Test scope follows the executed Jest/Vitest command, including full-suite fallbacks; absent evidence is unknown.
-Timings exclude skipped steps. Setup/other includes job overhead and unclassified steps.
-Use explicit start/end dates and a commit SHA for repeatable comparisons; GitHub history remains live.
-Squash source PRs may contain equivalent changes without containing the squash merge commit.
-No matches exits successfully.`;
+  const { stdout } = await execute('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
+  const history = await collectHistory(stdout.trim(), options);
+  console.log(renderReport(history, options));
 }
 
 /**
@@ -263,7 +247,47 @@ function validDate(value: string): boolean {
     && new Date(value).toISOString().slice(0, 10) === value;
 }
 
-// 3. Read-only GitHub collection
+// CLI usage, argument parsing, and validation
+
+/**
+ * Returns the CLI reference printed by --help.
+ * @example usage().includes('--start YYYY-MM-DD') // true
+ */
+function usage(): string {
+  // 1. Describe commands, filters, and evidence limits in the CLI reference.
+  return `Usage: npm run report:ci-history -- --start 2026-09-01
+       npm run report:ci-history -- --start 2026-09-01 --dev
+       npm run report:ci-history -- --start 2026-11-02 --end 2026-11-06 --dev --change 0a06f196b --all
+       npm run report:ci-history -- --start 2026-09-01 --end 2026-09-30 --main --type frontend --exclusive
+
+  --start YYYY-MM-DD  Required inclusive start date (UTC).
+  --end YYYY-MM-DD    Inclusive end date; defaults to now.
+  --dev              Development PR checks only.
+  --change SHA       Group development runs by exact commit ancestry. Requires --dev.
+  --main             Production deployments only; default shows both views.
+  --success          Successful attempts only; timings use first attempts (default).
+  --failures         Failed attempts only; excludes cancellations.
+  --all              All outcomes, including cancellations.
+  --type COMPONENT   Deployment component; repeat to require multiple components. Requires --main.
+  --exclusive        Require exactly the selected component combination.
+  --help             Show this help.
+
+Components: frontend, backend, migrations, infrastructure.
+Migrations include backend; infrastructure includes all four components when matching --exclusive.
+Deployments without component logs remain Unclassified and are excluded by component filters.
+
+Requires authenticated GitHub CLI access (gh auth login). Dates select workflow creation time.
+If GitHub's 1,000-run query limit is reached, narrow the date range.
+--all shows success rate excluding cancellations. Outcome flags are mutually exclusive.
+Development output includes job phases, full/related test groups, test counts, and per-attempt PR/head context.
+Test scope follows the executed Jest/Vitest command, including full-suite fallbacks; absent evidence is unknown.
+Timings exclude skipped steps. Setup/other includes job overhead and unclassified steps.
+Use explicit start/end dates and a commit SHA for repeatable comparisons; GitHub history remains live.
+Squash source PRs may contain equivalent changes without containing the squash merge commit.
+No matches exits successfully.`;
+}
+
+// Read-only GitHub collection
 
 /**
  * Collects completed development PR checks and production deployment attempts with job timings.
@@ -337,6 +361,24 @@ export async function collectHistory(repository: string, options: Options, reque
   return records.sort((left, right) => left.createdAt.localeCompare(right.createdAt)
     || left.runId - right.runId || left.attempt - right.attempt);
 }
+
+
+/**
+ * Reads GitHub through the authenticated gh CLI without saving files; command failures reject.
+ * @param endpoint - GitHub API path, including any query parameters.
+ * @param paginate - Whether to collect every page into a JSON array of page responses.
+ * @returns Raw response text, or slurped JSON pages when pagination is enabled.
+ * @example await github('repos/example/project/actions/runs?per_page=100', true) // JSON pages
+ */
+async function github(endpoint: string, paginate: boolean = false): Promise<string> {
+  // 1. Choose paginated JSON or raw output, preserving terminal-formatted logs.
+  const flags = paginate ? ['--paginate', '--slurp'] : ['--allow-escape-sequences'];
+
+  // 2. Execute the authenticated read and return its output without saving files.
+  const { stdout } = await execute('gh', ['api', ...flags, endpoint], { maxBuffer: 128 * 1024 * 1024 });
+  return stdout;
+}
+
 
 /**
  * Collects one attempt's phases, test evidence, ancestry, or deployment flags.
@@ -425,6 +467,53 @@ async function collectAttempt(workflow: Workflow, attempt: number, context: Atte
 }
 
 /**
+ * Measures elapsed seconds for a completed job or step; absent timestamps remain unknown.
+ * @param item - GitHub timestamps in ISO format, including skipped or incomplete steps.
+ * @example elapsedSeconds({ started_at: null, completed_at: null }) // null
+ */
+function elapsedSeconds(item: Pick<Step, 'started_at' | 'completed_at'>): number | null {
+  // 1. Preserve missing timestamps instead of interpreting them as zero duration.
+  if (!item.started_at || !item.completed_at) return null;
+
+  // 2. Convert the completed interval to non-negative seconds.
+  return Math.max(0, (Date.parse(item.completed_at) - Date.parse(item.started_at)) / 1000);
+}
+
+// Shared attempt filtering
+
+/**
+ * Selects attempts by inclusive creation date, branch, outcome, and deployment components without mutation.
+ * Exclusive matching includes backend for migrations and all components for infrastructure.
+ * @param runs - Collected attempts with component flags when available.
+ * @param options - Validated filters; attempts without flags cannot match component filters.
+ * @example filterRuns([], parseArgs(['--start', '2026-09-01'])) // []
+ */
+export function filterRuns(runs: Run[], options: Options): Run[] {
+  // 1. Expand component dependencies and resolve the inclusive date boundaries.
+  const selected = new Set(options.types);
+  const expected: Record<Component, boolean> = {
+    frontend: selected.has('frontend') || selected.has('infrastructure'),
+    backend: selected.has('backend') || selected.has('migrations') || selected.has('infrastructure'),
+    migrations: selected.has('migrations') || selected.has('infrastructure'),
+    infrastructure: selected.has('infrastructure'),
+  };
+  const start = Date.parse(options.start);
+  const end = Date.parse(options.end);
+
+  // 2. Match dates and outcomes before applying component selection rules.
+  return runs.filter(run => {
+    const started = Date.parse(run.createdAt);
+    if (started < start || started > end) return false;
+    if (options.branch && run.branch !== options.branch) return false;
+    if (options.outcome === 'success' && run.conclusion !== 'success') return false;
+    if (options.outcome === 'failures' && ['success', 'cancelled'].includes(run.conclusion)) return false;
+    if (!selected.size) return true;
+    if (options.exclusive) return COMPONENTS.every(component => run.flags?.[component] === expected[component]);
+    return options.types.every(component => run.flags?.[component]);
+  });
+}
+
+/**
  * Checks commit ancestry using GitHub's resolved comparison, rather than merge dates.
  * @param endpoint - Comparison with the cleanup commit as base and run head as head.
  * @param request - Read-only GitHub client; API failures reject.
@@ -442,32 +531,15 @@ async function requestComparison(endpoint: string, request: Request): Promise<bo
 }
 
 /**
- * Reads a job log, retaining unavailable/expired logs as missing evidence.
- * @param endpoint - GitHub job-log endpoint.
- * @param request - Read-only client; errors other than HTTP 404/410 reject.
- * @example await optionalLog('repos/example/project/actions/jobs/1/logs', request) // null for expired logs
+ * Labels a run's ancestry evidence without treating missing metadata as a pre-change run.
+ * @param run - Development attempt collected with --change.
+ * @example changeGroup({ containsChange: null }) // 'Unknown ancestry'
  */
-async function optionalLog(endpoint: string, request: Request): Promise<string | null> {
-  // 1. Read the log, treating only missing or expired output as unavailable evidence.
-  try {
-    return await request(endpoint);
-  } catch (error) {
-    if (error instanceof Error && /HTTP (404|410)/.test(error.message)) return null;
-    throw error;
-  }
-}
-
-/**
- * Measures elapsed seconds for a completed job or step; absent timestamps remain unknown.
- * @param item - GitHub timestamps in ISO format, including skipped or incomplete steps.
- * @example elapsedSeconds({ started_at: null, completed_at: null }) // null
- */
-function elapsedSeconds(item: Pick<Step, 'started_at' | 'completed_at'>): number | null {
-  // 1. Preserve missing timestamps instead of interpreting them as zero duration.
-  if (!item.started_at || !item.completed_at) return null;
-
-  // 2. Convert the completed interval to non-negative seconds.
-  return Math.max(0, (Date.parse(item.completed_at) - Date.parse(item.started_at)) / 1000);
+function changeGroup(run: Pick<Run, 'containsChange'>): string {
+  // 1. Label exact ancestry while preserving missing evidence as unknown.
+  if (run.containsChange === true) return 'Contains commit';
+  if (run.containsChange === false) return 'Lacks commit';
+  return 'Unknown ancestry';
 }
 
 /**
@@ -513,6 +585,22 @@ function jobTiming(job: Job): JobTiming {
 }
 
 /**
+ * Reads a job log, retaining unavailable/expired logs as missing evidence.
+ * @param endpoint - GitHub job-log endpoint.
+ * @param request - Read-only client; errors other than HTTP 404/410 reject.
+ * @example await optionalLog('repos/example/project/actions/jobs/1/logs', request) // null for expired logs
+ */
+async function optionalLog(endpoint: string, request: Request): Promise<string | null> {
+  // 1. Read the log, treating only missing or expired output as unavailable evidence.
+  try {
+    return await request(endpoint);
+  } catch (error) {
+    if (error instanceof Error && /HTTP (404|410)/.test(error.message)) return null;
+    throw error;
+  }
+}
+
+/**
  * Extracts actual test scope and the last runner totals from Jest/Vitest output.
  * Command evidence overrides planned MODE values, which can fall back to full execution.
  * @param log - Attempt-specific job output; null means expired or unavailable.
@@ -551,22 +639,6 @@ function testSummary(log: string | null, component: 'backend' | 'frontend'): Tes
 }
 
 /**
- * Reads GitHub through the authenticated gh CLI without saving files; command failures reject.
- * @param endpoint - GitHub API path, including any query parameters.
- * @param paginate - Whether to collect every page into a JSON array of page responses.
- * @returns Raw response text, or slurped JSON pages when pagination is enabled.
- * @example await github('repos/example/project/actions/runs?per_page=100', true) // JSON pages
- */
-async function github(endpoint: string, paginate: boolean = false): Promise<string> {
-  // 1. Choose paginated JSON or raw output, preserving terminal-formatted logs.
-  const flags = paginate ? ['--paginate', '--slurp'] : ['--allow-escape-sequences'];
-
-  // 2. Execute the authenticated read and return its output without saving files.
-  const { stdout } = await execute('gh', ['api', ...flags, endpoint], { maxBuffer: 128 * 1024 * 1024 });
-  return stdout;
-}
-
-/**
  * Reads the last printed value for each deployment component, ignoring letter case.
  * @param log - Deployment job output containing component: true/false lines.
  * @returns All four flags, or undefined if any component has no printed value.
@@ -583,41 +655,7 @@ function deploymentFlags(log: string): Run['flags'] {
   return flags;
 }
 
-// 4. Shared attempt filtering
-
-/**
- * Selects attempts by inclusive creation date, branch, outcome, and deployment components without mutation.
- * Exclusive matching includes backend for migrations and all components for infrastructure.
- * @param runs - Collected attempts with component flags when available.
- * @param options - Validated filters; attempts without flags cannot match component filters.
- * @example filterRuns([], parseArgs(['--start', '2026-09-01'])) // []
- */
-export function filterRuns(runs: Run[], options: Options): Run[] {
-  // 1. Expand component dependencies and resolve the inclusive date boundaries.
-  const selected = new Set(options.types);
-  const expected: Record<Component, boolean> = {
-    frontend: selected.has('frontend') || selected.has('infrastructure'),
-    backend: selected.has('backend') || selected.has('migrations') || selected.has('infrastructure'),
-    migrations: selected.has('migrations') || selected.has('infrastructure'),
-    infrastructure: selected.has('infrastructure'),
-  };
-  const start = Date.parse(options.start);
-  const end = Date.parse(options.end);
-
-  // 2. Match dates and outcomes before applying component selection rules.
-  return runs.filter(run => {
-    const started = Date.parse(run.createdAt);
-    if (started < start || started > end) return false;
-    if (options.branch && run.branch !== options.branch) return false;
-    if (options.outcome === 'success' && run.conclusion !== 'success') return false;
-    if (options.outcome === 'failures' && ['success', 'cancelled'].includes(run.conclusion)) return false;
-    if (!selected.size) return true;
-    if (options.exclusive) return COMPONENTS.every(component => run.flags?.[component] === expected[component]);
-    return options.types.every(component => run.flags?.[component]);
-  });
-}
-
-// 5. Outcome counts and separate success/failure timing tables
+// Outcome counts and separate success/failure timing tables
 
 /**
  * Builds the filtered text report with separate successful first-attempt and failed-attempt timings.
@@ -710,15 +748,36 @@ function timingRows(runs: Run[]): string[][] {
 }
 
 /**
- * Labels a run's ancestry evidence without treating missing metadata as a pre-change run.
- * @param run - Development attempt collected with --change.
- * @example changeGroup({ containsChange: null }) // 'Unknown ancestry'
+ * Formats a duration rounded to whole seconds, omitting zero seconds after whole minutes.
+ * @param seconds - Non-negative finite duration, or null when the metric is unavailable.
+ * @example duration(65) // '1m 05s'
+ * @example duration(null) // '—'
  */
-function changeGroup(run: Pick<Run, 'containsChange'>): string {
-  // 1. Label exact ancestry while preserving missing evidence as unknown.
-  if (run.containsChange === true) return 'Contains commit';
-  if (run.containsChange === false) return 'Lacks commit';
-  return 'Unknown ancestry';
+function duration(seconds: number | null): string {
+  // 1. Display unavailable durations explicitly.
+  if (seconds === null) return '—';
+
+  // 2. Round short durations to whole seconds.
+  const rounded = Math.round(seconds);
+  if (rounded < 60) return `${rounded}s`;
+
+  // 3. Format longer durations as minutes with any remaining seconds.
+  const remaining = rounded % 60;
+  return `${Math.floor(rounded / 60)}m${remaining ? ` ${String(remaining).padStart(2, '0')}s` : ''}`;
+}
+
+/**
+ * Computes the median without changing the supplied values.
+ * @param values - Nonempty collection of finite timing values in the same units.
+ * @example median([10, 40]) // 25
+ */
+function median(values: number[]): number {
+  // 1. Sort a copy so the caller's measurements retain their original order.
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+
+  // 2. Use the middle value or the mean of the two central values.
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
 /**
@@ -802,58 +861,6 @@ function developmentAttempts(runs: Run[], options: Options): string[] {
     }
   }
   return lines;
-}
-
-/**
- * Computes the median without changing the supplied values.
- * @param values - Nonempty collection of finite timing values in the same units.
- * @example median([10, 40]) // 25
- */
-function median(values: number[]): number {
-  // 1. Sort a copy so the caller's measurements retain their original order.
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-
-  // 2. Use the middle value or the mean of the two central values.
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-}
-
-/**
- * Formats a duration rounded to whole seconds, omitting zero seconds after whole minutes.
- * @param seconds - Non-negative finite duration, or null when the metric is unavailable.
- * @example duration(65) // '1m 05s'
- * @example duration(null) // '—'
- */
-function duration(seconds: number | null): string {
-  // 1. Display unavailable durations explicitly.
-  if (seconds === null) return '—';
-
-  // 2. Round short durations to whole seconds.
-  const rounded = Math.round(seconds);
-  if (rounded < 60) return `${rounded}s`;
-
-  // 3. Format longer durations as minutes with any remaining seconds.
-  const remaining = rounded % 60;
-  return `${Math.floor(rounded / 60)}m${remaining ? ` ${String(remaining).padStart(2, '0')}s` : ''}`;
-}
-
-// 6. Read-only CLI
-
-/**
- * Validates CLI filters, resolves the repository, collects history, and prints the report.
- * Help returns before contacting GitHub; collection failures reach the entrypoint.
- * @example main() // with --help, prints the reference without running gh
- */
-async function main(): Promise<void> {
-  const options = parseArgs(process.argv.slice(2));
-  if (options.help) {
-    console.log(usage());
-    return;
-  }
-
-  const { stdout } = await execute('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
-  const history = await collectHistory(stdout.trim(), options);
-  console.log(renderReport(history, options));
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

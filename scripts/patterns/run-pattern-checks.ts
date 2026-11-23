@@ -18,6 +18,7 @@ import { filterDeletedFiles, type Findings } from './utils.ts';
 import { readBaseline } from '../../backend/db/scripts/helpers/read-migrations.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
+
 const TEXT_EXTENSIONS = new Set(['.css', '.html', '.js', '.json', '.md', '.mjs', '.sh', '.sql', '.ts', '.tsx', '.yaml', '.yml']);
 
 type CheckOptions = { mode: 'all' } | { mode: 'changed'; baseRef: string };
@@ -27,25 +28,52 @@ interface EnforcementOptions {
 }
 
 /**
- * Supplies supported pattern-check modes and comparison-base defaults.
- * @example usage().includes('--changed') // true
+ * Discovers selected text files, reports pattern violations, and exits with status 1 when any rule fails.
+ * @example // node scripts/patterns/run-pattern-checks.ts --help prints usage without inspecting files.
  */
-function usage(): string {
-  return `Usage: node scripts/patterns/run-pattern-checks.ts [--changed [BASE_REF] | --all]
+function main(): void {
+  // 1. Resolve the requested file set and route ownership context.
+  const options = parseArguments(process.argv.slice(2));
+  const files = options.mode === 'all' ? collectAllFiles() : collectChangedFiles(options.baseRef);
+  const repositoryFiles = collectAllFiles();
+  const routePageDirectories = collectRoutePageDirectories(repositoryFiles);
+  const violations: string[] = [];
 
-  --changed   Check committed and working-tree changes (default).
-  BASE_REF    Compare committed changes with this revision. Defaults to the
-              development branch, the remote default branch, or HEAD.
-  --all       Check every tracked and untracked repository source file.
-  -h, --help  Show this help.`;
+  // 2. Inspect existing text files with their applicable owner rules.
+  for (const file of files) {
+    const absolute = resolve(REPO_ROOT, file);
+    if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
+    const source = readFileSync(absolute, 'utf8');
+    runEnforcementChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
+  }
+
+  // 3. Validate migration history, then report all failures or successful completion.
+  if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);
+  if (violations.length) {
+    console.error(`Pattern checks failed (${violations.length}):`);
+    for (const violation of violations) console.error(`  - ${violation}`);
+    process.exit(1);
+  }
+
+  console.log(`Pattern checks passed for ${files.length} ${options.mode === 'all' ? 'repository files' : `changes against ${options.baseRef}`}.`);
 }
 
 /**
- * Runs Git in this checkout and returns trimmed stdout; command failures throw.
- * @example git(['branch', '--show-current']) // current branch name
+ * Parses one supported mode and optional base; help exits successfully and invalid combinations exit with status 2.
+ * @example parseArguments(['--all']) // { mode: 'all' }
  */
-function git(args: string[]): string {
-  return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+function parseArguments(argv: string[]): CheckOptions {
+  // 1. Recognize the default mode, help, and supported argument combinations.
+  if (!argv.length) return { mode: 'changed', baseRef: defaultBaseRef() };
+  if (argv[0] === '-h' || argv[0] === '--help') {
+    console.log(usage());
+    process.exit(0);
+  }
+  if (argv[0] === '--all' && argv.length === 1) return { mode: 'all' };
+  if (argv[0] === '--changed' && argv.length <= 2) return { mode: 'changed', baseRef: argv[1] ?? defaultBaseRef() };
+  // 2. Print usage and fail when the requested combination is invalid.
+  console.error(usage());
+  process.exit(2);
 }
 
 /**
@@ -70,21 +98,39 @@ function defaultBaseRef(): string {
 }
 
 /**
- * Parses one supported mode and optional base; help exits successfully and invalid combinations exit with status 2.
- * @example parseArguments(['--all']) // { mode: 'all' }
+ * Runs Git in this checkout and returns trimmed stdout; command failures throw.
+ * @example git(['branch', '--show-current']) // current branch name
  */
-function parseArguments(argv: string[]): CheckOptions {
-  // 1. Recognize the default mode, help, and supported argument combinations.
-  if (!argv.length) return { mode: 'changed', baseRef: defaultBaseRef() };
-  if (argv[0] === '-h' || argv[0] === '--help') {
-    console.log(usage());
-    process.exit(0);
-  }
-  if (argv[0] === '--all' && argv.length === 1) return { mode: 'all' };
-  if (argv[0] === '--changed' && argv.length <= 2) return { mode: 'changed', baseRef: argv[1] ?? defaultBaseRef() };
-  // 2. Print usage and fail when the requested combination is invalid.
-  console.error(usage());
-  process.exit(2);
+function git(args: string[]): string {
+  return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+}
+
+/**
+ * Supplies supported pattern-check modes and comparison-base defaults.
+ * @example usage().includes('--changed') // true
+ */
+function usage(): string {
+  return `Usage: node scripts/patterns/run-pattern-checks.ts [--changed [BASE_REF] | --all]
+
+  --changed   Check committed and working-tree changes (default).
+  BASE_REF    Compare committed changes with this revision. Defaults to the
+              development branch, the remote default branch, or HEAD.
+  --all       Check every tracked and untracked repository source file.
+  -h, --help  Show this help.`;
+}
+
+/**
+ * Lists tracked and nonignored untracked paths, excluding deleted tracked files.
+ * @example collectAllFiles() // repository-relative file paths
+ */
+function collectAllFiles(): string[] {
+  // 1. Combine tracked and nonignored untracked paths.
+  const files = uniqueLines([
+    git(['ls-files']),
+    git(['ls-files', '--others', '--exclude-standard']),
+  ].join('\n'));
+  // 2. Remove tracked paths that no longer exist in the working tree.
+  return filterDeletedFiles(files, uniqueLines(git(['ls-files', '--deleted'])));
 }
 
 /**
@@ -119,17 +165,24 @@ function collectChangedFiles(baseRef: string): string[] {
 }
 
 /**
- * Lists tracked and nonignored untracked paths, excluding deleted tracked files.
- * @example collectAllFiles() // repository-relative file paths
+ * Appends owner-specific findings for one repository-relative file and its complete source text.
+ * @example runEnforcementChecks([], 'README.md', '# App', '/repo') // no findings
  */
-function collectAllFiles(): string[] {
-  // 1. Combine tracked and nonignored untracked paths.
-  const files = uniqueLines([
-    git(['ls-files']),
-    git(['ls-files', '--others', '--exclude-standard']),
-  ].join('\n'));
-  // 2. Remove tracked paths that no longer exist in the working tree.
-  return filterDeletedFiles(files, uniqueLines(git(['ls-files', '--deleted'])));
+export function runEnforcementChecks(
+  violations: Findings,
+  file: string,
+  source: string,
+  repoRoot: string,
+  { routePageDirectories = [] }: EnforcementOptions = {},
+): void {
+  // 1. Apply frontend ownership and centralized HTTP rules.
+  if (file.startsWith('frontend/src/')) {
+    checkFrontendOwnership(violations, file, source, routePageDirectories, repoRoot);
+    checkCentralizedHttp(violations, file, source);
+  }
+
+  // 2. Apply backend route wrapping rules.
+  if (file.startsWith('backend/src/routes/')) checkBackendRoutes(violations, file, source);
 }
 
 /**
@@ -189,58 +242,6 @@ function checkAppliedMigrations(violations: string[], baseRef: string): void {
     // 5. Report every remaining change to an already committed migration.
     if (status !== 'A') violations.push(`${file} applied migrations are immutable; add a new migration instead of ${status === 'D' ? 'deleting' : 'modifying'} one.`);
   }
-}
-
-/**
- * Appends owner-specific findings for one repository-relative file and its complete source text.
- * @example runEnforcementChecks([], 'README.md', '# App', '/repo') // no findings
- */
-export function runEnforcementChecks(
-  violations: Findings,
-  file: string,
-  source: string,
-  repoRoot: string,
-  { routePageDirectories = [] }: EnforcementOptions = {},
-): void {
-  // 1. Apply frontend ownership and centralized HTTP rules.
-  if (file.startsWith('frontend/src/')) {
-    checkFrontendOwnership(violations, file, source, routePageDirectories, repoRoot);
-    checkCentralizedHttp(violations, file, source);
-  }
-
-  // 2. Apply backend route wrapping rules.
-  if (file.startsWith('backend/src/routes/')) checkBackendRoutes(violations, file, source);
-}
-
-/**
- * Discovers selected text files, reports pattern violations, and exits with status 1 when any rule fails.
- * @example // node scripts/patterns/run-pattern-checks.ts --help prints usage without inspecting files.
- */
-function main(): void {
-  // 1. Resolve the requested file set and route ownership context.
-  const options = parseArguments(process.argv.slice(2));
-  const files = options.mode === 'all' ? collectAllFiles() : collectChangedFiles(options.baseRef);
-  const repositoryFiles = collectAllFiles();
-  const routePageDirectories = collectRoutePageDirectories(repositoryFiles);
-  const violations: string[] = [];
-
-  // 2. Inspect existing text files with their applicable owner rules.
-  for (const file of files) {
-    const absolute = resolve(REPO_ROOT, file);
-    if (!existsSync(absolute) || !statSync(absolute).isFile() || !TEXT_EXTENSIONS.has(extname(file))) continue;
-    const source = readFileSync(absolute, 'utf8');
-    runEnforcementChecks(violations, file, source, REPO_ROOT, { routePageDirectories });
-  }
-
-  // 3. Validate migration history, then report all failures or successful completion.
-  if (options.mode === 'changed') checkAppliedMigrations(violations, options.baseRef);
-  if (violations.length) {
-    console.error(`Pattern checks failed (${violations.length}):`);
-    for (const violation of violations) console.error(`  - ${violation}`);
-    process.exit(1);
-  }
-
-  console.log(`Pattern checks passed for ${files.length} ${options.mode === 'all' ? 'repository files' : `changes against ${options.baseRef}`}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

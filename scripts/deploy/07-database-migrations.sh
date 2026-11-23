@@ -3,18 +3,27 @@
 # Sourced by main.sh; configuration and the EXIT rollback trap belong to the
 # deployment lifecycle. ROLLBACK_NEEDED covers migration apply and post-status.
 
-# Require database configuration and a running database container before database work.
-# Example: require_database # exits on unavailable DB_CONTAINER
-require_database() {
-  # 1. Require configured database identifiers before inspecting the container.
-  : "${DB_USER:?DB_USER not set — check .env}"
-  : "${DB_NAME:?DB_NAME not set — check .env}"
+# Snapshot, validate, apply, and revalidate migrations with rollback armed around apply.
+# Example: run_migration_flow # clears ROLLBACK_NEEDED only after post-status succeeds
+run_migration_flow() {
+  # 1. Capture recovery data and validate existing migration history before applying files.
+  take_database_snapshot
 
-  # 2. Abort before exporting if the database container is unavailable.
-  if [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || true)" != true ]; then
-    echo "ERROR: DB container '$DB_CONTAINER' is not running" >&2
-    exit 1
-  fi
+  echo ""
+  echo "Checking migration status before apply..."
+  run_migration_status
+
+  echo ""
+  echo "Applying pending migrations..."
+  # 2. Arm rollback only around migration apply and its post-apply status check.
+  ROLLBACK_NEEDED=true
+  docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js
+
+  echo ""
+  echo "Checking migration status after apply..."
+  run_migration_status
+  # 3. End automatic database rollback after successful migration validation.
+  ROLLBACK_NEEDED=false
 }
 
 # Export and verify a private rollback archive; cleanup owns SNAPSHOT and SNAPSHOT_TMP.
@@ -39,31 +48,22 @@ take_database_snapshot() {
   echo "Snapshot saved and verified."
 }
 
+# Require database configuration and a running database container before database work.
+# Example: require_database # exits on unavailable DB_CONTAINER
+require_database() {
+  # 1. Require configured database identifiers before inspecting the container.
+  : "${DB_USER:?DB_USER not set — check .env}"
+  : "${DB_NAME:?DB_NAME not set — check .env}"
+
+  # 2. Abort before exporting if the database container is unavailable.
+  if [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || true)" != true ]; then
+    echo "ERROR: DB container '$DB_CONTAINER' is not running" >&2
+    exit 1
+  fi
+}
+
 # Validate production migration history without applying pending migrations.
 # Example: run_migration_status
 run_migration_status() {
   docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js --dry-run
-}
-
-# Snapshot, validate, apply, and revalidate migrations with rollback armed around apply.
-# Example: run_migration_flow # clears ROLLBACK_NEEDED only after post-status succeeds
-run_migration_flow() {
-  # 1. Capture recovery data and validate existing migration history before applying files.
-  take_database_snapshot
-
-  echo ""
-  echo "Checking migration status before apply..."
-  run_migration_status
-
-  echo ""
-  echo "Applying pending migrations..."
-  # 2. Arm rollback only around migration apply and its post-apply status check.
-  ROLLBACK_NEEDED=true
-  docker compose run --rm --no-deps -e NODE_ENV=production backend node dist/db/scripts/update_schemas.js
-
-  echo ""
-  echo "Checking migration status after apply..."
-  run_migration_status
-  # 3. End automatic database rollback after successful migration validation.
-  ROLLBACK_NEEDED=false
 }
