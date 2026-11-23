@@ -33,3 +33,6 @@ Thumbs.db
 logs/
 *.log
 .deploy-state/
+
+# Private operator runbooks kept only in local checkouts
+/docs/production/

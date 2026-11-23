@@ -6,8 +6,8 @@ choose the local equivalent of a failed check.
 
 Feature work enters `develop` through a pull request. Production releases use a
 separately authorized pull request from `develop` to `main`; direct feature
-pull requests to `main` are rejected. See [Shipping](../../../.agents/skills/03-update-repo/SKILL.md) and
-[Deployment](../../production/deployment.md) for those procedures.
+pull requests to `main` are rejected. See [Shipping](../../../.agents/skills/03-update-repo/SKILL.md) for feature delivery
+and the privately maintained production runbooks for releases.
 
 ## Workflow Topology
 
@@ -80,7 +80,7 @@ all architecture conventions or require test files.
 
 Changed pattern checks run in the quality job alongside static analysis.
 Scheduled Playwright retains failure traces. Deployment failures and
-reruns belong to the [deployment guide](../../production/deployment.md#monitoring-and-rerunning-a-deployment).
+reruns belong to the privately maintained production runbooks.
 
 ## Required Checks
 
