@@ -16,7 +16,7 @@
     "test:sessions": "jest --testPathPatterns=tests/sessions",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
-    "test:hours": "jest --testPathPatterns=tests/hours",
+    "test:hours": "jest --testPathPatterns='src/(services/staff/hours/|routes/hoursRoutes[.]test[.]ts$)'",
     "test:reference-data": "jest --testPathPatterns=tests/referenceData",
     "test:tasks": "jest --testPathPatterns=tests/tasks",
     "test:docker": "docker-compose exec -e NODE_ENV=test backend sh -c 'npm run db:migrate:test && npm test'",
