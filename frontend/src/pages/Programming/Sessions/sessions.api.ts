@@ -3,8 +3,8 @@ import type { ProgramCycleAssignment, Program } from '../Programs/types';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
+import type { Session } from '../../../common/features/programming/sessions/types';
 import type {
-  ProgramSession,
   SessionAttachment,
   SessionListFilters,
   SessionNote,
@@ -33,14 +33,7 @@ interface UpdateSessionAttachmentInput {
   youthIds: string[];
 }
 
-interface SessionFields {
-  sessionType: string;
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  description?: string | null;
-}
+type SessionFields = Pick<Session, 'sessionType' | 'title' | 'date' | 'startTime' | 'endTime' | 'description'>;
 
 export interface AttendanceYouth {
   id: string;
@@ -54,13 +47,11 @@ export function getAttendanceYouth(opts?: RequestOptions) {
     : apiClient.get<AttendanceYouth[]>('/youth');
 }
 
-interface CreateSessionInput extends Partial<SessionFields> {
-  programId: string;
-  sessionType: string;
-  title: string;
-}
+type CreateSessionInput = Pick<Session, 'programId' | 'sessionType' | 'title'> & Partial<SessionFields>;
 
-export type SetSessionInput = CreateSessionInput | (Partial<SessionFields> & { id: string });
+type UpdateSessionInput = Pick<Session, 'id'> & Partial<SessionFields>;
+
+export type SetSessionInput = CreateSessionInput | UpdateSessionInput;
 
 export interface DeletedSessionResult {
   id: string;
@@ -72,8 +63,8 @@ export interface DeletedSessionResult {
  * @param data - Session fields with a program ID for creation or a session ID for updates.
  * @example await setSession({ id: sessionId, date: '2030-03-10' })
  */
-export function setSession(data: SetSessionInput): Promise<ProgramSession> {
-  return apiClient.post<ProgramSession>('/sessions', data);
+export function setSession(data: SetSessionInput): Promise<Session> {
+  return apiClient.post<Session>('/sessions', data);
 }
 
 export function getSessionTypes(opts?: RequestOptions) {
@@ -82,12 +73,12 @@ export function getSessionTypes(opts?: RequestOptions) {
     : apiClient.get<SessionType[]>('/session-types');
 }
 
-export function getSessions(filters: SessionCalendarFilters, opts?: RequestOptions): Promise<ProgramSession[]>;
+export function getSessions(filters: SessionCalendarFilters, opts?: RequestOptions): Promise<Session[]>;
 export function getSessions(
   filters: SessionListFilters,
   opts: RequestOptions | undefined,
   pagination: CursorRequest<SessionSortKey>,
-): Promise<CursorPage<ProgramSession>>;
+): Promise<CursorPage<Session>>;
 export function getSessions(
   filters: SessionListFilters | SessionCalendarFilters = {},
   opts?: RequestOptions,
@@ -115,8 +106,8 @@ export function getSessions(
   const suffix = query.toString();
   const path = `/sessions${suffix ? `?${suffix}` : ''}`;
   return opts
-    ? apiClient.get<ProgramSession[] | CursorPage<ProgramSession>>(path, opts)
-    : apiClient.get<ProgramSession[] | CursorPage<ProgramSession>>(path);
+    ? apiClient.get<Session[] | CursorPage<Session>>(path, opts)
+    : apiClient.get<Session[] | CursorPage<Session>>(path);
 }
 
 export function getSessionRoster(sessionId: string, opts?: RequestOptions) {
@@ -128,7 +119,7 @@ export function getSessionRoster(sessionId: string, opts?: RequestOptions) {
 
 export interface SessionAttendanceResult {
   roster: SessionRosterMember[];
-  session: ProgramSession;
+  session: Session;
   updatedYouth?: YouthProfile[];
   updatedProgramCycle?: ProgramCycleAssignment;
 }

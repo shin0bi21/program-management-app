@@ -13,7 +13,8 @@ import type {
 import type { Program } from '../../../Programs/types';
 import { intersectDateRanges } from '../../../../../common/utils/dateRange';
 import { getSessions } from '../../sessions.api';
-import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
+import type { SessionCalendarCache, SessionListFilters } from '../../types';
 import SessionItem from './SessionItem/SessionItem';
 import './SessionCalendar.css';
 
@@ -28,12 +29,12 @@ interface SessionCalendarProps {
   pendingSessionIds?: string[];
 
   onProgramSelect?: (program: Program, source?: 'row' | 'item') => void;
-  onSessionSelect: (session: ProgramSession) => void;
-  onSelectedSessionLoaded?: (session: ProgramSession) => void;
-  onSessionMove?: (session: ProgramSession, date: string) => Promise<ProgramSession | null>;
+  onSessionSelect: (session: Session) => void;
+  onSelectedSessionLoaded?: (session: Session) => void;
+  onSessionMove?: (session: Session, date: string) => Promise<Session | null>;
   onAddSession?: (program: Program, date: string) => void;
-  onSessionEdit?: (session: ProgramSession) => void;
-  onSessionDelete?: (session: ProgramSession) => void;
+  onSessionEdit?: (session: Session) => void;
+  onSessionDelete?: (session: Session) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
@@ -68,7 +69,7 @@ export default function SessionCalendar({
     const sessions = await getSessions(requestFilters, { signal });
 
     signal.throwIfAborted();
-    const data: Record<string, Record<string, ProgramSession[]>> = {};
+    const data: Record<string, Record<string, Session[]>> = {};
     for (const session of sessions) {
       data[session.programId] ??= {};
       data[session.programId][start.key] ??= [];
@@ -127,7 +128,7 @@ export default function SessionCalendar({
    * Displays a shared session with selection and permitted edit/delete actions.
    * @example buildItem(context) // session item for its program row
    */
-  function buildItem({ data: session, calendar: itemCalendar }: BuildItemContext<Program, ProgramSession>) {
+  function buildItem({ data: session, calendar: itemCalendar }: BuildItemContext<Program, Session>) {
     const isPending = pendingSessionIds.includes(session.id);
 
     return (
@@ -145,7 +146,7 @@ export default function SessionCalendar({
    * Allows dragging upcoming, active sessions when no mutation is pending.
    * @example getItemCapabilities(context) // draggable flag and resizing disabled
    */
-  function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, ProgramSession>) {
+  function getItemCapabilities({ data: session }: ItemCapabilityContext<Program, Session>) {
     const draggable = Boolean(onSessionMove)
       && !session.cancelledAt
       && session.movable
@@ -158,7 +159,7 @@ export default function SessionCalendar({
    * Reports the requested date to the session mutation owner.
    * @example moveSession(context) // saves the new start day
    */
-  async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, ProgramSession>) {
+  async function moveSession({ item: session, nextRange }: ItemMoveContext<Program, Session>) {
     await onSessionMove?.(session, nextRange.start);
   }
 
@@ -207,7 +208,7 @@ const getSessionId = (session: { id: string }) => session.id;
  * @param session - Canonical session with a validated date.
  * @example getSessionRange(session) // { start: session.date, end: session.date }
  */
-function getSessionRange(session: ProgramSession) {
+function getSessionRange(session: Session) {
   return { start: session.date, end: session.date };
 }
 
@@ -226,6 +227,6 @@ function renderProgramRow({ row }: RenderRowContext<Program>) {
  * Restricts session moves to their existing program.
  * @example canMoveWithinProgram(context) // false for a different program
  */
-function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, ProgramSession>) {
+function canMoveWithinProgram({ row, destinationRow }: ItemMoveContext<Program, Session>) {
   return row.id === destinationRow.id;
 }

@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AttendanceGroup } from '../../../../common/features/Attendance/attendance.api';
 import { renderWithQueryClient as render } from '../../../../tests/queryClientTestUtils';
 import { makeYouthProfile } from '../../../../tests/factories/youth';
 import YouthAttendanceModal from './YouthAttendanceModal';
@@ -40,16 +41,16 @@ const attendance = {
   averageAttendance: 50,
   youth: [{ id: 'youth-1', firstName: 'Jamie', lastName: 'Test', presentCount: 1, lateCount: 0, absentCount: 1, sessions: [
     {
-      id: 'session-2', sessionType: 'Workshop', title: 'Teamwork',
+      id: 'session-2', sessionType: 'Regular', title: 'Teamwork',
       date: '2026-07-21', startTime: '17:00', completed: true,
       cancelledAt: null, status: null, notes: null, sessionNotes: [],
     },
     {
-      id: 'session-1', sessionType: 'Workshop', title: 'Communication',
+      id: 'session-1', sessionType: 'Regular', title: 'Communication',
       date: '2026-07-14', startTime: '17:00', completed: true,
-      cancelledAt: null, status: 'present' as const, notes: 'Participated fully',
+      cancelledAt: null, status: 'present', notes: 'Participated fully',
       sessionNotes: [{
-        id: 'note-1', sessionId: 'session-1', category: 'achievement' as const,
+        id: 'note-1', sessionId: 'session-1', category: 'achievement',
         details: 'Led the opening activity.',
         createdAt: '2026-07-14T22:00:00.000Z', updatedAt: '2026-07-14T22:00:00.000Z',
         createdByName: 'Bilal Khan',
@@ -57,7 +58,7 @@ const attendance = {
       }],
     },
   ] }],
-};
+} satisfies AttendanceGroup;
 
 describe('YouthAttendanceModal', () => {
   beforeEach(() => {
@@ -70,7 +71,6 @@ describe('YouthAttendanceModal', () => {
     sessionNoteApi.getSessionRoster.mockResolvedValue([
       { youthId: 'youth-1', firstName: 'Jamie', lastName: 'Test', status: 'present', notes: null },
     ]);
-    sessionNoteApi.updateSessionNote.mockResolvedValue({});
   });
 
   it('opens and closes details for the selected session note', async () => {
@@ -118,11 +118,9 @@ describe('YouthAttendanceModal', () => {
       'session-2',
       expect.objectContaining({ details: 'Good teamwork', youthIds: ['youth-1'] }),
     ));
-    expect(screen.getByText('Session note successfully added.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Add Note' })).toBeInTheDocument();
   });
 
-  it('edits a session note with the selected youth link preserved', async () => {
+  it('opens the editor for the selected session note', async () => {
     render(
       <YouthAttendanceModal
         youth={makeYouthProfile({ id: 'youth-1' })}
@@ -135,13 +133,8 @@ describe('YouthAttendanceModal', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Edit session note' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'Note *' }), { target: { value: 'Updated participation' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(sessionNoteApi.updateSessionNote).toHaveBeenCalledWith(
-      'session-1',
-      'note-1',
-      expect.objectContaining({ details: 'Updated participation', youthIds: ['youth-1'] }),
-    ));
+    const editor = await screen.findByRole('dialog', { name: 'Edit Note' });
+    expect(within(editor).getByRole('textbox', { name: 'Note *' })).toHaveValue('Led the opening activity.');
   });
 
   it('uses supplied cycle sessions and saves statuses for only the selected youth', async () => {

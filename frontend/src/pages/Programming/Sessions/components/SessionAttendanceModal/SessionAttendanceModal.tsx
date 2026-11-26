@@ -1,7 +1,8 @@
 import type { SessionAttendanceResult } from '../../sessions.api';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramSession, SessionRosterMember } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
+import type { SessionRosterMember } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 
 import SessionAttendanceRoster from './SessionAttendanceRoster';
@@ -9,7 +10,7 @@ import OpenAttendancePicker from './OpenAttendancePicker';
 import useSessionAttendanceModal from './hooks/useSessionAttendanceModal';
 
 interface SessionAttendanceModalProps {
-  session: ProgramSession | null;
+  session: Session | null;
   roster: SessionRosterMember[];
   onClose: () => void;
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
@@ -29,7 +30,7 @@ export default function SessionAttendanceModal({ session, ...props }: SessionAtt
  * @param props - Saved session and attendance with close/save callbacks.
  * @example <AttendanceForm session={session} roster={roster} onClose={close} onSaved={save} />
  */
-function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAttendanceModalProps, 'session'> & { session: ProgramSession }) {
+function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAttendanceModalProps, 'session'> & { session: Session }) {
   const workflow = useSessionAttendanceModal({ session, roster, onSaved });
 
   const footer = (

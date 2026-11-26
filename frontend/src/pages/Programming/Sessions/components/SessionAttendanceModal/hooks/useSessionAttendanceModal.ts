@@ -11,13 +11,14 @@ import {
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import type { AttendanceStatus } from '../../../../../../common/features/AttendanceStatusSelect/types';
-import type { ProgramSession, SessionRosterMember } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
+import type { SessionRosterMember } from '../../../types';
 import { getErrorMessage } from '../../../../../../http/errors';
 
 const SESSION_QUERY_KEY = ['sessions'] as const;
 
 interface UseSessionAttendanceModalOptions {
-  session: ProgramSession;
+  session: Session;
   roster: SessionRosterMember[];
   onSaved: (result: SessionAttendanceResult) => void | Promise<void>;
 }

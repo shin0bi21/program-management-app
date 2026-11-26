@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ProgramSession } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
 
 /**
  * Keeps the clicked session as context for the URL's selected session.
@@ -8,7 +8,7 @@ import type { ProgramSession } from '../../types';
  */
 export default function useSessionSelection() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedRecord, setSelectedRecord] = useState<ProgramSession | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<Session | null>(null);
   const selectedSessionId = searchParams.get('session') ?? '';
   const selectedSession = selectedRecord?.id === selectedSessionId ? selectedRecord : null;
 
@@ -19,7 +19,7 @@ export default function useSessionSelection() {
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
-  const selectSession = useCallback((session: ProgramSession) => {
+  const selectSession = useCallback((session: Session) => {
     const next = new URLSearchParams(searchParams);
     next.set('session', session.id);
     setSelectedRecord(session);
@@ -30,7 +30,7 @@ export default function useSessionSelection() {
     if (selectedSessionId === sessionId) clearSelectedSession();
   }, [clearSelectedSession, selectedSessionId]);
 
-  const syncSelectedSession = useCallback((session: ProgramSession) => {
+  const syncSelectedSession = useCallback((session: Session) => {
     if (selectedSessionId === session.id) setSelectedRecord(session);
   }, [selectedSessionId]);
 

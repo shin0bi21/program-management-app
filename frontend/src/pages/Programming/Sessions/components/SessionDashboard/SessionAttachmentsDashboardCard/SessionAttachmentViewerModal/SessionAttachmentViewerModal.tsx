@@ -4,10 +4,11 @@ import {
   downloadSessionAttachment,
   getSessionAttachmentFile,
 } from '../../../../sessions.api';
-import type { ProgramSession, SessionAttachment } from '../../../../types';
+import type { Session } from '../../../../../../../common/features/programming/sessions/types';
+import type { SessionAttachment } from '../../../../types';
 
 interface SessionAttachmentViewerModalProps {
-  session: ProgramSession | null;
+  session: Session | null;
   attachment: SessionAttachment | null;
   onClose: () => void;
 }
@@ -28,7 +29,7 @@ export default function SessionAttachmentViewerModal({ session, attachment, onCl
  * @param props - Required saved targets and close action.
  * @example <AttachmentPreview session={session} attachment={attachment} onClose={close} />
  */
-function AttachmentPreview({ session, attachment, onClose }: { session: ProgramSession; attachment: SessionAttachment; onClose: () => void }) {
+function AttachmentPreview({ session, attachment, onClose }: { session: Session; attachment: SessionAttachment; onClose: () => void }) {
   const viewFileModal = useViewFileModal({
     requestKey: `${session.id}:${attachment.id}`,
     title: attachment.title,

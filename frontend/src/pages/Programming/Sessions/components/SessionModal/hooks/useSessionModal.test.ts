@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Program } from '../../../../Programs/types';
 import { makeProgramSession } from '../../../../../../tests/factories/session';
 import type { SetSessionInput } from '../../../sessions.api';
-import type { ProgramSession } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
 import useSessionModal from './useSessionModal';
 
-const onSave = vi.fn<(input: SetSessionInput) => Promise<ProgramSession>>();
+const onSave = vi.fn<(input: SetSessionInput) => Promise<Session>>();
 const programs: Program[] = [
   { id: 'p1', title: 'Art', enrollmentRequired: false, minAge: null, maxAge: null,
     defaultDayOfWeek: 'tuesday', defaultStartTime: '17:30', defaultEndTime: '19:30', timezone: 'America/Toronto' },

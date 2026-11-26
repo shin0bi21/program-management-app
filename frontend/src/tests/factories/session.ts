@@ -1,6 +1,6 @@
-import type { ProgramSession } from '../../pages/Programming/Sessions/types';
+import type { Session } from '../../common/features/programming/sessions/types';
 
-export function makeProgramSession(overrides: Partial<ProgramSession> = {}): ProgramSession {
+export function makeProgramSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 'session-1',
     cycleId: 'cycle-1',

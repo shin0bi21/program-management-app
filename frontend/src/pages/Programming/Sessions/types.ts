@@ -1,28 +1,6 @@
 import type { DateRange } from '../../../common/utils/dateRange';
 import type { AttendanceStatus } from '../../../common/features/AttendanceStatusSelect/types';
-
-export type SessionTypeValue = 'Regular' | 'Guest Speaker' | 'Field Trip';
-
-export interface ProgramSession {
-  id: string;
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  cancelledAt: string | null;
-  description: string | null;
-  cycleId: string;
-  sessionType: SessionTypeValue;
-
-  cycle: string;
-
-  programId: string;
-  program: string;
-  enrollmentRequired: boolean;
-
-  state: 'upcoming' | 'completed' | 'cancelled';
-  movable: boolean;
-}
+import type { Session } from '../../../common/features/programming/sessions/types';
 
 export interface SessionListFilters {
   dateRange?: DateRange;
@@ -39,7 +17,7 @@ export const SESSION_TABLE_KEYS = ['program', 'cycle', 'title', 'date', 'time', 
 export type SessionSortKey = typeof SESSION_TABLE_KEYS[number];
 
 export interface SessionType {
-  id: string;
+  id: Session['sessionType'];
   name: string;
 }
 
@@ -107,6 +85,6 @@ export interface SessionAttachment {
 }
 
 export interface SessionCalendarCache {
-  upsert: (session: ProgramSession) => void;
+  upsert: (session: Session) => void;
   remove: (sessionId: string) => void;
 }

@@ -1,22 +1,14 @@
-import type { SetSessionInput } from '../../sessions.api';
-import type { ProgramSession, SessionType } from '../../types';
+import type { ReactElement } from 'react';
+import type { SessionType } from '../../types';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
-import type { Program } from '../../../Programs/types';
-import useSessionModal from './hooks/useSessionModal';
+import useSessionModal, { type SessionModalOptions } from './hooks/useSessionModal';
 
-interface SessionModalProps {
-  programs: Program[];
-  session?: ProgramSession;
+export interface SessionModalProps extends SessionModalOptions {
   sessionTypes: SessionType[];
-  programId?: string;
-  date?: string;
-  pending?: boolean;
   onClose: () => void;
-  onSave: (input: SetSessionInput) => Promise<ProgramSession>;
-  onSaved: (session: ProgramSession) => void | Promise<void>;
 }
 
 /**
@@ -24,7 +16,7 @@ interface SessionModalProps {
  * @param props - Page references, optional saved session/calendar context, and close/save callbacks.
  * @example <SessionModal programs={programs} sessionTypes={types} onClose={close} onSave={save} onSaved={refresh} />
  */
-export default function SessionModal({ onClose, sessionTypes, ...options }: SessionModalProps) {
+export default function SessionModal({ onClose, sessionTypes, ...options }: SessionModalProps): ReactElement {
   const workflow = useSessionModal(options);
   const isEdit = options.session !== undefined;
   return <Modal isOpen onClose={onClose} title={isEdit ? 'Edit Session' : 'Add Session'} status={workflow.status}
@@ -38,7 +30,8 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
       </FormField>}
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionType}
-          onChange={value => workflow.updateDraft('sessionType', value)} disabled={workflow.locked}
+          onChange={value => workflow.updateDraft('sessionType', sessionTypes.find(type => type.id === value)?.id ?? '')}
+          disabled={workflow.locked}
           options={sessionTypes.map(({ id, name }) => ({ id, label: name }))} />
       </FormField>
       <FormField id="session-title" label="Title">
