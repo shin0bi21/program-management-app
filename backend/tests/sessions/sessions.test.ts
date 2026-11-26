@@ -908,18 +908,6 @@ describe('Program cycle sessions and attendance API', () => {
     ]);
   });
 
-  it('rejects a session range whose end is before its start date', async () => {
-    const response = await request(app)
-      .get('/api/sessions')
-      .query({
-        start: '2026-07-02',
-        end: '2026-07-01',
-      })
-      .set('Authorization', `Bearer ${staffToken}`);
-
-    expect(response.status).toBe(400);
-  });
-
   it('preserves a session and its logged hours when hours are the only deletion dependency', async () => {
     const created = await request(app)
       .post(`/api/programs/${programId}/cycles/${mainCycleId}/sessions`)

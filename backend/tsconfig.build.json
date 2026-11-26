@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*",
@@ -11,6 +13,7 @@
     "node_modules",
     "dist",
     "tests",
-    "integrations"
+    "integrations",
+    "**/*.test.ts"
   ]
 }

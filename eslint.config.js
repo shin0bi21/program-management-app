@@ -49,6 +49,13 @@ export default tseslint.config(
     },
   },
   {
+    files: ['backend/jest.config.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: globals.node,
+    },
+  },
+  {
     files: ['backend/src/**/*.ts'],
     languageOptions: {
       globals: globals.node,

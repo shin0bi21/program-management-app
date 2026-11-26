@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema } from './dateRangeValidation';
+import { calendarDateSchema, hasOrderedCalendarBounds, hasPairedCalendarBounds } from './dateRangeValidation';
 
 export const hoursCategorySchema = z.enum([
   'program_delivery',
@@ -41,10 +41,10 @@ export const hoursCalendarQuerySchema = z.object({
     ...hoursFilterFields,
     start: dateSchema.optional(),
     end: dateSchema.optional(),
-  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Start and end dates must be provided together',
     path: ['end'],
-  }).refine(({ start, end }) => !start || !end || start <= end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'Start date must be on or before end date',
     path: ['end'],
   }),
@@ -56,10 +56,10 @@ export const hoursTableQuerySchema = z.object({
     start: dateSchema.optional(),
     end: dateSchema.optional(),
     ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'], 'date', 'desc'),
-  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Start and end dates must be provided together',
     path: ['end'],
-  }).refine(({ start, end }) => !start || !end || start <= end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'Start date must be on or before end date',
     path: ['end'],
   }),
