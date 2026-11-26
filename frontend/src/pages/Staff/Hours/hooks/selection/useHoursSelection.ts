@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import type { HoursItem, StaffReference } from '../../types';
+import type { Hours, StaffReference } from '../../types';
 
 /**
  * Tracks shared staff selection and the last clicked entry’s row ID.
@@ -17,7 +17,7 @@ export default function useHoursSelection({
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
-  const selectRow = useCallback((row: HoursItem) => {
+  const selectRow = useCallback((row: Hours) => {
     setSelectedRowId(row.id);
     setSelectedStaffId(row.staffId);
   }, []);
