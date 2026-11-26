@@ -2,7 +2,7 @@ import type { ItemCalendarProps } from '../../../../../../common/components/Time
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import StatusLabel from '../../../../../../common/components/StatusLabel/StatusLabel';
 import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
-import type { ProgramSession } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import { formatSessionTime } from '../../../utils/sessionSchedule';
 import './SessionItem.css';
@@ -23,7 +23,7 @@ export default function SessionItem<TRow, TItemData>({
   onDelete,
 }: {
   calendar?: ItemCalendarProps<TRow, TItemData>;
-  session: ProgramSession;
+  session: Session;
   selected?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;

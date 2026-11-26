@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionNote, getSessionNotes } from '../../../../sessions.api';
-import type { ProgramSession, SessionNote } from '../../../../types';
+import type { Session } from '../../../../../../../common/features/programming/sessions/types';
+import type { SessionNote } from '../../../../types';
 
 /**
  * Owns this session's notes query and ID-based editor and viewer targets.
@@ -13,7 +14,7 @@ import type { ProgramSession, SessionNote } from '../../../../types';
  */
 export function useSessionNotes({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
-  session: ProgramSession | null;
+  session: Session | null;
   onMessageChange?: PageMessageChangeHandler;
 }) {
   const client = useQueryClient();

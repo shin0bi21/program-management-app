@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { createSessionAttachment, getSessionRoster, updateSessionAttachment } from '../../../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../../../common/hooks/useSubmitLock';
-import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../../../../../types';
+import type { Session } from '../../../../../../../../common/features/programming/sessions/types';
+import type { SessionAttachment, SessionRosterMember } from '../../../../../types';
 
 /**
  * Owns attachment upload or metadata-edit drafts and prevents duplicate pending saves.
@@ -13,7 +14,7 @@ import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../
  */
 export function useSessionAttachmentModal({ queryKey, session, attachment, onSaved }: {
   queryKey: readonly unknown[];
-  session: ProgramSession;
+  session: Session;
   attachment: SessionAttachment | null;
   onSaved: () => void | Promise<void>;
 }) {

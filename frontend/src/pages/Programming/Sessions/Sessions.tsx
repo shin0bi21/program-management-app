@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useAuth } from '../../../auth/authContext';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import type { Program } from '../Programs/types';
-import { SESSION_TABLE_KEYS, type ProgramSession, type SessionRosterMember } from './types';
-import SessionModal from './components/SessionModal/SessionModal';
+import type { Session } from '../../../common/features/programming/sessions/types';
+import { SESSION_TABLE_KEYS, type SessionRosterMember } from './types';
+import SessionModal, { type SessionModalProps } from './components/SessionModal/SessionModal';
 import SessionAttendanceModal from './components/SessionAttendanceModal/SessionAttendanceModal';
 import SessionAttendanceDashboardCard from './components/SessionDashboard/SessionAttendanceDashboardCard/SessionAttendanceDashboardCard';
 import SessionNotesDashboardCard from './components/SessionDashboard/SessionNotesDashboardCard/SessionNotesDashboardCard';
@@ -23,11 +24,18 @@ import './Sessions.css';
 const SESSION_QUERY_KEY = ['sessions'] as const;
 const SESSION_TABLE_QUERY_KEY = [...SESSION_QUERY_KEY, 'table'] as const;
 
+interface SessionAttendanceTarget {
+  session: Session;
+  roster: SessionRosterMember[];
+}
+
+type SessionModalTarget = Pick<SessionModalProps, 'session' | 'programId' | 'date'>;
+
 /**
  * Coordinates session controls, selection, dialogs, and collection views.
  * @example <Sessions /> // programming sessions route
  */
-export default function Sessions() {
+export default function Sessions(): ReactElement {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions and application services.
@@ -64,7 +72,7 @@ export default function Sessions() {
     if (source !== 'item') selection.clearSelectedSession();
     setSelectedProgramId(program.id);
   };
-  const selectSession = (session: ProgramSession) => {
+  const selectSession = (session: Session) => {
     setSelectedProgramId(session.programId);
     selection.selectSession(session);
   };
@@ -72,16 +80,14 @@ export default function Sessions() {
   const actions = useSessionActions({ onSessionRemoved: selection.removeSelectedSession, onSessionSynced: selection.syncSelectedSession });
 
   // Attendance modal.
-  const [attendanceTarget, setAttendanceTarget] = useState<{ session: ProgramSession; roster: SessionRosterMember[] } | null>(null);
+  const [attendanceTarget, setAttendanceTarget] = useState<SessionAttendanceTarget | null>(null);
   const closeSessionAttendanceModal = () => setAttendanceTarget(null);
 
   // Session editor with saved data or optional calendar context.
-  const [sessionModalTarget, setSessionModalTarget] = useState<{
-    session?: ProgramSession; programId?: string; date?: string;
-  } | null>(null);
+  const [sessionModalTarget, setSessionModalTarget] = useState<SessionModalTarget | null>(null);
   const isSessionModalOpen = sessionModalTarget !== null;
   const closeSessionModal = () => setSessionModalTarget(null);
-  const openEditSessionModal = (session: ProgramSession) => {
+  const openEditSessionModal = (session: Session) => {
     if (!actions.pendingSessionIds.includes(session.id)) setSessionModalTarget({ session });
   };
   const editingSession = sessionModalTarget?.session;

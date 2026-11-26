@@ -1,8 +1,6 @@
-export interface HomepageSession {
-  id: string;
-  title: string;
-  date: string;
-}
+import type { Session } from '../../../common/features/programming/sessions/types';
+
+export type HomepageSession = Pick<Session, 'id' | 'title' | 'date'>;
 
 export interface HomepageProgram {
   id: string;

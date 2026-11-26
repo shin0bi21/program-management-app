@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type MutableRefObject } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
@@ -6,12 +6,34 @@ import type { ConfirmAction } from '../../../../../common/components/ConfirmModa
 import { deleteSession, setSession, type SessionAttendanceResult, type SetSessionInput } from '../../sessions.api';
 import type { ProgramCycleAssignment } from '../../../Programs/types';
 import { updateProgramCycleAssignments } from '../../../Programs/hooks/actions/programCycleAssignmentCache';
-import type { ProgramSession, SessionCalendarCache } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
+import type { SessionCalendarCache } from '../../types';
 import { formatShortDate } from '../../../../../common/utils/date';
 import { getErrorMessage } from '../../../../../http/errors';
 
 const SESSION_TABLE_QUERY_KEY = ['sessions', 'table'] as const;
 const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, remove: () => undefined };
+
+interface SessionActionsOptions {
+  onSessionRemoved: (sessionId: string) => void;
+  onSessionSynced?: (session: Session) => void;
+}
+
+interface SessionActions {
+  confirmAction: ConfirmAction | null;
+  moveError: string | null;
+  pendingSessionIds: string[];
+  saveSession: typeof setSession;
+  moveSession: (session: Session, date: string) => Promise<Session | null>;
+  calendarRevision: number;
+  calendarCacheRef: MutableRefObject<SessionCalendarCache>;
+  syncSession: (session: Session) => void;
+  syncUpdatedSession: (session: Session) => void;
+  syncAttendance: (result: SessionAttendanceResult) => void;
+  refreshCreatedSessions: () => Promise<void>;
+  requestDelete: (session: Session) => void;
+  closeConfirmation: () => void;
+}
 
 /**
  * Reconciles saved session rows and refreshes related attendance/program summaries.
@@ -22,10 +44,7 @@ const EMPTY_CALENDAR_CACHE: SessionCalendarCache = { upsert: () => undefined, re
 export default function useSessionActions({
   onSessionRemoved,
   onSessionSynced,
-}: {
-  onSessionRemoved: (sessionId: string) => void;
-  onSessionSynced?: (session: ProgramSession) => void;
-}) {
+}: SessionActionsOptions): SessionActions {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [calendarRevision, setCalendarRevision] = useState(0);
@@ -48,7 +67,7 @@ export default function useSessionActions({
    * Publishes the supplied authoritative session into loaded table, calendar and selected context.
    * @example syncSession(savedSession)
    */
-  const syncSession = useCallback((session: ProgramSession) => {
+  const syncSession = useCallback((session: Session) => {
     replaceInfiniteListRow(queryClient, SESSION_TABLE_QUERY_KEY, session);
     calendarCacheRef.current.upsert(session);
     onSessionSynced?.(session);
@@ -67,7 +86,7 @@ export default function useSessionActions({
    * Reconciles a saved session and refreshes its roster and affected Hours queries.
    * @example syncUpdatedSession(savedSession)
    */
-  const syncUpdatedSession = useCallback((session: ProgramSession) => {
+  const syncUpdatedSession = useCallback((session: Session) => {
     syncSession(session);
     void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
     void queryClient.invalidateQueries({ queryKey: ['hours'] });
@@ -111,7 +130,7 @@ export default function useSessionActions({
    * Saves a calendar drop and reports failures at page level.
    * @example await moveSession(session, '2026-11-20')
    */
-  const moveSession = useCallback(async (session: ProgramSession, date: string) => {
+  const moveSession = useCallback(async (session: Session, date: string) => {
     if (pendingSessions.current.has(session.id)) return null;
     setMoveError(null);
 
@@ -140,7 +159,7 @@ export default function useSessionActions({
    * Opens a confirmation capturing the supplied session and its deletion reconciliation.
    * @example requestDelete(session)
    */
-  const requestDelete = useCallback((session: ProgramSession) => setConfirmAction({
+  const requestDelete = useCallback((session: Session) => setConfirmAction({
     title: 'Delete Session',
     message: `Delete the ${session.title} session for the ${session.program} program on ${formatShortDate(session.date)}? This cannot be undone.`,
     confirmVariant: 'danger',

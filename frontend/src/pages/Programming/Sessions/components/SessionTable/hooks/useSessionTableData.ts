@@ -1,5 +1,6 @@
 import { getSessions } from '../../../sessions.api';
-import type { ProgramSession, SessionListFilters, SessionSortKey } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
+import type { SessionListFilters, SessionSortKey } from '../../../types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 
@@ -23,7 +24,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
     statuses,
     search,
   };
-  const query = useInfiniteListQuery<ProgramSession>({
+  const query = useInfiniteListQuery<Session>({
     ordering: { direction: sorting.direction, getValue: session => getSessionSortValue(session, sorting.key) },
     queryKey: [...queryKey, filters, sorting],
     queryFn: ({ signal, pageParam }) => getSessions(filters, { signal }, {
@@ -52,7 +53,7 @@ export function useSessionTableData(queryKey: readonly unknown[], {
  * Supplies server-compatible date, time, or label strings for the selected session order.
  * @example getSessionSortValue(session, 'date') // saved date string
  */
-export function getSessionSortValue(session: ProgramSession, key: SessionSortKey) {
+export function getSessionSortValue(session: Session, key: SessionSortKey) {
   return {
     program: session.program.toLowerCase(),
     cycle: session.cycle.toLowerCase(),

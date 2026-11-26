@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import SessionModal from './SessionModal';
+import SessionModal, { type SessionModalProps } from './SessionModal';
 
 const session = makeProgramSession({
   date: '2026-12-21', startTime: '17:00', endTime: '19:30', description: 'Practice session',
 });
-const sessionTypes = [
+const sessionTypes: SessionModalProps['sessionTypes'] = [
   { id: 'Regular', name: 'Regular' },
   { id: 'Guest Speaker', name: 'Guest Speaker' },
 ];

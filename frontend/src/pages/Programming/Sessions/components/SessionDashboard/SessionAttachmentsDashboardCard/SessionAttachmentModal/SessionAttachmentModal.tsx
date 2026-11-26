@@ -3,14 +3,15 @@ import FormFieldGroup from '../../../../../../../common/components/FormField/For
 import Checklist from '../../../../../../../common/components/Checklist/Checklist';
 import Modal from '../../../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../../../common/components/Modal/components/ModalFormFooter';
-import type { ProgramSession, SessionAttachment } from '../../../../types';
+import type { Session } from '../../../../../../../common/features/programming/sessions/types';
+import type { SessionAttachment } from '../../../../types';
 import { useSessionAttachmentModal } from './hooks/useSessionAttachmentModal';
 import { getErrorMessage } from '../../../../../../../http/errors';
 import './SessionAttachmentModal.css';
 
 interface SessionAttachmentModalProps {
   queryKey: readonly unknown[];
-  session: ProgramSession | null;
+  session: Session | null;
   attachment?: SessionAttachment | null;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -30,7 +31,7 @@ export default function SessionAttachmentModal({ session, ...props }: SessionAtt
  * @param props - Saved session/attachment and completion actions.
  * @example <AttachmentForm queryKey={['sessions']} session={session} onClose={close} onSaved={refresh} />
  */
-function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved }: Omit<SessionAttachmentModalProps, 'session'> & { session: ProgramSession }) {
+function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved }: Omit<SessionAttachmentModalProps, 'session'> & { session: Session }) {
   const workflow = useSessionAttachmentModal({ queryKey, session, attachment, onSaved });
   const { roster, rosterQuery, selectedYouthIds, setSelectedFile, submitStatus, statusMessage, submissionComplete, toggleYouth, submit } = workflow;
 

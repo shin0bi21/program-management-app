@@ -1,4 +1,5 @@
 import type { DateRange } from '../../../common/utils/dateRange';
+import type { Session } from '../../../common/features/programming/sessions/types';
 // Domain values and records.
 export type HoursCategory =
   | 'program_delivery'
@@ -26,8 +27,8 @@ export interface HoursItem {
   categoryLabel: string;
   taskId: string | null;
   taskTitle: string | null;
-  sessionId: string | null;
-  sessionTitle: string | null;
+  sessionId: Session['id'] | null;
+  sessionTitle: Session['title'] | null;
   date: string;
   type: HoursItemType;
   hours: number;

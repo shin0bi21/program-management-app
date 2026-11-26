@@ -30,7 +30,7 @@ describe('session API', () => {
 
   it('sends session saves to the same endpoint with their supplied fields', () => {
     const date = '2027-01-12';
-    const fields = { sessionType: 'Regular', title: 'Workshop', date, startTime: '13:00', endTime: '15:00' };
+    const fields = { sessionType: 'Regular', title: 'Workshop', date, startTime: '13:00', endTime: '15:00' } as const;
     const create = { programId: 'program-1', ...fields };
     const edit = { id: 'session-1', ...fields };
     const move = { id: 'session-1', date };

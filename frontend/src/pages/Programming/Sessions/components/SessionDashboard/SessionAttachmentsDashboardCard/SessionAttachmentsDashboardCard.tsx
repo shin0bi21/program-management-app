@@ -1,7 +1,7 @@
 import Button from '../../../../../../common/components/Button/Button';
 import ConfirmModal from '../../../../../../common/components/ConfirmModal/ConfirmModal';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import type { ProgramSession } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
 import SessionAttachmentModal from './SessionAttachmentModal/SessionAttachmentModal';
 import SessionAttachmentRow from './SessionAttachmentRow/SessionAttachmentRow';
 import SessionAttachmentViewerModal from './SessionAttachmentViewerModal/SessionAttachmentViewerModal';
@@ -16,7 +16,7 @@ export default function SessionAttachmentsDashboardCard({
   onMessageChange,
 }: {
   queryKey: readonly unknown[];
-  session: ProgramSession | null;
+  session: Session | null;
   canWrite: boolean;
   onMessageChange?: PageMessageChangeHandler;
 }) {

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { unlinkSessionNoteYouth } from '../../../../Programming/Sessions/sessions.api';
 import type { SessionNote } from '../../../../Programming/Sessions/types';
-import type { AttendanceSession } from '../../../../../common/features/Attendance/attendance.api';
+import type { SessionAttendance } from '../../../../../common/features/Attendance/attendance.api';
 import useYouthSessionNotes from './useYouthSessionNotes';
 
 vi.mock('../../../../Programming/Sessions/sessions.api', () => ({
@@ -21,7 +21,7 @@ const note: SessionNote = {
   createdByName: 'Admin User',
   youth: [],
 };
-const session: AttendanceSession = {
+const session: SessionAttendance = {
   id: 'session-1',
   sessionType: 'Regular',
   title: 'Communication',

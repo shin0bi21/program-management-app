@@ -3,9 +3,9 @@ import tableRefreshMessage from '../../../../../common/components/Table/tableRef
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
 import {
   SESSION_TABLE_KEYS,
-  type ProgramSession,
   type SessionListFilters,
   type SessionSortKey,
 } from '../../types';
@@ -14,14 +14,14 @@ import { useSessionTableData } from './hooks/useSessionTableData';
 
 interface SessionTableProps {
   queryKey: readonly unknown[];
-  columns: TableColumnDef<ProgramSession>[];
+  columns: TableColumnDef<Session>[];
   hiddenColumnKeys: string[];
   filters: SessionListFilters;
   sorting: ListSort<SessionSortKey>;
   columnWidths: Record<string, number>;
   selectedSessionId: string;
-  onSessionSelect: (session: ProgramSession) => void;
-  onSelectedSessionLoaded?: (session: ProgramSession) => void;
+  onSessionSelect: (session: Session) => void;
+  onSelectedSessionLoaded?: (session: Session) => void;
   onSortingChange: (sorting: ListSort<SessionSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onMessageChange?: PageMessageChangeHandler;

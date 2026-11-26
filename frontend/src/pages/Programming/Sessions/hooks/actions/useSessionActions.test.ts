@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import type { ProgramSession } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
 import useSessionActions from './useSessionActions';
 
 const api = vi.hoisted(() => ({ deleteSession: vi.fn(), setSession: vi.fn() }));
@@ -36,8 +36,8 @@ describe('useSessionActions', () => {
       date: '2027-01-12', startTime: '13:00', endTime: '15:00',
     });
     const { result, invalidate, calendar, onSessionSynced } = renderActions();
-    let finish!: (value: ProgramSession) => void;
-    api.setSession.mockReturnValue(new Promise<ProgramSession>(resolve => { finish = resolve; }));
+    let finish!: (value: Session) => void;
+    api.setSession.mockReturnValue(new Promise<Session>(resolve => { finish = resolve; }));
 
     let first!: ReturnType<typeof result.current.moveSession>;
     await act(async () => {

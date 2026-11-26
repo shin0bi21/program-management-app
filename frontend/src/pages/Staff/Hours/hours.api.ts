@@ -1,4 +1,5 @@
 import { intersectDateRanges } from '../../../common/utils/dateRange';
+import type { Session } from '../../../common/features/programming/sessions/types';
 import { apiClient } from '../../../http/client';
 import type { RequestOptions } from '../../../http/client';
 import type { CursorPage, CursorRequest } from '../../../query/types';
@@ -14,7 +15,7 @@ interface SharedHoursInput { staffId: string; hours: number; note: string }
 export type SetHoursInput = SharedHoursInput & ({
   source: 'regular'; date: string; programId: string | null; category: Exclude<HoursCategory, 'program_delivery'>;
 } | { source: 'task'; date: string; taskId: string; completeTask?: boolean }
-  | { source: 'session'; sessionId: string });
+  | { source: 'session'; sessionId: Session['id'] });
 export interface UpdateHoursPlacementInput { date: string }
 export type HoursMutationResult = HoursItem & { updatedTasks?: Task[] };
 export type SetHoursResult = HoursMutationResult;
@@ -22,10 +23,8 @@ export interface DeleteHoursResult { message: string; updatedTasks?: Task[] }
 
 export type HoursCalendarData = HoursItem[];
 
-export interface HoursSession {
-  id: string;
-  name: string;
-  date: string;
+interface SessionOption extends Pick<Session, 'id' | 'date'> {
+  name: Session['title'];
 }
 
 export interface HoursReferenceData {
@@ -132,9 +131,9 @@ export function getHoursCycleSummaryData(staffId: string, cycleId: string, opts?
  * @param signal - Cancels the session lookup when the caller departs.
  * @example getHoursSessions(staffId, date, signal)
  */
-export function getHoursSessions(staffId: string, date: string, signal?: AbortSignal) {
+export function getHoursSessions(staffId: string, date: string, signal?: AbortSignal): Promise<SessionOption[]> {
   const params = new URLSearchParams({ staffId, date });
-  return apiClient.get<HoursSession[]>(`/hours/sessions?${params}`, { signal });
+  return apiClient.get<SessionOption[]>(`/hours/sessions?${params}`, { signal });
 }
 
 /**

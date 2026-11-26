@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from 'react';
 import Button from '../../../../../../common/components/Button/Button';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import type { ProgramSession, SessionRosterMember } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
+import type { SessionRosterMember } from '../../../types';
 import useSessionRoster from '../../../hooks/data/useSessionRoster';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
@@ -14,9 +15,9 @@ import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../
 export default function SessionAttendanceDashboardCard({
   session, canWrite, onManage, onMessageChange,
 }: {
-  session: ProgramSession | null;
+  session: Session | null;
   canWrite: boolean;
-  onManage: (session: ProgramSession, roster: SessionRosterMember[]) => void;
+  onManage: (session: Session, roster: SessionRosterMember[]) => void;
   onMessageChange?: PageMessageChangeHandler;
 }) {
   const query = useSessionRoster(session?.id);
