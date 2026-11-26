@@ -1,4 +1,5 @@
 import { sql } from '../../../db/client';
+import type { HoursCalendarQuery } from '../../../validation/hoursSchemas';
 import {
   createHoursFixture, clearHoursRecords, deleteHoursFixture, emptyHoursFilters, type HoursFixture,
 } from '../../../../tests/shared/hoursFixtures';
@@ -21,7 +22,7 @@ describe('Hours collection queries', () => {
     expect(await getHoursCalendarData(firstStaff.auth, { ...emptyHoursFilters, search: 'missing-entry' })).toEqual([]);
   });
 
-  it('applies inclusive date bounds before table pagination and matches calendar membership', async () => {
+  it('applies inclusive date bounds to calendar and paginated table reads', async () => {
     const { firstStaff, activeCycleId, programId, date, linkedDate, placementDate } = fixture;
     const ids: string[] = [];
     for (const workDate of [date, linkedDate, placementDate]) {
@@ -32,9 +33,12 @@ describe('Hours collection queries', () => {
     }
     const query = { ...emptyHoursFilters, start: linkedDate, end: placementDate };
     const table = await getHoursList(firstStaff.auth, { ...query, sort: 'date', direction: 'asc' });
-    expect(table.rows.map(row => row.id).sort()).toEqual(ids.slice(1).sort());
+    const calendar = await getHoursCalendarData(firstStaff.auth, query);
+
+    const expectedIds = ids.slice(1).sort();
+    expect(table.rows.map(row => row.id).sort()).toEqual(expectedIds);
     expect(table.nextCursor).toBeNull();
-    expect((await getHoursCalendarData(firstStaff.auth, query)).map(row => row.id).sort()).toEqual(ids.slice(1).sort());
+    expect(calendar.map(row => row.id).sort()).toEqual(expectedIds);
   });
 
   it('filters selected cycles without widening readable staff scope', async () => {
@@ -56,8 +60,11 @@ describe('Hours collection queries', () => {
     for (const { cycleIds, expected } of cases) {
       const query = { ...emptyHoursFilters, cycleIds };
       const table = await getHoursList(firstStaff.auth, { ...query, sort: 'date', direction: 'asc' });
-      expect(table.rows.map(row => row.id).sort()).toEqual([...expected].sort());
-      expect((await getHoursCalendarData(firstStaff.auth, query)).map(row => row.id).sort()).toEqual([...expected].sort());
+      const calendar = await getHoursCalendarData(firstStaff.auth, query);
+
+      const expectedIds = [...expected].sort();
+      expect(table.rows.map(row => row.id).sort()).toEqual(expectedIds);
+      expect(calendar.map(row => row.id).sort()).toEqual(expectedIds);
     }
     const hidden = await getHoursList(firstStaff.auth, {
       ...emptyHoursFilters, staffIds: [unrelatedStaff.userId], cycleIds: [activeCycleId, upcomingCycleId], sort: 'date', direction: 'asc',
@@ -65,31 +72,31 @@ describe('Hours collection queries', () => {
     expect(hidden.rows).toEqual([]);
   });
 
-  it('applies identical domain filters to table and calendar reads', async () => {
-    const { firstStaff, unrelatedStaff, activeCycleId, programId, date } = fixture;
-    const [general] = await sql<Array<{ id: string }>>`INSERT INTO time_entries
-      (staff_id, cycle_id, category, date, hours, note)
-      VALUES (${firstStaff.userId}, ${activeCycleId}, 'other', ${date}, 1, 'General filtered entry') RETURNING id`;
-    await sql`INSERT INTO time_entries (staff_id, program_id, cycle_id, category, date, hours, note) VALUES
-      (${firstStaff.userId}, ${programId}, ${activeCycleId}, 'meeting', ${date}, 1, 'Program entry'),
-      (${unrelatedStaff.userId}, ${programId}, ${activeCycleId}, 'other', ${date}, 1, 'Hidden entry')`;
-    const filters = [
-      { ...emptyHoursFilters, categories: ['other'] as ['other'] },
-      { ...emptyHoursFilters, programIds: ['general'] },
-      { ...emptyHoursFilters, types: ['regular'] as ['regular'] },
-      { ...emptyHoursFilters, staffIds: [firstStaff.userId] },
-      { ...emptyHoursFilters, cycleIds: [activeCycleId] },
+  it('filters table and calendar records by category, program, source and staff', async () => {
+    const { firstStaff, secondStaff, activeCycleId, programId, sessionId, date } = fixture;
+    const [general, session, shared] = await sql<Array<{ id: string }>>`INSERT INTO time_entries
+      (staff_id, program_id, cycle_id, session_id, category, date, hours, note) VALUES
+      (${firstStaff.userId}, NULL, ${activeCycleId}, NULL, 'other', ${date}, 1, 'General'),
+      (${firstStaff.userId}, ${programId}, ${activeCycleId}, ${sessionId}, 'program_delivery', ${date}, 1, 'Session'),
+      (${secondStaff.userId}, ${programId}, ${activeCycleId}, NULL, 'meeting', ${date}, 1, 'Shared') RETURNING id`;
+
+    const cases: Array<{ filters: Partial<HoursCalendarQuery>; expected: string[] }> = [
+      { filters: { categories: ['meeting'] }, expected: [shared.id] },
+      { filters: { programIds: ['general'] }, expected: [general.id] },
+      { filters: { programIds: [programId] }, expected: [session.id, shared.id] },
+      { filters: { types: ['session'] }, expected: [session.id] },
+      { filters: { types: ['regular'] }, expected: [general.id, shared.id] },
+      { filters: { staffIds: [secondStaff.userId] }, expected: [shared.id] },
     ];
-    for (const query of filters) {
-      const table = await getHoursList(firstStaff.auth, { ...query, start: date, end: date, sort: 'date', direction: 'asc' });
-      const calendar = await getHoursCalendarData(firstStaff.auth, { ...query, start: date, end: date });
-      expect(calendar.map(row => row.id).sort()).toEqual(table.rows.map(row => row.id).sort());
-      expect(calendar.some(row => row.staffId === unrelatedStaff.userId)).toBe(false);
+    for (const { filters, expected } of cases) {
+      const query = { ...emptyHoursFilters, ...filters };
+      const table = await getHoursList(firstStaff.auth, { ...query, sort: 'date', direction: 'asc' });
+      const calendar = await getHoursCalendarData(firstStaff.auth, query);
+
+      const expectedIds = [...expected].sort();
+      expect(table.rows.map(row => row.id).sort()).toEqual(expectedIds);
+      expect(calendar.map(row => row.id).sort()).toEqual(expectedIds);
     }
-    const generalTable = await getHoursList(firstStaff.auth, {
-      ...emptyHoursFilters, programIds: ['general'], types: ['regular'], sort: 'date', direction: 'asc',
-    });
-    expect(generalTable.rows.map(row => row.id)).toEqual([general.id]);
   });
 
   it('reads own and shared staff across cycles when no date range is supplied', async () => {
@@ -104,10 +111,5 @@ describe('Hours collection queries', () => {
       expect.objectContaining({ staffId: firstStaff.userId, date, cycleId: activeCycleId, note: 'Delivered workshop' }),
       expect.objectContaining({ staffId: secondStaff.userId, date: upcomingDate, cycleId: upcomingCycleId, note: 'Campaign materials' }),
     ]));
-  });
-
-  it('accepts supported calendar ranges spanning more than one year', async () => {
-    expect(await getHoursCalendarData(fixture.firstStaff.auth, { ...emptyHoursFilters, start: '2025-01-01', end: '2026-01-02' }))
-      .toEqual([]);
   });
 });

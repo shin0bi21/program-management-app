@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { hoursCategorySchema } from './hoursSchemas';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema } from './dateRangeValidation';
+import { calendarDateSchema, hasOrderedCalendarBounds, hasPairedCalendarBounds } from './dateRangeValidation';
 
 const nullableUuid = (message: string) => z.string().uuid(message).nullable().optional().transform(value => value ?? null);
 
@@ -37,10 +37,10 @@ export const taskListQuerySchema = z.object({
     start: calendarDateSchema('Start date').optional(),
     end: calendarDateSchema('End date').optional(),
     ...cursorListFields(['firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status'], 'startDate', 'asc'),
-  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Start and end dates must be provided together',
     path: ['end'],
-  }).refine(({ start, end }) => !start || !end || start <= end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'End date must be on or after start date',
     path: ['end'],
   }),
@@ -51,7 +51,7 @@ export const taskCalendarQuerySchema = z.object({
     ...taskFilterFields,
     start: calendarDateSchema('Start date'),
     end: calendarDateSchema('End date'),
-  }).refine(query => query.start <= query.end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'End date must be on or after start date',
     path: ['end'],
   }),

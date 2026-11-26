@@ -1,7 +1,7 @@
 import { SESSION_TYPES } from '../types/programming';
 import { z } from 'zod';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema } from './dateRangeValidation';
+import { calendarDateSchema, hasOrderedCalendarBounds, hasPairedCalendarBounds } from './dateRangeValidation';
 
 const dateSchema = calendarDateSchema();
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must use HH:mm');
@@ -185,10 +185,10 @@ export const sessionListQuerySchema = z.object({
     statuses: commaSeparated(z.enum(['upcoming', 'completed'])),
     search: z.string().trim().max(120).optional().default(''),
     ...cursorListFields(['program', 'cycle', 'title', 'date', 'time', 'type', 'status'], 'date', 'desc'),
-  }).refine(data => Boolean(data.start) === Boolean(data.end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Session range requires both start and end',
     path: ['end'],
-  }).refine(data => !data.start || !data.end || data.start <= data.end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'Session range end must be on or after start',
     path: ['end'],
   }),

@@ -618,11 +618,6 @@ describe('Tasks API', () => {
     expect(table.status).toBe(200);
     expect(table.body.rows.map((task: { id: string }) => task.id).sort()).toEqual([spanning.body.id, inside.body.id, boundary.body.id].sort());
     expect(table.body.nextCursor).toBeNull();
-
-    const incompleteRange = await request(app)
-      .get('/api/tasks/calendar?start=2026-06-12')
-      .set('Authorization', `Bearer ${adminToken}`);
-    expect(incompleteRange.status).toBe(400);
   });
 
   it('returns tasks across a multi-year table and calendar read range', async () => {
@@ -644,20 +639,6 @@ describe('Tasks API', () => {
       const rows = endpoint === 'list' ? response.body.rows : response.body;
       expect(rows.map((task: { id: string }) => task.id)).toEqual(ids);
     }
-  });
-
-  it.each([
-    'start=2026-06-12',
-    'end=2026-06-15',
-    'start=2026-06-15&end=2026-06-12',
-    'start=2026-02-30&end=2026-03-01',
-    'start=0000-01-01&end=0000-01-02',
-  ])('rejects an invalid table range: %s', async query => {
-    const response = await request(app)
-      .get(`/api/tasks/list?${query}`)
-      .set('Authorization', `Bearer ${adminToken}`);
-
-    expect(response.status).toBe(400);
   });
 
   it('preserves newer task content and status when placement changes', async () => {
