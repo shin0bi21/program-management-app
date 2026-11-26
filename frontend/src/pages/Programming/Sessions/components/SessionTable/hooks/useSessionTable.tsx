@@ -11,15 +11,17 @@ import SessionTypeLabel from '../../SessionTypeLabel/SessionTypeLabel';
 
 /**
  * Builds session columns using saved dates and clock times, with permitted write actions.
- * @param options - Write capability and page-owned edit/delete callbacks.
- * @example useSessionTable({ canWriteSessions: false, onEdit, onDelete }) // columns without actions
+ * @param options - Write capability, pending session IDs, and page-owned edit/delete callbacks.
+ * @example useSessionTable({ canWriteSessions: false, pendingSessionIds: [], onEdit, onDelete })
  */
 export default function useSessionTable({
   canWriteSessions,
+  pendingSessionIds,
   onEdit,
   onDelete,
 }: {
   canWriteSessions: boolean;
+  pendingSessionIds: readonly string[];
   onEdit: (session: ProgramSession) => void;
   onDelete: (session: ProgramSession) => void;
 }) {
@@ -59,11 +61,12 @@ export default function useSessionTable({
       header: '',
       cell: ({ row: { original: session } }: CellContext<ProgramSession, unknown>) => <ActionsMenu
         ariaLabel={`More actions for ${session.title}`}
+        disabled={pendingSessionIds.includes(session.id)}
         items={[
           { id: 'edit', label: 'Edit', onClick: () => onEdit(session) },
           { id: 'delete', label: 'Delete', variant: 'danger' as const, onClick: () => onDelete(session) },
         ]}
       />,
     }] : []),
-  ], [canWriteSessions, onDelete, onEdit]);
+  ], [canWriteSessions, onDelete, onEdit, pendingSessionIds]);
 }

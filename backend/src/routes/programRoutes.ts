@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { handleCreateSession } from '../controllers/sessionController';
 import { handleSetProgramCycles, handleCreateProgram, handleGetPrograms, handleGetProgramList, handleUpdateProgram } from '../controllers/programController';
 import { handleGetProgramCycles, handleGetProgramRosterYouth, handleGetProgramCycleAttendance, handleGetAttendanceReportPdf } from '../controllers/programCycleController';
 import { handleEnrollYouth, handleWithdrawYouth, handleSetProgramRoster } from '../controllers/enrollmentController';
@@ -7,7 +6,7 @@ import { authenticateToken, requirePermission } from '../middleware/authMiddlewa
 import { generalLimiter } from '../middleware/rateLimiter';
 import { asyncHandler, validateRequest } from '../middleware/routeMiddleware';
 import { setProgramCyclesSchema, createProgramSchema, programQuerySchema, programListQuerySchema, updateProgramSchema } from '../validation/programSchemas';
-import { createSessionSchema, programCycleQuerySchema, programRosterSchema, programCycleAttendanceSchema, attendanceReportSchema, setProgramRosterSchema, enrollYouthSchema, withdrawYouthSchema } from '../validation/programmingSchemas';
+import { programCycleQuerySchema, programRosterSchema, programCycleAttendanceSchema, attendanceReportSchema, setProgramRosterSchema, enrollYouthSchema, withdrawYouthSchema } from '../validation/programmingSchemas';
 
 const router = Router();
 
@@ -24,7 +23,5 @@ router.post('/:programId/cycles/:cycleId/enrollments', authenticateToken, requir
 router.patch('/:programId/cycles/:cycleId/enrollments/:youthId/withdraw', authenticateToken, requirePermission('write:enrollments'), generalLimiter, validateRequest(withdrawYouthSchema), asyncHandler(handleWithdrawYouth));
 router.get('/:programId/cycles/:cycleId/attendance', authenticateToken, requirePermission('read:programs', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(programCycleAttendanceSchema), asyncHandler(handleGetProgramCycleAttendance));
 router.post('/:programId/cycles/:cycleId/reports/youth.pdf', authenticateToken, requirePermission('read:programs', 'read:attendance', 'read:sessions'), generalLimiter, validateRequest(attendanceReportSchema), asyncHandler(handleGetAttendanceReportPdf));
-
-router.post('/:programId/cycles/:cycleId/sessions', authenticateToken, requirePermission('write:sessions'), generalLimiter, validateRequest(createSessionSchema), asyncHandler(handleCreateSession));
 
 export default router;

@@ -143,8 +143,6 @@ describe('Program cycle assignments', () => {
       .set('Authorization', `Bearer ${managerToken}`)
       .send({ programId, sessionType: 'Regular', title: 'Manager session', date: `${futureYear}-10-01` });
     expect(session.status).toBe(201);
-    expect((await request(app).put(`/api/sessions/${session.body.id}/date`)
-      .set('Authorization', `Bearer ${managerToken}`).send({ date: `${futureYear}-10-02` })).status).toBe(200);
     expect((await request(app).delete(`/api/sessions/${session.body.id}`)
       .set('Authorization', `Bearer ${managerToken}`)).status).toBe(200);
 

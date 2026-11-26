@@ -3,9 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../http/client';
 import {
-  createSession,
-  moveSessionDate,
-  updateSession,
+  setSession,
   setSessionAttendance,
   createSessionAttachment,
   getSessionAttachmentDownloadName,
@@ -30,24 +28,25 @@ describe('session API', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/sessions/reference-data', options);
   });
 
-  it('moves a session with a date-only command', () => {
-    moveSessionDate('session-1', '2027-01-12');
-    expect(apiClient.put).toHaveBeenCalledWith('/sessions/session-1/date', { date: '2027-01-12' });
+  it('sends session saves to the same endpoint with their supplied fields', () => {
+    const date = '2027-01-12';
+    const fields = { sessionType: 'Regular', title: 'Workshop', date, startTime: '13:00', endTime: '15:00' };
+    const create = { programId: 'program-1', ...fields };
+    const edit = { id: 'session-1', ...fields };
+    const move = { id: 'session-1', date };
+
+    setSession(create);
+    setSession(edit);
+    setSession(move);
+
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, '/sessions', create);
+    expect(apiClient.post).toHaveBeenNthCalledWith(2, '/sessions', edit);
+    expect(apiClient.post).toHaveBeenNthCalledWith(3, '/sessions', move);
   });
 
-  it('sends the date/time edit and attendance commands to their endpoints', () => {
-    const edit = { sessionType: 'Regular', title: 'Edited', date: '2027-01-12', startTime: '13:00', endTime: '15:00' };
-    updateSession('session-1', edit);
-    expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1', edit);
-
+  it('sends attendance records to the session attendance endpoint', () => {
     setSessionAttendance('session-1', []);
-    expect(apiClient.put).toHaveBeenLastCalledWith('/sessions/session-1/attendance', { records: [] });
-  });
-
-  it('creates by program and date so the server resolves the assigned cycle', () => {
-    const data = { programId: 'program-1', sessionType: 'Regular', title: 'Art', date: '2026-10-27' };
-    createSession(data);
-    expect(apiClient.post).toHaveBeenCalledWith('/sessions', data);
+    expect(apiClient.put).toHaveBeenCalledWith('/sessions/session-1/attendance', { records: [] });
   });
 
   it('serializes session list filters without adding a trailing question mark', () => {

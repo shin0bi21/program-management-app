@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import type { UpdatedSessionResult } from '../../sessions.api';
+import type { ProgramSession } from '../../types';
 import useSessionActions from './useSessionActions';
 
-const api = vi.hoisted(() => ({ deleteSession: vi.fn(), moveSessionDate: vi.fn() }));
-vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, moveSessionDate: api.moveSessionDate }));
+const api = vi.hoisted(() => ({ deleteSession: vi.fn(), setSession: vi.fn() }));
+vi.mock('../../sessions.api', () => ({ deleteSession: api.deleteSession, setSession: api.setSession }));
 
 /**
  * Mounts session actions with an isolated query cache and calendar callbacks.
@@ -36,18 +36,18 @@ describe('useSessionActions', () => {
       date: '2027-01-12', startTime: '13:00', endTime: '15:00',
     });
     const { result, invalidate, calendar, onSessionSynced } = renderActions();
-    let finish!: (value: UpdatedSessionResult) => void;
-    api.moveSessionDate.mockReturnValue(new Promise<UpdatedSessionResult>(resolve => { finish = resolve; }));
+    let finish!: (value: ProgramSession) => void;
+    api.setSession.mockReturnValue(new Promise<ProgramSession>(resolve => { finish = resolve; }));
 
     let first!: ReturnType<typeof result.current.moveSession>;
     await act(async () => {
       first = result.current.moveSession(session, '2027-01-12');
       await result.current.moveSession(session, '2027-01-13');
     });
-    expect(api.moveSessionDate).toHaveBeenCalledOnce();
+    expect(api.setSession).toHaveBeenCalledExactlyOnceWith({ id: session.id, date: '2027-01-12' });
     expect(result.current.pendingSessionIds).toEqual([session.id]);
 
-    await act(async () => { finish({ session: saved }); await first; });
+    await act(async () => { finish(saved); await first; });
 
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
@@ -55,12 +55,14 @@ describe('useSessionActions', () => {
     expect(result.current.pendingSessionIds).toEqual([]);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['programs', 'cycle-assignments'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', saved.id, 'roster'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours-sessions'] });
     expect(result.current.calendarRevision).toBe(0);
   });
 
   it('keeps failed moves unchanged and permits a retry', async () => {
     const { result, calendar, onSessionSynced, invalidate } = renderActions();
-    api.moveSessionDate.mockRejectedValueOnce(new Error('Session has already started'));
+    api.setSession.mockRejectedValueOnce(new Error('Session has already started'));
 
     await act(async () => { expect(await result.current.moveSession(makeProgramSession(), '2027-01-12')).toBeNull(); });
 
@@ -102,7 +104,7 @@ describe('useSessionActions', () => {
   it('invalidates the exact session collections and replaces the calendar only after creation', async () => {
     const { result, invalidate } = renderActions();
 
-    await act(() => result.current.refreshCreatedSessions(makeProgramSession()));
+    await act(() => result.current.refreshCreatedSessions());
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(result.current.calendarRevision).toBe(1);

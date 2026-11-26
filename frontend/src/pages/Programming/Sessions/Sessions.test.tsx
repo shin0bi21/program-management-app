@@ -81,7 +81,7 @@ vi.mock('./components/SessionAttendanceModal/SessionAttendanceModal', () => ({
   },
 }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({ getCycleReferences: vi.fn() }));
-vi.mock('./sessions.api', () => ({ getSessionReferenceData: vi.fn(), deleteSession: vi.fn(), moveSessionDate: vi.fn() }));
+vi.mock('./sessions.api', () => ({ getSessionReferenceData: vi.fn(), deleteSession: vi.fn(), setSession: vi.fn() }));
 const auth = vi.hoisted(() => ({ role: 'admin', permissions: [] as string[] }));
 vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 const preferences = vi.hoisted(() => ({

@@ -3,21 +3,23 @@ import type { Program } from '../../../../Programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
-import { createSession, updateSession, type CreatedSessionResult, type UpdatedSessionResult } from '../../../sessions.api';
+import type { SetSessionInput } from '../../../sessions.api';
 import { type ProgramSession } from '../../../types';
 import { nextSessionDate } from '../../../utils/sessionSchedule';
 
 /**
  * Initializes one session draft from a saved session or the selected program's defaults.
  * @param options - Page-owned programs, optional edit session/calendar context, and save callback.
- * @example useSessionModal({ programs, session, onSaved }) // edits the supplied session without another read
+ * @example useSessionModal({ programs, session, onSave, onSaved }) // edits the supplied session without another read
  */
-export default function useSessionModal({ programs, session, programId, date, onSaved }: {
+export default function useSessionModal({ programs, session, programId, date, pending = false, onSave, onSaved }: {
   programs: Program[];
   session?: ProgramSession;
   programId?: string;
   date?: string;
-  onSaved: (result: CreatedSessionResult | UpdatedSessionResult) => void | Promise<void>;
+  pending?: boolean;
+  onSave: (input: SetSessionInput) => Promise<ProgramSession>;
+  onSaved: (session: ProgramSession) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => {
     const program = programs.find(candidate => candidate.id === (session?.programId ?? programId));
@@ -52,7 +54,7 @@ export default function useSessionModal({ programs, session, programId, date, on
   };
 
   const submit = async () => {
-    if ((!session && !program) || !draft.title.trim() || !draft.sessionType) return;
+    if (pending || (!session && !program) || !draft.title.trim() || !draft.sessionType) return;
     if (draft.startTime && draft.endTime && draft.endTime <= draft.startTime) {
       setStatus('error');
       setMessage('End time must be after start time.');
@@ -62,9 +64,10 @@ export default function useSessionModal({ programs, session, programId, date, on
 
     setStatus('submitting');
     setMessage(session ? 'Updating session...' : 'Adding session...');
-    let saved: CreatedSessionResult | UpdatedSessionResult;
+    let saved: ProgramSession;
     try {
       const fields = {
+        ...(session ? { id: session.id } : { programId: draft.programId }),
         sessionType: draft.sessionType,
         title: draft.title.trim(),
         description: draft.description.trim() || null,
@@ -72,9 +75,7 @@ export default function useSessionModal({ programs, session, programId, date, on
         startTime: draft.startTime,
         endTime: draft.endTime,
       };
-      saved = session
-        ? await updateSession(session.id, fields)
-        : await createSession({ ...fields, programId: draft.programId });
+      saved = await onSave(fields);
     } catch (cause) {
       setStatus('error');
       setMessage(getErrorMessage(cause, session ? 'Could not update session' : 'Could not add session'));
@@ -94,5 +95,5 @@ export default function useSessionModal({ programs, session, programId, date, on
   };
 
   return { program, draft, updateDraft, selectProgram,
-    status, message, submit, locked: status === 'submitting' || status === 'success' };
+    status, message, submit, locked: pending || status === 'submitting' || status === 'success' };
 }

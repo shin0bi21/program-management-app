@@ -1,16 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { SESSION_TYPES } from '../../../types/programming';
 import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
-import { assertProgramCycleAccess, assertProgramAccess, assertSessionAccess } from '../../../policies/programAccessPolicy';
+import { assertProgramAccess, assertSessionAccess } from '../../../policies/programAccessPolicy';
+import { audit } from '../../shared/auditService';
 import { lockAssignmentProgram } from '../programCycles/assignmentService';
-import { getSessionRows } from './sessionRowQuery';
+import { getSessionRows, type SessionRow } from './sessionRowQuery';
 import { buildSessionFilters } from './sessionRowFilters';
 import { getProgramCycleRowsByKeys, type ProgramCycleKey } from '../programCycles/programCycleRowQuery';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type {
-  CreateSessionInput,
-  UpdateSessionInput,
-} from '../../../validation/programmingSchemas';
+import type { SetSessionInput } from '../../../validation/programmingSchemas';
 
 interface ProgramSchedule {
   defaultStartTime: string;
@@ -26,241 +25,151 @@ export function getSessionTypes() {
   return [...SESSION_TYPES].sort().map(value => ({ id: value, name: value }));
 }
 
-/**
- * Creates a scheduled session in the one cycle covering its date; ambiguous assignments are 409.
- * @param programId - Program the user must be allowed to access.
- * @param data - Validated session settings, with optional schedule defaults.
- * @param user - User used for authorization and write metadata.
- * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createProgramSession(programId, { sessionType, title: 'Cooking', date: '2027-01-15' }, user) // session in the cycle covering January 15
- */
-export async function createProgramSession(programId: string, data: CreateSessionInput, user: AccessTokenPayload) {
-  // 1. Check access to the program.
-  await assertProgramAccess(user, programId);
-  return sql.begin(async tx => {
-    const trx = asTransactionSql(tx);
+type SessionFields = Pick<SessionRow, 'sessionType' | 'title' | 'date' | 'startTime' | 'endTime' | 'description'>;
 
-    // 2. Lock the program before resolving cycle assignments.
-    await lockAssignmentProgram(trx, programId, user);
-
-    // 3. Load program defaults and resolve the session date.
-    const schedule = await getProgramSchedule(programId, trx);
-    const date = data.date ?? schedule.nextDate;
-
-    // 4. Lock assigned cycles covering the session date.
-    const assignments = await trx<ProgramCycleKey[]>`
-      SELECT assignment.program_id, assignment.cycle_id
-      FROM program_cycle_assignments assignment
-      INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
-      WHERE assignment.program_id = ${programId}
-        AND ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      ORDER BY cycle.id
-      FOR UPDATE OF cycle, assignment
-    `;
-    if (!assignments.length) {
-      throw new ConflictError('No assigned cycle covers this session date. Assign a cycle covering this date in Programming settings.');
-    }
-    if (assignments.length > 1) {
-      throw new ConflictError('Multiple assigned cycles cover this session date. Adjust the overlapping cycle dates in Programming settings.');
-    }
-
-    // 5. Save the session and return affected cycle rows.
-    return createScheduledSession(trx, programId, assignments[0].cycleId, data, user, schedule, date);
-  }).catch(rethrowSessionConflict);
+interface SavedSessionFields extends SessionFields {
+  cycleId: string;
+  movable: boolean;
+  today: string;
 }
 
 /**
- * Creates a session in a required program-cycle assignment; dates outside that cycle are 409.
- * @param programId - Program owning the session.
- * @param cycleId - Assigned cycle the user must be allowed to access.
- * @param data - Validated session settings, with optional schedule defaults.
- * @param user - User used for authorization and write metadata.
- * @returns The created session and any readable affected program-cycle rows after commit.
- * @example await createSession(programId, cycleId, { sessionType, title: 'Cooking', date: '2027-01-15' }, user) // January 15 session using program default times
+ * Creates a session or saves changes to an existing session, including the work date of linked hours.
+ * @param input - Program ID and fields for creation, or an existing session ID and changes.
+ * @param user - User whose access is checked and whose ID is recorded on the write.
+ * @returns The saved session in the same shape as the session list.
+ * @example await setSession({ id: sessionId, date: '2030-03-10' }, user) // updates the date and resolves the cycle
  */
-export async function createSession(programId: string, cycleId: string, data: CreateSessionInput, user: AccessTokenPayload) {
+export async function setSession(input: SetSessionInput, user: AccessTokenPayload): Promise<SessionRow> {
+  // 1. Authorize the target before resolving its schedule.
+  if ('id' in input) {
+    await assertSessionAccess(user, input.id);
+  } else {
+    await assertProgramAccess(user, input.programId);
+  }
 
-  // 1. Check access to the assigned program and cycle.
-  await assertProgramCycleAccess(user, programId, cycleId);
   return sql.begin(async tx => {
     const trx = asTransactionSql(tx);
+    const transactionId = randomUUID();
+    let programId: string;
+    let current: SavedSessionFields | undefined;
+    let previousSession: SessionRow | undefined;
+    let fields: SessionFields;
+    let requiredCycleId: string | undefined;
 
-    // 2. Lock the program, cycle, and assignment.
-    await lockSessionAssignment(trx, programId, cycleId, user);
-
-    // 3. Load the cycle date bounds.
-    const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
-      SELECT cycle.starts_on, cycle.ends_on
-      FROM program_cycles cycle
-      WHERE cycle.id = ${cycleId}
-    `;
-
-    if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
-
-    // 4. Resolve the session date from program defaults.
-    const schedule = await getProgramSchedule(programId, trx);
-    const date = data.date ?? schedule.nextDate;
-    if (date < cycle.startsOn || date > cycle.endsOn) {
-      throw new ConflictError('Sessions must fall within the cycle date range');
-    }
-
-    // 5. Save the session within the validated cycle.
-    return createScheduledSession(trx, programId, cycleId, data, user, schedule, date);
-  }).catch(rethrowSessionConflict);
-}
-
-/**
- * Updates an accessible session; missing targets are 404 and dates outside its cycle are 409.
- * @param id - Session the user must be allowed to access.
- * @param data - Validated replacement session fields.
- * @param user - User used for authorization, write metadata, and response scope.
- * @example await updateSession(sessionId, { title: 'Cooking', date: '2027-01-15', startTime: '17:00', endTime: '18:00' }, user) // returns the saved session with its existing type and cleared description
- */
-export async function updateSession(id: string, data: UpdateSessionInput, user: AccessTokenPayload) {
-
-  // 1. Check access to the session.
-  await assertSessionAccess(user, id);
-  return sql.begin(async tx => {
-    const trx = asTransactionSql(tx);
-
-    // 2. Find the session assignment.
-    const [session] = await trx<ProgramCycleKey[]>`
-      SELECT program_id, cycle_id
-      FROM program_sessions
-      WHERE id = ${id}
-    `;
-    if (!session) throw new NotFoundError('Session not found');
-
-    // 3. Lock the program, cycle, and assignment.
-    await lockSessionAssignment(trx, session.programId, session.cycleId, user);
-
-    // 4. Validate the replacement date against the locked cycle.
-    const [cycle] = await trx<{ startsOn: string; endsOn: string }[]>`
-      SELECT starts_on, ends_on
-      FROM program_cycles
-      WHERE id = ${session.cycleId}
-    `;
-    if (!cycle) throw new InternalServerError('Locked cycle record is unavailable');
-    if (data.date < cycle.startsOn || data.date > cycle.endsOn) {
-      throw new ConflictError('Sessions must fall within the cycle date range');
-    }
-
-    // 5. Save the replacement session details.
-    const rows = await trx`
-      UPDATE program_sessions
-      SET session_type = COALESCE(${data.sessionType ?? null}, session_type),
-          title = ${data.title},
-          date = ${data.date}, start_time = ${data.startTime}, end_time = ${data.endTime},
-          description = ${data.description ?? null}, updated_at = NOW(), updated_by = ${user.userId}
-      WHERE id = ${id}
-      RETURNING id
-    `;
-    if (!rows.length) throw new NotFoundError('Session not found');
-
-    // 6. Load the complete saved session for the response.
-    const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [id] }, trx);
-    if (!saved) throw new InternalServerError('Saved session record is unavailable');
-
-    // 7. Load affected cycle rows and return them with the updated session.
-    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [saved], trx) };
-  }).catch(rethrowSessionConflict);
-}
-
-/**
- * Moves a session between future dates while preserving clock times and recorded history.
- * @param id - Accessible, non-cancelled session to move.
- * @param date - Authoritative YYYY-MM-DD destination, strictly after today.
- * @param user - User used for authorization, write metadata, and response scope.
- * @example await moveSessionDate(sessionId, '2030-03-10', user) // preserves both saved clock times
- */
-export async function moveSessionDate(id: string, date: string, user: AccessTokenPayload) {
-
-  // 1. Check access to the session.
-  await assertSessionAccess(user, id);
-  return sql.begin(async tx => {
-    const trx = asTransactionSql(tx);
-
-    // 2. Find the session program.
-    const [lookup] = await trx<{ programId: string }[]>`
-      SELECT session.program_id
-      FROM program_sessions session
-      WHERE session.id = ${id}
-    `;
-    if (!lookup) throw new NotFoundError('Session not found');
-
-    // 3. Lock the program before resolving the destination cycle.
-    await lockAssignmentProgram(trx, lookup.programId, user);
-
-    // 4. Lock the session and check its saved date against today's date.
-    const [session] = await trx<{
-      cycleId: string; movable: boolean; today: string;
-    }[]>`
-      SELECT cycle_id,
-        cancelled_at IS NULL
-          AND date > CURRENT_DATE AS movable,
-        CURRENT_DATE AS today
-      FROM program_sessions
-      WHERE id = ${id}
-      FOR UPDATE
-    `;
-    if (!session) throw new NotFoundError('Session not found');
-    if (!session.movable) throw new ConflictError('Only non-cancelled sessions on future dates can be moved');
-    if (date <= session.today) throw new ConflictError('Session destination must be after today');
-
-    // 5. Lock assigned cycles covering the destination date.
-    const assignments = await trx<ProgramCycleKey[]>`
-      SELECT assignment.program_id, assignment.cycle_id
-      FROM program_cycle_assignments assignment
-      JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
-      WHERE assignment.program_id = ${lookup.programId}
-        AND ${date}::date BETWEEN cycle.starts_on AND cycle.ends_on
-      ORDER BY cycle.id
-      FOR UPDATE OF cycle, assignment
-    `;
-    if (!assignments.length) throw new ConflictError('No assigned cycle covers this session date');
-    if (assignments.length > 1) throw new ConflictError('Multiple assigned cycles cover this session date');
-
-    // 6. Reject a cycle change when the session has recorded data.
-    if (assignments[0].cycleId !== session.cycleId) {
-      const [records] = await trx<{ recorded: boolean }[]>`
-        SELECT EXISTS (SELECT 1
-        FROM attendance_records
-        WHERE session_id = ${id})
-          OR EXISTS (
-            SELECT 1
-            FROM session_notes
-            WHERE session_id = ${id}
-          )
-          OR EXISTS (
-            SELECT 1
-            FROM session_attachments
-            WHERE session_id = ${id}
-          )
-          OR EXISTS (
-            SELECT 1
-            FROM time_entries
-            WHERE session_id = ${id}
-          ) AS recorded
+    // 2. Lock the program before loading saved fields or scheduling defaults.
+    if ('id' in input) {
+      const [session] = await trx<{ programId: string }[]>`
+        SELECT program_id
+        FROM program_sessions
+        WHERE id = ${input.id}
       `;
-      if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
+      if (!session) throw new NotFoundError('Session not found');
+      programId = session.programId;
+      await lockAssignmentProgram(trx, programId, user);
+
+      [current] = await trx<SavedSessionFields[]>`
+        SELECT cycle_id, session_type, title, date,
+          to_char(start_time, 'HH24:MI') AS start_time,
+          to_char(end_time, 'HH24:MI') AS end_time,
+          description,
+          cancelled_at IS NULL AND date > CURRENT_DATE AS movable,
+          CURRENT_DATE AS today
+        FROM program_sessions
+        WHERE id = ${input.id}
+        FOR UPDATE
+      `;
+      if (!current) throw new NotFoundError('Session not found');
+      [previousSession] = await buildSessionFilters(getSessionRows(user, trx), { ids: [input.id] }, trx);
+      if (!previousSession) throw new InternalServerError('Saved session record is unavailable');
+
+      const isDateOnlyUpdate = 'date' in input
+        && Object.keys(input).every(field => field === 'id' || field === 'date');
+      if (isDateOnlyUpdate) {
+        if (!current.movable) throw new ConflictError('Only non-cancelled sessions on future dates can be moved');
+        const date = input.date ?? current.date;
+        if (date <= current.today) throw new ConflictError('Session destination must be after today');
+        const { sessionType, title, startTime, endTime, description } = current;
+        fields = { sessionType, title, date, startTime, endTime, description };
+      } else {
+        requiredCycleId = current.cycleId;
+        fields = {
+          sessionType: input.sessionType ?? current.sessionType,
+          title: input.title ?? current.title,
+          date: input.date ?? current.date,
+          startTime: input.startTime ?? current.startTime,
+          endTime: input.endTime ?? current.endTime,
+          description: input.description === undefined ? current.description : input.description,
+        };
+      }
+    } else {
+      programId = input.programId;
+      await lockAssignmentProgram(trx, programId, user);
+
+      const schedule = await getProgramSchedule(programId, trx);
+      fields = {
+        sessionType: input.sessionType,
+        title: input.title,
+        date: input.date ?? schedule.nextDate,
+        startTime: input.startTime ?? schedule.defaultStartTime,
+        endTime: input.endTime ?? schedule.defaultEndTime,
+        description: input.description ?? null,
+      };
     }
 
-    // 7. Save only the destination date and resolved cycle, retaining both times.
-    await trx`
-      UPDATE program_sessions
-      SET cycle_id = ${assignments[0].cycleId},
-        date = ${date},
-        updated_at = NOW(), updated_by = ${user.userId}
-      WHERE id = ${id}
+    // 3. Resolve and lock the assigned cycle, then check the schedule and recorded history.
+    const cycleId = await resolveSessionCycle(trx, programId, fields.date, requiredCycleId);
+    if (fields.endTime <= fields.startTime) throw new ConflictError('End time must be after start time');
+
+    const id = 'id' in input ? input.id : null;
+    if (id && current && current.cycleId !== cycleId) {
+      await assertSessionHasNoCycleHistory(trx, id);
+    }
+
+    // 4. Save the session, preserving creation and cancellation metadata on updates.
+    const [record] = await trx<{ id: string }[]>`
+      INSERT INTO program_sessions (
+        id, program_id, cycle_id, session_type, title, date, start_time, end_time, description, created_by, updated_by
+      ) VALUES (
+        COALESCE(${id}::uuid, gen_random_uuid()), ${programId}, ${cycleId}, ${fields.sessionType}, ${fields.title},
+        ${fields.date}, ${fields.startTime}, ${fields.endTime}, ${fields.description}, ${user.userId}, ${user.userId}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        cycle_id = EXCLUDED.cycle_id,
+        session_type = EXCLUDED.session_type,
+        title = EXCLUDED.title,
+        date = EXCLUDED.date,
+        start_time = EXCLUDED.start_time,
+        end_time = EXCLUDED.end_time,
+        description = EXCLUDED.description,
+        updated_at = NOW(),
+        updated_by = EXCLUDED.updated_by
       RETURNING id
     `;
+    if (!record) throw new InternalServerError('Session save returned no record');
 
-    // 8. Load the complete moved session for the response.
-    const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [id] }, trx);
-    if (!saved) throw new InternalServerError('Saved session record is unavailable');
+    // 5. Move linked hours to the saved session date before committing.
+    if (current && fields.date !== current.date) {
+      await syncSessionHoursDate(trx, record.id, fields.date, user.userId, transactionId);
+    }
 
-    // 9. Load affected cycle rows and return them with the moved session.
-    return { session: saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [{ programId: lookup.programId, cycleId: session.cycleId }, saved], trx) };
+    // 6. Return the canonical session.
+    const [session] = await buildSessionFilters(getSessionRows(user, trx), { ids: [record.id] }, trx);
+    if (!session) throw new InternalServerError('Saved session record is unavailable');
+
+    // 7. Record the canonical saved change.
+    await audit(
+      trx,
+      user.userId,
+      transactionId,
+      'program_sessions',
+      session.id,
+      current ? 'UPDATE' : 'INSERT',
+      previousSession ? { ...previousSession } : null,
+      { ...session },
+    );
+
+    return session;
   }).catch(rethrowSessionConflict);
 }
 
@@ -418,50 +327,94 @@ async function getProgramSchedule(programId: string, query = sql): Promise<Progr
 }
 
 /**
- * Creates one session from local schedule values and returns visible affected cycle rows.
- * @param trx - Existing transaction owning the session write.
- * @param programId - Program owning the session.
- * @param cycleId - Previously verified assigned cycle.
- * @param data - Validated session details and optional time overrides.
- * @param user - User recorded on writes and used to scope response rows.
- * @param schedule - Program clock defaults used when a request omits times.
- * @param date - Authoritative supplied date or resolved default YYYY-MM-DD date.
- * @example await createScheduledSession(trx, programId, cycleId, { sessionType, title: 'Cooking' }, user, schedule, '2027-01-15') // inserts January 15 using schedule defaults
+ * Locks the selected assignment or resolves exactly one assignment covering the date.
+ * @param trx - Transaction already holding the program lock.
+ * @param programId - Program that owns the assignment.
+ * @param date - Business date that must fall within the assigned cycle.
+ * @param requiredCycleId - Existing assignment for a full edit.
+ * @example await resolveSessionCycle(trx, programId, '2030-03-10') // cycle ID covering March 10
  */
-async function createScheduledSession(
-  trx: typeof sql,
-  programId: string,
-  cycleId: string,
-  data: CreateSessionInput,
-  user: AccessTokenPayload,
-  schedule: ProgramSchedule,
-  date: string,
-) {
-  const startTime = data.startTime ?? schedule.defaultStartTime;
-  const endTime = data.endTime ?? schedule.defaultEndTime;
-
-  // 1. Validate clock ordering after resolving omitted program defaults.
-  if (endTime <= startTime) throw new ConflictError('End time must be after start time');
-
-  // 2. Insert the session using the resolved schedule.
-  const [session] = await trx`
-    INSERT INTO program_sessions (
-      program_id, cycle_id, session_type, title, date, start_time, end_time, description, created_by, updated_by
-    ) VALUES (
-      ${programId}, ${cycleId}, ${data.sessionType}, ${data.title},
-      ${date}, ${startTime}, ${endTime},
-      ${data.description ?? null}, ${user.userId}, ${user.userId}
-    )
-    RETURNING id
+async function resolveSessionCycle(trx: typeof sql, programId: string, date: string, requiredCycleId?: string): Promise<string> {
+  const selection = requiredCycleId
+    ? trx`cycle.id = ${requiredCycleId}`
+    : trx`${date}::date BETWEEN cycle.starts_on AND cycle.ends_on`;
+  const cycles = await trx<{ id: string; startsOn: string; endsOn: string }[]>`
+    SELECT cycle.id, cycle.starts_on, cycle.ends_on
+    FROM program_cycle_assignments assignment
+    INNER JOIN program_cycles cycle ON cycle.id = assignment.cycle_id
+    WHERE assignment.program_id = ${programId} AND ${selection}
+    ORDER BY cycle.id
+    FOR UPDATE OF cycle, assignment
   `;
-  if (!session) throw new InternalServerError('Session creation returned no record');
 
-  // 3. Load the complete created session for the response.
-  const [saved] = await buildSessionFilters(getSessionRows(user, trx), { ids: [session.id] }, trx);
-  if (!saved) throw new InternalServerError('Saved session record is unavailable');
+  if (requiredCycleId && !cycles.length) throw new NotFoundError('Program cycle not found');
+  if (!cycles.length) {
+    throw new ConflictError('No assigned cycle covers this session date. Assign a cycle covering this date in Programming settings.');
+  }
+  if (cycles.length > 1) {
+    throw new ConflictError('Multiple assigned cycles cover this session date. Adjust the overlapping cycle dates in Programming settings.');
+  }
 
-  // 4. Load affected cycle rows and return them with the created session.
-  return { ...saved, updatedProgramCycles: await getUpdatedProgramCycles(user, [{ programId, cycleId }], trx) };
+  const [cycle] = cycles;
+  if (date < cycle.startsOn || date > cycle.endsOn) {
+    throw new ConflictError('Sessions must fall within the cycle date range');
+  }
+  return cycle.id;
+}
+
+/**
+ * Rejects cycle changes when attendance, notes, attachments, or hours already exist.
+ * @param trx - Transaction holding the session lock.
+ * @param id - Session whose recorded data must stay in its original cycle.
+ * @example await assertSessionHasNoCycleHistory(trx, sessionId) // throws 409 for recorded sessions
+ */
+async function assertSessionHasNoCycleHistory(trx: typeof sql, id: string): Promise<void> {
+  const [records] = await trx<{ recorded: boolean }[]>`
+    SELECT EXISTS (SELECT 1 FROM attendance_records WHERE session_id = ${id})
+      OR EXISTS (SELECT 1 FROM session_notes WHERE session_id = ${id})
+      OR EXISTS (SELECT 1 FROM session_attachments WHERE session_id = ${id})
+      OR EXISTS (SELECT 1 FROM time_entries WHERE session_id = ${id}) AS recorded
+  `;
+  if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
+}
+
+/**
+ * Updates and audits the work date of hours linked to a rescheduled session.
+ * @param trx - Session save transaction holding the session lock.
+ * @param sessionId - Session whose logged hours follow the new date.
+ * @param date - Saved session date within its assigned cycle.
+ * @param userId - User recorded on the Hours update and audit entries.
+ * @example await syncSessionHoursDate(trx, sessionId, '2030-03-10', userId)
+ */
+async function syncSessionHoursDate(
+  trx: typeof sql,
+  sessionId: string,
+  date: string,
+  userId: string,
+  transactionId: string,
+): Promise<void> {
+  const entries = await trx<{ id: string; previousDate: string }[]>`
+    WITH previous AS (
+      SELECT id, date
+      FROM time_entries
+      WHERE session_id = ${sessionId} AND date <> ${date}::date
+      ORDER BY id
+      FOR UPDATE
+    )
+    UPDATE time_entries entry
+    SET date = ${date},
+      updated_at = NOW(),
+      updated_by = ${userId}
+    FROM previous
+    WHERE entry.id = previous.id
+    RETURNING entry.id, previous.date AS previous_date
+  `;
+  if (!entries.length) return;
+
+  for (const { id, previousDate } of entries) {
+    await audit(trx, userId, transactionId, 'time_entries', id, 'UPDATE',
+      { sessionId, date: previousDate }, { sessionId, date });
+  }
 }
 
 /**

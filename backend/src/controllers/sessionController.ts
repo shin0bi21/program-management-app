@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middleware/authMiddleware';
 
-import { createProgramSession, createSession, moveSessionDate, deleteSession, getSessionTypes, updateSession } from '../services/programming/sessions/sessionService';
+import { deleteSession, getSessionTypes, setSession } from '../services/programming/sessions/sessionService';
 import { getSessionReferenceData } from '../services/programming/sessions/sessionReferenceDataService';
 import { listSessions } from '../services/programming/sessions/sessionListService';
 import { getSessionRoster, setSessionAttendance } from '../services/programming/sessions/sessionAttendanceService';
 import { createSessionNote, deleteSessionNote, getSessionNotes, unlinkYouthFromSessionNote, updateSessionNote } from '../services/programming/sessions/sessionNoteService';
 import { createSessionAttachment, deleteSessionAttachment, getSessionAttachmentFile, getSessionAttachments, updateSessionAttachment } from '../services/programming/sessions/sessionAttachmentService';
-import type { CreateProgramSessionInput, CreateSessionInput, CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, SetAttendanceInput, UpdateSessionNoteInput, UpdateSessionInput } from '../validation/programmingSchemas';
+import type { CreateSessionAttachmentInput, UpdateSessionAttachmentInput, CreateSessionNoteInput, SetAttendanceInput, UpdateSessionNoteInput, SetSessionInput } from '../validation/programmingSchemas';
 import type { SessionListQuery } from '../validation/programmingSchemas';
 
 /**
@@ -28,17 +28,10 @@ export const handleGetSessionTypes = async (_req: Request, res: Response) => {
   res.json(await getSessionTypes());
 };
 
-export const handleCreateProgramSession = async (req: Request, res: Response) => {
-  const { programId, ...data } = req.body as CreateProgramSessionInput;
-  res.status(201).json(await createProgramSession(programId, data, user(req)));
-};
-
-export const handleCreateSession = async (req: Request, res: Response) => {
-  res.status(201).json(await createSession(req.params.programId, req.params.cycleId, req.body as CreateSessionInput, user(req)));
-};
-
-export const handleMoveSessionDate = async (req: Request, res: Response) => {
-  res.json(await moveSessionDate(req.params.sessionId, req.body.date as string, user(req)));
+export const handleSetSession = async (req: Request, res: Response) => {
+  const data = req.body as SetSessionInput;
+  const session = await setSession(data, user(req));
+  res.status('id' in data ? 200 : 201).json(session);
 };
 
 export const handleGetSessionRoster = async (req: Request, res: Response) => {
@@ -116,10 +109,6 @@ export const handleUpdateSessionAttachment = async (req: Request, res: Response)
 export const handleDeleteSessionAttachment = async (req: Request, res: Response) => {
   await deleteSessionAttachment(req.params.sessionId, req.params.attachmentId, user(req));
   res.json({ id: req.params.attachmentId });
-};
-
-export const handleUpdateSession = async (req: Request, res: Response) => {
-  res.json(await updateSession(req.params.sessionId, req.body as UpdateSessionInput, user(req)));
 };
 
 export const handleDeleteSession = async (req: Request, res: Response) => {

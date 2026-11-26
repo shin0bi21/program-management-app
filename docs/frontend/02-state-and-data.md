@@ -57,7 +57,7 @@ itself keeps its own `id` and `title`. Keep display labels out of identifier fie
 
 - Own endpoint paths, HTTP methods, request/response contracts, serialization, and boundary normalization.
 - Send all requests through the centralized HTTP client.
-- Use `PATCH` for focused status and placement mutations.
+- Use the domain's `set<Domain>` adapter for ordinary create and edit flows when its API supports an ID-based upsert: omit the ID to create, and supply the existing ID to update. A focused calendar change can send only its changed fields through that same adapter; preserve separate command endpoints when they enforce distinct lifecycle rules. Follow the backend [save contract](../backend/services.md#save-a-full-record).
 - Detach a departing caller from shared re-login without cancelling authentication for other callers.
 
 ### Cursor Tables
