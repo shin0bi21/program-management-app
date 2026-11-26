@@ -33,7 +33,7 @@ interface UpdateSessionAttachmentInput {
   youthIds: string[];
 }
 
-interface UpdateSessionInput {
+interface SessionFields {
   sessionType: string;
   title: string;
   date: string;
@@ -54,32 +54,27 @@ export function getAttendanceYouth(opts?: RequestOptions) {
     : apiClient.get<AttendanceYouth[]>('/youth');
 }
 
-export interface CreateSessionInput {
+interface CreateSessionInput extends Partial<SessionFields> {
   programId: string;
   sessionType: string;
   title: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
-  description?: string | null;
 }
 
-export type CreatedSessionResult = ProgramSession & { updatedProgramCycles?: ProgramCycleAssignment[] };
-
-export interface UpdatedSessionResult {
-  session: ProgramSession;
-  updatedProgramCycles?: ProgramCycleAssignment[];
-}
+export type SetSessionInput = CreateSessionInput | (Partial<SessionFields> & { id: string });
 
 export interface DeletedSessionResult {
   id: string;
   updatedProgramCycles?: ProgramCycleAssignment[];
 }
 
-export function createSession(data: CreateSessionInput) {
-  return apiClient.post<CreatedSessionResult>('/sessions', data);
+/**
+ * Saves a new session or updates an existing session with a full edit or a new date.
+ * @param data - Session fields with a program ID for creation or a session ID for updates.
+ * @example await setSession({ id: sessionId, date: '2030-03-10' })
+ */
+export function setSession(data: SetSessionInput): Promise<ProgramSession> {
+  return apiClient.post<ProgramSession>('/sessions', data);
 }
-
 
 export function getSessionTypes(opts?: RequestOptions) {
   return opts
@@ -250,14 +245,6 @@ export async function downloadSessionAttachment(sessionId: string, attachment: S
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-export function updateSession(sessionId: string, data: UpdateSessionInput) {
-  return apiClient.put<UpdatedSessionResult>(`/sessions/${sessionId}`, data);
-}
-
-export function moveSessionDate(sessionId: string, date: string) {
-  return apiClient.put<UpdatedSessionResult>(`/sessions/${sessionId}/date`, { date });
 }
 
 export function deleteSession(sessionId: string) {

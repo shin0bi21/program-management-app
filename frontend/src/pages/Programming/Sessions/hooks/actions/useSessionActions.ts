@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
 import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
-import { deleteSession, moveSessionDate, type CreatedSessionResult, type UpdatedSessionResult, type SessionAttendanceResult } from '../../sessions.api';
+import { deleteSession, setSession, type SessionAttendanceResult, type SetSessionInput } from '../../sessions.api';
 import type { ProgramCycleAssignment } from '../../../Programs/types';
 import { updateProgramCycleAssignments } from '../../../Programs/hooks/actions/programCycleAssignmentCache';
 import type { ProgramSession, SessionCalendarCache } from '../../types';
@@ -31,7 +31,7 @@ export default function useSessionActions({
   const [calendarRevision, setCalendarRevision] = useState(0);
   const calendarCacheRef = useRef<SessionCalendarCache>(EMPTY_CALENDAR_CACHE);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const pendingMoves = useRef(new Set<string>());
+  const pendingSessions = useRef(new Set<string>());
   const [pendingSessionIds, setPendingSessionIds] = useState<string[]>([]);
 
   /**
@@ -64,14 +64,15 @@ export default function useSessionActions({
   }, [queryClient]);
 
   /**
-   * Reconciles a saved session, affected assignments and its roster query.
-   * @example syncUpdatedSession(result)
+   * Reconciles a saved session and refreshes its roster and affected Hours queries.
+   * @example syncUpdatedSession(savedSession)
    */
-  const syncUpdatedSession = useCallback((result: UpdatedSessionResult) => {
-    syncSession(result.session);
-    syncAssignments(result.updatedProgramCycles);
-    void queryClient.invalidateQueries({ queryKey: ['sessions', result.session.id, 'roster'] });
-  }, [queryClient, syncAssignments, syncSession]);
+  const syncUpdatedSession = useCallback((session: ProgramSession) => {
+    syncSession(session);
+    void queryClient.invalidateQueries({ queryKey: ['sessions', session.id, 'roster'] });
+    void queryClient.invalidateQueries({ queryKey: ['hours'] });
+    void queryClient.invalidateQueries({ queryKey: ['hours-sessions'] });
+  }, [queryClient, syncSession]);
 
   /**
    * Publishes saved roster data and affected session, Youth and assignment rows.
@@ -89,40 +90,51 @@ export default function useSessionActions({
   }, [queryClient, syncAssignments, syncSession]);
 
   /**
-   * Moves the supplied session to the requested YYYY-MM-DD date while preventing duplicate moves.
-   * @example await moveSession(session, "2026-11-20")
+   * Saves session fields and lets the caller display any API failure.
+   * @example await saveSession({ id: session.id, date: '2026-11-20' })
+   */
+  const saveSession = useCallback(async (input: SetSessionInput) => {
+    if (!('id' in input)) return setSession(input);
+    if (pendingSessions.current.has(input.id)) throw new Error('Session is being updated. Try again.');
+
+    pendingSessions.current.add(input.id);
+    setPendingSessionIds([...pendingSessions.current]);
+    try {
+      return await setSession(input);
+    } finally {
+      pendingSessions.current.delete(input.id);
+      setPendingSessionIds([...pendingSessions.current]);
+    }
+  }, []);
+
+  /**
+   * Saves a calendar drop and reports failures at page level.
+   * @example await moveSession(session, '2026-11-20')
    */
   const moveSession = useCallback(async (session: ProgramSession, date: string) => {
-    if (pendingMoves.current.has(session.id)) return null;
-
-    pendingMoves.current.add(session.id);
-    setPendingSessionIds([...pendingMoves.current]);
+    if (pendingSessions.current.has(session.id)) return null;
     setMoveError(null);
 
     try {
-      const saved = await moveSessionDate(session.id, date);
+      const saved = await saveSession({ id: session.id, date });
       syncUpdatedSession(saved);
-      return saved.session;
+      return saved;
     } catch (cause) {
       setMoveError(getErrorMessage(cause, 'Could not move session'));
       return null;
-    } finally {
-      pendingMoves.current.delete(session.id);
-      setPendingSessionIds([...pendingMoves.current]);
     }
-  }, [syncUpdatedSession]);
+  }, [saveSession, syncUpdatedSession]);
 
   /**
-   * Reloads membership after creation and publishes affected program assignments.
-   * @example await refreshCreatedSessions(result)
+   * Reloads collection membership and refreshes program summaries after creation.
+   * @example await refreshCreatedSessions()
    */
-  const refreshCreatedSessions = useCallback(async (result: CreatedSessionResult) => {
-    syncAssignments(result.updatedProgramCycles);
+  const refreshCreatedSessions = useCallback(async () => {
     // Creation cannot establish membership in every filtered collection or buffered range.
     await queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
     refreshProgramOverviews();
     setCalendarRevision(revision => revision + 1);
-  }, [queryClient, refreshProgramOverviews, syncAssignments]);
+  }, [queryClient, refreshProgramOverviews]);
 
   /**
    * Opens a confirmation capturing the supplied session and its deletion reconciliation.
@@ -134,9 +146,10 @@ export default function useSessionActions({
     confirmVariant: 'danger',
     successMessage: 'Session deleted',
     onConfirm: async () => {
-      if (pendingMoves.current.has(session.id)) throw new Error('Session is being updated. Try again.');
-      pendingMoves.current.add(session.id);
-      setPendingSessionIds([...pendingMoves.current]);
+      if (pendingSessions.current.has(session.id)) throw new Error('Session is being updated. Try again.');
+
+      pendingSessions.current.add(session.id);
+      setPendingSessionIds([...pendingSessions.current]);
       try {
         const saved = await deleteSession(session.id);
 
@@ -146,8 +159,8 @@ export default function useSessionActions({
         onSessionRemoved(session.id);
         refreshProgramOverviews();
       } finally {
-        pendingMoves.current.delete(session.id);
-        setPendingSessionIds([...pendingMoves.current]);
+        pendingSessions.current.delete(session.id);
+        setPendingSessionIds([...pendingSessions.current]);
       }
     },
   }), [onSessionRemoved, queryClient, refreshProgramOverviews, syncAssignments]);
@@ -162,6 +175,7 @@ export default function useSessionActions({
     confirmAction,
     moveError,
     pendingSessionIds,
+    saveSession,
     moveSession,
     calendarRevision,
     calendarCacheRef,

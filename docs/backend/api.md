@@ -164,10 +164,14 @@ authoritative, including clock values on daylight-saving transition dates;
 saves do not reconstruct timestamps or reject DST gaps/folds. The current clock is
 used only for today/now rules; stored values are not converted for display.
 
-Program-based creation resolves exactly one allowed cycle from the local date
-inside the assignment-locking transaction; missing or overlapping matches conflict.
-Direct pair creation validates the session dates against the selected program/cycle
-combination. See
+Send `POST /api/sessions` to save a session. Creation takes `programId` and
+session details. The service resolves exactly one assigned cycle covering the
+date. Missing or overlapping matches return 409. Updates take the existing
+session `id` and one or more editable fields; omitted fields keep their stored values, and
+explicit `null` clears the optional description. A missing supplied ID returns
+404 and never creates a replacement. The response is the same session record as
+the session list. Creates and edits write `INSERT` and `UPDATE` audit events in
+the session transaction. See the
 [session service](../../backend/src/services/programming/sessions/sessionService.ts).
 
 Session types are fixed enum values: `Regular`, `Guest Speaker`, and `Field Trip`.
@@ -186,15 +190,15 @@ See the [session list service](../../backend/src/services/programming/sessions/s
 
 #### Move a Future Session Date
 
-The focused date command changes only the saved date and resolved cycle,
-preserving the program and both clock times. Both the source and destination dates must be strictly after today's date,
-the source must not be cancelled, and exactly one assigned cycle must contain the
-complete moved session. Recorded attendance, notes, attachments, or session-linked
-hours prevent moving to another cycle. Move eligibility compares dates directly,
-regardless of start/end clock times or DST transitions; unrelated
-session fields remain unchanged. Its authoritative response supplies the new
-placement for cache reconciliation. See the strict request in
-[programmingSchemas](../../backend/src/validation/programmingSchemas.ts).
+Send the session `id` and new `date` to the same save endpoint to reschedule an
+existing session. A date-only update preserves the program and other
+saved fields, including both clock times. Both dates must be after today, the
+source must be active, and exactly one assigned cycle must cover the destination.
+Attendance, notes, attachments, or session-linked hours prevent a change of
+cycle. A save that changes the session date updates and audits the work date on
+linked Hours entries in the same transaction ID as the Session audit. Their
+logged duration stays the same. Full edits remain within the session's current cycle.
+A missing target returns 404 for users with global program access.
 
 ### Roster Eligibility
 

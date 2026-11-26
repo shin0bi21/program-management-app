@@ -29,6 +29,7 @@ describe('useSessionTable', () => {
   it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useSessionTable({
       canWriteSessions: false,
+      pendingSessionIds: [],
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -42,6 +43,7 @@ describe('useSessionTable', () => {
     const callbacks = { onEdit: vi.fn(), onDelete: vi.fn() };
     const { result } = renderHook(() => useSessionTable({
       canWriteSessions: true,
+      pendingSessionIds: [],
       ...callbacks,
     }));
 

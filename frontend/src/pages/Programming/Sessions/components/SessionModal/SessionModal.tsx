@@ -1,4 +1,4 @@
-import type { CreatedSessionResult, UpdatedSessionResult } from '../../sessions.api';
+import type { SetSessionInput } from '../../sessions.api';
 import type { ProgramSession, SessionType } from '../../types';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
@@ -13,14 +13,16 @@ interface SessionModalProps {
   sessionTypes: SessionType[];
   programId?: string;
   date?: string;
+  pending?: boolean;
   onClose: () => void;
-  onSaved: (result: CreatedSessionResult | UpdatedSessionResult) => void | Promise<void>;
+  onSave: (input: SetSessionInput) => Promise<ProgramSession>;
+  onSaved: (session: ProgramSession) => void | Promise<void>;
 }
 
 /**
  * Adds or edits a session; program selection and its schedule defaults are available when adding.
  * @param props - Page references, optional saved session/calendar context, and close/save callbacks.
- * @example <SessionModal programs={programs} sessionTypes={types} session={session} onClose={close} onSaved={save} />
+ * @example <SessionModal programs={programs} sessionTypes={types} onClose={close} onSave={save} onSaved={refresh} />
  */
 export default function SessionModal({ onClose, sessionTypes, ...options }: SessionModalProps) {
   const workflow = useSessionModal(options);
@@ -28,7 +30,7 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
   return <Modal isOpen onClose={onClose} title={isEdit ? 'Edit Session' : 'Add Session'} status={workflow.status}
     statusMessage={workflow.message}
     footer={<ModalFormFooter formId="session-form"
-      submitStatus={workflow.status} submitDisabled={!workflow.draft.sessionType || (!isEdit && !workflow.program)} onClose={onClose} />}>
+      submitStatus={workflow.status} submitDisabled={workflow.locked || !workflow.draft.sessionType || (!isEdit && !workflow.program)} onClose={onClose} />}>
     <form id="session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
       {!isEdit && <FormField id="session-program" label="Program">
         <FloatingSelect id="session-program" value={workflow.draft.programId} onChange={workflow.selectProgram}

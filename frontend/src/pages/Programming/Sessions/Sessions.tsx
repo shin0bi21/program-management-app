@@ -81,11 +81,15 @@ export default function Sessions() {
   } | null>(null);
   const isSessionModalOpen = sessionModalTarget !== null;
   const closeSessionModal = () => setSessionModalTarget(null);
-  const openEditSessionModal = (session: ProgramSession) => setSessionModalTarget({ session });
+  const openEditSessionModal = (session: ProgramSession) => {
+    if (!actions.pendingSessionIds.includes(session.id)) setSessionModalTarget({ session });
+  };
+  const editingSession = sessionModalTarget?.session;
 
   // Table configuration.
   const columns = useSessionTable({
     canWriteSessions,
+    pendingSessionIds: actions.pendingSessionIds,
     onEdit: openEditSessionModal,
     onDelete: actions.requestDelete,
   });
@@ -196,20 +200,16 @@ export default function Sessions() {
       />
 
       {isSessionModalOpen && <SessionModal
-        key={sessionModalTarget?.session?.id ?? 'new'}
+        key={editingSession?.id ?? 'new'}
         programs={programs}
         sessionTypes={sessionTypes}
-        session={sessionModalTarget?.session}
+        session={editingSession}
         programId={sessionModalTarget?.programId}
         date={sessionModalTarget?.date}
+        pending={editingSession !== undefined && actions.pendingSessionIds.includes(editingSession.id)}
         onClose={closeSessionModal}
-        onSaved={result => {
-          if ('session' in result) {
-            actions.syncUpdatedSession(result);
-          } else {
-            return actions.refreshCreatedSessions(result);
-          }
-        }}
+        onSave={actions.saveSession}
+        onSaved={editingSession ? actions.syncUpdatedSession : actions.refreshCreatedSessions}
       />}
 
       <ConfirmModal
