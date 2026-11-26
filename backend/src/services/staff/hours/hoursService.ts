@@ -190,6 +190,47 @@ export async function updateHoursPlacement(
 }
 
 /**
+ * Moves linked hours to the saved session date and audits each changed entry.
+ * @param trx - Transaction holding the lock on the rescheduled session.
+ * @param sessionId - Session whose logged hours follow the new date.
+ * @param date - Saved session date within its assigned cycle.
+ * @param userId - User who rescheduled the session.
+ * @param transactionId - Audit group shared with the session save.
+ * @example await syncSessionHoursDate(trx, sessionId, '2030-03-10', userId, transactionId)
+ */
+export async function syncSessionHoursDate(
+  trx: typeof sql,
+  sessionId: string,
+  date: string,
+  userId: string,
+  transactionId: string,
+): Promise<void> {
+  // 1. Move entries whose work date differs from the saved session date.
+  const entries = await trx<{ id: string; previousDate: string }[]>`
+    WITH previous AS (
+      SELECT id, date
+      FROM time_entries
+      WHERE session_id = ${sessionId} AND date <> ${date}::date
+      ORDER BY id
+      FOR UPDATE
+    )
+    UPDATE time_entries entry
+    SET date = ${date},
+      updated_at = NOW(),
+      updated_by = ${userId}
+    FROM previous
+    WHERE entry.id = previous.id
+    RETURNING entry.id, previous.date AS previous_date
+  `;
+
+  // 2. Record each date change in the session's audit group.
+  for (const { id, previousDate } of entries) {
+    await audit(trx, userId, transactionId, 'time_entries', id, 'UPDATE',
+      { sessionId, date: previousDate }, { sessionId, date });
+  }
+}
+
+/**
  * Deletes an accessible hours entry and returns affected tasks.
  * @param id - Entry to delete.
  * @param user - User whose write access is enforced.
