@@ -29,7 +29,7 @@ function renderActions() {
 describe('useSessionActions', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('uses the complete move response and locks duplicate drops', async () => {
+  it('reconciles a move into another cycle and locks duplicate drops', async () => {
     const session = makeProgramSession();
     const saved = makeProgramSession({
       ...session, title: 'Changed after the client read', cycle: 'Winter', cycleId: 'cycle-2',
@@ -49,7 +49,7 @@ describe('useSessionActions', () => {
 
     await act(async () => { finish(saved); await first; });
 
-    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
     expect(calendar.upsert).toHaveBeenCalledWith(saved);
     expect(onSessionSynced).toHaveBeenCalledWith(saved);
     expect(result.current.pendingSessionIds).toEqual([]);
@@ -58,6 +58,17 @@ describe('useSessionActions', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours-sessions'] });
     expect(result.current.calendarRevision).toBe(0);
+  });
+
+  it('retains the table positions when a calendar move stays in the same cycle', async () => {
+    const session = makeProgramSession();
+    const saved = { ...session, date: '2026-08-11' };
+    const { result, invalidate } = renderActions();
+    api.setSession.mockResolvedValue(saved);
+
+    await act(async () => { await result.current.moveSession(session, saved.date); });
+
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['sessions', 'table'] });
   });
 
   it('keeps failed moves unchanged and permits a retry', async () => {

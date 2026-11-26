@@ -127,7 +127,7 @@ export default function useSessionActions({
   }, []);
 
   /**
-   * Saves a calendar drop and reports failures at page level.
+   * Saves a calendar drop, reloads table membership after a cycle change, and reports failures.
    * @example await moveSession(session, '2026-11-20')
    */
   const moveSession = useCallback(async (session: Session, date: string) => {
@@ -136,13 +136,21 @@ export default function useSessionActions({
 
     try {
       const saved = await saveSession({ id: session.id, date });
+      const changedCycle = saved.cycleId !== session.cycleId;
+      if (changedCycle) {
+        await queryClient.cancelQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+      }
+
       syncUpdatedSession(saved);
+      if (changedCycle) {
+        void queryClient.invalidateQueries({ queryKey: SESSION_TABLE_QUERY_KEY });
+      }
       return saved;
     } catch (cause) {
       setMoveError(getErrorMessage(cause, 'Could not move session'));
       return null;
     }
-  }, [saveSession, syncUpdatedSession]);
+  }, [queryClient, saveSession, syncUpdatedSession]);
 
   /**
    * Reloads collection membership and refreshes program summaries after creation.
