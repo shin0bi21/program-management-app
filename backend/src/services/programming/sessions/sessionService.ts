@@ -4,6 +4,7 @@ import { asTransactionSql, sql } from '../../../db/client';
 import { ConflictError, NotFoundError, InternalServerError, isUniqueViolation } from '../../../errors';
 import { assertProgramAccess, assertSessionAccess } from '../../../policies/programAccessPolicy';
 import { audit } from '../../shared/auditService';
+import { syncSessionHoursDate } from '../../staff/hours/hoursService';
 import { lockAssignmentProgram } from '../programCycles/assignmentService';
 import { getSessionRows, type SessionRow } from './sessionRowQuery';
 import { buildSessionFilters } from './sessionRowFilters';
@@ -376,45 +377,6 @@ async function assertSessionHasNoCycleHistory(trx: typeof sql, id: string): Prom
       OR EXISTS (SELECT 1 FROM time_entries WHERE session_id = ${id}) AS recorded
   `;
   if (records.recorded) throw new ConflictError('Sessions with recorded data cannot move to a different cycle');
-}
-
-/**
- * Updates and audits the work date of hours linked to a rescheduled session.
- * @param trx - Session save transaction holding the session lock.
- * @param sessionId - Session whose logged hours follow the new date.
- * @param date - Saved session date within its assigned cycle.
- * @param userId - User recorded on the Hours update and audit entries.
- * @example await syncSessionHoursDate(trx, sessionId, '2030-03-10', userId)
- */
-async function syncSessionHoursDate(
-  trx: typeof sql,
-  sessionId: string,
-  date: string,
-  userId: string,
-  transactionId: string,
-): Promise<void> {
-  const entries = await trx<{ id: string; previousDate: string }[]>`
-    WITH previous AS (
-      SELECT id, date
-      FROM time_entries
-      WHERE session_id = ${sessionId} AND date <> ${date}::date
-      ORDER BY id
-      FOR UPDATE
-    )
-    UPDATE time_entries entry
-    SET date = ${date},
-      updated_at = NOW(),
-      updated_by = ${userId}
-    FROM previous
-    WHERE entry.id = previous.id
-    RETURNING entry.id, previous.date AS previous_date
-  `;
-  if (!entries.length) return;
-
-  for (const { id, previousDate } of entries) {
-    await audit(trx, userId, transactionId, 'time_entries', id, 'UPDATE',
-      { sessionId, date: previousDate }, { sessionId, date });
-  }
 }
 
 /**
