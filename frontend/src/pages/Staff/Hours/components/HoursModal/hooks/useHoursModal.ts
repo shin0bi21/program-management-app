@@ -12,7 +12,7 @@ import type {
   StaffReference,
   HoursCategory,
   HoursProgram,
-  HoursItem,
+  Hours,
 } from '../../../types';
 
 type HoursSource = 'regular' | 'task' | 'session';
@@ -50,7 +50,7 @@ export interface UseHoursModalOptions {
   date?: string;
   source?: HoursSource;
   task?: HoursTaskOption;
-  item?: HoursItem;
+  item?: Hours;
   canCompleteTask?: boolean;
 }
 

@@ -16,7 +16,7 @@ import type { Task } from '../../../Tasks/types';
 import type {
   HoursCalendarIndex,
   HoursItemMove,
-  HoursItem,
+  Hours,
 } from '../../types';
 
 const EMPTY_CALENDAR_INDEX: HoursCalendarIndex = {
@@ -79,7 +79,7 @@ export default function useHoursActions({
   }, [queryClient, taskQueryKey]);
 
   // Keep the mounted calendar responsive while a save is pending.
-  const applyItem = useCallback((item: HoursItem) => {
+  const applyItem = useCallback((item: Hours) => {
     calendarIndexRef.current.upsert(item);
   }, []);
 
@@ -128,7 +128,7 @@ export default function useHoursActions({
     }
   }, [applyItem, finishItemAction, startItemAction, syncHours]);
 
-  const requestDelete = useCallback((target: HoursItem) => setConfirmAction({
+  const requestDelete = useCallback((target: Hours) => setConfirmAction({
     title: 'Delete logged hours',
     message: `Delete these ${target.categoryLabel.toLowerCase()} hours?`,
     confirmVariant: 'danger',

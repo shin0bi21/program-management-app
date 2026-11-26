@@ -6,7 +6,7 @@ import type { CursorPage, CursorRequest } from '../../../query/types';
 import type { Task } from '../Tasks/types';
 import type {
   HoursCategory,
-  HoursItem,
+  Hours,
   HoursFilters,
   HoursItemType,
 } from './types';
@@ -17,11 +17,11 @@ export type SetHoursInput = SharedHoursInput & ({
 } | { source: 'task'; date: string; taskId: string; completeTask?: boolean }
   | { source: 'session'; sessionId: Session['id'] });
 export interface UpdateHoursPlacementInput { date: string }
-export type HoursMutationResult = HoursItem & { updatedTasks?: Task[] };
+export type HoursMutationResult = Hours & { updatedTasks?: Task[] };
 export type SetHoursResult = HoursMutationResult;
 export interface DeleteHoursResult { message: string; updatedTasks?: Task[] }
 
-export type HoursCalendarData = HoursItem[];
+export type HoursCalendarData = Hours[];
 
 interface SessionOption extends Pick<Session, 'id' | 'date'> {
   name: Session['title'];
@@ -95,7 +95,7 @@ export function getHoursTableData(
     params.set('start', filters.dateRange.start);
     params.set('end', filters.dateRange.end);
   }
-  return apiClient.get<CursorPage<HoursItem>>(`/hours/table?${params}`, opts);
+  return apiClient.get<CursorPage<Hours>>(`/hours/table?${params}`, opts);
 }
 
 /**

@@ -20,7 +20,7 @@ import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import type { SetHoursInput } from './hours.api';
 import { getOpenTasks } from '../Tasks/api/tasks.api';
-import { HOURS_TABLE_KEYS, type HoursItem } from './types';
+import { HOURS_TABLE_KEYS, type Hours } from './types';
 
 import './Hours.css';
 
@@ -32,7 +32,7 @@ type HoursAddTarget = {
 
 type HoursModalState =
   | { mode: 'add'; context: HoursAddTarget }
-  | { mode: 'edit'; item: HoursItem }
+  | { mode: 'edit'; item: Hours }
   | null;
 
 // Page-owned cache contracts.
@@ -104,7 +104,7 @@ export default function Hours() {
     setHoursModalState({ mode: 'add', context });
   }, []);
 
-  const openEditHoursModal = useCallback((target: HoursItem) => {
+  const openEditHoursModal = useCallback((target: Hours) => {
     setHoursModalState({ mode: 'edit', item: target });
   }, []);
 

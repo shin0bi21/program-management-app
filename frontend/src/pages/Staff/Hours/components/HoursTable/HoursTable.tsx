@@ -2,20 +2,20 @@ import tableRefreshMessage from '../../../../../common/components/Table/tableRef
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
-import type { HoursFilters, HoursItem } from '../../types';
+import type { HoursFilters, Hours } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import { HOURS_TABLE_KEYS, type HoursSortKey } from '../../types';
 import useHoursTableData from './hooks/useHoursTableData';
 
 interface HoursTableProps {
   queryKey: readonly unknown[];
-  columns: TableColumnDef<HoursItem>[];
+  columns: TableColumnDef<Hours>[];
   hiddenColumnKeys: string[];
   filters: HoursFilters;
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   selectedRowId: string | null;
-  onRowSelect: (row: HoursItem) => void;
+  onRowSelect: (row: Hours) => void;
   onSortingChange: (sorting: ListSort<HoursSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   onMessageChange?: PageMessageChangeHandler;

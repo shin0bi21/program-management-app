@@ -1,7 +1,7 @@
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { useState } from 'react';
 import TimelineCalendar from '../../../../../../common/components/TimelineCalendar/TimelineCalendar';
-import type { HoursItem } from '../../../types';
+import type { Hours } from '../../../types';
 import HoursCalendarItem from './HoursItem';
 
 interface StoryStaff {
@@ -13,7 +13,7 @@ const staff: StoryStaff[] = [
   { id: 'staff-1', name: 'Zoe Wilson' },
   { id: 'staff-2', name: 'Alex Morgan' },
 ];
-const firstItem: HoursItem = makeHoursItem({
+const firstItem: Hours = makeHoursItem({
   id: 'entry-1',
   programId: 'program-1',
   program: 'Soft Skills',
@@ -26,7 +26,7 @@ const firstItem: HoursItem = makeHoursItem({
   hours: 2,
   note: 'Workshop delivery',
 });
-const secondItem: HoursItem = {
+const secondItem: Hours = {
   ...firstItem,
   id: 'entry-2',
   category: 'meeting',
@@ -34,7 +34,7 @@ const secondItem: HoursItem = {
   hours: 1,
   note: 'Planning meeting',
 };
-const items: HoursItem[] = [
+const items: Hours[] = [
   { ...firstItem, date: '2026-08-09' },
   { ...secondItem, date: '2026-08-10' },
   {
@@ -55,7 +55,7 @@ export function InteractiveHoursItems() {
   const [selectionCount, setSelectionCount] = useState(0);
   return (
     <div style={{ height: '420px', padding: '16px' }}>
-      <TimelineCalendar<StoryStaff, HoursItem>
+      <TimelineCalendar<StoryStaff, Hours>
         rows={staff}
         items={{
           'staff-1': items.filter(item => item.staffId === 'staff-1'),

@@ -3,10 +3,10 @@ import { useDataBuffer } from '../../../../../../common/components/TimelineCalen
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type { RowItemData } from '../../../../../../common/components/TimelineCalendar/types';
 import { getHoursCalendarData } from '../../../hours.api';
-import type { HoursCalendarIndex, HoursFilters, HoursItem } from '../../../types';
+import type { HoursCalendarIndex, HoursFilters, Hours } from '../../../types';
 
 /** Identifies an entry in the calendar buffer. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */
-const getHoursItemId = (item: HoursItem) => item.id;
+const getHoursItemId = (item: Hours) => item.id;
 
 /**
  * Loads complete Hours rows into the calendar range buffer.
@@ -22,7 +22,7 @@ export default function useHoursCalendarData(
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const rows = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
     signal.throwIfAborted();
-    const index: Record<string, Record<string, HoursItem[]>> = {};
+    const index: Record<string, Record<string, Hours[]>> = {};
 
     for (const entry of rows) {
       const periods = index[entry.staffId] ??= {};
@@ -37,8 +37,8 @@ export default function useHoursCalendarData(
     getItemId: getHoursItemId,
     errorMessage: 'Unable to load hours data',
   });
-  const visibleItems = useMemo<RowItemData<HoursItem>>(() => {
-    const items: Record<string, HoursItem[]> = {};
+  const visibleItems = useMemo<RowItemData<Hours>>(() => {
+    const items: Record<string, Hours[]> = {};
     for (const entries of Object.values(calendar.items)) {
       for (const entry of entries ?? []) {
         (items[entry.staffId] ??= []).push(entry);

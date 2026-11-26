@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { HoursItem } from '../../../types';
+import type { Hours } from '../../../types';
 import useHoursTable from './useHoursTable';
 
 const writable = {
@@ -12,9 +12,9 @@ const writable = {
 };
 const row = makeHoursItem({ id: 'entry-1', taskId: 'task-1', taskTitle: 'Prepare workshop' });
 
-function renderCell(column: ColumnDef<HoursItem>, item: HoursItem) {
+function renderCell(column: ColumnDef<Hours>, item: Hours) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: item } } as CellContext<HoursItem, unknown>);
+  return column.cell({ row: { original: item } } as CellContext<Hours, unknown>);
 }
 
 describe('useHoursTable', () => {

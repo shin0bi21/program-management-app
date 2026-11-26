@@ -14,7 +14,7 @@ import type {
 import {
   getHoursCalendarData,
 } from '../../hours.api';
-import type { StaffReference, HoursItem, HoursFilters } from '../../types';
+import type { StaffReference, Hours, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarIndex } from '../../types';
 
@@ -35,7 +35,7 @@ const coworker: StaffReference = {
   writable: false,
 };
 
-type CalendarProps = TimelineCalendarProps<StaffReference, HoursItem>;
+type CalendarProps = TimelineCalendarProps<StaffReference, Hours>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
@@ -59,7 +59,7 @@ vi.mock('../../hours.api', () => ({
  * Builds a complete regular-hours row with scenario-specific values.
  * @example buildItem({ hours: 3 }) // regular entry with three hours
  */
-function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
+function buildItem(overrides: Partial<Hours> = {}): Hours {
   return makeHoursItem({
     id: 'entry-1',
     programId: 'program-1',
@@ -89,7 +89,7 @@ function renderCalendar({
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
 }: {
-  data?: HoursItem[];
+  data?: Hours[];
   staff?: StaffReference[];
   staffIds?: string[];
   search?: string;

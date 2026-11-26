@@ -1,13 +1,13 @@
 import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
-import type { HoursItem as HoursItemData } from '../../../types';
+import type { Hours } from '../../../types';
 import HoursTypeLabel from '../../HoursTypeLabel/HoursTypeLabel';
 import { HOURS_ITEM_TYPE_LABELS } from '../../../utils/hoursItemType';
 import './HoursItem.css';
 
 interface HoursItemProps<TRow, TItemData> {
   calendar?: ItemCalendarProps<TRow, TItemData>;
-  item: HoursItemData;
+  item: Hours;
   onEdit?: () => void;
   onDelete?: () => void;
 }
