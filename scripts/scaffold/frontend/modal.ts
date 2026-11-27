@@ -22,6 +22,14 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     directory,
     join(context.frontendRoot, 'common/components/Modal/Modal'),
   );
+  const fieldImport = context.relativeImport(
+    directory,
+    join(context.frontendRoot, 'common/components/FormField/FormField'),
+  );
+  const footerImport = context.relativeImport(
+    directory,
+    join(context.frontendRoot, 'common/components/Modal/components/ModalFormFooter'),
+  );
   const hookName = `use${name}`;
 
   // 2. Format the component source without writing destination files.
@@ -29,7 +37,9 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
     join(directory, `${name}.tsx`),
     `
     import type { ReactElement } from 'react';
+    import FormField from '${fieldImport}';
     import Modal from '${modalImport}';
+    import ModalFormFooter from '${footerImport}';
 
     import ${hookName} from './hooks/${hookName}';
 
@@ -60,8 +70,13 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
           status={workflow.submitStatus}
           statusMessage={workflow.statusMessage}
           onClose={onClose}
+          footer={<ModalFormFooter formId="${name}-form" submitStatus={workflow.submitStatus} onClose={onClose} />}
         >
-          <p>TODO: Add the ${name} form workflow.</p>
+          <form id="${name}-form" onSubmit={workflow.submit}>
+            <FormField id="${name}-title" label="Title">
+              <input id="${name}-title" required {...workflow.register('title')} />
+            </FormField>
+          </form>
         </Modal>
       );
     }
@@ -72,21 +87,30 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
   const hook = context.sourceFile(
     join(directory, `hooks/${hookName}.ts`),
     `
+    import { useForm, type UseFormHandleSubmit, type UseFormRegister } from 'react-hook-form';
+
+    interface ${name}Draft {
+      title: string;
+    }
+
     interface ${name}Result {
+      register: UseFormRegister<${name}Draft>;
+      submit: ReturnType<UseFormHandleSubmit<${name}Draft>>;
       submitStatus: 'idle';
       statusMessage: undefined;
     }
 
     /**
-     * Supplies idle submission feedback until the ${name} workflow is implemented.
+     * Initializes the mounted form with example fields and idle feedback.
      * @example ${hookName}() // { submitStatus: 'idle', statusMessage: undefined }
      */
     export default function ${hookName}(): ${name}Result {
       // TODO: Initialize once from the supplied edit record or add defaults.
-      // Name incoming context by its domain fields; keep editable values together under draft.
-      // Order draft fields and initialization to match the form's DOM order.
+      // Name incoming context by its domain fields and match defaultValues to the form's DOM order.
       // This form mounts while open; close/save completion unmounts its draft and feedback.
-      // Keep validation, submission, and recovery with this mounted instance.
+      const { register, handleSubmit } = useForm<${name}Draft>({ defaultValues: { title: '' } });
+
+      // TODO: Replace the example field and wire validation, the save command, and recovery.
       // Represent mutually exclusive add/edit targets with a discriminated state plus null for closed.
       // Apply entry-context defaults/locks; align optional/derived fields with API validation.
       // Load only selector choices not already supplied; forward inputs and cancellation.
@@ -95,7 +119,9 @@ export function modalPlan(context: ScaffoldContext, ownerPath: string, name: str
       // Return authoritative saved records; the owning page action reconciles its views.
       // Use FormField/FormFieldGroup and ModalFormFooter; inherit Modal's success delay.
       return {
-        submitStatus: 'idle' as const,
+        register,
+        submit: handleSubmit(() => undefined),
+        submitStatus: 'idle',
         statusMessage: undefined,
       };
     }

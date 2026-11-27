@@ -5,6 +5,32 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Validate the selected mode, then run or preview its suites.
+# Example: main "$@"
+main() {
+  case "${1:---full}" in
+    --full)
+      [ "$#" -le 1 ] || { usage >&2; exit 2; }
+      run_full_suite
+      ;;
+    --changed)
+      [ "$#" -le 2 ] || { usage >&2; exit 2; }
+      run_changed_suites "${2:-$(default_base_ref)}"
+      ;;
+    --plan-changed)
+      [ "$#" -le 2 ] || { usage >&2; exit 2; }
+      run_changed_suites "${2:-$(default_base_ref)}" true
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
 # Print full, changed, and planning modes without starting tests or containers.
 # Example: bash scripts/tests/test-app.sh --help
 usage() {
@@ -40,85 +66,6 @@ run_full_suite() {
   # 2. Report success only after all child runners complete.
   echo "Full test suite passed!"
   echo "=========================================="
-}
-
-# Prepare services and run related paths; deleted inputs fall back to all backend tests.
-# Example: run_related_backend_tests src/routes/tasks/index.ts
-run_related_backend_tests() {
-  # 1. Require graph inputs before preparing backend test services.
-  if [ "$#" -eq 0 ]; then
-    echo "ERROR: Related backend tests require at least one changed path." >&2
-    exit 2
-  fi
-
-  # 2. Prepare services once and fall back to all tests for deleted graph inputs.
-  source scripts/tests/backend/_docker-health.sh
-  export BACKEND_TEST_ENV_READY=1
-  # Deleted or renamed-away inputs cannot be resolved in the current graph.
-  for changed_path in "$@"; do
-    if [ ! -f "backend/$changed_path" ]; then
-      docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand
-      return
-    fi
-  done
-
-  # 3. Let Jest discover tests related to existing changed inputs.
-  docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand --findRelatedTests "$@"
-}
-
-# Run Vitest dependency selection against the supplied comparison revision.
-# Example: run_related_frontend_tests origin/develop
-run_related_frontend_tests() {
-  local base_ref="$1"
-  (cd frontend && npm test -- --changed "$base_ref")
-}
-
-# Print the environment override or an available integration reference, falling back to HEAD.
-# Example: default_base_ref
-default_base_ref() {
-  # 1. Prefer an explicit environment override.
-  if [ -n "${TEST_APP_BASE_REF:-}" ]; then
-    printf '%s\n' "$TEST_APP_BASE_REF"
-    return
-  fi
-
-  # 2. Use the development reference when present.
-  if git rev-parse --verify --quiet origin/develop >/dev/null; then
-    printf '%s\n' "origin/develop"
-    return
-  fi
-
-  # 3. Fall back to the remote default branch, then HEAD.
-  local remote_default
-  remote_default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-  if [ -n "$remote_default" ]; then
-    printf '%s\n' "$remote_default"
-    return
-  fi
-
-  printf '%s\n' "HEAD"
-}
-
-# Print deduplicated branch and working-tree paths against a valid comparison base.
-# Example: collect_changed_files origin/develop
-collect_changed_files() {
-  # 1. Validate the comparison revision before collecting changed paths.
-  local base_ref="$1"
-  local merge_base
-
-  if ! git rev-parse --verify --quiet "$base_ref^{commit}" >/dev/null; then
-    echo "ERROR: Base revision '$base_ref' does not exist." >&2
-    exit 2
-  fi
-
-  # 2. Combine committed, staged, unstaged, and untracked changes without duplicates.
-  merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || git rev-parse HEAD)"
-  {
-    git diff --no-renames --name-only --diff-filter=ACDMR "$merge_base"...HEAD
-    git diff --no-renames --name-only --diff-filter=ACDMR
-    git diff --cached --no-renames --name-only --diff-filter=ACDMR
-    git ls-files --others --exclude-standard
-  } | awk 'NF && !seen[$0]++'
 }
 
 # Select affected checks; print the plan or execute it with child stdin isolated.
@@ -195,24 +142,83 @@ run_changed_suites() {
   echo "Selected test suites passed!"
 }
 
-case "${1:---full}" in
-  --full)
-    [ "$#" -le 1 ] || { usage >&2; exit 2; }
-    run_full_suite
-    ;;
-  --changed)
-    [ "$#" -le 2 ] || { usage >&2; exit 2; }
-    run_changed_suites "${2:-$(default_base_ref)}"
-    ;;
-  --plan-changed)
-    [ "$#" -le 2 ] || { usage >&2; exit 2; }
-    run_changed_suites "${2:-$(default_base_ref)}" true
-    ;;
-  -h|--help)
-    usage
-    ;;
-  *)
-    usage >&2
+# Print deduplicated branch and working-tree paths against a valid comparison base.
+# Example: collect_changed_files origin/develop
+collect_changed_files() {
+  # 1. Validate the comparison revision before collecting changed paths.
+  local base_ref="$1"
+  local merge_base
+
+  if ! git rev-parse --verify --quiet "$base_ref^{commit}" >/dev/null; then
+    echo "ERROR: Base revision '$base_ref' does not exist." >&2
     exit 2
-    ;;
-esac
+  fi
+
+  # 2. Combine committed, staged, unstaged, and untracked changes without duplicates.
+  merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || git rev-parse HEAD)"
+  {
+    git diff --no-renames --name-only --diff-filter=ACDMR "$merge_base"...HEAD
+    git diff --no-renames --name-only --diff-filter=ACDMR
+    git diff --cached --no-renames --name-only --diff-filter=ACDMR
+    git ls-files --others --exclude-standard
+  } | awk 'NF && !seen[$0]++'
+}
+
+# Print the environment override or an available integration reference, falling back to HEAD.
+# Example: default_base_ref
+default_base_ref() {
+  # 1. Prefer an explicit environment override.
+  if [ -n "${TEST_APP_BASE_REF:-}" ]; then
+    printf '%s\n' "$TEST_APP_BASE_REF"
+    return
+  fi
+
+  # 2. Use the development reference when present.
+  if git rev-parse --verify --quiet origin/develop >/dev/null; then
+    printf '%s\n' "origin/develop"
+    return
+  fi
+
+  # 3. Fall back to the remote default branch, then HEAD.
+  local remote_default
+  remote_default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [ -n "$remote_default" ]; then
+    printf '%s\n' "$remote_default"
+    return
+  fi
+
+  printf '%s\n' "HEAD"
+}
+
+# Prepare services and run related paths; deleted inputs fall back to all backend tests.
+# Example: run_related_backend_tests src/routes/tasks/index.ts
+run_related_backend_tests() {
+  # 1. Require graph inputs before preparing backend test services.
+  if [ "$#" -eq 0 ]; then
+    echo "ERROR: Related backend tests require at least one changed path." >&2
+    exit 2
+  fi
+
+  # 2. Prepare services once and fall back to all tests for deleted graph inputs.
+  source scripts/tests/backend/_docker-health.sh
+  export BACKEND_TEST_ENV_READY=1
+  # Deleted or renamed-away inputs cannot be resolved in the current graph.
+  for changed_path in "$@"; do
+    if [ ! -f "backend/$changed_path" ]; then
+      docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand
+      return
+    fi
+  done
+
+  # 3. Let Jest discover tests related to existing changed inputs.
+  docker compose exec -T -e NODE_ENV=test backend npm test -- --runInBand --findRelatedTests "$@"
+}
+
+# Run Vitest dependency selection against the supplied comparison revision.
+# Example: run_related_frontend_tests origin/develop
+run_related_frontend_tests() {
+  local base_ref="$1"
+  (cd frontend && npm test -- --changed "$base_ref")
+}
+
+main "$@"

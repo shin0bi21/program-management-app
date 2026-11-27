@@ -1,13 +1,14 @@
+import type { ReactElement } from 'react';
 import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
-import type { HoursItem as HoursItemData } from '../../../types';
+import type { Hours } from '../../../types';
 import HoursTypeLabel from '../../HoursTypeLabel/HoursTypeLabel';
 import { HOURS_ITEM_TYPE_LABELS } from '../../../utils/hoursItemType';
 import './HoursItem.css';
 
 interface HoursItemProps<TRow, TItemData> {
   calendar?: ItemCalendarProps<TRow, TItemData>;
-  item: HoursItemData;
+  item: Hours;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -16,7 +17,7 @@ interface HoursItemProps<TRow, TItemData> {
  * Displays an Hours entry and its available actions.
  * @example <HoursItem item={entry} onEdit={openEditor} />
  */
-export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onDelete }: HoursItemProps<TRow, TItemData>) {
+export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onDelete }: HoursItemProps<TRow, TItemData>): ReactElement {
   const type = item.type;
   const label = HOURS_ITEM_TYPE_LABELS[type];
   const title = item.taskTitle ?? item.sessionTitle ?? item.categoryLabel;

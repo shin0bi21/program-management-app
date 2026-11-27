@@ -38,7 +38,6 @@ export default function Programs() {
   const actions = useProgramsActions({
     programTableQueryKey: PROGRAM_TABLE_QUERY_KEY,
     onProgramSynced: program => setSelectedProgram(current => current?.id === program.id ? program : current),
-    onCycleDeleted: data.removeCycle,
   });
 
   const modals = useProgramsModals();

@@ -1,14 +1,12 @@
 import { sql } from '../../../db/client';
 import { InternalServerError, NotFoundError } from '../../../errors';
 import type { AccessTokenPayload } from '../../../types/auth';
-import type { HoursCategory, HoursCycleSummaryQuery, HoursPayPeriodQuery } from '../../../validation/hoursSchemas';
+import type { HoursCycleSummaryQuery, HoursPayPeriodQuery } from '../../../validation/hoursSchemas';
 import { getStaffReferenceData } from '../../referenceData/staffReferenceData';
 import { getHoursCategoryLabel } from './hoursReferenceData';
+import type { Hours } from './hoursRowQuery';
 
-interface HoursCategoryTotal {
-  category: HoursCategory;
-  hours: number;
-}
+type HoursCategoryTotal = Pick<Hours, 'category' | 'hours'>;
 
 /**
  * Summarizes accessible staff hours for the pay period containing the requested date.

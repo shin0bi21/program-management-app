@@ -37,11 +37,10 @@ export default function ProfileNoteModal({
         { id: 'health', name: 'Health' },
         { id: 'preference', name: 'Preference' },
       ]}
-      details={workflow.draft.details}
+      detailsField={workflow.detailsField}
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       onCategoryChange={value => workflow.selectCategory(value as YouthProfileNoteCategory)}
-      onDetailsChange={workflow.updateDetails}
       onSubmit={workflow.submit}
       onClose={onClose}
     />

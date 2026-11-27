@@ -1,9 +1,11 @@
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { createSessionAttachment, getSessionRoster, updateSessionAttachment } from '../../../../../sessions.api';
 import type { SubmitStatus } from '../../../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../../../common/hooks/useSubmitLock';
-import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../../../../../types';
+import type { Session } from '../../../../../../../../common/features/programming/sessions/types';
+import type { SessionAttachment, SessionRosterMember } from '../../../../../types';
 
 /**
  * Owns attachment upload or metadata-edit drafts and prevents duplicate pending saves.
@@ -13,12 +15,23 @@ import type { ProgramSession, SessionAttachment, SessionRosterMember } from '../
  */
 export function useSessionAttachmentModal({ queryKey, session, attachment, onSaved }: {
   queryKey: readonly unknown[];
-  session: ProgramSession;
+  session: Session;
   attachment: SessionAttachment | null;
   onSaved: () => void | Promise<void>;
 }) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedYouthIds, setSelectedYouthIds] = useState<string[]>(() => attachment?.youth.map(youth => youth.youthId) ?? []);
+  const { register, watch, getValues, setValue, handleSubmit } = useForm<{
+    title: string;
+    file?: FileList;
+    description: string;
+    selectedYouthIds: string[];
+  }>({
+    defaultValues: {
+      title: attachment?.title ?? '',
+      description: attachment?.description ?? '',
+      selectedYouthIds: attachment?.youth.map(youth => youth.youthId) ?? [],
+    },
+  });
+  const selectedYouthIds = watch('selectedYouthIds');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
@@ -27,23 +40,22 @@ export function useSessionAttachmentModal({ queryKey, session, attachment, onSav
     queryFn: ({ signal }) => getSessionRoster(session.id, { signal }),
   });
 
-  const toggleYouth = (youthId: string) => setSelectedYouthIds(current => current.includes(youthId)
-    ? current.filter(id => id !== youthId)
-    : [...current, youthId]);
+  const toggleYouth = (youthId: string) => {
+    const ids = getValues('selectedYouthIds');
+    setValue('selectedYouthIds', ids.includes(youthId) ? ids.filter(id => id !== youthId) : [...ids, youthId]);
+  };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if ((!attachment && !selectedFile?.size) || !tryLock()) return;
-
-    const form = new FormData(event.currentTarget);
+  const submit = handleSubmit(async draft => {
+    const file = draft.file?.[0];
+    if ((!attachment && !file?.size) || !tryLock()) return;
     setSubmitStatus('submitting');
     setStatusMessage(attachment ? 'Saving attachment...' : 'Uploading attachment...');
 
     try {
-      const description = String(form.get('description') ?? '').trim();
-      const data = { title: String(form.get('title')).trim(), description: description || null, youthIds: selectedYouthIds };
+      const description = draft.description.trim();
+      const data = { title: draft.title.trim(), description: description || null, youthIds: draft.selectedYouthIds };
       if (attachment) await updateSessionAttachment(session.id, attachment.id, data);
-      else await createSessionAttachment(session.id, { ...data, file: selectedFile! });
+      else if (file) await createSessionAttachment(session.id, { ...data, file });
     } catch (cause) {
       setStatusMessage(cause instanceof Error ? cause.message : `Could not ${attachment ? 'update' : 'add'} attachment`);
       setSubmitStatus('error');
@@ -59,10 +71,10 @@ export function useSessionAttachmentModal({ queryKey, session, attachment, onSav
     }
     setStatusMessage(message);
     setSubmitStatus('success');
-  };
+  });
 
   return {
-    roster: rosterQuery.data ?? [], rosterQuery, selectedYouthIds, setSelectedFile,
+    roster: rosterQuery.data ?? [], rosterQuery, selectedYouthIds, register, setValue,
     submitStatus, statusMessage, submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
     toggleYouth, submit,
   };

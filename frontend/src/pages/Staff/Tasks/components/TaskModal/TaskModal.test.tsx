@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setTask } from '../../api/tasks.api';
@@ -47,9 +47,13 @@ describe('TaskModal', () => {
     expect(screen.getByLabelText('Start date *')).toHaveValue('2026-08-10');
     expect(screen.getByLabelText('Due date *')).toHaveValue('2026-08-10');
     expect(screen.getByLabelText('Due date *')).toHaveAttribute('min', '2026-08-10');
+
+    fireEvent.change(screen.getByLabelText('Start date *'), { target: { value: '2026-08-12' } });
+
+    expect(screen.getByLabelText('Due date *')).toHaveValue('2026-08-12');
   });
 
-  it('disables modal controls while the task is submitting', () => {
+  it('disables modal controls while the task is submitting', async () => {
     vi.mocked(setTask).mockReturnValue(new Promise(() => undefined));
     render(<TaskModal
       target={{
@@ -72,7 +76,7 @@ describe('TaskModal', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Planning / Prep' }));
     fireEvent.submit(document.getElementById('task-form')!);
 
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled());
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Task program' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Task category' })).toBeDisabled();

@@ -1,11 +1,11 @@
-import type { HoursItem } from '../../pages/Staff/Hours/types';
+import type { Hours } from '../../pages/Staff/Hours/types';
 
 /**
  * Builds a complete Hours entry with scenario overrides.
  * @param overrides - Entry fields supplied by the test scenario.
  * @example makeHoursItem({ hours: 2 }) // a two-hour meeting
  */
-export function makeHoursItem(overrides: Partial<HoursItem> = {}): HoursItem {
+export function makeHoursItem(overrides: Partial<Hours> = {}): Hours {
   let type = overrides.type ?? 'regular';
   if (!overrides.type && overrides.taskId) type = 'task';
   if (!overrides.type && !overrides.taskId && overrides.sessionId) type = 'session';

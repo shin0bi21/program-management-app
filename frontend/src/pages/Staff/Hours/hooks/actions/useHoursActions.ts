@@ -2,50 +2,59 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-import type { ConfirmAction } from '../../../../../common/components/ConfirmModal/types';
+import { getBoundedDate } from '../../../../../common/utils/dateRange';
 import {
   deleteHours,
   setHours,
-  type SetHoursInput,
   type HoursMutationResult,
-  updateHoursPlacement,
 } from '../../hours.api';
 
 import type { Task } from '../../../Tasks/types';
 
 import type {
-  HoursCalendarIndex,
-  HoursItemMove,
-  HoursItem,
+  HoursFilters,
+  Hours,
+  HoursActions,
 } from '../../types';
 
-const EMPTY_CALENDAR_INDEX: HoursCalendarIndex = {
-  upsert: () => undefined,
-  remove: () => undefined,
-};
+const HOURS_SEARCH_FIELDS = [
+  'firstName', 'lastName', 'program', 'cycle', 'category', 'taskTitle', 'sessionTitle', 'note', 'date',
+] as const satisfies readonly (keyof Hours)[];
+
+interface UseHoursActionsOptions {
+  hoursQueryKey: readonly unknown[];
+  hoursTableQueryKey: readonly unknown[];
+  taskQueryKey: readonly unknown[];
+  filters: HoursFilters;
+  onItemChanged?: (item: Hours) => void;
+  onItemRemoved?: (itemId: Hours['id']) => void;
+}
+
+interface HoursActionsResult {
+  moveError: string | null;
+  isItemPending: HoursActions['isItemPending'];
+  saveHours: (input: Partial<Hours>, previous?: Hours, completeTask?: boolean) => Promise<void>;
+  moveHours: HoursActions['move'];
+  deleteHours: (target: Hours) => Promise<void>;
+}
 
 /**
  * Saves Hours rows into loaded views and refreshes their related summaries.
- * @param options - Query prefixes and the callback for closing a deleted entry.
- * @example actions.moveHours({ item, date }) // replaces the saved row in the table and mounted calendar
+ * @param options - Query prefixes, applied filters, and callbacks for the page to reconcile changed or deleted entries.
+ * @example actions.moveHours(item, date) // reports a preview followed by the saved or restored entry
  */
 export default function useHoursActions({
   hoursQueryKey,
   hoursTableQueryKey,
   taskQueryKey,
+  filters,
+  onItemChanged,
   onItemRemoved,
-}: {
-  hoursQueryKey: readonly unknown[];
-  hoursTableQueryKey: readonly unknown[];
-  taskQueryKey: readonly unknown[];
-  onItemRemoved?: (itemId: string) => void;
-}) {
+}: UseHoursActionsOptions): HoursActionsResult {
   const queryClient = useQueryClient();
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [pendingItemIds, setPendingItemIds] = useState<ReadonlySet<string>>(() => new Set());
   const pendingItemIdsRef = useRef(new Set<string>());
-  const calendarIndexRef = useRef<HoursCalendarIndex>(EMPTY_CALENDAR_INDEX);
 
   const startItemAction = useCallback((itemId: string) => {
     if (pendingItemIdsRef.current.has(itemId)) return false;
@@ -78,31 +87,27 @@ export default function useHoursActions({
     void queryClient.invalidateQueries({ queryKey: [...taskQueryKey, 'hours-options'] });
   }, [queryClient, taskQueryKey]);
 
-  // Keep the mounted calendar responsive while a save is pending.
-  const applyItem = useCallback((item: HoursItem) => {
-    calendarIndexRef.current.upsert(item);
-  }, []);
-
-  const syncHours = useCallback((saved: HoursMutationResult, operation: 'create' | 'update' = 'update') => {
+  const syncHours = useCallback((saved: HoursMutationResult, previous?: Hours) => {
     const { updatedTasks, ...entry } = saved;
-    if (operation === 'create') {
+    if (!previous || changesTableMembership(previous, entry, filters)) {
       void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
     } else {
       replaceInfiniteListRow(queryClient, hoursTableQueryKey, entry);
     }
-    applyItem(entry);
+    onItemChanged?.(entry);
     syncTasks(updatedTasks);
     refreshOverview();
-  }, [applyItem, hoursTableQueryKey, queryClient, refreshOverview, syncTasks]);
+  }, [filters, hoursTableQueryKey, onItemChanged, queryClient, refreshOverview, syncTasks]);
 
-  const saveHours = useCallback(async (input: SetHoursInput, itemId?: string) => {
+  const saveHours = useCallback(async (input: Partial<Hours>, previous?: Hours, completeTask = false) => {
+    const itemId = previous?.id;
     if (itemId && !startItemAction(itemId)) return;
 
     try {
       const saved = itemId
         ? await setHours(input, itemId)
-        : await setHours(input);
-      syncHours(saved, itemId ? 'update' : 'create');
+        : await setHours(input, undefined, completeTask);
+      syncHours(saved, previous);
     } finally {
       if (itemId) {
         finishItemAction(itemId);
@@ -110,54 +115,69 @@ export default function useHoursActions({
     }
   }, [finishItemAction, startItemAction, syncHours]);
 
-  const moveHours = useCallback(async ({ item, date }: HoursItemMove) => {
+  const moveHours = useCallback(async (item: Hours, date: Hours['date']) => {
     if (!startItemAction(item.id)) return;
 
     const previous = item;
     setMoveError(null);
-    applyItem({ ...previous, date });
+    onItemChanged?.({ ...previous, date });
 
     try {
-      const updated = await updateHoursPlacement(item.id, { date });
-      syncHours(updated);
+      const updated = await setHours({ date }, item.id);
+      syncHours(updated, previous);
     } catch {
-      applyItem(previous);
+      onItemChanged?.(previous);
       setMoveError('Unable to move logged hours. The hours were returned to their original day.');
     } finally {
       finishItemAction(item.id);
     }
-  }, [applyItem, finishItemAction, startItemAction, syncHours]);
+  }, [finishItemAction, onItemChanged, startItemAction, syncHours]);
 
-  const requestDelete = useCallback((target: HoursItem) => setConfirmAction({
-    title: 'Delete logged hours',
-    message: `Delete these ${target.categoryLabel.toLowerCase()} hours?`,
-    confirmVariant: 'danger',
-    onConfirm: async () => {
-      if (!startItemAction(target.id)) return;
+  const deleteHoursAction = useCallback(async (target: Hours) => {
+    if (!startItemAction(target.id)) return;
 
-      try {
-        const deleted = await deleteHours(target.id);
-        removeInfiniteListRow(queryClient, hoursTableQueryKey, target.id);
-        calendarIndexRef.current.remove(target.id);
-        onItemRemoved?.(target.id);
-        refreshOverview();
-        syncTasks(deleted.updatedTasks);
-      } finally {
-        finishItemAction(target.id);
-      }
-    },
-  }), [finishItemAction, hoursTableQueryKey, onItemRemoved, queryClient, refreshOverview, startItemAction, syncTasks]);
-
-  const closeConfirmation = useCallback(() => setConfirmAction(null), []);
+    try {
+      const deleted = await deleteHours(target.id);
+      removeInfiniteListRow(queryClient, hoursTableQueryKey, target.id);
+      onItemRemoved?.(target.id);
+      refreshOverview();
+      syncTasks(deleted.updatedTasks);
+    } finally {
+      finishItemAction(target.id);
+    }
+  }, [finishItemAction, hoursTableQueryKey, onItemRemoved, queryClient, refreshOverview, startItemAction, syncTasks]);
 
   return {
-    confirmAction,
     moveError,
-    calendarIndexRef,
     isItemPending,
     saveHours,
     moveHours,
-    requestDelete,
-    closeConfirmation,
+    deleteHours: deleteHoursAction,
   };
+}
+
+/**
+ * Checks whether a saved edit needs the table to fetch its membership again.
+ * @example changesTableMembership(before, saved, filters) // true when the edit leaves the selected category
+ */
+function changesTableMembership(before: Hours, saved: Hours, filters: HoursFilters): boolean {
+  const beforeMatches = matchesTableFilters(before, filters);
+  const savedMatches = matchesTableFilters(saved, filters);
+  if (beforeMatches !== savedMatches) return true;
+
+  return savedMatches && Boolean(filters.search.trim())
+    && HOURS_SEARCH_FIELDS.some(field => before[field] !== saved[field]);
+}
+
+/**
+ * Applies the exact selections while leaving text matching to the server.
+ * @example matchesTableFilters(row, filters) // false when the row falls outside the date bounds
+ */
+function matchesTableFilters(row: Hours, filters: HoursFilters): boolean {
+  return getBoundedDate(row.date, filters.dateRange) === row.date
+    && (!filters.staffIds.length || filters.staffIds.includes(row.staffId))
+    && (!filters.categories.length || filters.categories.includes(row.category))
+    && (!filters.programIds.length || filters.programIds.includes(row.programId ?? 'general'))
+    && (!filters.types.length || filters.types.includes(row.type))
+    && (!filters.cycleIds?.length || filters.cycleIds.includes(row.cycleId));
 }

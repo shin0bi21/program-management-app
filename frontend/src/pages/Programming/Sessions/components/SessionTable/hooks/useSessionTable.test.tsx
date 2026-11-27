@@ -3,7 +3,7 @@ import type { CellContext, ColumnDef } from '@tanstack/react-table';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { ProgramSession } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
 import { makeProgramSession } from '../../../../../../tests/factories/session';
 import useSessionTable from './useSessionTable';
 
@@ -15,9 +15,9 @@ vi.mock('../../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
   },
 }));
 
-function renderCell(column: ColumnDef<ProgramSession>, session: ProgramSession) {
+function renderCell(column: ColumnDef<Session>, session: Session) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: session } } as CellContext<ProgramSession, unknown>);
+  return column.cell({ row: { original: session } } as CellContext<Session, unknown>);
 }
 
 describe('useSessionTable', () => {
@@ -29,6 +29,7 @@ describe('useSessionTable', () => {
   it('omits management actions for read-only users', () => {
     const { result } = renderHook(() => useSessionTable({
       canWriteSessions: false,
+      pendingSessionIds: [],
       onEdit: vi.fn(),
       onDelete: vi.fn(),
     }));
@@ -42,6 +43,7 @@ describe('useSessionTable', () => {
     const callbacks = { onEdit: vi.fn(), onDelete: vi.fn() };
     const { result } = renderHook(() => useSessionTable({
       canWriteSessions: true,
+      pendingSessionIds: [],
       ...callbacks,
     }));
 

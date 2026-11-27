@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { TaskReferenceData } from '../../api/tasks.api';
-import type { StaffReference, TaskProgram } from '../../types';
+import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -50,7 +50,7 @@ const tableKeys = [
   'firstName', 'lastName', 'title', 'category', 'program', 'startDate', 'dueDate', 'status',
 ] as const;
 
-type TestTaskOptions = TaskReferenceData & { staff: StaffReference[]; programs: TaskProgram[] };
+type TestTaskOptions = TaskReferenceData & { staff: StaffReference[]; programs: ProgramReference[] };
 
 interface UsePreferencesOptions {
   currentOptions?: TestTaskOptions;
@@ -69,20 +69,15 @@ function usePreferences(settings: UsePreferencesOptions = {}) {
   const currentOptions = Object.prototype.hasOwnProperty.call(settings, 'currentOptions')
     ? settings.currentOptions
     : options;
+  const loading = settings.optionsLoading ?? false;
+  const error = settings.optionsError ? new Error('Options unavailable') : null;
 
   return useTaskPreferences({
-    staff: currentOptions?.staff ?? [],
-    programs: currentOptions?.programs ?? [],
-    staffLoading: settings.optionsLoading ?? false,
-    staffError: settings.optionsError ?? false,
-    programsLoading: settings.optionsLoading ?? false,
-    programsError: settings.optionsError ?? false,
-    referenceData: currentOptions,
-    referenceDataLoading: settings.optionsLoading ?? false,
-    referenceDataError: settings.optionsError ?? false,
-    tableKeys,
-    cycles, cyclesLoading: settings.cyclesLoading ?? false, cyclesError: settings.cyclesError ?? false,
-  });
+    staff: { data: currentOptions?.staff, isLoading: loading, error },
+    programs: { data: currentOptions?.programs, isLoading: loading, error },
+    taskOptions: { data: currentOptions, isLoading: loading, error },
+    cycles: { data: cycles, isLoading: settings.cyclesLoading ?? false, error: settings.cyclesError ? new Error('Cycles unavailable') : null },
+  }, tableKeys);
 }
 
 describe('useTaskPreferences', () => {

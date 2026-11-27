@@ -2,8 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { deleteTask, updateTaskState } from '../../api/tasks.api';
-import { updateTaskPlacement } from '../../components/TaskCalendar/api/taskCalendar.api';
+import { deleteTask, updateTaskPlacement, updateTaskState } from '../../api/tasks.api';
 import type { Task } from '../../types';
 import { setHours } from '../../../Hours/hours.api';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
@@ -12,9 +11,8 @@ import { createQueryClientWrapper, createTestQueryClient } from '../../../../../
 import useTaskActions from './useTaskActions';
 
 vi.mock('../../api/tasks.api', () => ({
-  deleteTask: vi.fn(), updateTaskState: vi.fn(),
+  deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(),
 }));
-vi.mock('../../components/TaskCalendar/api/taskCalendar.api', () => ({ updateTaskPlacement: vi.fn() }));
 vi.mock('../../../Hours/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
@@ -43,7 +41,7 @@ describe('useTaskActions', () => {
     });
     expect(updateTaskState).toHaveBeenCalledWith('task-1', 'cancelled');
     expect(rendered.onTaskSynced).toHaveBeenLastCalledWith(cancelled);
-    expect(rendered.upsertCalendarTask).toHaveBeenCalledTimes(2);
+    expect(rendered.onTaskSynced).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
     expect(returnedTask).toEqual(moved);
   });
@@ -62,7 +60,7 @@ describe('useTaskActions', () => {
     });
 
     expect(rendered.result.current.actionError).toBe('Unable to resize task.');
-    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
     expect(returnedTask).toBeNull();
   });
 
@@ -70,6 +68,7 @@ describe('useTaskActions', () => {
     const moveRequest = deferred<Task>();
     vi.mocked(updateTaskPlacement).mockReturnValue(moveRequest.promise);
     const rendered = renderActions();
+    const moved = { ...task, startDate: '2026-08-11', dueDate: '2026-08-13' };
 
     let moving!: Promise<Task | null>;
     act(() => {
@@ -85,16 +84,14 @@ describe('useTaskActions', () => {
     expect(updateTaskState).not.toHaveBeenCalled();
 
     await act(async () => {
-      moveRequest.resolve({ ...task, startDate: '2026-08-11', dueDate: '2026-08-13' });
+      moveRequest.resolve(moved);
       await moving;
     });
-
     expect(rendered.result.current.isTaskPending(task.id)).toBe(false);
-    expect(rendered.onTaskSynced).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-08-11', dueDate: '2026-08-13' }));
-    expect(rendered.upsertCalendarTask).toHaveBeenCalledOnce();
+    expect(rendered.onTaskSynced).toHaveBeenCalledExactlyOnceWith(moved);
   });
 
-  it('deletes the task and reconciles table, calendar, and selection consumers', async () => {
+  it('deletes the task and notifies the page', async () => {
     vi.mocked(deleteTask).mockResolvedValue();
     const client = createTestQueryClient();
     const rendered = renderActions(client);
@@ -104,7 +101,6 @@ describe('useTaskActions', () => {
 
     expect(deleteTask).toHaveBeenCalledWith('task-1');
     expect(rendered.onTaskRemoved).toHaveBeenCalledWith('task-1');
-    expect(rendered.removeCalendarTask).toHaveBeenCalledWith('task-1');
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
   });
 
@@ -115,43 +111,42 @@ describe('useTaskActions', () => {
 
     await act(async () => rendered.result.current.setState(task, 'completed'));
     expect(rendered.result.current.actionError).toBe('Unable to update task status.');
-    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
 
     await act(async () => {
       await expect(rendered.result.current.deleteTask(task)).rejects.toThrow('delete failed');
     });
-    expect(rendered.removeCalendarTask).not.toHaveBeenCalled();
     expect(rendered.onTaskRemoved).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])('synchronizes authoritative hours and task state after logging (complete=%s)', async completeTask => {
+  it('synchronizes authoritative hours and task state after logging', async () => {
     const savedHours = deferred<Awaited<ReturnType<typeof setHours>>>();
     vi.mocked(setHours).mockReturnValue(savedHours.promise);
     const updatedTask = makeTask({
       hoursLogged: 3.5,
       loggedHoursByDate: [{ date: '2026-08-18', hours: 3.5 }],
-      state: completeTask ? 'completed' : 'open',
-      status: completeTask ? 'completed' : 'in_progress',
-      statusLabel: completeTask ? 'Completed' : 'In Progress',
-      completedAt: completeTask ? '2026-08-18T12:00:00Z' : null,
+      state: 'completed',
+      status: 'completed',
+      statusLabel: 'Completed',
+      completedAt: '2026-08-18T12:00:00Z',
     });
     const client = createTestQueryClient();
     const rendered = renderActions(client);
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const input = {
-      source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared', completeTask,
+      type: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
     };
 
     let saving!: Promise<void>;
-    act(() => { saving = rendered.result.current.logHours(input); });
+    act(() => { saving = rendered.result.current.logHours(input, true); });
 
     await act(async () => {
       savedHours.resolve({ ...makeHoursItem(), updatedTasks: [updatedTask] });
       await saving;
     });
 
-    expect(setHours).toHaveBeenCalledWith(input);
-    expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
+    expect(setHours).toHaveBeenCalledWith(input, undefined, true);
+    expect(rendered.onTaskSynced).toHaveBeenCalledExactlyOnceWith(updatedTask);
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tasks', 'overview'] });
@@ -165,11 +160,11 @@ describe('useTaskActions', () => {
 
     await act(async () => {
       await expect(rendered.result.current.logHours({
-        source: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
+        type: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
       })).rejects.toThrow('Save failed');
     });
 
-    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
   });
 
@@ -190,13 +185,13 @@ describe('useTaskActions', () => {
 
     await act(async () => {
       await expect(rendered.result.current.logHours({
-        source: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
+        type: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
       })).resolves.toBeUndefined();
     });
 
     expect(setHours).toHaveBeenCalledOnce();
     expect(rendered.result.current.actionError).toBe('Hours saved, but task details could not be refreshed. Reload the page to see the updated task.');
-    expect(rendered.upsertCalendarTask).not.toHaveBeenCalled();
+    expect(rendered.onTaskSynced).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
@@ -209,7 +204,7 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
+/** Renders actions with a fresh account cache and page callbacks. @example renderActions() // isolated mutation owner */
 function renderActions(client: QueryClient = createTestQueryClient()) {
   const onTaskRemoved = vi.fn();
   const onTaskSynced = vi.fn();
@@ -218,18 +213,10 @@ function renderActions(client: QueryClient = createTestQueryClient()) {
     onTaskRemoved,
     onTaskSynced,
   }), { wrapper: createQueryClientWrapper(client) });
-  const upsertCalendarTask = vi.fn();
-  const removeCalendarTask = vi.fn();
-  result.result.current.calendarCacheRef.current = {
-    upsert: upsertCalendarTask,
-    remove: removeCalendarTask,
-  };
   return {
     ...result,
     client,
     onTaskRemoved,
     onTaskSynced,
-    upsertCalendarTask,
-    removeCalendarTask,
   };
 }

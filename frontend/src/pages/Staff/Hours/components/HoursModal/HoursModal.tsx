@@ -1,67 +1,60 @@
+import type { ReactElement } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { getSubmitStatusMessage } from '../../../../../common/hooks/useSubmitStatus';
+import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { HoursReferenceData } from '../../hours.api';
 import type { HoursCategory } from '../../types';
-import useHoursModal, { type UseHoursModalOptions } from './hooks/useHoursModal';
+import useHoursModal, { type HoursFormTarget, type UseHoursModalOptions } from './hooks/useHoursModal';
 import './HoursModal.css';
 
-interface HoursModalProps extends UseHoursModalOptions {
-  isOpen: boolean;
+type HoursFormProps = UseHoursModalOptions & {
   onClose: () => void;
-  categories: ReadonlyArray<{ id: HoursCategory; name: string }>;
-}
+  staff: readonly StaffReference[];
+  programs: readonly ProgramReference[];
+  categories: Readonly<HoursReferenceData['categories']>;
+};
+
+type HoursModalProps = Omit<HoursFormProps, 'target'> & { target: HoursFormTarget | null };
 
 /**
  * Mounts an Hours form only while its add/edit interaction is open.
  * Saved entries and contextual staff/task targets lock staff; other additions default to the signed-in staff member.
  * @param props - Visibility, supplied entry/context, page references and save/close callbacks.
- * @example <HoursModal isOpen item={entry} {...options} />
+ * @example <HoursModal target={{ mode: 'edit', item }} {...options} />
  */
-export default function HoursModal({ isOpen, ...props }: HoursModalProps) {
-  if (!isOpen) return null;
+export default function HoursModal({ target, ...props }: HoursModalProps): ReactElement | null {
+  if (!target) return null;
 
   let targetKey = 'new';
-  if (props.task) targetKey = `task:${props.task.id}`;
-  if (props.item) targetKey = `entry:${props.item.id}`;
-  return <HoursForm key={targetKey} {...props} />;
+  if (target.mode === 'task') targetKey = `task:${target.task.id}`;
+  if (target.mode === 'edit') targetKey = `entry:${target.item.id}`;
+  return <HoursForm key={targetKey} target={target} {...props} />;
 }
 
 /** Owns the mounted Hours form and its draft. @example <HoursForm {...options} /> */
 function HoursForm({
   staff,
   programs,
+  target,
   loadTasks,
   onClose,
-  onAdd,
-  staffId,
-  date,
-  source = 'regular',
-  task,
-  item,
+  onSave,
   canCompleteTask = false,
   categories,
-}: Omit<HoursModalProps, 'isOpen'>) {
-  const workflow = useHoursModal({
-    staff,
-    programs,
-    loadTasks,
-    onAdd,
-    staffId,
-    date,
-    source,
-    task,
-    item,
-    canCompleteTask,
-  });
+}: HoursFormProps) {
+  const workflow = useHoursModal({ target, loadTasks, onSave, canCompleteTask });
   const { draft } = workflow;
   const submissionComplete = workflow.submitting || workflow.submitStatus === 'success';
-  const isTaskEntry = draft.source === 'task';
-  const isSessionEntry = draft.source === 'session';
-  const isRegularEntry = draft.source === 'regular';
-  const staffLocked = Boolean(item || task || staffId);
-  const sessionDateLocked = isSessionEntry && Boolean(item || date);
+  const isTaskEntry = draft.type === 'task';
+  const isSessionEntry = draft.type === 'session';
+  const isRegularEntry = draft.type === 'regular';
+  const isEdit = target.mode === 'edit';
+  const addContext = target.mode === 'add' ? target.context : undefined;
+  const staffLocked = target.mode !== 'add' || Boolean(addContext?.staffId);
+  const sessionDateLocked = isSessionEntry && (isEdit || Boolean(addContext?.date));
   const sourceMissing = (isTaskEntry && !draft.taskId) || (isSessionEntry && !draft.sessionId);
   const submitDisabled = submissionComplete || !staff.length || !draft.staffId || sourceMissing;
   let sessionPlaceholder = workflow.sessionOptions.length ? 'Select session' : 'No sessions on this date';
@@ -71,8 +64,8 @@ function HoursForm({
     workflow.submitStatus,
     workflow.error,
     {
-      submitting: item ? 'Updating logged hours...' : 'Logging hours...',
-      success: item ? 'Logged hours updated.' : 'Hours logged successfully.',
+      submitting: isEdit ? 'Updating logged hours...' : 'Logging hours...',
+      success: isEdit ? 'Logged hours updated.' : 'Hours logged successfully.',
     },
   );
 
@@ -93,7 +86,7 @@ function HoursForm({
     <Modal
       isOpen
       onClose={onClose}
-      title={item ? 'Edit Logged Hours' : 'Log Hours'}
+      title={isEdit ? 'Edit Logged Hours' : 'Log Hours'}
       maxWidth="620px"
       status={workflow.submitStatus}
       statusMessage={statusMessage}
@@ -127,7 +120,7 @@ function HoursForm({
                 id="hours-assigned-task"
                 value={draft.taskId}
                 options={workflow.taskOptions.map(task => ({ id: task.id, label: task.title }))}
-                onChange={workflow.selectTask}
+                onChange={value => workflow.setValue('taskId', value)}
                 placeholder={workflow.tasksLoading ? 'Loading assigned tasks…' : 'Select assigned task'}
                 ariaLabel="Task"
                 disabled={submissionComplete || workflow.tasksLoading || workflow.taskLocked}
@@ -136,12 +129,11 @@ function HoursForm({
           </div>
         )}
 
-        {isTaskEntry && !item && canCompleteTask && (
+        {isTaskEntry && !isEdit && canCompleteTask && (
           <label className="hours-form__complete-task">
             <input
               type="checkbox"
-              checked={draft.completeTask}
-              onChange={event => workflow.setCompleteTask(event.target.checked)}
+              {...workflow.register('completeTask')}
               disabled={submissionComplete}
             />
             Task completed
@@ -154,7 +146,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-session"
                 value={draft.sessionId}
-                options={workflow.sessionOptions.map(({ id, name }) => ({ id, label: name }))}
+                options={workflow.sessionOptions.map(({ id, title }) => ({ id, label: title }))}
                 onChange={workflow.selectSession}
                 placeholder={sessionPlaceholder}
                 ariaLabel="Session"
@@ -170,12 +162,12 @@ function HoursForm({
               id="hours-program"
               value={draft.programId}
               options={programs.map(({ id, title }) => ({ id, label: title }))}
-              onChange={workflow.selectProgram}
+              onChange={value => workflow.setValue('programId', value)}
               placeholder="Select a program"
               ariaLabel="Program"
               disabled={submissionComplete}
               action={draft.programId
-                ? { label: 'Clear program', onSelect: () => workflow.selectProgram('') }
+                ? { label: 'Clear program', onSelect: () => workflow.setValue('programId', '') }
                 : undefined}
             />
           </FormField>
@@ -185,7 +177,8 @@ function HoursForm({
               id="hours-category"
               value={draft.category}
               options={categories.filter(option => option.id !== 'program_delivery').map(({ id, name }) => ({ id, label: name }))}
-              onChange={value => workflow.selectCategory(
+              onChange={value => workflow.setValue(
+                'category',
                 value as Exclude<HoursCategory, 'program_delivery'>,
               )}
               ariaLabel="Category"
@@ -198,8 +191,7 @@ function HoursForm({
           <input
             id="hours-date"
             type="date"
-            value={draft.date}
-            onChange={event => workflow.updateDate(event.target.value)}
+            {...workflow.register('date', { onChange: event => workflow.updateDate(event.target.value) })}
             required
             disabled={submissionComplete || sessionDateLocked}
           />
@@ -212,8 +204,7 @@ function HoursForm({
             min="0.25"
             max="24"
             step="0.25"
-            value={draft.hours}
-            onChange={event => workflow.updateHours(event.target.value)}
+            {...workflow.register('hours')}
             required
             disabled={submissionComplete}
           />
@@ -223,8 +214,7 @@ function HoursForm({
           <FormField id="hours-note" label="Note">
             <textarea
               id="hours-note"
-              value={draft.note}
-              onChange={event => workflow.updateNote(event.target.value)}
+              {...workflow.register('note')}
               rows={5}
               maxLength={2000}
               required

@@ -24,13 +24,19 @@ describe('useCycleModal', () => {
     const onSaved = vi.fn(() => new Promise<void>(resolve => { resolveRefresh = resolve; }));
     const { result } = renderHook(() => useCycleModal({ cycle: null, assignments, onSaved }), { wrapper: wrapper() });
 
+    act(() => {
+      result.current.setValue('title', input.title);
+      result.current.setValue('startsOn', input.startsOn);
+      result.current.setValue('endsOn', input.endsOn);
+    });
+
     let submission!: Promise<void>;
-    act(() => { submission = result.current.submit(input); });
+    act(() => { submission = result.current.submit(); });
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(result.current.submitStatus).toBe('submitting');
     expect(result.current.submissionComplete).toBe(true);
-    await act(async () => result.current.submit(input));
+    await act(async () => result.current.submit());
     expect(setProgramCycle).toHaveBeenCalledOnce();
 
     await act(async () => {
@@ -54,10 +60,10 @@ describe('useCycleModal', () => {
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.assignmentsReady).toBe(true));
-    await act(async () => result.current.submit(input));
+    await act(async () => result.current.submit());
     expect(result.current.statusMessage).toBe('Cycle dates overlap');
 
-    await act(async () => result.current.submit(input));
+    await act(async () => result.current.submit());
     expect(setProgramCycle).toHaveBeenCalledTimes(2);
     expect(setProgramCycle).toHaveBeenLastCalledWith({ ...input, programIds: ['program-1'] }, cycle.id);
     expect(result.current.submitStatus).toBe('success');
@@ -68,7 +74,7 @@ describe('useCycleModal', () => {
     const { result } = renderHook(() => useCycleModal({ cycle, assignments, onSaved: vi.fn() }), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.selectedProgramIds).toEqual(['program-1']));
     act(() => result.current.toggleProgram('program-1'));
-    await act(async () => result.current.submit(input));
+    await act(async () => result.current.submit());
     expect(result.current.selectedProgramIds).toEqual([]);
     expect(result.current.statusMessage).toBe('An assignment with logged hours cannot be removed.');
     expect(result.current.submissionComplete).toBe(false);

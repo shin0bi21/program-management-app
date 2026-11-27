@@ -1,12 +1,19 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-import type { StaffReference } from '../../../types';
+import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
+import { getErrorMessage } from '../../../../../../http/errors';
 import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
+
+interface HoursCycleSummaryDashboardCardProps {
+  queryKey: readonly unknown[];
+  staff: StaffReference | null;
+  cycles: readonly ProgramCycle[];
+}
 
 /**
  * Loads and displays the selected staff member's cycle average, independent of the pay-period query.
@@ -15,19 +22,23 @@ import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
  * @param props - Shared staff, ordered cycle references, and query namespace.
  * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycles={cycles} />
  */
-export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycles }: {
-  queryKey: readonly unknown[];
-  staff: StaffReference | null;
-  cycles: readonly ProgramCycle[];
-}) {
+export default function HoursCycleSummaryDashboardCard({
+  queryKey,
+  staff,
+  cycles,
+}: HoursCycleSummaryDashboardCardProps): ReactElement {
   const cycle = cycles.find(candidate => candidate.state === 'active') ?? null;
 
-  const state = useHoursCycleSummaryData(queryKey, staff?.id ?? null, cycle?.id ?? null);
-  const error = state.status === 'error' ? state.message : null;
-  const retry = state.status === 'error' ? state.retry : undefined;
-  usePageMessageReporter(undefined, error, retry ? { label: 'Retry', onClick: retry } : undefined);
+  const staffId = staff?.id ?? null;
+  const cycleId = cycle?.id ?? null;
+  const hasScope = Boolean(staffId && cycleId);
+  const query = useHoursCycleSummaryData(queryKey, staffId, cycleId);
+  const queryError = hasScope ? query.error : null;
+  const error = queryError ? getErrorMessage(queryError, 'Could not load cycle hours.') : null;
+  usePageMessageReporter(undefined, error, queryError ? { label: 'Retry', onClick: query.refetch } : undefined);
 
-  const summary = state.status === 'ready' ? state.data : null;
+  const summary = hasScope && !queryError ? query.data : undefined;
+  const loading = hasScope && !queryError && !summary;
   const breakdownData = summary ? {
     total: summary.averageHours,
     title: staff?.name ?? '',
@@ -39,19 +50,19 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycles
     : 'Select a staff member to view their cycle hours.';
 
   let content: ReactNode;
-  if (state.status === 'error') {
+  if (queryError) {
     content = <UnavailableState
       compact
       title="Cycle hours unavailable"
-      onRetry={state.retry}
+      onRetry={query.refetch}
     />;
-  } else if (state.status === 'unavailable') {
+  } else if (!hasScope) {
     content = <p className="dashboard-card__empty">{emptyMessage}</p>;
   }
 
   return <DashboardCard
     title={`Average Biweekly Hours${cycle ? ` - ${cycle.title}` : ''}`}
-    loading={state.status === 'loading'}
+    loading={loading}
     className="dashboard-card--short"
     details={[
       { label: 'Cycle', value: cycle?.title },
@@ -60,7 +71,6 @@ export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycles
     action={<HoursBreakdown
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, cycle?.id])}
-      disabled={state.status !== 'ready'}
     />}
   >
     {content}

@@ -1,35 +1,32 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useForm, type UseFormHandleSubmit, type UseFormSetValue, type UseFormRegister } from 'react-hook-form';
 
 import { setTask, type SetTaskInput } from '../../../api/tasks.api';
-import type { TaskCategory } from '../../../types';
+import type { Task, TaskModalState } from '../../../types';
+import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getSubmitStatusMessage, useSubmitStatus, type SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
-import type { TaskModalProps } from '../TaskModal';
 
-type UseTaskModalOptions = Pick<TaskModalProps,
-  | 'target'
-  | 'onSaved'
->;
-
-interface TaskDraft {
-  title: string;
-  staffId: string;
-  programId: string;
-  category: TaskCategory | '';
-  startDate: string;
-  dueDate: string;
-  details: string;
+export interface UseTaskModalOptions {
+  target: NonNullable<TaskModalState>;
+  onSaved: (task: Task) => void;
 }
+
+type TaskDraft = Pick<Task, 'title' | 'staffId' | 'startDate' | 'dueDate'> & {
+  programId: string;
+  category: Task['category'] | '';
+  details: string;
+};
 
 interface TaskModalResult {
   draft: TaskDraft;
-  updateDraft: <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => void;
-  updateStartDate: (value: string) => void;
+  register: UseFormRegister<TaskDraft>;
+  setValue: UseFormSetValue<TaskDraft>;
+  updateStartDate: (value: Task['startDate']) => void;
   submissionComplete: boolean;
   status: SubmitStatus;
   statusMessage: string | undefined;
-  submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  submit: ReturnType<UseFormHandleSubmit<TaskDraft>>;
 }
 
 /**
@@ -43,9 +40,9 @@ export default function useTaskModal({
 }: UseTaskModalOptions): TaskModalResult {
   const task = target.mode === 'edit' ? target.task : undefined;
   const addContext = target.mode === 'add' ? target.context : undefined;
-  const [draft, setDraft] = useState<TaskDraft>(() => {
-    const startDate = task?.startDate ?? addContext?.startDate ?? getDate();
-    return {
+  const startDate = task?.startDate ?? addContext?.startDate ?? getDate();
+  const { register, watch, setValue, handleSubmit } = useForm<TaskDraft>({
+    defaultValues: {
       title: task?.title ?? '',
       staffId: task?.staffId ?? addContext?.staffId ?? '',
       programId: task?.programId ?? '',
@@ -53,29 +50,26 @@ export default function useTaskModal({
       startDate,
       dueDate: task?.dueDate ?? addContext?.dueDate ?? startDate,
       details: task?.details ?? '',
-    };
+    },
   });
-  const submittingRef = useRef(false);
+  const draft = watch();
+  const { tryLock, unlock } = useSubmitLock();
   const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
 
-  const updateDraft = <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => {
-    setDraft(current => ({ ...current, [key]: value }));
-  };
-
   const updateStartDate = (value: string) => {
-    setDraft(current => ({ ...current, startDate: value, dueDate: value }));
+    setValue('startDate', value);
+    setValue('dueDate', value);
   };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (submittingRef.current) return;
+  const submit = handleSubmit(async draft => {
+    if (!tryLock()) return;
     if (!draft.category) {
+      unlock();
       setError('Select a category.');
       setSubmitStatus('error');
       return;
     }
 
-    submittingRef.current = true;
     setSubmitStatus('submitting');
     setError('');
 
@@ -95,11 +89,11 @@ export default function useTaskModal({
       setSubmitStatus('success');
       onSaved(savedTask);
     } catch (cause) {
-      submittingRef.current = false;
+      unlock();
       setError(getErrorMessage(cause, task ? 'Unable to update task' : 'Unable to create task'));
       setSubmitStatus('error');
     }
-  };
+  });
 
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
     submitting: task ? 'Updating task…' : 'Creating task…',
@@ -108,7 +102,8 @@ export default function useTaskModal({
 
   return {
     draft,
-    updateDraft,
+    register,
+    setValue,
     updateStartDate,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
     status: submitStatus,

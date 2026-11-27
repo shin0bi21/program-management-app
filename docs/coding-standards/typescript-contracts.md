@@ -17,6 +17,9 @@ Document constraints and behavior that types cannot express using
   and hook boundaries. Reuse the canonical domain or library contract instead
   of repeating its structure. Keep types beside their owner; follow
   [frontend type ownership](../frontend/01-ownership.md#place-types-and-utilities).
+- Reuse an existing field's type directly, for example `Hours['type']`.
+- Derive a union from its runtime list, for example
+  `type HoursCategory = typeof HOURS_CATEGORIES[number]`.
 - Infer local variables when the initializer expresses the intended type.
   Annotate contract objects, nullable values, empty collections, or complex
   expressions when needed to clarify or constrain their types.

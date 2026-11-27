@@ -1,4 +1,6 @@
 import { apiClient, type RequestOptions } from '../../../http/client';
+import type { AttendanceStatus } from '../AttendanceStatusSelect/types';
+import type { Session } from '../programming/sessions/types';
 
 /** Attendance is always grouped by its program/cycle assignment. */
 export interface AttendanceData {
@@ -7,9 +9,32 @@ export interface AttendanceData {
 
 export interface AttendanceFilters {
   youthIds?: string[];
-  sessionId?: string;
+  sessionId?: Session['id'];
   programId?: string;
   cycleId?: string;
+}
+
+interface AttendanceSessionNote {
+  id: string;
+  sessionId: Session['id'];
+  category: 'general' | 'attendance' | 'behaviour' | 'achievement';
+  details: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByName: string | null;
+  youth: Array<{ youthId: string; firstName: string; lastName: string }>;
+}
+
+interface Attendance {
+  status: AttendanceStatus | null;
+  notes: string | null;
+  sessionNotes: AttendanceSessionNote[];
+}
+
+export interface SessionAttendance extends
+  Pick<Session, 'id' | 'sessionType' | 'title' | 'date' | 'startTime' | 'cancelledAt'>,
+  Attendance {
+  completed: boolean;
 }
 
 /** One saved-attendance group shared unchanged by dashboards, editors and PDF rendering. */
@@ -26,32 +51,11 @@ export interface AttendanceGroup {
     lateCount: number;
     /** Completed sessions explicitly marked absent or excused. */
     absentCount: number;
-    sessions: Array<{
-      id: string;
-      sessionType: string;
-      title: string;
-      date: string;
-      startTime: string;
-      completed: boolean;
-      cancelledAt: string | null;
-      status: 'present' | 'late' | 'absent' | 'excused' | null;
-      notes: string | null;
-      sessionNotes: Array<{
-        id: string;
-        sessionId: string;
-        category: 'general' | 'attendance' | 'behaviour' | 'achievement';
-        details: string;
-        createdAt: string;
-        updatedAt: string;
-        createdByName: string | null;
-        youth: Array<{ youthId: string; firstName: string; lastName: string }>;
-      }>;
-    }>;
+    sessions: SessionAttendance[];
   }>;
 }
 
 export type AttendanceYouth = AttendanceGroup['youth'][number];
-export type AttendanceSession = AttendanceYouth['sessions'][number];
 
 /**
  * Loads saved attendance grouped by program/cycle for requested youth IDs or an assignment.

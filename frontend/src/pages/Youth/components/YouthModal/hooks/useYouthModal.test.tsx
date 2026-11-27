@@ -5,27 +5,12 @@ import { makeYouthProfile } from '../../../../../tests/factories/youth';
 import { setYouth, setYouthContacts } from '../../../youth.api';
 import { useYouthModal } from './useYouthModal';
 
-const subEntities = vi.hoisted(() => ({
-  validateContacts: vi.fn<() => string | undefined>(),
-  getContactPayload: vi.fn(() => [{ phoneNumber: '4165550100', type: 'parent' as const }]),
-}));
-
 vi.mock('../../../youth.api', () => ({ setYouth: vi.fn(), setYouthContacts: vi.fn() }));
-vi.mock('../../../../../common/features/SchoolModal/hooks/useSchools', () => ({
-  useSchools: () => ({
-    schools: [],
-    upsertSchool: vi.fn(),
-    removeSchool: vi.fn(),
-    loading: false,
+vi.mock('../../../../../common/features/referenceData/hooks/useReferenceData', () => ({
+  useSchoolReferences: () => ({
+    data: [],
+    isLoading: false,
     error: null,
-  }),
-}));
-vi.mock('../../../../../common/features/contacts/hooks/useContacts', () => ({
-  useContacts: () => ({
-    draft: [],
-    handleChange: vi.fn(),
-    validate: subEntities.validateContacts,
-    getPayload: subEntities.getContactPayload,
   }),
 }));
 
@@ -36,12 +21,15 @@ const formData = {
   dateOfBirth: '2012-08-19',
   schoolId: 'school-1',
   addresses: [{ address: '123 Main Street' }],
+  contacts: [
+    { id: '', phoneNumber: ' 4165550100 ', type: 'parent' as const },
+    { id: '', phoneNumber: '', type: 'guardian' as const },
+  ],
 };
 
 describe('useYouthModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    subEntities.validateContacts.mockReturnValue(undefined);
     vi.mocked(setYouth).mockResolvedValue(makeYouthProfile());
   });
 
@@ -84,7 +72,11 @@ describe('useYouthModal', () => {
   });
 
   it('saves legacy contacts without validating or writing other profile fields', async () => {
-    const legacy = makeYouthProfile({ dateOfBirth: null, addresses: [{ id: 'address-1', address: '' }] });
+    const legacy = makeYouthProfile({
+      dateOfBirth: null,
+      addresses: [{ id: 'address-1', address: '' }],
+      contacts: [{ id: 'contact-1', phoneNumber: '4165550100', type: 'parent' }],
+    });
     const saved = makeYouthProfile({ firstName: 'Authoritative', dateOfBirth: null });
     vi.mocked(setYouthContacts).mockResolvedValue(saved);
     const onSuccess = vi.fn();
@@ -95,23 +87,25 @@ describe('useYouthModal', () => {
     await act(async () => result.current.rhfHandleSubmit(result.current.onValid)());
 
     expect(setYouth).not.toHaveBeenCalled();
-    expect(setYouthContacts).toHaveBeenCalledWith(legacy.id, [{ phoneNumber: '4165550100', type: 'parent' }]);
+    expect(setYouthContacts).toHaveBeenCalledWith(legacy.id, [{ id: 'contact-1', phoneNumber: '4165550100', type: 'parent' }]);
     expect(onSuccess).toHaveBeenCalledWith(saved);
     expect(result.current.submitStatus).toBe('success');
   });
 
   it('stops before the API when nested profile data is invalid', async () => {
-    subEntities.validateContacts.mockReturnValue('Contact is invalid');
     const { result } = renderHook(() => useYouthModal({
       onClose: vi.fn(),
       onSuccess: vi.fn(),
     }));
 
-    await act(async () => result.current.onValid(formData));
+    await act(async () => result.current.onValid({
+      ...formData,
+      contacts: [{ id: 'contact-1', phoneNumber: ' ', type: 'parent' }],
+    }));
 
     expect(setYouth).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
-    expect(result.current.error).toBe('Contact is invalid');
+    expect(result.current.error).toBe('Contact 1: Phone number is required');
   });
 
 });

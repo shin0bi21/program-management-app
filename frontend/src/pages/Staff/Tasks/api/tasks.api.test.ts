@@ -10,6 +10,7 @@ import {
   getTaskReferenceData,
   setTask,
   type SetTaskInput,
+  updateTaskPlacement,
   updateTaskState,
 } from './tasks.api';
 
@@ -71,5 +72,15 @@ describe('tasks API', () => {
 
     expect(apiClient.patch).toHaveBeenCalledWith('/tasks/task-1/state', { state: 'completed' });
     expect(apiClient.delete).toHaveBeenCalledWith('/tasks/task-1');
+  });
+
+  it('patches task dates and reassignment through the placement endpoint', () => {
+    const placement = {
+      startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
+    };
+
+    updateTaskPlacement('task-1', placement);
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/tasks/task-1/placement', placement);
   });
 });

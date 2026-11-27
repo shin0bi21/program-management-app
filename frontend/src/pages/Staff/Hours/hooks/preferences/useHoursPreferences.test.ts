@@ -36,6 +36,12 @@ const programs = [{ id: 'program-1', title: 'Soft Skills' }];
 const categories = [{ id: 'meeting' as const, name: 'Meeting' }];
 const types = [{ id: 'task' as const, name: 'Task' }];
 const tableKeys = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
+const references = {
+  staff: { data: staff, isLoading: false, error: null },
+  programs: { data: programs, isLoading: false, error: null },
+  cycles: { data: cycles, isLoading: false, error: null },
+  hoursOptions: { data: { categories, types }, isLoading: false, error: null },
+} satisfies Parameters<typeof useHoursPreferences>[0];
 
 describe('useHoursPreferences', () => {
   beforeEach(() => {
@@ -57,9 +63,9 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ loading }) => useHoursPreferences({
-        staff, programs, cycles, categories, types, loadingDependencies: loading,
-        optionsError: false, cyclesError: false, tableKeys,
-      }),
+        ...references,
+        hoursOptions: { ...references.hoursOptions, isLoading: loading },
+      }, tableKeys),
       { initialProps: { loading: true } },
     );
     expect(result.current.ready).toBe(false);
@@ -78,10 +84,7 @@ describe('useHoursPreferences', () => {
     savedPreference.preference = {
       view: 'calendar', staffIds: ['staff-1', 'staff-2'], programIds: [], categories: [], cycleIds: ['cycle-1'],
     };
-    const { result } = renderHook(() => useHoursPreferences({
-      staff, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
+    const { result } = renderHook(() => useHoursPreferences(references, tableKeys));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.filters.definitions.some(filter => filter.id === 'staffIds')).toBe(true);
@@ -98,13 +101,13 @@ describe('useHoursPreferences', () => {
     };
     const { result, rerender } = renderHook(
       ({ optionsError, cyclesError }) => useHoursPreferences({
-        staff: optionsError ? [] : staff,
-        programs: optionsError ? [] : programs,
-        categories: optionsError ? [] : categories,
-        types: optionsError ? [] : types,
-        cycles: cyclesError ? [] : cycles,
-        loadingDependencies: false, optionsError, cyclesError, tableKeys,
-      }),
+        staff: optionsError ? { data: undefined, isLoading: false, error: new Error('Staff unavailable') } : references.staff,
+        programs: optionsError ? { data: undefined, isLoading: false, error: new Error('Programs unavailable') } : references.programs,
+        hoursOptions: optionsError
+          ? { data: undefined, isLoading: false, error: new Error('Hours options unavailable') }
+          : references.hoursOptions,
+        cycles: cyclesError ? { data: undefined, isLoading: false, error: new Error('Cycles unavailable') } : references.cycles,
+      }, tableKeys),
       { initialProps: { optionsError: true, cyclesError: true } },
     );
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -129,10 +132,7 @@ describe('useHoursPreferences', () => {
   });
 
   it('applies and saves search and sorting changes', async () => {
-    const { result } = renderHook(() => useHoursPreferences({
-      staff, programs, cycles, categories, types, loadingDependencies: false,
-      optionsError: false, cyclesError: false, tableKeys,
-    }));
+    const { result } = renderHook(() => useHoursPreferences(references, tableKeys));
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => result.current.search.apply('workshop'));

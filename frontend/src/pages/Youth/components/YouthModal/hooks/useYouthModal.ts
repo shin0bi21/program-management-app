@@ -1,9 +1,8 @@
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { setYouth, setYouthContacts } from '../../../youth.api';
 import { getErrorMessage } from '../../../../../http/errors';
-import { useContacts } from '../../../../../common/features/contacts/hooks/useContacts';
-import { useSchools } from '../../../../../common/features/SchoolModal/hooks/useSchools';
+import { useSchoolReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import { youthSchema, youthContactSchema, type YouthFormData } from '../youthSchema';
@@ -32,6 +31,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
   const { tryLock, unlock } = useSubmitLock();
 
   const {
+    control,
     register,
     handleSubmit: rhfHandleSubmit,
     setValue,
@@ -46,19 +46,23 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
       email: youthData?.account?.email ?? '',
       schoolId: youthData?.schoolId ?? '',
       addresses: youthData?.addresses?.length ? youthData.addresses : [{ address: '' }],
+      contacts: youthData?.contacts?.length
+        ? youthData.contacts.map(({ id, phoneNumber, type }) => ({ id, phoneNumber: phoneNumber ?? '', type }))
+        : [{ id: '', phoneNumber: '', type: 'parent' }],
     },
   });
 
-  const { schools, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const { data: schools = [], isLoading: schoolsLoading, error: schoolError } = useSchoolReferences();
+  const schoolsError = schoolError ? getErrorMessage(schoolError, 'Could not load schools') : '';
   const schoolId = watch('schoolId');
 
   const addresses = watch('addresses') ?? [];
 
-  const contactForm = useContacts(youthData?.contacts);
+  const { fields: contacts } = useFieldArray({ control, name: 'contacts' });
 
   /**
    * Saves the form and reports the profile returned by the server.
-   * @param data - Validated profile fields; contact mode saves the separate contact list instead.
+   * @param data - Validated profile and contact fields. Contact mode saves only the contacts.
    * @example onValid(data) // calls onSuccess with the saved profile
    */
   const onValid = async (data: YouthFormData) => {
@@ -67,19 +71,31 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     setSubmitStatus('submitting');
     setError('');
 
-    const contactError = contactForm.validate();
-    if (contactError) {
-      setError(contactError);
+    const normalizedContacts = data.contacts.map(contact => ({
+      ...contact,
+      phoneNumber: contact.phoneNumber.trim(),
+    }));
+    const missingPhoneIndex = normalizedContacts.findIndex(contact => contact.id && !contact.phoneNumber);
+    if (missingPhoneIndex !== -1) {
+      setError(`Contact ${missingPhoneIndex + 1}: Phone number is required`);
       setSubmitStatus('error');
       unlock();
       return;
     }
 
+    const contacts = normalizedContacts
+      .filter(contact => contact.phoneNumber)
+      .map(({ id, phoneNumber, type }) => ({
+        ...(id && { id }),
+        phoneNumber,
+        type,
+      }));
+
     let savedYouth: YouthProfile;
     try {
       if (mode === 'contact') {
         if (!youthData) throw new Error('Select a youth profile to update contacts.');
-        savedYouth = await setYouthContacts(youthData.id, contactForm.getPayload());
+        savedYouth = await setYouthContacts(youthData.id, contacts);
       } else {
         const payload = {
           ...(youthData && { id: youthData.id }),
@@ -94,7 +110,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
               ...(address.id && { id: address.id }),
               address: address.address,
             })),
-          contacts: contactForm.getPayload(),
+          contacts,
         };
 
         savedYouth = await setYouth(payload);
@@ -112,6 +128,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
 
   return {
     // Profile form fields and submission.
+    control,
     register,
     errors,
     rhfHandleSubmit,
@@ -123,8 +140,7 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     schoolId,
     setSchoolId: (id: string) => setValue('schoolId', id, { shouldDirty: true }),
     addresses,
-    contacts: contactForm.draft,
-    handleContactChange: contactForm.handleChange,
+    contacts,
     // Submit state
     submitStatus,
     error,

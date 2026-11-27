@@ -1,23 +1,33 @@
 import { useCallback, useState } from 'react';
 
-import type { HoursItem, StaffReference } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Hours } from '../../types';
+
+interface UseHoursSelectionOptions {
+  staff: readonly StaffReference[];
+  currentUserId?: Hours['staffId'];
+}
+
+interface HoursSelectionResult {
+  selectedRowId: Hours['id'] | null;
+  selectedStaff: StaffReference | null;
+  selectRow: (row: Hours) => void;
+  selectStaff: (staffId: Hours['staffId']) => void;
+}
 
 /**
  * Tracks shared staff selection and the last clicked entry’s row ID.
- * @param options - Visible staff and the current user's default staff member.
+ * @param options - Visible staff and the signed-in user's ID for default selection.
  * @example selection.selectRow(entry) // selects its staff member
  */
 export default function useHoursSelection({
   staff,
-  currentUserStaff,
-}: {
-  staff: readonly StaffReference[];
-  currentUserStaff: StaffReference | null;
-}) {
+  currentUserId,
+}: UseHoursSelectionOptions): HoursSelectionResult {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
-  const selectRow = useCallback((row: HoursItem) => {
+  const selectRow = useCallback((row: Hours) => {
     setSelectedRowId(row.id);
     setSelectedStaffId(row.staffId);
   }, []);
@@ -28,7 +38,8 @@ export default function useHoursSelection({
   }, []);
 
   const selectedStaff = staff.find(staffMember => staffMember.id === selectedStaffId)
-    ?? currentUserStaff;
+    ?? staff.find(staffMember => staffMember.id === currentUserId)
+    ?? null;
 
   return {
     selectedRowId,

@@ -57,7 +57,7 @@ itself keeps its own `id` and `title`. Keep display labels out of identifier fie
 
 - Own endpoint paths, HTTP methods, request/response contracts, serialization, and boundary normalization.
 - Send all requests through the centralized HTTP client.
-- Use `PATCH` for focused status and placement mutations.
+- Use the domain's `set<Domain>` adapter for ordinary create and edit flows when its API supports an ID-based upsert: omit the ID to create, and supply the existing ID to update. A focused calendar change can send only its changed fields through that same adapter; preserve separate command endpoints when they enforce distinct lifecycle rules. Follow the backend [save contract](../backend/services.md#save-a-full-record).
 - Detach a departing caller from shared re-login without cancelling authentication for other callers.
 
 ### Cursor Tables
@@ -80,10 +80,19 @@ itself keeps its own `id` and `title`. Keep display labels out of identifier fie
 
 ### Page Data Flow
 
-The page calls `use<Domain>Data` once for shared reference lookups. It manages
-applied controls and selected context, then passes the required inputs to the
-body and dashboard. Each consuming view owns its ordinary query results or
-calendar buffer; do not add a separate normalized record store.
+- **Reference data.** Call the page's reference hook once and pass its result
+  directly to preferences. Reuse `ReferenceDataQuery<T>` for each lookup's
+  data, loading, and error fields. See
+  [Hours reference data](../../frontend/src/pages/Staff/Hours/hooks/data/useHoursReferenceData.ts)
+  and [Hours preferences](../../frontend/src/pages/Staff/Hours/hooks/preferences/useHoursPreferences.ts).
+- **Actions.** Compose one `actions` object in the page. Pass it to both
+  views and use the same type in each. See
+  [Hours actions contract](../../frontend/src/pages/Staff/Hours/types.ts) and
+  [Hours page composition](../../frontend/src/pages/Staff/Hours/Hours.tsx).
+- **Page context.** Keep applied controls and shared selection in the page.
+  Pass the values each view or card needs.
+- **View behavior.** Keep the view's query, calendar buffer, and interactions
+  with the view. Derive lookup maps and defaults where they are used.
 
 ```text
 <Page>/
@@ -121,7 +130,6 @@ that same ID and the query's AbortSignal to the API adapter. Enable the query
 only when its required ID is present. Each card handles its own selection and
 query states; independent summary cards can query their supplied page context.
 
-- **Main data:** Compose page-wide reference queries, including choices used by filters and selectors. Pass these results to consumers instead of repeating the main hook.
 - **Table:** Own the paginated query, complete returned rows, loading/retry state, and ordering.
 - **Calendar:** Own range requests and the buffer of complete returned rows.
 - **Dashboard:** Receive selected IDs and required page context. Query its own summaries or children; use supplied fields that are already available. Sibling cards sharing a request use one dashboard data hook; independent requests stay with their cards.

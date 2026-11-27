@@ -5,18 +5,17 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
 import type { TaskReferenceData } from '../../api/tasks.api';
-import type { Task, TaskCategory, TaskModalState, TaskProgram, StaffReference } from '../../types';
+import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Task } from '../../types';
 
-import useTaskModal from './hooks/useTaskModal';
+import useTaskModal, { type UseTaskModalOptions } from './hooks/useTaskModal';
 
 import './TaskModal.css';
 
-export interface TaskModalProps {
-  target: Exclude<TaskModalState, null>;
+interface TaskModalProps extends UseTaskModalOptions {
   staff: readonly StaffReference[];
-  programs: readonly TaskProgram[];
+  programs: readonly ProgramReference[];
   categories: Readonly<TaskReferenceData['categories']>;
-  onSaved: (task: Task) => void;
   onClose: () => void;
 }
 
@@ -62,8 +61,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
         <FormField id="task-title" label="Task title *">
           <input
             id="task-title"
-            value={modal.draft.title}
-            onChange={event => modal.updateDraft('title', event.target.value)}
+            {...modal.register('title')}
             maxLength={255}
             disabled={modal.submissionComplete}
             required
@@ -75,7 +73,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
             id="task-staff"
             value={modal.draft.staffId}
             options={staff.map(({ id, name }) => ({ id, label: name }))}
-            onChange={value => modal.updateDraft('staffId', value)}
+            onChange={value => modal.setValue('staffId', value)}
             placeholder="Select staff"
             ariaLabel="Task staff"
             disabled={modal.submissionComplete}
@@ -88,11 +86,11 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
               id="task-program"
               value={modal.draft.programId}
               options={programs.map(({ id, title }) => ({ id, label: title }))}
-              onChange={value => modal.updateDraft('programId', value)}
+              onChange={value => modal.setValue('programId', value)}
               placeholder="Select a program"
               ariaLabel="Task program"
               disabled={modal.submissionComplete}
-              action={modal.draft.programId ? { label: 'Clear program', onSelect: () => modal.updateDraft('programId', '') } : undefined}
+              action={modal.draft.programId ? { label: 'Clear program', onSelect: () => modal.setValue('programId', '') } : undefined}
             />
           </FormField>
 
@@ -101,7 +99,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
               id="task-category"
               value={modal.draft.category}
               options={categories.map(({ id, name }) => ({ id, label: name }))}
-              onChange={value => modal.updateDraft('category', value as TaskCategory)}
+              onChange={value => modal.setValue('category', value as Task['category'])}
               ariaLabel="Task category"
               disabled={modal.submissionComplete}
             />
@@ -113,8 +111,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
             <input
               id="task-start-date"
               type="date"
-              value={modal.draft.startDate}
-              onChange={event => modal.updateStartDate(event.target.value)}
+              {...modal.register('startDate', { onChange: event => modal.updateStartDate(event.target.value) })}
               disabled={modal.submissionComplete}
               required
             />
@@ -123,9 +120,8 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
             <input
               id="task-due-date"
               type="date"
-              value={modal.draft.dueDate}
               min={modal.draft.startDate || undefined}
-              onChange={event => modal.updateDraft('dueDate', event.target.value)}
+              {...modal.register('dueDate')}
               disabled={modal.submissionComplete}
               required
             />
@@ -134,8 +130,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
         <FormField id="task-details" label="Details (optional)">
           <textarea
             id="task-details"
-            value={modal.draft.details}
-            onChange={event => modal.updateDraft('details', event.target.value)}
+            {...modal.register('details')}
             rows={4}
             maxLength={2000}
             disabled={modal.submissionComplete}

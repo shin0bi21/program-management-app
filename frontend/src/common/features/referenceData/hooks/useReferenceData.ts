@@ -1,11 +1,17 @@
-import useListQuery from '../../../../query/hooks/useListQuery';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   getCycleReferences,
   getProgramReferences,
   getSchoolReferences,
   getStaffReferences,
+  type CycleReference,
+  type ProgramReference,
+  type SchoolReference,
+  type StaffReference,
   type StaffReferenceFeature,
 } from '../referenceData.api';
+
+export type ReferenceDataQuery<T> = Pick<UseQueryResult<T>, 'data' | 'isLoading' | 'error'>;
 
 export const referenceDataKeys = {
   cycles: ['reference-data', 'cycles'] as const,
@@ -15,35 +21,30 @@ export const referenceDataKeys = {
   schools: ['reference-data', 'schools'] as const,
 };
 
-export function useCycleReferences() {
-  return useListQuery({
+export function useCycleReferences(): UseQueryResult<CycleReference[]> {
+  return useQuery({
     queryKey: referenceDataKeys.cycles,
     queryFn: ({ signal }) => getCycleReferences({ signal }),
-    errorMessage: 'Could not load cycles',
   });
 }
 
-export function useProgramReferences({ assignedOnly = false }: { assignedOnly?: boolean } = {}) {
-  return useListQuery({
+export function useProgramReferences({ assignedOnly = false }: { assignedOnly?: boolean } = {}): UseQueryResult<ProgramReference[]> {
+  return useQuery({
     queryKey: referenceDataKeys.programs(assignedOnly),
     queryFn: ({ signal }) => getProgramReferences({ assignedOnly }, { signal }),
-    errorMessage: 'Could not load programs',
   });
 }
 
-export function useStaffReferences(feature: StaffReferenceFeature) {
-  return useListQuery({
+export function useStaffReferences(feature: StaffReferenceFeature): UseQueryResult<StaffReference[]> {
+  return useQuery({
     queryKey: referenceDataKeys.staff(feature),
     queryFn: ({ signal }) => getStaffReferences(feature, { signal }),
-    errorMessage: 'Could not load staff',
   });
 }
 
-export function useSchoolReferences({ enabled = true }: { enabled?: boolean } = {}) {
-  return useListQuery({
+export function useSchoolReferences(): UseQueryResult<SchoolReference[]> {
+  return useQuery({
     queryKey: referenceDataKeys.schools,
-    enabled,
     queryFn: ({ signal }) => getSchoolReferences({ signal }),
-    errorMessage: 'Could not load schools',
   });
 }

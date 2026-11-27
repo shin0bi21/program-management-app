@@ -1,31 +1,8 @@
 import { Node, SyntaxKind, type CallExpression } from 'ts-morph';
-
 import { parseSourceFile } from '../syntax.ts';
 import type { Findings } from '../utils.ts';
 
 const ROUTE_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
-
-/**
- * Recognizes supported HTTP methods called directly on the router identifier.
- * @example // isRouterMethodCall(call) is true for router.get('/tasks', handler).
- */
-function isRouterMethodCall(call: CallExpression): boolean {
-  const expression = call.getExpression();
-  return Node.isPropertyAccessExpression(expression)
-    && expression.getExpression().getText() === 'router'
-    && ROUTE_METHODS.has(expression.getName());
-}
-
-/**
- * Checks whether the final router argument is an asyncHandler call.
- * @example // hasWrappedHandler(call) is true for router.get('/tasks', asyncHandler(handler)).
- */
-function hasWrappedHandler(call: CallExpression): boolean {
-  const handler = call.getArguments().at(-1);
-  return handler != null
-    && Node.isCallExpression(handler)
-    && handler.getExpression().getText() === 'asyncHandler';
-}
 
 /**
  * Appends source-line findings for backend router handlers missing asyncHandler.
@@ -49,4 +26,26 @@ export function checkBackendRoutes(violations: Findings, file: string, source: s
       );
     }
   }
+}
+
+/**
+ * Recognizes supported HTTP methods called directly on the router identifier.
+ * @example // isRouterMethodCall(call) is true for router.get('/tasks', handler).
+ */
+function isRouterMethodCall(call: CallExpression): boolean {
+  const expression = call.getExpression();
+  return Node.isPropertyAccessExpression(expression)
+    && expression.getExpression().getText() === 'router'
+    && ROUTE_METHODS.has(expression.getName());
+}
+
+/**
+ * Checks whether the final router argument is an asyncHandler call.
+ * @example // hasWrappedHandler(call) is true for router.get('/tasks', asyncHandler(handler)).
+ */
+function hasWrappedHandler(call: CallExpression): boolean {
+  const handler = call.getArguments().at(-1);
+  return handler != null
+    && Node.isCallExpression(handler)
+    && handler.getExpression().getText() === 'asyncHandler';
 }

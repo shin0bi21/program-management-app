@@ -215,7 +215,8 @@ behavior; do not duplicate a shared matrix at each consumer.
   inspect representative command output when changing them. Use the change report
   and `test-app.sh --plan-changed` to inspect CI selection. Register new TypeScript
   script folders in root lint; `scripts/tests/test-static.sh` runs script typechecking.
-- Backend suites live in `backend/tests/<domain>/`; reuse `backend/tests/shared/`.
+- Follow [backend test ownership](../../backend/testing.md) for suite placement;
+  reuse `backend/tests/shared/`.
   Mount new routes in both `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 - TanStack Query tests use `frontend/src/tests/queryClientTestUtils.tsx` with a
   fresh client per test. Complete reusable fixtures belong in

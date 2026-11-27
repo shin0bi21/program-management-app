@@ -4,27 +4,32 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import type { ColumnDef } from '@tanstack/react-table';
-import type { HoursItem } from '../../../types';
+import type { Hours, HoursActions } from '../../../types';
 import useHoursTable from './useHoursTable';
 
 const writable = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 };
 const row = makeHoursItem({ id: 'entry-1', taskId: 'task-1', taskTitle: 'Prepare workshop' });
+const defaultActions: HoursActions = {
+  isItemPending: () => false,
+  add: vi.fn(),
+  edit: vi.fn(),
+  move: vi.fn().mockResolvedValue(undefined),
+  requestDelete: vi.fn(),
+};
 
-function renderCell(column: ColumnDef<HoursItem>, item: HoursItem) {
+function renderCell(column: ColumnDef<Hours>, item: Hours) {
   if (typeof column.cell !== 'function') throw new Error(`Column ${column.id} has no cell renderer`);
-  return column.cell({ row: { original: item } } as CellContext<HoursItem, unknown>);
+  return column.cell({ row: { original: item } } as CellContext<Hours, unknown>);
 }
 
 describe('useHoursTable', () => {
   it('omits row actions for read-only users', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: false,
-      staffById: new Map(),
-      isItemPending: () => false,
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
+      staff: [],
+      actions: defaultActions,
     }));
 
     expect(result.current.columns.some(column => column.id === 'actions')).toBe(false);
@@ -35,10 +40,8 @@ describe('useHoursTable', () => {
     const onDelete = vi.fn();
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
-      staffById: new Map([[writable.id, writable]]),
-      isItemPending: () => false,
-      onEdit,
-      onDelete,
+      staff: [writable],
+      actions: { ...defaultActions, edit: onEdit, requestDelete: onDelete },
     }));
     const actionsColumn = result.current.columns.find(column => column.id === 'actions')!;
     render(<>{renderCell(actionsColumn, row)}</>);
@@ -55,10 +58,8 @@ describe('useHoursTable', () => {
   it('hides row actions for a read-only staff member in a writable table', () => {
     const { result } = renderHook(() => useHoursTable({
       canWrite: true,
-      staffById: new Map([['staff-1', { ...writable, writable: false }]]),
-      isItemPending: () => false,
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
+      staff: [{ ...writable, writable: false }],
+      actions: defaultActions,
     }));
 
     const actionsColumn = result.current.columns.find(column => column.id === 'actions')!;

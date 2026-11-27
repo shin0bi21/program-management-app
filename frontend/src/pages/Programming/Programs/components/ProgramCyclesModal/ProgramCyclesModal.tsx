@@ -60,10 +60,7 @@ function ProgramCyclesForm({
       onClose={onClose}
     />}
   >
-    <form id="program-cycles-form" onSubmit={event => {
-      event.preventDefault();
-      void workflow.submit();
-    }} aria-busy={cyclesLoading || workflow.locked}>
+    <form id="program-cycles-form" onSubmit={workflow.submit} aria-busy={cyclesLoading || workflow.locked}>
       {cyclesError && <div role="alert">{cyclesError} <Button onClick={onRetryCycles}>Retry cycles</Button></div>}
       {cyclesLoading && <p role="status">Loading cycles...</p>}
       <FormFieldGroup label="Assigned cycles">

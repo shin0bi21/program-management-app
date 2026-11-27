@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import type { Hours } from '../services/staff/hours/hoursRowQuery';
 import { cursorListFields } from './listQuerySchemas';
-import { calendarDateSchema } from './dateRangeValidation';
+import { calendarDateSchema, hasOrderedCalendarBounds, hasPairedCalendarBounds } from './dateRangeValidation';
 
 export const hoursCategorySchema = z.enum([
   'program_delivery',
@@ -10,12 +11,14 @@ export const hoursCategorySchema = z.enum([
   'outreach',
   'maintenance',
   'other',
-]);
+] satisfies Hours['category'][]);
 
+const hoursTypeSchema = z.enum(['regular', 'task', 'session'] satisfies Hours['type'][]);
 const dateSchema = calendarDateSchema();
 
+const hoursId = z.string().uuid('Invalid time entry ID');
 export const hoursParamsSchema = z.object({
-  params: z.object({ id: z.string().uuid('Invalid time entry ID') }),
+  params: z.object({ id: hoursId }),
 });
 
 /**
@@ -31,7 +34,7 @@ const hoursFilterFields = {
   staffIds: commaSeparated(z.string().uuid('Invalid staff ID')),
   categories: commaSeparated(hoursCategorySchema),
   programIds: commaSeparated(z.union([z.string().uuid('Invalid program ID'), z.literal('general')])),
-  types: commaSeparated(z.enum(['task', 'session', 'regular'])),
+  types: commaSeparated(hoursTypeSchema),
   cycleIds: commaSeparated(z.string().uuid('Invalid cycle ID')),
   search: z.string().trim().max(120).optional().default(''),
 };
@@ -41,10 +44,10 @@ export const hoursCalendarQuerySchema = z.object({
     ...hoursFilterFields,
     start: dateSchema.optional(),
     end: dateSchema.optional(),
-  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Start and end dates must be provided together',
     path: ['end'],
-  }).refine(({ start, end }) => !start || !end || start <= end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'Start date must be on or before end date',
     path: ['end'],
   }),
@@ -56,10 +59,10 @@ export const hoursTableQuerySchema = z.object({
     start: dateSchema.optional(),
     end: dateSchema.optional(),
     ...cursorListFields(['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'], 'date', 'desc'),
-  }).refine(({ start, end }) => Boolean(start) === Boolean(end), {
+  }).refine(hasPairedCalendarBounds, {
     message: 'Start and end dates must be provided together',
     path: ['end'],
-  }).refine(({ start, end }) => !start || !end || start <= end, {
+  }).refine(hasOrderedCalendarBounds, {
     message: 'Start date must be on or before end date',
     path: ['end'],
   }),
@@ -86,45 +89,59 @@ export const hoursPayPeriodQuerySchema = z.object({
   }),
 });
 
-const sharedHoursFields = {
+const hoursFields = z.strictObject({
   staffId: z.string().uuid('Invalid staff ID'),
   hours: z.number().positive('Hours must be greater than zero').max(24, 'Hours cannot exceed 24'),
-  note: z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters'),
-};
-
-const datedHoursFields = { ...sharedHoursFields, date: dateSchema };
-
-export const setHoursSchema = z.object({
-  body: z.discriminatedUnion('source', [
-    z.object({
-      ...datedHoursFields,
-      source: z.literal('regular'),
-      programId: z.string().uuid('Invalid program ID').nullable().optional().transform(value => value ?? null),
-      category: hoursCategorySchema.exclude(['program_delivery']),
-    }),
-    z.object({
-      ...datedHoursFields,
-      source: z.literal('task'),
-      taskId: z.string().uuid('Invalid task ID'),
-      completeTask: z.boolean().optional().default(false),
-    }),
-    z.object({
-      ...sharedHoursFields,
-      source: z.literal('session'),
-      sessionId: z.string().uuid('Invalid session ID'),
-    }),
-  ]),
+  note: z.string(),
+  type: hoursTypeSchema,
+  date: dateSchema,
+  programId: z.string().uuid('Invalid program ID').nullable(),
+  category: hoursCategorySchema.exclude(['program_delivery']),
+  taskId: z.string().uuid('Invalid task ID'),
+  sessionId: z.string().uuid('Invalid session ID'),
 });
 
-export const updateHoursPlacementSchema = z.object({
-  body: z.object({ date: dateSchema }),
+const submittedHoursNote = z.string().trim().min(1, 'Note is required').max(2000, 'Note cannot exceed 2000 characters');
+const sharedHoursFields = hoursFields.pick({ staffId: true, hours: true, note: true });
+
+const regularHours = sharedHoursFields.extend({
+  type: z.literal('regular'),
+  date: hoursFields.shape.date,
+  programId: hoursFields.shape.programId.default(null),
+  category: hoursFields.shape.category,
 });
+const taskHours = sharedHoursFields.extend({
+  type: z.literal('task'),
+  date: hoursFields.shape.date,
+  taskId: hoursFields.shape.taskId,
+});
+const sessionHours = sharedHoursFields.extend({
+  type: z.literal('session'),
+  sessionId: hoursFields.shape.sessionId,
+});
+
+export const hoursRecordSchema = z.discriminatedUnion('type', [regularHours, taskHours, sessionHours]);
+
+const hoursEditFields = hoursFields.extend({ note: submittedHoursNote }).partial();
+
+const hoursEditBody = hoursEditFields.refine(
+  input => Object.keys(input).length > 0,
+  { message: 'At least one hours field is required' },
+);
+
+// Normalize the submitted note and allow the task completion option on creation.
+const hoursWriteBody = z.looseObject({ note: submittedHoursNote }).pipe(z.discriminatedUnion('type', [
+  regularHours,
+  taskHours.extend({ completeTask: z.boolean().optional() }),
+  sessionHours,
+]));
+
+export const createHoursSchema = z.object({ body: hoursWriteBody });
+export const editHoursSchema = hoursParamsSchema.extend({ body: hoursEditBody });
 
 export type HoursCalendarQuery = z.infer<typeof hoursCalendarQuerySchema.shape.query>;
 export type HoursTableQuery = z.infer<typeof hoursTableQuerySchema.shape.query>;
 export type HoursCycleSummaryQuery = z.infer<typeof hoursCycleSummaryQuerySchema.shape.query>;
 export type HoursPayPeriodQuery = z.infer<typeof hoursPayPeriodQuerySchema.shape.query>;
 export type HoursSessionQuery = z.infer<typeof hoursSessionQuerySchema.shape.query>;
-export type SetHoursInput = z.infer<typeof setHoursSchema.shape.body>;
-export type UpdateHoursPlacementInput = z.infer<typeof updateHoursPlacementSchema.shape.body>;
-export type HoursCategory = z.infer<typeof hoursCategorySchema>;
+export type HoursCategory = Hours['category'];

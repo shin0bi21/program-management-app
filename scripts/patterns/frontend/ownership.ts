@@ -9,25 +9,6 @@ interface ModuleReference {
 }
 
 /**
- * Extracts static import and re-export module paths with one-based source line locations.
- * @example moduleReferences('a.ts', "export * from './b';")[0].modulePath // './b'
- */
-function moduleReferences(file: string, source: string): ModuleReference[] {
-  // 1. Parse static module declarations, including re-exports.
-  const sourceFile = parseSourceFile(file, source);
-  // 2. Retain module specifiers with their original source line numbers.
-  return [
-    ...sourceFile.getImportDeclarations(),
-    ...sourceFile.getExportDeclarations(),
-  ].flatMap((declaration) => {
-    const modulePath = declaration.getModuleSpecifierValue();
-    return modulePath == null
-      ? []
-      : [{ line: declaration.getStartLineNumber(), modulePath }];
-  });
-}
-
-/**
  * Appends dependency-direction violations using repository-relative route owners and resolved local imports.
  * @example checkFrontendOwnership([], 'README.md', '', [], '/repo') // no findings
  */
@@ -65,4 +46,23 @@ export function checkFrontendOwnership(
       violations.push(`${file}:${line} page-family common code cannot import a route page's private code (${modulePath}).`);
     }
   }
+}
+
+/**
+ * Extracts static import and re-export module paths with one-based source line locations.
+ * @example moduleReferences('a.ts', "export * from './b';")[0].modulePath // './b'
+ */
+function moduleReferences(file: string, source: string): ModuleReference[] {
+  // 1. Parse static module declarations, including re-exports.
+  const sourceFile = parseSourceFile(file, source);
+  // 2. Retain module specifiers with their original source line numbers.
+  return [
+    ...sourceFile.getImportDeclarations(),
+    ...sourceFile.getExportDeclarations(),
+  ].flatMap((declaration) => {
+    const modulePath = declaration.getModuleSpecifierValue();
+    return modulePath == null
+      ? []
+      : [{ line: declaration.getStartLineNumber(), modulePath }];
+  });
 }

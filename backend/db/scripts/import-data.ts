@@ -5,21 +5,13 @@
  * database activation. Business records stay intact; copied passwords and
  * tokens are disabled, and the configured local admin is created or reset.
  *
- * CLI: npx tsx db/scripts/import-data.ts
- * Requires development mode, outbound operations disabled, a local staging URL,
- * ADMIN_EMAIL, and ADMIN_PASSWORD. All database changes share one transaction.
+ * Flow: validate arguments/help and staging isolation, replace authentication,
+ * then report success. All database changes share one transaction.
+ * See usage() for commands and required configuration.
  */
-
-// ============================================================================
-// 1. Imports
-// ============================================================================
 
 import postgres from 'postgres';
 import { seedAdmin } from './helpers/seed-admin';
-
-// ============================================================================
-// 2. Local-only configuration and staging guards
-// ============================================================================
 
 interface LocalImportConfiguration {
   databaseUrl: string;
@@ -27,6 +19,37 @@ interface LocalImportConfiguration {
   adminPassword: string;
   adminFirstName: string;
   adminLastName: string;
+}
+
+/**
+ * Validates the CLI and staging target, replaces copied authentication, and reports success.
+ * @example main() // with --help, prints requirements without database access.
+ */
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.length === 1 && ['-h', '--help'].includes(args[0])) {
+    console.log(usage());
+    return;
+  }
+  if (args.length > 0) throw new Error(usage());
+
+  const configuration = localImportConfiguration(process.env);
+  await prepareLocalImport(configuration);
+  console.log('Local imported authentication prepared. Only the configured local administrator can sign in.');
+}
+
+/**
+ * Describes the command and its required configuration without opening a connection.
+ * @example usage().includes('--help') // true
+ */
+function usage(): string {
+  return `Usage: npx tsx db/scripts/import-data.ts [--help]
+
+Prepares copied authentication on a local staging database in one transaction.
+Requires NODE_ENV=development, DISABLE_OUTBOUND=true, a DATABASE_URL for
+local_snapshot_* on db:5432, ADMIN_EMAIL and ADMIN_PASSWORD.
+Optional ADMIN_FIRST_NAME and ADMIN_LAST_NAME set the local administrator name.
+  -h, --help  Show help without database access.`;
 }
 
 /**
@@ -71,15 +94,11 @@ export function localImportConfiguration(env: NodeJS.ProcessEnv): LocalImportCon
   };
 }
 
-// ============================================================================
-// 3. Authentication replacement and connection cleanup
-// ============================================================================
-
 /**
  * Replaces copied authentication and resets the local administrator in one transaction on a validated staging configuration; always closes its connection.
  * @example await prepareLocalImport(configuration) // copied logins disabled, configured local admin enabled
  */
-export async function prepareLocalImport(configuration: LocalImportConfiguration) {
+export async function prepareLocalImport(configuration: LocalImportConfiguration): Promise<void> {
   // 1. Open a single owned connection for the validated staging database.
   const sql = postgres(configuration.databaseUrl, { max: 1 });
 
@@ -110,14 +129,8 @@ export async function prepareLocalImport(configuration: LocalImportConfiguration
   }
 }
 
-// ============================================================================
-// 4. Entrypoint — validate the target before preparing authentication
-// ============================================================================
-
 if (require.main === module) {
-  Promise.resolve().then(() => localImportConfiguration(process.env)).then(prepareLocalImport).then(() => {
-    console.log('Local imported authentication prepared. Only the configured local administrator can sign in.');
-  }).catch(() => {
+  main().catch(() => {
     // Database exceptions can include restored values; keep production data out of terminal logs.
     console.error('Local import preparation failed. Verify the staging database and local administrator configuration.');
     process.exitCode = 1;

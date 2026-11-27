@@ -1,16 +1,10 @@
 import { apiClient } from '../../../../http/client';
 import type { RequestOptions } from '../../../../http/client';
-import type { Task, TaskCategory, TaskStatus, TasksFilters } from '../types';
+import type { Task, TaskStatus, TasksFilters } from '../types';
 
-export interface SetTaskInput {
-  title: string;
-  details: string | null;
-  category: TaskCategory;
-  programId: string | null;
-  startDate: string;
-  dueDate: string;
-  staffId: string;
-}
+export type SetTaskInput = Pick<Task, 'title' | 'details' | 'category' | 'programId' | 'startDate' | 'dueDate' | 'staffId'>;
+
+type TaskPlacementInput = Pick<Task, 'startDate' | 'dueDate'> & Partial<Pick<Task, 'staffId'>>;
 
 /**
  * Loads accessible open tasks for a staff overview or Hours task choices.
@@ -18,14 +12,14 @@ export interface SetTaskInput {
  * @param opts - Request cancellation options from the consuming query.
  * @example getOpenTasks('staff-1', { signal })
  */
-export function getOpenTasks(staffId: string, opts?: RequestOptions): Promise<Task[]> {
+export function getOpenTasks(staffId: Task['staffId'], opts?: RequestOptions): Promise<Task[]> {
   const params = new URLSearchParams();
   params.set('staffId', staffId);
   return apiClient.get<Task[]>(`/tasks?${params}`, opts);
 }
 
 export interface TaskReferenceData {
-  categories: Array<{ id: TaskCategory; name: string }>;
+  categories: Array<{ id: Task['category']; name: string }>;
   statuses: Array<{ id: TaskStatus; name: string }>;
 }
 
@@ -44,8 +38,18 @@ export function getTaskReferenceData(opts?: RequestOptions): Promise<TaskReferen
  * @param id - Existing task ID; omit to create.
  * @example setTask(input, 'task-1') // updates an existing task
  */
-export function setTask(input: SetTaskInput, id?: string): Promise<Task> {
+export function setTask(input: SetTaskInput, id?: Task['id']): Promise<Task> {
   return id ? apiClient.put<Task>(`/tasks/${id}`, input) : apiClient.post<Task>('/tasks', input);
+}
+
+/**
+ * Changes task dates or assignee and returns the complete saved task.
+ * @param id - Task to move or resize.
+ * @param input - Inclusive YYYY-MM-DD dates and optional replacement staff ID.
+ * @example updateTaskPlacement('task-1', { startDate: '2026-08-10', dueDate: '2026-08-12' })
+ */
+export function updateTaskPlacement(id: Task['id'], input: TaskPlacementInput): Promise<Task> {
+  return apiClient.patch<Task>(`/tasks/${id}/placement`, input);
 }
 
 /**
@@ -54,7 +58,7 @@ export function setTask(input: SetTaskInput, id?: string): Promise<Task> {
  * @param state - Requested lifecycle state, validated by the backend.
  * @example updateTaskState('task-1', 'completed')
  */
-export function updateTaskState(id: string, state: Task['state']): Promise<Task> {
+export function updateTaskState(id: Task['id'], state: Task['state']): Promise<Task> {
   return apiClient.patch<Task>(`/tasks/${id}/state`, { state });
 }
 
@@ -63,7 +67,7 @@ export function updateTaskState(id: string, state: Task['state']): Promise<Task>
  * @param id - Task to delete.
  * @example deleteTask('task-1')
  */
-export function deleteTask(id: string): Promise<void> {
+export function deleteTask(id: Task['id']): Promise<void> {
   return apiClient.delete<void>(`/tasks/${id}`);
 }
 

@@ -1,4 +1,3 @@
-import type { FormEvent } from 'react';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import ModalFormFooter from '../../../../../common/components/Modal/components/ModalFormFooter';
@@ -29,17 +28,6 @@ export default function HomepageImageModal({ isOpen, ...props }: HomepageImageMo
 function ImageForm({ image, onClose, onSaved }: Omit<HomepageImageModalProps, 'isOpen'>) {
   const workflow = useHomepageImageModal({ image, onSaved });
 
-  /**
-   * Reads and trims the caption before submitting through the image workflow.
-   * @param event - Native form submission containing the caption draft.
-   * @example submit(event) // sends the trimmed caption without changing the saved image snapshot
-   */
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const caption = String(form.get('caption')).trim();
-    await workflow.submit(caption);
-  };
 
   return (
     <Modal
@@ -56,16 +44,15 @@ function ImageForm({ image, onClose, onSaved }: Omit<HomepageImageModalProps, 'i
         />
       )}
     >
-      <form id="homepage-image-form" onSubmit={(event) => void submit(event)}>
+      <form id="homepage-image-form" onSubmit={workflow.submit}>
         {!image && (
           <FormField id="homepage-image-file" label="Image">
             <input
               id="homepage-image-file"
-              name="image"
+              {...workflow.register('image')}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={workflow.submissionComplete}
-              onChange={(event) => workflow.setSelectedFile(event.currentTarget.files?.[0] ?? null)}
               required
             />
           </FormField>
@@ -73,8 +60,7 @@ function ImageForm({ image, onClose, onSaved }: Omit<HomepageImageModalProps, 'i
         <FormField id="homepage-image-caption" label="Caption">
           <textarea
             id="homepage-image-caption"
-            name="caption"
-            defaultValue={image?.caption ?? ''}
+            {...workflow.register('caption')}
             rows={3}
             maxLength={500}
             required

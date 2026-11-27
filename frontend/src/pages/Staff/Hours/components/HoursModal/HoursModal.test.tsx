@@ -27,16 +27,16 @@ const task = makeTask();
 
 /**
  * Opens an Hours form with reference choices and the supplied entry context.
- * @example renderModal({ staffId: 'staff-2' }) // locked contextual staff selection
+ * @example renderModal({ target: { mode: 'task', task } }) // locked task and staff
  */
 function renderModal(overrides: Partial<ComponentProps<typeof HoursModal>> = {}) {
   const props: ComponentProps<typeof HoursModal> = {
-    isOpen: true,
+    target: { mode: 'add', context: {} },
     staff,
     programs,
     categories,
     loadTasks,
-    onAdd: vi.fn().mockResolvedValue(undefined),
+    onSave: vi.fn().mockResolvedValue(undefined),
     onClose: vi.fn(),
     ...overrides,
   };
@@ -65,7 +65,7 @@ describe('HoursModal', () => {
   });
 
   it('renders only options valid for regular time', () => {
-    renderModal({ date: '2026-08-18', staffId: 'staff-1' });
+    renderModal({ target: { mode: 'add', context: { date: '2026-08-18', staffId: 'staff-1' } } });
 
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Program' }));
@@ -79,7 +79,7 @@ describe('HoursModal', () => {
 
   it('selects an assigned task through the rendered control', async () => {
     loadTasks.mockResolvedValue([task]);
-    renderModal({ source: 'task', date: '2026-08-18' });
+    renderModal({ target: { mode: 'add', context: { type: 'task', date: '2026-08-18' } } });
 
     await waitFor(() => expect(loadTasks).toHaveBeenCalledWith(
       'staff-1',
@@ -97,12 +97,12 @@ describe('HoursModal', () => {
       date === '2099-01-01'
         ? [{
           id: 'session-future',
-          name: 'Leadership',
+          title: 'Leadership',
           date,
         }]
         : []
     ));
-    renderModal({ source: 'session' });
+    renderModal({ target: { mode: 'add', context: { type: 'session' } } });
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
     await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
@@ -115,14 +115,14 @@ describe('HoursModal', () => {
   });
 
   it('locks the work date when opened from a calendar cell', async () => {
-    renderModal({ source: 'session', date: '2026-08-18', staffId: 'staff-2' });
+    renderModal({ target: { mode: 'add', context: { type: 'session', date: '2026-08-18', staffId: 'staff-2' } } });
 
     expect(screen.getByLabelText('Date')).toHaveValue('2026-08-18');
     expect(screen.getByLabelText('Date')).toBeDisabled();
   });
 
   it('locks a contextual task and its assigned staff while logging task time', async () => {
-    renderModal({ staff: [staff[0]], programs: [], task: task, canCompleteTask: true });
+    renderModal({ staff: [staff[0]], programs: [], target: { mode: 'task', task }, canCompleteTask: true });
 
     expect(screen.getByRole('button', { name: 'Task' })).toHaveTextContent('Prepare workshop');
     expect(screen.getByRole('button', { name: 'Task' })).toBeDisabled();
@@ -130,23 +130,22 @@ describe('HoursModal', () => {
   });
 
   it('renders initialized edit values', () => {
-    renderModal({
-      item: makeHoursItem({
-        id: 'entry-1',
-        category: 'meeting',
-        categoryLabel: 'Meeting',
-        programId: 'program-1',
-        program: 'Soft Skills',
-        cycleId: '',
-        cycle: '',
-        taskId: null,
-        taskTitle: null,
-        sessionId: null,
-        sessionTitle: null,
-        hours: 2,
-        note: 'Original note',
-      }),
+    const item = makeHoursItem({
+      id: 'entry-1',
+      category: 'meeting',
+      categoryLabel: 'Meeting',
+      programId: 'program-1',
+      program: 'Soft Skills',
+      cycleId: '',
+      cycle: '',
+      taskId: null,
+      taskTitle: null,
+      sessionId: null,
+      sessionTitle: null,
+      hours: 2,
+      note: 'Original note',
     });
+    renderModal({ target: { mode: 'edit', item } });
 
     expect(screen.getByRole('heading', { name: 'Edit Logged Hours' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Staff member' })).toBeDisabled();
@@ -157,16 +156,16 @@ describe('HoursModal', () => {
 
   it('locks the form actions while submitting and displays the success status', async () => {
     let resolve!: () => void;
-    const onAdd = vi.fn(() => new Promise<void>(done => { resolve = done; }));
+    const onSave = vi.fn(() => new Promise<void>(done => { resolve = done; }));
     const onClose = vi.fn();
-    renderModal({ onAdd, onClose, date: '2026-08-19' });
+    renderModal({ onSave, onClose, target: { mode: 'add', context: { date: '2026-08-19' } } });
     fireEvent.change(screen.getByLabelText('Hours'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Category' }));
     fireEvent.click(screen.getByRole('menuitemradio', { name: 'Meeting' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Pending work' } });
     submitForm();
 
-    await waitFor(() => expect(onAdd).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     expect(onClose).not.toHaveBeenCalled();

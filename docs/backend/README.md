@@ -18,12 +18,7 @@ Dependencies flow from routes through middleware and controllers to services and
 5. Define validation, keep controllers thin, and compose the route with the standard middleware order.
 6. Mount new routers in `backend/src/index.ts` and `backend/tests/shared/app.ts`.
 7. Verify behavior with authoritative feature tests; related-test selection follows Jest's import graph.
-8. Update the API overview when area responsibilities change, restart after TypeScript changes, and run the focused runner.
-
-## API Areas
-
-See the [API overview](api.md) for application areas and where to find request contracts.
-Route files remain authoritative for methods, paths, validation, and permissions.
+8. Restart after TypeScript changes and run the focused runner.
 
 ## Layers
 
@@ -64,7 +59,7 @@ Use stable product areas such as `staff`, `programming`, `youth`, and `outreach`
 
 | Owner | Guide |
 |---|---|
-| API areas and request contracts | [API overview](api.md) |
+| Route ownership and request and response contracts | [API overview](api.md) |
 | Shared filter and selector lookups | [Reference Data](reference-data.md) |
 | Request middleware and ordering | [Middleware](middleware.md) |
 | Authentication, tokens, and RBAC | [Auth](auth.md) |

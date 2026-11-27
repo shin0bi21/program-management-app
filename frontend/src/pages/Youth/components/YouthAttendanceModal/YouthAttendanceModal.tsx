@@ -1,5 +1,4 @@
 import type { YouthAttendanceResult } from './youthAttendance.api';
-import type { FormEvent } from 'react';
 import type { AttendanceGroup, AttendanceYouth } from '../../../../common/features/Attendance/attendance.api';
 import { faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -58,11 +57,6 @@ function AttendanceForm({ youth, attendance, participant, refresh, canManageSess
   });
 
   /** Saves the supplied cycle's edited attendance. @example submit(event) */
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void save();
-  };
-
   return (
     <>
       <Modal
@@ -81,7 +75,7 @@ function AttendanceForm({ youth, attendance, participant, refresh, canManageSess
           />
         )}
       >
-        <form id="youth-attendance-form" onSubmit={submit} aria-busy={submissionComplete}>
+        <form id="youth-attendance-form" onSubmit={save} aria-busy={submissionComplete}>
           <fieldset className="youth-attendance-modal__fields" disabled={submissionComplete}>
               <div className="youth-attendance-modal__summary">
                 <p className="youth-attendance-modal__context">

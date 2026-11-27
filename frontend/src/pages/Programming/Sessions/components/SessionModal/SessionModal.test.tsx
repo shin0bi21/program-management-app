@@ -3,18 +3,13 @@ import { renderWithQueryClient } from '../../../../../tests/queryClientTestUtils
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { updateSession } from '../../sessions.api';
 import { makeProgramSession } from '../../../../../tests/factories/session';
-import SessionModal from './SessionModal';
-
-vi.mock('../../sessions.api', () => ({
-  updateSession: vi.fn(),
-}));
+import SessionModal, { type SessionModalProps } from './SessionModal';
 
 const session = makeProgramSession({
   date: '2026-12-21', startTime: '17:00', endTime: '19:30', description: 'Practice session',
 });
-const sessionTypes = [
+const sessionTypes: SessionModalProps['sessionTypes'] = [
   { id: 'Regular', name: 'Regular' },
   { id: 'Guest Speaker', name: 'Guest Speaker' },
 ];
@@ -26,7 +21,7 @@ describe('SessionModal', () => {
 
   it('disables Save without a selected program when adding a session', async () => {
     const user = userEvent.setup();
-    renderWithQueryClient(<SessionModal programs={[]} sessionTypes={sessionTypes} onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderWithQueryClient(<SessionModal programs={[]} sessionTypes={sessionTypes} onClose={vi.fn()} onSave={vi.fn()} onSaved={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Type' }));
     await user.click(screen.getByRole('menuitemradio', { name: 'Regular' }));
@@ -35,7 +30,7 @@ describe('SessionModal', () => {
   });
 
   it('submits edits with the saved date and minute-based clock times', async () => {
-    vi.mocked(updateSession).mockResolvedValue({ session });
+    const onSave = vi.fn().mockResolvedValue(session);
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderWithQueryClient(
@@ -44,6 +39,7 @@ describe('SessionModal', () => {
         sessionTypes={sessionTypes}
         session={session}
         onClose={vi.fn()}
+        onSave={onSave}
         onSaved={onSaved}
       />,
     );
@@ -58,7 +54,8 @@ describe('SessionModal', () => {
     fireEvent.submit(document.getElementById('session-form')!);
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
-    expect(updateSession).toHaveBeenCalledWith(session.id, {
+    expect(onSave).toHaveBeenCalledWith({
+      id: session.id,
       sessionType: 'Guest Speaker', title: 'Career Stories', description: null,
       date: '2026-12-22', startTime: '17:00', endTime: '19:30',
     });

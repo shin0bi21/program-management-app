@@ -1,9 +1,10 @@
-import type { ProgramSession, SessionRosterMember } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
+import type { SessionRosterMember } from '../../types';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import FormFieldGroup from '../../../../../common/components/FormField/FormFieldGroup';
 
 interface SessionYouthChecklistProps {
-  enrollmentRequired: ProgramSession['enrollmentRequired'];
+  enrollmentRequired: Session['enrollmentRequired'];
   roster: readonly SessionRosterMember[];
   selectedYouthIds: readonly string[];
   loading: boolean;

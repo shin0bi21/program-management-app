@@ -23,3 +23,21 @@ export function calendarDateSchema(label = 'Date') {
     .regex(/^\d{4}-\d{2}-\d{2}$/, `${label} must use YYYY-MM-DD`)
     .refine(isCalendarDate, `${label} must be a valid calendar date`);
 }
+
+/**
+ * Checks that optional range bounds are either both supplied or both omitted.
+ * @param range - Optional calendar query bounds.
+ * @example hasPairedCalendarBounds({ start: '2026-01-01' }) // false
+ */
+export function hasPairedCalendarBounds(range: { start?: string; end?: string }) {
+  return Boolean(range.start) === Boolean(range.end);
+}
+
+/**
+ * Checks the order of supplied calendar bounds, including equal dates.
+ * @param range - Calendar query bounds; individual dates are validated separately.
+ * @example hasOrderedCalendarBounds({ start: '2026-01-01', end: '2027-01-01' }) // true
+ */
+export function hasOrderedCalendarBounds(range: { start?: string; end?: string }) {
+  return !range.start || !range.end || range.start <= range.end;
+}

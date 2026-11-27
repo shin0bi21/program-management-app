@@ -31,7 +31,8 @@ describe('useHomepageImageModal', () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image, onSaved }));
 
-    await act(() => result.current.submit('Updated caption.'));
+    act(() => result.current.setValue('caption', 'Updated caption.'));
+    await act(() => result.current.submit());
 
     expect(updateHomepageImage).toHaveBeenCalledWith(image.id, { caption: 'Updated caption.' });
     expect(onSaved).toHaveBeenCalledOnce();
@@ -50,8 +51,9 @@ describe('useHomepageImageModal', () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image: null, onSaved }));
 
-    act(() => result.current.setSelectedFile(file));
-    await act(() => result.current.submit('New image.'));
+    act(() => result.current.setValue('image', Object.assign([file], { item: (index: number) => index === 0 ? file : null })));
+    act(() => result.current.setValue('caption', 'New image.'));
+    await act(() => result.current.submit());
 
     expect(createHomepageImage).toHaveBeenCalledWith({ image: file, caption: 'New image.' });
     expect(onSaved).toHaveBeenCalledOnce();
@@ -63,7 +65,8 @@ describe('useHomepageImageModal', () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => useHomepageImageModal({ image: null, onSaved }));
 
-    await act(() => result.current.submit('New image.'));
+    act(() => result.current.setValue('caption', 'New image.'));
+    await act(() => result.current.submit());
 
     expect(createHomepageImage).not.toHaveBeenCalled();
     expect(result.current).toMatchObject({
@@ -80,10 +83,11 @@ describe('useHomepageImageModal', () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => useHomepageImageModal({ image, onSaved }));
 
-    await act(() => result.current.submit('Updated caption.'));
+    act(() => result.current.setValue('caption', 'Updated caption.'));
+    await act(() => result.current.submit());
     expect(result.current).toMatchObject({ status: 'error', statusMessage: 'Image update failed' });
 
-    await act(() => result.current.submit('Updated caption.'));
+    await act(() => result.current.submit());
     expect(updateHomepageImage).toHaveBeenCalledTimes(2);
     expect(onSaved).toHaveBeenCalledOnce();
     expect(result.current.status).toBe('success');

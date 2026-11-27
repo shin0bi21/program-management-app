@@ -48,56 +48,45 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
       <form
         id="program-form"
         aria-busy={workflow.submissionComplete}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void workflow.submit();
-        }}
+        onSubmit={workflow.submit}
       >
         <FormField id="program-title" label="Program Title">
           <input
             id="program-title"
-            name="title"
             required
             maxLength={120}
-            value={workflow.draft.title}
             disabled={workflow.submissionComplete}
-            onChange={event => workflow.updateDraft('title', event.target.value)}
+            {...workflow.register('title')}
           />
         </FormField>
         <FormField id="program-description" label="Description">
           <textarea
             id="program-description"
-            name="description"
             rows={4}
             maxLength={2000}
-            value={workflow.draft.description}
             disabled={workflow.submissionComplete}
-            onChange={event => workflow.updateDraft('description', event.target.value)}
+            {...workflow.register('description')}
           />
         </FormField>
         <div className="form-row">
           <FormField id="program-min-age" label="Minimum Age">
             <input
               id="program-min-age"
-              name="minAge"
               type="number"
               min={0}
               max={30}
-              value={workflow.draft.minAge}
               disabled={workflow.submissionComplete}
-              onChange={event => workflow.updateDraft('minAge', event.target.value)}
+              {...workflow.register('minAge')}
             />
           </FormField>
           <FormField id="program-max-age" label="Maximum Age">
             <input
               id="program-max-age"
-              name="maxAge"
               type="number"
               min={0}
               max={30}
-              value={workflow.draft.maxAge}
               disabled={workflow.submissionComplete}
-              onChange={event => workflow.updateDraft('maxAge', event.target.value)}
+              {...workflow.register('maxAge')}
             />
           </FormField>
         </div>
@@ -106,7 +95,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             id="program-default-weekday"
             value={workflow.draft.defaultDayOfWeek}
             disabled={workflow.submissionComplete}
-            onChange={value => workflow.updateDraft('defaultDayOfWeek', value as ProgramWeekday)}
+            onChange={value => workflow.setValue('defaultDayOfWeek', value as ProgramWeekday)}
             options={['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => ({
               id: day,
               label: day[0].toUpperCase() + day.slice(1),
@@ -119,9 +108,8 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
               id="program-default-start"
               type="time"
               required
-              value={workflow.draft.defaultStartTime}
               disabled={workflow.submissionComplete}
-              onChange={event => workflow.updateDraft('defaultStartTime', event.target.value)}
+              {...workflow.register('defaultStartTime')}
             />
           </FormField>
           <FormField id="program-default-end" label="Default End Time">
@@ -129,9 +117,8 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
               id="program-default-end"
               type="time"
               required
-              value={workflow.draft.defaultEndTime}
               disabled={workflow.submissionComplete}
-              onChange={event => workflow.updateDraft('defaultEndTime', event.target.value)}
+              {...workflow.register('defaultEndTime')}
             />
           </FormField>
         </div>
@@ -141,7 +128,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             value={workflow.draft.timezone}
             disabled={workflow.submissionComplete}
             options={[{ id: 'America/Toronto', label: 'Toronto (Eastern Time)' }]}
-            onChange={value => workflow.updateDraft('timezone', value as Program['timezone'])}
+            onChange={value => workflow.setValue('timezone', value as Program['timezone'])}
           />
         </FormField>
         <FormField id="program-enrollment-required" label="Enrollment Required">
@@ -149,7 +136,7 @@ function ProgramForm({ program, onClose, onSaved }: Omit<ProgramModalProps, 'isO
             id="program-enrollment-required"
             value={workflow.draft.enrollmentRequired ? 'yes' : 'no'}
             disabled={workflow.submissionComplete}
-            onChange={value => workflow.updateDraft(
+            onChange={value => workflow.setValue(
               'enrollmentRequired',
               value === 'yes',
             )}

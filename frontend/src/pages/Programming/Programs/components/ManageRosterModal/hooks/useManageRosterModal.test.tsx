@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProgramRoster } from '../../../api/programCycleAssignments.api';
 import type { ProgramCycleAssignment } from '../../../types';
@@ -70,7 +70,7 @@ describe('useManageRosterModal', () => {
     });
     act(() => result.current.toggleYouth('youth-2'));
     expect(result.current.selectedYouthIds).toEqual(['youth-1']);
-    expect(result.current.locked).toBe(true);
+    await waitFor(() => expect(result.current.locked).toBe(true));
     expect(setProgramRoster).toHaveBeenCalledOnce();
 
     await act(async () => finishSave());

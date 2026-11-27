@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
@@ -11,6 +11,12 @@ interface HoursBreakdownData {
   breakdown: Array<{ label: string; hours: number }>;
 }
 
+type HoursBreakdownProps = {
+  data: HoursBreakdownData | null;
+  scopeKey: string;
+  disabled?: boolean;
+};
+
 /**
  * Opens a staff summary's category breakdown and closes it when its selection or availability changes.
  * @param props.data - The current summary's decimal hours and breakdown; null disables the action.
@@ -18,11 +24,7 @@ interface HoursBreakdownData {
  * @param props.disabled - Prevents opening or retaining a breakdown while its summary is unavailable.
  * @example <HoursBreakdown data={summary} scopeKey="staff-1:cycle-1" disabled={false} />
  */
-export default function HoursBreakdown({ data, scopeKey, disabled = false }: {
-  data: HoursBreakdownData | null;
-  scopeKey: string;
-  disabled?: boolean;
-}) {
+export default function HoursBreakdown({ data, scopeKey, disabled = false }: HoursBreakdownProps): ReactElement {
   const [openScope, setOpenScope] = useState<string | null>(null);
   const hasData = data !== null;
 

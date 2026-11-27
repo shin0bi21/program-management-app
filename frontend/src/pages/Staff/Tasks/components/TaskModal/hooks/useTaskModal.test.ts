@@ -1,4 +1,3 @@
-import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,10 +9,6 @@ import { getDate } from '../../../../../../common/utils/date';
 vi.mock('../../../api/tasks.api', () => ({
   setTask: vi.fn(),
 }));
-
-const submitEvent = {
-  preventDefault: vi.fn(),
-} as unknown as FormEvent<HTMLFormElement>;
 
 describe('useTaskModal', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -44,12 +39,12 @@ describe('useTaskModal', () => {
     }));
 
     act(() => {
-      result.current.updateDraft('title', '  Prepare workshop  ');
-      result.current.updateDraft('details', '  Draft materials  ');
-      result.current.updateDraft('category', 'outreach');
-      result.current.updateDraft('programId', 'program-1');
+      result.current.setValue('title', '  Prepare workshop  ');
+      result.current.setValue('details', '  Draft materials  ');
+      result.current.setValue('category', 'outreach');
+      result.current.setValue('programId', 'program-1');
     });
-    await act(() => result.current.submit(submitEvent));
+    await act(() => result.current.submit());
 
     expect(setTask).toHaveBeenCalledWith({
       title: 'Prepare workshop',
@@ -80,7 +75,7 @@ describe('useTaskModal', () => {
     }));
 
     expect(result.current.draft.title).toBe('Existing task');
-    await act(() => result.current.submit(submitEvent));
+    await act(() => result.current.submit());
 
     expect(setTask).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Existing task',
@@ -116,7 +111,7 @@ describe('useTaskModal', () => {
       onSaved: vi.fn(),
     }));
 
-    await act(() => result.current.submit(submitEvent));
+    await act(() => result.current.submit());
 
     expect(setTask).not.toHaveBeenCalled();
     expect(result.current.status).toBe('error');
@@ -138,9 +133,9 @@ describe('useTaskModal', () => {
       onSaved,
     }));
 
-    act(() => result.current.updateDraft('category', 'outreach'));
+    act(() => result.current.setValue('category', 'outreach'));
 
-    await act(() => result.current.submit(submitEvent));
+    await act(() => result.current.submit());
     await waitFor(() => expect(result.current.status).toBe('error'));
 
     expect(result.current.statusMessage).toBe('Unable to create task');
@@ -148,7 +143,7 @@ describe('useTaskModal', () => {
 
     const savedTask = makeTask();
     vi.mocked(setTask).mockResolvedValue(savedTask);
-    await act(() => result.current.submit(submitEvent));
+    await act(() => result.current.submit());
     expect(onSaved).toHaveBeenCalledWith(savedTask);
     expect(result.current.status).toBe('success');
   });
@@ -171,12 +166,12 @@ describe('useTaskModal', () => {
     }));
 
     act(() => {
-      result.current.updateDraft('title', 'Prepare workshop');
-      result.current.updateDraft('category', 'outreach');
+      result.current.setValue('title', 'Prepare workshop');
+      result.current.setValue('category', 'outreach');
     });
-    act(() => {
-      void result.current.submit(submitEvent);
-      void result.current.submit(submitEvent);
+    await act(async () => {
+      void result.current.submit();
+      void result.current.submit();
     });
 
     expect(setTask).toHaveBeenCalledOnce();

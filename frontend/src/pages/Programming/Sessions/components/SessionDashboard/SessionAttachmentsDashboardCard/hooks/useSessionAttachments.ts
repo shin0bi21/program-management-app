@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConfirmAction } from '../../../../../../../common/components/ConfirmModal/types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { deleteSessionAttachment, getSessionAttachments } from '../../../../sessions.api';
-import type { ProgramSession, SessionAttachment } from '../../../../types';
+import type { Session } from '../../../../../../../common/features/programming/sessions/types';
+import type { SessionAttachment } from '../../../../types';
 
 /**
  * Owns this session's attachments query and ID-based editor and viewer targets.
@@ -13,7 +14,7 @@ import type { ProgramSession, SessionAttachment } from '../../../../types';
  */
 export function useSessionAttachments({ queryKey, session, onMessageChange }: {
   queryKey: readonly unknown[];
-  session: ProgramSession | null;
+  session: Session | null;
   onMessageChange?: PageMessageChangeHandler;
 }) {
   const client = useQueryClient();

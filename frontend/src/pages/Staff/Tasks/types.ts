@@ -1,21 +1,15 @@
+import type { DateRange } from '../../../common/utils/dateRange';
+import type { HoursCategory } from '../Hours/types';
+
 // Domain values and types.
-export type TaskState = 'open' | 'completed' | 'cancelled';
-export type TaskTiming = 'upcoming' | 'in_progress' | 'overdue';
-export type TaskStatus = TaskTiming | Exclude<TaskState, 'open'>;
-export type TaskCategory =
-  | 'program_delivery'
-  | 'planning_prep'
-  | 'meeting'
-  | 'administration'
-  | 'outreach'
-  | 'maintenance'
-  | 'other';
+type TaskState = 'open' | 'completed' | 'cancelled';
+export type TaskStatus = 'upcoming' | 'in_progress' | 'overdue' | Exclude<TaskState, 'open'>;
 
 export interface Task {
   id: string;
   title: string;
   details: string | null;
-  category: TaskCategory;
+  category: HoursCategory;
   categoryLabel: string;
   programId: string | null;
   program: string | null;
@@ -39,12 +33,9 @@ export interface TasksFilters {
   search: string;
   staffIds: string[];
   programIds: string[];
-  categories: TaskCategory[];
+  categories: Task['category'][];
   statuses: TaskStatus[];
 }
-
-// Shared task data contracts.
-export type { StaffReference, ProgramReference as TaskProgram } from '../../../common/features/referenceData/referenceData.api';
 
 // Shared table contracts.
 export const TASK_TABLE_KEYS = [
@@ -60,18 +51,27 @@ export const TASK_TABLE_KEYS = [
 export type TaskSortKey = typeof TASK_TABLE_KEYS[number];
 
 // Page state and actions.
+export type TaskActions = {
+  isTaskPending: (taskId: Task['id']) => boolean;
+  setState: (task: Task, state: Task['state']) => Promise<void>;
+  setTaskRange: (
+    task: Task,
+    nextRange: DateRange,
+    action: 'move' | 'resize',
+    staffId?: Task['staffId'],
+  ) => Promise<Task | null>;
+  edit: (task: Task) => void;
+  requestDelete: (task: Task) => void;
+};
+
 export interface TaskCalendarCache {
   upsert: (task: Task) => void;
   remove: (taskId: string) => void;
 }
 
-export interface AddTaskContext {
-  startDate?: string;
-  dueDate?: string;
-  staffId?: string;
-}
+export type AddTaskFormContext = Partial<Pick<Task, 'startDate' | 'dueDate' | 'staffId'>>;
 
 export type TaskModalState =
-  | { mode: 'add'; context: AddTaskContext }
+  | { mode: 'add'; context: AddTaskFormContext }
   | { mode: 'edit'; task: Task }
   | null;

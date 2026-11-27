@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Task, StaffReference } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Task } from '../../types';
 
 interface UseTaskSelectionOptions {
   staff: StaffReference[];

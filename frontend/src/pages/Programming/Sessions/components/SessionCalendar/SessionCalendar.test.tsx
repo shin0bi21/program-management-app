@@ -7,11 +7,12 @@ import { makeProgramSession } from '../../../../../tests/factories/session';
 import { buildDayPeriod } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import type { Program } from '../../../Programs/types';
-import type { ProgramSession, SessionCalendarCache, SessionListFilters } from '../../types';
+import type { Session } from '../../../../../common/features/programming/sessions/types';
+import type { SessionCalendarCache, SessionListFilters } from '../../types';
 import SessionCalendar from './SessionCalendar';
 import SessionItem from './SessionItem/SessionItem';
 
-type CalendarProps = TimelineCalendarProps<Program, ProgramSession>;
+type CalendarProps = TimelineCalendarProps<Program, Session>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 const api = vi.hoisted(() => ({ getSessions: vi.fn() }));
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({

@@ -5,10 +5,6 @@
  * are never overwritten; failed exports leave no published archive.
  */
 
-// ============================================================================
-// 1. Imports and snapshot configuration
-// ============================================================================
-
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { closeSync, existsSync, linkSync, mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs';
@@ -18,89 +14,6 @@ export interface SnapshotOptions {
   databaseUrl: string;
   outputFile: string;
 }
-
-// ============================================================================
-// 2. PostgreSQL environment and private diagnostics
-// ============================================================================
-
-/**
- * Validates a PostgreSQL URL and returns private child-process connection settings; invalid URLs throw.
- * @example databaseEnvironment('postgres://user:secret@db/app').PGDATABASE // 'app'
- */
-function databaseEnvironment(databaseUrl: string): NodeJS.ProcessEnv {
-  // 1. Validate the PostgreSQL URL before deriving child-process settings.
-  const url = new URL(databaseUrl);
-  if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.pathname.slice(1)) {
-    throw new Error('Invalid PostgreSQL connection configuration');
-  }
-
-  // 2. Pass credentials through the child environment rather than command arguments.
-  // Credentials belong in the child environment, never argv or recovery files.
-  return {
-    ...process.env,
-    PGHOST: url.hostname,
-    PGPORT: url.port || '5432',
-    PGUSER: decodeURIComponent(url.username),
-    PGPASSWORD: decodeURIComponent(url.password),
-    PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
-    ...(url.searchParams.has('sslmode') ? { PGSSLMODE: url.searchParams.get('sslmode')! } : {}),
-  };
-}
-
-/**
- * Attempts to write diagnostic detail to a new private log under directory, suppressing write failures.
- * @example privateDiagnostic('/private/recovery', 'Export failed') // writes a private log when possible
- */
-function privateDiagnostic(directory: string, detail: string): void {
-  try {
-    writeFileSync(join(directory, `snapshot-error-${randomBytes(8).toString('hex')}.log`), detail, {
-      mode: 0o600, flag: 'wx',
-    });
-  } catch {
-    // A diagnostic write failure must not expose connection details to the CLI.
-  }
-}
-
-// ============================================================================
-// 3. Shared dump operation for recovery, schema, data, and seed exports
-// ============================================================================
-
-/**
- * Writes a new private dump file using the supplied PostgreSQL URL and pg_dump format arguments.
- * Rejects existing output; failed exports remove their output and retain private diagnostics.
- * @example dumpDatabase(databaseUrl, '/private/schema.sql', ['--schema-only']) // writes a new schema dump
- */
-export function dumpDatabase(databaseUrl: string, outputFile: string, args: readonly string[]): void {
-  // 1. Prepare private output ownership and reject existing destinations.
-  const directory = dirname(resolve(outputFile));
-  let outputFd: number | undefined;
-  let created = false;
-  try {
-    mkdirSync(directory, { recursive: true, mode: 0o700 });
-    const env = databaseEnvironment(databaseUrl);
-    outputFd = openSync(outputFile, 'wx', 0o600);
-    created = true;
-    // 2. Stream the requested dump format directly into the exclusively created file.
-    const result = spawnSync('pg_dump', [...args], {
-      env, encoding: 'utf8', stdio: ['ignore', outputFd, 'pipe'], maxBuffer: 64 * 1024 * 1024,
-    });
-    if (result.status !== 0) {
-      throw new Error(result.stderr || result.error?.message || 'pg_dump did not complete');
-    }
-  } catch (error) {
-    // 3. Retain private diagnostics and remove only output created by this failed export.
-    privateDiagnostic(directory, error instanceof Error ? error.message : String(error));
-    if (created) rmSync(outputFile, { force: true });
-    throw new Error('Database export failed; private diagnostics retained beside the output', { cause: error });
-  } finally {
-    // 4. Close the owned output descriptor on success or failure.
-    if (outputFd !== undefined) closeSync(outputFd);
-  }
-}
-
-// ============================================================================
-// 4. Verify and atomically publish a complete recovery snapshot
-// ============================================================================
 
 /**
  * Exports, verifies, and atomically publishes a private custom archive; existing output is rejected and partial files are removed.
@@ -145,3 +58,73 @@ export function snapshotData(options: SnapshotOptions): void {
   }
 }
 
+/**
+ * Attempts to write diagnostic detail to a new private log under directory, suppressing write failures.
+ * @example privateDiagnostic('/private/recovery', 'Export failed') // writes a private log when possible
+ */
+function privateDiagnostic(directory: string, detail: string): void {
+  try {
+    writeFileSync(join(directory, `snapshot-error-${randomBytes(8).toString('hex')}.log`), detail, {
+      mode: 0o600, flag: 'wx',
+    });
+  } catch {
+    // A diagnostic write failure must not expose connection details to the CLI.
+  }
+}
+
+/**
+ * Writes a new private dump file using the supplied PostgreSQL URL and pg_dump format arguments.
+ * Rejects existing output; failed exports remove their output and retain private diagnostics.
+ * @example dumpDatabase(databaseUrl, '/private/schema.sql', ['--schema-only']) // writes a new schema dump
+ */
+export function dumpDatabase(databaseUrl: string, outputFile: string, args: readonly string[]): void {
+  // 1. Prepare private output ownership and reject existing destinations.
+  const directory = dirname(resolve(outputFile));
+  let outputFd: number | undefined;
+  let created = false;
+  try {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const env = databaseEnvironment(databaseUrl);
+    outputFd = openSync(outputFile, 'wx', 0o600);
+    created = true;
+    // 2. Stream the requested dump format directly into the exclusively created file.
+    const result = spawnSync('pg_dump', [...args], {
+      env, encoding: 'utf8', stdio: ['ignore', outputFd, 'pipe'], maxBuffer: 64 * 1024 * 1024,
+    });
+    if (result.status !== 0) {
+      throw new Error(result.stderr || result.error?.message || 'pg_dump did not complete');
+    }
+  } catch (error) {
+    // 3. Retain private diagnostics and remove only output created by this failed export.
+    privateDiagnostic(directory, error instanceof Error ? error.message : String(error));
+    if (created) rmSync(outputFile, { force: true });
+    throw new Error('Database export failed; private diagnostics retained beside the output', { cause: error });
+  } finally {
+    // 4. Close the owned output descriptor on success or failure.
+    if (outputFd !== undefined) closeSync(outputFd);
+  }
+}
+
+/**
+ * Validates a PostgreSQL URL and returns private child-process connection settings; invalid URLs throw.
+ * @example databaseEnvironment('postgres://user:secret@db/app').PGDATABASE // 'app'
+ */
+function databaseEnvironment(databaseUrl: string): NodeJS.ProcessEnv {
+  // 1. Validate the PostgreSQL URL before deriving child-process settings.
+  const url = new URL(databaseUrl);
+  if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.pathname.slice(1)) {
+    throw new Error('Invalid PostgreSQL connection configuration');
+  }
+
+  // 2. Pass credentials through the child environment rather than command arguments.
+  // Credentials belong in the child environment, never argv or recovery files.
+  return {
+    ...process.env,
+    PGHOST: url.hostname,
+    PGPORT: url.port || '5432',
+    PGUSER: decodeURIComponent(url.username),
+    PGPASSWORD: decodeURIComponent(url.password),
+    PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
+    ...(url.searchParams.has('sslmode') ? { PGSSLMODE: url.searchParams.get('sslmode')! } : {}),
+  };
+}

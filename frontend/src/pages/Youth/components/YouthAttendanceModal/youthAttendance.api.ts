@@ -1,5 +1,5 @@
 import type { YouthProfile } from '../../types';
-import type { ProgramSession } from '../../../Programming/Sessions/types';
+import type { Session } from '../../../../common/features/programming/sessions/types';
 import type { ProgramCycleAssignment } from '../../../Programming/Programs/types';
 import { apiClient } from '../../../../http/client';
 import type { SetYouthAttendanceRecord } from './types';
@@ -8,7 +8,7 @@ import type { AttendanceData } from '../../../../common/features/Attendance/atte
 export interface YouthAttendanceResult {
   attendance: AttendanceData;
   updatedYouth: YouthProfile;
-  updatedSessions?: ProgramSession[];
+  updatedSessions?: Session[];
   updatedProgramCycle?: ProgramCycleAssignment;
 }
 

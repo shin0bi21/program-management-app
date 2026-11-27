@@ -1,14 +1,25 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useForm } from 'react-hook-form';
+import type { ComponentProps } from 'react';
 import NoteModal from './NoteModal';
 
+type TestNoteProps = Omit<ComponentProps<typeof NoteModal>, 'detailsField' | 'onSubmit'> & {
+  onSubmit: (values: { details: string }) => void;
+};
+
+/** Mounts the shared modal with a real registered note field. @example <TestNote {...props} /> */
+function TestNote({ onSubmit, ...props }: TestNoteProps) {
+  const { register, handleSubmit } = useForm({ defaultValues: { details: 'Current note' } });
+  return <NoteModal {...props} detailsField={register('details')} onSubmit={handleSubmit(onSubmit)} />;
+}
+
 describe('NoteModal', () => {
-  it('owns the shared category and required-note form wiring', () => {
+  it('owns the shared category and required-note form wiring', async () => {
     const onCategoryChange = vi.fn();
-    const onDetailsChange = vi.fn();
     const onSubmit = vi.fn();
 
-    render(<NoteModal
+    render(<TestNote
       isOpen
       title="Add Note"
       formId="test-note-form"
@@ -18,10 +29,8 @@ describe('NoteModal', () => {
         { id: 'general', name: 'General' },
         { id: 'health', name: 'Health' },
       ]}
-      details="Current note"
       submitStatus="idle"
       onCategoryChange={onCategoryChange}
-      onDetailsChange={onDetailsChange}
       onSubmit={onSubmit}
       onClose={vi.fn()}
     />);
@@ -34,22 +43,19 @@ describe('NoteModal', () => {
     fireEvent.submit(document.getElementById('test-note-form')!);
 
     expect(onCategoryChange).toHaveBeenCalledWith('health');
-    expect(onDetailsChange).toHaveBeenCalledWith('Updated note');
-    expect(onSubmit).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ details: 'Updated note' }, expect.anything()));
   });
 
   it('locks shared controls while submitting', () => {
-    render(<NoteModal
+    render(<TestNote
       isOpen
       title="Add Note"
       formId="test-note-form"
       categoryLabel="Status"
       category="new"
       categoryOptions={[{ id: 'new', name: 'New' }]}
-      details="Required reason"
       submitStatus="submitting"
       onCategoryChange={vi.fn()}
-      onDetailsChange={vi.fn()}
       onSubmit={vi.fn()}
       onClose={vi.fn()}
     />);

@@ -7,7 +7,7 @@ import Modal from '../../../../../../common/components/Modal/Modal';
 import SessionNoteDetails from '../../SessionNoteDetails/SessionNoteDetails';
 import SessionNoteModal from '../../SessionNoteModal/SessionNoteModal';
 import SessionNoteRow from '../../SessionNoteRow/SessionNoteRow';
-import type { ProgramSession } from '../../../types';
+import type { Session } from '../../../../../../common/features/programming/sessions/types';
 import { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import { useSessionNotes } from './hooks/useSessionNotes';
@@ -20,7 +20,7 @@ export default function SessionNotesDashboardCard({
   onMessageChange,
 }: {
   queryKey: readonly unknown[];
-  session: ProgramSession | null;
+  session: Session | null;
   canWrite: boolean;
   onMessageChange?: PageMessageChangeHandler;
 }) {

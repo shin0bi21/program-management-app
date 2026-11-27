@@ -7,7 +7,12 @@ import PageContainer from '../../../common/components/PageContainer/PageContaine
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
-import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+import {
+  getCycleReferences,
+  getProgramReferences,
+  getStaffReferences,
+  type StaffReference,
+} from '../../../common/features/referenceData/referenceData.api';
 import { makeHoursItem } from '../../../tests/factories/hours';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
@@ -17,9 +22,8 @@ import type HoursTable from './components/HoursTable/HoursTable';
 import type useHoursTable from './components/HoursTable/hooks/useHoursTable';
 import type HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
 import type HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
-import { deleteHours, getHoursReferenceData } from './hours.api';
+import { deleteHours, getHoursReferenceData, setHours } from './hours.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
-import type { StaffReference } from './types';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
 vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
@@ -58,7 +62,7 @@ vi.mock('./components/HoursTable/hooks/useHoursTable', () => ({
 vi.mock('./components/HoursModal/HoursModal', () => ({
   default: (props: ComponentProps<typeof HoursModal>) => {
     children.modal = props;
-    return props.isOpen ? <div role="dialog" aria-label="Hours editor" /> : null;
+    return props.target ? <div role="dialog" aria-label="Hours editor" /> : null;
   },
 }));
 vi.mock('./components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard', () => ({
@@ -76,7 +80,6 @@ vi.mock('./components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSu
 vi.mock('./hours.api', () => ({
   getHoursReferenceData: vi.fn(),
   setHours: vi.fn(),
-  updateHoursPlacement: vi.fn(),
   deleteHours: vi.fn(),
 }));
 vi.mock('../Tasks/api/tasks.api', () => ({ getOpenTasks: vi.fn() }));
@@ -254,18 +257,18 @@ describe('Hours', () => {
     openAddHours();
 
     expect(screen.getByRole('dialog', { name: 'Hours editor' })).toBeInTheDocument();
-    expect(children.modal?.source).toBe('regular');
+    expect(children.modal?.target).toEqual({ mode: 'add', context: { type: 'regular' } });
   });
 
   it('opens the entry modal with the calendar staff member and date', async () => {
     renderHours();
     await screen.findByTestId('hours-calendar');
-    const context = { staffId: staffMember.id, date: '2026-08-09', source: 'regular' as const };
+    const context = { staffId: staffMember.id, date: '2026-08-09', type: 'regular' as const };
 
-    act(() => children.calendar!.onAdd(context));
+    act(() => children.calendar!.actions.add(context));
 
     expect(screen.getByRole('dialog', { name: 'Hours editor' })).toBeInTheDocument();
-    expect(children.modal).toEqual(expect.objectContaining(context));
+    expect(children.modal?.target).toEqual({ mode: 'add', context });
   });
 
   it('opens the selected table entry for editing', async () => {
@@ -273,10 +276,10 @@ describe('Hours', () => {
     renderHours();
     await screen.findByTestId('hours-table');
 
-    act(() => children.tableActions!.onEdit(entry));
+    act(() => children.tableActions!.actions.edit(entry));
 
     expect(screen.getByRole('dialog', { name: 'Hours editor' })).toBeInTheDocument();
-    expect(children.modal?.item).toBe(entry);
+    expect(children.modal?.target).toEqual({ mode: 'edit', item: entry });
   });
 
   it('bridges a table Delete action to the page confirmation workflow', async () => {
@@ -285,10 +288,30 @@ describe('Hours', () => {
     renderHours();
     await screen.findByTestId('hours-table');
 
-    act(() => children.tableActions!.onDelete(entry));
+    act(() => children.tableActions!.actions.requestDelete(entry));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteHours).toHaveBeenCalledWith(entry.id));
+  });
+
+  it('updates the mounted calendar after an entry moves or is deleted', async () => {
+    const saved = { ...entry, date: '2026-08-10' };
+    vi.mocked(setHours).mockResolvedValue(saved);
+    vi.mocked(deleteHours).mockResolvedValue({ message: 'Deleted' });
+    renderHours();
+    await screen.findByTestId('hours-calendar');
+    const calendar = children.calendar!;
+    const upsert = vi.fn();
+    const remove = vi.fn();
+    calendar.calendarIndexRef.current = { upsert, remove };
+
+    await act(async () => calendar.actions.move(entry, saved.date));
+    expect(upsert).toHaveBeenLastCalledWith(saved);
+
+    act(() => calendar.actions.requestDelete(saved));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(remove).toHaveBeenCalledWith(entry.id));
   });
 });
 

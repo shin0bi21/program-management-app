@@ -1,60 +1,71 @@
 import type { DateRange } from '../../../common/utils/dateRange';
-// Domain values and records.
-export type HoursCategory =
-  | 'program_delivery'
-  | 'planning_prep'
-  | 'meeting'
-  | 'administration'
-  | 'outreach'
-  | 'maintenance'
-  | 'other';
 
-export type { StaffReference, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
-export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
-export interface HoursItem {
+export const HOURS_CATEGORIES = [
+  'program_delivery',
+  'planning_prep',
+  'meeting',
+  'administration',
+  'outreach',
+  'maintenance',
+  'other',
+] as const;
+
+export type HoursCategory = typeof HOURS_CATEGORIES[number];
+
+export interface Hours {
   id: string;
   staffId: string;
+  programId: string | null;
+  category: HoursCategory;
+  date: string;
+  hours: number;
+  note: string;
+  taskId: string | null;
+  sessionId: string | null;
+
   firstName: string;
   lastName: string;
-  programId: string | null;
+
   program: string | null;
+
   cycleId: string;
   cycle: string;
   cycleStartsOn: string;
   cycleEndsOn: string;
-  category: HoursCategory;
-  categoryLabel: string;
-  taskId: string | null;
+
   taskTitle: string | null;
-  sessionId: string | null;
+
   sessionTitle: string | null;
-  date: string;
-  type: HoursItemType;
-  hours: number;
-  note: string;
+
+  categoryLabel: string;
+  type: 'task' | 'session' | 'regular';
 }
 
 // Table and filter values.
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
-export type HoursItemType = 'task' | 'session' | 'regular';
+
+export type AddHoursFormContext = Pick<Hours, 'staffId' | 'date' | 'type'>;
+
+export type HoursActions = {
+  isItemPending: (itemId: Hours['id']) => boolean;
+  add: (context: AddHoursFormContext) => void;
+  edit: (item: Hours) => void;
+  move: (item: Hours, date: Hours['date']) => Promise<void>;
+  requestDelete: (item: Hours) => void;
+};
 
 export interface HoursFilters {
   dateRange?: DateRange;
-  staffIds: string[];
+  staffIds: Hours['staffId'][];
   categories: HoursCategory[];
-  programIds: string[];
-  types: HoursItemType[];
-  cycleIds?: string[];
+  programIds: NonNullable<Hours['programId']>[];
+  types: Hours['type'][];
+  cycleIds?: Hours['cycleId'][];
   search: string;
 }
 
-export interface HoursItemMove {
-  item: HoursItem;
-  date: string;
-}
-
 export interface HoursCalendarIndex {
-  upsert: (item: HoursItem) => void;
+  upsert: (item: Hours) => void;
   remove: (itemId: string) => void;
 }

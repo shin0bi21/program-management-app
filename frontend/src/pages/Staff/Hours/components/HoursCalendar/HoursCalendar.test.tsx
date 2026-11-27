@@ -14,7 +14,8 @@ import type {
 import {
   getHoursCalendarData,
 } from '../../hours.api';
-import type { StaffReference, HoursItem, HoursFilters } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Hours, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarIndex } from '../../types';
 
@@ -35,7 +36,7 @@ const coworker: StaffReference = {
   writable: false,
 };
 
-type CalendarProps = TimelineCalendarProps<StaffReference, HoursItem>;
+type CalendarProps = TimelineCalendarProps<StaffReference, Hours>;
 const calendarState = vi.hoisted(() => ({ props: null as CalendarProps | null }));
 
 vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', () => ({
@@ -59,7 +60,7 @@ vi.mock('../../hours.api', () => ({
  * Builds a complete regular-hours row with scenario-specific values.
  * @example buildItem({ hours: 3 }) // regular entry with three hours
  */
-function buildItem(overrides: Partial<HoursItem> = {}): HoursItem {
+function buildItem(overrides: Partial<Hours> = {}): Hours {
   return makeHoursItem({
     id: 'entry-1',
     programId: 'program-1',
@@ -89,7 +90,7 @@ function renderCalendar({
   onStaffSelect = vi.fn(),
   onMove = vi.fn().mockResolvedValue(undefined),
 }: {
-  data?: HoursItem[];
+  data?: Hours[];
   staff?: StaffReference[];
   staffIds?: string[];
   search?: string;
@@ -102,22 +103,22 @@ function renderCalendar({
   onMove?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
-  const calendarIndexRef: MutableRefObject<HoursCalendarIndex> = {
-    current: { upsert: vi.fn(), remove: vi.fn() },
-  };
+  const calendarIndexRef: MutableRefObject<HoursCalendarIndex | null> = { current: null };
   const result = renderWithQueryClient(
       <HoursCalendar
         staff={staff}
         filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
         canWrite={canWrite}
-        isItemPending={() => false}
+        actions={{
+          isItemPending: () => false,
+          add: onAdd,
+          edit: onEdit,
+          requestDelete: onDelete,
+          move: onMove,
+        }}
         selectedStaffId="staff-1"
         calendarIndexRef={calendarIndexRef}
         onStaffSelect={onStaffSelect}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onAdd={onAdd}
-        onMove={onMove}
       />
   );
   return {
@@ -150,12 +151,12 @@ describe('HoursCalendar', () => {
     const { calendarIndexRef } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
     const item = buildItem({ cycleId: 'cycle-1', date: '2026-08-10' });
     act(() => {
-      calendarIndexRef.current.upsert(item);
+      calendarIndexRef.current!.upsert(item);
     });
     await waitFor(() => expect(calendarState.props!.items).toEqual({ 'staff-1': [item] }));
 
-    act(() => calendarIndexRef.current.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
-    expect(calendarState.props!.items).toEqual({});
+    act(() => calendarIndexRef.current!.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
+    expect(calendarState.props!.items?.[item.staffId] ?? []).toEqual([]);
   });
 
   it('filters staff and restricts dragging and cell actions by entry source', () => {
@@ -189,7 +190,7 @@ describe('HoursCalendar', () => {
     expect(onAdd).toHaveBeenCalledWith({
       staffId: 'staff-1',
       date: periods[1].key,
-      source: 'regular',
+      type: 'regular',
     });
   });
 
@@ -217,19 +218,13 @@ describe('HoursCalendar', () => {
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
   });
 
-  it('updates a buffered row through the mounted calendar callback', async () => {
-    const periods = buildInitialDayPeriods('2026-08-10', 3);
-    const item = buildItem({ date: periods[1].key });
-    const { calendarIndexRef } = renderCalendar({ data: [item] });
-    await initializeCalendar(periods);
-    await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
+  it('clears the page-owned mutation callbacks when the calendar unmounts', () => {
+    const { calendarIndexRef, unmount } = renderCalendar();
+    expect(calendarIndexRef.current).not.toBeNull();
 
-    const saved = { ...item, note: 'Edited from table', hours: 3 };
-    act(() => calendarIndexRef.current.upsert(saved));
+    unmount();
 
-    await waitFor(() => expect(calendarState.props!.items!['staff-1']![0].note).toBe('Edited from table'));
-    expect(calendarState.props!.items!['staff-1']![0]).toEqual(saved);
-    expect(getHoursCalendarData).toHaveBeenCalledOnce();
+    expect(calendarIndexRef.current).toBeNull();
   });
 
   it('translates a calendar drop into the page-owned move action', async () => {
@@ -250,10 +245,7 @@ describe('HoursCalendar', () => {
       nextRange: { start: periods[2].key, end: periods[2].key },
     }));
 
-    expect(rendered.onMove).toHaveBeenCalledWith({
-      item,
-      date: periods[2].key,
-    });
+    expect(rendered.onMove).toHaveBeenCalledWith(item, periods[2].key);
   });
 
   it('removes calendar mutation callbacks in read-only mode', () => {
@@ -291,6 +283,7 @@ describe('HoursCalendar', () => {
     expect(await screen.findByText('Hours calendar unavailable')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('Staff hours calendar')).toBeInTheDocument();
+    expect(screen.queryByText('Hours calendar unavailable')).not.toBeInTheDocument();
   });
 });

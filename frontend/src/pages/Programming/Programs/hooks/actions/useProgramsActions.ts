@@ -14,15 +14,14 @@ import type { ProgramCycle } from '../../../../../common/features/programming/cy
 interface UseProgramsActionsOptions {
   programTableQueryKey: readonly unknown[];
   onProgramSynced: (program: Program) => void;
-  onCycleDeleted: (cycleId: string) => void;
 }
 
 /**
  * Reconciles saved programs and cycles with their loaded queries.
- * @param options - Table cache key and callbacks for saved programs and removed cycles.
- * @example useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted })
+ * @param options - Table cache key and callback for saved programs.
+ * @example useProgramsActions({ programTableQueryKey, onProgramSynced })
  */
-export default function useProgramsActions({ programTableQueryKey, onProgramSynced, onCycleDeleted }: UseProgramsActionsOptions) {
+export default function useProgramsActions({ programTableQueryKey, onProgramSynced }: UseProgramsActionsOptions) {
   const queryClient = useQueryClient();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
@@ -69,10 +68,12 @@ export default function useProgramsActions({ programTableQueryKey, onProgramSync
         await deleteProgramCycle(cycle.id);
 
         removeInfiniteListRow(queryClient, CYCLE_TABLE_QUERY_KEY, cycle.id);
-        onCycleDeleted(cycle.id);
+        queryClient.setQueryData<ProgramCycle[]>(referenceDataKeys.cycles, current => (
+          (current ?? []).filter(choice => choice.id !== cycle.id)
+        ));
       },
     });
-  }, [onCycleDeleted, queryClient]);
+  }, [queryClient]);
 
   const closeConfirmation = useCallback(() => setConfirmAction(null), []);
 

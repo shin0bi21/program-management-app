@@ -7,10 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildInitialDayPeriods } from '../../../../../common/components/TimelineCalendar/utils/periods';
 import type { TimelineCalendarProps } from '../../../../../common/components/TimelineCalendar/types';
 import { getTasksCalendarData } from './api/taskCalendar.api';
-import type { Task, StaffReference } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Task, TaskActions } from '../../types';
 import { makeTask } from '../../../../../tests/factories/task';
 import type { TaskCalendarCache } from '../../types';
-import TaskCalendar, { type TaskCalendarActions } from './TaskCalendar';
+import TaskCalendar from './TaskCalendar';
 import type TaskItem from './TaskItem/TaskItem';
 
 type CalendarProps = TimelineCalendarProps<StaffReference, Task>;
@@ -58,16 +59,19 @@ describe('TaskCalendar', () => {
   });
 
   it('updates full buffered rows through mutation callbacks after saves and deletes', async () => {
-    const { calendarCacheRef } = renderCalendar();
+    const { calendarCacheRef, unmount } = renderCalendar();
     act(() => calendarState.props!.onInitialPeriods!(buildInitialDayPeriods('2026-08-10', 3)));
     await waitFor(() => expect(calendarState.props!.items['staff-1']).toEqual([task]));
 
     const saved = makeTask({ title: 'Saved by another consumer' });
-    act(() => calendarCacheRef.current.upsert(saved));
+    act(() => calendarCacheRef.current!.upsert(saved));
     await waitFor(() => expect(calendarState.props!.items['staff-1']?.[0].title).toBe(saved.title));
 
-    act(() => calendarCacheRef.current.remove(task.id));
+    act(() => calendarCacheRef.current!.remove(task.id));
     await waitFor(() => expect(calendarState.props!.items['staff-1'] ?? []).toEqual([]));
+
+    unmount();
+    expect(calendarCacheRef.current).toBeNull();
   });
 
   it('emits narrow resize and cross-staff member move commands with selection changes', async () => {
@@ -173,7 +177,7 @@ describe('TaskCalendar', () => {
     act(() => element.props.onEdit!());
     expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'completed');
     expect(rendered.actions.setState).toHaveBeenCalledWith(openTask, 'cancelled');
-    expect(rendered.onEditTask).toHaveBeenCalledWith(openTask);
+    expect(rendered.actions.edit).toHaveBeenCalledWith(openTask);
   });
 
   it('limits date changes and reassignment by task lifecycle', () => {
@@ -249,17 +253,16 @@ function renderCalendar({
   canWrite = true,
   selectedTaskId = null,
 }: RenderCalendarOptions = {}) {
-  const actions: TaskCalendarActions = {
+  const actions: TaskActions = {
     isTaskPending: vi.fn(() => false),
     requestDelete: vi.fn(),
     setState: vi.fn().mockResolvedValue(undefined),
     setTaskRange: vi.fn().mockResolvedValue(null),
+    edit: vi.fn(),
   };
-  const calendarCacheRef: MutableRefObject<TaskCalendarCache> = {
-    current: { upsert: vi.fn(), remove: vi.fn() },
-  };
+  const calendarCacheRef: MutableRefObject<TaskCalendarCache | null> = { current: null };
   const callbacks = {
-    onTaskSelect: vi.fn(), onStaffSelect: vi.fn(), onAddTask: vi.fn(), onEditTask: vi.fn(),
+    onTaskSelect: vi.fn(), onStaffSelect: vi.fn(), onAddTask: vi.fn(),
   };
   const rendered = render(<TaskCalendar
     staff={staff}
