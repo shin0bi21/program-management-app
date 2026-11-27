@@ -5,18 +5,17 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 
 import type { TaskReferenceData } from '../../api/tasks.api';
-import type { Task, TaskCategory, TaskModalState, TaskProgram, StaffReference } from '../../types';
+import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Task } from '../../types';
 
-import useTaskModal from './hooks/useTaskModal';
+import useTaskModal, { type UseTaskModalOptions } from './hooks/useTaskModal';
 
 import './TaskModal.css';
 
-export interface TaskModalProps {
-  target: Exclude<TaskModalState, null>;
+interface TaskModalProps extends UseTaskModalOptions {
   staff: readonly StaffReference[];
-  programs: readonly TaskProgram[];
+  programs: readonly ProgramReference[];
   categories: Readonly<TaskReferenceData['categories']>;
-  onSaved: (task: Task) => void;
   onClose: () => void;
 }
 
@@ -101,7 +100,7 @@ export default function TaskModal(props: TaskModalProps): ReactElement {
               id="task-category"
               value={modal.draft.category}
               options={categories.map(({ id, name }) => ({ id, label: name }))}
-              onChange={value => modal.updateDraft('category', value as TaskCategory)}
+              onChange={value => modal.updateDraft('category', value as Task['category'])}
               ariaLabel="Task category"
               disabled={modal.submissionComplete}
             />

@@ -13,7 +13,8 @@ import type {
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
-import type { AddTaskContext, Task, TaskCalendarCache, StaffReference, TasksFilters } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { AddTaskFormContext, Task, TaskActions, TaskCalendarCache, TasksFilters } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -23,20 +24,9 @@ import {
 } from '../../utils/taskCapabilities';
 import TaskItem from './TaskItem/TaskItem';
 import useTaskCalendarData from './hooks/useTaskCalendarData';
+import { getTaskId, getTaskRange } from './taskCalendarRecords';
 
 const TASK_CALENDAR_POSITION_KEY = 'resource-calendar:tasks:position';
-
-export interface TaskCalendarActions {
-  isTaskPending: (taskId: string) => boolean;
-  requestDelete: (task: Task) => void;
-  setState: (task: Task, state: Task['state']) => Promise<void>;
-  setTaskRange: (
-    task: Task,
-    nextRange: DateRange,
-    action: 'move' | 'resize',
-    staffId?: string,
-  ) => Promise<Task | null>;
-}
 
 interface TaskCalendarProps {
   staff: StaffReference[];
@@ -45,13 +35,12 @@ interface TaskCalendarProps {
   canWrite: boolean;
   selectedStaffId: string | null;
   selectedTaskId: string | null;
-  actions: TaskCalendarActions;
-  calendarCacheRef: MutableRefObject<TaskCalendarCache>;
+  actions: TaskActions;
+  calendarCacheRef: MutableRefObject<TaskCalendarCache | null>;
 
   onTaskSelect: (task: Task) => void;
   onStaffSelect: (staffId: string) => void;
-  onAddTask: (context: AddTaskContext) => void;
-  onEditTask: (task: Task) => void;
+  onAddTask: (context: AddTaskFormContext) => void;
   onMessageChange?: PageMessageChangeHandler;
 }
 
@@ -72,11 +61,10 @@ export default function TaskCalendar({
   onTaskSelect,
   onStaffSelect,
   onAddTask,
-  onEditTask,
   onMessageChange,
 }: TaskCalendarProps): ReactElement {
   const { staffIds } = filters;
-  const { calendar, visibleItems } = useTaskCalendarData(filters, calendarCacheRef);
+  const calendar = useTaskCalendarData(filters, calendarCacheRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(onMessageChange, calendar.error, retryAction);
@@ -102,7 +90,7 @@ export default function TaskCalendar({
         onComplete={actionsAvailable && canCompleteTask(task) ? () => void actions.setState(task, 'completed') : undefined}
         onCancel={actionsAvailable && canCancelTask(task) ? () => void actions.setState(task, 'cancelled') : undefined}
         onReopen={actionsAvailable && canReopenTask(task) ? () => void actions.setState(task, 'open') : undefined}
-        onEdit={actionsAvailable && canEditTask(task) ? () => onEditTask(task) : undefined}
+        onEdit={actionsAvailable && canEditTask(task) ? () => actions.edit(task) : undefined}
         onDelete={actionsAvailable && canDeleteTask(task) ? () => actions.requestDelete(task) : undefined}
       />
     );
@@ -180,7 +168,7 @@ export default function TaskCalendar({
       selectedRowId={selectedStaffId}
       onRowSelect={row => onStaffSelect(row.id)}
 
-      items={visibleItems}
+      items={calendar.items}
       getItemId={getTaskId}
       getItemRange={getTaskRange}
       buildItem={buildItem}
@@ -206,14 +194,6 @@ function getStaffId(staffMember: StaffReference) {
  */
 function renderStaffRow({ row }: RenderRowContext<StaffReference>) {
   return <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>;
-}
-/** Identifies a task. @example getTaskId(task) // task.id */
-function getTaskId(task: Pick<Task, 'id'>) {
-  return task.id;
-}
-/** Reads inclusive assignment dates. @example getTaskRange(task) // { start: task.startDate, end: task.dueDate } */
-function getTaskRange(task: Task) {
-  return { start: task.startDate, end: task.dueDate };
 }
 /**
  * Allows reassignment only for open tasks without logged hours.

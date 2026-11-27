@@ -1,16 +1,17 @@
 import { render, renderHook } from '@testing-library/react';
 import type { CellContext, ColumnDef } from '@tanstack/react-table';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Task } from '../../../types';
 import { makeTask } from '../../../../../../tests/factories/task';
-import type { TaskTableActions } from '../TaskActionsMenu';
+import type TaskActionsMenu from '../TaskActionsMenu';
 import useTaskTable from './useTaskTable';
 
 const taskActionsMenu = vi.hoisted(() => vi.fn());
 
 vi.mock('../TaskActionsMenu', () => ({
-  default: (props: TaskTableActions & { task: Task }) => {
+  default: (props: ComponentProps<typeof TaskActionsMenu>) => {
     taskActionsMenu(props);
     return <div data-testid="task-actions-menu" />;
   },
@@ -20,6 +21,7 @@ function renderTable(canWrite: boolean) {
   const actions = {
     isTaskPending: vi.fn(() => false),
     setState: vi.fn().mockResolvedValue(undefined),
+    setTaskRange: vi.fn().mockResolvedValue(null),
     edit: vi.fn(),
     requestDelete: vi.fn(),
   };
@@ -57,10 +59,7 @@ describe('useTaskTable', () => {
     render(<>{renderCell(actionColumn, task)}</>);
     expect(taskActionsMenu).toHaveBeenCalledWith({
       task,
-      isTaskPending: rendered.actions.isTaskPending,
-      setState: rendered.actions.setState,
-      edit: rendered.actions.edit,
-      requestDelete: rendered.actions.requestDelete,
+      actions: rendered.actions,
     });
   });
 });

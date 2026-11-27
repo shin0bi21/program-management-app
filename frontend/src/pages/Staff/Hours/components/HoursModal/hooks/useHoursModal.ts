@@ -2,40 +2,65 @@ import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getUser } from '../../../../../../auth/storage';
 
-import { useSubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
+import { useSubmitStatus, type SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
 import type { RequestOptions } from '../../../../../../http/client';
 import type { Task } from '../../../../Tasks/types';
 import { getHoursSessions } from '../../../hours.api';
+import type { ProgramReference, StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import type {
-  StaffReference,
+  AddHoursFormContext,
   HoursCategory,
-  HoursProgram,
   Hours,
 } from '../../../types';
 
-type HoursDraft = Pick<Hours, 'staffId' | 'date' | 'note' | 'type'> & {
-  taskId: NonNullable<Hours['taskId']>;
+type HoursDraft = AddHoursFormContext & {
+  taskId: string;
   completeTask: boolean;
-  sessionId: NonNullable<Hours['sessionId']>;
-  programId: NonNullable<Hours['programId']>;
+  sessionId: string;
+  programId: string;
   category: HoursCategory | '';
   hours: string;
+  note: Hours['note'];
 };
 
-export interface UseHoursModalOptions extends Partial<Pick<Hours, 'staffId' | 'date' | 'type'>> {
+export interface UseHoursModalOptions extends Partial<AddHoursFormContext> {
   staff: readonly StaffReference[];
-  programs: readonly HoursProgram[];
+  programs: readonly ProgramReference[];
   loadTasks: (
-    staffId: string,
+    staffId: Hours['staffId'],
     opts?: RequestOptions,
   ) => Promise<readonly Task[]>;
   onAdd: (input: Partial<Hours>, completeTask: boolean) => Promise<void>;
   task?: Task;
   item?: Hours;
   canCompleteTask?: boolean;
+}
+
+interface HoursModalResult {
+  draft: HoursDraft;
+  taskLocked: boolean;
+  taskOptions: readonly Task[];
+  tasksLoading: boolean;
+  tasksError: string | undefined;
+  sessionOptions: Awaited<ReturnType<typeof getHoursSessions>>;
+  sessionsLoading: boolean;
+  sessionsError: string | undefined;
+  submitStatus: SubmitStatus;
+  submitting: boolean;
+  error: string;
+  selectStaff: (staffId: HoursDraft['staffId']) => void;
+  selectProgram: (programId: HoursDraft['programId']) => void;
+  selectCategory: (category: Exclude<HoursCategory, 'program_delivery'>) => void;
+  selectTask: (taskId: HoursDraft['taskId']) => void;
+  selectSession: (sessionId: HoursDraft['sessionId']) => void;
+  updateDate: (date: HoursDraft['date']) => void;
+  updateHours: (hours: HoursDraft['hours']) => void;
+  updateNote: (note: HoursDraft['note']) => void;
+  setCompleteTask: (completeTask: boolean) => void;
+  submit: (event: FormEvent) => Promise<void>;
 }
 
 /**
@@ -45,7 +70,7 @@ export interface UseHoursModalOptions extends Partial<Pick<Hours, 'staffId' | 'd
  * @param options.date - Contextual work date; omitted add dates default to today.
  * @example useHoursModal({ ...options, item }) // initializes the edit draft once
  */
-export default function useHoursModal(options: UseHoursModalOptions) {
+export default function useHoursModal(options: UseHoursModalOptions): HoursModalResult {
   const { loadTasks, onAdd, task, item, canCompleteTask = false } = options;
   const [draft, setDraft] = useState<HoursDraft>(() => {
     const type = task ? 'task' : item?.type ?? options.type ?? 'regular';

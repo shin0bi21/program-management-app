@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
@@ -29,7 +30,7 @@ export default function HoursTable({
   queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
   onColumnWidthsChange, onMessageChange,
-}: HoursTableProps) {
+}: HoursTableProps): ReactElement {
   const query = useHoursTableData(queryKey, filters, sorting);
   usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import ActionsMenu from '../../../../../common/components/ActionsMenu/ActionsMenu';
-import type { Task } from '../../types';
+import type { Task, TaskActions } from '../../types';
 import {
   canCancelTask,
   canCompleteTask,
@@ -9,29 +9,21 @@ import {
   canReopenTask,
 } from '../../utils/taskCapabilities';
 
-export interface TaskTableActions {
-  isTaskPending: (taskId: string) => boolean;
-  setState: (task: Task, state: Task['state']) => Promise<void>;
-  edit: (task: Task) => void;
-  requestDelete: (task: Task) => void;
-}
-
-interface TaskActionsMenuProps extends TaskTableActions {
+type TaskActionsMenuProps = {
   task: Task;
-}
+  actions: TaskActions;
+};
 
 /**
  * Displays permitted lifecycle, edit, and delete commands for an available task.
  * @param props - Saved task and page-coordinated action callbacks.
- * @example <TaskActionsMenu task={task} {...actions} />
+ * @example <TaskActionsMenu task={task} actions={actions} />
  */
 export default function TaskActionsMenu({
   task,
-  isTaskPending,
-  setState,
-  edit,
-  requestDelete,
+  actions,
 }: TaskActionsMenuProps): ReactElement | null {
+  const { isTaskPending, setState, edit, requestDelete } = actions;
   if (!task.writable || isTaskPending(task.id)) return null;
 
   return <ActionsMenu

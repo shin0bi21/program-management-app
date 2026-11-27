@@ -1,4 +1,5 @@
-.hours-staff {
+.hours-calendar-staff-name {
+  display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

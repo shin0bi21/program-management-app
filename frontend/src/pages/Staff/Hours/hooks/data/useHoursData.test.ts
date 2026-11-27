@@ -36,7 +36,7 @@ describe('useHoursData', () => {
       { wrapper: createQueryClientWrapper(client) },
     );
 
-    await waitFor(() => expect(result.current.cycles).toHaveLength(1));
+    await waitFor(() => expect(result.current.cycles.data).toHaveLength(1));
     expect(result.current.writableStaff.map(staffMember => staffMember.id)).toEqual(['staff-1']);
     expect(result.current.staffById.get('staff-2')?.name).toBe('Alex Morgan');
     expect(result.current.currentUserStaff?.name).toBe('Zoe Wilson');

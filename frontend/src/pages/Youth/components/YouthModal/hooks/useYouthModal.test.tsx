@@ -11,12 +11,10 @@ const subEntities = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../youth.api', () => ({ setYouth: vi.fn(), setYouthContacts: vi.fn() }));
-vi.mock('../../../../../common/features/SchoolModal/hooks/useSchools', () => ({
-  useSchools: () => ({
-    schools: [],
-    upsertSchool: vi.fn(),
-    removeSchool: vi.fn(),
-    loading: false,
+vi.mock('../../../../../common/features/referenceData/hooks/useReferenceData', () => ({
+  useSchoolReferences: () => ({
+    data: [],
+    isLoading: false,
     error: null,
   }),
 }));

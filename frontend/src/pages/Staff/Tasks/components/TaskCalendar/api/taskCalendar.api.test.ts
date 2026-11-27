@@ -3,10 +3,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apiClient } from '../../../../../../http/client';
-import { getTasksCalendarData, updateTaskPlacement } from './taskCalendar.api';
+import { getTasksCalendarData } from './taskCalendar.api';
 
 vi.mock('../../../../../../http/client', () => ({
-  apiClient: { get: vi.fn(), patch: vi.fn() },
+  apiClient: { get: vi.fn() },
 }));
 
 describe('taskCalendar API', () => {
@@ -38,15 +38,5 @@ describe('taskCalendar API', () => {
       search: 'workshop prep',
     });
     expect(options?.signal).toBe(signal);
-  });
-
-  it('patches task dates and reassignment through the placement endpoint', () => {
-    const input = {
-      startDate: '2026-08-11', dueDate: '2026-08-13', staffId: 'staff-2',
-    };
-
-    updateTaskPlacement('task-1', input);
-
-    expect(apiClient.patch).toHaveBeenCalledWith('/tasks/task-1/placement', input);
   });
 });

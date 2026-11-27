@@ -1,15 +1,14 @@
 import { useMemo } from 'react';
-import type { CellContext } from '@tanstack/react-table';
 
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { Task } from '../../../types';
+import type { Task, TaskActions } from '../../../types';
 
 import TaskStatusLabel from '../../TaskStatusLabel/TaskStatusLabel';
-import TaskActionsMenu, { type TaskTableActions } from '../TaskActionsMenu';
+import TaskActionsMenu from '../TaskActionsMenu';
 
 interface UseTaskTableOptions {
   canWrite: boolean;
-  actions: TaskTableActions;
+  actions: TaskActions;
 }
 
 interface TaskTableResult {
@@ -25,8 +24,6 @@ export default function useTaskTable({
   canWrite,
   actions,
 }: UseTaskTableOptions): TaskTableResult {
-  const { isTaskPending, setState, edit, requestDelete } = actions;
-
   const columns = useMemo<TableColumnDef<Task>[]>(() => [
     {
       id: 'firstName',
@@ -82,15 +79,9 @@ export default function useTaskTable({
       size: 40,
       enableResizing: false,
       enableHiding: false,
-      cell: ({ row }: CellContext<Task, unknown>) => <TaskActionsMenu
-        task={row.original}
-        isTaskPending={isTaskPending}
-        setState={setState}
-        edit={edit}
-        requestDelete={requestDelete}
-      />,
-    }] : []),
-  ], [canWrite, edit, isTaskPending, requestDelete, setState]);
+      cell: ({ row }) => <TaskActionsMenu task={row.original} actions={actions} />,
+    } satisfies TableColumnDef<Task>] : []),
+  ], [actions, canWrite]);
 
   return { columns };
 }

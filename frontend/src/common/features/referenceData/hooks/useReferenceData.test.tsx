@@ -30,7 +30,7 @@ describe('shared reference queries', () => {
       wrapper: createQueryClientWrapper(client),
     });
 
-    await waitFor(() => expect(result.current.cycles.loading || result.current.schools.loading).toBe(false));
+    await waitFor(() => expect(result.current.cycles.isLoading || result.current.schools.isLoading).toBe(false));
     expect(getCycleReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
     expect(getSchoolReferences).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
     expect(client.getQueryData(referenceDataKeys.cycles)).toEqual([]);
@@ -44,18 +44,18 @@ describe('shared reference queries', () => {
       tasks: useStaffReferences('tasks'), hours: useStaffReferences('hours'),
     }), { wrapper: createQueryClientWrapper(client) });
 
-    await waitFor(() => expect(result.current.hours.rows).toHaveLength(1));
-    expect(result.current.programs.rows[0].id).toBe('all-programs');
-    expect(result.current.assigned.rows[0].id).toBe('assigned-program');
-    expect(result.current.tasks.rows[0].writable).toBe(true);
-    expect(result.current.hours.rows[0].writable).toBe(false);
+    await waitFor(() => expect(result.current.hours.data).toHaveLength(1));
+    expect(result.current.programs.data?.[0].id).toBe('all-programs');
+    expect(result.current.assigned.data?.[0].id).toBe('assigned-program');
+    expect(result.current.tasks.data?.[0].writable).toBe(true);
+    expect(result.current.hours.data?.[0].writable).toBe(false);
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: false }, { signal: expect.any(AbortSignal) });
     expect(getStaffReferences).toHaveBeenCalledWith('tasks', { signal: expect.any(AbortSignal) });
     expect(getStaffReferences).toHaveBeenCalledWith('hours', { signal: expect.any(AbortSignal) });
-    expect(client.getQueryData(referenceDataKeys.programs(true))).toEqual(result.current.assigned.rows);
-    expect(client.getQueryData(referenceDataKeys.programs())).toEqual(result.current.programs.rows);
-    expect(client.getQueryData(referenceDataKeys.staff('tasks'))).toEqual(result.current.tasks.rows);
-    expect(client.getQueryData(referenceDataKeys.staff('hours'))).toEqual(result.current.hours.rows);
+    expect(client.getQueryData(referenceDataKeys.programs(true))).toEqual(result.current.assigned.data);
+    expect(client.getQueryData(referenceDataKeys.programs())).toEqual(result.current.programs.data);
+    expect(client.getQueryData(referenceDataKeys.staff('tasks'))).toEqual(result.current.tasks.data);
+    expect(client.getQueryData(referenceDataKeys.staff('hours'))).toEqual(result.current.hours.data);
   });
 });

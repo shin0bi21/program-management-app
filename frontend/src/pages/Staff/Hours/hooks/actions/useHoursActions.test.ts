@@ -30,21 +30,20 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-/** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
+/** Renders actions with a fresh account cache and page callbacks. @example renderActions() // isolated mutation owner */
 function renderActions(filters: Partial<HoursFilters> = {}) {
   const client = createTestQueryClient();
+  const onItemChanged = vi.fn();
   const onItemRemoved = vi.fn();
   const rendered = renderHook(() => useHoursActions({
     hoursQueryKey: ['hours'],
     hoursTableQueryKey: ['hours', 'table'],
     taskQueryKey: ['tasks'],
     filters: { staffIds: [], categories: [], programIds: [], types: [], search: '', ...filters },
+    onItemChanged,
     onItemRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
-  const upsert = vi.fn();
-  const remove = vi.fn();
-  rendered.result.current.calendarIndexRef.current = { upsert, remove };
-  return { ...rendered, client, onItemRemoved, upsert, remove };
+  return { ...rendered, client, onItemChanged, onItemRemoved };
 }
 
 const entry = makeHoursItem({
@@ -67,7 +66,7 @@ describe('useHoursActions', () => {
 
     await act(async () => rendered.result.current.saveHours(input));
     expect(setHours).toHaveBeenLastCalledWith(input, undefined, false);
-    expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
+    expect(rendered.onItemChanged).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['hours', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
@@ -76,7 +75,7 @@ describe('useHoursActions', () => {
     await act(async () => rendered.result.current.saveHours(input, entry));
 
     expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
-    expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
+    expect(rendered.onItemChanged).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
@@ -93,17 +92,14 @@ describe('useHoursActions', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
 
-  it('owns confirmation, calendar removal, and related summary refreshes together', async () => {
+  it('notifies the page after deletion and refreshes related summaries', async () => {
     vi.mocked(deleteHours).mockResolvedValue({ message: 'deleted', updatedTasks: [updatedTask] });
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
 
-    act(() => rendered.result.current.requestDelete(entry));
-    expect(rendered.result.current.confirmAction).toEqual(expect.objectContaining({ title: 'Delete logged hours' }));
-    await act(async () => rendered.result.current.confirmAction?.onConfirm());
+    await act(async () => rendered.result.current.deleteHours(entry));
 
     expect(deleteHours).toHaveBeenCalledWith('entry-1');
-    expect(rendered.remove).toHaveBeenCalledWith('entry-1');
     expect(rendered.onItemRemoved).toHaveBeenCalledWith('entry-1');
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['hours', 'dashboard'], ['tasks', 'overview'], ['tasks', 'hours-options'],
@@ -149,7 +145,7 @@ describe('useHoursActions', () => {
 
     await act(async () => rendered.result.current.moveHours(stale, saved.date));
 
-    expect(rendered.upsert.mock.calls).toEqual([
+    expect(rendered.onItemChanged.mock.calls).toEqual([
       [{ ...stale, date: saved.date }],
       [entry],
     ]);
@@ -165,7 +161,7 @@ describe('useHoursActions', () => {
 
     await act(async () => rendered.result.current.moveHours(item, '2026-08-19'));
 
-    expect(rendered.upsert.mock.calls).toEqual([
+    expect(rendered.onItemChanged.mock.calls).toEqual([
       [{ ...item, date: '2026-08-19' }],
       [item],
     ]);
@@ -193,13 +189,11 @@ describe('useHoursActions', () => {
     await act(async () => {
       await expect(rendered.result.current.saveHours(input, item)).rejects.toThrow('save failed');
     });
-    act(() => rendered.result.current.requestDelete(item));
     await act(async () => {
-      await expect(rendered.result.current.confirmAction!.onConfirm()).rejects.toThrow('delete failed');
+      await expect(rendered.result.current.deleteHours(item)).rejects.toThrow('delete failed');
     });
 
-    expect(rendered.upsert).not.toHaveBeenCalled();
-    expect(rendered.remove).not.toHaveBeenCalled();
+    expect(rendered.onItemChanged).not.toHaveBeenCalled();
     expect(rendered.onItemRemoved).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
   });

@@ -1,8 +1,25 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { useCycleReferences, useProgramReferences, useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
-import { getHoursReferenceData } from '../../hours.api';
+import {
+  useCycleReferences,
+  useProgramReferences,
+  useStaffReferences,
+  type ReferenceDataQuery,
+} from '../../../../../common/features/referenceData/hooks/useReferenceData';
+import type { CycleReference, ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import { getHoursReferenceData, type HoursReferenceData } from '../../hours.api';
+import type { Hours } from '../../types';
+
+type HoursDataResult = {
+  staff: ReferenceDataQuery<StaffReference[]>;
+  programs: ReferenceDataQuery<ProgramReference[]>;
+  cycles: ReferenceDataQuery<CycleReference[]>;
+  referenceData: ReferenceDataQuery<HoursReferenceData>;
+  writableStaff: StaffReference[];
+  staffById: ReadonlyMap<Hours['staffId'], StaffReference>;
+  currentUserStaff: StaffReference | null;
+};
 
 /**
  * Supplies shared staff, program, cycle, and hour choices.
@@ -13,39 +30,30 @@ import { getHoursReferenceData } from '../../hours.api';
 export default function useHoursData(
   referenceDataQueryKey: readonly unknown[],
   currentUserId?: string,
-) {
-  const referenceDataQuery = useQuery({
+): HoursDataResult {
+  const referenceData = useQuery({
     queryKey: referenceDataQueryKey,
     queryFn: ({ signal }) => getHoursReferenceData({ signal }),
   });
-  const cyclesQuery = useCycleReferences();
-  const programsQuery = useProgramReferences();
-  const staffQuery = useStaffReferences('hours');
-  const staff = staffQuery.rows;
+  const cycles = useCycleReferences();
+  const programs = useProgramReferences();
+  const staff = useStaffReferences('hours');
   const writableStaff = useMemo(
-    () => staff.filter(staffMember => staffMember.writable),
-    [staff],
+    () => (staff.data ?? []).filter(staffMember => staffMember.writable),
+    [staff.data],
   );
   const staffById = useMemo(
-    () => new Map(staff.map(staffMember => [staffMember.id, staffMember])),
-    [staff],
+    () => new Map((staff.data ?? []).map(staffMember => [staffMember.id, staffMember])),
+    [staff.data],
   );
 
   return {
     staff,
+    programs,
+    cycles,
+    referenceData,
     writableStaff,
     staffById,
-    programs: programsQuery.rows,
-    categories: referenceDataQuery.data?.categories ?? [],
-    types: referenceDataQuery.data?.types ?? [],
     currentUserStaff: currentUserId ? staffById.get(currentUserId) ?? null : null,
-    optionsLoading: referenceDataQuery.isLoading || programsQuery.loading || staffQuery.loading,
-    optionsError: referenceDataQuery.error || programsQuery.error || staffQuery.error,
-    staffError: staffQuery.error,
-    programsError: programsQuery.error,
-    localOptionsError: referenceDataQuery.error,
-    cycles: cyclesQuery.rows,
-    cyclesLoading: cyclesQuery.loading,
-    cyclesError: cyclesQuery.error,
   };
 }

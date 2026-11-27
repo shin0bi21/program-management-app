@@ -32,7 +32,7 @@ export default function AccountModal({ isOpen, ...props }: AccountModalProps) {
  * @example <AccountForm onClose={close} onSuccess={sync} />
  */
 function AccountForm({ account, onClose, onSuccess }: Omit<AccountModalProps, 'isOpen'>) {
-  const { rows: programs, loading: programsLoading } = useProgramReferences();
+  const { data: programs = [], isLoading: programsLoading } = useProgramReferences();
   const { register, control, errors, onSubmit, submitStatus, error } = useAccountModal({ account, onSuccess });
   const isEdit = account !== undefined;
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';

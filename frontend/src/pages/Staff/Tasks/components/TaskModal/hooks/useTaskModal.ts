@@ -1,31 +1,26 @@
 import { useRef, useState, type FormEvent } from 'react';
 
 import { setTask, type SetTaskInput } from '../../../api/tasks.api';
-import type { TaskCategory } from '../../../types';
+import type { Task, TaskModalState } from '../../../types';
 import { getSubmitStatusMessage, useSubmitStatus, type SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
-import type { TaskModalProps } from '../TaskModal';
 
-type UseTaskModalOptions = Pick<TaskModalProps,
-  | 'target'
-  | 'onSaved'
->;
-
-interface TaskDraft {
-  title: string;
-  staffId: string;
-  programId: string;
-  category: TaskCategory | '';
-  startDate: string;
-  dueDate: string;
-  details: string;
+export interface UseTaskModalOptions {
+  target: NonNullable<TaskModalState>;
+  onSaved: (task: Task) => void;
 }
+
+type TaskDraft = Pick<Task, 'title' | 'staffId' | 'startDate' | 'dueDate'> & {
+  programId: string;
+  category: Task['category'] | '';
+  details: string;
+};
 
 interface TaskModalResult {
   draft: TaskDraft;
   updateDraft: <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => void;
-  updateStartDate: (value: string) => void;
+  updateStartDate: (value: Task['startDate']) => void;
   submissionComplete: boolean;
   status: SubmitStatus;
   statusMessage: string | undefined;

@@ -7,7 +7,12 @@ import PageContainer from '../../../common/components/PageContainer/PageContaine
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
-import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+import {
+  getCycleReferences,
+  getProgramReferences,
+  getStaffReferences,
+  type StaffReference,
+} from '../../../common/features/referenceData/referenceData.api';
 import { makeHoursItem } from '../../../tests/factories/hours';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
 import Hours from './Hours';
@@ -17,9 +22,8 @@ import type HoursTable from './components/HoursTable/HoursTable';
 import type useHoursTable from './components/HoursTable/hooks/useHoursTable';
 import type HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
 import type HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
-import { deleteHours, getHoursReferenceData } from './hours.api';
+import { deleteHours, getHoursReferenceData, setHours } from './hours.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
-import type { StaffReference } from './types';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
 vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
@@ -288,6 +292,26 @@ describe('Hours', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(deleteHours).toHaveBeenCalledWith(entry.id));
+  });
+
+  it('updates the mounted calendar after an entry moves or is deleted', async () => {
+    const saved = { ...entry, date: '2026-08-10' };
+    vi.mocked(setHours).mockResolvedValue(saved);
+    vi.mocked(deleteHours).mockResolvedValue({ message: 'Deleted' });
+    renderHours();
+    await screen.findByTestId('hours-calendar');
+    const calendar = children.calendar!;
+    const upsert = vi.fn();
+    const remove = vi.fn();
+    calendar.calendarIndexRef.current = { upsert, remove };
+
+    await act(async () => calendar.onMove(entry, saved.date));
+    expect(upsert).toHaveBeenLastCalledWith(saved);
+
+    act(() => calendar.onDelete(saved));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(remove).toHaveBeenCalledWith(entry.id));
   });
 });
 

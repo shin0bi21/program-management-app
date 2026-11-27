@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-import type { StaffReference } from '../../../types';
+import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { formatShortDateRange } from '../../../../../../common/utils/date';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
@@ -8,15 +8,20 @@ import UnavailableState from '../../../../../../common/components/UnavailableSta
 import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
 
+interface HoursPayPeriodDashboardCardProps {
+  queryKey: readonly unknown[];
+  staff: StaffReference | null;
+}
+
 /**
  * Loads and displays the selected staff member's current pay period, independent of cycle selection.
  * @param props - Staff selection and query namespace.
  * @example <HoursPayPeriodDashboardCard queryKey={['hours']} staff={staff} />
  */
-export default function HoursPayPeriodDashboardCard({ queryKey, staff }: {
-  queryKey: readonly unknown[];
-  staff: StaffReference | null;
-}) {
+export default function HoursPayPeriodDashboardCard({
+  queryKey,
+  staff,
+}: HoursPayPeriodDashboardCardProps): ReactElement {
   const state = useHoursPayPeriodData(queryKey, staff?.id ?? null);
   const error = state.status === 'error' ? state.message : null;
   const retry = state.status === 'error' ? state.retry : undefined;

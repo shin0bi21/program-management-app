@@ -1,5 +1,5 @@
 import { getDate } from '../../../../../common/utils/date';
-import { useCallback, useMemo, type MutableRefObject } from 'react';
+import { useCallback, useMemo, type MutableRefObject, type ReactElement } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
@@ -11,14 +11,17 @@ import type {
   RenderRowContext,
 } from '../../../../../common/components/TimelineCalendar/types';
 import { formatCompactPersonName } from '../../../../../common/utils/name';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
 import type {
-  StaffReference,
+  AddHoursFormContext,
   HoursFilters,
   HoursCalendarIndex,
   Hours,
 } from '../../types';
 import HoursCalendarItem from './HoursItem/HoursItem';
 import useHoursCalendarData from './hooks/useHoursCalendarData';
+
+import './HoursCalendar.css';
 
 const initialDate = getDate();
 const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
@@ -28,13 +31,13 @@ interface HoursCalendarProps {
   filters: HoursFilters;
   canWrite: boolean;
   selectedStaffId?: string;
-  calendarIndexRef: MutableRefObject<HoursCalendarIndex>;
+  calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>;
   isItemPending: (itemId: string) => boolean;
 
   onStaffSelect: (staffId: string) => void;
   onEdit: (target: Hours) => void;
   onDelete: (target: Hours) => void;
-  onAdd: (target: Pick<Hours, 'staffId' | 'date' | 'type'>) => void;
+  onAdd: (context: AddHoursFormContext) => void;
   onMove: (item: Hours, date: Hours['date']) => Promise<void>;
   onMessageChange?: PageMessageChangeHandler;
 }
@@ -57,7 +60,7 @@ export default function HoursCalendar({
   onAdd,
   onMove,
   onMessageChange,
-}: HoursCalendarProps) {
+}: HoursCalendarProps): ReactElement {
   const { staffIds, dateRange } = filters;
   const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef);
 
@@ -168,9 +171,9 @@ function getStaffId(staffMember: StaffReference) {
  */
 function renderStaffRow({ row }: RenderRowContext<StaffReference>) {
   return (
-    <div className="hours-staff">
-      <span aria-label={row.name}>{formatCompactPersonName(row.firstName, row.lastName)}</span>
-    </div>
+    <span className="hours-calendar-staff-name" aria-label={row.name}>
+      {formatCompactPersonName(row.firstName, row.lastName)}
+    </span>
   );
 }
 

@@ -10,22 +10,17 @@ vi.mock('../../youth.api', () => ({
 
 const schoolState = vi.hoisted(() => ({
   schools: [] as Array<{ id: string; name: string }>,
-  upsertSchool: vi.fn(),
-  removeSchool: vi.fn(),
 }));
 
 const authState = vi.hoisted(() => ({
   permissions: ['write:schools'] as string[],
 }));
 
-vi.mock('../../../../common/features/SchoolModal/hooks/useSchools', () => ({
-  useSchools: () => ({
-    schools: schoolState.schools,
-    upsertSchool: schoolState.upsertSchool,
-    removeSchool: schoolState.removeSchool,
-    loading: false,
-    error: '',
-    refetch: vi.fn(),
+vi.mock('../../../../common/features/referenceData/hooks/useReferenceData', () => ({
+  useSchoolReferences: () => ({
+    data: schoolState.schools,
+    isLoading: false,
+    error: null,
   }),
 }));
 
@@ -80,8 +75,6 @@ describe('YouthModal', () => {
     mockSetYouth.mockResolvedValue(makeYouthProfile());
     vi.mocked(setYouthContacts).mockResolvedValue(makeYouthProfile());
     schoolState.schools = [];
-    schoolState.upsertSchool.mockReset();
-    schoolState.removeSchool.mockReset();
     authState.permissions = ['write:schools'];
   });
 
