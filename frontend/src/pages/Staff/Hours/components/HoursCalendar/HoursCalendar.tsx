@@ -2,7 +2,7 @@ import { getDate } from '../../../../../common/utils/date';
 import { useCallback, useMemo, type MutableRefObject, type ReactElement } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
-import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
+import usePageMessageReporter from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type {
   BuildItemContext,
   CalendarCellContext,
@@ -13,7 +13,7 @@ import type {
 import { formatCompactPersonName } from '../../../../../common/utils/name';
 import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
 import type {
-  AddHoursFormContext,
+  HoursActions,
   HoursFilters,
   HoursCalendarIndex,
   Hours,
@@ -32,14 +32,9 @@ interface HoursCalendarProps {
   canWrite: boolean;
   selectedStaffId?: string;
   calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>;
-  isItemPending: (itemId: string) => boolean;
+  actions: HoursActions;
 
   onStaffSelect: (staffId: string) => void;
-  onEdit: (target: Hours) => void;
-  onDelete: (target: Hours) => void;
-  onAdd: (context: AddHoursFormContext) => void;
-  onMove: (item: Hours, date: Hours['date']) => Promise<void>;
-  onMessageChange?: PageMessageChangeHandler;
 }
 
 /**
@@ -52,20 +47,15 @@ export default function HoursCalendar({
   canWrite,
   selectedStaffId,
   calendarIndexRef,
-  isItemPending,
+  actions,
 
   onStaffSelect,
-  onEdit,
-  onDelete,
-  onAdd,
-  onMove,
-  onMessageChange,
 }: HoursCalendarProps): ReactElement {
   const { staffIds, dateRange } = filters;
-  const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef);
+  const calendar = useHoursCalendarData(filters, calendarIndexRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
-  usePageMessageReporter(onMessageChange, calendar.error, retryAction);
+  usePageMessageReporter(undefined, calendar.error, retryAction);
 
   const visibleStaff = useMemo(() => {
     if (!staffIds.length) return staff;
@@ -79,17 +69,17 @@ export default function HoursCalendar({
     calendar: itemCalendar,
   }: BuildItemContext<StaffReference, Hours>) => {
     const entry = data;
-    const canModifyEntry = canWrite && row.writable && !isItemPending(entry.id);
+    const canModifyEntry = canWrite && row.writable && !actions.isItemPending(entry.id);
 
     return (
       <HoursCalendarItem
         calendar={itemCalendar}
         item={entry}
-        onEdit={canModifyEntry ? () => onEdit(entry) : undefined}
-        onDelete={canModifyEntry ? () => onDelete(entry) : undefined}
+        onEdit={canModifyEntry ? () => actions.edit(entry) : undefined}
+        onDelete={canModifyEntry ? () => actions.requestDelete(entry) : undefined}
       />
     );
-  }, [canWrite, isItemPending, onDelete, onEdit]);
+  }, [actions, canWrite]);
 
   /**
    * Allows dragging only writable entries without session-owned placement or pending changes.
@@ -97,7 +87,7 @@ export default function HoursCalendar({
    */
   function getItemCapabilities({ row, data }: ItemCapabilityContext<StaffReference, Hours>) {
     const entry = data;
-    const draggable = canWrite && row.writable && !entry.sessionId && !isItemPending(entry.id);
+    const draggable = canWrite && row.writable && !entry.sessionId && !actions.isItemPending(entry.id);
 
     return { draggable };
   }
@@ -107,7 +97,7 @@ export default function HoursCalendar({
    * @example moveHours(context) // saves context.nextRange.start
    */
   function moveHours({ item, nextRange }: ItemMoveContext<StaffReference, Hours>) {
-    return onMove(item, nextRange.start);
+    return actions.move(item, nextRange.start);
   }
 
   /**
@@ -120,9 +110,9 @@ export default function HoursCalendar({
     const target = { staffId: row.id, date: period.key };
 
     return [
-      { id: 'session', label: 'Session Hours', onSelect: () => onAdd({ ...target, type: 'session' }) },
-      { id: 'task', label: 'Task Hours', onSelect: () => onAdd({ ...target, type: 'task' }) },
-      { id: 'regular', label: 'Regular Hours', onSelect: () => onAdd({ ...target, type: 'regular' }) },
+      { id: 'session', label: 'Session Hours', onSelect: () => actions.add({ ...target, type: 'session' }) },
+      { id: 'task', label: 'Task Hours', onSelect: () => actions.add({ ...target, type: 'task' }) },
+      { id: 'regular', label: 'Regular Hours', onSelect: () => actions.add({ ...target, type: 'regular' }) },
     ];
   }
 
@@ -147,7 +137,7 @@ export default function HoursCalendar({
       selectedRowId={selectedStaffId}
       onRowSelect={row => onStaffSelect(row.id)}
 
-      items={visibleItems}
+      items={calendar.items}
       getItemId={getHoursItemId}
       getItemRange={getHoursItemRange}
       buildItem={buildItem}

@@ -274,7 +274,7 @@ describe('Tasks', () => {
     act(() => children.table!.onTaskSelect(task));
     act(() => children.hoursCard!.onLogHours!());
 
-    expect(children.hoursModal?.task).toBe(task);
+    expect(children.hoursModal?.target).toEqual({ mode: 'task', task });
   });
 
   it('reopens a completed task through the route action workflow', async () => {
@@ -322,9 +322,9 @@ describe('Tasks', () => {
     const input = { type: 'task' as const, staffId: task.staffId, taskId: task.id,
       date: task.startDate, hours: 1, note: 'Done' };
 
-    await act(async () => children.hoursModal!.onAdd(input, true));
+    await act(async () => children.hoursModal!.onSave(input, true));
 
-    expect(children.hoursModal?.task).toBe(completedTask);
+    expect(children.hoursModal?.target).toEqual({ mode: 'task', task: completedTask });
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 
     act(() => children.hoursModal!.onClose());

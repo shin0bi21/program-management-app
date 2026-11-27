@@ -220,14 +220,13 @@ export default function Tasks(): ReactElement {
     />}
 
     {hoursModalTask && <HoursModal
-      isOpen
-      task={hoursModalTask}
+      target={{ mode: 'task', task: hoursModalTask }}
       canCompleteTask={canWrite}
       staff={staffRows}
       programs={programs.data ?? []}
       categories={categories}
       loadTasks={getOpenTasks}
-      onAdd={actions.logHours}
+      onSave={actions.logHours}
       onClose={closeHoursModal}
     />}
 

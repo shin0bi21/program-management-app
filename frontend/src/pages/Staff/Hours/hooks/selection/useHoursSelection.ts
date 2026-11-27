@@ -5,7 +5,7 @@ import type { Hours } from '../../types';
 
 interface UseHoursSelectionOptions {
   staff: readonly StaffReference[];
-  currentUserStaff: StaffReference | null;
+  currentUserId?: Hours['staffId'];
 }
 
 interface HoursSelectionResult {
@@ -17,12 +17,12 @@ interface HoursSelectionResult {
 
 /**
  * Tracks shared staff selection and the last clicked entry’s row ID.
- * @param options - Visible staff and the current user's default staff member.
+ * @param options - Visible staff and the signed-in user's ID for default selection.
  * @example selection.selectRow(entry) // selects its staff member
  */
 export default function useHoursSelection({
   staff,
-  currentUserStaff,
+  currentUserId,
 }: UseHoursSelectionOptions): HoursSelectionResult {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
@@ -38,7 +38,8 @@ export default function useHoursSelection({
   }, []);
 
   const selectedStaff = staff.find(staffMember => staffMember.id === selectedStaffId)
-    ?? currentUserStaff;
+    ?? staff.find(staffMember => staffMember.id === currentUserId)
+    ?? null;
 
   return {
     selectedRowId,

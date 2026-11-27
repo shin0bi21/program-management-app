@@ -5,6 +5,7 @@ import usePageMessageReporter from '../../../../../../common/components/PageMess
 import { formatShortDateRange } from '../../../../../../common/utils/date';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
+import { getErrorMessage } from '../../../../../../http/errors';
 import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
 
@@ -22,12 +23,14 @@ export default function HoursPayPeriodDashboardCard({
   queryKey,
   staff,
 }: HoursPayPeriodDashboardCardProps): ReactElement {
-  const state = useHoursPayPeriodData(queryKey, staff?.id ?? null);
-  const error = state.status === 'error' ? state.message : null;
-  const retry = state.status === 'error' ? state.retry : undefined;
-  usePageMessageReporter(undefined, error, retry ? { label: 'Retry', onClick: retry } : undefined);
+  const staffId = staff?.id ?? null;
+  const query = useHoursPayPeriodData(queryKey, staffId);
+  const queryError = staffId ? query.error : null;
+  const error = queryError ? getErrorMessage(queryError, 'Could not load pay-period hours.') : null;
+  usePageMessageReporter(undefined, error, queryError ? { label: 'Retry', onClick: query.refetch } : undefined);
 
-  const payPeriod = state.status === 'ready' ? state.data : null;
+  const payPeriod = staffId && !queryError ? query.data : undefined;
+  const loading = Boolean(staffId && !queryError && !payPeriod);
   const payPeriodLabel = payPeriod ? formatShortDateRange(payPeriod.periodStart, payPeriod.periodEnd) : null;
   const breakdownData = payPeriod ? {
     total: payPeriod.totalHours,
@@ -37,15 +40,15 @@ export default function HoursPayPeriodDashboardCard({
   } : null;
 
   let content: ReactNode;
-  if (state.status === 'error') {
-    content = <UnavailableState compact title="Pay-period hours unavailable" onRetry={state.retry} />;
-  } else if (state.status === 'unavailable') {
+  if (queryError) {
+    content = <UnavailableState compact title="Pay-period hours unavailable" onRetry={query.refetch} />;
+  } else if (!staffId) {
     content = <p className="dashboard-card__empty">Select a staff member to view their pay-period hours.</p>;
   }
 
   return <DashboardCard
     title="Hours This Pay Period"
-    loading={state.status === 'loading'}
+    loading={loading}
     className="dashboard-card--short"
     details={[
       { label: 'Current Pay Period', value: payPeriodLabel },
@@ -54,7 +57,6 @@ export default function HoursPayPeriodDashboardCard({
     action={<HoursBreakdown
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, payPeriod?.periodStart])}
-      disabled={state.status !== 'ready'}
     />}
   >
     {content}

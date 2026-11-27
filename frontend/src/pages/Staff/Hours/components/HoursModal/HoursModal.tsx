@@ -1,67 +1,60 @@
+import type { ReactElement } from 'react';
 import Button from '../../../../../common/components/Button/Button';
 import FloatingSelect from '../../../../../common/components/FloatingSelect/FloatingSelect';
 import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { getSubmitStatusMessage } from '../../../../../common/hooks/useSubmitStatus';
+import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { HoursReferenceData } from '../../hours.api';
 import type { HoursCategory } from '../../types';
-import useHoursModal, { type UseHoursModalOptions } from './hooks/useHoursModal';
+import useHoursModal, { type HoursFormTarget, type UseHoursModalOptions } from './hooks/useHoursModal';
 import './HoursModal.css';
 
-interface HoursModalProps extends UseHoursModalOptions {
-  isOpen: boolean;
+type HoursFormProps = UseHoursModalOptions & {
   onClose: () => void;
-  categories: ReadonlyArray<{ id: HoursCategory; name: string }>;
-}
+  staff: readonly StaffReference[];
+  programs: readonly ProgramReference[];
+  categories: Readonly<HoursReferenceData['categories']>;
+};
+
+type HoursModalProps = Omit<HoursFormProps, 'target'> & { target: HoursFormTarget | null };
 
 /**
  * Mounts an Hours form only while its add/edit interaction is open.
  * Saved entries and contextual staff/task targets lock staff; other additions default to the signed-in staff member.
  * @param props - Visibility, supplied entry/context, page references and save/close callbacks.
- * @example <HoursModal isOpen item={entry} {...options} />
+ * @example <HoursModal target={{ mode: 'edit', item }} {...options} />
  */
-export default function HoursModal({ isOpen, ...props }: HoursModalProps) {
-  if (!isOpen) return null;
+export default function HoursModal({ target, ...props }: HoursModalProps): ReactElement | null {
+  if (!target) return null;
 
   let targetKey = 'new';
-  if (props.task) targetKey = `task:${props.task.id}`;
-  if (props.item) targetKey = `entry:${props.item.id}`;
-  return <HoursForm key={targetKey} {...props} />;
+  if (target.mode === 'task') targetKey = `task:${target.task.id}`;
+  if (target.mode === 'edit') targetKey = `entry:${target.item.id}`;
+  return <HoursForm key={targetKey} target={target} {...props} />;
 }
 
 /** Owns the mounted Hours form and its draft. @example <HoursForm {...options} /> */
 function HoursForm({
   staff,
   programs,
+  target,
   loadTasks,
   onClose,
-  onAdd,
-  staffId,
-  date,
-  type = 'regular',
-  task,
-  item,
+  onSave,
   canCompleteTask = false,
   categories,
-}: Omit<HoursModalProps, 'isOpen'>) {
-  const workflow = useHoursModal({
-    staff,
-    programs,
-    loadTasks,
-    onAdd,
-    staffId,
-    date,
-    type,
-    task,
-    item,
-    canCompleteTask,
-  });
+}: HoursFormProps) {
+  const workflow = useHoursModal({ target, loadTasks, onSave, canCompleteTask });
   const { draft } = workflow;
   const submissionComplete = workflow.submitting || workflow.submitStatus === 'success';
   const isTaskEntry = draft.type === 'task';
   const isSessionEntry = draft.type === 'session';
   const isRegularEntry = draft.type === 'regular';
-  const staffLocked = Boolean(item || task || staffId);
-  const sessionDateLocked = isSessionEntry && Boolean(item || date);
+  const isEdit = target.mode === 'edit';
+  const addContext = target.mode === 'add' ? target.context : undefined;
+  const staffLocked = target.mode !== 'add' || Boolean(addContext?.staffId);
+  const sessionDateLocked = isSessionEntry && (isEdit || Boolean(addContext?.date));
   const sourceMissing = (isTaskEntry && !draft.taskId) || (isSessionEntry && !draft.sessionId);
   const submitDisabled = submissionComplete || !staff.length || !draft.staffId || sourceMissing;
   let sessionPlaceholder = workflow.sessionOptions.length ? 'Select session' : 'No sessions on this date';
@@ -71,8 +64,8 @@ function HoursForm({
     workflow.submitStatus,
     workflow.error,
     {
-      submitting: item ? 'Updating logged hours...' : 'Logging hours...',
-      success: item ? 'Logged hours updated.' : 'Hours logged successfully.',
+      submitting: isEdit ? 'Updating logged hours...' : 'Logging hours...',
+      success: isEdit ? 'Logged hours updated.' : 'Hours logged successfully.',
     },
   );
 
@@ -93,7 +86,7 @@ function HoursForm({
     <Modal
       isOpen
       onClose={onClose}
-      title={item ? 'Edit Logged Hours' : 'Log Hours'}
+      title={isEdit ? 'Edit Logged Hours' : 'Log Hours'}
       maxWidth="620px"
       status={workflow.submitStatus}
       statusMessage={statusMessage}
@@ -136,7 +129,7 @@ function HoursForm({
           </div>
         )}
 
-        {isTaskEntry && !item && canCompleteTask && (
+        {isTaskEntry && !isEdit && canCompleteTask && (
           <label className="hours-form__complete-task">
             <input
               type="checkbox"

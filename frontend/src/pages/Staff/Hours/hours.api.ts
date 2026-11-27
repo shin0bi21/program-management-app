@@ -8,7 +8,6 @@ import type {
   HoursCategory,
   Hours,
   HoursFilters,
-  HoursItemType,
 } from './types';
 
 export type HoursMutationResult = Hours & { updatedTasks?: Task[] };
@@ -18,7 +17,7 @@ type SessionOption = Pick<Session, 'id' | 'date' | 'title'>;
 
 export interface HoursReferenceData {
   categories: Array<{ id: HoursCategory; name: string }>;
-  types: Array<{ id: HoursItemType; name: string }>;
+  types: Array<{ id: Hours['type']; name: string }>;
 }
 
 export interface HoursPayPeriodData {
@@ -28,7 +27,7 @@ export interface HoursPayPeriodData {
   breakdown: Array<{ label: string; hours: number }>;
 }
 
-interface HoursCycleSummaryData {
+export interface HoursCycleSummaryData {
   periodCount: number;
   averageHours: number;
   breakdown: Array<{ label: string; hours: number }>;

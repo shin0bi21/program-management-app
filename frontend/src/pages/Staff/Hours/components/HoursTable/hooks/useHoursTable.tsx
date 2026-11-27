@@ -3,17 +3,15 @@ import { useMemo } from 'react';
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
 import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
-import type { Hours } from '../../../types';
+import type { Hours, HoursActions } from '../../../types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import { HOURS_ITEM_TYPE_LABELS } from '../../../utils/hoursItemType';
 import HoursTypeLabel from '../../HoursTypeLabel/HoursTypeLabel';
 
 interface UseHoursTableOptions {
   canWrite: boolean;
-  staffById: ReadonlyMap<Hours['staffId'], StaffReference>;
-  isItemPending: (itemId: Hours['id']) => boolean;
-  onEdit: (target: Hours) => void;
-  onDelete: (target: Hours) => void;
+  staff: readonly StaffReference[] | undefined;
+  actions: HoursActions;
 }
 
 interface HoursTableResult {
@@ -27,11 +25,11 @@ interface HoursTableResult {
  */
 export default function useHoursTable({
   canWrite,
-  staffById,
-  isItemPending,
-  onEdit,
-  onDelete,
+  staff,
+  actions,
 }: UseHoursTableOptions): HoursTableResult {
+  const staffById = useMemo(() => new Map((staff ?? []).map(member => [member.id, member])), [staff]);
+
   const columns = useMemo<TableColumnDef<Hours>[]>(() => {
     /**
      * Displays edit/delete actions when the entry's staff member is writable and the entry is settled.
@@ -39,12 +37,12 @@ export default function useHoursTable({
      * @example An entry belonging to a read-only staffMember returns null.
      */
     function renderActionsMenu(row: Hours) {
-      if (!staffById.get(row.staffId)?.writable || isItemPending(row.id)) return null;
+      if (!staffById.get(row.staffId)?.writable || actions.isItemPending(row.id)) return null;
       return <ActionsMenu
         ariaLabel={`Actions for ${row.taskTitle ?? row.categoryLabel} on ${row.date}`}
         items={[
-          { id: 'edit', label: 'Edit', onClick: () => onEdit(row) },
-          { id: 'delete', label: 'Delete', variant: 'danger', onClick: () => onDelete(row) },
+          { id: 'edit', label: 'Edit', onClick: () => actions.edit(row) },
+          { id: 'delete', label: 'Delete', variant: 'danger', onClick: () => actions.requestDelete(row) },
         ]}
       />;
     }
@@ -83,7 +81,7 @@ export default function useHoursTable({
     }
 
     return tableColumns;
-  }, [canWrite, isItemPending, onDelete, onEdit, staffById]);
+  }, [actions, canWrite, staffById]);
 
   return { columns };
 }

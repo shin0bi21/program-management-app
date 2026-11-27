@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getHoursPayPeriodData } from '../../../../hours.api';
-import { getErrorMessage } from '../../../../../../../http/errors';
+import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../../hours.api';
+import type { Hours } from '../../../../types';
 
 /**
  * Queries one staff member's pay-period totals independently of cycle selection.
@@ -12,24 +12,12 @@ import { getErrorMessage } from '../../../../../../../http/errors';
  */
 export default function useHoursPayPeriodData(
   queryKey: readonly unknown[],
-  staffId: string | null,
-  date: string | null = null,
-) {
-  const query = useQuery({
+  staffId: Hours['staffId'] | null,
+  date: Hours['date'] | null = null,
+): UseQueryResult<HoursPayPeriodData> {
+  return useQuery({
     queryKey: [...queryKey, 'dashboard', 'pay-period', staffId, date],
     queryFn: ({ signal }) => getHoursPayPeriodData(staffId!, date, { signal }),
     enabled: Boolean(staffId),
   });
-
-  if (!staffId) return { status: 'unavailable' } as const;
-  if (query.isLoading) return { status: 'loading' } as const;
-  if (query.error) return {
-    status: 'error',
-    message: getErrorMessage(query.error, 'Could not load pay-period hours.'),
-    retry: query.refetch,
-  } as const;
-
-  return query.data
-    ? { status: 'ready', data: query.data } as const
-    : { status: 'loading' } as const;
 }
