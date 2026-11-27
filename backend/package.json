@@ -13,7 +13,7 @@
     "test:youth": "jest --testPathPatterns=tests/youth",
     "test:schools": "jest --testPathPatterns=tests/schools",
     "test:programs": "jest --testPathPatterns=tests/programs",
-    "test:sessions": "jest --testPathPatterns='tests/sessions|src/services/programming/sessions/'",
+    "test:sessions": "jest --testPathPatterns='src/(services/programming/sessions/|routes/sessionRoutes[.]test[.]ts$)'",
     "test:homepage": "jest --testPathPatterns=tests/homepage",
     "test:preferences": "jest --testPathPatterns=tests/preferences",
     "test:hours": "jest --testPathPatterns='src/(services/staff/hours/|routes/hoursRoutes[.]test[.]ts$)'",
