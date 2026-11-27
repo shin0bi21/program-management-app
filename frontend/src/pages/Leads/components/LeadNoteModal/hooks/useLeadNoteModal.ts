@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import {
@@ -9,6 +9,10 @@ import { getErrorMessage } from '../../../../../http/errors';
 
 import { createLeadNote, updateLeadNote } from '../../../leads.api';
 import type { Lead, LeadNote } from '../../../types';
+
+interface LeadNoteDraft {
+  details: string;
+}
 
 interface UseLeadNoteModalOptions {
   lead: Pick<Lead, 'id'>;
@@ -26,7 +30,9 @@ export default function useLeadNoteModal({
   note,
   onSaved,
 }: UseLeadNoteModalOptions) {
-  const [details, setDetails] = useState(note?.details ?? '');
+  const { register, setValue, handleSubmit } = useForm<LeadNoteDraft>({
+    defaultValues: { details: note?.details ?? '' },
+  });
   const submitLock = useSubmitLock();
 
   const {
@@ -36,7 +42,8 @@ export default function useLeadNoteModal({
     setError,
   } = useSubmitStatus();
 
-  const submit = async () => {
+  /** Saves validated note values for this editor. @example await saveNote(draft) */
+  async function saveNote({ details }: LeadNoteDraft): Promise<void> {
     const normalizedDetails = details.trim();
     if (!normalizedDetails) {
       setError('Enter a follow-up note.');
@@ -67,7 +74,7 @@ export default function useLeadNoteModal({
 
     setSubmitStatus('success');
     onSaved(result);
-  };
+  }
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
@@ -76,11 +83,11 @@ export default function useLeadNoteModal({
   });
 
   return {
-    details,
-    updateDetails: setDetails,
+    detailsField: register('details'),
+    setValue,
     submitStatus,
     statusMessage,
     submissionComplete,
-    submit,
+    submit: handleSubmit(saveNote),
   };
 }

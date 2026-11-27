@@ -38,7 +38,7 @@ describe('useProfileNoteModal', () => {
       details: 'Allergy plan: carry medication.',
     });
     act(() => {
-      result.current.updateDetails('  Updated details.  ');
+      result.current.setValue('details', '  Updated details.  ');
     });
     await act(async () => result.current.submit());
 
@@ -55,7 +55,7 @@ describe('useProfileNoteModal', () => {
       onSaved: vi.fn(),
     }));
 
-    act(() => { result.current.updateDetails('Check in'); result.current.selectCategory('general'); });
+    act(() => { result.current.setValue('details', 'Check in'); result.current.selectCategory('general'); });
     await act(async () => result.current.submit());
 
     expect(setYouthProfileNote).toHaveBeenCalledWith('youth-1', {
@@ -84,7 +84,7 @@ describe('useProfileNoteModal', () => {
       youthId: 'youth-1',
       onSaved,
     }));
-    act(() => { result.current.updateDetails('Retry this note'); result.current.selectCategory('general'); });
+    act(() => { result.current.setValue('details', 'Retry this note'); result.current.selectCategory('general'); });
 
     await act(async () => result.current.submit());
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { createProgram, updateProgram, type CreateProgramInput, type ProgramMutationResult } from '../../../api/programs.api';
 import type { Program, ProgramWeekday } from '../../../types';
@@ -33,7 +34,7 @@ type ParsedAges =
  * @example useProgramModal({ program: null, onSaved }) // empty new-program draft
  */
 export default function useProgramModal({ program, onSaved }: UseProgramModalOptions) {
-  const [draft, setDraft] = useState<ProgramDraft>(() => ({
+  const { register, watch, setValue, handleSubmit } = useForm<ProgramDraft>({ defaultValues: {
     title: program?.title ?? '',
     description: program?.description ?? '',
     minAge: program?.minAge == null ? '' : String(program.minAge),
@@ -43,19 +44,13 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
     defaultEndTime: program?.defaultEndTime ?? '',
     timezone: program?.timezone ?? 'America/Toronto',
     enrollmentRequired: program?.enrollmentRequired ?? false,
-  }));
+  } });
+  const draft = watch();
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
 
-  const updateDraft = <Key extends keyof ProgramDraft>(
-    key: Key,
-    value: ProgramDraft[Key],
-  ) => {
-    setDraft(current => ({ ...current, [key]: value }));
-  };
-
-  const submit = async () => {
+  const submit = handleSubmit(async draft => {
     const title = draft.title.trim();
     if (!title) {
       setSubmitStatus('error');
@@ -115,14 +110,15 @@ export default function useProgramModal({ program, onSaved }: UseProgramModalOpt
     onSaved(saved, program ? 'update' : 'create');
     setStatusMessage(program ? 'Program updated successfully.' : 'Program added successfully.');
     setSubmitStatus('success');
-  };
+  });
 
   return {
     draft,
+    register,
     submitStatus,
     statusMessage: statusMessage || undefined,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
-    updateDraft,
+    setValue,
     submit,
   };
 }

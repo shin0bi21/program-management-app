@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useForm, type UseFormHandleSubmit, type UseFormRegister, type UseFormSetValue } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { getUser } from '../../../../../../auth/storage';
 
@@ -42,6 +42,8 @@ export type UseHoursModalOptions = {
 
 interface HoursModalResult {
   draft: HoursDraft;
+  register: UseFormRegister<HoursDraft>;
+  setValue: UseFormSetValue<HoursDraft>;
   taskLocked: boolean;
   taskOptions: readonly Pick<Task, 'id' | 'title'>[];
   tasksLoading: boolean;
@@ -53,15 +55,9 @@ interface HoursModalResult {
   submitting: boolean;
   error: string;
   selectStaff: (staffId: HoursDraft['staffId']) => void;
-  selectProgram: (programId: HoursDraft['programId']) => void;
-  selectCategory: (category: Exclude<HoursCategory, 'program_delivery'>) => void;
-  selectTask: (taskId: HoursDraft['taskId']) => void;
   selectSession: (sessionId: HoursDraft['sessionId']) => void;
   updateDate: (date: HoursDraft['date']) => void;
-  updateHours: (hours: HoursDraft['hours']) => void;
-  updateNote: (note: HoursDraft['note']) => void;
-  setCompleteTask: (completeTask: boolean) => void;
-  submit: (event: FormEvent) => Promise<void>;
+  submit: ReturnType<UseFormHandleSubmit<HoursDraft>>;
 }
 
 /**
@@ -74,10 +70,9 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
   const item = target.mode === 'edit' ? target.item : undefined;
   const task = target.mode === 'task' ? target.task : undefined;
   const context = target.mode === 'add' ? target.context : undefined;
-  const [draft, setDraft] = useState<HoursDraft>(() => {
-    const type = task ? 'task' : item?.type ?? context?.type ?? 'regular';
-
-    return {
+  const type = task ? 'task' : item?.type ?? context?.type ?? 'regular';
+  const { register, watch, getValues, setValue, handleSubmit } = useForm<HoursDraft>({
+    defaultValues: {
       type,
 
       staffId: item?.staffId ?? task?.staffId ?? context?.staffId ?? getUser()?.id ?? '',
@@ -89,8 +84,9 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
       date: item?.date ?? context?.date ?? getDate(),
       hours: item ? String(item.hours) : '',
       note: item?.note ?? '',
-    };
+    },
   });
+  const draft = watch();
   const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const taskLocked = Boolean(task);
   const submitting = submitStatus === 'submitting';
@@ -115,46 +111,22 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
 
   // Dependent field events.
   const selectStaff = (staffId: string) => {
-    setDraft(current => ({ ...current, staffId, taskId: '', sessionId: '' }));
-  };
-  const selectProgram = (programId: string) => {
-    setDraft(current => ({ ...current, programId }));
-  };
-  const selectCategory = (category: Exclude<HoursCategory, 'program_delivery'>) => {
-    setDraft(current => ({ ...current, category }));
-  };
-  const selectTask = (taskId: string) => {
-    setDraft(current => ({ ...current, taskId }));
+    setValue('staffId', staffId);
+    setValue('taskId', '');
+    setValue('sessionId', '');
   };
   const selectSession = (sessionId: string) => {
     const session = sessionOptions.find(option => option.id === sessionId);
-    setDraft(current => ({
-      ...current,
-      sessionId,
-      date: session?.date ?? current.date,
-    }));
+    setValue('sessionId', sessionId);
+    if (session) setValue('date', session.date);
   };
   const updateDate = (date: string) => {
-    setDraft(current => ({
-      ...current,
-      date,
-      sessionId: current.type === 'session' ? '' : current.sessionId,
-    }));
-  };
-  const updateHours = (hours: string) => {
-    setDraft(current => ({ ...current, hours }));
-  };
-  const updateNote = (note: string) => {
-    setDraft(current => ({ ...current, note }));
-  };
-  const setCompleteTask = (completeTask: boolean) => {
-    setDraft(current => ({ ...current, completeTask }));
+    setValue('date', date);
+    if (getValues('type') === 'session') setValue('sessionId', '');
   };
 
   // Submission boundary.
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-
+  const submit = handleSubmit(async draft => {
     const validationError = getDraftError(draft);
     if (validationError) {
       setError(validationError);
@@ -213,10 +185,12 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
     } finally {
       submitLock.unlock();
     }
-  };
+  });
 
   return {
     draft,
+    register,
+    setValue,
     taskLocked,
     taskOptions,
     tasksLoading: taskQuery.isLoading,
@@ -228,14 +202,8 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
     submitting,
     error,
     selectStaff,
-    selectProgram,
-    selectCategory,
-    selectTask,
     selectSession,
     updateDate,
-    updateHours,
-    updateNote,
-    setCompleteTask,
     submit,
   };
 }

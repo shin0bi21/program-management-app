@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/programCycleAssignmentCache';
 import { setProgramRoster, type ProgramRosterYouth, type RosterMutationResult } from '../../../api/programCycleAssignments.api';
@@ -22,9 +23,12 @@ interface UseManageRosterModalOptions {
 export function useManageRosterModal({ assignment, youth, refresh, onSuccess }: UseManageRosterModalOptions) {
   const queryClient = useQueryClient();
   const { tryLock, unlock } = useSubmitLock();
-  const [selectedYouthIds, setSelectedYouthIds] = useState(() => youth.filter(profile => profile.programCycles.some(
-    enrollment => enrollment.programId === assignment.programId && enrollment.cycleId === assignment.cycleId && enrollment.withdrawnOn === null,
-  )).map(profile => profile.id));
+  const { watch, getValues, setValue, handleSubmit, formState: { isSubmitting } } = useForm({
+    defaultValues: { selectedYouthIds: youth.filter(profile => profile.programCycles.some(
+      enrollment => enrollment.programId === assignment.programId && enrollment.cycleId === assignment.cycleId && enrollment.withdrawnOn === null,
+    )).map(profile => profile.id) },
+  });
+  const selectedYouthIds = watch('selectedYouthIds');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const locked = submitStatus === 'submitting' || submitStatus === 'success';
@@ -35,17 +39,16 @@ export function useManageRosterModal({ assignment, youth, refresh, onSuccess }: 
    * @example Toggling an enrolled youth removes their ID from the pending payload.
    */
   const toggleYouth = (youthId: string) => {
-    if (locked) return;
-    setSelectedYouthIds(current => current.includes(youthId)
-      ? current.filter(id => id !== youthId)
-      : [...current, youthId]);
+    if (locked || isSubmitting) return;
+    const ids = getValues('selectedYouthIds');
+    setValue('selectedYouthIds', ids.includes(youthId) ? ids.filter(id => id !== youthId) : [...ids, youthId]);
   };
 
   /**
    * Saves the complete roster in one request and reconciles the authoritative response.
    * @example Repeated submissions while saving send only one request.
    */
-  const submit = async () => {
+  const submit = handleSubmit(async ({ selectedYouthIds }) => {
     if (!tryLock()) return;
     setSubmitStatus('submitting');
     setStatusMessage('Saving roster...');
@@ -72,7 +75,7 @@ export function useManageRosterModal({ assignment, youth, refresh, onSuccess }: 
 
     setSubmitStatus('success');
     setStatusMessage('Roster saved.');
-  };
+  });
 
   return { selectedYouthIds, toggleYouth, submit, submitStatus, statusMessage, locked };
 }

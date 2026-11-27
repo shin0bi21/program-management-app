@@ -1,5 +1,6 @@
 import { getAge } from '../../../../common/utils/time';
 import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 
 import { getProgramCycleAssignments } from '../../../Programming/Programs/api/programCycleAssignments.api';
@@ -37,9 +38,14 @@ export default function useSignUpLeadModal({
   lead,
   onSuccess,
 }: UseSignUpLeadModalOptions) {
-  const [dateOfBirth, setDateOfBirth] = useState(lead.dateOfBirth ?? '');
-  const [selectedPairKey, setSelectedPairKey] = useState('');
-  const [noteCategory, setNoteCategory] = useState<LeadNoteCategory | ''>('');
+  const { watch, setValue, handleSubmit } = useForm({
+    defaultValues: {
+      dateOfBirth: lead.dateOfBirth ?? '',
+      selectedPairKey: '',
+      noteCategory: '' as LeadNoteCategory | '',
+    },
+  });
+  const { dateOfBirth, selectedPairKey, noteCategory } = watch();
   const age = getAge(dateOfBirth);
   const [successMessage, setSuccessMessage] = useState('');
   const [showAllPrograms, setShowAllPrograms] = useState(false);
@@ -80,7 +86,7 @@ export default function useSignUpLeadModal({
    * Revalidates the current draft and creates the profile before refreshing its owner.
    * @example await submit() // reports validation, save, or refresh feedback
    */
-  const submit = async () => {
+  const submit = handleSubmit(async ({ dateOfBirth, selectedPairKey, noteCategory }) => {
     const birthDateResult = outreachFormSchema.shape.dateOfBirth.safeParse(dateOfBirth);
     if (!birthDateResult.success) {
       setError(birthDateResult.error.issues[0].message);
@@ -131,7 +137,7 @@ export default function useSignUpLeadModal({
 
     setSuccessMessage(nextSuccessMessage);
     setSubmitStatus('success');
-  };
+  });
 
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
   const statusMessage = getSubmitStatusMessage(submitStatus, error, {
@@ -143,13 +149,13 @@ export default function useSignUpLeadModal({
     dateOfBirth,
     age,
     changeDateOfBirth: (value: string) => {
-      setDateOfBirth(value);
-      setSelectedPairKey('');
+      setValue('dateOfBirth', value);
+      setValue('selectedPairKey', '');
     },
     selectedPairKey,
-    selectProgramCycle: setSelectedPairKey,
+    selectProgramCycle: (key: string) => setValue('selectedPairKey', key),
     noteCategory,
-    selectNoteCategory: setNoteCategory,
+    selectNoteCategory: (category: LeadNoteCategory) => setValue('noteCategory', category),
     programCycles,
     visibleProgramCycles,
     showAllPrograms,

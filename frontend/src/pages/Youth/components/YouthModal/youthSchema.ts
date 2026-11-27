@@ -1,5 +1,12 @@
 import { z } from 'zod';
+import { contactRelationships } from '../../../../common/features/contacts/types';
 import { outreachFormSchema } from '../../../../common/features/OutreachForm/outreachFormSchema';
+
+const contacts = z.array(z.object({
+  id: z.string(),
+  phoneNumber: z.string(),
+  type: z.enum(contactRelationships),
+}));
 
 export const youthSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required').max(120, 'First name is too long'),
@@ -14,6 +21,7 @@ export const youthSchema = z.object({
     message: 'Street address is required',
     path: ['address'],
   })).optional(),
+  contacts,
 });
 
 export type YouthFormData = z.infer<typeof youthSchema>;
@@ -24,4 +32,5 @@ export const youthContactSchema = z.object({
   email: z.string(),
   dateOfBirth: z.string(),
   schoolId: z.string().optional(),
+  contacts,
 });

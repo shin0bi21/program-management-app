@@ -1,19 +1,15 @@
 // Scope: verifies the password step's field, error, and submission wiring.
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import PasswordStep from './PasswordStep';
 
 describe('PasswordStep', () => {
-  it('renders authentication context and submits the entered password', () => {
-    const onPasswordChange = vi.fn();
+  it('renders authentication context and submits the entered password', async () => {
     const onSubmit = vi.fn();
 
     render(<PasswordStep
       email="staff@example.com"
-      password="secret"
       error="Try again"
-      submitting={false}
-      onPasswordChange={onPasswordChange}
       onSubmit={onSubmit}
     />);
 
@@ -23,7 +19,6 @@ describe('PasswordStep', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'updated-secret' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Continue' }).closest('form')!);
 
-    expect(onPasswordChange).toHaveBeenCalledWith('updated-secret');
-    expect(onSubmit).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith('updated-secret'));
   });
 });

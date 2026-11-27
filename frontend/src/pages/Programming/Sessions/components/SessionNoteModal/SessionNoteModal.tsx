@@ -51,11 +51,10 @@ function SessionNoteForm({
       categoryLabel="Category"
       category={workflow.draft.category}
       categoryOptions={sessionNoteCategoryOptions}
-      details={workflow.draft.details}
+      detailsField={workflow.detailsField}
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       onCategoryChange={value => workflow.updateCategory(value as SessionNoteCategory)}
-      onDetailsChange={workflow.updateDetails}
       onSubmit={workflow.submit}
       onClose={onClose}
     >

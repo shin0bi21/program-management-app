@@ -55,10 +55,7 @@ function AttendanceForm({ session, roster, onClose, onSaved }: Omit<SessionAtten
       <form
         id="attendance-form"
         aria-busy={workflow.submitStatus === 'submitting'}
-        onSubmit={(event) => {
-          event.preventDefault();
-          void workflow.submit();
-        }}
+        onSubmit={workflow.submit}
       >
         <p className="attendance-modal__context">
           {formatShortDate(session.date)}

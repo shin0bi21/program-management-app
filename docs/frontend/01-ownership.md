@@ -74,6 +74,10 @@ Do not create hooks merely to rename state or forward props.
   successful completion. This includes forms, viewers, reports, details, and confirmations.
 - Keep the open target with the page or interaction owner. A form's draft,
   validation, feedback, and submission lock belong to its mounted instance.
+- Use React Hook Form for modal form values and submission. Register native
+  inputs, and connect custom controls with `Controller` or `setValue` when
+  their changes also coordinate related fields. Keep domain validation and
+  request feedback with the mounted workflow.
 - Keep an explicit `isOpen` interface when the modal uses one. A thin modal owner
   can conditionally mount its state-owning content without another visibility state.
 - Initialize once from supplied edit data or add defaults. Pass records already

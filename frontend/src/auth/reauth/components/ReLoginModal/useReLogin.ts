@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { login, resend2FA, verify2FA } from '../../../auth.api';
 import { getDeviceFingerprint, getDeviceName } from '../../../deviceFingerprint';
+import useSubmitLock from '../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../http/errors';
 import { getUser, setAuthData } from '../../../storage';
 
@@ -18,12 +19,10 @@ interface UseReLoginOptions {
 export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
   const [step, setStep] = useState<ReLoginStep>('password');
   const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
 
+  const { tryLock, unlock } = useSubmitLock();
   const storedUser = getUser();
   const email = storedUser?.email ?? '';
 
@@ -38,10 +37,11 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
     onReAuthenticated();
   };
 
-  /** Checks the password and opens verification when required. @example await submitPassword() */
-  const submitPassword = async () => {
+  /** Checks the password and opens verification when required. @example await submitPassword('password') */
+  const submitPassword = async (password: string) => {
+    if (!tryLock()) return;
+
     setError('');
-    setSubmitting(true);
 
     try {
       const response = await login(email, password, getDeviceFingerprint());
@@ -54,14 +54,15 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
     } catch (err) {
       setError(getErrorMessage(err, 'Incorrect password. Please try again.'));
     } finally {
-      setSubmitting(false);
+      unlock();
     }
   };
 
-  /** Verifies the code and completes login. @example await submitVerification() */
-  const submitVerification = async () => {
+  /** Verifies the code and completes login. @example await submitVerification('123456') */
+  const submitVerification = async (code: string) => {
+    if (!tryLock()) return;
+
     setError('');
-    setSubmitting(true);
 
     try {
       const response = await verify2FA(
@@ -75,7 +76,7 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
     } catch (err) {
       setError(getErrorMessage(err, 'Invalid code. Please try again.'));
     } finally {
-      setSubmitting(false);
+      unlock();
     }
   };
 
@@ -97,12 +98,7 @@ export function useReLogin({ onReAuthenticated }: UseReLoginOptions) {
   return {
     step,
     email,
-    password,
-    setPassword,
-    code,
-    setCode,
     error,
-    submitting,
     resending,
     submitPassword,
     submitVerification,

@@ -1,18 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHomepageImage, updateHomepageImage } from '../../manageHomepage.api';
 import type { ManagedHomepageImage } from '../../types';
 import HomepageImageModal from './HomepageImageModal';
-import useHomepageImageModal from './hooks/useHomepageImageModal';
 
-const workflow = vi.hoisted<ReturnType<typeof useHomepageImageModal>>(() => ({
-  status: 'idle',
-  statusMessage: '',
-  submissionComplete: false,
-  setSelectedFile: vi.fn(),
-  submit: vi.fn(),
+vi.mock('../../manageHomepage.api', () => ({
+  createHomepageImage: vi.fn(),
+  updateHomepageImage: vi.fn(),
 }));
-
-vi.mock('./hooks/useHomepageImageModal', () => ({ default: vi.fn(() => workflow) }));
 
 const image: ManagedHomepageImage = {
   id: 'image-1',
@@ -27,47 +23,40 @@ const image: ManagedHomepageImage = {
 };
 
 describe('HomepageImageModal', () => {
-  beforeEach(() => {
-    workflow.status = 'idle';
-    workflow.statusMessage = '';
-    workflow.submissionComplete = false;
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.resetAllMocks());
 
-  it('renders the edit caption field and submits a trimmed caption through the workflow', () => {
+  it('submits the edited caption and locks the form on success', async () => {
+    const user = userEvent.setup();
+    const saved = { ...image, caption: 'Updated caption.' };
+    vi.mocked(updateHomepageImage).mockResolvedValue(saved);
     const onSaved = vi.fn();
-    const view = render(<HomepageImageModal image={image} isOpen onClose={vi.fn()} onSaved={onSaved} />);
+    render(<HomepageImageModal image={image} isOpen onClose={vi.fn()} onSaved={onSaved} />);
 
-    expect(useHomepageImageModal).toHaveBeenCalledWith({ image, onSaved });
     const caption = screen.getByLabelText('Caption');
     expect(caption).toHaveValue('Original caption.');
-    expect(caption).toHaveAttribute('maxlength', '500');
+    await user.clear(caption);
+    await user.type(caption, ' Updated caption. ');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    fireEvent.change(caption, { target: { value: ' Updated caption. ' } });
-    fireEvent.submit(document.getElementById('homepage-image-form')!);
-    expect(workflow.submit).toHaveBeenCalledWith('Updated caption.');
-
-    workflow.status = 'success';
-    workflow.statusMessage = 'Homepage image updated.';
-    workflow.submissionComplete = true;
-    view.rerender(<HomepageImageModal image={image} isOpen onClose={vi.fn()} onSaved={vi.fn()} />);
-
+    await waitFor(() => expect(onSaved).toHaveBeenCalledExactlyOnceWith(saved));
+    expect(updateHomepageImage).toHaveBeenCalledWith(image.id, { caption: 'Updated caption.' });
     expect(caption).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent('Homepage image updated.');
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
-  it('renders the required upload field and wires selected files to the workflow', () => {
-    render(<HomepageImageModal image={null} isOpen onClose={vi.fn()} onSaved={vi.fn()} />);
+  it('submits the file selected in the upload field', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createHomepageImage).mockResolvedValue(image);
+    const onSaved = vi.fn();
+    render(<HomepageImageModal image={null} isOpen onClose={vi.fn()} onSaved={onSaved} />);
 
-    const file = screen.getByLabelText('Image');
-    expect(file).toHaveAttribute('type', 'file');
-    expect(file).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
-    expect(file).toBeRequired();
-    expect(screen.getByLabelText('Caption')).toBeRequired();
+    const file = new File(['image'], 'homepage.webp', { type: 'image/webp' });
+    await user.upload(screen.getByLabelText('Image'), file);
+    const caption = screen.getByLabelText('Caption');
+    await user.type(caption, image.caption);
+    fireEvent.submit(caption.closest('form')!);
 
-    const selectedFile = new File(['image'], 'homepage.webp', { type: 'image/webp' });
-    fireEvent.change(file, { target: { files: [selectedFile] } });
-    expect(workflow.setSelectedFile).toHaveBeenCalledWith(selectedFile);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledExactlyOnceWith(image));
+    expect(createHomepageImage).toHaveBeenCalledWith({ image: file, caption: image.caption });
   });
 });

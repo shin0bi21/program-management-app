@@ -1,4 +1,3 @@
-import type { FormEvent } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -29,10 +28,6 @@ function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
   return { ...hook, options };
 }
 
-function submitEvent() {
-  return { preventDefault: vi.fn() } as unknown as FormEvent;
-}
-
 describe('useHoursModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,12 +47,12 @@ describe('useHoursModal', () => {
     const { result } = renderWorkflow({ onSave });
 
     act(() => {
-      result.current.selectProgram('program-1');
-      result.current.selectCategory('meeting');
-      result.current.updateHours('2.5');
-      result.current.updateNote('  Team planning  ');
+      result.current.setValue('programId', 'program-1');
+      result.current.setValue('category', 'meeting');
+      result.current.setValue('hours', '2.5');
+      result.current.setValue('note', '  Team planning  ');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(onSave).toHaveBeenCalledWith({
       type: 'regular',
@@ -76,8 +71,8 @@ describe('useHoursModal', () => {
     const item = makeHoursItem({ note: '  Stored note  ', hours: 1 });
     const { result } = renderWorkflow({ target: { mode: 'edit', item }, onSave });
 
-    act(() => result.current.updateHours('2'));
-    await act(async () => result.current.submit(submitEvent()));
+    act(() => result.current.setValue('hours', '2'));
+    await act(async () => result.current.submit());
 
     expect(onSave).toHaveBeenCalledExactlyOnceWith({ hours: 2 }, false);
   });
@@ -97,12 +92,12 @@ describe('useHoursModal', () => {
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
-      result.current.selectTask(task.id);
-      result.current.updateHours('1');
-      result.current.setCompleteTask(true);
-      result.current.updateNote('Prepared materials');
+      result.current.setValue('taskId', task.id);
+      result.current.setValue('hours', '1');
+      result.current.setValue('completeTask', true);
+      result.current.setValue('note', 'Prepared materials');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(onSave).toHaveBeenCalledWith({
       type: 'task',
@@ -122,12 +117,12 @@ describe('useHoursModal', () => {
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
-      result.current.selectTask(task.id);
-      result.current.updateHours('1');
-      result.current.setCompleteTask(true);
-      result.current.updateNote('Logged without completion permission');
+      result.current.setValue('taskId', task.id);
+      result.current.setValue('hours', '1');
+      result.current.setValue('completeTask', true);
+      result.current.setValue('note', 'Logged without completion permission');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       type: 'task',
@@ -146,10 +141,10 @@ describe('useHoursModal', () => {
     await waitFor(() => expect(result.current.sessionOptions).toHaveLength(1));
     act(() => {
       result.current.selectSession('session-1');
-      result.current.updateHours('1');
-      result.current.updateNote('Led session');
+      result.current.setValue('hours', '1');
+      result.current.setValue('note', 'Led session');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(onSave).toHaveBeenCalledWith({
       type: 'session',
@@ -165,17 +160,17 @@ describe('useHoursModal', () => {
     const { result } = renderWorkflow({ target: { mode: 'add', context: { ...addContext, type: 'task' } }, onSave });
 
     act(() => {
-      result.current.updateHours('not-a-number');
-      result.current.updateNote('Prepared materials');
+      result.current.setValue('hours', 'not-a-number');
+      result.current.setValue('note', 'Prepared materials');
     });
-    await act(async () => result.current.submit(submitEvent()));
+    await act(async () => result.current.submit());
 
     expect(onSave).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
     expect(result.current.error).toBe('Select a task.');
 
-    act(() => result.current.selectTask('task-1'));
-    await act(async () => result.current.submit(submitEvent()));
+    act(() => result.current.setValue('taskId', 'task-1'));
+    await act(async () => result.current.submit());
 
     expect(onSave).not.toHaveBeenCalled();
     expect(result.current.error).toBe('Hours must be between 0.25 and 24.');

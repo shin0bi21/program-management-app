@@ -43,8 +43,7 @@ describe('useReLogin', () => {
     const onReAuthenticated = vi.fn();
     const { result } = renderHook(() => useReLogin({ onReAuthenticated }));
 
-    act(() => result.current.setPassword('correct-password'));
-    await act(async () => result.current.submitPassword());
+    await act(async () => result.current.submitPassword('correct-password'));
 
     expect(login).toHaveBeenCalledWith('test@example.com', 'correct-password', 'device-fingerprint');
     expect(setAuthData).toHaveBeenCalledWith('fresh-token', storedUser);
@@ -60,11 +59,9 @@ describe('useReLogin', () => {
     const onReAuthenticated = vi.fn();
     const { result } = renderHook(() => useReLogin({ onReAuthenticated }));
 
-    act(() => result.current.setPassword('correct-password'));
-    await act(async () => result.current.submitPassword());
+    await act(async () => result.current.submitPassword('correct-password'));
     await act(async () => result.current.resendVerification());
-    act(() => result.current.setCode('123456'));
-    await act(async () => result.current.submitVerification());
+    await act(async () => result.current.submitVerification('123456'));
 
     expect(verify2FA).toHaveBeenCalledWith(
       'verification-user-1', '123456', true, 'device-fingerprint', 'Test browser',
@@ -87,21 +84,17 @@ describe('useReLogin', () => {
       vi.mocked(login).mockResolvedValue({
         message: 'Verification required', requiresVerification: true, userId: 'verification-user-1',
       });
-      act(() => result.current.setPassword('correct-password'));
-      await act(async () => result.current.submitPassword());
+      await act(async () => result.current.submitPassword('correct-password'));
     }
-    if (step === 'password') act(() => result.current.setPassword('wrong-password'));
-    if (step === 'verification') act(() => result.current.setCode('000000'));
     rejectRequest();
 
     await act(async () => {
-      if (step === 'password') await result.current.submitPassword();
-      if (step === 'verification') await result.current.submitVerification();
+      if (step === 'password') await result.current.submitPassword('wrong-password');
+      if (step === 'verification') await result.current.submitVerification('000000');
       if (step === 'resend') await result.current.resendVerification();
     });
 
     expect(result.current.error).toBe(expectedError);
-    expect(result.current.submitting).toBe(false);
     expect(result.current.resending).toBe(false);
     expect(setAuthData).not.toHaveBeenCalled();
     expect(onReAuthenticated).not.toHaveBeenCalled();

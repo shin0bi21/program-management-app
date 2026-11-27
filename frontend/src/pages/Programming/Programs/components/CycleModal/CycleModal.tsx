@@ -1,5 +1,4 @@
 import type { ProgramCycleAssignment } from '../../types';
-import { type FormEvent } from 'react';
 import Checklist from '../../../../../common/components/Checklist/Checklist';
 import Button from '../../../../../common/components/Button/Button';
 import type { ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
@@ -53,15 +52,6 @@ export default function CycleModal({ isOpen, ...props }: CycleModalProps) {
 function CycleForm({ cycle, programs, assignments, programsReady = true, programsError, onRetryPrograms, onClose, onSaved }: Omit<CycleModalProps, 'isOpen'>) {
   const workflow = useCycleModal({ cycle, assignments, programsReady, onSaved });
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await workflow.submit({
-      title: String(form.get('title')),
-      startsOn: String(form.get('startsOn')),
-      endsOn: String(form.get('endsOn')),
-    });
-  };
 
   return (
     <Modal
@@ -75,17 +65,17 @@ function CycleForm({ cycle, programs, assignments, programsReady = true, program
       <form
         id="cycle-form"
         aria-busy={workflow.submissionComplete}
-        onSubmit={(event) => void submit(event)}
+        onSubmit={workflow.submit}
       >
         <FormField id="cycle-title" label="Cycle Title">
-          <input id="cycle-title" name="title" required maxLength={120} placeholder="Fall 2026" defaultValue={cycle?.title} disabled={workflow.submissionComplete} />
+          <input id="cycle-title" {...workflow.register('title')} required maxLength={120} placeholder="Fall 2026" disabled={workflow.submissionComplete} />
         </FormField>
         <div className="form-row">
           <FormField id="cycle-start" label="Starts on">
-            <input id="cycle-start" name="startsOn" type="date" required defaultValue={cycle?.startsOn} disabled={workflow.submissionComplete} />
+            <input id="cycle-start" {...workflow.register('startsOn')} type="date" required disabled={workflow.submissionComplete} />
           </FormField>
           <FormField id="cycle-end" label="Ends on">
-            <input id="cycle-end" name="endsOn" type="date" required defaultValue={cycle?.endsOn} disabled={workflow.submissionComplete} />
+            <input id="cycle-end" {...workflow.register('endsOn')} type="date" required disabled={workflow.submissionComplete} />
           </FormField>
         </div>
         {programsError && <div role="alert">{programsError} <Button onClick={onRetryPrograms}>Retry programs</Button></div>}

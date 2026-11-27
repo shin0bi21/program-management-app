@@ -60,7 +60,7 @@ describe('useSessionNoteModal', () => {
       youthIds: ['youth-1'],
     });
     act(() => {
-      result.current.updateDetails('  Updated details.  ');
+      result.current.setValue('details', '  Updated details.  ');
     });
     await act(async () => result.current.submit());
 
@@ -85,7 +85,7 @@ describe('useSessionNoteModal', () => {
     }), { wrapper: wrapper() });
 
     await waitFor(() => expect(result.current.roster).toHaveLength(1));
-    act(() => { result.current.updateDetails('Attendance follow-up'); result.current.updateCategory('general'); });
+    act(() => { result.current.setValue('details', 'Attendance follow-up'); result.current.updateCategory('general'); });
     await act(async () => result.current.submit());
 
     expect(createSessionNote).toHaveBeenCalledWith(session.id, {
@@ -115,7 +115,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved: vi.fn().mockRejectedValue(new Error('Refresh failed')),
     }), { wrapper: wrapper() });
-    act(() => { result.current.updateDetails('Saved note'); result.current.updateCategory('general'); });
+    act(() => { result.current.setValue('details', 'Saved note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 
@@ -131,7 +131,7 @@ describe('useSessionNoteModal', () => {
       session,
       onSaved,
     }), { wrapper: wrapper() });
-    act(() => { result.current.updateDetails('Retry this note'); result.current.updateCategory('general'); });
+    act(() => { result.current.setValue('details', 'Retry this note'); result.current.updateCategory('general'); });
 
     await act(async () => result.current.submit());
 

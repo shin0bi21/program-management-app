@@ -1,34 +1,27 @@
-import type { FormEvent } from 'react';
+import { useForm } from 'react-hook-form';
 import Button from '../../../../../common/components/Button/Button';
 
 interface VerificationStepProps {
   email: string;
-  code: string;
   error: string;
-  submitting: boolean;
   resending: boolean;
-  onCodeChange: (code: string) => void;
-  onSubmit: () => void | Promise<void>;
+  onSubmit: (code: string) => void | Promise<void>;
   onResend: () => void | Promise<void>;
 }
 
 export default function VerificationStep({
   email,
-  code,
   error,
-  submitting,
   resending,
-  onCodeChange,
   onSubmit,
   onResend,
 }: VerificationStepProps) {
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    void onSubmit();
-  };
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+    defaultValues: { code: '' },
+  });
 
   return (
-    <form onSubmit={handleSubmit} className="relogin-form">
+    <form onSubmit={handleSubmit(({ code }) => onSubmit(code))} className="relogin-form">
       <p className="relogin-hint">
         A verification code was sent to <strong>{email}</strong>.
       </p>
@@ -38,8 +31,7 @@ export default function VerificationStep({
         <input
           id="relogin-code"
           type="text"
-          value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
+          {...register('code')}
           placeholder="6-digit code"
           className="relogin-input"
           maxLength={6}
@@ -50,8 +42,8 @@ export default function VerificationStep({
 
       {error && <p className="relogin-error" role="alert">{error}</p>}
 
-      <Button type="submit" fullWidth disabled={submitting}>
-        {submitting ? 'Verifying...' : 'Verify'}
+      <Button type="submit" fullWidth disabled={isSubmitting}>
+        {isSubmitting ? 'Verifying...' : 'Verify'}
       </Button>
 
       <Button type="button" variant="ghost" fullWidth onClick={() => void onResend()} disabled={resending}>

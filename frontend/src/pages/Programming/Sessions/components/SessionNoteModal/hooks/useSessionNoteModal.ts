@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -42,11 +43,12 @@ export default function useSessionNoteModal({
   hideYouthSelection = false,
   onSaved,
 }: UseSessionNoteModalOptions) {
-  const [draft, setDraft] = useState<SessionNoteDraft>(() => ({
+  const { register, watch, getValues, setValue, handleSubmit } = useForm<SessionNoteDraft>({ defaultValues: {
     category: note?.category ?? '',
     details: note?.details ?? '',
     youthIds: note?.youth.map(youth => youth.youthId) ?? (youthId ? [youthId] : []),
-  }));
+  } });
+  const draft = watch();
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const submitLock = useSubmitLock();
@@ -59,21 +61,17 @@ export default function useSessionNoteModal({
   });
 
   const updateCategory = (category: SessionNoteCategory) => {
-    setDraft(current => ({ ...current, category }));
-  };
-  const updateDetails = (details: string) => {
-    setDraft(current => ({ ...current, details }));
+    setValue('category', category);
   };
   const toggleYouth = (youthId: string) => {
-    setDraft(current => ({
-      ...current,
-      youthIds: current.youthIds.includes(youthId)
-        ? current.youthIds.filter(id => id !== youthId)
-        : [...current.youthIds, youthId],
-    }));
+    const youthIds = getValues('youthIds');
+    setValue('youthIds', youthIds.includes(youthId)
+      ? youthIds.filter(id => id !== youthId)
+      : [...youthIds, youthId]);
   };
 
-  const submit = async () => {
+  /** Saves validated note values for this editor. @example await saveNote(draft) */
+  async function saveNote(draft: SessionNoteDraft): Promise<void> {
     const details = draft.details.trim();
     if (!details) {
       setSubmitStatus('error');
@@ -121,7 +119,7 @@ export default function useSessionNoteModal({
     if (refreshFailed) message = 'Session note was saved, but the page could not refresh. Reload to see it.';
     setStatusMessage(message);
     setSubmitStatus('success');
-  };
+  }
 
   return {
     draft,
@@ -132,8 +130,9 @@ export default function useSessionNoteModal({
     statusMessage: statusMessage || undefined,
     submissionComplete: submitStatus === 'submitting' || submitStatus === 'success',
     updateCategory,
-    updateDetails,
+    detailsField: register('details'),
+    setValue,
     toggleYouth,
-    submit,
+    submit: handleSubmit(saveNote),
   };
 }

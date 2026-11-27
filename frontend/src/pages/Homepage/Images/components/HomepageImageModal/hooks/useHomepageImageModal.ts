@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
@@ -22,20 +23,23 @@ export default function useHomepageImageModal({
 }: UseHomepageImageModalOptions) {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { register, setValue, handleSubmit } = useForm<{ image?: FileList; caption: string }>({
+    defaultValues: { caption: image?.caption ?? '' },
+  });
   const { tryLock, unlock } = useSubmitLock();
 
   /**
    * Saves the caption and optional upload once, forwarding the server's complete image.
-   * @param caption - Trimmed caption supplied by the rendered form.
-   * @example await submit('Community event.') // saves and reconciles before reporting success
+   * @example await submit() // saves and reconciles before reporting success
    */
-  const submit = async (caption: string) => {
+  const submit = handleSubmit(async draft => {
     if (!tryLock()) return;
 
     setStatus('submitting');
     setStatusMessage(image ? 'Saving homepage image...' : 'Uploading homepage image...');
 
+    const caption = draft.caption.trim();
+    const selectedFile = draft.image?.[0];
     let savedImage: ManagedHomepageImage;
     try {
       if (image) {
@@ -59,13 +63,14 @@ export default function useHomepageImageModal({
     }
     setStatus('success');
     setStatusMessage(message);
-  };
+  });
 
   return {
     status,
     statusMessage,
     submissionComplete: status === 'submitting' || status === 'success',
-    setSelectedFile,
+    register,
+    setValue,
     submit,
   };
 }

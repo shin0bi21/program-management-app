@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import type { AttendanceStatus } from '../../../../../common/features/AttendanceStatusSelect/types';
 import type { SubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
@@ -22,9 +23,12 @@ export default function useYouthAttendance({
 }) {
   const sessions = attendance.youth.find(person => person.id === youthId)?.sessions ?? [];
   const { tryLock, unlock } = useSubmitLock();
-  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
-    sessions.map(session => [session.id, session.status ?? '']),
-  ));
+  const { watch, getValues, setValue, handleSubmit } = useForm<{ selections: Record<string, AttendanceStatus | ''> }>({
+    defaultValues: {
+      selections: Object.fromEntries(sessions.map(session => [session.id, session.status ?? ''])),
+    },
+  });
+  const { selections } = watch();
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
@@ -35,14 +39,14 @@ export default function useYouthAttendance({
    */
   const updateStatus = (sessionId: string, status: AttendanceStatus | '') => {
     if (submissionComplete) return;
-    setSelections(current => ({ ...current, [sessionId]: status }));
+    setValue('selections', { ...getValues('selections'), [sessionId]: status });
   };
 
   /**
    * Saves the complete draft once, preserving failures for retry and successful feedback until close.
    * @example await save()
    */
-  const save = async () => {
+  const save = handleSubmit(async ({ selections }) => {
     if (sessions.length === 0 || !tryLock()) return;
 
     const { programId, cycleId } = attendance.programCycle;
@@ -74,7 +78,7 @@ export default function useYouthAttendance({
     }
     setStatusMessage(message);
     setSubmitStatus('success');
-  };
+  });
 
   return { selections, updateStatus, save, submitStatus, statusMessage, submissionComplete };
 }
