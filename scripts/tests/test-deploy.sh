@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Verify deployment classification and preview behavior using disposable Git fixtures.
+# Verify deployment planning, backend readiness, and cleanup with disposable fixtures.
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-# Prepare disposable fixtures and verify deployment classification, preview, and cleanup.
+# Prepare disposable fixtures and verify deployment planning, readiness, and cleanup.
 # Example: run_deployment_tests
 run_deployment_tests() {
   TEST_ROOT="$(mktemp -d /tmp/myapp-deployment-test.XXXXXX)"
@@ -131,6 +131,8 @@ run_deployment_tests() {
     [ "${steps[*]}" = "build-backend build-frontend migrate backend frontend" ] || { echo "FAIL: infrastructure deployment steps" >&2; exit 1; }
   )
 
+  assert_backend_readiness
+
   # Preview must see a remote commit absent from the checkout without changing it.
   git -C "$TEST_REPO" branch -M main
   git clone --quiet "$TEST_REPO" "$TEST_ROOT/remote"
@@ -223,7 +225,7 @@ run_deployment_tests() {
     [ "$(cat "$TEST_ROOT/signal-status")" = "$expected_status" ] || { echo "FAIL: $signal_name cleanup status" >&2; exit 1; }
   done
 
-  echo "Deployment classification, preview, help, and interruption tests passed!"
+  echo "Deployment classification, readiness, preview, help, and interruption tests passed!"
 }
 
 # Write one fixture file in the disposable checkout, creating its parent directory.
@@ -284,6 +286,43 @@ assert_plan() {
   [ "$MIGRATIONS_CHANGED" = "$expected_migrations" ] || { echo "FAIL: $label migrations" >&2; exit 1; }
   [ "$INFRASTRUCTURE_CHANGED" = "$expected_infrastructure" ] || { echo "FAIL: $label infrastructure" >&2; exit 1; }
 }
+
+# Require the backend restart to poll again after Docker reports unhealthy.
+# Example: assert_backend_readiness # accepts healthy after one retry
+assert_backend_readiness() (
+  export HEALTH_RETRY_MARKER="$TEST_ROOT/health-retry"
+
+  # 1. Simulate replacement and switch from unhealthy to healthy after one wait.
+  # shellcheck disable=SC2317,SC2329
+  docker() {
+    case "$*" in
+      'compose ps -q backend') printf '%s\n' new-backend ;;
+      'compose up -d --no-deps --force-recreate backend') return ;;
+      "inspect --format={{.State.Health.Status}} new-backend")
+        if [ -e "$HEALTH_RETRY_MARKER" ]; then
+          printf '%s\n' healthy
+        else
+          printf '%s\n' unhealthy
+        fi
+        ;;
+      *) echo "FAIL: unexpected Docker call: $*" >&2; return 1 ;;
+    esac
+  }
+  # shellcheck disable=SC2034,SC2317,SC2329
+  wait_for_replacement() { REPLACED_CONTAINER_ID=new-backend; }
+  # shellcheck disable=SC2317,SC2329
+  timeout() { shift; "$@"; }
+  # shellcheck disable=SC2317,SC2329
+  sleep() {
+    [ ! -e "$HEALTH_RETRY_MARKER" ] || exit 1
+    touch "$HEALTH_RETRY_MARKER"
+  }
+  export -f docker sleep
+
+  # 2. Exercise the real readiness command and check that it waited.
+  restart_backend > /dev/null
+  [ -e "$HEALTH_RETRY_MARKER" ] || { echo "FAIL: unhealthy backend was accepted" >&2; exit 1; }
+)
 
 # Print ordered checksums of the disposable checkout to detect preview mutations.
 # Example: snapshot_checkout > "$TEST_ROOT/before"
