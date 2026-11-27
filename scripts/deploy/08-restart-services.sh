@@ -12,7 +12,7 @@ restart_backend() {
 
   # 2. Require Docker health to succeed before reporting the backend ready.
   echo "Waiting for backend to become healthy..."
-  if ! timeout 60 bash -c "until docker inspect --format='{{.State.Health.Status}}' '$REPLACED_CONTAINER_ID' 2>/dev/null | grep -q 'healthy'; do sleep 2; done"; then
+  if ! timeout 60 bash -c "until docker inspect --format='{{.State.Health.Status}}' '$REPLACED_CONTAINER_ID' 2>/dev/null | grep -qx 'healthy'; do sleep 2; done"; then
     echo "ERROR: Backend failed to become healthy within 60s" >&2
     docker logs --tail 50 "$REPLACED_CONTAINER_ID"
     exit 1
