@@ -15,7 +15,6 @@ import type {
   StaffReference,
   HoursFilters,
   HoursCalendarIndex,
-  HoursItemMove,
   Hours,
 } from '../../types';
 import HoursCalendarItem from './HoursItem/HoursItem';
@@ -35,8 +34,8 @@ interface HoursCalendarProps {
   onStaffSelect: (staffId: string) => void;
   onEdit: (target: Hours) => void;
   onDelete: (target: Hours) => void;
-  onAdd: (target: { staffId: string; date: string; source: 'regular' | 'task' | 'session' }) => void;
-  onMove: (move: HoursItemMove) => Promise<void>;
+  onAdd: (target: Pick<Hours, 'staffId' | 'date' | 'type'>) => void;
+  onMove: (item: Hours, date: Hours['date']) => Promise<void>;
   onMessageChange?: PageMessageChangeHandler;
 }
 
@@ -105,7 +104,7 @@ export default function HoursCalendar({
    * @example moveHours(context) // saves context.nextRange.start
    */
   function moveHours({ item, nextRange }: ItemMoveContext<StaffReference, Hours>) {
-    return onMove({ item, date: nextRange.start });
+    return onMove(item, nextRange.start);
   }
 
   /**
@@ -118,9 +117,9 @@ export default function HoursCalendar({
     const target = { staffId: row.id, date: period.key };
 
     return [
-      { id: 'session', label: 'Session Hours', onSelect: () => onAdd({ ...target, source: 'session' }) },
-      { id: 'task', label: 'Task Hours', onSelect: () => onAdd({ ...target, source: 'task' }) },
-      { id: 'regular', label: 'Regular Hours', onSelect: () => onAdd({ ...target, source: 'regular' }) },
+      { id: 'session', label: 'Session Hours', onSelect: () => onAdd({ ...target, type: 'session' }) },
+      { id: 'task', label: 'Task Hours', onSelect: () => onAdd({ ...target, type: 'task' }) },
+      { id: 'regular', label: 'Regular Hours', onSelect: () => onAdd({ ...target, type: 'regular' }) },
     ];
   }
 

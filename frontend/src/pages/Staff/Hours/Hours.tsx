@@ -18,20 +18,13 @@ import useHoursData from './hooks/data/useHoursData';
 import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
-import type { SetHoursInput } from './hours.api';
 import { getOpenTasks } from '../Tasks/api/tasks.api';
 import { HOURS_TABLE_KEYS, type Hours } from './types';
 
 import './Hours.css';
 
-type HoursAddTarget = {
-  staffId?: string;
-  date?: string;
-  source?: 'regular' | 'task' | 'session';
-};
-
 type HoursModalState =
-  | { mode: 'add'; context: HoursAddTarget }
+  | { mode: 'add'; context: Partial<Pick<Hours, 'staffId' | 'date' | 'type'>> }
   | { mode: 'edit'; item: Hours }
   | null;
 
@@ -45,7 +38,7 @@ const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
  * Composes page-owned Hours choices with independent body and dashboard queries.
  * @example <Hours /> // table/calendar rows with staff summaries
  */
-export default function Hours() {
+export default function HoursPage() {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions.
@@ -93,6 +86,7 @@ export default function Hours() {
     hoursQueryKey: HOURS_QUERY_KEY,
     hoursTableQueryKey: HOURS_TABLE_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
+    filters: preferences.appliedFilters,
     onItemRemoved: closeRemovedItem,
   });
 
@@ -100,7 +94,7 @@ export default function Hours() {
   const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.context : undefined;
 
   // Hours modal.
-  const openAddHoursModal = useCallback((context: HoursAddTarget) => {
+  const openAddHoursModal = useCallback((context: Partial<Pick<Hours, 'staffId' | 'date' | 'type'>>) => {
     setHoursModalState({ mode: 'add', context });
   }, []);
 
@@ -110,7 +104,9 @@ export default function Hours() {
 
   const closeHoursModal = useCallback(() => setHoursModalState(null), []);
 
-  const submitHours = (input: SetHoursInput) => actions.saveHours(input, editedItem?.id);
+  const submitHours = (input: Partial<Hours>, completeTask: boolean) => (
+    actions.saveHours(input, editedItem, completeTask)
+  );
 
   // Table configuration.
   const table = useHoursTable({
@@ -171,9 +167,9 @@ export default function Hours() {
         triggerLabel="+ Add"
         ariaLabel="Add hours"
         items={[
-          { id: 'session', label: 'Session Hours', onClick: () => openAddHoursModal({ source: 'session' }) },
-          { id: 'task', label: 'Task Hours', onClick: () => openAddHoursModal({ source: 'task' }) },
-          { id: 'regular', label: 'Regular Hours', onClick: () => openAddHoursModal({ source: 'regular' }) },
+          { id: 'session', label: 'Session Hours', onClick: () => openAddHoursModal({ type: 'session' }) },
+          { id: 'task', label: 'Task Hours', onClick: () => openAddHoursModal({ type: 'task' }) },
+          { id: 'regular', label: 'Regular Hours', onClick: () => openAddHoursModal({ type: 'regular' }) },
         ]}
       /> : undefined}
 
@@ -217,7 +213,7 @@ export default function Hours() {
       onAdd={submitHours}
       staffId={addHoursContext?.staffId}
       date={addHoursContext?.date}
-      source={addHoursContext?.source}
+      type={addHoursContext?.type}
       canCompleteTask={canCompleteTask}
       item={editedItem}
     />

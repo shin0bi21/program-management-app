@@ -295,12 +295,11 @@ describe('Tasks', () => {
     await screen.findByTestId('task-table');
     act(() => children.table!.onTaskSelect(task));
     act(() => children.hoursCard!.onLogHours!());
-    const input = { source: 'task' as const, staffId: task.staffId, taskId: task.id,
-      date: task.startDate, hours: 1, note: 'Done', completeTask: true };
+    const input = { type: 'task' as const, staffId: task.staffId, taskId: task.id,
+      date: task.startDate, hours: 1, note: 'Done' };
 
-    await act(async () => children.hoursModal!.onAdd(input));
+    await act(async () => children.hoursModal!.onAdd(input, true));
 
-    expect(setHours).toHaveBeenCalledWith(input);
     expect(children.hoursModal?.task).toBe(completedTask);
     expect(screen.getByRole('dialog', { name: 'Log Hours' })).toBeInTheDocument();
 

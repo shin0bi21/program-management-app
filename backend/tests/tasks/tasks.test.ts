@@ -270,7 +270,7 @@ describe('Tasks API', () => {
         .post('/api/hours')
         .set('Authorization', `Bearer ${firstStaffToken}`)
         .send({
-          source: 'task', staffId: firstStaffId, taskId: created.body.id, completeTask: true,
+          type: 'task', staffId: firstStaffId, taskId: created.body.id, completeTask: true,
           date: taskDate, hours: 2, note: 'Finished task',
         });
       expect(hours.status).toBe(201);
@@ -728,7 +728,7 @@ describe('Tasks API', () => {
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'task', staffId: firstStaffId, taskId: task.body.id,
+        type: 'task', staffId: firstStaffId, taskId: task.body.id,
         date: loggedDate, hours: 2, note: 'Worked outside the planned task dates',
       });
     expect(linkedTime.status).toBe(201);
@@ -798,7 +798,7 @@ describe('Tasks API', () => {
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'task', staffId: firstStaffId, taskId: completedTask.body.id, completeTask: true,
+        type: 'task', staffId: firstStaffId, taskId: completedTask.body.id, completeTask: true,
         date: taskDate, hours: 1, note: 'Completed locked task',
       });
     expect(completedEntry.status).toBe(201);
@@ -883,7 +883,7 @@ describe('Tasks API', () => {
       .post('/api/hours')
       .set('Authorization', `Bearer ${firstStaffToken}`)
       .send({
-        source: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
+        type: 'task', staffId: firstStaffId, taskId: task.body.id, completeTask: true,
         date: taskDate, hours: 1, note: 'Completed audited task',
       });
     expect(completedEntry.status).toBe(201);

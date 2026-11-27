@@ -3,7 +3,8 @@ import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-import { setHours, type SetHoursInput } from '../../../Hours/hours.api';
+import { setHours } from '../../../Hours/hours.api';
+import type { Hours } from '../../../Hours/types';
 import {
   deleteTask,
   updateTaskState,
@@ -37,7 +38,7 @@ interface TaskActionsResult {
     staffId?: string,
   ) => Promise<Task | null>;
   setState: (task: Task, state: Task['state']) => Promise<void>;
-  logHours: (input: SetHoursInput) => Promise<void>;
+  logHours: (input: Partial<Hours>, completeTask?: boolean) => Promise<void>;
 }
 
 /**
@@ -156,18 +157,18 @@ export default function useTaskActions({
     }
   }, [finishTaskAction, startTaskAction, syncTask]);
 
-  const logHours = useCallback(async (input: SetHoursInput) => {
-    const taskId = input.source === 'task' ? input.taskId : undefined;
+  const logHours = useCallback(async (input: Partial<Hours>, completeTask = false) => {
+    const taskId = input.type === 'task' ? input.taskId : undefined;
 
     if (taskId && !startTaskAction(taskId)) throw new Error('Task is being updated. Try again.');
 
     try {
-      const saved = await setHours(input);
+      const saved = await setHours(input, undefined, completeTask);
       const { updatedTasks } = saved;
 
       setActionError('');
 
-      if (input.source === 'task') {
+      if (input.type === 'task') {
         if (updatedTasks?.length) {
           updatedTasks.forEach(task => syncTask(task));
         } else {

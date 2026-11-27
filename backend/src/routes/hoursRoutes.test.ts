@@ -2,7 +2,7 @@ import request from 'supertest';
 import { createApp } from '../../tests/shared/app';
 import { generateToken } from '../../tests/shared/tokenHelpers';
 import {
-  createHoursFixture, clearHoursRecords, deleteHoursFixture, regularHoursInput, type HoursFixture,
+  createHoursFixture, clearHoursRecords, deleteHoursFixture, regularHoursInput, seedHoursTask, type HoursFixture,
 } from '../../tests/shared/hoursFixtures';
 
 const app = createApp();
@@ -33,17 +33,41 @@ describe('Hours HTTP boundary', () => {
     expect(table.status).toBe(200);
     expect(table.body.rows).toEqual([created.body]);
 
-    const updated = await request(app).put(`/api/hours/${id}`).set('Authorization', `Bearer ${token}`)
-      .send(regularHoursInput(fixture, { note: 'HTTP edit' }));
+    const updated = await request(app).patch(`/api/hours/${id}`).set('Authorization', `Bearer ${token}`)
+      .send({ note: '  HTTP edit  ' });
     expect(updated.status).toBe(200);
-    expect(updated.body).toEqual(expect.objectContaining({ id, note: 'HTTP edit' }));
-    const moved = await request(app).patch(`/api/hours/${id}/placement`).set('Authorization', `Bearer ${token}`)
+    expect(updated.body).toEqual({ ...created.body, note: 'HTTP edit' });
+    const moved = await request(app).patch(`/api/hours/${id}`).set('Authorization', `Bearer ${token}`)
       .send({ date: fixture.placementDate });
     expect(moved.status).toBe(200);
     expect(moved.body).toEqual(expect.objectContaining({ id, date: fixture.placementDate }));
     const deleted = await request(app).delete(`/api/hours/${id}`).set('Authorization', `Bearer ${token}`);
     expect(deleted.status).toBe(200);
     expect(deleted.body.message).toBe('Logged hours deleted');
+  });
+
+  it('rejects empty edits and fields outside the save contract', async () => {
+    const endpoint = `/api/hours/${crypto.randomUUID()}`;
+    const invalidEdits = [{}, { id: crypto.randomUUID() }, { cycleId: fixture.activeCycleId }, { completeTask: true }];
+    for (const input of invalidEdits) {
+      const response = await request(app).patch(endpoint).set('Authorization', `Bearer ${token}`).send(input);
+      expect(response.status).toBe(400);
+    }
+
+    const incomplete = await request(app).post('/api/hours').set('Authorization', `Bearer ${token}`).send({ hours: 1 });
+    expect(incomplete.status).toBe(400);
+  });
+
+  it('passes task completion through the create request', async () => {
+    const taskId = await seedHoursTask(fixture, 'Complete task through Hours');
+    const saved = await request(app).post('/api/hours').set('Authorization', `Bearer ${token}`).send({
+      type: 'task', taskId, staffId: fixture.firstStaff.userId, date: fixture.date, hours: 1, note: 'Done', completeTask: true,
+    });
+
+    expect(saved.status).toBe(201);
+    expect(saved.body).toMatchObject({
+      type: 'task', taskId, updatedTasks: [expect.objectContaining({ id: taskId, state: 'completed' })],
+    });
   });
 
   it('returns logged hours for a calendar range spanning more than one year', async () => {
@@ -75,7 +99,7 @@ describe('Hours HTTP boundary', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual([{ id: sessionId, name: 'Hours workshop', date }]);
+    expect(response.body).toEqual([{ id: sessionId, title: 'Hours workshop', date }]);
   });
 
   it('returns pay-period totals and cycle averages for logged hours', async () => {

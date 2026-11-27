@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../../tests/factories/task';
+import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import { getHoursSessions } from '../../../hours.api';
 import useHoursModal, { type UseHoursModalOptions } from './useHoursModal';
@@ -66,15 +67,26 @@ describe('useHoursModal', () => {
     await act(async () => result.current.submit(submitEvent()));
 
     expect(onAdd).toHaveBeenCalledWith({
-      source: 'regular',
+      type: 'regular',
       staffId: 'staff-1',
       date: '2026-08-19',
       programId: 'program-1',
       category: 'meeting',
       hours: 2.5,
-      note: 'Team planning',
-    });
+      note: '  Team planning  ',
+    }, false);
     expect(result.current.submitStatus).toBe('success');
+  });
+
+  it('sends only changed fields when editing an existing entry', async () => {
+    const onAdd = vi.fn().mockResolvedValue(undefined);
+    const item = makeHoursItem({ note: '  Stored note  ', hours: 1 });
+    const { result } = renderWorkflow({ item, onAdd });
+
+    act(() => result.current.updateHours('2'));
+    await act(async () => result.current.submit(submitEvent()));
+
+    expect(onAdd).toHaveBeenCalledExactlyOnceWith({ hours: 2 }, false);
   });
 
   it('loads only open task options and submits the task command', async () => {
@@ -85,7 +97,7 @@ describe('useHoursModal', () => {
     ]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({
-      source: 'task',
+      type: 'task',
       canCompleteTask: true,
       onAdd,
     });
@@ -100,21 +112,20 @@ describe('useHoursModal', () => {
     await act(async () => result.current.submit(submitEvent()));
 
     expect(onAdd).toHaveBeenCalledWith({
-      source: 'task',
+      type: 'task',
       staffId: 'staff-1',
       date: '2026-08-19',
       taskId: 'task-1',
-      completeTask: true,
       hours: 1,
       note: 'Prepared materials',
-    });
+    }, true);
   });
 
   it('does not send task completion without task-write capability', async () => {
     const task = makeTask();
     loadTasks.mockResolvedValue([task]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ source: 'task', onAdd });
+    const { result } = renderWorkflow({ type: 'task', onAdd });
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
@@ -126,19 +137,18 @@ describe('useHoursModal', () => {
     await act(async () => result.current.submit(submitEvent()));
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
-      source: 'task',
-      completeTask: false,
-    }));
+      type: 'task',
+    }), false);
   });
 
   it('reloads sessions by staff and date before submitting the selected session', async () => {
     vi.mocked(getHoursSessions).mockResolvedValue([{
       id: 'session-1',
-      name: 'Leadership',
+      title: 'Leadership',
       date: '2026-08-20',
     }]);
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ source: 'session', onAdd });
+    const { result } = renderWorkflow({ type: 'session', onAdd });
 
     await waitFor(() => expect(result.current.sessionOptions).toHaveLength(1));
     act(() => {
@@ -149,17 +159,17 @@ describe('useHoursModal', () => {
     await act(async () => result.current.submit(submitEvent()));
 
     expect(onAdd).toHaveBeenCalledWith({
-      source: 'session',
+      type: 'session',
       staffId: 'staff-1',
       sessionId: 'session-1',
       hours: 1,
       note: 'Led session',
-    });
+    }, false);
   });
 
   it('rejects direct form submission when required command data is invalid', async () => {
     const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ source: 'task', onAdd });
+    const { result } = renderWorkflow({ type: 'task', onAdd });
 
     act(() => {
       result.current.updateHours('not-a-number');

@@ -7,7 +7,8 @@ import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
 import type { RequestOptions } from '../../../../../../http/client';
-import { getHoursSessions, type SetHoursInput } from '../../../hours.api';
+import type { Task } from '../../../../Tasks/types';
+import { getHoursSessions } from '../../../hours.api';
 import type {
   StaffReference,
   HoursCategory,
@@ -15,41 +16,24 @@ import type {
   Hours,
 } from '../../../types';
 
-type HoursSource = 'regular' | 'task' | 'session';
-
-export interface HoursTaskOption {
-  id: string;
-  title: string;
-  state: 'open' | 'completed' | 'cancelled';
-  staffId: string;
-}
-
-interface HoursDraft {
-  source: HoursSource;
-
-  staffId: string;
-  taskId: string;
+type HoursDraft = Pick<Hours, 'staffId' | 'date' | 'note' | 'type'> & {
+  taskId: NonNullable<Hours['taskId']>;
   completeTask: boolean;
-  sessionId: string;
-  programId: string;
+  sessionId: NonNullable<Hours['sessionId']>;
+  programId: NonNullable<Hours['programId']>;
   category: HoursCategory | '';
-  date: string;
   hours: string;
-  note: string;
-}
+};
 
-export interface UseHoursModalOptions {
+export interface UseHoursModalOptions extends Partial<Pick<Hours, 'staffId' | 'date' | 'type'>> {
   staff: readonly StaffReference[];
   programs: readonly HoursProgram[];
   loadTasks: (
     staffId: string,
     opts?: RequestOptions,
-  ) => Promise<readonly HoursTaskOption[]>;
-  onAdd: (input: SetHoursInput) => Promise<void>;
-  staffId?: string;
-  date?: string;
-  source?: HoursSource;
-  task?: HoursTaskOption;
+  ) => Promise<readonly Task[]>;
+  onAdd: (input: Partial<Hours>, completeTask: boolean) => Promise<void>;
+  task?: Task;
   item?: Hours;
   canCompleteTask?: boolean;
 }
@@ -64,12 +48,10 @@ export interface UseHoursModalOptions {
 export default function useHoursModal(options: UseHoursModalOptions) {
   const { loadTasks, onAdd, task, item, canCompleteTask = false } = options;
   const [draft, setDraft] = useState<HoursDraft>(() => {
-    let source = options.source ?? 'regular';
-    if (item?.sessionId) source = 'session';
-    if (task || item?.taskId) source = 'task';
+    const type = task ? 'task' : item?.type ?? options.type ?? 'regular';
 
     return {
-      source,
+      type,
 
       staffId: item?.staffId ?? task?.staffId ?? options.staffId ?? getUser()?.id ?? '',
       taskId: task?.id ?? item?.taskId ?? '',
@@ -91,7 +73,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   const taskQuery = useQuery({
     queryKey: ['tasks', 'hours-options', draft.staffId],
     queryFn: ({ signal }) => loadTasks(draft.staffId, { signal }),
-    enabled: draft.source === 'task' && Boolean(draft.staffId) && !taskLocked,
+    enabled: draft.type === 'task' && Boolean(draft.staffId) && !taskLocked,
   });
   const taskOptions = task
     ? [task]
@@ -100,7 +82,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
   const sessionQuery = useQuery({
     queryKey: ['hours-sessions', draft.staffId, draft.date],
     queryFn: ({ signal }) => getHoursSessions(draft.staffId, draft.date, signal),
-    enabled: draft.source === 'session' && Boolean(draft.staffId) && Boolean(draft.date),
+    enabled: draft.type === 'session' && Boolean(draft.staffId) && Boolean(draft.date),
   });
   const sessionOptions = sessionQuery.data ?? [];
 
@@ -129,7 +111,7 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     setDraft(current => ({
       ...current,
       date,
-      sessionId: current.source === 'session' ? '' : current.sessionId,
+      sessionId: current.type === 'session' ? '' : current.sessionId,
     }));
   };
   const updateHours = (hours: string) => {
@@ -156,19 +138,18 @@ export default function useHoursModal(options: UseHoursModalOptions) {
     const shared = {
       staffId: draft.staffId,
       hours: Number(draft.hours),
-      note: draft.note.trim(),
+      note: draft.note,
     };
-    let input: SetHoursInput;
-    if (draft.source === 'task') {
+    let input: Partial<Hours>;
+    if (draft.type === 'task') {
       input = {
         ...shared,
-        source: 'task',
+        type: 'task',
         date: draft.date,
         taskId: draft.taskId,
-        completeTask: canCompleteTask && draft.completeTask,
       };
-    } else if (draft.source === 'session') {
-      input = { ...shared, source: 'session', sessionId: draft.sessionId };
+    } else if (draft.type === 'session') {
+      input = { ...shared, type: 'session', sessionId: draft.sessionId };
     } else {
       if (!draft.category || draft.category === 'program_delivery') {
         setError('Select a category.');
@@ -177,18 +158,24 @@ export default function useHoursModal(options: UseHoursModalOptions) {
       }
       input = {
         ...shared,
-        source: 'regular',
+        type: 'regular',
         date: draft.date,
         programId: draft.programId || null,
         category: draft.category,
       };
+    }
+    if (item) {
+      const changedFields = Object.entries(input).filter(([field, value]) => item[field as keyof Hours] !== value);
+      input = Object.fromEntries(changedFields);
     }
     if (!submitLock.tryLock()) return;
 
     setSubmitStatus('submitting');
     setError('');
     try {
-      await onAdd(input);
+      if (!item || Object.keys(input).length) {
+        await onAdd(input, draft.type === 'task' && canCompleteTask && draft.completeTask);
+      }
       setSubmitStatus('success');
     } catch (cause) {
       setError(getErrorMessage(
@@ -229,8 +216,8 @@ export default function useHoursModal(options: UseHoursModalOptions) {
 /** Validates the command fields before saving. @example getDraftError(draft) // empty when valid */
 function getDraftError(draft: HoursDraft) {
   if (!draft.staffId) return 'Select a staff member.';
-  if (draft.source === 'task' && !draft.taskId) return 'Select a task.';
-  if (draft.source === 'session' && !draft.sessionId) return 'Select a session.';
+  if (draft.type === 'task' && !draft.taskId) return 'Select a task.';
+  if (draft.type === 'session' && !draft.sessionId) return 'Select a session.';
 
   const hours = Number(draft.hours);
   if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) {
