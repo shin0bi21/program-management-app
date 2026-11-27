@@ -3,6 +3,8 @@ import type { HoursFilters, HoursSortKey, Hours } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 
+type HoursTableDataResult = ReturnType<typeof useInfiniteListQuery<Hours>>;
+
 /**
  * Loads complete Hours rows for the applied table controls.
  * @param queryKey - Hours list-only key prefix.
@@ -14,7 +16,7 @@ export default function useHoursTableData(
   queryKey: readonly unknown[],
   filters: HoursFilters,
   sorting: ListSort<HoursSortKey>,
-) {
+): HoursTableDataResult {
   return useInfiniteListQuery<Hours>({
     ordering: { direction: sorting.direction, getValue: item => getHoursSortValue(item, sorting.key) },
     queryKey: [...queryKey, filters, sorting],
@@ -33,7 +35,7 @@ export default function useHoursTableData(
  * @param key - Column selected for ordering.
  * @example getHoursSortValue(item, 'hours') // numeric hours
  */
-export function getHoursSortValue(item: Hours, key: HoursSortKey) {
+export function getHoursSortValue(item: Hours, key: HoursSortKey): Hours[HoursSortKey] {
   const value = item[key];
   return typeof value === 'string' ? value.toLowerCase() : value;
 }

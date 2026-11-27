@@ -1,7 +1,8 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { useProgramReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
+import { getProgramReferences } from '../../../../../common/features/referenceData/referenceData.api';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import useAccountData from './useAccountData';
 
 vi.mock('../../../../../auth/storage', () => ({
@@ -10,26 +11,19 @@ vi.mock('../../../../../auth/storage', () => ({
 vi.mock('../../../../../auth/authContext', () => ({
   useAuth: () => ({ role: 'staff' }),
 }));
-vi.mock('../../../../../common/features/referenceData/hooks/useReferenceData', () => ({
-  useProgramReferences: vi.fn(),
+vi.mock('../../../../../common/features/referenceData/referenceData.api', () => ({
+  getProgramReferences: vi.fn(),
 }));
 
 describe('useAccountData', () => {
-  it('exposes identity and assigned programs through the page data contract', () => {
-    const retryPrograms = vi.fn();
-    vi.mocked(useProgramReferences).mockReturnValue({
-      rows: [{
-        id: 'program-1', title: 'Soft Skills',
-      }],
-      upsert: vi.fn(), remove: vi.fn(),
-      loading: false,
-      error: '',
-      refetch: retryPrograms,
+  it('exposes identity, loads assigned programs, and can retry them', async () => {
+    vi.mocked(getProgramReferences).mockResolvedValue([{ id: 'program-1', title: 'Soft Skills' }]);
+    const { result } = renderHook(() => useAccountData(), {
+      wrapper: createQueryClientWrapper(createTestQueryClient()),
     });
 
-    const { result } = renderHook(() => useAccountData());
-
-    expect(useProgramReferences).toHaveBeenCalledWith({ assignedOnly: true });
+    await waitFor(() => expect(result.current.programNames).toBe('Soft Skills'));
+    expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
     expect(result.current).toEqual({
       name: 'Sofia Soft Skills',
       email: 'staff@example.test',
@@ -37,7 +31,10 @@ describe('useAccountData', () => {
       programNames: 'Soft Skills',
       programsLoading: false,
       programsError: '',
-      retryPrograms,
+      retryPrograms: expect.any(Function),
     });
+
+    await act(async () => result.current.retryPrograms());
+    expect(getProgramReferences).toHaveBeenCalledTimes(2);
   });
 });

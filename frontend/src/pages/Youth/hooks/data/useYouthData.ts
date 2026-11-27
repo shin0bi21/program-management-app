@@ -1,4 +1,5 @@
 import { useCycleReferences, useProgramReferences, useSchoolReferences } from '../../../../common/features/referenceData/hooks/useReferenceData';
+import { getErrorMessage } from '../../../../http/errors';
 
 /**
  * Supplies the page's shared program, cycle, and school choices.
@@ -12,14 +13,14 @@ export default function useYouthData(assignedOnly: boolean) {
   const schools = useSchoolReferences();
 
   return {
-    programs: programs.rows,
-    programsLoading: programs.loading,
-    programsError: programs.error,
-    cycles: cycles.rows,
-    cyclesLoading: cycles.loading,
-    cyclesError: cycles.error,
-    schools: schools.rows,
-    schoolsLoading: schools.loading,
-    schoolsError: schools.error,
+    programs: programs.data ?? [],
+    programsLoading: programs.isLoading,
+    programsError: programs.error ? getErrorMessage(programs.error, 'Could not load programs') : '',
+    cycles: cycles.data ?? [],
+    cyclesLoading: cycles.isLoading,
+    cyclesError: cycles.error ? getErrorMessage(cycles.error, 'Could not load cycles') : '',
+    schools: schools.data ?? [],
+    schoolsLoading: schools.isLoading,
+    schoolsError: schools.error ? getErrorMessage(schools.error, 'Could not load schools') : '',
   };
 }

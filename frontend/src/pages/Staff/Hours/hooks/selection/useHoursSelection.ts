@@ -1,6 +1,19 @@
 import { useCallback, useState } from 'react';
 
-import type { Hours, StaffReference } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Hours } from '../../types';
+
+interface UseHoursSelectionOptions {
+  staff: readonly StaffReference[];
+  currentUserStaff: StaffReference | null;
+}
+
+interface HoursSelectionResult {
+  selectedRowId: Hours['id'] | null;
+  selectedStaff: StaffReference | null;
+  selectRow: (row: Hours) => void;
+  selectStaff: (staffId: Hours['staffId']) => void;
+}
 
 /**
  * Tracks shared staff selection and the last clicked entry’s row ID.
@@ -10,10 +23,7 @@ import type { Hours, StaffReference } from '../../types';
 export default function useHoursSelection({
   staff,
   currentUserStaff,
-}: {
-  staff: readonly StaffReference[];
-  currentUserStaff: StaffReference | null;
-}) {
+}: UseHoursSelectionOptions): HoursSelectionResult {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 

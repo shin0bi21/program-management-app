@@ -5,7 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
-import { getCycleReferences, getProgramReferences, getStaffReferences } from '../../../common/features/referenceData/referenceData.api';
+import {
+  getCycleReferences,
+  getProgramReferences,
+  getStaffReferences,
+  type StaffReference,
+} from '../../../common/features/referenceData/referenceData.api';
 import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
 import { makeTask } from '../../../tests/factories/task';
 import { makeHoursItem } from '../../../tests/factories/hours';
@@ -21,7 +26,6 @@ import type TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverv
 import type TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import { deleteTask, getTaskReferenceData, updateTaskState } from './api/tasks.api';
 import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
-import type { StaffReference } from './types';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
 vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
@@ -84,9 +88,8 @@ vi.mock('./components/TaskTable/hooks/useTaskTable', () => ({
 }));
 vi.mock('./api/tasks.api', () => ({
   getOpenTasks: vi.fn(), getTaskReferenceData: vi.fn(),
-  updateTaskState: vi.fn(), deleteTask: vi.fn(),
+  updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
-vi.mock('./components/TaskCalendar/api/taskCalendar.api', () => ({ updateTaskPlacement: vi.fn() }));
 vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
 vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
@@ -286,6 +289,27 @@ describe('Tasks', () => {
 
     expect(updateTaskState).toHaveBeenCalledWith(completedTask.id, 'open');
     expect(children.hoursCard?.task).toBe(reopened);
+  });
+
+  it('updates the mounted calendar after a task is saved or deleted', async () => {
+    preferenceState.value.view = 'calendar';
+    const completedTask = makeTask({ state: 'completed' });
+    vi.mocked(updateTaskState).mockResolvedValue(completedTask);
+    renderTasks();
+    await screen.findByTestId('task-calendar');
+    const calendar = children.calendar!;
+    const upsert = vi.fn();
+    const remove = vi.fn();
+    calendar.calendarCacheRef.current = { upsert, remove };
+
+    await act(async () => calendar.actions.setState(task, 'completed'));
+    expect(upsert).toHaveBeenCalledWith(completedTask);
+
+    act(() => calendar.actions.requestDelete(completedTask));
+    const confirmation = screen.getByRole('dialog', { name: 'Delete Task' });
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(remove).toHaveBeenCalledWith(task.id));
   });
 
   it('keeps the hours target current after completion and preserves selection when closed', async () => {

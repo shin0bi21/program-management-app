@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SchoolModal from './SchoolModal';
 import useSchoolModal from './hooks/useSchoolModal';
 import { createSchool, deleteSchool, setSchool } from './schoolModal.api';
+import { referenceDataKeys } from '../referenceData/hooks/useReferenceData';
+import { renderWithQueryClient as render } from '../../../tests/queryClientTestUtils';
 
-const schools = vi.hoisted(() => ({ upsertSchool: vi.fn(), removeSchool: vi.fn() }));
-vi.mock('./hooks/useSchools', () => ({ useSchools: () => schools }));
 vi.mock('./schoolModal.api', () => ({ createSchool: vi.fn(), deleteSchool: vi.fn(), setSchool: vi.fn() }));
 
 const school = { id: 'school-1', name: 'Central High' };
@@ -37,14 +37,14 @@ describe('SchoolModal', () => {
 
   it('creates a school, reconciles the returned record, selects it, and closes', async () => {
     const onChange = vi.fn();
-    render(<SchoolWorkflow onChange={onChange} />);
+    const { queryClient } = render(<SchoolWorkflow onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: '  Entered name  ' } });
     fireEvent.submit(document.getElementById('school-action-form')!);
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(createSchool).toHaveBeenCalledWith('Entered name');
-    expect(schools.upsertSchool).toHaveBeenCalledWith(school);
+    expect(queryClient.getQueryData(referenceDataKeys.schools)).toEqual([school]);
     expect(onChange).toHaveBeenCalledWith(school.id);
   });
 
@@ -52,7 +52,8 @@ describe('SchoolModal', () => {
     const onChange = vi.fn();
     const saved = { ...school, name: 'Central Academy' };
     vi.mocked(setSchool).mockResolvedValue(saved);
-    render(<SchoolWorkflow schoolId="other" onChange={onChange} />);
+    const { queryClient } = render(<SchoolWorkflow schoolId="other" onChange={onChange} />);
+    queryClient.setQueryData(referenceDataKeys.schools, [school]);
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     expect(screen.getByLabelText('School Name *')).toHaveValue(school.name);
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central Academy' } });
@@ -60,19 +61,20 @@ describe('SchoolModal', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(setSchool).toHaveBeenCalledWith({ id: school.id, name: 'Central Academy' });
-    expect(schools.upsertSchool).toHaveBeenCalledWith(saved);
+    expect(queryClient.getQueryData(referenceDataKeys.schools)).toEqual([saved]);
     expect(onChange).not.toHaveBeenCalled();
   });
 
   it.each([school.id, 'other'])('clears a deleted school only when selected (%s)', async schoolId => {
     const onChange = vi.fn();
-    render(<SchoolWorkflow schoolId={schoolId} onChange={onChange} />);
+    const { queryClient } = render(<SchoolWorkflow schoolId={schoolId} onChange={onChange} />);
+    queryClient.setQueryData(referenceDataKeys.schools, [school]);
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(deleteSchool).toHaveBeenCalledWith(school.id);
-    expect(schools.removeSchool).toHaveBeenCalledWith(school.id);
+    expect(queryClient.getQueryData(referenceDataKeys.schools)).toEqual([]);
     expect(onChange.mock.calls).toEqual(schoolId === school.id ? [['']] : []);
   });
 
@@ -89,14 +91,14 @@ describe('SchoolModal', () => {
   it('preserves the draft after failure and allows retry', async () => {
     vi.mocked(createSchool).mockRejectedValueOnce(new Error('network failed'));
     const onChange = vi.fn();
-    render(<SchoolWorkflow onChange={onChange} />);
+    const { queryClient } = render(<SchoolWorkflow onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central High' } });
     fireEvent.submit(document.getElementById('school-action-form')!);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('network failed');
     expect(screen.getByLabelText('School Name *')).toHaveValue('Central High');
-    expect(schools.upsertSchool).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(referenceDataKeys.schools)).toBeUndefined();
     expect(onChange).not.toHaveBeenCalled();
 
     fireEvent.submit(document.getElementById('school-action-form')!);

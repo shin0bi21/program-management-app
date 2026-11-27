@@ -33,7 +33,7 @@ vi.mock('../../common/features/referenceData/hooks/useReferenceData', async impo
   ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
   useProgramReferences: (...args: unknown[]) => {
     expect(args).toEqual([{ assignedOnly: true }]);
-    return { rows: [{ id: 'program-1', title: 'Soft Skills' }], loading: false, error: '' };
+    return { data: [{ id: 'program-1', title: 'Soft Skills' }], isLoading: false, error: null };
   },
 }));
 

@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState, type ReactElement } from 'react';
 
 import ActionsMenu from '../../../common/components/ActionsMenu/ActionsMenu';
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import ConfirmModal from '../../../common/components/ConfirmModal/ConfirmModal';
+import type { ConfirmAction } from '../../../common/components/ConfirmModal/types';
 import { type PageMessageValue } from '../../../common/components/PageMessageOverlay/PageMessageOverlay';
 import HoursModal from './components/HoursModal/HoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
@@ -19,12 +20,10 @@ import useHoursPreferences from './hooks/preferences/useHoursPreferences';
 import useHoursSelection from './hooks/selection/useHoursSelection';
 
 import { getOpenTasks } from '../Tasks/api/tasks.api';
-import { HOURS_TABLE_KEYS, type Hours } from './types';
-
-import './Hours.css';
+import { HOURS_TABLE_KEYS, type AddHoursFormContext, type Hours, type HoursCalendarIndex } from './types';
 
 type HoursModalState =
-  | { mode: 'add'; context: Partial<Pick<Hours, 'staffId' | 'date' | 'type'>> }
+  | { mode: 'add'; context: Partial<AddHoursFormContext> }
   | { mode: 'edit'; item: Hours }
   | null;
 
@@ -38,7 +37,7 @@ const HOURS_REFERENCE_DATA_QUERY_KEY = ['hours-reference-data'] as const;
  * Composes page-owned Hours choices with independent body and dashboard queries.
  * @example <Hours /> // table/calendar rows with staff summaries
  */
-export default function HoursPage() {
+export default function HoursPage(): ReactElement {
   const [viewError, setViewError] = useState<PageMessageValue>(null);
 
   // Permissions.
@@ -53,24 +52,17 @@ export default function HoursPage() {
     currentUserId,
   );
 
-  const preferences = useHoursPreferences({
-    staff: pageData.staff,
-    programs: pageData.programs,
-    cycles: pageData.cycles,
-    categories: pageData.categories,
-    types: pageData.types,
-    loadingDependencies: pageData.optionsLoading || pageData.cyclesLoading,
-    optionsError: Boolean(pageData.localOptionsError),
-    staffError: Boolean(pageData.staffError),
-    programsError: Boolean(pageData.programsError),
-    cyclesError: Boolean(pageData.cyclesError),
-    tableKeys: HOURS_TABLE_KEYS,
-  });
+  const preferences = useHoursPreferences(pageData, HOURS_TABLE_KEYS);
 
   const [hoursModalState, setHoursModalState] = useState<HoursModalState>(null);
+  const calendarIndexRef = useRef<HoursCalendarIndex | null>(null);
 
-  // Keep table action cells mounted when preferences or page data refresh.
-  const closeRemovedItem = useCallback((itemId: string) => {
+  const syncHoursView = useCallback((item: Hours) => {
+    calendarIndexRef.current?.upsert(item);
+  }, []);
+
+  const removeHoursFromViews = useCallback((itemId: Hours['id']) => {
+    calendarIndexRef.current?.remove(itemId);
     setHoursModalState(current => (
       current?.mode === 'edit' && current.item.id === itemId ? null : current
     ));
@@ -78,7 +70,7 @@ export default function HoursPage() {
 
   // Selection and actions.
   const selection = useHoursSelection({
-    staff: pageData.staff,
+    staff: pageData.staff.data ?? [],
     currentUserStaff: pageData.currentUserStaff,
   });
 
@@ -87,14 +79,15 @@ export default function HoursPage() {
     hoursTableQueryKey: HOURS_TABLE_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
     filters: preferences.appliedFilters,
-    onItemRemoved: closeRemovedItem,
+    onItemChanged: syncHoursView,
+    onItemRemoved: removeHoursFromViews,
   });
 
   const editedItem = hoursModalState?.mode === 'edit' ? hoursModalState.item : undefined;
-  const addHoursContext = hoursModalState?.mode === 'add' ? hoursModalState.context : undefined;
+  const addHoursFormContext = hoursModalState?.mode === 'add' ? hoursModalState.context : undefined;
 
   // Hours modal.
-  const openAddHoursModal = useCallback((context: Partial<Pick<Hours, 'staffId' | 'date' | 'type'>>) => {
+  const openAddHoursModal = useCallback((context: Partial<AddHoursFormContext>) => {
     setHoursModalState({ mode: 'add', context });
   }, []);
 
@@ -108,13 +101,25 @@ export default function HoursPage() {
     actions.saveHours(input, editedItem, completeTask)
   );
 
+  const [confirmation, setConfirmation] = useState<ConfirmAction | null>(null);
+  const deleteHours = actions.deleteHours;
+  const requestDelete = useCallback((target: Hours) => {
+    setConfirmation({
+      title: 'Delete logged hours',
+      message: `Delete these ${target.categoryLabel.toLowerCase()} hours?`,
+      confirmVariant: 'danger',
+      onConfirm: () => deleteHours(target),
+    });
+  }, [deleteHours]);
+  const closeConfirmation = () => setConfirmation(null);
+
   // Table configuration.
   const table = useHoursTable({
     canWrite,
     staffById: pageData.staffById,
     isItemPending: actions.isItemPending,
     onEdit: openEditHoursModal,
-    onDelete: actions.requestDelete,
+    onDelete: requestDelete,
   });
 
   // View configuration.
@@ -137,23 +142,24 @@ export default function HoursPage() {
   const hoursCalendar = (
     <HoursCalendar
       key={JSON.stringify(preferences.appliedFilters)}
-      staff={pageData.staff}
+      staff={pageData.staff.data ?? []}
       filters={preferences.appliedFilters}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
-      calendarIndexRef={actions.calendarIndexRef}
+      calendarIndexRef={calendarIndexRef}
       isItemPending={actions.isItemPending}
       onStaffSelect={selection.selectStaff}
       onEdit={openEditHoursModal}
-      onDelete={actions.requestDelete}
+      onDelete={requestDelete}
       onAdd={openAddHoursModal}
       onMove={actions.moveHours}
       onMessageChange={setViewError}
     />
   );
 
-  const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
-  const hasCycleBounds = Boolean(preferences.appliedFilters.dateRange) && !pageData.cyclesError;
+  const viewUnavailable = pageData.cycles.error ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
+  const hasCycleBounds = Boolean(preferences.appliedFilters.dateRange) && !pageData.cycles.error;
+  const optionsError = pageData.referenceData.error || pageData.staff.error || pageData.programs.error;
 
   // Render.
   return <>
@@ -176,11 +182,11 @@ export default function HoursPage() {
       search={{ label: 'Search hours', placeholder: 'Search hours' }}
       columns={table.columns}
       messages={[
-        pageData.optionsError ? {
+        optionsError ? {
           message: 'Could not load hour options.',
           details: 'Staff, programs, hour categories, and hour types could not be loaded.',
         } : null,
-        pageData.cyclesError ? {
+        pageData.cycles.error ? {
           message: 'Could not load program cycles.',
           details: 'Cycle filters and cycle-based totals may be unavailable.',
         } : null,
@@ -196,7 +202,7 @@ export default function HoursPage() {
         <HoursCycleSummaryDashboardCard
           queryKey={HOURS_QUERY_KEY}
           staff={selection.selectedStaff}
-          cycles={pageData.cycles}
+          cycles={pageData.cycles.data ?? []}
         />
       </>}
       table={hasCycleBounds ? hoursTable : viewUnavailable}
@@ -206,21 +212,21 @@ export default function HoursPage() {
     <HoursModal
       isOpen={hoursModalState !== null}
       staff={pageData.writableStaff}
-      programs={pageData.programs}
-      categories={pageData.categories}
+      programs={pageData.programs.data ?? []}
+      categories={pageData.referenceData.data?.categories ?? []}
       loadTasks={getOpenTasks}
       onClose={closeHoursModal}
       onAdd={submitHours}
-      staffId={addHoursContext?.staffId}
-      date={addHoursContext?.date}
-      type={addHoursContext?.type}
+      staffId={addHoursFormContext?.staffId}
+      date={addHoursFormContext?.date}
+      type={addHoursFormContext?.type}
       canCompleteTask={canCompleteTask}
       item={editedItem}
     />
 
     <ConfirmModal
-      action={actions.confirmAction}
-      onClose={actions.closeConfirmation}
+      action={confirmation}
+      onClose={closeConfirmation}
     />
   </>;
 }

@@ -15,8 +15,8 @@ export default function useSessionData() {
     sessionTypes: references.data?.sessionTypes ?? [],
     referencesLoading: references.isLoading,
     referencesError: references.error ? getErrorMessage(references.error, 'Could not load session options.') : '',
-    cycles: cycles.rows,
-    cyclesLoading: cycles.loading,
-    cyclesError: cycles.error,
+    cycles: cycles.data ?? [],
+    cyclesLoading: cycles.isLoading,
+    cyclesError: cycles.error ? getErrorMessage(cycles.error, 'Could not load cycles') : '',
   };
 }

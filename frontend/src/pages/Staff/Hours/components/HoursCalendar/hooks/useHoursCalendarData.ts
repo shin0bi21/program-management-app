@@ -5,6 +5,11 @@ import type { RowItemData } from '../../../../../../common/components/TimelineCa
 import { getHoursCalendarData } from '../../../hours.api';
 import type { HoursCalendarIndex, HoursFilters, Hours } from '../../../types';
 
+interface HoursCalendarDataResult {
+  calendar: ReturnType<typeof useDataBuffer<Hours>>;
+  visibleItems: RowItemData<Hours>;
+}
+
 /** Identifies an entry in the calendar buffer. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */
 const getHoursItemId = (item: Hours) => item.id;
 
@@ -12,13 +17,13 @@ const getHoursItemId = (item: Hours) => item.id;
  * Loads complete Hours rows into the calendar range buffer.
  * Registers mutation callbacks for the mounted view and removes them on teardown.
  * @param filters - Applied page filters, also used to scope mutation placement.
- * @param calendarIndexRef - Page actions' link to this calendar's membership index.
+ * @param calendarIndexRef - Page-owned ref populated while this calendar is mounted.
  * @example const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef)
  */
 export default function useHoursCalendarData(
   filters: HoursFilters,
-  calendarIndexRef: MutableRefObject<HoursCalendarIndex>,
-) {
+  calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>,
+): HoursCalendarDataResult {
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const rows = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
     signal.throwIfAborted();
@@ -66,10 +71,7 @@ export default function useHoursCalendarData(
     };
 
     return () => {
-      calendarIndexRef.current = {
-        upsert: () => undefined,
-        remove: () => undefined,
-      };
+      calendarIndexRef.current = null;
     };
   }, [calendarIndexRef, filters.cycleIds, removeItem, upsertItem]);
 

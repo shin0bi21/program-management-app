@@ -1,12 +1,18 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
-import type { StaffReference } from '../../../types';
+import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../../../common/features/programming/cycles/types';
 import usePageMessageReporter from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
 import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
+
+interface HoursCycleSummaryDashboardCardProps {
+  queryKey: readonly unknown[];
+  staff: StaffReference | null;
+  cycles: readonly ProgramCycle[];
+}
 
 /**
  * Loads and displays the selected staff member's cycle average, independent of the pay-period query.
@@ -15,11 +21,11 @@ import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
  * @param props - Shared staff, ordered cycle references, and query namespace.
  * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycles={cycles} />
  */
-export default function HoursCycleSummaryDashboardCard({ queryKey, staff, cycles }: {
-  queryKey: readonly unknown[];
-  staff: StaffReference | null;
-  cycles: readonly ProgramCycle[];
-}) {
+export default function HoursCycleSummaryDashboardCard({
+  queryKey,
+  staff,
+  cycles,
+}: HoursCycleSummaryDashboardCardProps): ReactElement {
   const cycle = cycles.find(candidate => candidate.state === 'active') ?? null;
 
   const state = useHoursCycleSummaryData(queryKey, staff?.id ?? null, cycle?.id ?? null);

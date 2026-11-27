@@ -1,5 +1,4 @@
-import type { ReactElement } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
 import PageContainer from '../../../common/components/PageContainer/PageContainer';
 import Button from '../../../common/components/Button/Button';
@@ -16,7 +15,7 @@ import TaskModal from './components/TaskModal/TaskModal';
 import { useAuth } from '../../../auth/authContext';
 import useTaskTable from './components/TaskTable/hooks/useTaskTable';
 import useTaskActions from './hooks/actions/useTaskActions';
-import useTaskData from './hooks/data/useTaskData';
+import useTaskReferenceData from './hooks/data/useTaskReferenceData';
 import useTaskPreferences from './hooks/preferences/useTaskPreferences';
 import useTaskSelection from './hooks/selection/useTaskSelection';
 
@@ -24,17 +23,16 @@ import { getDate } from '../../../common/utils/date';
 import { getOpenTasks } from './api/tasks.api';
 import {
   TASK_TABLE_KEYS,
-  type AddTaskContext,
+  type AddTaskFormContext,
   type Task,
+  type TaskActions,
+  type TaskCalendarCache,
   type TaskModalState,
 } from './types';
-
-import './Tasks.css';
 
 // Page-owned cache contracts.
 const TASK_QUERY_KEY = ['tasks'] as const;
 const TASK_TABLE_QUERY_KEY = [...TASK_QUERY_KEY, 'table'] as const;
-const TASK_REFERENCE_DATA_QUERY_KEY = ['task-reference-data'] as const;
 const HOURS_QUERY_KEY = ['hours'] as const;
 
 /**
@@ -49,36 +47,40 @@ export default function Tasks(): ReactElement {
   const canWrite = permissions.includes('write:tasks');
   const today = getDate();
 
-  // Page data and preferences.
-  const pageData = useTaskData(TASK_REFERENCE_DATA_QUERY_KEY);
-
-  const preferences = useTaskPreferences({
-    referenceData: pageData.referenceData,
-    referenceDataLoading: pageData.referenceDataLoading,
-    referenceDataError: Boolean(pageData.referenceDataError),
-    staff: pageData.staff,
-    programs: pageData.programs,
-    staffLoading: pageData.staffLoading,
-    staffError: Boolean(pageData.staffError),
-    programsLoading: pageData.programsLoading,
-    programsError: Boolean(pageData.programsError),
-    tableKeys: TASK_TABLE_KEYS,
-    cycles: pageData.cycles,
-    cyclesLoading: pageData.cyclesLoading,
-    cyclesError: Boolean(pageData.cyclesError),
-  });
+  // Reference data and preferences.
+  const referenceData = useTaskReferenceData();
+  const { staff, programs, cycles, taskOptions } = referenceData;
+  const staffRows = staff.data ?? [];
+  const categories = taskOptions.data?.categories ?? [];
+  const writableStaff = useMemo(
+    () => (staff.data ?? []).filter(staffMember => staffMember.writable),
+    [staff.data],
+  );
+  const preferences = useTaskPreferences(referenceData, TASK_TABLE_KEYS);
 
   // Selection and actions.
-  const selection = useTaskSelection({ staff: pageData.staff });
+  const selection = useTaskSelection({ staff: staffRows });
+  const calendarCacheRef = useRef<TaskCalendarCache | null>(null);
+  const { onTaskSynced, removeSelectedTask } = selection;
+
+  const syncTaskViews = useCallback((task: Task) => {
+    onTaskSynced(task);
+    calendarCacheRef.current?.upsert(task);
+  }, [onTaskSynced]);
+
+  const removeTaskFromViews = useCallback((taskId: Task['id']) => {
+    calendarCacheRef.current?.remove(taskId);
+    removeSelectedTask(taskId);
+  }, [removeSelectedTask]);
 
   const actions = useTaskActions({
     taskQueryKey: TASK_QUERY_KEY,
     taskTableQueryKey: TASK_TABLE_QUERY_KEY,
     hoursQueryKey: HOURS_QUERY_KEY,
-    onTaskRemoved: selection.removeSelectedTask,
-    onTaskSynced: selection.onTaskSynced,
+    onTaskRemoved: removeTaskFromViews,
+    onTaskSynced: syncTaskViews,
   });
-  const deleteTaskAction = actions.deleteTask;
+  const { deleteTask: deleteTaskAction, isTaskPending, setState, setTaskRange } = actions;
 
   // Hours modal.
   const [hoursModalOpen, setHoursModalOpen] = useState(false);
@@ -90,7 +92,7 @@ export default function Tasks(): ReactElement {
 
   // Task modal.
   const [taskModalState, setTaskModalState] = useState<TaskModalState>(null);
-  const openAddTaskModal = (context: AddTaskContext) => {
+  const openAddTaskModal = (context: AddTaskFormContext) => {
     setTaskModalState({ mode: 'add', context });
   };
   const openEditTaskModal = useCallback((task: Task) => {
@@ -111,15 +113,14 @@ export default function Tasks(): ReactElement {
 
   const closeConfirmation = () => setConfirmationState(null);
 
-  const table = useTaskTable({
-    canWrite,
-    actions: {
-      isTaskPending: actions.isTaskPending,
-      setState: actions.setState,
-      edit: openEditTaskModal,
-      requestDelete: openDeleteConfirmation,
-    },
-  });
+  const taskActions = useMemo<TaskActions>(() => ({
+    isTaskPending,
+    setState,
+    setTaskRange,
+    edit: openEditTaskModal,
+    requestDelete: openDeleteConfirmation,
+  }), [isTaskPending, openDeleteConfirmation, openEditTaskModal, setState, setTaskRange]);
+  const table = useTaskTable({ canWrite, actions: taskActions });
 
   // View configuration.
   const hoursModalTask = hoursModalOpen ? selection.selectedTask : null;
@@ -144,29 +145,23 @@ export default function Tasks(): ReactElement {
   const taskCalendar = (
     <TaskCalendar
       key={JSON.stringify(preferences.appliedFilters)}
-      staff={pageData.staff}
+      staff={staffRows}
       filters={preferences.appliedFilters}
       dateRange={preferences.dateRange}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaffId}
       selectedTaskId={selection.selectedTaskId}
-      actions={{
-        isTaskPending: actions.isTaskPending,
-        requestDelete: openDeleteConfirmation,
-        setState: actions.setState,
-        setTaskRange: actions.setTaskRange,
-      }}
-      calendarCacheRef={actions.calendarCacheRef}
+      actions={taskActions}
+      calendarCacheRef={calendarCacheRef}
       onTaskSelect={selection.selectTask}
       onStaffSelect={selection.selectStaff}
       onAddTask={openAddTaskModal}
-      onEditTask={openEditTaskModal}
       onMessageChange={setViewError}
     />
   );
 
-  const viewUnavailable = pageData.cyclesError ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
-  const hasCycleBounds = Boolean(preferences.dateRange) && !pageData.cyclesError;
+  const viewUnavailable = cycles.error ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
+  const hasCycleBounds = Boolean(preferences.dateRange) && !cycles.error;
 
   // Render.
   return <>
@@ -187,13 +182,13 @@ export default function Tasks(): ReactElement {
       messages={[
         actions.actionError,
         preferences.error,
-        pageData.referenceDataError ? {
+        taskOptions.error ? {
           message: 'Unable to load task options.',
           details: 'Staff, programs, and task categories could not be loaded.',
         } : null,
-        pageData.staffError ? { message: 'Unable to load task staff.' } : null,
-        pageData.programsError ? { message: 'Unable to load task programs.' } : null,
-        pageData.cyclesError ? {
+        staff.error ? { message: 'Unable to load task staff.' } : null,
+        programs.error ? { message: 'Unable to load task programs.' } : null,
+        cycles.error ? {
           message: 'Unable to load cycles.',
           details: 'Cycle date bounds could not be loaded.',
         } : null,
@@ -217,9 +212,9 @@ export default function Tasks(): ReactElement {
     {canWrite && taskModalState && <TaskModal
       key={taskModalState.mode === 'edit' ? taskModalState.task.id : 'new'}
       target={taskModalState}
-      staff={pageData.writableStaff}
-      programs={pageData.programs}
-      categories={pageData.referenceData?.categories ?? []}
+      staff={writableStaff}
+      programs={programs.data ?? []}
+      categories={categories}
       onSaved={task => actions.syncTask(task, taskModalState.mode === 'add' ? 'create' : 'update')}
       onClose={closeTaskModal}
     />}
@@ -228,9 +223,9 @@ export default function Tasks(): ReactElement {
       isOpen
       task={hoursModalTask}
       canCompleteTask={canWrite}
-      staff={pageData.staff}
-      programs={pageData.programs}
-      categories={pageData.referenceData?.categories ?? []}
+      staff={staffRows}
+      programs={programs.data ?? []}
+      categories={categories}
       loadTasks={getOpenTasks}
       onAdd={actions.logHours}
       onClose={closeHoursModal}

@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { setYouth, setYouthContacts } from '../../../youth.api';
 import { getErrorMessage } from '../../../../../http/errors';
 import { useContacts } from '../../../../../common/features/contacts/hooks/useContacts';
-import { useSchools } from '../../../../../common/features/SchoolModal/hooks/useSchools';
+import { useSchoolReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import { useSubmitStatus } from '../../../../../common/hooks/useSubmitStatus';
 import useSubmitLock from '../../../../../common/hooks/useSubmitLock';
 import { youthSchema, youthContactSchema, type YouthFormData } from '../youthSchema';
@@ -49,7 +49,8 @@ export function useYouthModal({ youthData, onClose, onSuccess, inviteYouth = fal
     },
   });
 
-  const { schools, loading: schoolsLoading, error: schoolsError } = useSchools();
+  const { data: schools = [], isLoading: schoolsLoading, error: schoolError } = useSchoolReferences();
+  const schoolsError = schoolError ? getErrorMessage(schoolError, 'Could not load schools') : '';
   const schoolId = watch('schoolId');
 
   const addresses = watch('addresses') ?? [];

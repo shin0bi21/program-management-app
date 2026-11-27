@@ -1,7 +1,6 @@
 import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
-import type { CycleReference, StaffReference, ProgramReference } from '../../../../../common/features/referenceData/referenceData.api';
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
-import type { TaskReferenceData } from '../../api/tasks.api';
+import type { TaskReferences } from '../data/useTaskReferenceData';
 import { useMemo } from 'react';
 import type { DateRange } from '../../../../../common/utils/dateRange';
 import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
@@ -16,9 +15,9 @@ import {
   preferenceSorting,
 } from '../../../../../common/features/Preferences/preferences';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
+import { HOURS_CATEGORIES } from '../../../Hours/types';
 
 import {
-  type TaskCategory,
   type TaskStatus,
   type TaskSortKey,
   type TasksFilters,
@@ -26,34 +25,12 @@ import {
 
 type TasksView = 'calendar' | 'table';
 
-interface TaskPreferences {
-  cycleIds: string[];
+interface TaskPreferences extends TasksFilters {
   view: TasksView;
-  search: string;
-  staffIds: string[];
-  programIds: string[];
-  categories: TaskCategory[];
-  statuses: TaskStatus[];
   sorting: ListSort<TaskSortKey>;
 }
 
 export type StoredTaskPreferences = Partial<TaskPreferences>;
-
-interface UseTaskPreferencesOptions {
-  referenceData: TaskReferenceData | undefined;
-  referenceDataLoading: boolean;
-  referenceDataError: boolean;
-  staff: StaffReference[];
-  programs: ProgramReference[];
-  staffLoading: boolean;
-  staffError: boolean;
-  programsLoading: boolean;
-  programsError: boolean;
-  tableKeys: readonly TaskSortKey[];
-  cycles: CycleReference[];
-  cyclesLoading: boolean;
-  cyclesError: boolean;
-}
 
 type TaskFilterValues = Omit<TasksFilters, 'search'>;
 
@@ -76,37 +53,28 @@ interface TaskPreferencesResult {
 
 /**
  * Restores task controls and supplies applied request filters with derived calendar bounds.
- * @param options - Reference choices, their availability, and supported table keys.
+ * @param referenceData - Task reference choices and availability.
+ * @param tableKeys - Supported sort and layout columns.
  * @example Submitting search.apply('workshop') saves the applied task search.
  */
-export default function useTaskPreferences({
-  referenceData,
-  referenceDataLoading,
-  referenceDataError,
-  staff,
-  programs,
-  staffLoading,
-  staffError,
-  programsLoading,
-  programsError,
-  tableKeys,
-  cycles,
-  cyclesLoading,
-  cyclesError,
-}: UseTaskPreferencesOptions): TaskPreferencesResult {
-  const options = referenceDataLoading || referenceDataError ? undefined : referenceData;
+export default function useTaskPreferences(
+  referenceData: TaskReferences,
+  tableKeys: readonly TaskSortKey[],
+): TaskPreferencesResult {
+  const { taskOptions, staff, programs, cycles } = referenceData;
+  const options = taskOptions.isLoading || taskOptions.error ? undefined : taskOptions.data;
   const layout = useTableLayout({ key: 'task-preferences', tableKeys });
   const { preferences, updatePreferences, ready, error } = usePreferences({
     key: 'task-preferences',
-    waiting: referenceDataLoading || cyclesLoading || staffLoading || programsLoading,
+    waiting: taskOptions.isLoading || cycles.isLoading || staff.isLoading || programs.isLoading,
     fields: {
-      cycleIds: preferenceIds(cyclesLoading || cyclesError ? undefined : cycles.map(cycle => cycle.id)),
+      cycleIds: preferenceIds(cycles.isLoading || cycles.error ? undefined : (cycles.data ?? []).map(cycle => cycle.id)),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
       search: preferenceText(),
-      staffIds: preferenceIds(staffLoading || staffError ? undefined : staff.map(staffMember => staffMember.id)),
-      programIds: preferenceIds(programsLoading || programsError ? undefined : programs.map(program => program.id)),
-      categories: preferenceOptions<TaskCategory>(
-        ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
+      staffIds: preferenceIds(staff.isLoading || staff.error ? undefined : (staff.data ?? []).map(staffMember => staffMember.id)),
+      programIds: preferenceIds(programs.isLoading || programs.error ? undefined : (programs.data ?? []).map(program => program.id)),
+      categories: preferenceOptions(
+        HOURS_CATEGORIES,
         [],
         options?.categories.map(category => category.id) ?? null,
       ),
@@ -129,17 +97,17 @@ export default function useTaskPreferences({
     {
       id: 'staffIds' as const,
       label: 'Staff',
-      options: staff.map(({ id, name }) => ({ id, label: name })),
+      options: (staff.data ?? []).map(({ id, name }) => ({ id, label: name })),
     },
     {
       id: 'programIds' as const,
       label: 'Program',
-      options: programs.map(({ id, title }) => ({ id, label: title })),
+      options: (programs.data ?? []).map(({ id, title }) => ({ id, label: title })),
     },
-    { id: 'cycleIds' as const, label: 'Cycle', options: cycles.map(({ id, title }) => ({ id, label: title })) },
-    { id: 'categories' as const, label: 'Category', options: (referenceData?.categories ?? []).map(({ id, name }) => ({ id, label: name })) },
-    { id: 'statuses' as const, label: 'Status', options: (referenceData?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
-  ], [referenceData, cycles, staff, programs]);
+    { id: 'cycleIds' as const, label: 'Cycle', options: (cycles.data ?? []).map(({ id, title }) => ({ id, label: title })) },
+    { id: 'categories' as const, label: 'Category', options: (taskOptions.data?.categories ?? []).map(({ id, name }) => ({ id, label: name })) },
+    { id: 'statuses' as const, label: 'Status', options: (taskOptions.data?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
+  ], [taskOptions.data, cycles.data, staff.data, programs.data]);
 
   const filterValues: TaskFilterValues = {
     cycleIds: preferences.cycleIds,
@@ -150,8 +118,8 @@ export default function useTaskPreferences({
   };
   const appliedFilters: TasksFilters = { ...filterValues, search: preferences.search };
   const dateRange = useMemo(
-    () => getCycleDateRange(cycles, preferences.cycleIds),
-    [cycles, preferences.cycleIds],
+    () => getCycleDateRange(cycles.data ?? [], preferences.cycleIds),
+    [cycles.data, preferences.cycleIds],
   );
 
   // Table sorting.

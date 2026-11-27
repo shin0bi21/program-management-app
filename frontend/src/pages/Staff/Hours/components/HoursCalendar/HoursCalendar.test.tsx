@@ -14,7 +14,8 @@ import type {
 import {
   getHoursCalendarData,
 } from '../../hours.api';
-import type { StaffReference, Hours, HoursFilters } from '../../types';
+import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { Hours, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import type { HoursCalendarIndex } from '../../types';
 
@@ -102,9 +103,7 @@ function renderCalendar({
   onMove?: ReturnType<typeof vi.fn>;
 } = {}) {
   vi.mocked(getHoursCalendarData).mockResolvedValue(data);
-  const calendarIndexRef: MutableRefObject<HoursCalendarIndex> = {
-    current: { upsert: vi.fn(), remove: vi.fn() },
-  };
+  const calendarIndexRef: MutableRefObject<HoursCalendarIndex | null> = { current: null };
   const result = renderWithQueryClient(
       <HoursCalendar
         staff={staff}
@@ -150,11 +149,11 @@ describe('HoursCalendar', () => {
     const { calendarIndexRef } = renderCalendar({ filters: { cycleIds: ['cycle-1', 'cycle-3'] } });
     const item = buildItem({ cycleId: 'cycle-1', date: '2026-08-10' });
     act(() => {
-      calendarIndexRef.current.upsert(item);
+      calendarIndexRef.current!.upsert(item);
     });
     await waitFor(() => expect(calendarState.props!.items).toEqual({ 'staff-1': [item] }));
 
-    act(() => calendarIndexRef.current.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
+    act(() => calendarIndexRef.current!.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
     expect(calendarState.props!.items).toEqual({});
   });
 
@@ -220,16 +219,19 @@ describe('HoursCalendar', () => {
   it('updates a buffered row through the mounted calendar callback', async () => {
     const periods = buildInitialDayPeriods('2026-08-10', 3);
     const item = buildItem({ date: periods[1].key });
-    const { calendarIndexRef } = renderCalendar({ data: [item] });
+    const { calendarIndexRef, unmount } = renderCalendar({ data: [item] });
     await initializeCalendar(periods);
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
 
     const saved = { ...item, note: 'Edited from table', hours: 3 };
-    act(() => calendarIndexRef.current.upsert(saved));
+    act(() => calendarIndexRef.current!.upsert(saved));
 
     await waitFor(() => expect(calendarState.props!.items!['staff-1']![0].note).toBe('Edited from table'));
     expect(calendarState.props!.items!['staff-1']![0]).toEqual(saved);
     expect(getHoursCalendarData).toHaveBeenCalledOnce();
+
+    unmount();
+    expect(calendarIndexRef.current).toBeNull();
   });
 
   it('translates a calendar drop into the page-owned move action', async () => {

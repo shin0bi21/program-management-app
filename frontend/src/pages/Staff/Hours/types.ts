@@ -1,17 +1,22 @@
 import type { DateRange } from '../../../common/utils/dateRange';
 
+export const HOURS_CATEGORIES = [
+  'program_delivery',
+  'planning_prep',
+  'meeting',
+  'administration',
+  'outreach',
+  'maintenance',
+  'other',
+] as const;
+
+export type HoursCategory = typeof HOURS_CATEGORIES[number];
+
 export interface Hours {
   id: string;
   staffId: string;
   programId: string | null;
-  category:
-    | 'program_delivery'
-    | 'planning_prep'
-    | 'meeting'
-    | 'administration'
-    | 'outreach'
-    | 'maintenance'
-    | 'other';
+  category: HoursCategory;
   date: string;
   hours: number;
   note: string;
@@ -35,15 +40,13 @@ export interface Hours {
   categoryLabel: string;
   type: 'task' | 'session' | 'regular';
 }
-export type HoursCategory = Hours['category'];
-
-export type { StaffReference, ProgramReference as HoursProgram } from '../../../common/features/referenceData/referenceData.api';
-export interface HoursCycle { id: string; name: string; state?: 'active' | 'upcoming' | 'completed' }
 
 // Table and filter values.
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
 export type HoursItemType = Hours['type'];
+
+export type AddHoursFormContext = Pick<Hours, 'staffId' | 'date' | 'type'>;
 
 export interface HoursFilters {
   dateRange?: DateRange;

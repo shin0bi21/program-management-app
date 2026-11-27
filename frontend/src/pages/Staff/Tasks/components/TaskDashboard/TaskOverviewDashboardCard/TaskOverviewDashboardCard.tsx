@@ -4,7 +4,8 @@ import { DashboardCard } from '../../../../../../common/components/DashboardCard
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
 import { getDate } from '../../../../../../common/utils/date';
-import type { StaffReference, Task } from '../../../types';
+import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
+import type { Task } from '../../../types';
 import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import useTaskOverviewData from './hooks/useTaskOverviewData';

@@ -29,15 +29,13 @@ describe('useProgramsData', () => {
     vi.mocked(getCycleReferences).mockResolvedValue([cycle]);
   });
 
-  it('loads cycles and removes a deleted cycle from page state', async () => {
+  it('loads cycles and assigned programs', async () => {
     const { result } = renderHook(() => useProgramsData(), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
 
     await waitFor(() => expect(result.current.cycles).toEqual([cycle]));
     expect(result.current.cyclesLoading).toBe(false);
     expect(getProgramReferences).toHaveBeenCalledWith({ assignedOnly: true }, { signal: expect.any(AbortSignal) });
 
-    act(() => result.current.removeCycle(cycle.id));
-    await waitFor(() => expect(result.current.cycles).toEqual([]));
   });
 
   it('reports cycle loading failures and retries them', async () => {

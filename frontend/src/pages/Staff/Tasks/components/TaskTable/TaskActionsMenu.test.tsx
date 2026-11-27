@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ActionItem } from '../../../../../common/components/ActionsMenu/ActionsMenu';
 import { makeTask } from '../../../../../tests/factories/task';
-import type { Task } from '../../types';
-import TaskActionsMenu, { type TaskTableActions } from './TaskActionsMenu';
+import type { Task, TaskActions } from '../../types';
+import TaskActionsMenu from './TaskActionsMenu';
 
 const menu = vi.hoisted<{ ariaLabel?: string; items: ActionItem[] }>(() => ({ items: [] }));
 
@@ -16,15 +16,15 @@ vi.mock('../../../../../common/components/ActionsMenu/ActionsMenu', () => ({
   },
 }));
 
-function renderMenu(task: Task, actionOverrides: Partial<TaskTableActions> = {}) {
-  const actions: TaskTableActions = {
+function renderMenu(task: Task) {
+  const actions: TaskActions = {
     isTaskPending: vi.fn(() => false),
     setState: vi.fn().mockResolvedValue(undefined),
+    setTaskRange: vi.fn().mockResolvedValue(null),
     edit: vi.fn(),
     requestDelete: vi.fn(),
-    ...actionOverrides,
   };
-  const rendered = render(<TaskActionsMenu task={task} {...actions} />);
+  const rendered = render(<TaskActionsMenu task={task} actions={actions} />);
 
   return { ...rendered, actions };
 }
@@ -44,21 +44,12 @@ describe('TaskActionsMenu', () => {
 
   it('does not offer actions for read-only or pending tasks', () => {
     const task = makeTask({ writable: false });
-    const { rerender } = render(<TaskActionsMenu
-      task={task}
-      isTaskPending={() => false}
-      setState={vi.fn()}
-      edit={vi.fn()}
-      requestDelete={vi.fn()}
-    />);
+    const { actions, rerender } = renderMenu(task);
     expect(screen.queryByTestId('task-actions-menu')).not.toBeInTheDocument();
 
     rerender(<TaskActionsMenu
       task={{ ...task, writable: true }}
-      isTaskPending={() => true}
-      setState={vi.fn()}
-      edit={vi.fn()}
-      requestDelete={vi.fn()}
+      actions={{ ...actions, isTaskPending: () => true }}
     />);
     expect(screen.queryByTestId('task-actions-menu')).not.toBeInTheDocument();
   });
@@ -86,12 +77,12 @@ describe('TaskActionsMenu', () => {
     expect(actions.edit).toHaveBeenCalledWith(openTask);
 
     const completedTask = makeTask({ state: 'completed', hoursLogged: 1 });
-    rerender(<TaskActionsMenu task={completedTask} {...actions} />);
+    rerender(<TaskActionsMenu task={completedTask} actions={actions} />);
     action('reopen').onClick();
     expect(actions.setState).toHaveBeenNthCalledWith(3, completedTask, 'open');
 
     const untouchedTask = makeTask();
-    rerender(<TaskActionsMenu task={untouchedTask} {...actions} />);
+    rerender(<TaskActionsMenu task={untouchedTask} actions={actions} />);
     action('delete').onClick();
     expect(actions.requestDelete).toHaveBeenCalledWith(untouchedTask);
   });

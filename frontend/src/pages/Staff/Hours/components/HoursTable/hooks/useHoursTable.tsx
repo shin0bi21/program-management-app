@@ -2,10 +2,23 @@ import { useMemo } from 'react';
 
 import ActionsMenu from '../../../../../../common/components/ActionsMenu/ActionsMenu';
 import type { TableColumnDef } from '../../../../../../common/components/Table/Table.types';
-import type { StaffReference, Hours } from '../../../types';
+import type { StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
+import type { Hours } from '../../../types';
 import { formatShortDate } from '../../../../../../common/utils/date';
 import { HOURS_ITEM_TYPE_LABELS } from '../../../utils/hoursItemType';
 import HoursTypeLabel from '../../HoursTypeLabel/HoursTypeLabel';
+
+interface UseHoursTableOptions {
+  canWrite: boolean;
+  staffById: ReadonlyMap<Hours['staffId'], StaffReference>;
+  isItemPending: (itemId: Hours['id']) => boolean;
+  onEdit: (target: Hours) => void;
+  onDelete: (target: Hours) => void;
+}
+
+interface HoursTableResult {
+  columns: TableColumnDef<Hours>[];
+}
 
 /**
  * Builds hours columns with notes capped at 160px and actions for writable, settled entries.
@@ -18,13 +31,7 @@ export default function useHoursTable({
   isItemPending,
   onEdit,
   onDelete,
-}: {
-  canWrite: boolean;
-  staffById: ReadonlyMap<string, StaffReference>;
-  isItemPending: (itemId: string) => boolean;
-  onEdit: (target: Hours) => void;
-  onDelete: (target: Hours) => void;
-}) {
+}: UseHoursTableOptions): HoursTableResult {
   const columns = useMemo<TableColumnDef<Hours>[]>(() => {
     /**
      * Displays edit/delete actions when the entry's staff member is writable and the entry is settled.
@@ -42,7 +49,7 @@ export default function useHoursTable({
       />;
     }
 
-    return [
+    const tableColumns: TableColumnDef<Hours>[] = [
       { id: 'firstName', header: 'First Name', accessorFn: row => row.firstName },
       { id: 'lastName', header: 'Last Name', accessorFn: row => row.lastName },
       { id: 'date', header: 'Date', size: 140, accessorFn: row => formatShortDate(row.date) },
@@ -62,15 +69,20 @@ export default function useHoursTable({
         accessorFn: row => HOURS_ITEM_TYPE_LABELS[row.type],
         cell: ({ row }) => <HoursTypeLabel item={row.original} />,
       },
-      ...(canWrite ? [{
+    ];
+
+    if (canWrite) {
+      tableColumns.push({
         id: 'actions',
         header: '',
         size: 40,
         enableResizing: false,
         enableHiding: false,
-        cell: ({ row }: { row: { original: Hours } }) => renderActionsMenu(row.original),
-      }] : []),
-    ];
+        cell: ({ row }) => renderActionsMenu(row.original),
+      });
+    }
+
+    return tableColumns;
   }, [canWrite, isItemPending, onDelete, onEdit, staffById]);
 
   return { columns };

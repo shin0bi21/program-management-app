@@ -33,7 +33,7 @@ describe('useProgramsActions', () => {
     derivedKeys.forEach(key => client.setQueryData(key, []));
     const onProgramSynced = vi.fn();
     const { result } = renderHook(() => useProgramsActions({
-      programTableQueryKey: tableKey, onProgramSynced, onCycleDeleted: vi.fn(),
+      programTableQueryKey: tableKey, onProgramSynced,
     }), { wrapper: createQueryClientWrapper(client) });
     const saved = { ...program, title: 'Zulu' };
     act(() => result.current.syncProgram({ program: saved, updatedProgramCycles: [], removedProgramCycles: [], createdProgramCycles: [] }, 'update'));
@@ -50,7 +50,7 @@ describe('useProgramsActions', () => {
     client.setQueryData(['programs', 'unrelated'], []);
     const onProgramSynced = vi.fn();
     const { result } = renderHook(() => useProgramsActions({
-      programTableQueryKey: tableKey, onProgramSynced, onCycleDeleted: vi.fn(),
+      programTableQueryKey: tableKey, onProgramSynced,
     }), { wrapper: createQueryClientWrapper(client) });
     const program: Program = {
       id: 'program-1', title: 'New program', enrollmentRequired: true, minAge: null, maxAge: null,
@@ -68,7 +68,7 @@ describe('useProgramsActions', () => {
   it('updates cycle choices from the saved response', () => {
     const client = createTestQueryClient();
     const { result } = renderHook(() => useProgramsActions({
-      programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(), onCycleDeleted: vi.fn(),
+      programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(),
     }), { wrapper: createQueryClientWrapper(client) });
     client.setQueryData(referenceDataKeys.cycles, [cycle]);
     const saved = { ...cycle, title: 'Updated cycle' };
@@ -78,25 +78,28 @@ describe('useProgramsActions', () => {
     expect(client.getQueryData(referenceDataKeys.cycles)).toEqual([saved]);
   });
 
-  it('deletes the requested cycle and reconciles the returned identity', async () => {
+  it('deletes the requested cycle and removes it from cached choices', async () => {
     vi.mocked(deleteProgramCycle).mockResolvedValue({ id: cycle.id });
-    const onCycleDeleted = vi.fn();
-    const { result } = renderHook(() => useProgramsActions({ programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(), onCycleDeleted }), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    const client = createTestQueryClient();
+    const otherCycle = { ...cycle, id: 'cycle-2' };
+    client.setQueryData(referenceDataKeys.cycles, [cycle, otherCycle]);
+    const { result } = renderHook(() => useProgramsActions({ programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn() }), { wrapper: createQueryClientWrapper(client) });
 
     act(() => result.current.requestCycleDeletion(cycle));
     await act(async () => result.current.confirmAction?.onConfirm());
 
     expect(deleteProgramCycle).toHaveBeenCalledWith(cycle.id);
-    expect(onCycleDeleted).toHaveBeenCalledWith(cycle.id);
+    expect(client.getQueryData(referenceDataKeys.cycles)).toEqual([otherCycle]);
   });
 
   it('does not reconcile when deletion fails', async () => {
     vi.mocked(deleteProgramCycle).mockRejectedValue(new Error('Cycle is in use'));
-    const onCycleDeleted = vi.fn();
-    const { result } = renderHook(() => useProgramsActions({ programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn(), onCycleDeleted }), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    const client = createTestQueryClient();
+    client.setQueryData(referenceDataKeys.cycles, [cycle]);
+    const { result } = renderHook(() => useProgramsActions({ programTableQueryKey: ['programs', 'table'], onProgramSynced: vi.fn() }), { wrapper: createQueryClientWrapper(client) });
 
     act(() => result.current.requestCycleDeletion(cycle));
     await expect(result.current.confirmAction?.onConfirm()).rejects.toThrow('Cycle is in use');
-    expect(onCycleDeleted).not.toHaveBeenCalled();
+    expect(client.getQueryData(referenceDataKeys.cycles)).toEqual([cycle]);
   });
 });

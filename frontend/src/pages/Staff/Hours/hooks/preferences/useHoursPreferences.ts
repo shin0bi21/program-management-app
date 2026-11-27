@@ -11,83 +11,81 @@ import {
   preferenceText,
   preferenceSorting,
 } from '../../../../../common/features/Preferences/preferences';
-import type {
-  StaffReference,
-  HoursCategory,
-  HoursFilters,
-  HoursItemType,
-  HoursProgram,
-  HoursSortKey,
+import {
+  HOURS_CATEGORIES,
+  type HoursCategory,
+  type HoursFilters,
+  type HoursItemType,
+  type HoursSortKey,
 } from '../../types';
-import type { CycleReference } from '../../../../../common/features/referenceData/referenceData.api';
+import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
+import type useHoursData from '../data/useHoursData';
 
 type HoursView = 'calendar' | 'table';
 
-interface HoursPreferences {
+interface HoursPreferences extends Omit<HoursFilters, 'dateRange' | 'cycleIds'> {
   view: HoursView;
-  search: string;
-  staffIds: string[];
-  programIds: string[];
-  categories: HoursCategory[];
-  types: HoursItemType[];
-  cycleIds: string[];
+  cycleIds: NonNullable<HoursFilters['cycleIds']>;
   sorting: ListSort<HoursSortKey>;
 }
 
 export type StoredHoursPreferences = Partial<HoursPreferences>;
 
-interface UseHoursPreferencesOptions {
-  staff: readonly StaffReference[];
-  programs: readonly HoursProgram[];
-  cycles: readonly CycleReference[];
-  categories: ReadonlyArray<{ id: HoursCategory; name: string }>;
-  types: ReadonlyArray<{ id: HoursItemType; name: string }>;
-  loadingDependencies: boolean;
-  optionsError: boolean;
-  staffError?: boolean;
-  programsError?: boolean;
-  cyclesError: boolean;
-  tableKeys: readonly HoursSortKey[];
+type HoursPreferenceReferences = Pick<ReturnType<typeof useHoursData>, 'referenceData' | 'staff' | 'programs' | 'cycles'>;
+
+type HoursFilterValues = Pick<HoursPreferences, 'staffIds' | 'programIds' | 'categories' | 'types' | 'cycleIds'>;
+
+type HoursTableControls = ReturnType<typeof useTableLayout> & {
+  sorting: ListSort<HoursSortKey>;
+  setSorting: (sorting: ListSort<HoursSortKey>) => void;
+};
+
+interface HoursPreferencesResult {
+  ready: boolean;
+  error: string | null;
+  appliedFilters: HoursFilters;
+  view: HoursView;
+  setView: (view: HoursView) => void;
+  search: PageSearchControls;
+  filters: ReturnType<typeof createPreferenceFilters<HoursFilterValues>>;
+  table: HoursTableControls;
 }
 
 /**
  * Restores hours controls and supplies applied filters with cycle-derived calendar bounds.
- * @param options - Available filter choices, dependency status, and table keys.
+ * @param references - Reference choices and availability from the Hours data hook.
+ * @param tableKeys - Supported sort and layout columns.
  * @example Submitting search.apply('workshop') saves the applied hours search.
  */
-export default function useHoursPreferences({
-  staff,
-  programs,
-  cycles,
-  categories,
-  types,
-  loadingDependencies,
-  optionsError,
-  staffError = optionsError,
-  programsError = optionsError,
-  cyclesError,
-  tableKeys,
-}: UseHoursPreferencesOptions) {
+export default function useHoursPreferences(
+  references: HoursPreferenceReferences,
+  tableKeys: readonly HoursSortKey[],
+): HoursPreferencesResult {
+  const { referenceData, staff, programs, cycles } = references;
+  const categories = referenceData.data?.categories;
+  const types = referenceData.data?.types;
+  const loadingDependencies = referenceData.isLoading || staff.isLoading || programs.isLoading || cycles.isLoading;
+
   // Unavailable choices preserve saved selections; confirmed empty choices clear them.
-  const availableStaffIds = !loadingDependencies && !staffError
-    ? staff.map(member => member.id)
+  const availableStaffIds = !loadingDependencies && !staff.error
+    ? (staff.data ?? []).map(member => member.id)
     : undefined;
 
-  const availableProgramIds = !loadingDependencies && !programsError
-    ? ['general', ...programs.map(program => program.id)]
+  const availableProgramIds = !loadingDependencies && !programs.error
+    ? ['general', ...(programs.data ?? []).map(program => program.id)]
     : undefined;
 
-  const availableCycleIds = !loadingDependencies && !cyclesError
-    ? cycles.map(cycle => cycle.id)
+  const availableCycleIds = !loadingDependencies && !cycles.error
+    ? (cycles.data ?? []).map(cycle => cycle.id)
     : undefined;
 
-  const availableCategories = !loadingDependencies && !optionsError
-    ? categories.map(category => category.id)
+  const availableCategories = !loadingDependencies && !referenceData.error
+    ? (categories ?? []).map(category => category.id)
     : null;
 
-  const availableTypes = !loadingDependencies && !optionsError
-    ? types.map(type => type.id)
+  const availableTypes = !loadingDependencies && !referenceData.error
+    ? (types ?? []).map(type => type.id)
     : null;
 
   // Saved controls.
@@ -100,7 +98,7 @@ export default function useHoursPreferences({
       staffIds: preferenceIds(availableStaffIds),
       programIds: preferenceIds(availableProgramIds),
       categories: preferenceOptions<HoursCategory>(
-        ['program_delivery', 'planning_prep', 'meeting', 'administration', 'outreach', 'maintenance', 'other'],
+        HOURS_CATEGORIES,
         [],
         availableCategories,
       ),
@@ -119,53 +117,50 @@ export default function useHoursPreferences({
     {
       id: 'staffIds' as const,
       label: 'Staff',
-      options: staff.map(({ id, name }) => ({ id, label: name })),
+      options: (staff.data ?? []).map(({ id, name }) => ({ id, label: name })),
     },
     {
       id: 'programIds' as const,
       label: 'Program',
       options: [
         { id: 'general', label: 'General' },
-        ...programs.map(({ id, title }) => ({ id, label: title })),
+        ...(programs.data ?? []).map(({ id, title }) => ({ id, label: title })),
       ],
     },
     {
       id: 'cycleIds' as const,
       label: 'Cycle',
-      options: cycles.map(({ id, title }) => ({ id, label: title })),
+      options: (cycles.data ?? []).map(({ id, title }) => ({ id, label: title })),
     },
     {
       id: 'types' as const,
       label: 'Type',
-      options: types.map(({ id, name }) => ({ id, label: name })),
+      options: (types ?? []).map(({ id, name }) => ({ id, label: name })),
     },
     {
       id: 'categories' as const,
       label: 'Category',
-      options: categories.map(({ id, name }) => ({ id, label: name })),
+      options: (categories ?? []).map(({ id, name }) => ({ id, label: name })),
     },
-  ], [categories, cycles, programs, staff, types]);
+  ], [categories, cycles.data, programs.data, staff.data, types]);
 
+  const filterValues: HoursFilterValues = {
+    staffIds: preferences.staffIds,
+    programIds: preferences.programIds,
+    categories: preferences.categories,
+    types: preferences.types,
+    cycleIds: preferences.cycleIds,
+  };
   const filterControls = createPreferenceFilters({
-    values: {
-      staffIds: preferences.staffIds,
-      programIds: preferences.programIds,
-      categories: preferences.categories,
-      types: preferences.types,
-      cycleIds: preferences.cycleIds,
-    },
+    values: filterValues,
     definitions: filterDefinitions,
     updatePreferences,
   });
-  const dateRange = useMemo(() => getCycleDateRange(cycles, preferences.cycleIds), [cycles, preferences.cycleIds]);
+  const dateRange = useMemo(() => getCycleDateRange(cycles.data ?? [], preferences.cycleIds), [cycles.data, preferences.cycleIds]);
 
   const appliedFilters: HoursFilters = {
+    ...filterValues,
     dateRange,
-    staffIds: preferences.staffIds,
-    categories: preferences.categories,
-    programIds: preferences.programIds,
-    types: preferences.types,
-    cycleIds: preferences.cycleIds,
     search: preferences.search,
   };
 
