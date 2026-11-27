@@ -65,7 +65,8 @@ interface ReportRow {
  */
 function main(): void {
   // Step 1. Validate arguments before reading repository files.
-  const options = parseArgs(process.argv.slice(2));
+  // npm consumes a bare --all and passes it through the lifecycle environment.
+  const options = parseArgs(process.argv.slice(2), process.env.npm_config_all === 'true');
 
   if (options.help) {
     console.log(usage());
@@ -85,20 +86,25 @@ function main(): void {
 
 /**
  * Selects the default TS/TSX report, all file types, or a combination of types.
- * @param args - CLI tokens after the script name; omit types to count TS/TSX.
+ * @param args - CLI tokens after the script name.
+ * @param npmAll - Whether npm consumed its own --all option for this run.
  * @returns Selected extensions and whether help was requested.
  * @throws When an argument is unknown.
- * @example parseArgs([]) // { extensions: ['ts', 'tsx'], help: false }
- * @example parseArgs(['--sql']).extensions // ['sql']
- * @example parseArgs(['--ts', '--sql']).extensions // ['ts', 'sql']
+ * @example parseArgs([], false) // { extensions: ['ts', 'tsx'], help: false }
+ * @example parseArgs([], true).extensions // ['ts', 'tsx', 'css', 'sql', 'md']
+ * @example parseArgs(['--ts', '--sql'], false).extensions // ['ts', 'sql']
  */
-function parseArgs(args: string[]): ReportOptions {
+function parseArgs(args: string[], npmAll: boolean): ReportOptions {
   const filters = args.filter(argument => argument !== '-h' && argument !== '--help');
 
+  let includeAll = npmAll;
   const selectedExtensions = new Set<string>();
 
   for (const filter of filters) {
-    if (filter === 'all') continue;
+    if (filter === '--all') {
+      includeAll = true;
+      continue;
+    }
 
     const extension = filter.slice(2);
 
@@ -111,7 +117,7 @@ function parseArgs(args: string[]): ReportOptions {
 
   let extensions = ['ts', 'tsx'];
 
-  if (filters.includes('all')) {
+  if (includeAll) {
     extensions = Object.keys(LABELS);
   } else if (selectedExtensions.size > 0) {
     extensions = [...selectedExtensions];
@@ -126,13 +132,14 @@ function parseArgs(args: string[]): ReportOptions {
  * @example usage().includes('--sql') // true
  */
 function usage(): string {
-  return `Usage: npm run report:loc -- [all | <types...>]
+  return `Commands:
+  npm run report:loc                 Count TypeScript and React source and tests.
+  npm run report:loc --all           Count all supported types.
+  npm run report:loc -- --all        Same report with a forwarded flag.
+  npm run report:loc -- --css --sql  Count only CSS and SQL.
+  npm run report:loc -- --help       Show this help (-h also works).
 
-  all                             Count all available types.
-  --ts, --tsx, --css, --sql, --md  Count any combination of these types.
-  -h, --help                      Show this help.
-
-Without types, count TS and TSX.
+Supported type filters: --ts, --tsx, --css, --sql, --md.
 Requires Git. Excludes blank and comment lines; separates TS/TSX source and tests.`;
 }
 
