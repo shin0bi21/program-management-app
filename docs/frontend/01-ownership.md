@@ -41,7 +41,13 @@ Do not collect descendant hooks at a parent merely because it renders those desc
 - Keep pure transforms, constants, date arithmetic, and library adapters in utilities.
 - Keep endpoint-only request, filter, pagination, and payload types in the API adapter.
 - Keep component-, hook-, and page-only types beside their owner.
-- Use page-root `types.ts` only for contracts consumed by sibling page units.
+- Define each shared contract once at its owner.
+- Put actions shared by a page's table and calendar in the page's `types.ts`.
+- Declare the reference-data result beside the page hook that supplies it.
+- Import the owner's type in consumer props and hook options. Use `Pick` if
+  the consumer receives only part of the object.
+
+See [Page Data Flow](02-state-and-data.md#page-data-flow) for examples.
 
 Follow [TypeScript Contracts](../coding-standards/typescript-contracts.md)
 for explicit boundary inputs and returns, named object contracts, and local inference.

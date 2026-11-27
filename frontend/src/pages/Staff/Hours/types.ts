@@ -44,16 +44,23 @@ export interface Hours {
 // Table and filter values.
 export const HOURS_TABLE_KEYS = ['firstName', 'lastName', 'date', 'program', 'cycle', 'category', 'hours', 'note', 'type'] as const;
 export type HoursSortKey = typeof HOURS_TABLE_KEYS[number];
-export type HoursItemType = Hours['type'];
 
 export type AddHoursFormContext = Pick<Hours, 'staffId' | 'date' | 'type'>;
+
+export type HoursActions = {
+  isItemPending: (itemId: Hours['id']) => boolean;
+  add: (context: AddHoursFormContext) => void;
+  edit: (item: Hours) => void;
+  move: (item: Hours, date: Hours['date']) => Promise<void>;
+  requestDelete: (item: Hours) => void;
+};
 
 export interface HoursFilters {
   dateRange?: DateRange;
   staffIds: Hours['staffId'][];
   categories: HoursCategory[];
   programIds: NonNullable<Hours['programId']>[];
-  types: HoursItemType[];
+  types: Hours['type'][];
   cycleIds?: Hours['cycleId'][];
   search: string;
 }

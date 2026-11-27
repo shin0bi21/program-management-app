@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
-import usePageMessageReporter, { type PageMessageChangeHandler } from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
+import usePageMessageReporter from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
 import type { TableColumnDef } from '../../../../../common/components/Table/Table.types';
 import type { HoursFilters, Hours } from '../../types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
@@ -19,7 +19,6 @@ interface HoursTableProps {
   onRowSelect: (row: Hours) => void;
   onSortingChange: (sorting: ListSort<HoursSortKey>) => void;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
-  onMessageChange?: PageMessageChangeHandler;
 }
 
 /**
@@ -29,10 +28,10 @@ interface HoursTableProps {
 export default function HoursTable({
   queryKey, columns, hiddenColumnKeys, filters,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
-  onColumnWidthsChange, onMessageChange,
+  onColumnWidthsChange,
 }: HoursTableProps): ReactElement {
   const query = useHoursTableData(queryKey, filters, sorting);
-  usePageMessageReporter(onMessageChange, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
+  usePageMessageReporter(undefined, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table
     enableColumnResizing

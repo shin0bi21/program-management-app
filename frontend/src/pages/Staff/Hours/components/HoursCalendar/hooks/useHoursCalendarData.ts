@@ -1,14 +1,8 @@
-import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
+import { useCallback, useEffect, type MutableRefObject } from 'react';
 import { useDataBuffer } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
-import type { RowItemData } from '../../../../../../common/components/TimelineCalendar/types';
 import { getHoursCalendarData } from '../../../hours.api';
 import type { HoursCalendarIndex, HoursFilters, Hours } from '../../../types';
-
-interface HoursCalendarDataResult {
-  calendar: ReturnType<typeof useDataBuffer<Hours>>;
-  visibleItems: RowItemData<Hours>;
-}
 
 /** Identifies an entry in the calendar buffer. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */
 const getHoursItemId = (item: Hours) => item.id;
@@ -18,12 +12,12 @@ const getHoursItemId = (item: Hours) => item.id;
  * Registers mutation callbacks for the mounted view and removes them on teardown.
  * @param filters - Applied page filters, also used to scope mutation placement.
  * @param calendarIndexRef - Page-owned ref populated while this calendar is mounted.
- * @example const { calendar, visibleItems } = useHoursCalendarData(filters, calendarIndexRef)
+ * @example const calendar = useHoursCalendarData(filters, calendarIndexRef)
  */
 export default function useHoursCalendarData(
   filters: HoursFilters,
   calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>,
-): HoursCalendarDataResult {
+): ReturnType<typeof useDataBuffer<Hours>> {
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
     const rows = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
     signal.throwIfAborted();
@@ -42,16 +36,6 @@ export default function useHoursCalendarData(
     getItemId: getHoursItemId,
     errorMessage: 'Unable to load hours data',
   });
-  const visibleItems = useMemo<RowItemData<Hours>>(() => {
-    const items: Record<string, Hours[]> = {};
-    for (const entries of Object.values(calendar.items)) {
-      for (const entry of entries ?? []) {
-        (items[entry.staffId] ??= []).push(entry);
-      }
-    }
-    return items;
-  }, [calendar.items]);
-
   const { upsertItem, removeItem } = calendar;
 
   useEffect(() => {
@@ -75,5 +59,5 @@ export default function useHoursCalendarData(
     };
   }, [calendarIndexRef, filters.cycleIds, removeItem, upsertItem]);
 
-  return { calendar, visibleItems };
+  return calendar;
 }

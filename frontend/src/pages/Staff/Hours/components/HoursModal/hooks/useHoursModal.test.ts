@@ -13,20 +13,13 @@ vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const loadTasks = vi.fn();
 
-const staff = [
-  { id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true },
-  { id: 'staff-2', firstName: 'Alex', lastName: 'Morgan', name: 'Alex Morgan', role: 'staff', writable: true },
-] as const;
-const programs = [{ id: 'program-1', title: 'Soft Skills' }];
+const addContext = { staffId: 'staff-1', date: '2026-08-19' };
 
 function renderWorkflow(overrides: Partial<UseHoursModalOptions> = {}) {
   const options: UseHoursModalOptions = {
-    staff,
-    programs,
+    target: { mode: 'add', context: addContext },
     loadTasks,
-    onAdd: vi.fn().mockResolvedValue(undefined),
-    staffId: 'staff-1',
-    date: '2026-08-19',
+    onSave: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
   const queryClient = createTestQueryClient();
@@ -49,14 +42,14 @@ describe('useHoursModal', () => {
 
   it('defaults the work date to today when no date is supplied', () => {
     const date = getDate();
-    const { result } = renderWorkflow({ date: undefined });
+    const { result } = renderWorkflow({ target: { mode: 'add', context: { staffId: 'staff-1' } } });
 
     expect(result.current.draft.date).toBe(date);
   });
 
   it('owns regular-time field transitions and reaches success after the command', async () => {
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ onAdd });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderWorkflow({ onSave });
 
     act(() => {
       result.current.selectProgram('program-1');
@@ -66,7 +59,7 @@ describe('useHoursModal', () => {
     });
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).toHaveBeenCalledWith({
+    expect(onSave).toHaveBeenCalledWith({
       type: 'regular',
       staffId: 'staff-1',
       date: '2026-08-19',
@@ -79,14 +72,14 @@ describe('useHoursModal', () => {
   });
 
   it('sends only changed fields when editing an existing entry', async () => {
-    const onAdd = vi.fn().mockResolvedValue(undefined);
+    const onSave = vi.fn().mockResolvedValue(undefined);
     const item = makeHoursItem({ note: '  Stored note  ', hours: 1 });
-    const { result } = renderWorkflow({ item, onAdd });
+    const { result } = renderWorkflow({ target: { mode: 'edit', item }, onSave });
 
     act(() => result.current.updateHours('2'));
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).toHaveBeenCalledExactlyOnceWith({ hours: 2 }, false);
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({ hours: 2 }, false);
   });
 
   it('loads only open task options and submits the task command', async () => {
@@ -95,11 +88,11 @@ describe('useHoursModal', () => {
       task,
       makeTask({ id: 'task-complete', state: 'completed', status: 'completed', statusLabel: 'Completed' }),
     ]);
-    const onAdd = vi.fn().mockResolvedValue(undefined);
+    const onSave = vi.fn().mockResolvedValue(undefined);
     const { result } = renderWorkflow({
-      type: 'task',
+      target: { mode: 'add', context: { ...addContext, type: 'task' } },
       canCompleteTask: true,
-      onAdd,
+      onSave,
     });
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
@@ -111,7 +104,7 @@ describe('useHoursModal', () => {
     });
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).toHaveBeenCalledWith({
+    expect(onSave).toHaveBeenCalledWith({
       type: 'task',
       staffId: 'staff-1',
       date: '2026-08-19',
@@ -124,8 +117,8 @@ describe('useHoursModal', () => {
   it('does not send task completion without task-write capability', async () => {
     const task = makeTask();
     loadTasks.mockResolvedValue([task]);
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ type: 'task', onAdd });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderWorkflow({ target: { mode: 'add', context: { ...addContext, type: 'task' } }, onSave });
 
     await waitFor(() => expect(result.current.taskOptions).toEqual([task]));
     act(() => {
@@ -136,7 +129,7 @@ describe('useHoursModal', () => {
     });
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       type: 'task',
     }), false);
   });
@@ -147,8 +140,8 @@ describe('useHoursModal', () => {
       title: 'Leadership',
       date: '2026-08-20',
     }]);
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ type: 'session', onAdd });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderWorkflow({ target: { mode: 'add', context: { ...addContext, type: 'session' } }, onSave });
 
     await waitFor(() => expect(result.current.sessionOptions).toHaveLength(1));
     act(() => {
@@ -158,7 +151,7 @@ describe('useHoursModal', () => {
     });
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).toHaveBeenCalledWith({
+    expect(onSave).toHaveBeenCalledWith({
       type: 'session',
       staffId: 'staff-1',
       sessionId: 'session-1',
@@ -168,8 +161,8 @@ describe('useHoursModal', () => {
   });
 
   it('rejects direct form submission when required command data is invalid', async () => {
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderWorkflow({ type: 'task', onAdd });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderWorkflow({ target: { mode: 'add', context: { ...addContext, type: 'task' } }, onSave });
 
     act(() => {
       result.current.updateHours('not-a-number');
@@ -177,14 +170,14 @@ describe('useHoursModal', () => {
     });
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
     expect(result.current.submitStatus).toBe('error');
     expect(result.current.error).toBe('Select a task.');
 
     act(() => result.current.selectTask('task-1'));
     await act(async () => result.current.submit(submitEvent()));
 
-    expect(onAdd).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
     expect(result.current.error).toBe('Hours must be between 0.25 and 24.');
   });
 });

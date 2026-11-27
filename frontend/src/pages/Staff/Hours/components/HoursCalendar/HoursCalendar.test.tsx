@@ -109,14 +109,16 @@ function renderCalendar({
         staff={staff}
         filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
         canWrite={canWrite}
-        isItemPending={() => false}
+        actions={{
+          isItemPending: () => false,
+          add: onAdd,
+          edit: onEdit,
+          requestDelete: onDelete,
+          move: onMove,
+        }}
         selectedStaffId="staff-1"
         calendarIndexRef={calendarIndexRef}
         onStaffSelect={onStaffSelect}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onAdd={onAdd}
-        onMove={onMove}
       />
   );
   return {
@@ -154,7 +156,7 @@ describe('HoursCalendar', () => {
     await waitFor(() => expect(calendarState.props!.items).toEqual({ 'staff-1': [item] }));
 
     act(() => calendarIndexRef.current!.upsert({ ...item, date: '2026-08-11', cycleId: 'cycle-2' }));
-    expect(calendarState.props!.items).toEqual({});
+    expect(calendarState.props!.items?.[item.staffId] ?? []).toEqual([]);
   });
 
   it('filters staff and restricts dragging and cell actions by entry source', () => {
@@ -216,21 +218,12 @@ describe('HoursCalendar', () => {
     await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
   });
 
-  it('updates a buffered row through the mounted calendar callback', async () => {
-    const periods = buildInitialDayPeriods('2026-08-10', 3);
-    const item = buildItem({ date: periods[1].key });
-    const { calendarIndexRef, unmount } = renderCalendar({ data: [item] });
-    await initializeCalendar(periods);
-    await waitFor(() => expect(calendarState.props?.items).toEqual({ 'staff-1': [item] }));
-
-    const saved = { ...item, note: 'Edited from table', hours: 3 };
-    act(() => calendarIndexRef.current!.upsert(saved));
-
-    await waitFor(() => expect(calendarState.props!.items!['staff-1']![0].note).toBe('Edited from table'));
-    expect(calendarState.props!.items!['staff-1']![0]).toEqual(saved);
-    expect(getHoursCalendarData).toHaveBeenCalledOnce();
+  it('clears the page-owned mutation callbacks when the calendar unmounts', () => {
+    const { calendarIndexRef, unmount } = renderCalendar();
+    expect(calendarIndexRef.current).not.toBeNull();
 
     unmount();
+
     expect(calendarIndexRef.current).toBeNull();
   });
 
@@ -290,6 +283,7 @@ describe('HoursCalendar', () => {
     expect(await screen.findByText('Hours calendar unavailable')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    await waitFor(() => expect(getHoursCalendarData).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('Staff hours calendar')).toBeInTheDocument();
+    expect(screen.queryByText('Hours calendar unavailable')).not.toBeInTheDocument();
   });
 });

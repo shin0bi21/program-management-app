@@ -9,7 +9,6 @@ import { getDate } from '../../../../../../common/utils/date';
 import type { RequestOptions } from '../../../../../../http/client';
 import type { Task } from '../../../../Tasks/types';
 import { getHoursSessions } from '../../../hours.api';
-import type { ProgramReference, StaffReference } from '../../../../../../common/features/referenceData/referenceData.api';
 import type {
   AddHoursFormContext,
   HoursCategory,
@@ -26,23 +25,25 @@ type HoursDraft = AddHoursFormContext & {
   note: Hours['note'];
 };
 
-export interface UseHoursModalOptions extends Partial<AddHoursFormContext> {
-  staff: readonly StaffReference[];
-  programs: readonly ProgramReference[];
+export type HoursFormTarget =
+  | { mode: 'add'; context: Partial<AddHoursFormContext> }
+  | { mode: 'edit'; item: Hours }
+  | { mode: 'task'; task: Pick<Task, 'id' | 'staffId' | 'title'> };
+
+export type UseHoursModalOptions = {
+  target: HoursFormTarget;
   loadTasks: (
     staffId: Hours['staffId'],
     opts?: RequestOptions,
   ) => Promise<readonly Task[]>;
-  onAdd: (input: Partial<Hours>, completeTask: boolean) => Promise<void>;
-  task?: Task;
-  item?: Hours;
+  onSave: (input: Partial<Hours>, completeTask: boolean) => Promise<void>;
   canCompleteTask?: boolean;
-}
+};
 
 interface HoursModalResult {
   draft: HoursDraft;
   taskLocked: boolean;
-  taskOptions: readonly Task[];
+  taskOptions: readonly Pick<Task, 'id' | 'title'>[];
   tasksLoading: boolean;
   tasksError: string | undefined;
   sessionOptions: Awaited<ReturnType<typeof getHoursSessions>>;
@@ -65,26 +66,27 @@ interface HoursModalResult {
 
 /**
  * Owns one mounted Hours draft, its selector choices and save feedback.
- * @param options - Supplied edit row or add context and the page's save callback.
- * @param options.staffId - Contextual staff ID; omitted add context defaults to the signed-in staff member.
- * @param options.date - Contextual work date; omitted add dates default to today.
- * @example useHoursModal({ ...options, item }) // initializes the edit draft once
+ * @param options - Form target, task lookup, and save callback. Add targets default to the signed-in staff member and today's date.
+ * @example useHoursModal({ ...options, target: { mode: 'edit', item } }) // initializes the edit draft once
  */
 export default function useHoursModal(options: UseHoursModalOptions): HoursModalResult {
-  const { loadTasks, onAdd, task, item, canCompleteTask = false } = options;
+  const { target, loadTasks, onSave, canCompleteTask = false } = options;
+  const item = target.mode === 'edit' ? target.item : undefined;
+  const task = target.mode === 'task' ? target.task : undefined;
+  const context = target.mode === 'add' ? target.context : undefined;
   const [draft, setDraft] = useState<HoursDraft>(() => {
-    const type = task ? 'task' : item?.type ?? options.type ?? 'regular';
+    const type = task ? 'task' : item?.type ?? context?.type ?? 'regular';
 
     return {
       type,
 
-      staffId: item?.staffId ?? task?.staffId ?? options.staffId ?? getUser()?.id ?? '',
+      staffId: item?.staffId ?? task?.staffId ?? context?.staffId ?? getUser()?.id ?? '',
       taskId: task?.id ?? item?.taskId ?? '',
       completeTask: false,
       sessionId: item?.sessionId ?? '',
       programId: item?.programId ?? '',
       category: item?.category ?? '',
-      date: item?.date ?? options.date ?? getDate(),
+      date: item?.date ?? context?.date ?? getDate(),
       hours: item ? String(item.hours) : '',
       note: item?.note ?? '',
     };
@@ -199,7 +201,7 @@ export default function useHoursModal(options: UseHoursModalOptions): HoursModal
     setError('');
     try {
       if (!item || Object.keys(input).length) {
-        await onAdd(input, draft.type === 'task' && canCompleteTask && draft.completeTask);
+        await onSave(input, draft.type === 'task' && canCompleteTask && draft.completeTask);
       }
       setSubmitStatus('success');
     } catch (cause) {

@@ -14,6 +14,7 @@ import type { Task } from '../../../Tasks/types';
 import type {
   HoursFilters,
   Hours,
+  HoursActions,
 } from '../../types';
 
 const HOURS_SEARCH_FIELDS = [
@@ -31,9 +32,9 @@ interface UseHoursActionsOptions {
 
 interface HoursActionsResult {
   moveError: string | null;
-  isItemPending: (itemId: Hours['id']) => boolean;
+  isItemPending: HoursActions['isItemPending'];
   saveHours: (input: Partial<Hours>, previous?: Hours, completeTask?: boolean) => Promise<void>;
-  moveHours: (item: Hours, date: Hours['date']) => Promise<void>;
+  moveHours: HoursActions['move'];
   deleteHours: (target: Hours) => Promise<void>;
 }
 

@@ -40,7 +40,7 @@ const references = {
   staff: { data: staff, isLoading: false, error: null },
   programs: { data: programs, isLoading: false, error: null },
   cycles: { data: cycles, isLoading: false, error: null },
-  referenceData: { data: { categories, types }, isLoading: false, error: null },
+  hoursOptions: { data: { categories, types }, isLoading: false, error: null },
 } satisfies Parameters<typeof useHoursPreferences>[0];
 
 describe('useHoursPreferences', () => {
@@ -64,7 +64,7 @@ describe('useHoursPreferences', () => {
     const { result, rerender } = renderHook(
       ({ loading }) => useHoursPreferences({
         ...references,
-        referenceData: { ...references.referenceData, isLoading: loading },
+        hoursOptions: { ...references.hoursOptions, isLoading: loading },
       }, tableKeys),
       { initialProps: { loading: true } },
     );
@@ -103,9 +103,9 @@ describe('useHoursPreferences', () => {
       ({ optionsError, cyclesError }) => useHoursPreferences({
         staff: optionsError ? { data: undefined, isLoading: false, error: new Error('Staff unavailable') } : references.staff,
         programs: optionsError ? { data: undefined, isLoading: false, error: new Error('Programs unavailable') } : references.programs,
-        referenceData: optionsError
+        hoursOptions: optionsError
           ? { data: undefined, isLoading: false, error: new Error('Hours options unavailable') }
-          : references.referenceData,
+          : references.hoursOptions,
         cycles: cyclesError ? { data: undefined, isLoading: false, error: new Error('Cycles unavailable') } : references.cycles,
       }, tableKeys),
       { initialProps: { optionsError: true, cyclesError: true } },

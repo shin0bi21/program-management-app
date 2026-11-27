@@ -13,14 +13,14 @@ import {
 } from '../../../../../common/features/Preferences/preferences';
 import {
   HOURS_CATEGORIES,
+  type Hours,
   type HoursCategory,
   type HoursFilters,
-  type HoursItemType,
   type HoursSortKey,
 } from '../../types';
 import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
-import type useHoursData from '../data/useHoursData';
+import type { HoursReferences } from '../data/useHoursReferenceData';
 
 type HoursView = 'calendar' | 'table';
 
@@ -31,8 +31,6 @@ interface HoursPreferences extends Omit<HoursFilters, 'dateRange' | 'cycleIds'> 
 }
 
 export type StoredHoursPreferences = Partial<HoursPreferences>;
-
-type HoursPreferenceReferences = Pick<ReturnType<typeof useHoursData>, 'referenceData' | 'staff' | 'programs' | 'cycles'>;
 
 type HoursFilterValues = Pick<HoursPreferences, 'staffIds' | 'programIds' | 'categories' | 'types' | 'cycleIds'>;
 
@@ -59,13 +57,13 @@ interface HoursPreferencesResult {
  * @example Submitting search.apply('workshop') saves the applied hours search.
  */
 export default function useHoursPreferences(
-  references: HoursPreferenceReferences,
+  references: HoursReferences,
   tableKeys: readonly HoursSortKey[],
 ): HoursPreferencesResult {
-  const { referenceData, staff, programs, cycles } = references;
-  const categories = referenceData.data?.categories;
-  const types = referenceData.data?.types;
-  const loadingDependencies = referenceData.isLoading || staff.isLoading || programs.isLoading || cycles.isLoading;
+  const { hoursOptions, staff, programs, cycles } = references;
+  const categories = hoursOptions.data?.categories;
+  const types = hoursOptions.data?.types;
+  const loadingDependencies = hoursOptions.isLoading || staff.isLoading || programs.isLoading || cycles.isLoading;
 
   // Unavailable choices preserve saved selections; confirmed empty choices clear them.
   const availableStaffIds = !loadingDependencies && !staff.error
@@ -80,11 +78,11 @@ export default function useHoursPreferences(
     ? (cycles.data ?? []).map(cycle => cycle.id)
     : undefined;
 
-  const availableCategories = !loadingDependencies && !referenceData.error
+  const availableCategories = !loadingDependencies && !hoursOptions.error
     ? (categories ?? []).map(category => category.id)
     : null;
 
-  const availableTypes = !loadingDependencies && !referenceData.error
+  const availableTypes = !loadingDependencies && !hoursOptions.error
     ? (types ?? []).map(type => type.id)
     : null;
 
@@ -102,7 +100,7 @@ export default function useHoursPreferences(
         [],
         availableCategories,
       ),
-      types: preferenceOptions<HoursItemType>(
+      types: preferenceOptions<Hours['type']>(
         ['task', 'session', 'regular'],
         [],
         availableTypes,

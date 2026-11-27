@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { ItemCalendarProps } from '../../../../../../common/components/TimelineCalendar/types';
 import Item from '../../../../../../common/components/TimelineCalendar/components/Item/Item';
 import type { Hours } from '../../../types';
@@ -16,7 +17,7 @@ interface HoursItemProps<TRow, TItemData> {
  * Displays an Hours entry and its available actions.
  * @example <HoursItem item={entry} onEdit={openEditor} />
  */
-export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onDelete }: HoursItemProps<TRow, TItemData>) {
+export default function HoursItem<TRow, TItemData>({ calendar, item, onEdit, onDelete }: HoursItemProps<TRow, TItemData>): ReactElement {
   const type = item.type;
   const label = HOURS_ITEM_TYPE_LABELS[type];
   const title = item.taskTitle ?? item.sessionTitle ?? item.categoryLabel;
