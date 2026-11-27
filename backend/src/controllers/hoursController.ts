@@ -6,7 +6,6 @@ import {
   getHoursReferenceData,
   getHoursSessions,
   setHours,
-  updateHoursPlacement,
 } from '../services/staff/hours/hoursService';
 import { getHoursCycleSummaryData, getHoursPayPeriodData } from '../services/staff/hours/hoursDashboardService';
 import { getHoursList } from '../services/staff/hours/hoursListService';
@@ -71,20 +70,16 @@ export async function handleGetHoursSessions(req: Request, res: Response) {
 }
 
 /**
- * Creates or updates an hours entry.
+ * Creates an hours entry on POST or updates the supplied ID on PATCH.
+ * PATCH preserves omitted fields and returns 404 when the target is missing.
  * @example handleSetHours(req, res)
  */
 export async function handleSetHours(req: Request, res: Response) {
-  const id = req.params.id;
-  res.status(id ? 200 : 201).json(await setHours(req.body, (req as AuthRequest).user!, id));
-}
-
-/**
- * Moves an hours entry to its requested work date.
- * @example handleUpdateHoursPlacement(req, res)
- */
-export async function handleUpdateHoursPlacement(req: Request, res: Response) {
-  res.json(await updateHoursPlacement(req.params.id, req.body, (req as AuthRequest).user!));
+  const user = (req as AuthRequest).user!;
+  const { id } = req.params;
+  const { completeTask, ...fields } = req.body;
+  const saved = await setHours({ ...fields, ...(id ? { id } : {}) }, user, completeTask);
+  res.status(id ? 200 : 201).json(saved);
 }
 
 /**

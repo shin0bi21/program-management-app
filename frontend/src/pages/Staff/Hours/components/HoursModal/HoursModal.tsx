@@ -37,7 +37,7 @@ function HoursForm({
   onAdd,
   staffId,
   date,
-  source = 'regular',
+  type = 'regular',
   task,
   item,
   canCompleteTask = false,
@@ -50,16 +50,16 @@ function HoursForm({
     onAdd,
     staffId,
     date,
-    source,
+    type,
     task,
     item,
     canCompleteTask,
   });
   const { draft } = workflow;
   const submissionComplete = workflow.submitting || workflow.submitStatus === 'success';
-  const isTaskEntry = draft.source === 'task';
-  const isSessionEntry = draft.source === 'session';
-  const isRegularEntry = draft.source === 'regular';
+  const isTaskEntry = draft.type === 'task';
+  const isSessionEntry = draft.type === 'session';
+  const isRegularEntry = draft.type === 'regular';
   const staffLocked = Boolean(item || task || staffId);
   const sessionDateLocked = isSessionEntry && Boolean(item || date);
   const sourceMissing = (isTaskEntry && !draft.taskId) || (isSessionEntry && !draft.sessionId);
@@ -154,7 +154,7 @@ function HoursForm({
               <FloatingSelect
                 id="hours-session"
                 value={draft.sessionId}
-                options={workflow.sessionOptions.map(({ id, name }) => ({ id, label: name }))}
+                options={workflow.sessionOptions.map(({ id, title }) => ({ id, label: title }))}
                 onChange={workflow.selectSession}
                 placeholder={sessionPlaceholder}
                 ariaLabel="Session"

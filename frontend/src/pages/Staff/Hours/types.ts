@@ -55,11 +55,6 @@ export interface HoursFilters {
   search: string;
 }
 
-export interface HoursItemMove {
-  item: Hours;
-  date: string;
-}
-
 export interface HoursCalendarIndex {
   upsert: (item: Hours) => void;
   remove: (itemId: string) => void;

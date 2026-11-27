@@ -2,13 +2,19 @@ import { sql } from '../../../db/client';
 import { hoursReadScopePredicate } from '../../../policies/hoursPolicy';
 import type { AccessTokenPayload } from '../../../types/auth';
 import { HOURS_CATEGORY_OPTIONS } from './hoursReferenceData';
-import type { HoursCategory } from '../../../validation/hoursSchemas';
 
-export interface HoursRow {
+export interface Hours {
   id: string;
   staffId: string;
   programId: string | null;
-  category: HoursCategory;
+  category:
+    | 'program_delivery'
+    | 'planning_prep'
+    | 'meeting'
+    | 'administration'
+    | 'outreach'
+    | 'maintenance'
+    | 'other';
   date: string;
   hours: number;
   note: string;
@@ -58,7 +64,7 @@ export const hoursSearchValue = sql`CONCAT_WS(' ',
  */
 export function getHoursRows(user: AccessTokenPayload, appliedFilters = sql`TRUE`, query = sql) {
   // 1. Build complete hours rows within the user’s staff scope.
-  return query<HoursRow[]>`
+  return query<Hours[]>`
     SELECT
       entry.id,
       entry.staff_id,

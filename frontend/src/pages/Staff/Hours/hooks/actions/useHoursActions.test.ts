@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteHours,
   setHours,
-  updateHoursPlacement,
 } from '../../hours.api';
 import { makeTask } from '../../../../../tests/factories/task';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
@@ -12,12 +11,12 @@ import {
   createQueryClientWrapper,
   createTestQueryClient,
 } from '../../../../../tests/queryClientTestUtils';
+import type { HoursFilters } from '../../types';
 import useHoursActions from './useHoursActions';
 
 vi.mock('../../hours.api', () => ({
   deleteHours: vi.fn(),
   setHours: vi.fn(),
-  updateHoursPlacement: vi.fn(),
 }));
 
 /** Supplies controlled async completion. @example const request = deferred<Task>() // resolve after starting the action */
@@ -32,13 +31,14 @@ function deferred<T>() {
 }
 
 /** Renders actions with a fresh account cache and calendar callbacks. @example renderActions() // isolated mutation owner */
-function renderActions() {
+function renderActions(filters: Partial<HoursFilters> = {}) {
   const client = createTestQueryClient();
   const onItemRemoved = vi.fn();
   const rendered = renderHook(() => useHoursActions({
     hoursQueryKey: ['hours'],
     hoursTableQueryKey: ['hours', 'table'],
     taskQueryKey: ['tasks'],
+    filters: { staffIds: [], categories: [], programIds: [], types: [], search: '', ...filters },
     onItemRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
   const upsert = vi.fn();
@@ -62,24 +62,35 @@ describe('useHoursActions', () => {
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const input = {
-      source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-19', hours: 2, note: 'Planning',
+      type: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-19', hours: 2, note: 'Planning',
     };
 
     await act(async () => rendered.result.current.saveHours(input));
-    expect(setHours).toHaveBeenLastCalledWith(input);
+    expect(setHours).toHaveBeenLastCalledWith(input, undefined, false);
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['hours', 'table'], ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
     invalidate.mockClear();
 
-    await act(async () => rendered.result.current.saveHours(input, 'entry-1'));
+    await act(async () => rendered.result.current.saveHours(input, entry));
 
     expect(setHours).toHaveBeenLastCalledWith(input, 'entry-1');
     expect(rendered.upsert).toHaveBeenLastCalledWith(entry);
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
       ['tasks', 'overview'], ['tasks', 'hours-options'], ['hours', 'dashboard'],
     ]);
+  });
+
+  it('reloads the filtered table when a saved edit leaves its selection', async () => {
+    const previous = makeHoursItem({ category: 'meeting' });
+    vi.mocked(setHours).mockResolvedValue({ ...previous, category: 'planning_prep' });
+    const rendered = renderActions({ categories: ['meeting'] });
+    const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
+
+    await act(async () => rendered.result.current.saveHours({ category: 'planning_prep' }, previous));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });
 
   it('owns confirmation, calendar removal, and related summary refreshes together', async () => {
@@ -101,12 +112,11 @@ describe('useHoursActions', () => {
 
   it('blocks another action for the same entry while one is pending', async () => {
     const moveRequest = deferred<typeof saved>();
-    vi.mocked(updateHoursPlacement).mockReturnValue(moveRequest.promise);
-    vi.mocked(setHours).mockResolvedValue(saved);
+    vi.mocked(setHours).mockReturnValue(moveRequest.promise);
     const rendered = renderActions();
     const item = makeHoursItem({ id: 'entry-1', taskId: 'task-1' });
     const input = {
-      source: 'task' as const,
+      type: 'task' as const,
       staffId: 'staff-1',
       taskId: 'task-1',
       date: '2026-08-19',
@@ -116,15 +126,12 @@ describe('useHoursActions', () => {
 
     let moving!: Promise<void>;
     act(() => {
-      moving = rendered.result.current.moveHours({
-        item,
-        date: '2026-08-19',
-      });
+      moving = rendered.result.current.moveHours(item, '2026-08-19');
     });
 
     expect(rendered.result.current.isItemPending(item.id)).toBe(true);
-    await act(async () => rendered.result.current.saveHours(input, item.id));
-    expect(setHours).not.toHaveBeenCalled();
+    await act(async () => rendered.result.current.saveHours(input, item));
+    expect(setHours).toHaveBeenCalledExactlyOnceWith({ date: '2026-08-19' }, 'entry-1');
 
     await act(async () => {
       moveRequest.resolve(saved);
@@ -132,19 +139,15 @@ describe('useHoursActions', () => {
     });
 
     expect(rendered.result.current.isItemPending(item.id)).toBe(false);
-    expect(updateHoursPlacement).toHaveBeenCalledWith('entry-1', { date: '2026-08-19' });
   });
 
   it('updates saved placement and refreshes related summaries', async () => {
-    vi.mocked(updateHoursPlacement).mockResolvedValue(saved);
+    vi.mocked(setHours).mockResolvedValue(saved);
     const rendered = renderActions();
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const stale = { ...entry, date: '2026-08-18', note: 'Stale note' };
 
-    await act(async () => rendered.result.current.moveHours({
-      item: stale,
-      date: saved.date,
-    }));
+    await act(async () => rendered.result.current.moveHours(stale, saved.date));
 
     expect(rendered.upsert.mock.calls).toEqual([
       [{ ...stale, date: saved.date }],
@@ -156,14 +159,11 @@ describe('useHoursActions', () => {
   });
 
   it('restores an optimistic move and releases the entry after placement fails', async () => {
-    vi.mocked(updateHoursPlacement).mockRejectedValue(new Error('move failed'));
+    vi.mocked(setHours).mockRejectedValue(new Error('move failed'));
     const rendered = renderActions();
     const item = makeHoursItem({ id: 'entry-1', date: '2026-08-18' });
 
-    await act(async () => rendered.result.current.moveHours({
-      item,
-      date: '2026-08-19',
-    }));
+    await act(async () => rendered.result.current.moveHours(item, '2026-08-19'));
 
     expect(rendered.upsert.mock.calls).toEqual([
       [{ ...item, date: '2026-08-19' }],
@@ -182,7 +182,7 @@ describe('useHoursActions', () => {
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const item = makeHoursItem({ id: 'entry-1', taskId: 'task-1' });
     const input = {
-      source: 'task' as const,
+      type: 'task' as const,
       staffId: 'staff-1',
       taskId: 'task-1',
       date: '2026-08-19',
@@ -191,7 +191,7 @@ describe('useHoursActions', () => {
     };
 
     await act(async () => {
-      await expect(rendered.result.current.saveHours(input, 'entry-1')).rejects.toThrow('save failed');
+      await expect(rendered.result.current.saveHours(input, item)).rejects.toThrow('save failed');
     });
     act(() => rendered.result.current.requestDelete(item));
     await act(async () => {

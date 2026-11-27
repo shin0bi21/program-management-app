@@ -11,21 +11,8 @@ import type {
   HoursItemType,
 } from './types';
 
-interface SharedHoursInput { staffId: string; hours: number; note: string }
-export type SetHoursInput = SharedHoursInput & ({
-  source: 'regular'; date: string; programId: string | null; category: Exclude<HoursCategory, 'program_delivery'>;
-} | { source: 'task'; date: string; taskId: string; completeTask?: boolean }
-  | { source: 'session'; sessionId: Session['id'] });
-export interface UpdateHoursPlacementInput { date: string }
 export type HoursMutationResult = Hours & { updatedTasks?: Task[] };
-export type SetHoursResult = HoursMutationResult;
 export interface DeleteHoursResult { message: string; updatedTasks?: Task[] }
-
-export type HoursCalendarData = Hours[];
-
-interface SessionOption extends Pick<Session, 'id' | 'date'> {
-  name: Session['title'];
-}
 
 export interface HoursReferenceData {
   categories: Array<{ id: HoursCategory; name: string }>;
@@ -56,13 +43,13 @@ export function getHoursCalendarData(
   filters: HoursFilters,
   range: { start: string; end: string },
   opts?: RequestOptions,
-) {
+): Promise<Hours[]> {
   const requestedRange = intersectDateRanges(range, filters.dateRange);
-  if (!requestedRange) return Promise.resolve<HoursCalendarData>([]);
+  if (!requestedRange) return Promise.resolve([]);
 
   const params = new URLSearchParams({ ...requestedRange });
   applyHoursFilters(params, filters);
-  return apiClient.get<HoursCalendarData>(`/hours/calendar?${params}`, opts);
+  return apiClient.get<Hours[]>(`/hours/calendar?${params}`, opts);
 }
 
 /**
@@ -131,31 +118,22 @@ export function getHoursCycleSummaryData(staffId: string, cycleId: string, opts?
  * @param signal - Cancels the session lookup when the caller departs.
  * @example getHoursSessions(staffId, date, signal)
  */
-export function getHoursSessions(staffId: string, date: string, signal?: AbortSignal): Promise<SessionOption[]> {
+export function getHoursSessions(staffId: Hours['staffId'], date: Hours['date'], signal?: AbortSignal): Promise<Pick<Session, 'id' | 'date' | 'title'>[]> {
   const params = new URLSearchParams({ staffId, date });
-  return apiClient.get<SessionOption[]>(`/hours/sessions?${params}`, { signal });
+  return apiClient.get<Pick<Session, 'id' | 'date' | 'title'>[]>(`/hours/sessions?${params}`, { signal });
 }
 
 /**
  * Creates or updates an Hours entry and returns its complete saved record.
- * @param input - Source-specific hours command, including staff and decimal hours.
+ * @param input - Complete creation fields or the fields to change on an existing entry.
  * @param id - Saved entry ID to update; omit it to create an entry.
+ * @param completeTask - Whether creating task-linked hours should also complete the task.
  * @example setHours(input, itemId) // omit the ID to create
  */
-export function setHours(input: SetHoursInput, id?: string) {
-  return id
-    ? apiClient.put<SetHoursResult>(`/hours/${id}`, input)
-    : apiClient.post<SetHoursResult>('/hours', input);
-}
+export function setHours(input: Partial<Hours>, id?: Hours['id'], completeTask = false): Promise<HoursMutationResult> {
+  if (id) return apiClient.patch<HoursMutationResult>(`/hours/${id}`, input);
 
-/**
- * Moves an Hours entry to a work date and returns its saved record.
- * @param id - Saved entry ID to move.
- * @param input - New work date in YYYY-MM-DD format.
- * @example updateHoursPlacement(itemId, { date })
- */
-export function updateHoursPlacement(id: string, input: UpdateHoursPlacementInput) {
-  return apiClient.patch<HoursMutationResult>(`/hours/${id}/placement`, input);
+  return apiClient.post<HoursMutationResult>('/hours', completeTask ? { ...input, completeTask } : input);
 }
 
 /**

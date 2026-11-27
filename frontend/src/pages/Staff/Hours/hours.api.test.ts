@@ -11,11 +11,10 @@ import {
   getHoursSessions,
   setHours,
   deleteHours,
-  updateHoursPlacement,
 } from './hours.api';
 
 vi.mock('../../../http/client', () => ({
-  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
 describe('hours API', () => {
@@ -114,9 +113,9 @@ describe('hours API', () => {
     );
   });
 
-  it('uses create, update, and placement endpoints without widening their commands', () => {
+  it('creates with POST and uses the same PATCH endpoint for edits and moves', () => {
     const input = {
-      source: 'task' as const,
+      type: 'task' as const,
       staffId: 'staff-1',
       date: '2026-08-19',
       taskId: 'task-1',
@@ -124,15 +123,15 @@ describe('hours API', () => {
       note: '',
     };
 
-    setHours(input);
+    setHours(input, undefined, true);
     setHours(input, 'entry-1');
-    updateHoursPlacement('entry-1', { date: '2026-08-20' });
+    setHours({ date: '2026-08-20' }, 'entry-1');
     deleteHours('entry-1');
 
     expect(apiClient.delete).toHaveBeenCalledWith('/hours/entry-1');
-    expect(apiClient.post).toHaveBeenCalledWith('/hours', input);
-    expect(apiClient.put).toHaveBeenCalledWith('/hours/entry-1', input);
-    expect(apiClient.patch).toHaveBeenCalledWith('/hours/entry-1/placement', {
+    expect(apiClient.post).toHaveBeenCalledWith('/hours', { ...input, completeTask: true });
+    expect(apiClient.patch).toHaveBeenNthCalledWith(1, '/hours/entry-1', input);
+    expect(apiClient.patch).toHaveBeenNthCalledWith(2, '/hours/entry-1', {
       date: '2026-08-20',
     });
   });

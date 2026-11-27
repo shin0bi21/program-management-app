@@ -79,7 +79,7 @@ describe('HoursModal', () => {
 
   it('selects an assigned task through the rendered control', async () => {
     loadTasks.mockResolvedValue([task]);
-    renderModal({ source: 'task', date: '2026-08-18' });
+    renderModal({ type: 'task', date: '2026-08-18' });
 
     await waitFor(() => expect(loadTasks).toHaveBeenCalledWith(
       'staff-1',
@@ -97,12 +97,12 @@ describe('HoursModal', () => {
       date === '2099-01-01'
         ? [{
           id: 'session-future',
-          name: 'Leadership',
+          title: 'Leadership',
           date,
         }]
         : []
     ));
-    renderModal({ source: 'session' });
+    renderModal({ type: 'session' });
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-01-01' } });
     await waitFor(() => expect(getHoursSessions).toHaveBeenCalledWith(
@@ -115,7 +115,7 @@ describe('HoursModal', () => {
   });
 
   it('locks the work date when opened from a calendar cell', async () => {
-    renderModal({ source: 'session', date: '2026-08-18', staffId: 'staff-2' });
+    renderModal({ type: 'session', date: '2026-08-18', staffId: 'staff-2' });
 
     expect(screen.getByLabelText('Date')).toHaveValue('2026-08-18');
     expect(screen.getByLabelText('Date')).toBeDisabled();

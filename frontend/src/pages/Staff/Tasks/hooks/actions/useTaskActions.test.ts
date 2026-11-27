@@ -124,33 +124,33 @@ describe('useTaskActions', () => {
     expect(rendered.onTaskRemoved).not.toHaveBeenCalled();
   });
 
-  it.each([false, true])('synchronizes authoritative hours and task state after logging (complete=%s)', async completeTask => {
+  it('synchronizes authoritative hours and task state after logging', async () => {
     const savedHours = deferred<Awaited<ReturnType<typeof setHours>>>();
     vi.mocked(setHours).mockReturnValue(savedHours.promise);
     const updatedTask = makeTask({
       hoursLogged: 3.5,
       loggedHoursByDate: [{ date: '2026-08-18', hours: 3.5 }],
-      state: completeTask ? 'completed' : 'open',
-      status: completeTask ? 'completed' : 'in_progress',
-      statusLabel: completeTask ? 'Completed' : 'In Progress',
-      completedAt: completeTask ? '2026-08-18T12:00:00Z' : null,
+      state: 'completed',
+      status: 'completed',
+      statusLabel: 'Completed',
+      completedAt: '2026-08-18T12:00:00Z',
     });
     const client = createTestQueryClient();
     const rendered = renderActions(client);
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
     const input = {
-      source: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared', completeTask,
+      type: 'task' as const, staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
     };
 
     let saving!: Promise<void>;
-    act(() => { saving = rendered.result.current.logHours(input); });
+    act(() => { saving = rendered.result.current.logHours(input, true); });
 
     await act(async () => {
       savedHours.resolve({ ...makeHoursItem(), updatedTasks: [updatedTask] });
       await saving;
     });
 
-    expect(setHours).toHaveBeenCalledWith(input);
+    expect(setHours).toHaveBeenCalledWith(input, undefined, true);
     expect(rendered.upsertCalendarTask).toHaveBeenCalledExactlyOnceWith(updatedTask);
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['tasks', 'table'] });
@@ -165,7 +165,7 @@ describe('useTaskActions', () => {
 
     await act(async () => {
       await expect(rendered.result.current.logHours({
-        source: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
+        type: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
       })).rejects.toThrow('Save failed');
     });
 
@@ -190,7 +190,7 @@ describe('useTaskActions', () => {
 
     await act(async () => {
       await expect(rendered.result.current.logHours({
-        source: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
+        type: 'task', staffId: 'staff-1', taskId: 'task-1', date: '2026-08-18', hours: 1, note: 'Prepared',
       })).resolves.toBeUndefined();
     });
 

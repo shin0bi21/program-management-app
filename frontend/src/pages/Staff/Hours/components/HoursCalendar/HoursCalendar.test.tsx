@@ -189,7 +189,7 @@ describe('HoursCalendar', () => {
     expect(onAdd).toHaveBeenCalledWith({
       staffId: 'staff-1',
       date: periods[1].key,
-      source: 'regular',
+      type: 'regular',
     });
   });
 
@@ -250,10 +250,7 @@ describe('HoursCalendar', () => {
       nextRange: { start: periods[2].key, end: periods[2].key },
     }));
 
-    expect(rendered.onMove).toHaveBeenCalledWith({
-      item,
-      date: periods[2].key,
-    });
+    expect(rendered.onMove).toHaveBeenCalledWith(item, periods[2].key);
   });
 
   it('removes calendar mutation callbacks in read-only mode', () => {

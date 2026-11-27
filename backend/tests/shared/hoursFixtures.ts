@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { deleteTestUser, seedTestUser, sql, type SeededUser, type SeedOverrides } from './db';
 import type { AccessTokenPayload } from '../../src/types/auth';
-import type { HoursCalendarQuery, SetHoursInput } from '../../src/validation/hoursSchemas';
+import type { HoursCalendarQuery } from '../../src/validation/hoursSchemas';
+import type { Hours } from '../../src/services/staff/hours/hoursRowQuery';
 
 export interface HoursTestUser extends SeededUser {
   auth: AccessTokenPayload;
@@ -23,7 +24,7 @@ export interface HoursFixture {
   upcomingDate: string;
 }
 
-type RegularHoursInput = Extract<SetHoursInput, { source: 'regular' }>;
+type RegularHoursInput = Pick<Hours, 'type' | 'staffId' | 'programId' | 'category' | 'date' | 'hours' | 'note'>;
 
 export const emptyHoursFilters: HoursCalendarQuery = {
   staffIds: [], categories: [], programIds: [], types: [], cycleIds: [], search: '',
@@ -119,7 +120,7 @@ export async function deleteHoursFixture(fixture: HoursFixture): Promise<void> {
  */
 export function regularHoursInput(fixture: HoursFixture, overrides: Partial<RegularHoursInput> = {}): RegularHoursInput {
   return {
-    source: 'regular', staffId: fixture.firstStaff.userId, programId: fixture.programId,
+    type: 'regular', staffId: fixture.firstStaff.userId, programId: fixture.programId,
     category: 'meeting', date: fixture.date, hours: 1, note: 'Hours fixture', ...overrides,
   };
 }

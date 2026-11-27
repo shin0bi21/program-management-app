@@ -76,7 +76,6 @@ vi.mock('./components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSu
 vi.mock('./hours.api', () => ({
   getHoursReferenceData: vi.fn(),
   setHours: vi.fn(),
-  updateHoursPlacement: vi.fn(),
   deleteHours: vi.fn(),
 }));
 vi.mock('../Tasks/api/tasks.api', () => ({ getOpenTasks: vi.fn() }));
@@ -254,13 +253,13 @@ describe('Hours', () => {
     openAddHours();
 
     expect(screen.getByRole('dialog', { name: 'Hours editor' })).toBeInTheDocument();
-    expect(children.modal?.source).toBe('regular');
+    expect(children.modal?.type).toBe('regular');
   });
 
   it('opens the entry modal with the calendar staff member and date', async () => {
     renderHours();
     await screen.findByTestId('hours-calendar');
-    const context = { staffId: staffMember.id, date: '2026-08-09', source: 'regular' as const };
+    const context = { staffId: staffMember.id, date: '2026-08-09', type: 'regular' as const };
 
     act(() => children.calendar!.onAdd(context));
 
