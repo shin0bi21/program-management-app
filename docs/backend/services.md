@@ -28,7 +28,7 @@ Name builders `build<Domain>Filters`. Use `filterValues` for incoming selections
 Add selected filters with plain `if` statements rather than nested SQL ternaries.
 
 Keep domain work with its capability and technical helpers in `services/shared/`.
-See the [API source map](api.md#find-an-api-owner) for feature ownership.
+Follow the [API route pattern](api.md#find-an-api-owner) to find the service behind an endpoint.
 
 ## Compose Collection Reads
 
@@ -89,8 +89,8 @@ unrelated lifecycle fields; set the update metadata on the saved record. Enforce
 record scope and lifecycle rules before or within the write. Never treat an
 inaccessible record as a missing record that may be recreated.
 
-Document each endpoint's creation and missing-ID behavior in its source contract
-and the [API guide](api.md). Existing-only commands such as moves, status changes,
+Document each endpoint's creation and missing-ID behavior in its source contract.
+Existing-only commands such as moves, status changes,
 and deletion continue to require their target. Multi-record workflows retain
 their relationship, audit, and external-operation rules. Keep a separate path
 only where one of those contracts requires different behavior, and explain why.
@@ -112,6 +112,6 @@ where the service can give it domain meaning.
 - Keep network calls and file rendering outside database transactions. Define
   recovery when an external operation can fail after a database change.
 
-Report services load authorized data; renderers under `src/reports/` only format
-that data. Controllers connect the two. Domain-specific contracts belong in the
-[API guide](api.md), including cycle dates, assignments, and enrollment.
+Report services load authorized data. Renderers under `src/reports/` format that
+data, and controllers connect the two. Document domain-specific contracts,
+including cycle dates, assignments, and enrollment, alongside their owners.

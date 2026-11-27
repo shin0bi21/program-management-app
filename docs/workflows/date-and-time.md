@@ -54,7 +54,7 @@ dates remain date-only values for eligibility comparisons, without timezone conv
 The frontend's `getDate()` uses `Temporal.Now.plainDateISO()` for local today.
 Calendar period keys, bounds, anchors, and buffered dates remain `YYYY-MM-DD`
 strings throughout. Determining today never changes a saved date.
-See [Session Creation and Ranges](../backend/api.md#session-creation-and-ranges)
+See the [session service](../../backend/src/services/programming/sessions/sessionService.ts)
 for scheduling behavior.
 
 Authentication, audit, and lifecycle events remain exact UTC instants in storage
