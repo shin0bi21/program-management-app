@@ -1,3 +1,4 @@
+import { Controller } from 'react-hook-form';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import FormField from '../../../../common/components/FormField/FormField';
@@ -50,6 +51,7 @@ function YouthForm({
   const { permissions } = useAuth();
   const canManageSchools = permissions.includes('write:schools') && !!onManageSchool;
   const {
+    control,
     register,
     errors,
     rhfHandleSubmit,
@@ -61,7 +63,6 @@ function YouthForm({
     setSchoolId,
     addresses,
     contacts,
-    handleContactChange,
     submitStatus,
     error,
     handleClose,
@@ -193,30 +194,35 @@ function YouthForm({
 
           <div className="section-content">
             {contacts.map((contact, index) => (
-              <div key={index} className="contact-form-item">
+              <div key={contact.id} className="contact-form-item">
                 <div className="form-row">
                   <FormField id={`phoneNumber-${index}`} label="Phone Number *">
                     <input
                       id={`phoneNumber-${index}`}
                       type="tel"
-                      value={contact.phoneNumber}
-                      onChange={(e) => handleContactChange(index, 'phoneNumber', e.target.value)}
+                      {...register(`contacts.${index}.phoneNumber`)}
                       placeholder="(416) 555-1234"
                       disabled={submissionComplete}
                     />
                   </FormField>
                   <FormField id={`type-${index}`} label="Relationship *">
-                    <FloatingSelect
-                      id={`type-${index}`}
-                      ariaLabel={`Relationship ${index + 1}`}
-                      value={contact.type}
-                      options={[
-                        { id: 'parent', label: 'Parent' },
-                        { id: 'guardian', label: 'Guardian' },
-                        { id: 'sibling', label: 'Sibling' },
-                      ]}
-                      onChange={value => handleContactChange(index, 'type', value)}
-                      disabled={submissionComplete}
+                    <Controller
+                      control={control}
+                      name={`contacts.${index}.type`}
+                      render={({ field }) => (
+                        <FloatingSelect
+                          id={`type-${index}`}
+                          ariaLabel={`Relationship ${index + 1}`}
+                          value={field.value}
+                          options={[
+                            { id: 'parent', label: 'Parent' },
+                            { id: 'guardian', label: 'Guardian' },
+                            { id: 'sibling', label: 'Sibling' },
+                          ]}
+                          onChange={field.onChange}
+                          disabled={submissionComplete}
+                        />
+                      )}
                     />
                   </FormField>
                 </div>

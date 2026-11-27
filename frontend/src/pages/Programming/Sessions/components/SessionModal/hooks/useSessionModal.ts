@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm, type UseFormSetValue, type UseFormRegister, type UseFormHandleSubmit } from 'react-hook-form';
 import type { Program } from '../../../../Programs/types';
 import useSubmitLock from '../../../../../../common/hooks/useSubmitLock';
 import type { SubmitStatus } from '../../../../../../common/hooks/useSubmitStatus';
@@ -20,14 +21,12 @@ export interface SessionModalOptions {
 interface SessionModalWorkflow {
   program: Program | undefined;
   draft: ReturnType<typeof createSessionDraft>;
-  updateDraft: <Key extends keyof SessionModalWorkflow['draft']>(
-    key: Key,
-    value: SessionModalWorkflow['draft'][Key],
-  ) => void;
+  register: UseFormRegister<SessionModalWorkflow['draft']>;
+  setValue: UseFormSetValue<SessionModalWorkflow['draft']>;
   selectProgram: (id: string) => void;
   status: SubmitStatus;
   message: string;
-  submit: () => Promise<void>;
+  submit: ReturnType<UseFormHandleSubmit<SessionModalWorkflow['draft']>>;
   locked: boolean;
 }
 
@@ -45,31 +44,28 @@ export default function useSessionModal({
   onSave,
   onSaved,
 }: SessionModalOptions): SessionModalWorkflow {
-  const [draft, setDraft] = useState(() => createSessionDraft({ programs, session, programId, date }));
+  const { register, watch, setValue, handleSubmit } = useForm({
+    defaultValues: createSessionDraft({ programs, session, programId, date }),
+  });
+  const draft = watch();
   const program = programs.find(candidate => candidate.id === draft.programId);
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [message, setMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
-
-  const updateDraft: SessionModalWorkflow['updateDraft'] = (key, value) => {
-    setDraft(current => ({ ...current, [key]: value }));
-  };
 
   const selectProgram = (id: string) => {
     if (session || id === draft.programId) return;
     const nextProgram = programs.find(candidate => candidate.id === id);
     if (!nextProgram) return;
 
-    setDraft(current => ({
-      ...current,
-      programId: id,
-      date: date ?? nextSessionDate(nextProgram),
-      startTime: nextProgram.defaultStartTime,
-      endTime: nextProgram.defaultEndTime,
-    }));
+    setValue('programId', id);
+    setValue('date', date ?? nextSessionDate(nextProgram));
+    setValue('startTime', nextProgram.defaultStartTime);
+    setValue('endTime', nextProgram.defaultEndTime);
   };
 
-  const submit = async () => {
+  const submit = handleSubmit(async draft => {
+    const program = programs.find(candidate => candidate.id === draft.programId);
     if (pending || (!session && !program) || !draft.title.trim() || !draft.sessionType) return;
     if (draft.startTime && draft.endTime && draft.endTime <= draft.startTime) {
       setStatus('error');
@@ -108,12 +104,13 @@ export default function useSessionModal({
         : 'Session added, but the page could not refresh. Reload to see it.');
     }
     setStatus('success');
-  };
+  });
 
   return {
     program,
     draft,
-    updateDraft,
+    register,
+    setValue,
     selectProgram,
     status,
     message,

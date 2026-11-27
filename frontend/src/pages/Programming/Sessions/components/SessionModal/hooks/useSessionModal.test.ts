@@ -23,8 +23,8 @@ describe('single session creation', () => {
     const onSaved = vi.fn();
     const { result } = renderHook(() => useSessionModal({ programs: [], onSave, onSaved }));
     act(() => {
-      result.current.updateDraft('title', 'Workshop');
-      result.current.updateDraft('sessionType', 'Regular');
+      result.current.setValue('title', 'Workshop');
+      result.current.setValue('sessionType', 'Regular');
     });
 
     await act(() => result.current.submit());
@@ -41,11 +41,11 @@ describe('single session creation', () => {
     );
     act(() => {
       result.current.selectProgram('p2');
-      result.current.updateDraft('title', 'Music workshop');
-      result.current.updateDraft('sessionType', 'Regular');
-      result.current.updateDraft('date', '2026-11-12');
-      result.current.updateDraft('startTime', '15:00');
-      result.current.updateDraft('endTime', '17:00');
+      result.current.setValue('title', 'Music workshop');
+      result.current.setValue('sessionType', 'Regular');
+      result.current.setValue('date', '2026-11-12');
+      result.current.setValue('startTime', '15:00');
+      result.current.setValue('endTime', '17:00');
     });
 
     rerender({ programId: 'p1', date: '2026-12-01' });
@@ -64,9 +64,9 @@ describe('single session creation', () => {
     act(() => result.current.selectProgram('p2'));
     expect(result.current.draft).toMatchObject({ date: '2026-11-04', startTime: '16:00', endTime: '18:00' });
     act(() => {
-      result.current.updateDraft('title', ' Music ');
-      result.current.updateDraft('sessionType', 'Regular');
-      result.current.updateDraft('description', ' Practice session ');
+      result.current.setValue('title', ' Music ');
+      result.current.setValue('sessionType', 'Regular');
+      result.current.setValue('description', ' Practice session ');
     });
     await act(() => result.current.submit());
     expect(onSave).toHaveBeenCalledWith({
@@ -79,7 +79,7 @@ describe('single session creation', () => {
   it('shows cycle resolution errors from the server without retrying another assignment', async () => {
     onSave.mockRejectedValueOnce(new Error('No assigned cycle covers this session date.'));
     const { result } = renderHook(() => useSessionModal({ programs, programId: 'p1', onSave, onSaved: vi.fn() }));
-    act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
+    act(() => { result.current.setValue('title', 'Art'); result.current.setValue('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     expect(result.current.message).toContain('No assigned cycle');
@@ -90,7 +90,7 @@ describe('single session creation', () => {
     onSave.mockRejectedValueOnce(new Error('Try again')).mockResolvedValueOnce(makeProgramSession());
     const onSaved = vi.fn().mockRejectedValue(new Error('Refresh failed'));
     const { result } = renderHook(() => useSessionModal({ programs, programId: 'p1', onSave, onSaved }));
-    act(() => { result.current.updateDraft('title', 'Art'); result.current.updateDraft('sessionType', 'Regular'); });
+    act(() => { result.current.setValue('title', 'Art'); result.current.setValue('sessionType', 'Regular'); });
     await act(() => result.current.submit());
     expect(result.current.status).toBe('error');
     await act(async () => { await Promise.all([result.current.submit(), result.current.submit()]); });

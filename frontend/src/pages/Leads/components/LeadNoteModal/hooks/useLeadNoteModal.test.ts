@@ -36,7 +36,7 @@ describe('useLeadNoteModal', () => {
       onSaved,
     }));
 
-    act(() => result.current.updateDetails('  Called and left a message.  '));
+    act(() => result.current.setValue('details', '  Called and left a message.  '));
     await act(() => result.current.submit());
 
     expect(createLeadNote).toHaveBeenCalledWith(lead.id, note.details);
@@ -51,7 +51,7 @@ describe('useLeadNoteModal', () => {
       onSaved: vi.fn(),
     }));
 
-    act(() => result.current.updateDetails('   '));
+    act(() => result.current.setValue('details', '   '));
     await act(() => result.current.submit());
 
     expect(createLeadNote).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('useLeadNoteModal', () => {
     expect(result.current.statusMessage).toBe('Enter a follow-up note.');
   });
 
-  it('preserves the draft when equivalent target objects are recreated', () => {
+  it('preserves the draft when equivalent target objects are recreated', async () => {
     const onSaved = vi.fn();
     const view = renderHook(
       ({ currentLead }) => useLeadNoteModal({
@@ -69,10 +69,12 @@ describe('useLeadNoteModal', () => {
       { initialProps: { currentLead: lead } },
     );
 
-    act(() => view.result.current.updateDetails('Draft in progress'));
+    act(() => view.result.current.setValue('details', 'Draft in progress'));
     view.rerender({ currentLead: { ...lead } });
 
-    expect(view.result.current.details).toBe('Draft in progress');
+    await act(() => view.result.current.submit());
+
+    expect(createLeadNote).toHaveBeenCalledWith(lead.id, 'Draft in progress');
   });
 
   it('shows a save failure and permits a retry', async () => {
@@ -84,7 +86,7 @@ describe('useLeadNoteModal', () => {
       lead,
       onSaved,
     }));
-    act(() => result.current.updateDetails(note.details));
+    act(() => result.current.setValue('details', note.details));
 
     await act(() => result.current.submit());
     expect(result.current.submitStatus).toBe('error');

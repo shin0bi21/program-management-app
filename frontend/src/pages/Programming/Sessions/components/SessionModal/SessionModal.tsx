@@ -23,38 +23,38 @@ export default function SessionModal({ onClose, sessionTypes, ...options }: Sess
     statusMessage={workflow.message}
     footer={<ModalFormFooter formId="session-form"
       submitStatus={workflow.status} submitDisabled={workflow.locked || !workflow.draft.sessionType || (!isEdit && !workflow.program)} onClose={onClose} />}>
-    <form id="session-form" onSubmit={event => { event.preventDefault(); void workflow.submit(); }}>
+    <form id="session-form" onSubmit={workflow.submit}>
       {!isEdit && <FormField id="session-program" label="Program">
         <FloatingSelect id="session-program" value={workflow.draft.programId} onChange={workflow.selectProgram}
           disabled={workflow.locked} options={options.programs.map(({ id, title }) => ({ id, label: title }))} />
       </FormField>}
       <FormField id="session-type" label="Type">
         <FloatingSelect id="session-type" value={workflow.draft.sessionType}
-          onChange={value => workflow.updateDraft('sessionType', sessionTypes.find(type => type.id === value)?.id ?? '')}
+          onChange={value => workflow.setValue('sessionType', sessionTypes.find(type => type.id === value)?.id ?? '')}
           disabled={workflow.locked}
           options={sessionTypes.map(({ id, name }) => ({ id, label: name }))} />
       </FormField>
       <FormField id="session-title" label="Title">
-        <input id="session-title" required maxLength={160} value={workflow.draft.title}
-          disabled={workflow.locked} onChange={event => workflow.updateDraft('title', event.target.value)} />
+        <input id="session-title" required maxLength={160}
+          disabled={workflow.locked} {...workflow.register('title')} />
       </FormField>
       <FormField id="session-date" label="Session Date">
-        <input id="session-date" type="date" required value={workflow.draft.date}
-          disabled={workflow.locked} onChange={event => workflow.updateDraft('date', event.target.value)} />
+        <input id="session-date" type="date" required
+          disabled={workflow.locked} {...workflow.register('date')} />
       </FormField>
       <div className="form-row session-time-row">
         <FormField id="session-start-time" label="Start Time">
-          <input id="session-start-time" type="time" required value={workflow.draft.startTime}
-            disabled={workflow.locked} onChange={event => workflow.updateDraft('startTime', event.target.value)} />
+          <input id="session-start-time" type="time" required
+          disabled={workflow.locked} {...workflow.register('startTime')} />
         </FormField>
         <FormField id="session-end-time" label="End Time">
-          <input id="session-end-time" type="time" required value={workflow.draft.endTime}
-            disabled={workflow.locked} onChange={event => workflow.updateDraft('endTime', event.target.value)} />
+          <input id="session-end-time" type="time" required
+          disabled={workflow.locked} {...workflow.register('endTime')} />
         </FormField>
       </div>
       <FormField id="session-description" label="Description">
-        <textarea id="session-description" maxLength={5000} value={workflow.draft.description}
-          disabled={workflow.locked} onChange={event => workflow.updateDraft('description', event.target.value)} />
+        <textarea id="session-description" maxLength={5000}
+          disabled={workflow.locked} {...workflow.register('description')} />
       </FormField>
     </form>
   </Modal>;

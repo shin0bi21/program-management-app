@@ -44,7 +44,10 @@ describe('useProgramCyclesModal', () => {
     vi.mocked(setProgramCycles).mockReturnValueOnce(pending.promise);
 
     act(() => { result.current.toggleCycle('cycle-1'); result.current.toggleCycle('cycle-2'); });
-    act(() => { void result.current.submit(); void result.current.submit(); });
+    await act(async () => {
+      void result.current.submit();
+      void result.current.submit();
+    });
     expect(setProgramCycles).toHaveBeenCalledTimes(1);
     expect(setProgramCycles).toHaveBeenCalledWith('program-1', ['cycle-2']);
     expect(result.current.locked).toBe(true);

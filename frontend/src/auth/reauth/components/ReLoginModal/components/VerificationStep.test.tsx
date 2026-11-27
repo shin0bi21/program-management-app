@@ -1,21 +1,17 @@
 // Scope: verifies the verification step's code, resend, error, and submission wiring.
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import VerificationStep from './VerificationStep';
 
 describe('VerificationStep', () => {
-  it('renders verification context and wires verification actions', () => {
-    const onCodeChange = vi.fn();
+  it('renders verification context and wires verification actions', async () => {
     const onSubmit = vi.fn();
     const onResend = vi.fn();
 
     render(<VerificationStep
       email="staff@example.com"
-      code="123456"
       error="Invalid code"
-      submitting={false}
       resending={false}
-      onCodeChange={onCodeChange}
       onSubmit={onSubmit}
       onResend={onResend}
     />);
@@ -27,8 +23,7 @@ describe('VerificationStep', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Resend code' }));
     fireEvent.submit(screen.getByRole('button', { name: 'Verify' }).closest('form')!);
 
-    expect(onCodeChange).toHaveBeenCalledWith('654321');
     expect(onResend).toHaveBeenCalledOnce();
-    expect(onSubmit).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith('654321'));
   });
 });

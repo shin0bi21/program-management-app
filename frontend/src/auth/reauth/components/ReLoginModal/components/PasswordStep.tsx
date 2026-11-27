@@ -1,30 +1,23 @@
-import type { FormEvent } from 'react';
+import { useForm } from 'react-hook-form';
 import Button from '../../../../../common/components/Button/Button';
 
 interface PasswordStepProps {
   email: string;
-  password: string;
   error: string;
-  submitting: boolean;
-  onPasswordChange: (password: string) => void;
-  onSubmit: () => void | Promise<void>;
+  onSubmit: (password: string) => void | Promise<void>;
 }
 
 export default function PasswordStep({
   email,
-  password,
   error,
-  submitting,
-  onPasswordChange,
   onSubmit,
 }: PasswordStepProps) {
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    void onSubmit();
-  };
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+    defaultValues: { password: '' },
+  });
 
   return (
-    <form onSubmit={handleSubmit} className="relogin-form">
+    <form onSubmit={handleSubmit(({ password }) => onSubmit(password))} className="relogin-form">
       <div className="relogin-field">
         <label htmlFor="relogin-email">Email</label>
         <input
@@ -41,8 +34,7 @@ export default function PasswordStep({
         <input
           id="relogin-password"
           type="password"
-          value={password}
-          onChange={(event) => onPasswordChange(event.target.value)}
+          {...register('password')}
           placeholder="Enter your password"
           className="relogin-input"
           autoFocus
@@ -52,8 +44,8 @@ export default function PasswordStep({
 
       {error && <p className="relogin-error" role="alert">{error}</p>}
 
-      <Button type="submit" fullWidth disabled={submitting}>
-        {submitting ? 'Verifying...' : 'Continue'}
+      <Button type="submit" fullWidth disabled={isSubmitting}>
+        {isSubmitting ? 'Verifying...' : 'Continue'}
       </Button>
     </form>
   );

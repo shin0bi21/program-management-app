@@ -120,7 +120,7 @@ function HoursForm({
                 id="hours-assigned-task"
                 value={draft.taskId}
                 options={workflow.taskOptions.map(task => ({ id: task.id, label: task.title }))}
-                onChange={workflow.selectTask}
+                onChange={value => workflow.setValue('taskId', value)}
                 placeholder={workflow.tasksLoading ? 'Loading assigned tasks…' : 'Select assigned task'}
                 ariaLabel="Task"
                 disabled={submissionComplete || workflow.tasksLoading || workflow.taskLocked}
@@ -133,8 +133,7 @@ function HoursForm({
           <label className="hours-form__complete-task">
             <input
               type="checkbox"
-              checked={draft.completeTask}
-              onChange={event => workflow.setCompleteTask(event.target.checked)}
+              {...workflow.register('completeTask')}
               disabled={submissionComplete}
             />
             Task completed
@@ -163,12 +162,12 @@ function HoursForm({
               id="hours-program"
               value={draft.programId}
               options={programs.map(({ id, title }) => ({ id, label: title }))}
-              onChange={workflow.selectProgram}
+              onChange={value => workflow.setValue('programId', value)}
               placeholder="Select a program"
               ariaLabel="Program"
               disabled={submissionComplete}
               action={draft.programId
-                ? { label: 'Clear program', onSelect: () => workflow.selectProgram('') }
+                ? { label: 'Clear program', onSelect: () => workflow.setValue('programId', '') }
                 : undefined}
             />
           </FormField>
@@ -178,7 +177,8 @@ function HoursForm({
               id="hours-category"
               value={draft.category}
               options={categories.filter(option => option.id !== 'program_delivery').map(({ id, name }) => ({ id, label: name }))}
-              onChange={value => workflow.selectCategory(
+              onChange={value => workflow.setValue(
+                'category',
                 value as Exclude<HoursCategory, 'program_delivery'>,
               )}
               ariaLabel="Category"
@@ -191,8 +191,7 @@ function HoursForm({
           <input
             id="hours-date"
             type="date"
-            value={draft.date}
-            onChange={event => workflow.updateDate(event.target.value)}
+            {...workflow.register('date', { onChange: event => workflow.updateDate(event.target.value) })}
             required
             disabled={submissionComplete || sessionDateLocked}
           />
@@ -205,8 +204,7 @@ function HoursForm({
             min="0.25"
             max="24"
             step="0.25"
-            value={draft.hours}
-            onChange={event => workflow.updateHours(event.target.value)}
+            {...workflow.register('hours')}
             required
             disabled={submissionComplete}
           />
@@ -216,8 +214,7 @@ function HoursForm({
           <FormField id="hours-note" label="Note">
             <textarea
               id="hours-note"
-              value={draft.note}
-              onChange={event => workflow.updateNote(event.target.value)}
+              {...workflow.register('note')}
               rows={5}
               maxLength={2000}
               required

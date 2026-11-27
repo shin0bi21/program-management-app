@@ -1,4 +1,5 @@
-import { type FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 
 import Button from '../../components/Button/Button';
@@ -38,7 +39,10 @@ function SchoolForm({ action, selection, onClose }: {
   selection: SchoolSelection;
   onClose: () => void;
 }) {
-  const [name, setName] = useState(action.type === 'edit' ? action.school.name : '');
+  const { register, watch, handleSubmit } = useForm({
+    defaultValues: { name: action.type === 'edit' ? action.school.name : '' },
+  });
+  const name = watch('name');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const { tryLock, unlock } = useSubmitLock();
@@ -46,7 +50,7 @@ function SchoolForm({ action, selection, onClose }: {
   const deleting = action.type === 'delete';
 
   /** Saves the selected school action, then unmounts on success. @example await submit() */
-  const submit = async () => {
+  const submit = handleSubmit(async ({ name }) => {
     const trimmedName = name.trim();
     if ((!deleting && !trimmedName) || !tryLock()) return;
 
@@ -81,13 +85,8 @@ function SchoolForm({ action, selection, onClose }: {
     }
 
     onClose();
-  };
+  });
 
-  /** Prevents native navigation before saving this draft. @example handleSubmit(event) */
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void submit();
-  };
 
   let title = 'Add School';
   if (action.type === 'edit') title = 'Edit School';
@@ -120,14 +119,13 @@ function SchoolForm({ action, selection, onClose }: {
       {action.type === 'delete' ? (
         <p>Delete {action.school.name}? Schools assigned to youth profiles cannot be deleted.</p>
       ) : (
-        <form id="school-action-form" onSubmit={handleSubmit}>
+        <form id="school-action-form" onSubmit={submit}>
           <FormField id="school-name" label="School Name *">
             <input
               id="school-name"
               autoFocus
               required
-              value={name}
-              onChange={event => setName(event.target.value)}
+              {...register('name')}
               disabled={submitting}
             />
           </FormField>

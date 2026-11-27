@@ -31,12 +31,11 @@ export default function LeadNoteModal({
       category="follow_up"
       categoryOptions={[{ id: 'follow_up', name: 'Follow-up' }]}
       categoryDisabled
-      details={workflow.details}
+      detailsField={workflow.detailsField}
       submitStatus={workflow.submitStatus}
       statusMessage={workflow.statusMessage}
       maxLength={500}
       onCategoryChange={() => undefined}
-      onDetailsChange={workflow.updateDetails}
       onSubmit={workflow.submit}
       onClose={onClose}
     />

@@ -33,7 +33,7 @@ export default function SessionAttachmentModal({ session, ...props }: SessionAtt
  */
 function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved }: Omit<SessionAttachmentModalProps, 'session'> & { session: Session }) {
   const workflow = useSessionAttachmentModal({ queryKey, session, attachment, onSaved });
-  const { roster, rosterQuery, selectedYouthIds, setSelectedFile, submitStatus, statusMessage, submissionComplete, toggleYouth, submit } = workflow;
+  const { roster, rosterQuery, selectedYouthIds, register, submitStatus, statusMessage, submissionComplete, toggleYouth, submit } = workflow;
 
   return (
     <Modal
@@ -44,23 +44,22 @@ function AttachmentForm({ queryKey, session, attachment = null, onClose, onSaved
       statusMessage={statusMessage || undefined}
       footer={<ModalFormFooter formId="session-attachment-form" submitStatus={submitStatus} onClose={onClose} />}
     >
-      <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={event => void submit(event)}>
+      <form id="session-attachment-form" aria-busy={submissionComplete} onSubmit={submit}>
         <FormField id="session-attachment-title" label="Title">
-          <input id="session-attachment-title" name="title" maxLength={160} defaultValue={attachment?.title ?? ''} disabled={submissionComplete} required />
+          <input id="session-attachment-title" {...register('title')} maxLength={160} disabled={submissionComplete} required />
         </FormField>
         {!attachment && <FormField id="session-attachment-file" label="File">
           <input
             id="session-attachment-file"
-            name="file"
+            {...register('file')}
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.docx"
             disabled={submissionComplete}
-            onChange={event => setSelectedFile(event.currentTarget.files?.[0] ?? null)}
             required
           />
         </FormField>}
         <FormField id="session-attachment-description" label="Description (optional)">
-          <textarea id="session-attachment-description" name="description" rows={4} maxLength={5000} defaultValue={attachment?.description ?? ''} disabled={submissionComplete} />
+          <textarea id="session-attachment-description" {...register('description')} rows={4} maxLength={5000} disabled={submissionComplete} />
         </FormField>
         <FormFieldGroup label="Link youth" className="session-attachment-youth" disabled={submissionComplete}>
           {rosterQuery.isLoading && <p>Loading youth…</p>}

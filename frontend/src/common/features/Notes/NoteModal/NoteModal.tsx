@@ -1,3 +1,4 @@
+import type { UseFormRegisterReturn } from 'react-hook-form';
 import type { FormEvent, ReactNode } from 'react';
 import FloatingSelect from '../../../components/FloatingSelect/FloatingSelect';
 import FormField from '../../../components/FormField/FormField';
@@ -13,14 +14,13 @@ interface NoteModalProps {
   category: string;
   categoryOptions: Array<{ id: string; name: string }>;
   categoryDisabled?: boolean;
-  details: string;
+  detailsField: UseFormRegisterReturn<'details'>;
   submitStatus: SubmitStatus;
   statusMessage?: string;
   maxLength?: number;
   children?: ReactNode;
   onCategoryChange: (category: string) => void;
-  onDetailsChange: (details: string) => void;
-  onSubmit: () => void | Promise<void>;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -38,21 +38,16 @@ export default function NoteModal({
   category,
   categoryOptions,
   categoryDisabled = false,
-  details,
+  detailsField,
   submitStatus,
   statusMessage,
   maxLength = 5000,
   children,
   onCategoryChange,
-  onDetailsChange,
   onSubmit,
   onClose,
 }: NoteModalProps) {
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void onSubmit();
-  };
 
   return (
     <Modal
@@ -63,7 +58,7 @@ export default function NoteModal({
       statusMessage={statusMessage}
       footer={<ModalFormFooter formId={formId} submitStatus={submitStatus} onClose={onClose} />}
     >
-      <form id={formId} aria-busy={submissionComplete || undefined} onSubmit={submit}>
+      <form id={formId} aria-busy={submissionComplete || undefined} onSubmit={onSubmit}>
         <FormField id={`${formId}-category`} label={categoryLabel}>
           <FloatingSelect
             id={`${formId}-category`}
@@ -79,10 +74,9 @@ export default function NoteModal({
             id={`${formId}-details`}
             rows={5}
             maxLength={maxLength}
-            value={details}
             required
             disabled={submissionComplete}
-            onChange={event => onDetailsChange(event.target.value)}
+            {...detailsField}
           />
         </FormField>
         {children}

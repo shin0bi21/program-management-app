@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { setYouthProfileNote } from '../../../youth.api';
 import {
@@ -30,10 +30,11 @@ export default function useProfileNoteModal({
   note,
   onSaved,
 }: UseProfileNoteModalOptions) {
-  const [draft, setDraft] = useState<ProfileNoteDraft>(() => ({
+  const { register, watch, setValue, handleSubmit } = useForm<ProfileNoteDraft>({ defaultValues: {
     category: note?.category ?? '',
     details: note?.details ?? '',
-  }));
+  } });
+  const draft = watch();
   const { submitStatus, setSubmitStatus, error, setError } = useSubmitStatus();
   const submitLock = useSubmitLock();
   const submissionComplete = submitStatus === 'submitting' || submitStatus === 'success';
@@ -43,14 +44,12 @@ export default function useProfileNoteModal({
   });
   // Draft events.
   const selectCategory = (category: YouthProfileNoteCategory) => {
-    setDraft(current => ({ ...current, category }));
-  };
-  const updateDetails = (details: string) => {
-    setDraft(current => ({ ...current, details }));
+    setValue('category', category);
   };
 
   // Submission boundary.
-  const submit = async () => {
+  /** Saves validated note values for this editor. @example await saveNote(draft) */
+  async function saveNote(draft: ProfileNoteDraft): Promise<void> {
     const details = draft.details.trim();
     if (!details) {
       setError('Enter a note.');
@@ -88,7 +87,7 @@ export default function useProfileNoteModal({
 
     setSubmitStatus('success');
     onSaved(saved);
-  };
+  }
 
   return {
     draft,
@@ -96,7 +95,8 @@ export default function useProfileNoteModal({
     statusMessage,
     submissionComplete,
     selectCategory,
-    updateDetails,
-    submit,
+    detailsField: register('details'),
+    setValue,
+    submit: handleSubmit(saveNote),
   };
 }

@@ -80,10 +80,7 @@ function SignUpForm({ queryKey, lead, onClose, onSuccess }: Omit<SignUpLeadModal
       <form
         id="sign-up-lead-form"
         className="sign-up-lead-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void workflow.submit();
-        }}
+        onSubmit={workflow.submit}
       >
         <section className="sign-up-lead-summary" aria-labelledby="sign-up-lead-name">
           <h3 id="sign-up-lead-name">

@@ -39,20 +39,14 @@ function ReLoginForm({ onReAuthenticated }: Pick<ReLoginModalProps, 'onReAuthent
       {reLogin.step === 'password' ? (
           <PasswordStep
             email={reLogin.email}
-            password={reLogin.password}
             error={reLogin.error}
-            submitting={reLogin.submitting}
-            onPasswordChange={reLogin.setPassword}
             onSubmit={reLogin.submitPassword}
           />
       ) : (
           <VerificationStep
             email={reLogin.email}
-            code={reLogin.code}
             error={reLogin.error}
-            submitting={reLogin.submitting}
             resending={reLogin.resending}
-            onCodeChange={reLogin.setCode}
             onSubmit={reLogin.submitVerification}
             onResend={reLogin.resendVerification}
           />

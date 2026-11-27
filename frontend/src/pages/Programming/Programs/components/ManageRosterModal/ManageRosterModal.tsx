@@ -66,10 +66,7 @@ function RosterForm({ assignment, onClose, onSuccess, roster }: Omit<ManageRoste
       statusMessage={workflow.statusMessage}
       footer={<ModalFormFooter formId="manage-roster-form" submitStatus={workflow.submitStatus} onClose={onClose} />}
     >
-      <form id="manage-roster-form" onSubmit={event => {
-        event.preventDefault();
-        void workflow.submit();
-      }} aria-busy={workflow.locked}>
+      <form id="manage-roster-form" onSubmit={workflow.submit} aria-busy={workflow.locked}>
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="manage-roster-controls">
           <SearchInput

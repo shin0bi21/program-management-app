@@ -42,14 +42,14 @@ describe('useProgramModal', () => {
       onSaved,
     }));
     act(() => {
-      result.current.updateDraft('title', '  Job Readiness  ');
-      result.current.updateDraft('defaultDayOfWeek', 'tuesday');
-      result.current.updateDraft('defaultStartTime', '17:00');
-      result.current.updateDraft('defaultEndTime', '19:30');
-      result.current.updateDraft('enrollmentRequired', true);
-      result.current.updateDraft('description', '   ');
-      result.current.updateDraft('minAge', '16');
-      result.current.updateDraft('maxAge', '19');
+      result.current.setValue('title', '  Job Readiness  ');
+      result.current.setValue('defaultDayOfWeek', 'tuesday');
+      result.current.setValue('defaultStartTime', '17:00');
+      result.current.setValue('defaultEndTime', '19:30');
+      result.current.setValue('enrollmentRequired', true);
+      result.current.setValue('description', '   ');
+      result.current.setValue('minAge', '16');
+      result.current.setValue('maxAge', '19');
     });
 
     await act(async () => result.current.submit());
@@ -86,7 +86,7 @@ describe('useProgramModal', () => {
       defaultEndTime: '19:30',
       timezone: 'America/Toronto',
     });
-    act(() => result.current.updateDraft('enrollmentRequired', false));
+    act(() => result.current.setValue('enrollmentRequired', false));
 
     await act(async () => result.current.submit());
 
@@ -115,9 +115,9 @@ describe('useProgramModal', () => {
       onSaved: vi.fn(),
     }));
     act(() => {
-      result.current.updateDraft('title', 'Job Readiness');
-      result.current.updateDraft('minAge', minAge);
-      result.current.updateDraft('maxAge', maxAge);
+      result.current.setValue('title', 'Job Readiness');
+      result.current.setValue('minAge', minAge);
+      result.current.setValue('maxAge', maxAge);
     });
 
     await act(async () => result.current.submit());
@@ -130,10 +130,10 @@ describe('useProgramModal', () => {
   it('saves program-specific session defaults', async () => {
     const { result } = renderHook(() => useProgramModal({ program, onSaved: vi.fn() }));
     act(() => {
-      result.current.updateDraft('defaultDayOfWeek', 'friday');
-      result.current.updateDraft('defaultStartTime', '17:30');
-      result.current.updateDraft('defaultEndTime', '19:30');
-      result.current.updateDraft('timezone', 'America/Toronto');
+      result.current.setValue('defaultDayOfWeek', 'friday');
+      result.current.setValue('defaultStartTime', '17:30');
+      result.current.setValue('defaultEndTime', '19:30');
+      result.current.setValue('timezone', 'America/Toronto');
     });
 
     await act(async () => result.current.submit());
@@ -147,7 +147,7 @@ describe('useProgramModal', () => {
     ['defaultEndTime', '16:00', 'Default end time must be after the start time.'],
   ] as const)('rejects invalid session default %s', async (field, value, message) => {
     const { result } = renderHook(() => useProgramModal({ program, onSaved: vi.fn() }));
-    act(() => result.current.updateDraft(field, value));
+    act(() => result.current.setValue(field, value));
 
     await act(async () => result.current.submit());
 
@@ -163,10 +163,10 @@ describe('useProgramModal', () => {
       onSaved,
     }));
     act(() => {
-      result.current.updateDraft('title', 'Soft Skills');
-      result.current.updateDraft('defaultDayOfWeek', 'tuesday');
-      result.current.updateDraft('defaultStartTime', '17:00');
-      result.current.updateDraft('defaultEndTime', '19:30');
+      result.current.setValue('title', 'Soft Skills');
+      result.current.setValue('defaultDayOfWeek', 'tuesday');
+      result.current.setValue('defaultStartTime', '17:00');
+      result.current.setValue('defaultEndTime', '19:30');
     });
 
     await act(async () => result.current.submit());

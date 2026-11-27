@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 
 import {
@@ -37,10 +38,13 @@ export default function useSessionAttendanceModal({
   onSaved,
 }: UseSessionAttendanceModalOptions) {
   const { tryLock, unlock } = useSubmitLock();
-  const [selectedYouthIds, setSelectedYouthIds] = useState(() => roster.map(member => member.youthId));
-  const [selections, setSelections] = useState<Record<string, AttendanceStatus | ''>>(() => Object.fromEntries(
-    roster.map(member => [member.youthId, member.status ?? '']),
-  ));
+  const { watch, getValues, setValue, handleSubmit } = useForm<{ selectedYouthIds: string[]; selections: Record<string, AttendanceStatus | ''> }>({
+    defaultValues: {
+      selectedYouthIds: roster.map(member => member.youthId),
+      selections: Object.fromEntries(roster.map(member => [member.youthId, member.status ?? ''])),
+    },
+  });
+  const { selectedYouthIds, selections } = watch();
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -84,9 +88,10 @@ export default function useSessionAttendanceModal({
 
     if (!youth.some(profile => profile.id === youthId)) return;
 
-    setSelectedYouthIds(current => current.includes(youthId)
-      ? current.filter(id => id !== youthId)
-      : [...current, youthId]);
+    const ids = getValues('selectedYouthIds');
+    setValue('selectedYouthIds', ids.includes(youthId)
+      ? ids.filter(id => id !== youthId)
+      : [...ids, youthId]);
   };
 
   /**
@@ -98,7 +103,7 @@ export default function useSessionAttendanceModal({
   const updateAttendanceStatus = (youthId: string, status: AttendanceStatus | '') => {
     if (controlsDisabled) return;
 
-    setSelections(current => ({ ...current, [youthId]: status }));
+    setValue('selections', { ...getValues('selections'), [youthId]: status });
   };
 
   /**
@@ -107,7 +112,7 @@ export default function useSessionAttendanceModal({
    * @returns Resolves after saving and page reconciliation, or after recording a write failure.
    * @example An unchecked open roster saves [] only when it differs from saved attendance.
    */
-  const submit = async () => {
+  const submit = handleSubmit(async ({ selectedYouthIds, selections }) => {
     if (submitDisabled || !tryLock()) return;
 
     const sessionTitle = session.title || `${session.program} session`;
@@ -154,7 +159,7 @@ export default function useSessionAttendanceModal({
       ? 'Attendance was saved, but the page could not refresh. Reload to see it.'
       : `Attendance successfully saved for ${sessionTitle}.`);
     setSubmitStatus('success');
-  };
+  });
 
   return {
     roster,

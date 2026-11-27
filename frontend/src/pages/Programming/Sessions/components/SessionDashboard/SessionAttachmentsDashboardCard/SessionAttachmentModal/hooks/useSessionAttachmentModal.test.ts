@@ -13,21 +13,6 @@ vi.mock('../../../../../sessions.api', () => ({
   updateSessionAttachment: vi.fn(),
 }));
 
-/**
- * Supplies the metadata form submitted by attachment workflow examples.
- * @example makeSubmitEvent().currentTarget // form containing title and description
- */
-function makeSubmitEvent() {
-  const form = document.createElement('form');
-  for (const [name, value] of [['title', ' Workshop photo '], ['description', '']]) {
-    const input = document.createElement('input');
-    input.name = name;
-    input.value = value;
-    form.append(input);
-  }
-  return { preventDefault: vi.fn(), currentTarget: form } as never;
-}
-
 describe('useSessionAttachmentModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -41,11 +26,12 @@ describe('useSessionAttachmentModal', () => {
     }), { wrapper });
     const file = new File(['photo'], 'workshop.png', { type: 'image/png' });
     act(() => {
-      result.current.setSelectedFile(file);
+      result.current.setValue('title', ' Workshop photo ');
+      result.current.setValue('file', Object.assign([file], { item: (index: number) => index === 0 ? file : null }));
       result.current.toggleYouth('youth-1');
     });
 
-    await act(() => result.current.submit(makeSubmitEvent()));
+    await act(() => result.current.submit());
 
     expect(createSessionAttachment).toHaveBeenCalledWith(session.id, {
       title: 'Workshop photo',
@@ -73,8 +59,9 @@ describe('useSessionAttachmentModal', () => {
       queryKey: ['sessions'], session, attachment, onSaved,
     }), { wrapper });
     await waitFor(() => expect(result.current.selectedYouthIds).toEqual(['youth-1']));
+    act(() => result.current.setValue('title', ' Workshop photo '));
 
-    await act(() => result.current.submit(makeSubmitEvent()));
+    await act(() => result.current.submit());
 
     expect(updateSessionAttachment).toHaveBeenCalledWith(session.id, attachment.id, {
       title: 'Workshop photo',
@@ -94,12 +81,13 @@ describe('useSessionAttachmentModal', () => {
     const { result } = renderHook(() => useSessionAttachmentModal({
       queryKey: ['sessions'], session, attachment: null, onSaved,
     }), { wrapper });
-    act(() => result.current.setSelectedFile(new File(['photo'], 'workshop.png')));
+    const file = new File(['photo'], 'workshop.png');
+    act(() => result.current.setValue('file', Object.assign([file], { item: (index: number) => index === 0 ? file : null })));
 
-    await act(() => result.current.submit(makeSubmitEvent()));
+    await act(() => result.current.submit());
     expect(result.current).toMatchObject({ submitStatus: 'error', statusMessage: 'Upload failed' });
 
-    await act(() => result.current.submit(makeSubmitEvent()));
+    await act(() => result.current.submit());
     expect(createSessionAttachment).toHaveBeenCalledTimes(2);
     expect(result.current.submitStatus).toBe('success');
   });
@@ -120,15 +108,15 @@ describe('useSessionAttachmentModal', () => {
     }), { wrapper });
 
     const file = new File(['photo'], 'workshop.png', { type: 'image/png' });
-    await act(async () => result.current.setSelectedFile(file));
+    act(() => result.current.setValue('file', Object.assign([file], { item: (index: number) => index === 0 ? file : null })));
     let firstSubmit!: Promise<void>;
     act(() => {
-      firstSubmit = result.current.submit(makeSubmitEvent());
-      void result.current.submit(makeSubmitEvent());
+      firstSubmit = result.current.submit();
+      void result.current.submit();
     });
 
-    expect(createSessionAttachment).toHaveBeenCalledOnce();
     await waitFor(() => expect(result.current.submissionComplete).toBe(true));
+    expect(createSessionAttachment).toHaveBeenCalledOnce();
     resolveCreate();
     await act(async () => firstSubmit);
 

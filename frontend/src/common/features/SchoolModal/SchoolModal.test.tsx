@@ -134,8 +134,10 @@ describe('SchoolModal', () => {
     render(<SchoolWorkflow onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     fireEvent.change(screen.getByLabelText('School Name *'), { target: { value: 'Central High' } });
-    fireEvent.submit(document.getElementById('school-action-form')!);
-    fireEvent.submit(document.getElementById('school-action-form')!);
+    await act(async () => {
+      fireEvent.submit(document.getElementById('school-action-form')!);
+      fireEvent.submit(document.getElementById('school-action-form')!);
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(createSchool).toHaveBeenCalledOnce();

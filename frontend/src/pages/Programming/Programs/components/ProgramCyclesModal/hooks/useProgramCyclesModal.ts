@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { setProgramCycles } from '../../../api/programs.api';
@@ -17,9 +18,10 @@ import { syncProgramCycleAssignmentChanges } from '../../../hooks/actions/progra
  */
 export default function useProgramCyclesModal(programId: string, assignments: ProgramCycleAssignment[], cyclesReady: boolean) {
   const queryClient = useQueryClient();
-  const [selectedCycleIds, setSelectedCycleIds] = useState<string[]>(() =>
-    assignments.filter(assignment => assignment.programId === programId).map(assignment => assignment.cycleId),
-  );
+  const { watch, getValues, setValue, handleSubmit } = useForm({
+    defaultValues: { selectedCycleIds: assignments.filter(assignment => assignment.programId === programId).map(assignment => assignment.cycleId) },
+  });
+  const selectedCycleIds = watch('selectedCycleIds');
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const { tryLock, unlock } = useSubmitLock();
@@ -29,12 +31,11 @@ export default function useProgramCyclesModal(programId: string, assignments: Pr
 
   const toggleCycle = (cycleId: string) => {
     if (locked || !ready) return;
-    setSelectedCycleIds(current => current.includes(cycleId)
-      ? current.filter(id => id !== cycleId)
-      : [...current, cycleId]);
+    const ids = getValues('selectedCycleIds');
+    setValue('selectedCycleIds', ids.includes(cycleId) ? ids.filter(id => id !== cycleId) : [...ids, cycleId]);
   };
 
-  const submit = async () => {
+  const submit = handleSubmit(async ({ selectedCycleIds }) => {
     if (!ready || !tryLock()) return;
 
     setSubmitStatus('submitting');
@@ -52,7 +53,7 @@ export default function useProgramCyclesModal(programId: string, assignments: Pr
       setSubmitStatus('error');
       unlock();
     }
-  };
+  });
 
   return {
     selectedCycleIds,
