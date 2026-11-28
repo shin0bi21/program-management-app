@@ -5,7 +5,7 @@ import FormField from '../../../../../common/components/FormField/FormField';
 import Modal from '../../../../../common/components/Modal/Modal';
 import { getSubmitStatusMessage } from '../../../../../common/hooks/useSubmitStatus';
 import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
-import type { HoursReferenceData } from '../../hours.api';
+import type { HoursReferenceData } from '../../api/hours.api';
 import type { HoursCategory } from '../../types';
 import useHoursModal, { type HoursFormTarget, type UseHoursModalOptions } from './hooks/useHoursModal';
 import './HoursModal.css';

@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../../hours.api';
+import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../../api/hours.api';
 import type { Hours } from '../../../../types';
 
 /**

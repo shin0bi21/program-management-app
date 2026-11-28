@@ -2,13 +2,13 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
-import { getHoursTableData } from '../../../hours.api';
+import { getHoursTableData } from '../../../api/hours.api';
 import useHoursTableData from './useHoursTableData';
 
 vi.mock('../../../../../../query/hooks/useInfiniteListQuery', () => ({
   default: vi.fn(() => ({ rows: [] })),
 }));
-vi.mock('../../../hours.api', () => ({ getHoursTableData: vi.fn() }));
+vi.mock('../../../api/hours.api', () => ({ getHoursTableData: vi.fn() }));
 
 const filters = {
   staffIds: ['staff-1'], categories: ['meeting' as const], programIds: ['program-1'],

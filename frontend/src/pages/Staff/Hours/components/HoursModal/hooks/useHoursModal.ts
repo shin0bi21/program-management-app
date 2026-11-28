@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../../../../http/errors';
 import { getDate } from '../../../../../../common/utils/date';
 import type { RequestOptions } from '../../../../../../http/client';
 import type { Task } from '../../../../Tasks/types';
-import { getHoursSessions } from '../../../hours.api';
+import { getHoursSessions } from '../../../api/hours.api';
 import type {
   AddHoursFormContext,
   HoursCategory,

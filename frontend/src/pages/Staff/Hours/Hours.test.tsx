@@ -22,7 +22,7 @@ import type HoursTable from './components/HoursTable/HoursTable';
 import type useHoursTable from './components/HoursTable/hooks/useHoursTable';
 import type HoursPayPeriodSummary from './components/HoursDashboard/HoursPayPeriodSummary/HoursPayPeriodSummary';
 import type HoursCycleSummary from './components/HoursDashboard/HoursCycleSummary/HoursCycleSummary';
-import { deleteHours, getHoursReferenceData, setHours } from './hours.api';
+import { deleteHours, getHoursReferenceData, setHours } from './api/hours.api';
 import type { HoursPreferences } from './hooks/preferences/useHoursPreferences';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
@@ -77,7 +77,7 @@ vi.mock('./components/HoursDashboard/HoursCycleSummary/HoursCycleSummary', () =>
     return null;
   },
 }));
-vi.mock('./hours.api', () => ({
+vi.mock('./api/hours.api', () => ({
   getHoursReferenceData: vi.fn(),
   setHours: vi.fn(),
   deleteHours: vi.fn(),

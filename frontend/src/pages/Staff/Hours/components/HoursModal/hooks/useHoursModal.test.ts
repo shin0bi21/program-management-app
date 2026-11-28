@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeTask } from '../../../../../../tests/factories/task';
 import { makeHoursItem } from '../../../../../../tests/factories/hours';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import { getHoursSessions } from '../../../hours.api';
+import { getHoursSessions } from '../../../api/hours.api';
 import useHoursModal, { type UseHoursModalOptions } from './useHoursModal';
 import { getDate } from '../../../../../../common/utils/date';
 
-vi.mock('../../../hours.api', () => ({ getHoursSessions: vi.fn() }));
+vi.mock('../../../api/hours.api', () => ({ getHoursSessions: vi.fn() }));
 
 const loadTasks = vi.fn();
 

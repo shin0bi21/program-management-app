@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { getHoursCycleSummaryData, type HoursCycleSummaryData } from '../../../../hours.api';
+import { getHoursCycleSummaryData, type HoursCycleSummaryData } from '../../../../api/hours.api';
 import type { Hours } from '../../../../types';
 
 /**

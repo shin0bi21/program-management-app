@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteHours,
   setHours,
-} from '../../hours.api';
+} from '../../api/hours.api';
 import { makeTask } from '../../../../../tests/factories/task';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import {
@@ -15,7 +15,7 @@ import type { HoursFilters } from '../../types';
 import type { DateRange } from '../../../../../common/utils/dateRange';
 import useHoursActions from './useHoursActions';
 
-vi.mock('../../hours.api', () => ({
+vi.mock('../../api/hours.api', () => ({
   deleteHours: vi.fn(),
   setHours: vi.fn(),
 }));

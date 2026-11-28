@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-import { setHours } from '../../../Hours/hours.api';
+import { setHours } from '../../../Hours/api/hours.api';
 import type { Hours } from '../../../Hours/types';
 import {
   deleteTask,

@@ -13,7 +13,7 @@ import type {
 } from '../../../../../common/components/TimelineCalendar/types';
 import {
   getHoursCalendarData,
-} from '../../hours.api';
+} from '../../api/hours.api';
 import type { StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
 import type { Hours, HoursFilters } from '../../types';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
@@ -52,7 +52,7 @@ vi.mock('../../../../../common/components/TimelineCalendar/TimelineCalendar', ()
   },
 }));
 
-vi.mock('../../hours.api', () => ({
+vi.mock('../../api/hours.api', () => ({
   getHoursCalendarData: vi.fn(),
 }));
 
