@@ -1,4 +1,3 @@
-import type { DateRange } from '../../../common/utils/dateRange';
 
 export const HOURS_CATEGORIES = [
   'program_delivery',
@@ -56,12 +55,11 @@ export type HoursActions = {
 };
 
 export interface HoursFilters {
-  dateRange?: DateRange;
   staffIds: Hours['staffId'][];
   categories: HoursCategory[];
   programIds: NonNullable<Hours['programId']>[];
   types: Hours['type'][];
-  cycleIds?: Hours['cycleId'][];
+  cycleIds: Hours['cycleId'][];
   search: string;
 }
 

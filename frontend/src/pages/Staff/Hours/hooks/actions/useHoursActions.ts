@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { removeInfiniteListRow, replaceInfiniteListRow } from '../../../../../query/infiniteListCache';
 
-import { getBoundedDate } from '../../../../../common/utils/dateRange';
+import { getBoundedDate, type DateRange } from '../../../../../common/utils/dateRange';
 import {
   deleteHours,
   setHours,
@@ -26,6 +26,7 @@ interface UseHoursActionsOptions {
   hoursTableQueryKey: readonly unknown[];
   taskQueryKey: readonly unknown[];
   filters: HoursFilters;
+  dateRange?: DateRange;
   onItemChanged?: (item: Hours) => void;
   onItemRemoved?: (itemId: Hours['id']) => void;
 }
@@ -40,7 +41,7 @@ interface HoursActionsResult {
 
 /**
  * Saves Hours rows into loaded views and refreshes their related summaries.
- * @param options - Query prefixes, applied filters, and callbacks for the page to reconcile changed or deleted entries.
+ * @param options - Query prefixes, applied filters and date bounds, and callbacks for reconciling changed or deleted entries.
  * @example actions.moveHours(item, date) // reports a preview followed by the saved or restored entry
  */
 export default function useHoursActions({
@@ -48,6 +49,7 @@ export default function useHoursActions({
   hoursTableQueryKey,
   taskQueryKey,
   filters,
+  dateRange,
   onItemChanged,
   onItemRemoved,
 }: UseHoursActionsOptions): HoursActionsResult {
@@ -89,7 +91,7 @@ export default function useHoursActions({
 
   const syncHours = useCallback((saved: HoursMutationResult, previous?: Hours) => {
     const { updatedTasks, ...entry } = saved;
-    if (!previous || changesTableMembership(previous, entry, filters)) {
+    if (!previous || changesTableMembership(previous, entry, filters, dateRange)) {
       void queryClient.invalidateQueries({ queryKey: hoursTableQueryKey });
     } else {
       replaceInfiniteListRow(queryClient, hoursTableQueryKey, entry);
@@ -97,7 +99,7 @@ export default function useHoursActions({
     onItemChanged?.(entry);
     syncTasks(updatedTasks);
     refreshOverview();
-  }, [filters, hoursTableQueryKey, onItemChanged, queryClient, refreshOverview, syncTasks]);
+  }, [dateRange, filters, hoursTableQueryKey, onItemChanged, queryClient, refreshOverview, syncTasks]);
 
   const saveHours = useCallback(async (input: Partial<Hours>, previous?: Hours, completeTask = false) => {
     const itemId = previous?.id;
@@ -158,11 +160,11 @@ export default function useHoursActions({
 
 /**
  * Checks whether a saved edit needs the table to fetch its membership again.
- * @example changesTableMembership(before, saved, filters) // true when the edit leaves the selected category
+ * @example changesTableMembership(before, saved, filters, dateRange) // true when the edit leaves the selected category
  */
-function changesTableMembership(before: Hours, saved: Hours, filters: HoursFilters): boolean {
-  const beforeMatches = matchesTableFilters(before, filters);
-  const savedMatches = matchesTableFilters(saved, filters);
+function changesTableMembership(before: Hours, saved: Hours, filters: HoursFilters, dateRange?: DateRange): boolean {
+  const beforeMatches = matchesTableFilters(before, filters, dateRange);
+  const savedMatches = matchesTableFilters(saved, filters, dateRange);
   if (beforeMatches !== savedMatches) return true;
 
   return savedMatches && Boolean(filters.search.trim())
@@ -171,10 +173,10 @@ function changesTableMembership(before: Hours, saved: Hours, filters: HoursFilte
 
 /**
  * Applies the exact selections while leaving text matching to the server.
- * @example matchesTableFilters(row, filters) // false when the row falls outside the date bounds
+ * @example matchesTableFilters(row, filters, dateRange) // false when the row falls outside the date bounds
  */
-function matchesTableFilters(row: Hours, filters: HoursFilters): boolean {
-  return getBoundedDate(row.date, filters.dateRange) === row.date
+function matchesTableFilters(row: Hours, filters: HoursFilters, dateRange?: DateRange): boolean {
+  return getBoundedDate(row.date, dateRange) === row.date
     && (!filters.staffIds.length || filters.staffIds.includes(row.staffId))
     && (!filters.categories.length || filters.categories.includes(row.category))
     && (!filters.programIds.length || filters.programIds.includes(row.programId ?? 'general'))

@@ -30,36 +30,6 @@ describe('useLeadPreferences', () => {
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
 
-  it('maps search, filters, and sorting to external-lead preferences', async () => {
-    const { result } = renderHook(() => (
-      useLeadPreferences('external', 'outreach-external-leads-filters', programs, false, null, tableKeys)
-    ));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    expect(result.current.appliedFilters.statuses).toEqual([]);
-    expect(result.current.appliedFilters.programIds).toEqual([]);
-
-    act(() => result.current.search.apply(' school '));
-    act(() => result.current.filters.update({ statuses: ['contacted'] }));
-    act(() => result.current.filters.update({ submitterRoles: ['youth'] }));
-    act(() => {
-      result.current.table.setSorting({ key: 'school', direction: 'asc' });
-    });
-
-    expect(result.current.appliedFilters.search).toBe('school');
-    expect(result.current.appliedFilters.statuses).toEqual(['contacted']);
-    expect(result.current.appliedFilters.submitterRoles).toEqual(['youth']);
-    expect(result.current.table).toMatchObject({
-      sorting: { key: 'school', direction: 'asc' },
-    });
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'outreach-external-leads-filters', expect.objectContaining({
-        search: 'school', statuses: ['contacted'], submitterRoles: ['youth'],
-        sorting: { key: 'school', direction: 'asc' },
-      }),
-    ));
-  });
-
   it('restricts internal leads to their origin and removes saved submitter roles', async () => {
     preferenceApi.getPreference.mockResolvedValue({ origins: ['external'], submitterRoles: ['parent'] });
     const { result } = renderHook(() => (

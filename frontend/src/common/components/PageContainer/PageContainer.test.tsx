@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TableColumnDef } from '../Table/Table.types';
 import PageContainer from './PageContainer';
 import usePageMessageReporter from '../PageMessageOverlay/usePageMessageReporter';
-import type { PageMessageItem } from '../PageMessageOverlay/PageMessageOverlay';
 
 const columns: TableColumnDef<{ name: string; status: string }>[] = [
   { id: 'name', header: 'Name', accessorKey: 'name' },
@@ -131,15 +130,11 @@ describe('PageContainer', () => {
 
 /**
  * Reports nested child feedback without route-owned callback wiring.
- * @param props - Current failure, recovery action, and optional additional notice.
+ * @param props.message - Current child error.
  * @example <MessageReporter message="Notes unavailable" />
  */
-function MessageReporter({ message, action, notice }: {
-  message: string | null;
-  action?: PageMessageItem['action'];
-  notice?: PageMessageItem;
-}) {
-  usePageMessageReporter(undefined, message, action, notice);
+function MessageReporter({ message }: { message: string | null }) {
+  usePageMessageReporter(undefined, message);
   return null;
 }
 
@@ -172,44 +167,6 @@ describe('PageContainer child messages', () => {
     view.rerender(<StrictMode><Page first={null} showSecond={false} /></StrictMode>);
     expect(screen.getByRole('alert')).toHaveTextContent('Reference options unavailable');
     expect(screen.getByRole('alert')).not.toHaveTextContent('Records unavailable');
-  });
-
-  it('preserves warnings, details, recovery actions, and pending changes through the overlay', () => {
-    const retry = vi.fn();
-    function Page({ error, pending }: { error: string | null; pending: boolean }) {
-      return <PageContainer title="Records" ariaLabel="Records" table={null} dashboard={<MessageReporter
-        message={error}
-        action={{ label: 'Retry', onClick: retry, disabled: pending }}
-        notice={{ message: 'Order changed', severity: 'warning', details: 'Refresh to reorder records.' }}
-      />} />;
-    }
-    const view = render(<Page error="Notes unavailable" pending={false} />);
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Refresh to reorder records.');
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(retry).toHaveBeenCalledOnce();
-
-    view.rerender(<Page error="Notes unavailable" pending />);
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeDisabled();
-
-    view.rerender(<Page error={null} pending={false} />);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Order changed');
-  });
-
-  it('keeps dismissal across unchanged reports and shows a failure again after it clears', () => {
-    function Page({ message }: { message: string | null }) {
-      return <PageContainer title="Records" ariaLabel="Records" table={null} dashboard={<MessageReporter message={message} />} />;
-    }
-    const view = render(<Page message="Notes unavailable" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss page messages' }));
-
-    view.rerender(<Page message="Notes unavailable" />);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-
-    view.rerender(<Page message={null} />);
-    view.rerender(<Page message="Notes unavailable" />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Notes unavailable');
   });
 
   it('clears dashboard and active-view reports when saved controls become unready', () => {

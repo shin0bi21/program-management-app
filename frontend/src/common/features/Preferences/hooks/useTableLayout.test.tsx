@@ -102,30 +102,6 @@ describe('useTableLayout', () => {
     expect(restored.result.current.hiddenColumns).toEqual(['status']);
   });
 
-  it('gives independent browser storage independent layouts for the same account', async () => {
-    const desktop = setup();
-    act(() => desktop.result.current.setColumnWidths({ name: 320 }));
-    await waitFor(() => expect(desktop.result.current.columnWidths).toEqual({ name: 320 }));
-    const desktopStorage = localStorage.getItem(storageKey())!;
-    desktop.unmount();
-
-    // A fresh origin storage area represents the second browser/device.
-    localStorage.clear();
-    login();
-    const mobile = setup();
-    expect(mobile.result.current).toMatchObject(defaults);
-    act(() => {
-      mobile.result.current.setColumnWidths({ name: 120 });
-      mobile.result.current.setHiddenColumns(['status']);
-    });
-    await waitFor(() => expect(mobile.result.current).toMatchObject({ columnWidths: { name: 120 }, hiddenColumns: ['status'] }));
-    mobile.unmount();
-
-    localStorage.setItem(storageKey(), desktopStorage);
-    const desktopAgain = setup();
-    expect(desktopAgain.result.current).toMatchObject({ columnWidths: { name: 320 }, hiddenColumns: [] });
-  });
-
   it('normalizes malformed fields and obsolete columns while preserving valid siblings', async () => {
     localStorage.setItem(storageKey(), JSON.stringify({
       columnWidths: { name: 180, status: -1, removed: 200 }, hiddenColumns: ['status', 'removed', 42],

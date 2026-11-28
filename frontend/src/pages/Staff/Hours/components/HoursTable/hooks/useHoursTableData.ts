@@ -1,6 +1,7 @@
 import { getHoursTableData } from '../../../hours.api';
 import type { HoursFilters, HoursSortKey, Hours } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
+import type { DateRange } from '../../../../../../common/utils/dateRange';
 import useInfiniteListQuery from '../../../../../../query/hooks/useInfiniteListQuery';
 
 type HoursTableDataResult = ReturnType<typeof useInfiniteListQuery<Hours>>;
@@ -9,19 +10,21 @@ type HoursTableDataResult = ReturnType<typeof useInfiniteListQuery<Hours>>;
  * Loads complete Hours rows for the applied table controls.
  * @param queryKey - Hours list-only key prefix.
  * @param filters - Applied page filters.
+ * @param dateRange - Date bounds derived from cycles.
  * @param sorting - Server table order.
- * @example useHoursTableData(['hours', 'table'], filters, sorting)
+ * @example useHoursTableData(['hours', 'table'], filters, dateRange, sorting)
  */
 export default function useHoursTableData(
   queryKey: readonly unknown[],
   filters: HoursFilters,
+  dateRange: DateRange | undefined,
   sorting: ListSort<HoursSortKey>,
 ): HoursTableDataResult {
   return useInfiniteListQuery<Hours>({
     ordering: { direction: sorting.direction, getValue: item => getHoursSortValue(item, sorting.key) },
-    queryKey: [...queryKey, filters, sorting],
+    queryKey: [...queryKey, filters, dateRange, sorting],
     queryFn: ({ signal, pageParam }) => getHoursTableData(
-      filters,
+      { filters, dateRange },
       { signal },
       { ...sorting, cursor: pageParam ?? undefined },
     ),

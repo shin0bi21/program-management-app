@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import usePreferences from '../../../../../common/features/Preferences/hooks/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/hooks/useTableLayout';
 import {
+  normalizePreferences,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
@@ -23,15 +25,13 @@ import type { HoursReferences } from '../data/useHoursReferenceData';
 
 type HoursView = 'calendar' | 'table';
 
-interface HoursPreferences extends Omit<HoursFilters, 'dateRange' | 'cycleIds'> {
+export interface HoursPreferences {
+  filters: HoursFilters;
   view: HoursView;
-  cycleIds: NonNullable<HoursFilters['cycleIds']>;
   sorting: ListSort<HoursSortKey>;
 }
 
-export type StoredHoursPreferences = Partial<HoursPreferences>;
-
-type HoursFilterValues = Pick<HoursPreferences, 'staffIds' | 'programIds' | 'categories' | 'types' | 'cycleIds'>;
+type HoursFilterValues = Omit<HoursPreferences['filters'], 'search'>;
 
 type HoursTableControls = ReturnType<typeof useTableLayout> & {
   sorting: ListSort<HoursSortKey>;
@@ -42,6 +42,7 @@ interface HoursPreferencesResult {
   ready: boolean;
   error: string | null;
   appliedFilters: HoursFilters;
+  dateRange: DateRange | undefined;
   view: HoursView;
   setView: (view: HoursView) => void;
   search: PageSearchControls;
@@ -86,25 +87,19 @@ export default function useHoursPreferences(
     : null;
 
   // Saved controls.
-  const { preferences, updatePreferences, ready, error } = usePreferences({
+  const { preferences, updatePreferences, ready, error } = usePreferences<HoursPreferences>({
     key: 'hours-filters',
     waiting: loadingDependencies,
     fields: {
+      filters: value => normalizePreferences<HoursPreferences['filters']>({
+        search: preferenceText(),
+        staffIds: preferenceIds(availableStaffIds),
+        programIds: preferenceIds(availableProgramIds),
+        categories: preferenceOptions<HoursCategory>(HOURS_CATEGORIES, [], availableCategories),
+        types: preferenceOptions<Hours['type']>(['task', 'session', 'regular'], [], availableTypes),
+        cycleIds: preferenceIds(availableCycleIds),
+      }, value),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
-      search: preferenceText(),
-      staffIds: preferenceIds(availableStaffIds),
-      programIds: preferenceIds(availableProgramIds),
-      categories: preferenceOptions<HoursCategory>(
-        HOURS_CATEGORIES,
-        [],
-        availableCategories,
-      ),
-      types: preferenceOptions<Hours['type']>(
-        ['task', 'session', 'regular'],
-        [],
-        availableTypes,
-      ),
-      cycleIds: preferenceIds(availableCycleIds),
       sorting: preferenceSorting(tableKeys, { key: 'date', direction: 'desc' }),
     },
   });
@@ -141,19 +136,19 @@ export default function useHoursPreferences(
     },
   ], [categories, cycles.data, programs.data, staff.data, types]);
 
-  const filterValues: HoursFilterValues = {
-    staffIds: preferences.staffIds,
-    programIds: preferences.programIds,
-    categories: preferences.categories,
-    types: preferences.types,
-    cycleIds: preferences.cycleIds,
-  };
-  const dateRange = useMemo(() => getCycleDateRange(cycles.data ?? [], preferences.cycleIds), [cycles.data, preferences.cycleIds]);
+  const appliedFilters = preferences.filters;
+  const { search: appliedSearch, ...filterValues } = appliedFilters;
+  const dateRange = useMemo(
+    () => getCycleDateRange(cycles.data ?? [], appliedFilters.cycleIds),
+    [cycles.data, appliedFilters.cycleIds],
+  );
 
-  const appliedFilters: HoursFilters = {
-    ...filterValues,
-    dateRange,
-    search: preferences.search,
+  /**
+   * Updates the supplied filter fields using the latest saved-control values.
+   * @example updateFilters({ cycleIds: [] }) // clears cycle choices and preserves search
+   */
+  const updateFilters = (patch: Partial<HoursPreferences['filters']>): void => {
+    updatePreferences(current => ({ filters: { ...current.filters, ...patch } }));
   };
 
   // View, search, and table controls.
@@ -161,8 +156,8 @@ export default function useHoursPreferences(
     updatePreferences({ view });
   };
   const search = {
-    appliedValue: preferences.search,
-    apply: (search: string) => updatePreferences({ search }),
+    appliedValue: appliedSearch,
+    apply: (value: string) => updateFilters({ search: value }),
   };
   const layout = useTableLayout({ key: 'hours-filters', tableKeys });
   const updateSorting = (sorting: ListSort<HoursSortKey>) => {
@@ -182,10 +177,11 @@ export default function useHoursPreferences(
     ready,
     error,
     appliedFilters,
+    dateRange,
     view: preferences.view,
     setView,
     search,
-    filters: { values: filterValues, definitions: filterDefinitions, update: updatePreferences },
+    filters: { values: filterValues, definitions: filterDefinitions, update: updateFilters },
     table,
   };
 }

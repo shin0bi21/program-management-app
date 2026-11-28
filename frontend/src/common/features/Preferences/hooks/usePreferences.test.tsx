@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 import { getPreference, setPreference, type PreferenceKey } from '../api/preferences.api';
 import {
+  normalizePreferences,
   preferenceOption,
   preferenceIds,
   preferenceText,
@@ -101,6 +102,30 @@ describe('usePreferences', () => {
     await tick(250);
     expect(put).toHaveBeenCalledTimes(1);
     expect(put).toHaveBeenCalledWith('task-preferences', { ...initial, view: 'table', statuses: ['inactive'], search: 'retained' });
+  });
+
+  it('gives successive nested updates the latest cached preferences', async () => {
+    get.mockResolvedValue({ filters: { search: 'saved', programIds: ['program-1'] } });
+    const { result } = renderHook(() => usePreferences({
+      key: 'task-preferences',
+      fields: {
+        filters: value => normalizePreferences({
+          search: preferenceText(),
+          programIds: preferenceIds(undefined),
+        }, value),
+      },
+    }), { wrapper: createQueryClientWrapper(createTestQueryClient()) });
+    await tick();
+
+    act(() => {
+      result.current.updatePreferences(current => ({ filters: { ...current.filters, search: 'updated' } }));
+      result.current.updatePreferences(current => ({ filters: { ...current.filters, programIds: [] } }));
+    });
+
+    await tick(250);
+    expect(put).toHaveBeenCalledExactlyOnceWith('task-preferences', {
+      filters: { search: 'updated', programIds: [] },
+    });
   });
 
   it('reconciles the latest selection when options recover and preserves sibling edits', async () => {

@@ -10,6 +10,20 @@ defaults, allowed values, role rules, and option sources together.
 
 ## Data Preferences
 
+### Shape Saved Page Preferences
+
+- Save filter selections and submitted search together under `filters`. Save
+  `view` and `sorting` as sibling fields when the page supports them. Hours
+  and Tasks both use `{ filters, view, sorting }`.
+- Shape `filters` from the page's request filter contract. Persist selected
+  cycle IDs and derive date ranges from the current cycles at read time.
+- Expose only category selections to `FilterCard`. Keep search in the saved
+  `filters` object and pass it to `SearchInput` through the search controls.
+  Clear all empties the category selections and preserves search. Clearing
+  search preserves the category selections.
+- Use `Partial<FeaturePreferences>` directly for fixtures representing
+  incomplete saved records.
+
 ### Declare Fields
 
 1. Declare `fields` with named exports from `common/features/Preferences/preferences.ts`.
@@ -26,7 +40,9 @@ defaults, allowed values, role rules, and option sources together.
 | `preferenceSorting(tableKeys, fallback)` | Valid sort key and direction |
 | `fixedPreference(value)` | A page-owned constant |
 
-- Read `preferences`; submit partial changes with `updatePreferences`.
+- Use `normalizePreferences` inside the `filters` field rule to validate each
+  nested field and supply defaults when the group is missing or malformed.
+- Read `preferences` and submit partial changes with `updatePreferences`.
 - Do not mirror persisted fields in local state or add restoration, save-merging, or option-recovery effects.
 
 See the [Hours preference hook](../../frontend/src/pages/Staff/Hours/hooks/preferences/useHoursPreferences.ts) for a complete caller.
@@ -92,11 +108,14 @@ Return these groups from the page preference or control hook, without flat alias
 - Pass the result as `controls` to [PageContainer](../../frontend/src/common/components/PageContainer/PageContainer.tsx).
 - Expose one typed `appliedFilters` object from the same hook, using the domain's request filter contract. Include saved `search` when the page has search, together with normalized filter fields and necessary derived inputs.
 - Pass `appliedFilters` directly to each table/calendar; routes do not rebuild it or append search. Keep sorting, cursors, and visible request ranges with their view owners.
-- Persist submitted search with `preferenceText()` through `usePreferences`, alongside the existing filter fields. Keep the draft inside `SearchInput`; do not mirror applied search in local state.
+- Persist submitted search with `preferenceText()` through `usePreferences`.
+  Keep the draft inside `SearchInput`.
 - Keep `appliedFilters` available as a normalized projection; `ready` gates its consumers through `PageContainer`. Gate any consumer outside that container separately.
 - Keep `appliedFilters` derived rather than separately stored or cached. Preserve domain field names and preference keys; do not add fields for controls a page does not have.
 - Filter category `values` remain array-valued selections for `FilterCard`. Search is part of `appliedFilters`, not that category map. Clearing filter categories preserves search; clearing search preserves category selections.
-- Derive `dateRange` from saved cycles in the hook and retain stable identity for calendar period building. Supply it in `appliedFilters` when the domain API accepts it, or as separate calendar context when it does not; never persist it.
+- Derive `dateRange` from saved cycles in the hook and retain stable identity
+  for calendar period building. Hours and Tasks expose the range separately
+  from `appliedFilters` so views can use it to bound requests or calendar display.
 
 ### Apply Search
 
@@ -106,7 +125,9 @@ Return these groups from the page preference or control hook, without flat alias
 
 ### Define Filters
 
-1. Supply filter `values`, `definitions`, and `update: updatePreferences` in the page controls.
+1. Supply filter `values`, `definitions`, and an `update` callback in the page
+   controls. For nested filters, pass a function to `updatePreferences` so it
+   merges the filter patch with the latest saved-control values.
 2. Match definition IDs to persisted fields and `values` keys. `PageContainer`
    sends a patch for the selected category on Apply or Clear, and one patch for
    every field in `values` on Clear all.

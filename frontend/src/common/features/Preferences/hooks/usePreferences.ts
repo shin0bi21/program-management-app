@@ -17,6 +17,8 @@ interface UsePreferencesOptions<T extends object> {
   waiting?: boolean;
 }
 
+type PreferenceUpdate<T> = Partial<T> | ((current: T) => Partial<T>);
+
 export default function usePreferences<T extends object>({ key, fields, waiting = false }: UsePreferencesOptions<T>) {
   const queryClient = useQueryClient();
   const queryKey = useMemo(() => ['user-preference', key] as const, [key]);
@@ -69,8 +71,9 @@ export default function usePreferences<T extends object>({ key, fields, waiting 
     }, 250);
   }, [flush, key, queryClient, queryKey, queue]);
 
-  const updatePreferences = useCallback((patch: Partial<T>) => {
+  const updatePreferences = useCallback((update: PreferenceUpdate<T>) => {
     const current = normalizePreferences(fields, queryClient.getQueryData(queryKey));
+    const patch = typeof update === 'function' ? update(current) : update;
     save(normalizePreferences(fields, { ...current, ...patch }));
   }, [fields, queryClient, queryKey, save]);
 

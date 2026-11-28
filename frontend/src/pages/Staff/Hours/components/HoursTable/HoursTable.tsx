@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import tableRefreshMessage from '../../../../../common/components/Table/tableRefreshMessage';
 import Table from '../../../../../common/components/Table/Table';
 import usePageMessageReporter from '../../../../../common/components/PageMessageOverlay/usePageMessageReporter';
@@ -13,6 +14,7 @@ interface HoursTableProps {
   columns: TableColumnDef<Hours>[];
   hiddenColumnKeys: string[];
   filters: HoursFilters;
+  dateRange?: DateRange;
   sorting: ListSort<HoursSortKey>;
   columnWidths: Record<string, number>;
   selectedRowId: string | null;
@@ -26,11 +28,11 @@ interface HoursTableProps {
  * @example <HoursTable filters={filters} {...tableProps} />
  */
 export default function HoursTable({
-  queryKey, columns, hiddenColumnKeys, filters,
+  queryKey, columns, hiddenColumnKeys, filters, dateRange,
   sorting, columnWidths, selectedRowId, onRowSelect, onSortingChange,
   onColumnWidthsChange,
 }: HoursTableProps): ReactElement {
-  const query = useHoursTableData(queryKey, filters, sorting);
+  const query = useHoursTableData(queryKey, filters, dateRange, sorting);
   usePageMessageReporter(undefined, query.error || query.nextPageError, { label: 'Retry', onClick: query.nextPageError ? query.retryNextPage : query.retry }, tableRefreshMessage(query.refreshNotice));
 
   return <Table

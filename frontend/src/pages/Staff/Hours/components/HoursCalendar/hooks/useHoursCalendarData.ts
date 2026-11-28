@@ -1,6 +1,7 @@
 import { useCallback, useEffect, type MutableRefObject } from 'react';
 import { useDataBuffer } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
+import type { DateRange } from '../../../../../../common/utils/dateRange';
 import { getHoursCalendarData } from '../../../hours.api';
 import type { HoursCalendarIndex, HoursFilters, Hours } from '../../../types';
 
@@ -11,15 +12,17 @@ const getHoursItemId = (item: Hours) => item.id;
  * Loads complete Hours rows into the calendar range buffer.
  * Registers mutation callbacks for the mounted view and removes them on teardown.
  * @param filters - Applied page filters, also used to scope mutation placement.
+ * @param dateRange - Date bounds derived from cycles.
  * @param calendarIndexRef - Page-owned ref populated while this calendar is mounted.
- * @example const calendar = useHoursCalendarData(filters, calendarIndexRef)
+ * @example const calendar = useHoursCalendarData(filters, dateRange, calendarIndexRef)
  */
 export default function useHoursCalendarData(
   filters: HoursFilters,
+  dateRange: DateRange | undefined,
   calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>,
 ): ReturnType<typeof useDataBuffer<Hours>> {
   const loadRange = useCallback(async ({ start, end }: PeriodRange, signal: AbortSignal) => {
-    const rows = await getHoursCalendarData(filters, { start: start.key, end: end.key }, { signal });
+    const rows = await getHoursCalendarData({ filters, dateRange }, { start: start.key, end: end.key }, { signal });
     signal.throwIfAborted();
     const index: Record<string, Record<string, Hours[]>> = {};
 
@@ -29,7 +32,7 @@ export default function useHoursCalendarData(
       items.push(entry);
     }
     return index;
-  }, [filters]);
+  }, [filters, dateRange]);
 
   const calendar = useDataBuffer({
     load: loadRange,

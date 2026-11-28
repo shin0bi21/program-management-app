@@ -7,6 +7,7 @@ import type { PageFilterControls, PageSearchControls } from '../../../../../comm
 import usePreferences from '../../../../../common/features/Preferences/hooks/usePreferences';
 import useTableLayout from '../../../../../common/features/Preferences/hooks/useTableLayout';
 import {
+  normalizePreferences,
   preferenceOption,
   preferenceOptions,
   preferenceIds,
@@ -24,14 +25,13 @@ import {
 
 type TasksView = 'calendar' | 'table';
 
-interface TaskPreferences extends TasksFilters {
+export interface TaskPreferences {
+  filters: TasksFilters;
   view: TasksView;
   sorting: ListSort<TaskSortKey>;
 }
 
-export type StoredTaskPreferences = Partial<TaskPreferences>;
-
-type TaskFilterValues = Omit<TasksFilters, 'search'>;
+type TaskFilterValues = Omit<TaskPreferences['filters'], 'search'>;
 
 type TaskTableControls = ReturnType<typeof useTableLayout> & {
   sorting: ListSort<TaskSortKey>;
@@ -63,25 +63,27 @@ export default function useTaskPreferences(
   const { taskOptions, staff, programs, cycles } = referenceData;
   const options = taskOptions.isLoading || taskOptions.error ? undefined : taskOptions.data;
   const layout = useTableLayout({ key: 'task-preferences', tableKeys });
-  const { preferences, updatePreferences, ready, error } = usePreferences({
+  const { preferences, updatePreferences, ready, error } = usePreferences<TaskPreferences>({
     key: 'task-preferences',
     waiting: taskOptions.isLoading || cycles.isLoading || staff.isLoading || programs.isLoading,
     fields: {
-      cycleIds: preferenceIds(cycles.isLoading || cycles.error ? undefined : (cycles.data ?? []).map(cycle => cycle.id)),
+      filters: value => normalizePreferences<TasksFilters>({
+        cycleIds: preferenceIds(cycles.isLoading || cycles.error ? undefined : (cycles.data ?? []).map(cycle => cycle.id)),
+        search: preferenceText(),
+        staffIds: preferenceIds(staff.isLoading || staff.error ? undefined : (staff.data ?? []).map(staffMember => staffMember.id)),
+        programIds: preferenceIds(programs.isLoading || programs.error ? undefined : (programs.data ?? []).map(program => program.id)),
+        categories: preferenceOptions(
+          HOURS_CATEGORIES,
+          [],
+          options?.categories.map(category => category.id) ?? null,
+        ),
+        statuses: preferenceOptions<TaskStatus>(
+          ['upcoming', 'in_progress', 'overdue', 'completed', 'cancelled'],
+          [],
+          options?.statuses.map(status => status.id) ?? null,
+        ),
+      }, value),
       view: preferenceOption(['calendar', 'table'] as const, 'calendar'),
-      search: preferenceText(),
-      staffIds: preferenceIds(staff.isLoading || staff.error ? undefined : (staff.data ?? []).map(staffMember => staffMember.id)),
-      programIds: preferenceIds(programs.isLoading || programs.error ? undefined : (programs.data ?? []).map(program => program.id)),
-      categories: preferenceOptions(
-        HOURS_CATEGORIES,
-        [],
-        options?.categories.map(category => category.id) ?? null,
-      ),
-      statuses: preferenceOptions<TaskStatus>(
-        ['upcoming', 'in_progress', 'overdue', 'completed', 'cancelled'],
-        [],
-        options?.statuses.map(status => status.id) ?? null,
-      ),
       sorting: preferenceSorting(tableKeys, { key: 'startDate', direction: 'asc' }),
     },
   });
@@ -108,17 +110,18 @@ export default function useTaskPreferences(
     { id: 'statuses' as const, label: 'Status', options: (taskOptions.data?.statuses ?? []).map(({ id, name }) => ({ id, label: name })) },
   ], [taskOptions.data, cycles.data, staff.data, programs.data]);
 
-  const filterValues: TaskFilterValues = {
-    cycleIds: preferences.cycleIds,
-    staffIds: preferences.staffIds,
-    programIds: preferences.programIds,
-    categories: preferences.categories,
-    statuses: preferences.statuses,
+  const appliedFilters = preferences.filters;
+  const { search, ...filterValues } = appliedFilters;
+  /**
+   * Updates the supplied filter fields using the latest saved-control values.
+   * @example updateFilters({ cycleIds: [] }) // clears cycle choices and preserves search
+   */
+  const updateFilters = (patch: Partial<TasksFilters>): void => {
+    updatePreferences(current => ({ filters: { ...current.filters, ...patch } }));
   };
-  const appliedFilters: TasksFilters = { ...filterValues, search: preferences.search };
   const dateRange = useMemo(
-    () => getCycleDateRange(cycles.data ?? [], preferences.cycleIds),
-    [cycles.data, preferences.cycleIds],
+    () => getCycleDateRange(cycles.data ?? [], appliedFilters.cycleIds),
+    [cycles.data, appliedFilters.cycleIds],
   );
 
   // Table sorting.
@@ -136,14 +139,14 @@ export default function useTaskPreferences(
     setView,
 
     search: {
-      appliedValue: preferences.search,
-      apply: (search: string) => updatePreferences({ search }),
+      appliedValue: search,
+      apply: (value: string) => updateFilters({ search: value }),
     },
 
     filters: {
       values: filterValues,
       definitions: filterDefinitions,
-      update: updatePreferences,
+      update: updateFilters,
     },
 
     table: {

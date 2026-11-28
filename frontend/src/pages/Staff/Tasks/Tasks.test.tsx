@@ -25,7 +25,7 @@ import type TaskModal from './components/TaskModal/TaskModal';
 import type TaskOverviewDashboardCard from './components/TaskDashboard/TaskOverviewDashboardCard/TaskOverviewDashboardCard';
 import type TaskHoursLoggedDashboardCard from './components/TaskDashboard/TaskHoursLoggedDashboardCard/TaskHoursLoggedDashboardCard';
 import { deleteTask, getTaskReferenceData, updateTaskState } from './api/tasks.api';
-import type { StoredTaskPreferences } from './hooks/preferences/useTaskPreferences';
+import type { TaskPreferences } from './hooks/preferences/useTaskPreferences';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
 vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
@@ -96,7 +96,7 @@ vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),
 }));
 
-const preferenceState: { value: StoredTaskPreferences } = { value: {} };
+const preferenceState: { value: Partial<TaskPreferences> } = { value: {} };
 const staffMember: StaffReference = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
 };
@@ -117,7 +117,7 @@ describe('Tasks', () => {
       calendar: null, table: null, taskModal: null, overview: null,
       hoursCard: null, hoursModal: null, tableActions: null,
     });
-    preferenceState.value = { view: 'table', staffIds: [], programIds: [], categories: [], statuses: [] };
+    preferenceState.value = { view: 'table' };
     vi.mocked(getPreference).mockImplementation(async () => preferenceState.value);
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
     vi.mocked(getCycleReferences).mockResolvedValue([{
@@ -178,7 +178,9 @@ describe('Tasks', () => {
       { id: 'cycle-1', title: 'First', startsOn: '2024-01-01', endsOn: '2024-06-30', state: 'completed' },
       { id: 'cycle-2', title: 'Second', startsOn: '2027-01-01', endsOn: '2027-12-31', state: 'upcoming' },
     ]);
-    preferenceState.value.cycleIds = ['cycle-1', 'cycle-2'];
+    preferenceState.value.filters = {
+      cycleIds: ['cycle-1', 'cycle-2'], search: '', staffIds: [], programIds: [], categories: [], statuses: [],
+    };
     renderTasks();
 
     await screen.findByTestId('task-table');
@@ -195,38 +197,27 @@ describe('Tasks', () => {
     await waitFor(() => expect(children.table?.filters.cycleIds).toEqual(['cycle-1']));
   });
 
-  it('shares the applied staff filter across table and calendar views', async () => {
+  it('shares applied filters across views and updates search on the active calendar', async () => {
     vi.mocked(getStaffReferences).mockResolvedValue([staffMember, coworker]);
     renderTasks();
     await screen.findByTestId('task-table');
 
-    act(() => pageControls().filters!.update({ staffIds: [coworker.id] }));
-    await waitFor(() => expect(children.table?.filters.staffIds).toEqual([coworker.id]));
+    act(() => {
+      pageControls().filters!.update({ staffIds: [coworker.id] });
+      pageControls().search!.apply('workshop');
+    });
+    const applied = { staffIds: [coworker.id], search: 'workshop' };
+    await waitFor(() => expect(children.table?.filters).toMatchObject(applied));
     act(() => pageControls().setView!('calendar'));
 
     await screen.findByTestId('task-calendar');
-    expect(children.calendar?.filters.staffIds).toEqual([coworker.id]);
-  });
-
-  it('keeps applied search active when switching from table to calendar', async () => {
-    renderTasks();
-    await screen.findByTestId('task-table');
+    expect(children.calendar?.filters).toMatchObject(applied);
 
     act(() => pageControls().search!.apply('missing'));
-    act(() => pageControls().setView!('calendar'));
 
-    await screen.findByTestId('task-calendar');
-    expect(children.calendar?.filters.search).toBe('missing');
-  });
-
-  it('supplies changed applied search to the calendar', async () => {
-    preferenceState.value.view = 'calendar';
-    renderTasks();
-    await screen.findByTestId('task-calendar');
-
-    act(() => pageControls().search!.apply('workshop'));
-
-    await waitFor(() => expect(children.calendar?.filters.search).toBe('workshop'));
+    await waitFor(() => expect(children.calendar?.filters).toMatchObject({
+      ...applied, search: 'missing',
+    }));
   });
 
   // Selection and coordination.

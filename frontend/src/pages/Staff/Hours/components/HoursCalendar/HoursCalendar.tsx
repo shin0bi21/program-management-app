@@ -1,4 +1,5 @@
 import { getDate } from '../../../../../common/utils/date';
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import { useCallback, useMemo, type MutableRefObject, type ReactElement } from 'react';
 import TimelineCalendar from '../../../../../common/components/TimelineCalendar/TimelineCalendar';
 import UnavailableState from '../../../../../common/components/UnavailableState/UnavailableState';
@@ -29,6 +30,7 @@ const HOURS_CALENDAR_POSITION_KEY = 'resource-calendar:hours:position';
 interface HoursCalendarProps {
   staff: StaffReference[];
   filters: HoursFilters;
+  dateRange?: DateRange;
   canWrite: boolean;
   selectedStaffId?: string;
   calendarIndexRef: MutableRefObject<HoursCalendarIndex | null>;
@@ -44,6 +46,7 @@ interface HoursCalendarProps {
 export default function HoursCalendar({
   staff,
   filters,
+  dateRange,
   canWrite,
   selectedStaffId,
   calendarIndexRef,
@@ -51,8 +54,8 @@ export default function HoursCalendar({
 
   onStaffSelect,
 }: HoursCalendarProps): ReactElement {
-  const { staffIds, dateRange } = filters;
-  const calendar = useHoursCalendarData(filters, calendarIndexRef);
+  const { staffIds } = filters;
+  const calendar = useHoursCalendarData(filters, dateRange, calendarIndexRef);
 
   const retryAction = useMemo(() => ({ label: 'Retry', onClick: calendar.retry }), [calendar.retry]);
   usePageMessageReporter(undefined, calendar.error, retryAction);

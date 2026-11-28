@@ -73,6 +73,7 @@ export default function HoursPage(): ReactElement {
     hoursTableQueryKey: HOURS_TABLE_QUERY_KEY,
     taskQueryKey: TASK_QUERY_KEY,
     filters: preferences.appliedFilters,
+    dateRange: preferences.dateRange,
     onItemChanged: syncHoursView,
     onItemRemoved: removeHoursFromViews,
   });
@@ -128,6 +129,7 @@ export default function HoursPage(): ReactElement {
       columns={table.columns}
       hiddenColumnKeys={preferences.table.hiddenColumns}
       filters={preferences.appliedFilters}
+      dateRange={preferences.dateRange}
       sorting={preferences.table.sorting}
       columnWidths={preferences.table.columnWidths}
       selectedRowId={selection.selectedRowId}
@@ -139,9 +141,10 @@ export default function HoursPage(): ReactElement {
 
   const hoursCalendar = (
     <HoursCalendar
-      key={JSON.stringify(preferences.appliedFilters)}
+      key={JSON.stringify([preferences.appliedFilters, preferences.dateRange])}
       staff={staffRows}
       filters={preferences.appliedFilters}
+      dateRange={preferences.dateRange}
       canWrite={canWrite}
       selectedStaffId={selection.selectedStaff?.id}
       calendarIndexRef={calendarIndexRef}
@@ -151,7 +154,7 @@ export default function HoursPage(): ReactElement {
   );
 
   const viewUnavailable = cycles.error ? <p>Cycles unavailable.</p> : <p>No cycles available.</p>;
-  const hasCycleBounds = Boolean(preferences.appliedFilters.dateRange) && !cycles.error;
+  const hasCycleBounds = Boolean(preferences.dateRange) && !cycles.error;
   const optionsError = hoursOptions.error || staff.error || programs.error;
 
   // Render.

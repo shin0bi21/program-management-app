@@ -15,6 +15,7 @@ const filters = {
   types: ['regular' as const], cycleIds: ['cycle-1'], search: 'team',
 };
 const sorting = { key: 'date' as const, direction: 'desc' as const };
+const dateRange = { start: '2026-07-01', end: '2026-09-01' };
 
 describe('useHoursTableData', () => {
   beforeEach(() => {
@@ -23,14 +24,14 @@ describe('useHoursTableData', () => {
   });
 
   it('keys the applied controls and forwards the domain request', async () => {
-    renderHook(() => useHoursTableData(['hours', 'table'], filters, sorting));
+    renderHook(() => useHoursTableData(['hours', 'table'], filters, dateRange, sorting));
     const options = vi.mocked(useInfiniteListQuery).mock.lastCall![0];
     const signal = new AbortController().signal;
 
-    expect(options.queryKey).toEqual(['hours', 'table', filters, sorting]);
+    expect(options.queryKey).toEqual(['hours', 'table', filters, dateRange, sorting]);
     await options.queryFn({ signal, pageParam: 'cursor-2' } as Parameters<typeof options.queryFn>[0]);
     expect(getHoursTableData).toHaveBeenLastCalledWith(
-      filters, { signal }, { ...sorting, cursor: 'cursor-2' },
+      { filters, dateRange }, { signal }, { ...sorting, cursor: 'cursor-2' },
     );
   });
 });

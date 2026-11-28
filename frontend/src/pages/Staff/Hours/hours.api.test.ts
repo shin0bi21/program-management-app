@@ -25,8 +25,10 @@ describe('hours API', () => {
 
     getHoursCalendarData(
       {
-        staffIds: ['staff-1'], categories: ['meeting'], programIds: ['general', 'program-1'],
-        types: ['task', 'regular'], cycleIds: ['cycle-1', 'cycle-2'], search: 'follow up',
+        filters: {
+          staffIds: ['staff-1'], categories: ['meeting'], programIds: ['general', 'program-1'],
+          types: ['task', 'regular'], cycleIds: ['cycle-1', 'cycle-2'], search: 'follow up',
+        },
         dateRange: { start: '2026-01-01', end: '2026-12-31' },
       },
       { start: '2026-08-01', end: '2026-08-31' },
@@ -61,12 +63,14 @@ describe('hours API', () => {
 
   it('serializes list filters and cursor pagination', () => {
     getHoursTableData({
-      staffIds: ['staff-1'],
-      categories: ['outreach'],
-      programIds: ['program-1'],
-      types: ['task'],
-      cycleIds: ['cycle-1', 'cycle-2'],
-      search: 'follow up',
+      filters: {
+        staffIds: ['staff-1'],
+        categories: ['outreach'],
+        programIds: ['program-1'],
+        types: ['task'],
+        cycleIds: ['cycle-1', 'cycle-2'],
+        search: 'follow up',
+      },
       dateRange: { start: '2026-02-01', end: '2026-04-30' },
     }, undefined, {
       key: 'date',
@@ -81,15 +85,15 @@ describe('hours API', () => {
   });
 
   it('clips buffered calendar requests to the applied date range and skips disjoint loads', async () => {
-    const filters = {
-      staffIds: [], categories: [], programIds: [], types: [], search: '',
+    const input = {
+      filters: { staffIds: [], categories: [], programIds: [], types: [], cycleIds: [], search: '' },
       dateRange: { start: '2026-08-01', end: '2026-08-31' },
     };
-    getHoursCalendarData(filters, { start: '2026-07-20', end: '2026-08-10' });
+    getHoursCalendarData(input, { start: '2026-07-20', end: '2026-08-10' });
     expect(apiClient.get).toHaveBeenCalledWith('/hours/calendar?start=2026-08-01&end=2026-08-10', undefined);
 
     vi.mocked(apiClient.get).mockClear();
-    expect(await getHoursCalendarData(filters, { start: '2026-09-01', end: '2026-09-30' })).toEqual([]);
+    expect(await getHoursCalendarData(input, { start: '2026-09-01', end: '2026-09-30' })).toEqual([]);
     expect(apiClient.get).not.toHaveBeenCalled();
   });
 
