@@ -20,8 +20,8 @@ import type HoursCalendar from './components/HoursCalendar/HoursCalendar';
 import type HoursModal from './components/HoursModal/HoursModal';
 import type HoursTable from './components/HoursTable/HoursTable';
 import type useHoursTable from './components/HoursTable/hooks/useHoursTable';
-import type HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
-import type HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
+import type HoursPayPeriodSummary from './components/HoursDashboard/HoursPayPeriodSummary/HoursPayPeriodSummary';
+import type HoursCycleSummary from './components/HoursDashboard/HoursCycleSummary/HoursCycleSummary';
 import { deleteHours, getHoursReferenceData, setHours } from './hours.api';
 import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
 
@@ -36,8 +36,8 @@ const children = vi.hoisted(() => ({
   table: null as ComponentProps<typeof HoursTable> | null,
   tableActions: null as Parameters<typeof useHoursTable>[0] | null,
   modal: null as ComponentProps<typeof HoursModal> | null,
-  payPeriod: null as ComponentProps<typeof HoursPayPeriodDashboardCard> | null,
-  cycleSummary: null as ComponentProps<typeof HoursCycleSummaryDashboardCard> | null,
+  payPeriod: null as ComponentProps<typeof HoursPayPeriodSummary> | null,
+  cycleSummary: null as ComponentProps<typeof HoursCycleSummary> | null,
 }));
 
 // Observe page-owned inputs and invoke child events without implementing child behavior.
@@ -65,14 +65,14 @@ vi.mock('./components/HoursModal/HoursModal', () => ({
     return props.target ? <div role="dialog" aria-label="Hours editor" /> : null;
   },
 }));
-vi.mock('./components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard', () => ({
-  default: (props: ComponentProps<typeof HoursPayPeriodDashboardCard>) => {
+vi.mock('./components/HoursDashboard/HoursPayPeriodSummary/HoursPayPeriodSummary', () => ({
+  default: (props: ComponentProps<typeof HoursPayPeriodSummary>) => {
     children.payPeriod = props;
     return null;
   },
 }));
-vi.mock('./components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard', () => ({
-  default: (props: ComponentProps<typeof HoursCycleSummaryDashboardCard>) => {
+vi.mock('./components/HoursDashboard/HoursCycleSummary/HoursCycleSummary', () => ({
+  default: (props: ComponentProps<typeof HoursCycleSummary>) => {
     children.cycleSummary = props;
     return null;
   },

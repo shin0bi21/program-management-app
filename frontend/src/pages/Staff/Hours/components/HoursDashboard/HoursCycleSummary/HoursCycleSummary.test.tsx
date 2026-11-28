@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getHoursCycleSummaryData } from '../../../hours.api';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import HoursCycleSummaryDashboardCard from './HoursCycleSummaryDashboardCard';
+import HoursCycleSummary from './HoursCycleSummary';
 
 vi.mock('../../../hours.api', () => ({ getHoursCycleSummaryData: vi.fn() }));
 
@@ -16,14 +16,14 @@ const cycle = {
 const baseProps = { queryKey: ['hours'], staff, cycles: [cycle] };
 const cycleSummary = { periodCount: 2, averageHours: 9, breakdown: [{ label: 'Meeting', hours: 9 }] };
 
-describe('HoursCycleSummaryDashboardCard', () => {
+describe('HoursCycleSummary', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(getHoursCycleSummaryData).mockResolvedValue(cycleSummary);
   });
 
   it('uses the current cycle even when a completed cycle appears first', async () => {
-    renderWithQueryClient(<HoursCycleSummaryDashboardCard
+    renderWithQueryClient(<HoursCycleSummary
       {...baseProps}
       cycles={[{ ...cycle, id: 'completed-cycle', state: 'completed' }, cycle]}
     />);
@@ -33,7 +33,7 @@ describe('HoursCycleSummaryDashboardCard', () => {
   });
 
   it('does not substitute a historical or upcoming cycle when none is active', () => {
-    renderWithQueryClient(<HoursCycleSummaryDashboardCard
+    renderWithQueryClient(<HoursCycleSummary
       {...baseProps}
       cycles={[{ ...cycle, state: 'completed' }, { ...cycle, id: 'next-cycle', state: 'upcoming' }]}
     />);
@@ -43,27 +43,27 @@ describe('HoursCycleSummaryDashboardCard', () => {
   });
 
   it('waits for shared staff context before requesting the current cycle summary', async () => {
-    const { rerender } = renderWithQueryClient(<HoursCycleSummaryDashboardCard
+    const { rerender } = renderWithQueryClient(<HoursCycleSummary
       {...baseProps}
       staff={null}
     />);
     expect(getHoursCycleSummaryData).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();
 
-    rerender(<HoursCycleSummaryDashboardCard {...baseProps} />);
+    rerender(<HoursCycleSummary {...baseProps} />);
 
     await screen.findByText('9.00');
     expect(getHoursCycleSummaryData).toHaveBeenCalledWith('staff-1', 'cycle-1', { signal: expect.any(AbortSignal) });
   });
 
   it('follows a new current cycle and closes the previous cycle breakdown', async () => {
-    const { rerender } = renderWithQueryClient(<HoursCycleSummaryDashboardCard {...baseProps} />);
+    const { rerender } = renderWithQueryClient(<HoursCycleSummary {...baseProps} />);
     await screen.findByText('9.00');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     expect(screen.getByRole('dialog', { name: 'Zoe Wilson' })).toBeInTheDocument();
     vi.mocked(getHoursCycleSummaryData).mockResolvedValue({ ...cycleSummary, averageHours: 6 });
 
-    rerender(<HoursCycleSummaryDashboardCard
+    rerender(<HoursCycleSummary
       {...baseProps}
       cycles={[{ ...cycle, state: 'completed' }, { ...cycle, id: 'cycle-2', title: 'Fall 2026' }]}
     />);
@@ -75,7 +75,7 @@ describe('HoursCycleSummaryDashboardCard', () => {
 
   it('keeps failed cycle requests distinct from empty results and retries', async () => {
     vi.mocked(getHoursCycleSummaryData).mockRejectedValue(new Error('Cycle offline'));
-    renderWithQueryClient(<HoursCycleSummaryDashboardCard {...baseProps} />);
+    renderWithQueryClient(<HoursCycleSummary {...baseProps} />);
     await screen.findByText('Cycle hours unavailable');
     vi.mocked(getHoursCycleSummaryData).mockResolvedValue(cycleSummary);
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../hours.api';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
-import HoursPayPeriodDashboardCard from './HoursPayPeriodDashboardCard';
+import HoursPayPeriodSummary from './HoursPayPeriodSummary';
 
 vi.mock('../../../hours.api', () => ({ getHoursPayPeriodData: vi.fn() }));
 
@@ -16,21 +16,21 @@ const payPeriod = {
   breakdown: [{ label: 'Meeting', hours: 12 }],
 };
 
-describe('HoursPayPeriodDashboardCard', () => {
+describe('HoursPayPeriodSummary', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(getHoursPayPeriodData).mockResolvedValue(payPeriod);
   });
 
   it('waits for shared staff selection and requests the current pay period', async () => {
-    const { rerender } = renderWithQueryClient(<HoursPayPeriodDashboardCard
+    const { rerender } = renderWithQueryClient(<HoursPayPeriodSummary
       {...baseProps}
       staff={null}
     />);
     expect(getHoursPayPeriodData).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();
 
-    rerender(<HoursPayPeriodDashboardCard {...baseProps} />);
+    rerender(<HoursPayPeriodSummary {...baseProps} />);
 
     expect(await screen.findByText('12.00')).toBeInTheDocument();
     expect(getHoursPayPeriodData).toHaveBeenCalledWith('staff-1', null, { signal: expect.any(AbortSignal) });
@@ -41,7 +41,7 @@ describe('HoursPayPeriodDashboardCard', () => {
     vi.mocked(getHoursPayPeriodData)
       .mockResolvedValueOnce(payPeriod)
       .mockReturnValueOnce(new Promise(resolve => { resolveNext = resolve; }));
-    const { rerender } = renderWithQueryClient(<HoursPayPeriodDashboardCard {...baseProps} />);
+    const { rerender } = renderWithQueryClient(<HoursPayPeriodSummary {...baseProps} />);
     await screen.findByText('12.00');
     fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
     const breakdown = screen.getByRole('dialog', { name: 'Zoe Wilson' });
@@ -49,7 +49,7 @@ describe('HoursPayPeriodDashboardCard', () => {
     expect(within(breakdown).getByRole('img', { name: 'Breakdown of 12.00 hours' })).toBeInTheDocument();
     expect(within(breakdown).getByText('Total').parentElement).toHaveTextContent('12.00');
 
-    rerender(<HoursPayPeriodDashboardCard
+    rerender(<HoursPayPeriodSummary
       {...baseProps}
       staff={{ ...staff, id: 'staff-2', name: 'Jordan Lee' }}
     />);

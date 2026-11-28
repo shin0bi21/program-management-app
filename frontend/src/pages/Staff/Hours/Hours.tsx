@@ -7,8 +7,8 @@ import type { ConfirmAction } from '../../../common/components/ConfirmModal/type
 import HoursModal from './components/HoursModal/HoursModal';
 import type { HoursFormTarget } from './components/HoursModal/hooks/useHoursModal';
 import HoursCalendar from './components/HoursCalendar/HoursCalendar';
-import HoursPayPeriodDashboardCard from './components/HoursDashboard/HoursPayPeriodDashboardCard/HoursPayPeriodDashboardCard';
-import HoursCycleSummaryDashboardCard from './components/HoursDashboard/HoursCycleSummaryDashboardCard/HoursCycleSummaryDashboardCard';
+import HoursPayPeriodSummary from './components/HoursDashboard/HoursPayPeriodSummary/HoursPayPeriodSummary';
+import HoursCycleSummary from './components/HoursDashboard/HoursCycleSummary/HoursCycleSummary';
 import HoursTable from './components/HoursTable/HoursTable';
 
 import { useAuth } from '../../../auth/authContext';
@@ -187,11 +187,11 @@ export default function HoursPage(): ReactElement {
         actions.moveError,
       ]}
       dashboard={<>
-        <HoursPayPeriodDashboardCard
+        <HoursPayPeriodSummary
           queryKey={HOURS_QUERY_KEY}
           staff={selection.selectedStaff}
         />
-        <HoursCycleSummaryDashboardCard
+        <HoursCycleSummary
           queryKey={HOURS_QUERY_KEY}
           staff={selection.selectedStaff}
           cycles={cycles.data ?? []}

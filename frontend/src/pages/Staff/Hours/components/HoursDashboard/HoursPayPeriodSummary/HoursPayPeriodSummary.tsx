@@ -6,10 +6,10 @@ import { formatShortDateRange } from '../../../../../../common/utils/date';
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import { getErrorMessage } from '../../../../../../http/errors';
-import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
+import HoursBreakdownCard from '../HoursBreakdownCard/HoursBreakdownCard';
 import useHoursPayPeriodData from './hooks/useHoursPayPeriodData';
 
-interface HoursPayPeriodDashboardCardProps {
+interface HoursPayPeriodSummaryProps {
   queryKey: readonly unknown[];
   staff: StaffReference | null;
 }
@@ -17,12 +17,12 @@ interface HoursPayPeriodDashboardCardProps {
 /**
  * Loads and displays the selected staff member's current pay period, independent of cycle selection.
  * @param props - Staff selection and query namespace.
- * @example <HoursPayPeriodDashboardCard queryKey={['hours']} staff={staff} />
+ * @example <HoursPayPeriodSummary queryKey={['hours']} staff={staff} />
  */
-export default function HoursPayPeriodDashboardCard({
+export default function HoursPayPeriodSummary({
   queryKey,
   staff,
-}: HoursPayPeriodDashboardCardProps): ReactElement {
+}: HoursPayPeriodSummaryProps): ReactElement {
   const staffId = staff?.id ?? null;
   const query = useHoursPayPeriodData(queryKey, staffId);
   const queryError = staffId ? query.error : null;
@@ -54,7 +54,7 @@ export default function HoursPayPeriodDashboardCard({
       { label: 'Current Pay Period', value: payPeriodLabel },
       { label: 'Hours', value: payPeriod?.totalHours.toFixed(2) },
     ]}
-    action={<HoursBreakdown
+    action={<HoursBreakdownCard
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, payPeriod?.periodStart])}
     />}
