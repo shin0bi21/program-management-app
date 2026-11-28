@@ -1,5 +1,5 @@
-import { apiClient } from '../../../http/client';
-import type { RequestOptions } from '../../../http/client';
+import { apiClient } from '../../../../http/client';
+import type { RequestOptions } from '../../../../http/client';
 
 export type PreferenceKey =
   | 'account-filters'

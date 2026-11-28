@@ -7,7 +7,7 @@ import type { SessionType } from '../types';
 import { useSessionControls } from './useSessionControls';
 
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
-vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 const programs: Program[] = [{
   id: 'program-1', title: 'Soft Skills', description: null, defaultDayOfWeek: 'tuesday', defaultStartTime: '17:00', defaultEndTime: '19:30', timezone: 'America/Toronto', enrollmentRequired: true, minAge: 12, maxAge: 15,
@@ -60,7 +60,7 @@ describe('useSessionControls', () => {
     expect(result.current.appliedFilters).toMatchObject({ search: 'workshop', programIds: ['program-1'] });
 
     act(() => result.current.search.apply('  communication  '));
-    act(() => result.current.filters.clear());
+    act(() => result.current.filters.update({ programIds: [], cycleIds: [], sessionTypes: [], statuses: [] }));
 
     expect(result.current.appliedFilters).toMatchObject({ search: 'communication', programIds: [], cycleIds: [] });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
@@ -96,8 +96,8 @@ describe('useSessionControls', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
 
     act(() => {
-      result.current.filters.apply('programIds', ['program-1']);
-      result.current.filters.apply('statuses', ['completed']);
+      result.current.filters.update({ programIds: ['program-1'] });
+      result.current.filters.update({ statuses: ['completed'] });
       result.current.setView('table');
     });
 

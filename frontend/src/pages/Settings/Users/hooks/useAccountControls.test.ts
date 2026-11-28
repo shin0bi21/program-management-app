@@ -5,7 +5,7 @@ import { createQueryClientWrapper, createTestQueryClient } from '../../../../tes
 import { useAccountControls } from './useAccountControls';
 
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
-vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 /**
  * Mounts the supplied hook with an isolated preference query cache.
@@ -47,8 +47,8 @@ describe('useAccountControls', () => {
     });
 
     act(() => {
-      result.current.filters.apply('statuses', ['inactive']);
-      result.current.filters.apply('roles', ['youth']);
+      result.current.filters.update({ statuses: ['inactive'] });
+      result.current.filters.update({ roles: ['youth'] });
       result.current.table.setHiddenColumns(['email']);
       result.current.table.setColumnWidths({ name: 240 });
       result.current.table.setSorting({ key: 'status', direction: 'asc' });
@@ -76,7 +76,7 @@ describe('useAccountControls', () => {
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('account-filters',
       expect.objectContaining({ search: 'Jamie', statuses: ['active'] })));
 
-    act(() => result.current.filters.clear());
+    act(() => result.current.filters.update({ roles: [], statuses: [] }));
     expect(result.current.appliedFilters).toMatchObject({ search: 'Jamie', statuses: [] });
 
     act(() => result.current.search.apply(''));

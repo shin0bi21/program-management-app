@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { getCycleDateRange } from '../../../../common/features/programming/cycles/cycleDateRange';
-import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { Program } from '../../Programs/types';
-import usePreferences from '../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceText,
   preferenceOption,
@@ -99,11 +98,11 @@ export function useSessionControls({
       appliedValue: search,
       apply: (search: string) => updatePreferences({ search }),
     },
-    filters: createPreferenceFilters({
+    filters: {
       values: { programIds, cycleIds, sessionTypes, statuses },
       definitions: filterCategories,
-      updatePreferences,
-    }),
+      update: updatePreferences,
+    },
     table: {
       sorting,
       setSorting,

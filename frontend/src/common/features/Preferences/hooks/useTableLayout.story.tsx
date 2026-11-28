@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import Table from '../../components/Table/Table';
-import type { TableColumnDef } from '../../components/Table/Table.types';
+import Table from '../../../components/Table/Table';
+import type { TableColumnDef } from '../../../components/Table/Table.types';
 import useTableLayout from './useTableLayout';
 
 interface LayoutRow {

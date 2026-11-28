@@ -5,7 +5,7 @@ import { useLeadPreferences } from './useLeadPreferences';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
-vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 /**
  * Mounts the supplied hook with an isolated preference query cache.
@@ -40,8 +40,8 @@ describe('useLeadPreferences', () => {
     expect(result.current.appliedFilters.programIds).toEqual([]);
 
     act(() => result.current.search.apply(' school '));
-    act(() => result.current.filters.apply('statuses', ['contacted']));
-    act(() => result.current.filters.apply('submitterRoles', ['youth']));
+    act(() => result.current.filters.update({ statuses: ['contacted'] }));
+    act(() => result.current.filters.update({ submitterRoles: ['youth'] }));
     act(() => {
       result.current.table.setSorting({ key: 'school', direction: 'asc' });
     });
@@ -106,7 +106,7 @@ describe('useLeadPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.appliedFilters.programIds).toEqual(['removed-program']);
 
-    act(() => result.current.filters.apply('statuses', ['contacted']));
+    act(() => result.current.filters.update({ statuses: ['contacted'] }));
     rerender({ error: null });
 
     await waitFor(() => expect(result.current.appliedFilters.programIds).toEqual([]));

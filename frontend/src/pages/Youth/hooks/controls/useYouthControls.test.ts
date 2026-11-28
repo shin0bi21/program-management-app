@@ -7,7 +7,7 @@ import { useYouthControls } from './useYouthControls';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
 
 const preferenceApi = vi.hoisted(() => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
-vi.mock('../../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 /**
  * Mounts the supplied hook with an isolated preference query cache.
@@ -102,13 +102,13 @@ describe('useYouthControls', () => {
       }),
     ));
 
-    act(() => result.current.filters.apply('schoolIds', ['school-1', 'school-2']));
+    act(() => result.current.filters.update({ schoolIds: ['school-1', 'school-2'] }));
     expect(result.current.appliedFilters.schoolIds).toEqual(['school-1', 'school-2']);
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({ schoolIds: ['school-1', 'school-2'] }),
     ));
 
-    act(() => result.current.filters.clear());
+    act(() => result.current.filters.update({ programIds: [], cycleIds: [], schoolIds: [] }));
     expect(result.current.appliedFilters).toEqual({ search: 'Alex Lee', programIds: [], cycleIds: [], schoolIds: [] });
 
     act(() => result.current.search.apply(''));

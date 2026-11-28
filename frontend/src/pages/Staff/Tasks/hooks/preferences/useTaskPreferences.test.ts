@@ -7,9 +7,9 @@ import type { ProgramReference, StaffReference } from '../../../../../common/fea
 import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getPreference, setPreference } from '../../../../../common/features/Preferences/preferences.api';
+import { getPreference, setPreference } from '../../../../../common/features/Preferences/api/preferences.api';
 
-vi.mock('../../../../../common/features/Preferences/preferences.api', () => ({
+vi.mock('../../../../../common/features/Preferences/api/preferences.api', () => ({
   getPreference: vi.fn(),
   setPreference: vi.fn(),
 }));
@@ -135,7 +135,7 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
 
-    act(() => result.current.filters.apply('cycleIds', []));
+    act(() => result.current.filters.update({ cycleIds: [] }));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
       expect.objectContaining({ cycleIds: [], view: 'table' })));

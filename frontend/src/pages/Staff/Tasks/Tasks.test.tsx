@@ -11,7 +11,7 @@ import {
   getStaffReferences,
   type StaffReference,
 } from '../../../common/features/referenceData/referenceData.api';
-import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
+import { getPreference, setPreference } from '../../../common/features/Preferences/api/preferences.api';
 import { makeTask } from '../../../tests/factories/task';
 import { makeHoursItem } from '../../../tests/factories/hours';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
@@ -91,7 +91,7 @@ vi.mock('./api/tasks.api', () => ({
   updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
 vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
-vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
+vi.mock('../../../common/features/Preferences/api/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),
 }));
@@ -190,7 +190,7 @@ describe('Tasks', () => {
     await screen.findByTestId('task-table');
     expect(children.table?.filters.cycleIds).toEqual([]);
 
-    act(() => pageControls().filters!.apply('cycleIds', ['cycle-1']));
+    act(() => pageControls().filters!.update({ cycleIds: ['cycle-1'] }));
 
     await waitFor(() => expect(children.table?.filters.cycleIds).toEqual(['cycle-1']));
   });
@@ -200,7 +200,7 @@ describe('Tasks', () => {
     renderTasks();
     await screen.findByTestId('task-table');
 
-    act(() => pageControls().filters!.apply('staffIds', [coworker.id]));
+    act(() => pageControls().filters!.update({ staffIds: [coworker.id] }));
     await waitFor(() => expect(children.table?.filters.staffIds).toEqual([coworker.id]));
     act(() => pageControls().setView!('calendar'));
 

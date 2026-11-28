@@ -1,10 +1,10 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiClient } from '../../../http/client';
+import { apiClient } from '../../../../http/client';
 import { getPreference, setPreference } from './preferences.api';
 
-vi.mock('../../../http/client', () => ({
+vi.mock('../../../../http/client', () => ({
   apiClient: { get: vi.fn(), put: vi.fn() },
 }));
 

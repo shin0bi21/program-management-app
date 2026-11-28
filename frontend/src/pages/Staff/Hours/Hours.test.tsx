@@ -6,7 +6,7 @@ import PageContainer from '../../../common/components/PageContainer/PageContaine
 
 import { AuthContext, type AuthContextValue } from '../../../auth/authContext';
 import { getUser } from '../../../auth/storage';
-import { getPreference, setPreference } from '../../../common/features/Preferences/preferences.api';
+import { getPreference, setPreference } from '../../../common/features/Preferences/api/preferences.api';
 import {
   getCycleReferences,
   getProgramReferences,
@@ -86,7 +86,7 @@ vi.mock('../Tasks/api/tasks.api', () => ({ getOpenTasks: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),
 }));
-vi.mock('../../../common/features/Preferences/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
+vi.mock('../../../common/features/Preferences/api/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const preferenceState: { value: StoredHoursPreferences } = { value: {} };
@@ -163,7 +163,7 @@ describe('Hours', () => {
     renderHours();
     await screen.findByTestId('hours-calendar');
 
-    act(() => pageControls().filters!.apply('staffIds', [coworker.id]));
+    act(() => pageControls().filters!.update({ staffIds: [coworker.id] }));
 
     await waitFor(() => expect(children.calendar?.filters.staffIds).toEqual([coworker.id]));
   });
@@ -202,7 +202,7 @@ describe('Hours', () => {
     renderHours();
     await screen.findByTestId('hours-calendar');
 
-    act(() => pageControls().filters!.apply('programIds', ['program-1']));
+    act(() => pageControls().filters!.update({ programIds: ['program-1'] }));
 
     await waitFor(() => expect(children.calendar?.filters.programIds).toEqual(['program-1']));
   });

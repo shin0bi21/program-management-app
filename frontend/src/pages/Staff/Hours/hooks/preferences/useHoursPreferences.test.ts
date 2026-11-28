@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import useHoursPreferences, { type StoredHoursPreferences } from './useHoursPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
-import { getPreference, setPreference } from '../../../../../common/features/Preferences/preferences.api';
+import { getPreference, setPreference } from '../../../../../common/features/Preferences/api/preferences.api';
 
-vi.mock('../../../../../common/features/Preferences/preferences.api', () => ({
+vi.mock('../../../../../common/features/Preferences/api/preferences.api', () => ({
   getPreference: vi.fn(),
   setPreference: vi.fn(),
 }));

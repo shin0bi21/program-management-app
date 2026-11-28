@@ -1,8 +1,8 @@
 import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
-import { getUser } from '../../../auth/storage';
-import type { PreferenceKey } from './preferences.api';
-import { normalizePreferences, preferenceColumnWidths, preferenceHiddenColumns } from './preferences';
+import { getUser } from '../../../../auth/storage';
+import type { PreferenceKey } from '../api/preferences.api';
+import { normalizePreferences, preferenceColumnWidths, preferenceHiddenColumns } from '../preferences';
 
 interface TableLayout {
   columnWidths: Record<string, number>;

@@ -23,10 +23,9 @@ function makeControls() {
       apply: vi.fn(),
     },
     filters: {
-      definitions: [{ id: 'statuses', label: 'Status', options: [{ id: 'active', label: 'Active' }] }],
-      values: { statuses: ['active'] },
-      apply: vi.fn(),
-      clear: vi.fn(),
+      definitions: [{ id: 'statuses' as const, label: 'Status', options: [{ id: 'active', label: 'Active' }] }],
+      values: { statuses: ['active'], roles: ['staff'] },
+      update: vi.fn(),
     },
     table: { hiddenColumns: [], setHiddenColumns: vi.fn() },
     ready: true,
@@ -112,18 +111,21 @@ describe('PageContainer', () => {
     expect(controls.table.setHiddenColumns).toHaveBeenCalledWith(['status']);
   });
 
-  it('connects filter application and clearing to the supplied controls', () => {
+  it('updates one filter on Apply and clears every supplied filter in one update', () => {
     const controls = makeControls();
     const { filters } = controls;
     render(<PageContainer title="Records" ariaLabel="Records" controls={{ ready: true, filters }} table={<p>Records</p>} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
-    expect(filters.clear).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole('menuitem', { name: /Status/ }));
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Active' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Apply' }));
-    expect(filters.apply).toHaveBeenCalledWith('statuses', []);
+    expect(filters.update).toHaveBeenCalledExactlyOnceWith({ statuses: [] });
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to filter categories' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Clear all' }));
+    expect(filters.update).toHaveBeenCalledTimes(2);
+    expect(filters.update).toHaveBeenLastCalledWith({ statuses: [], roles: [] });
   });
 });
 
