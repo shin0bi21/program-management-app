@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 
-import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
-import usePreferences from '../../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceOption,
   preferenceOptions,
@@ -18,7 +17,7 @@ import {
   type HoursFilters,
   type HoursSortKey,
 } from '../../types';
-import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
+import type { PageFilterControls, PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
 import type { ListSort } from '../../../../../common/components/Table/Table.types';
 import type { HoursReferences } from '../data/useHoursReferenceData';
 
@@ -46,7 +45,7 @@ interface HoursPreferencesResult {
   view: HoursView;
   setView: (view: HoursView) => void;
   search: PageSearchControls;
-  filters: ReturnType<typeof createPreferenceFilters<HoursFilterValues>>;
+  filters: PageFilterControls<HoursFilterValues>;
   table: HoursTableControls;
 }
 
@@ -149,11 +148,6 @@ export default function useHoursPreferences(
     types: preferences.types,
     cycleIds: preferences.cycleIds,
   };
-  const filterControls = createPreferenceFilters({
-    values: filterValues,
-    definitions: filterDefinitions,
-    updatePreferences,
-  });
   const dateRange = useMemo(() => getCycleDateRange(cycles.data ?? [], preferences.cycleIds), [cycles.data, preferences.cycleIds]);
 
   const appliedFilters: HoursFilters = {
@@ -191,7 +185,7 @@ export default function useHoursPreferences(
     view: preferences.view,
     setView,
     search,
-    filters: filterControls,
+    filters: { values: filterValues, definitions: filterDefinitions, update: updatePreferences },
     table,
   };
 }

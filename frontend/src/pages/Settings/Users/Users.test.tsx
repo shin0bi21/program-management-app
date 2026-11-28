@@ -11,7 +11,7 @@ vi.mock('../../../auth/authContext', () => ({ useAuth: () => mockUseAuth() }));
 vi.mock('./components/UserTable/hooks/useUserTableData', () => ({
   default: (...args: unknown[]) => mockUseUserTableData(...args),
 }));
-vi.mock('../../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getSchoolReferences: vi.fn().mockResolvedValue([]),
 }));

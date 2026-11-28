@@ -27,7 +27,7 @@ vi.mock('../../common/features/Attendance/attendance.api', () => attendanceApi);
 vi.mock('../../common/features/SchoolModal/schoolModal.api', () => ({
   createSchool: vi.fn().mockResolvedValue({ id: 'school-new', name: 'Saved School' }),
 }));
-vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
   ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),

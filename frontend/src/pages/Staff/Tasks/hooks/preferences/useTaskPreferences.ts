@@ -1,12 +1,11 @@
-import createPreferenceFilters from '../../../../../common/features/Preferences/createPreferenceFilters';
 import { getCycleDateRange } from '../../../../../common/features/programming/cycles/cycleDateRange';
 import type { TaskReferences } from '../data/useTaskReferenceData';
 import { useMemo } from 'react';
 import type { DateRange } from '../../../../../common/utils/dateRange';
-import type { PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
+import type { PageFilterControls, PageSearchControls } from '../../../../../common/components/PageContainer/PageContainer.types';
 
-import usePreferences from '../../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceOption,
   preferenceOptions,
@@ -47,7 +46,7 @@ interface TaskPreferencesResult {
   view: TasksView;
   setView: (view: TasksView) => void;
   search: PageSearchControls;
-  filters: ReturnType<typeof createPreferenceFilters<TaskFilterValues>>;
+  filters: PageFilterControls<TaskFilterValues>;
   table: TaskTableControls;
 }
 
@@ -141,11 +140,11 @@ export default function useTaskPreferences(
       apply: (search: string) => updatePreferences({ search }),
     },
 
-    filters: createPreferenceFilters({
+    filters: {
       values: filterValues,
       definitions: filterDefinitions,
-      updatePreferences,
-    }),
+      update: updatePreferences,
+    },
 
     table: {
       sorting: preferences.sorting,

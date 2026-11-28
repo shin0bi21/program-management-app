@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
-import usePreferences from '../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceText,
   preferenceOptions,
@@ -62,14 +61,14 @@ export function useAccountControls(
       appliedValue: preferences.search,
       apply: (search: string) => updatePreferences({ search }),
     },
-    filters: createPreferenceFilters({
+    filters: {
       values: {
         statuses: preferences.statuses,
         roles: preferences.roles,
       },
       definitions: filterCategories,
-      updatePreferences,
-    }),
+      update: updatePreferences,
+    },
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: ListSort<UserSortKey>) => updatePreferences({ sorting }),

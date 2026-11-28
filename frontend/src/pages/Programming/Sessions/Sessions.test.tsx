@@ -87,7 +87,7 @@ vi.mock('../../../auth/authContext', () => ({ useAuth: () => auth }));
 const preferences = vi.hoisted(() => ({
   value: null as SessionPreference | null, getPreference: vi.fn(), setPreference: vi.fn(),
 }));
-vi.mock('../../../common/features/Preferences/preferences.api', () => ({
+vi.mock('../../../common/features/Preferences/api/preferences.api', () => ({
   getPreference: preferences.getPreference, setPreference: preferences.setPreference,
 }));
 
@@ -202,7 +202,7 @@ describe('Sessions', () => {
     renderPage();
     await screen.findByTestId('sessions-table');
 
-    act(() => pageControls().filters!.apply('cycleIds', ['cycle-1', 'cycle-2']));
+    act(() => pageControls().filters!.update({ cycleIds: ['cycle-1', 'cycle-2'] }));
     await waitFor(() => expect(children.table?.filters.cycleIds).toEqual(['cycle-1', 'cycle-2']));
     act(() => pageControls().setView!('calendar'));
 
@@ -224,13 +224,13 @@ describe('Sessions', () => {
     await screen.findByTestId('sessions-calendar');
     act(() => children.calendar!.onSessionSelect(session));
 
-    act(() => pageControls().filters!.apply('cycleIds', ['cycle-2']));
+    act(() => pageControls().filters!.update({ cycleIds: ['cycle-2'] }));
     await waitFor(() => expect(children.calendar?.filters.cycleIds).toEqual(['cycle-2']));
     expect(children.calendar?.selectedProgramId).toBe(program.id);
     expect(screen.getByTestId('location')).toHaveTextContent(`session=${session.id}`);
     expect(children.attendance?.session).toBe(session);
 
-    act(() => pageControls().filters!.clear());
+    act(() => pageControls().filters!.update({ cycleIds: [], programIds: [], sessionTypes: [], statuses: [] }));
 
     await waitFor(() => expect(children.calendar?.filters.cycleIds).toEqual([]));
     expect(children.calendar?.selectedProgramId).toBe(program.id);

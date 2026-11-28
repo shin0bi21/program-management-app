@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getPreference, setPreference, type PreferenceKey } from './preferences.api';
-import { normalizePreferences, type PreferenceFields } from './preferences';
+import { getPreference, setPreference, type PreferenceKey } from '../api/preferences.api';
+import { normalizePreferences, type PreferenceFields } from '../preferences';
 
 interface SaveQueue<T> {
   key: PreferenceKey;

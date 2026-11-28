@@ -1,16 +1,16 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createQueryClientWrapper, createTestQueryClient } from '../../../tests/queryClientTestUtils';
-import { getPreference, setPreference, type PreferenceKey } from './preferences.api';
+import { createQueryClientWrapper, createTestQueryClient } from '../../../../tests/queryClientTestUtils';
+import { getPreference, setPreference, type PreferenceKey } from '../api/preferences.api';
 import {
   preferenceOption,
   preferenceIds,
   preferenceText,
   preferenceOptions,
-} from './preferences';
+} from '../preferences';
 import usePreferences from './usePreferences';
 
-vi.mock('./preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
+vi.mock('../api/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 const get = vi.mocked(getPreference);
 const put = vi.mocked(setPreference);
 const initial = { view: 'calendar', programIds: ['program-1'], statuses: [], search: '' };

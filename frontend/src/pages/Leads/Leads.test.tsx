@@ -33,7 +33,7 @@ vi.mock('./leads.api', () => ({
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({ permissions: ['read:outreach', 'write:outreach'] }),
 }));
-vi.mock('../../common/features/Preferences/preferences.api', () => preferenceApi);
+vi.mock('../../common/features/Preferences/api/preferences.api', () => preferenceApi);
 
 vi.mock('../../common/features/referenceData/hooks/useReferenceData', async importOriginal => ({
   ...await importOriginal<typeof import('../../common/features/referenceData/hooks/useReferenceData')>(),
@@ -88,7 +88,7 @@ describe('Leads', () => {
     renderPage();
     await screen.findByRole('row', { name: /Avery Outreach/ });
 
-    act(() => pageControls().filters!.apply('submitterRoles', ['parent']));
+    act(() => pageControls().filters!.update({ submitterRoles: ['parent'] }));
 
     await waitFor(() => expect(getLeads).toHaveBeenLastCalledWith(
       expect.objectContaining({ origins: ['external'], submitterRoles: ['parent'] }),

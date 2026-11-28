@@ -85,7 +85,7 @@ Return these groups from the page preference or control hook, without flat alias
 | Group | Members |
 |---|---|
 | `search` | `appliedValue`, `apply(search)` |
-| `filters` | `values`, `definitions`, `apply`, `clear` |
+| `filters` | `values`, `definitions`, `update(patch)` |
 | `table` | `sorting`, `setSorting`, `columnWidths`, `setColumnWidths`, `hiddenColumns`, `setHiddenColumns` |
 
 - Keep `ready`, `error`, and optional `view`/`setView` at the top level.
@@ -106,8 +106,10 @@ Return these groups from the page preference or control hook, without flat alias
 
 ### Define Filters
 
-1. Use `createPreferenceFilters({ values, definitions, updatePreferences })` from `common/features/Preferences/createPreferenceFilters.ts` for filter `apply` and `clear`.
-2. Match definition IDs to persisted fields and `values` keys.
-3. Use `Ids` for record-ID arrays and plural enum names; use `Id` or singular enum names for single selections. Preserve existing persisted names.
+1. Supply filter `values`, `definitions`, and `update: updatePreferences` in the page controls.
+2. Match definition IDs to persisted fields and `values` keys. `PageContainer`
+   sends a patch for the selected category on Apply or Clear, and one patch for
+   every field in `values` on Clear all.
+3. Use `Ids` for record-ID arrays and plural enum names. Use `Id` or singular enum names for single selections. Preserve existing persisted names.
 
 Follow [FilterCard](../../frontend/src/common/components/FilterCard/FilterCard.tsx) and its [category owner](../../frontend/src/common/components/FilterCard/components/FilterCategoryCard.tsx) for filter drafts and dismissal.

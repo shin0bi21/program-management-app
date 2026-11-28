@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { ProgramReference, SchoolReference } from '../../../../common/features/referenceData/referenceData.api';
 import type { ProgramCycle } from '../../../../common/features/programming/cycles/types';
-import usePreferences from '../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceIds,
   preferenceText,
@@ -99,15 +98,15 @@ export function useYouthControls({
       appliedValue: preferences.search,
       apply: (search: string) => updatePreferences({ search }),
     },
-    filters: createPreferenceFilters({
+    filters: {
       values: {
         programIds: preferences.programIds,
         cycleIds: preferences.cycleIds,
         schoolIds: preferences.schoolIds,
       },
       definitions: filterCategories,
-      updatePreferences,
-    }),
+      update: updatePreferences,
+    },
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: ListSort<YouthSortKey>) => updatePreferences({ sorting }),

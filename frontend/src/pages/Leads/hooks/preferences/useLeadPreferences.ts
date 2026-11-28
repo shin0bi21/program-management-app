@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import createPreferenceFilters from '../../../../common/features/Preferences/createPreferenceFilters';
 import type { ProgramReference } from '../../../../common/features/referenceData/referenceData.api';
-import usePreferences from '../../../../common/features/Preferences/usePreferences';
-import useTableLayout from '../../../../common/features/Preferences/useTableLayout';
+import usePreferences from '../../../../common/features/Preferences/hooks/usePreferences';
+import useTableLayout from '../../../../common/features/Preferences/hooks/useTableLayout';
 import {
   preferenceOptions,
   preferenceIds,
@@ -75,15 +74,15 @@ export function useLeadPreferences(
       appliedValue: preferences.search,
       apply: (search: string) => updatePreferences({ search }),
     },
-    filters: createPreferenceFilters({
+    filters: {
       values: {
         statuses: preferences.statuses,
         programIds: preferences.programIds,
         submitterRoles: preferences.submitterRoles,
       },
       definitions: filterCategories,
-      updatePreferences,
-    }),
+      update: updatePreferences,
+    },
     table: {
       sorting: preferences.sorting,
       setSorting: (sorting: ListSort<LeadSortKey>) => updatePreferences({ sorting }),

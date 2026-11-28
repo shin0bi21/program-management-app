@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { TableColumnDef } from '../Table/Table.types';
 import type { PageControls, PageViewControls } from './PageContainer.types';
 import ColumnVisibilityMenu from '../ColumnVisibilityMenu/ColumnVisibilityMenu';
-import FilterCard from '../FilterCard/FilterCard';
+import FilterCard, { type FilterCardValues } from '../FilterCard/FilterCard';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import PageHeader from '../PageHeader/PageHeader';
 import PageMessageOverlay, { type PageMessageValue } from '../PageMessageOverlay/PageMessageOverlay';
@@ -16,11 +16,11 @@ interface PageSearch {
   placeholder?: string;
 }
 
-type PageContent =
-  | { table: ReactNode; calendar?: never; controls?: PageControls & { view?: never; setView?: never } }
-  | { table: ReactNode; calendar: ReactNode; controls: PageViewControls };
+type PageContent<Filters extends FilterCardValues> =
+  | { table: ReactNode; calendar?: never; controls?: PageControls<Filters> & { view?: never; setView?: never } }
+  | { table: ReactNode; calendar: ReactNode; controls: PageViewControls<Filters> };
 
-type PageContainerProps<T> = PageContent & {
+type PageContainerProps<T, Filters extends FilterCardValues> = PageContent<Filters> & {
   title: string;
   ariaLabel: string;
   className?: string;
@@ -53,7 +53,7 @@ const VIEW_OPTIONS = [
  * @param props.calendar - The page's alternative calendar view, when available.
  * @example With controls.view='calendar', the calendar mounts and the table stays unmounted.
  */
-export default function PageContainer<T>({
+export default function PageContainer<T, Filters extends FilterCardValues = FilterCardValues>({
   title,
   ariaLabel,
   className,
@@ -68,7 +68,7 @@ export default function PageContainer<T>({
   columns,
   table,
   calendar,
-}: PageContainerProps<T>) {
+}: PageContainerProps<T, Filters>): ReactElement {
   const childMessages = usePageMessages();
   const ready = controls?.ready ?? true;
   const filters = controls?.filters;
@@ -77,6 +77,27 @@ export default function PageContainer<T>({
   const activeView = controls?.view ?? 'table';
   const content = activeView === 'calendar' ? calendar : table;
   const contentClassName = activeView === 'calendar' ? 'page-calendar' : 'page-table';
+
+  /**
+   * Updates the category that FilterCard applied or cleared.
+   * @example applyFilter('statuses', ['active'])
+   */
+  const applyFilter = (id: string, selected: string[]): void => {
+    filters?.update({ [id]: selected } as Partial<Filters>);
+  };
+
+  /**
+   * Clears all supplied filter fields, including categories hidden by the page.
+   * @example clearFilters() // sends { statuses: [], roles: [] } for those two fields
+   */
+  const clearFilters = (): void => {
+    if (!filters) return;
+
+    const cleared: FilterCardValues = Object.fromEntries(
+      Object.keys(filters.values).map(id => [id, []]),
+    );
+    filters.update(cleared as Partial<Filters>);
+  };
 
   return (
     <PageMessageContext.Provider value={childMessages.reportMessage}>
@@ -93,8 +114,8 @@ export default function PageContainer<T>({
           filters={ready && filters ? <FilterCard
             categories={filters.definitions}
             values={filters.values}
-            onApply={filters.apply}
-            onClearAll={filters.clear}
+            onApply={applyFilter}
+            onClearAll={clearFilters}
           /> : undefined}
           view={ready && controls?.view ? <ViewMenu
             value={controls.view}
