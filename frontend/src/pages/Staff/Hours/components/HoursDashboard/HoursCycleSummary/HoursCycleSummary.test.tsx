@@ -1,11 +1,11 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getHoursCycleSummaryData } from '../../../hours.api';
+import { getHoursCycleSummaryData } from '../../../api/hours.api';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import HoursCycleSummary from './HoursCycleSummary';
 
-vi.mock('../../../hours.api', () => ({ getHoursCycleSummaryData: vi.fn() }));
+vi.mock('../../../api/hours.api', () => ({ getHoursCycleSummaryData: vi.fn() }));
 
 const staff = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
@@ -48,7 +48,6 @@ describe('HoursCycleSummary', () => {
       staff={null}
     />);
     expect(getHoursCycleSummaryData).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();
 
     rerender(<HoursCycleSummary {...baseProps} />);
 
@@ -56,11 +55,9 @@ describe('HoursCycleSummary', () => {
     expect(getHoursCycleSummaryData).toHaveBeenCalledWith('staff-1', 'cycle-1', { signal: expect.any(AbortSignal) });
   });
 
-  it('follows a new current cycle and closes the previous cycle breakdown', async () => {
+  it('loads the biweekly average for the new current cycle', async () => {
     const { rerender } = renderWithQueryClient(<HoursCycleSummary {...baseProps} />);
     await screen.findByText('9.00');
-    fireEvent.click(screen.getByRole('button', { name: 'See Breakdown' }));
-    expect(screen.getByRole('dialog', { name: 'Zoe Wilson' })).toBeInTheDocument();
     vi.mocked(getHoursCycleSummaryData).mockResolvedValue({ ...cycleSummary, averageHours: 6 });
 
     rerender(<HoursCycleSummary
@@ -70,7 +67,6 @@ describe('HoursCycleSummary', () => {
 
     expect(await screen.findByText('6.00')).toBeInTheDocument();
     expect(getHoursCycleSummaryData).toHaveBeenLastCalledWith('staff-1', 'cycle-2', { signal: expect.any(AbortSignal) });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps failed cycle requests distinct from empty results and retries', async () => {

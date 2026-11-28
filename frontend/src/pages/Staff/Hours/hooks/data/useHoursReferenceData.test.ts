@@ -2,14 +2,14 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useStaffReferences } from '../../../../../common/features/referenceData/hooks/useReferenceData';
-import { getHoursReferenceData } from '../../hours.api';
+import { getHoursReferenceData } from '../../api/hours.api';
 import {
   createQueryClientWrapper,
   createTestQueryClient,
 } from '../../../../../tests/queryClientTestUtils';
 import useHoursReferenceData from './useHoursReferenceData';
 
-vi.mock('../../hours.api', () => ({ getHoursReferenceData: vi.fn() }));
+vi.mock('../../api/hours.api', () => ({ getHoursReferenceData: vi.fn() }));
 vi.mock('../../../../../common/features/referenceData/hooks/useReferenceData', () => ({
   useCycleReferences: vi.fn(),
   useProgramReferences: vi.fn(),

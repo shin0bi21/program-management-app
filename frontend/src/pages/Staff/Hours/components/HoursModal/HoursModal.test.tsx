@@ -5,11 +5,11 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { makeTask } from '../../../../../tests/factories/task';
-import { getHoursSessions } from '../../hours.api';
+import { getHoursSessions } from '../../api/hours.api';
 import { getUser } from '../../../../../auth/storage';
 import HoursModal from './HoursModal';
 
-vi.mock('../../hours.api', () => ({ getHoursSessions: vi.fn() }));
+vi.mock('../../api/hours.api', () => ({ getHoursSessions: vi.fn() }));
 vi.mock('../../../../../auth/storage', () => ({ getUser: vi.fn() }));
 
 const loadTasks = vi.fn();

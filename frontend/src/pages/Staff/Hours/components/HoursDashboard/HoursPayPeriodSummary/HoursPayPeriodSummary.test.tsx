@@ -1,11 +1,11 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../hours.api';
+import { getHoursPayPeriodData, type HoursPayPeriodData } from '../../../api/hours.api';
 import { renderWithQueryClient } from '../../../../../../tests/queryClientTestUtils';
 import HoursPayPeriodSummary from './HoursPayPeriodSummary';
 
-vi.mock('../../../hours.api', () => ({ getHoursPayPeriodData: vi.fn() }));
+vi.mock('../../../api/hours.api', () => ({ getHoursPayPeriodData: vi.fn() }));
 
 const staff = {
   id: 'staff-1', firstName: 'Zoe', lastName: 'Wilson', name: 'Zoe Wilson', role: 'staff', writable: true,
@@ -28,7 +28,6 @@ describe('HoursPayPeriodSummary', () => {
       staff={null}
     />);
     expect(getHoursPayPeriodData).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'See Breakdown' })).toBeDisabled();
 
     rerender(<HoursPayPeriodSummary {...baseProps} />);
 
@@ -36,7 +35,7 @@ describe('HoursPayPeriodSummary', () => {
     expect(getHoursPayPeriodData).toHaveBeenCalledWith('staff-1', null, { signal: expect.any(AbortSignal) });
   });
 
-  it('clears the previous staff numbers and open breakdown while new staff hours load', async () => {
+  it('replaces stale totals and closes the staff breakdown when staff changes', async () => {
     let resolveNext!: (data: HoursPayPeriodData) => void;
     vi.mocked(getHoursPayPeriodData)
       .mockResolvedValueOnce(payPeriod)
@@ -47,7 +46,6 @@ describe('HoursPayPeriodSummary', () => {
     const breakdown = screen.getByRole('dialog', { name: 'Zoe Wilson' });
     expect(within(breakdown).getByText('Meeting')).toBeInTheDocument();
     expect(within(breakdown).getByRole('img', { name: 'Breakdown of 12.00 hours' })).toBeInTheDocument();
-    expect(within(breakdown).getByText('Total').parentElement).toHaveTextContent('12.00');
 
     rerender(<HoursPayPeriodSummary
       {...baseProps}

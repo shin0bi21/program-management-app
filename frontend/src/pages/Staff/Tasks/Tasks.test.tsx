@@ -15,7 +15,7 @@ import { getPreference, setPreference } from '../../../common/features/Preferenc
 import { makeTask } from '../../../tests/factories/task';
 import { makeHoursItem } from '../../../tests/factories/hours';
 import { renderWithQueryClient } from '../../../tests/queryClientTestUtils';
-import { setHours } from '../Hours/hours.api';
+import { setHours } from '../Hours/api/hours.api';
 import type HoursModal from '../Hours/components/HoursModal/HoursModal';
 import Tasks from './Tasks';
 import type TaskCalendar from './components/TaskCalendar/TaskCalendar';
@@ -90,7 +90,7 @@ vi.mock('./api/tasks.api', () => ({
   getOpenTasks: vi.fn(), getTaskReferenceData: vi.fn(),
   updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(), deleteTask: vi.fn(),
 }));
-vi.mock('../Hours/hours.api', () => ({ setHours: vi.fn() }));
+vi.mock('../Hours/api/hours.api', () => ({ setHours: vi.fn() }));
 vi.mock('../../../common/features/Preferences/api/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
   getCycleReferences: vi.fn(), getProgramReferences: vi.fn(), getStaffReferences: vi.fn(),

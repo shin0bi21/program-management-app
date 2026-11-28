@@ -1,4 +1,4 @@
-import { getHoursTableData } from '../../../hours.api';
+import { getHoursTableData } from '../../../api/hours.api';
 import type { HoursFilters, HoursSortKey, Hours } from '../../../types';
 import type { ListSort } from '../../../../../../common/components/Table/Table.types';
 import type { DateRange } from '../../../../../../common/utils/dateRange';

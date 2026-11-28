@@ -7,7 +7,7 @@ import {
   type ReferenceDataQuery,
 } from '../../../../../common/features/referenceData/hooks/useReferenceData';
 import type { CycleReference, ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
-import { getHoursReferenceData, type HoursReferenceData } from '../../hours.api';
+import { getHoursReferenceData, type HoursReferenceData } from '../../api/hours.api';
 
 export type HoursReferences = {
   staff: ReferenceDataQuery<StaffReference[]>;

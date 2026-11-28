@@ -2,7 +2,7 @@ import { useCallback, useEffect, type MutableRefObject } from 'react';
 import { useDataBuffer } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/useDataBuffer';
 import type { PeriodRange } from '../../../../../../common/components/TimelineCalendar/hooks/useDataBuffer/DataBuffer';
 import type { DateRange } from '../../../../../../common/utils/dateRange';
-import { getHoursCalendarData } from '../../../hours.api';
+import { getHoursCalendarData } from '../../../api/hours.api';
 import type { HoursCalendarIndex, HoursFilters, Hours } from '../../../types';
 
 /** Identifies an entry in the calendar buffer. @example getHoursItemId({ id: 'hours-1' }) // 'hours-1' */

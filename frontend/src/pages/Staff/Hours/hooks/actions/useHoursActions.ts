@@ -7,7 +7,7 @@ import {
   deleteHours,
   setHours,
   type HoursMutationResult,
-} from '../../hours.api';
+} from '../../api/hours.api';
 
 import type { Task } from '../../../Tasks/types';
 

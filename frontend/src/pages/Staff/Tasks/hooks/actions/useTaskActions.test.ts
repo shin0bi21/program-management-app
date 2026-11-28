@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deleteTask, updateTaskPlacement, updateTaskState } from '../../api/tasks.api';
 import type { Task } from '../../types';
-import { setHours } from '../../../Hours/hours.api';
+import { setHours } from '../../../Hours/api/hours.api';
 import { makeHoursItem } from '../../../../../tests/factories/hours';
 import { makeTask } from '../../../../../tests/factories/task';
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
@@ -13,7 +13,7 @@ import useTaskActions from './useTaskActions';
 vi.mock('../../api/tasks.api', () => ({
   deleteTask: vi.fn(), updateTaskPlacement: vi.fn(), updateTaskState: vi.fn(),
 }));
-vi.mock('../../../Hours/hours.api', () => ({ setHours: vi.fn() }));
+vi.mock('../../../Hours/api/hours.api', () => ({ setHours: vi.fn() }));
 
 const task = makeTask();
 

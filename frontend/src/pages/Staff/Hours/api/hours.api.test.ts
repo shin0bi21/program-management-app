@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { apiClient } from '../../../http/client';
+import { apiClient } from '../../../../http/client';
 import {
   getHoursCalendarData,
   getHoursPayPeriodData,
@@ -13,7 +13,7 @@ import {
   deleteHours,
 } from './hours.api';
 
-vi.mock('../../../http/client', () => ({
+vi.mock('../../../../http/client', () => ({
   apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 

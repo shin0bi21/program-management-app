@@ -1,14 +1,14 @@
-import { intersectDateRanges, type DateRange } from '../../../common/utils/dateRange';
-import type { Session } from '../../../common/features/programming/sessions/types';
-import { apiClient } from '../../../http/client';
-import type { RequestOptions } from '../../../http/client';
-import type { CursorPage, CursorRequest } from '../../../query/types';
-import type { Task } from '../Tasks/types';
+import { intersectDateRanges, type DateRange } from '../../../../common/utils/dateRange';
+import type { Session } from '../../../../common/features/programming/sessions/types';
+import { apiClient } from '../../../../http/client';
+import type { RequestOptions } from '../../../../http/client';
+import type { CursorPage, CursorRequest } from '../../../../query/types';
+import type { Task } from '../../Tasks/types';
 import type {
   HoursCategory,
   Hours,
   HoursFilters,
-} from './types';
+} from '../types';
 
 export type HoursMutationResult = Hours & { updatedTasks?: Task[] };
 type DeleteHoursResult = Pick<HoursMutationResult, 'updatedTasks'> & { message: string };
