@@ -8,7 +8,7 @@ for (const width of [1280, 390]) {
     for (const { story, height } of [
       { story: 'DashboardCard/LoadingAndOverflow', height: '125px' },
       { story: 'pages/Programming/Programs/components/ProgramOverviewDashboardCard/ProgramOverviewDashboardCard/ProgramDashboard', height: '125px' },
-      { story: 'HoursBreakdown/HoursSummary', height: '75px' },
+      { story: 'HoursBreakdownCard/HoursSummary', height: '75px' },
     ]) {
       test(`${story} retains the standard height while loading`, async ({ page, mount }) => {
         const component = await mount(story);

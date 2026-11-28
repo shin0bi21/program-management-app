@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 
 import Button from '../../../../../../common/components/Button/Button';
 import Modal from '../../../../../../common/components/Modal/Modal';
-import './HoursBreakdown.css';
+import './HoursBreakdownCard.css';
 
 interface HoursBreakdownData {
   total: number;
@@ -11,7 +11,7 @@ interface HoursBreakdownData {
   breakdown: Array<{ label: string; hours: number }>;
 }
 
-type HoursBreakdownProps = {
+type HoursBreakdownCardProps = {
   data: HoursBreakdownData | null;
   scopeKey: string;
   disabled?: boolean;
@@ -22,9 +22,9 @@ type HoursBreakdownProps = {
  * @param props.data - The current summary's decimal hours and breakdown; null disables the action.
  * @param props.scopeKey - Staff and period/cycle identity, used to discard a departing breakdown.
  * @param props.disabled - Prevents opening or retaining a breakdown while its summary is unavailable.
- * @example <HoursBreakdown data={summary} scopeKey="staff-1:cycle-1" disabled={false} />
+ * @example <HoursBreakdownCard data={summary} scopeKey="staff-1:cycle-1" disabled={false} />
  */
-export default function HoursBreakdown({ data, scopeKey, disabled = false }: HoursBreakdownProps): ReactElement {
+export default function HoursBreakdownCard({ data, scopeKey, disabled = false }: HoursBreakdownCardProps): ReactElement {
   const [openScope, setOpenScope] = useState<string | null>(null);
   const hasData = data !== null;
 

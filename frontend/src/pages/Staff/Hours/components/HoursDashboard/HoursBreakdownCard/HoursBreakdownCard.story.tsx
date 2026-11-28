@@ -1,5 +1,5 @@
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
-import HoursBreakdown from './HoursBreakdown';
+import HoursBreakdownCard from './HoursBreakdownCard';
 
 /**
  * Shows the standard Hours card with its independently owned breakdown action.
@@ -23,7 +23,7 @@ export function HoursSummary({ loading = false }: { loading?: boolean }) {
         { label: 'Current Pay Period', value: data?.subtitle },
         { label: 'Hours', value: data?.total.toFixed(2) },
       ]}
-      action={<HoursBreakdown data={data} scopeKey="staff-1:2026-10-01" disabled={loading} />}
+      action={<HoursBreakdownCard data={data} scopeKey="staff-1:2026-10-01" disabled={loading} />}
     />
   </div>;
 }

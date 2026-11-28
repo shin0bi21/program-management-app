@@ -6,10 +6,10 @@ import usePageMessageReporter from '../../../../../../common/components/PageMess
 import { DashboardCard } from '../../../../../../common/components/DashboardCard/DashboardCard';
 import UnavailableState from '../../../../../../common/components/UnavailableState/UnavailableState';
 import { getErrorMessage } from '../../../../../../http/errors';
-import HoursBreakdown from '../HoursBreakdown/HoursBreakdown';
+import HoursBreakdownCard from '../HoursBreakdownCard/HoursBreakdownCard';
 import useHoursCycleSummaryData from './hooks/useHoursCycleSummaryData';
 
-interface HoursCycleSummaryDashboardCardProps {
+interface HoursCycleSummaryProps {
   queryKey: readonly unknown[];
   staff: StaffReference | null;
   cycles: readonly ProgramCycle[];
@@ -20,13 +20,13 @@ interface HoursCycleSummaryDashboardCardProps {
  * Uses the first active cycle from shared references; entry placement and collection
  * filters do not change the reporting cycle. Without an active cycle, no summary is loaded.
  * @param props - Shared staff, ordered cycle references, and query namespace.
- * @example <HoursCycleSummaryDashboardCard queryKey={['hours']} staff={staff} cycles={cycles} />
+ * @example <HoursCycleSummary queryKey={['hours']} staff={staff} cycles={cycles} />
  */
-export default function HoursCycleSummaryDashboardCard({
+export default function HoursCycleSummary({
   queryKey,
   staff,
   cycles,
-}: HoursCycleSummaryDashboardCardProps): ReactElement {
+}: HoursCycleSummaryProps): ReactElement {
   const cycle = cycles.find(candidate => candidate.state === 'active') ?? null;
 
   const staffId = staff?.id ?? null;
@@ -68,7 +68,7 @@ export default function HoursCycleSummaryDashboardCard({
       { label: 'Cycle', value: cycle?.title },
       { label: 'Biweekly Average', value: summary?.averageHours.toFixed(2) },
     ]}
-    action={<HoursBreakdown
+    action={<HoursBreakdownCard
       data={breakdownData}
       scopeKey={JSON.stringify([staff?.id, cycle?.id])}
     />}
