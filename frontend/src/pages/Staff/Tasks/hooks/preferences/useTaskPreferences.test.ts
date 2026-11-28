@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProgramCycle } from '../../../../../common/features/programming/cycles/types';
 import type { TaskReferenceData } from '../../api/tasks.api';
 import type { ProgramReference, StaffReference } from '../../../../../common/features/referenceData/referenceData.api';
-import useTaskPreferences, { type StoredTaskPreferences } from './useTaskPreferences';
+import useTaskPreferences, { type TaskPreferences } from './useTaskPreferences';
 
 import { createQueryClientWrapper, createTestQueryClient } from '../../../../../tests/queryClientTestUtils';
 import { getPreference, setPreference } from '../../../../../common/features/Preferences/api/preferences.api';
@@ -24,9 +24,12 @@ const renderHook: typeof renderBase = (callback, options) => renderBase(callback
   wrapper: createQueryClientWrapper(createTestQueryClient()),
   ...options,
 });
-const savedPreference: { preference: StoredTaskPreferences | null; error: string | null } = {
+const savedPreference: { preference: Partial<TaskPreferences> | null; error: string | null } = {
   preference: null,
   error: null,
+};
+const defaultFilters: TaskPreferences['filters'] = {
+  cycleIds: [], search: '', staffIds: [], programIds: [], categories: [], statuses: [],
 };
 
 const options: TestTaskOptions = {
@@ -98,11 +101,14 @@ describe('useTaskPreferences', () => {
 
   it('waits for options and restores saved task controls', async () => {
     savedPreference.preference = {
-      search: 'workshop',
-      staffIds: ['staff-1'],
-      programIds: ['program-1'],
-      categories: ['planning_prep'],
-      statuses: ['in_progress'],
+      filters: {
+        ...defaultFilters,
+        search: 'workshop',
+        staffIds: ['staff-1'],
+        programIds: ['program-1'],
+        categories: ['planning_prep'],
+        statuses: ['in_progress'],
+      },
       sorting: { key: 'startDate', direction: 'asc' },
     };
     const { result, rerender } = renderHook(
@@ -130,7 +136,7 @@ describe('useTaskPreferences', () => {
   });
 
   it('restores and saves task cycle selections', async () => {
-    savedPreference.preference = { view: 'table', cycleIds: ['cycle-1'] };
+    savedPreference.preference = { view: 'table', filters: { ...defaultFilters, cycleIds: ['cycle-1'] } };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']);
@@ -138,11 +144,25 @@ describe('useTaskPreferences', () => {
     act(() => result.current.filters.update({ cycleIds: [] }));
     expect(result.current.view).toBe('table');
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences',
-      expect.objectContaining({ cycleIds: [], view: 'table' })));
+      expect.objectContaining({ filters: defaultFilters, view: 'table' })));
+  });
+
+  it('resets legacy flat filters while retaining valid saved view and sorting', async () => {
+    const sorting = { key: 'title', direction: 'desc' } as const;
+    vi.mocked(getPreference).mockResolvedValue({
+      cycleIds: ['cycle-1'], search: 'old search', view: 'table', sorting,
+    });
+    const { result } = renderHook(() => usePreferences());
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.appliedFilters).toEqual(defaultFilters);
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', {
+      filters: defaultFilters, view: 'table', sorting,
+    }));
   });
 
   it('waits for cycles and preserves saved IDs during cycle failures until options recover', async () => {
-    savedPreference.preference = { cycleIds: ['cycle-1', 'removed-cycle'] };
+    savedPreference.preference = { filters: { ...defaultFilters, cycleIds: ['cycle-1', 'removed-cycle'] } };
     const { result, rerender } = renderHook(
       ({ cyclesLoading, cyclesError }) => usePreferences({ cyclesLoading, cyclesError }),
       { initialProps: { cyclesLoading: true, cyclesError: false } },
@@ -157,47 +177,26 @@ describe('useTaskPreferences', () => {
     await waitFor(() => expect(result.current.appliedFilters.cycleIds).toEqual(['cycle-1']));
   });
 
-  it('keeps browser layout separate from account sorting and view', async () => {
+  it('saves task search inside filters alongside cycle selections', async () => {
+    savedPreference.preference = { filters: { ...defaultFilters, cycleIds: ['cycle-1'] } };
     const { result } = renderHook(() => usePreferences());
     await waitFor(() => expect(result.current.ready).toBe(true));
 
-    act(() => {
-      result.current.table.setHiddenColumns(['program']);
-      result.current.table.setColumnWidths({ title: 300 });
-      result.current.table.setSorting({ key: 'title', direction: 'asc' });
-      result.current.setView('table');
-    });
+    act(() => result.current.search.apply('workshop'));
 
-    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:task-preferences')!)).toEqual({
-      hiddenColumns: ['program'], columnWidths: { title: 300 },
-    });
-    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
-      view: 'table', sorting: { key: 'title', direction: 'asc' },
-    })));
-    const calls = vi.mocked(setPreference).mock.calls;
-    const saved = calls[calls.length - 1]?.[1];
-    expect(saved).not.toHaveProperty('hiddenColumns');
-    expect(saved).not.toHaveProperty('columnWidths');
-  });
-
-  it('saves submitted search and empty search', async () => {
-    const { result } = renderHook(() => usePreferences());
-    await waitFor(() => expect(result.current.ready).toBe(true));
-
-    act(() => result.current.search.apply(' workshop '));
     expect(result.current.appliedFilters.search).toBe('workshop');
-    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: 'workshop' })));
-    act(() => result.current.search.apply(''));
-    expect(result.current.appliedFilters.search).toBe('');
-    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({ search: '' })));
+    await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
+      filters: { ...defaultFilters, search: 'workshop', cycleIds: ['cycle-1'] },
+    })));
   });
 
   it('preserves unverified IDs after an option error and scrubs them when options recover', async () => {
     savedPreference.preference = {
-      staffIds: ['staff-1', 'removed-staff'],
-      programIds: ['program-1', 'removed-program'],
-      categories: [],
-      statuses: [],
+      filters: {
+        ...defaultFilters,
+        staffIds: ['staff-1', 'removed-staff'],
+        programIds: ['program-1', 'removed-program'],
+      },
     };
     const { result, rerender } = renderHook(
       ({ currentOptions, optionsError }) => usePreferences({ currentOptions, optionsError }),
@@ -222,8 +221,7 @@ describe('useTaskPreferences', () => {
       programIds: ['program-1'],
     }));
     await waitFor(() => expect(setPreference).toHaveBeenLastCalledWith('task-preferences', expect.objectContaining({
-      staffIds: ['staff-1'],
-      programIds: ['program-1'],
+      filters: { ...defaultFilters, staffIds: ['staff-1'], programIds: ['program-1'] },
     })));
   });
 });

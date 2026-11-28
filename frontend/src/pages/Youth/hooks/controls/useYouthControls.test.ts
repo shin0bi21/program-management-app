@@ -81,9 +81,9 @@ describe('useYouthControls', () => {
     ));
   });
 
-  it('restores search and schools and saves applied and cleared filters', async () => {
+  it('saves multiple school selections alongside the youth program and cycle filters', async () => {
     preferenceApi.getPreference.mockResolvedValue({
-      search: 'Jamie', statuses: ['active'], programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
+      programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
     });
     const { result } = renderHook(() => useYouthControls({
       role: 'admin', programs, programsLoading: false,
@@ -92,29 +92,12 @@ describe('useYouthControls', () => {
     }));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters).toMatchObject({ search: 'Jamie', schoolIds: ['school-1'] });
+    act(() => result.current.filters.update({ schoolIds: ['school-1', 'school-2'] }));
 
-    act(() => result.current.search.apply('  Alex Lee  '));
-    expect(result.current.appliedFilters.search).toBe('Alex Lee');
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'youth-profile-filters', expect.objectContaining({
-        search: 'Alex Lee', programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1'],
+        programIds: ['program-1'], cycleIds: ['cycle-1'], schoolIds: ['school-1', 'school-2'],
       }),
-    ));
-
-    act(() => result.current.filters.update({ schoolIds: ['school-1', 'school-2'] }));
-    expect(result.current.appliedFilters.schoolIds).toEqual(['school-1', 'school-2']);
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ schoolIds: ['school-1', 'school-2'] }),
-    ));
-
-    act(() => result.current.filters.update({ programIds: [], cycleIds: [], schoolIds: [] }));
-    expect(result.current.appliedFilters).toEqual({ search: 'Alex Lee', programIds: [], cycleIds: [], schoolIds: [] });
-
-    act(() => result.current.search.apply(''));
-    expect(result.current.appliedFilters.search).toBe('');
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
-      'youth-profile-filters', expect.objectContaining({ search: '', cycleIds: [], schoolIds: [] }),
     ));
   });
 

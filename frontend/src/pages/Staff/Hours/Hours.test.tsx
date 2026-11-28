@@ -23,7 +23,7 @@ import type useHoursTable from './components/HoursTable/hooks/useHoursTable';
 import type HoursPayPeriodSummary from './components/HoursDashboard/HoursPayPeriodSummary/HoursPayPeriodSummary';
 import type HoursCycleSummary from './components/HoursDashboard/HoursCycleSummary/HoursCycleSummary';
 import { deleteHours, getHoursReferenceData, setHours } from './hours.api';
-import type { StoredHoursPreferences } from './hooks/preferences/useHoursPreferences';
+import type { HoursPreferences } from './hooks/preferences/useHoursPreferences';
 
 // Observe the public controls while retaining the real container's rendering and readiness behavior.
 vi.mock('../../../common/components/PageContainer/PageContainer', async importOriginal => {
@@ -89,7 +89,7 @@ vi.mock('../../../common/features/referenceData/referenceData.api', () => ({
 vi.mock('../../../common/features/Preferences/api/preferences.api', () => ({ getPreference: vi.fn(), setPreference: vi.fn() }));
 vi.mock('../../../auth/storage', () => ({ getUser: vi.fn() }));
 
-const preferenceState: { value: StoredHoursPreferences } = { value: {} };
+const preferenceState: { value: Partial<HoursPreferences> } = { value: {} };
 const auth: AuthContextValue = {
   isAuthenticated: true, role: 'staff', permissions: ['read:hours', 'write:hours'],
   loading: false, login: vi.fn(), logout: vi.fn(),
@@ -111,7 +111,10 @@ describe('Hours', () => {
     });
     auth.role = 'staff';
     auth.permissions = ['read:hours', 'write:hours'];
-    preferenceState.value = { view: 'calendar', staffIds: [], programIds: [], categories: [], cycleIds: ['cycle-1'] };
+    preferenceState.value = {
+      view: 'calendar',
+      filters: { search: '', staffIds: [], programIds: [], categories: [], types: [], cycleIds: ['cycle-1'] },
+    };
 
     vi.mocked(getPreference).mockImplementation(async () => preferenceState.value);
     vi.mocked(setPreference).mockImplementation(async (_key, value) => value);
@@ -187,7 +190,7 @@ describe('Hours', () => {
     expect(children.payPeriod?.staff?.id).toBe(coworker.id);
   });
 
-  it('supplies applied search and existing filters to the calendar', async () => {
+  it('supplies applied filters and the derived cycle bounds to both views', async () => {
     renderHours();
     await screen.findByTestId('hours-calendar');
 
@@ -196,6 +199,12 @@ describe('Hours', () => {
     await waitFor(() => expect(children.calendar?.filters).toEqual(expect.objectContaining({
       search: 'workshop', cycleIds: ['cycle-1'],
     })));
+    expect(children.calendar?.dateRange).toEqual({ start: '2026-07-01', end: '2026-09-01' });
+
+    act(() => pageControls().setView!('table'));
+    await screen.findByTestId('hours-table');
+
+    expect(children.table?.dateRange).toEqual({ start: '2026-07-01', end: '2026-09-01' });
   });
 
   it('applies the program selection to the calendar', async () => {

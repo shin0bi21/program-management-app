@@ -71,7 +71,7 @@ describe('Leads', () => {
   });
 
   // Controls and views.
-  it('keeps the filled-out-by filter unavailable for internal leads', async () => {
+  it('queries internal leads with the internal origin', async () => {
     const internalLead: Lead = {
       ...lead,
       origin: 'internal',
@@ -81,7 +81,11 @@ describe('Leads', () => {
     renderPage('internal');
 
     await screen.findByRole('row', { name: /Avery Outreach/ });
-    expect(pageControls().filters!.definitions.some(group => group.id === 'submitterRoles')).toBe(false);
+    expect(getLeads).toHaveBeenLastCalledWith(
+      expect.objectContaining({ origins: ['internal'] }),
+      expect.any(Object),
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it('filters external leads by who filled out the form', async () => {

@@ -79,9 +79,12 @@ it('flattens grouped messages and deduplicates by severity and message', () => {
   expect(items).toHaveLength(2);
 });
 
-it('resets dismissal after all messages clear and when severity changes', () => {
+it('keeps equivalent messages dismissed and resets dismissal when severity changes or messages clear', () => {
   const view = render(<PageMessageOverlay messages={['Check the view.']} />);
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss page messages' }));
+
+  view.rerender(<PageMessageOverlay messages={['Check the view.']} />);
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
   view.rerender(<PageMessageOverlay messages={[{ message: 'Check the view.', severity: 'warning' }]} />);
   expect(screen.getByRole('status')).toBeVisible();

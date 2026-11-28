@@ -12,6 +12,7 @@ import {
   createTestQueryClient,
 } from '../../../../../tests/queryClientTestUtils';
 import type { HoursFilters } from '../../types';
+import type { DateRange } from '../../../../../common/utils/dateRange';
 import useHoursActions from './useHoursActions';
 
 vi.mock('../../hours.api', () => ({
@@ -31,7 +32,7 @@ function deferred<T>() {
 }
 
 /** Renders actions with a fresh account cache and page callbacks. @example renderActions() // isolated mutation owner */
-function renderActions(filters: Partial<HoursFilters> = {}) {
+function renderActions(filters: Partial<HoursFilters> = {}, dateRange?: DateRange) {
   const client = createTestQueryClient();
   const onItemChanged = vi.fn();
   const onItemRemoved = vi.fn();
@@ -39,7 +40,8 @@ function renderActions(filters: Partial<HoursFilters> = {}) {
     hoursQueryKey: ['hours'],
     hoursTableQueryKey: ['hours', 'table'],
     taskQueryKey: ['tasks'],
-    filters: { staffIds: [], categories: [], programIds: [], types: [], search: '', ...filters },
+    filters: { staffIds: [], categories: [], programIds: [], types: [], cycleIds: [], search: '', ...filters },
+    dateRange,
     onItemChanged,
     onItemRemoved,
   }), { wrapper: createQueryClientWrapper(client) });
@@ -88,6 +90,18 @@ describe('useHoursActions', () => {
     const invalidate = vi.spyOn(rendered.client, 'invalidateQueries');
 
     await act(async () => rendered.result.current.saveHours({ category: 'planning_prep' }, previous));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
+  });
+
+  it('reloads the table when a saved move leaves its date bounds', async () => {
+    const previous = makeHoursItem({ date: '2026-08-19' });
+    const date = '2026-09-01';
+    vi.mocked(setHours).mockResolvedValue({ ...previous, date });
+    const { result, client } = renderActions({}, { start: '2026-08-01', end: '2026-08-31' });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    await act(async () => result.current.moveHours(previous, date));
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['hours', 'table'] });
   });

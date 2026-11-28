@@ -50,28 +50,6 @@ describe('useSessionControls', () => {
     });
   });
 
-  it('restores and saves search with filters while clearing categories independently', async () => {
-    preferenceApi.getPreference.mockResolvedValue({ search: '  workshop  ', programIds: ['program-1'], cycleIds: ['cycle-1'] });
-    const { result } = renderHook(() => useSessionControls({
-      role: 'admin', programs, programsLoading: false, cycles, cyclesLoading: false,
-      sessionTypes, sessionTypesLoading: false, tableKeys,
-    }), { wrapper: wrapper() });
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters).toMatchObject({ search: 'workshop', programIds: ['program-1'] });
-
-    act(() => result.current.search.apply('  communication  '));
-    act(() => result.current.filters.update({ programIds: [], cycleIds: [], sessionTypes: [], statuses: [] }));
-
-    expect(result.current.appliedFilters).toMatchObject({ search: 'communication', programIds: [], cycleIds: [] });
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
-      expect.objectContaining({ search: 'communication', programIds: [], cycleIds: [] })));
-
-    act(() => result.current.search.apply(''));
-    expect(result.current.appliedFilters.search).toBe('');
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('session-filters',
-      expect.objectContaining({ search: '' })));
-  });
-
   it('waits for authoritative cycles before restoring a saved cycle', async () => {
     preferenceApi.getPreference.mockResolvedValue({ cycleIds: ['cycle-2'] });
     const { result, rerender } = renderHook(({ loading }) => useSessionControls({

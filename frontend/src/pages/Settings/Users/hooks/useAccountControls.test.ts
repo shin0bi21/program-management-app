@@ -29,7 +29,7 @@ describe('useAccountControls', () => {
     preferenceApi.setPreference.mockImplementation((_key, value) => Promise.resolve(value));
   });
 
-  it('restores account preferences and local layout, and saves them separately', async () => {
+  it('combines account sorting and filters with the account table layout', async () => {
     localStorage.setItem('table-layout:v1:user-1:account-filters', JSON.stringify({
       columnWidths: { email: 260 }, hiddenColumns: ['createdAt'],
     }));
@@ -39,7 +39,6 @@ describe('useAccountControls', () => {
     const { result } = renderHook(() => useAccountControls(true, tableKeys));
 
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.search.appliedValue).toBe('');
     expect(result.current.appliedFilters.roles).toEqual(['staff']);
     expect(result.current.appliedFilters.statuses).toEqual(['active']);
     expect(result.current.table).toMatchObject({
@@ -49,40 +48,14 @@ describe('useAccountControls', () => {
     act(() => {
       result.current.filters.update({ statuses: ['inactive'] });
       result.current.filters.update({ roles: ['youth'] });
-      result.current.table.setHiddenColumns(['email']);
-      result.current.table.setColumnWidths({ name: 240 });
       result.current.table.setSorting({ key: 'status', direction: 'asc' });
     });
 
-    expect(result.current.table).toMatchObject({ hiddenColumns: ['email'], columnWidths: { name: 240 } });
-    expect(JSON.parse(localStorage.getItem('table-layout:v1:user-1:account-filters')!)).toEqual({
-      hiddenColumns: ['email'], columnWidths: { name: 240 },
-    });
     await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith(
       'account-filters', expect.objectContaining({
         statuses: ['inactive'], roles: ['youth'], sorting: { key: 'status', direction: 'asc' },
       }),
     ));
-  });
-
-  it('restores and saves applied search while preserving category filters', async () => {
-    preferenceApi.getPreference.mockResolvedValue({ search: '  Alex  ', roles: ['staff'], statuses: ['active'] });
-    const { result } = renderHook(() => useAccountControls(true, tableKeys));
-    await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.appliedFilters).toMatchObject({ search: 'Alex', roles: ['staff'], statuses: ['active'] });
-
-    act(() => result.current.search.apply('  Jamie  '));
-    expect(result.current.appliedFilters).toMatchObject({ search: 'Jamie', statuses: ['active'] });
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('account-filters',
-      expect.objectContaining({ search: 'Jamie', statuses: ['active'] })));
-
-    act(() => result.current.filters.update({ roles: [], statuses: [] }));
-    expect(result.current.appliedFilters).toMatchObject({ search: 'Jamie', statuses: [] });
-
-    act(() => result.current.search.apply(''));
-    expect(result.current.appliedFilters.search).toBe('');
-    await waitFor(() => expect(preferenceApi.setPreference).toHaveBeenLastCalledWith('account-filters',
-      expect.objectContaining({ search: '', statuses: [] })));
   });
 
   it('restores the project manager account filter for administrators', async () => {

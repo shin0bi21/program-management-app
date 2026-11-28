@@ -33,19 +33,24 @@ export interface HoursCycleSummaryData {
   breakdown: Array<{ label: string; hours: number }>;
 }
 
+interface HoursQueryInput {
+  filters: HoursFilters;
+  dateRange?: DateRange;
+}
+
 /**
  * Loads Hours entries within the visible and applied date ranges.
- * @param filters - Applied staff, category, program, source, cycle, search, and date restrictions.
+ * @param input - Selected filters and the date bounds derived from cycles.
  * @param range - Inclusive calendar buffer dates; requests are clipped to the applied range.
  * @param opts - Request cancellation options.
- * @example getHoursCalendarData(filters, range, { signal })
+ * @example getHoursCalendarData({ filters, dateRange }, range, { signal })
  */
 export function getHoursCalendarData(
-  filters: HoursFilters,
+  { filters, dateRange }: HoursQueryInput,
   range: DateRange,
   opts?: RequestOptions,
 ): Promise<Hours[]> {
-  const requestedRange = intersectDateRanges(range, filters.dateRange);
+  const requestedRange = intersectDateRanges(range, dateRange);
   if (!requestedRange) return Promise.resolve([]);
 
   const params = new URLSearchParams({ ...requestedRange });
@@ -64,13 +69,13 @@ export function getHoursReferenceData(opts?: RequestOptions): Promise<HoursRefer
 
 /**
  * Loads one filtered, sorted Hours page.
- * @param filters - Applied restrictions shared with the calendar.
+ * @param input - Selected filters and the date bounds derived from cycles.
  * @param opts - Request cancellation options.
  * @param pagination - Server sort field, direction, and optional continuation cursor.
- * @example getHoursTableData(filters, { signal }, pagination)
+ * @example getHoursTableData({ filters, dateRange }, { signal }, pagination)
  */
 export function getHoursTableData(
-  filters: HoursFilters,
+  { filters, dateRange }: HoursQueryInput,
   opts: RequestOptions | undefined,
   pagination: CursorRequest,
 ): Promise<CursorPage<Hours>> {
@@ -79,9 +84,9 @@ export function getHoursTableData(
   });
   if (pagination.cursor) params.set('cursor', pagination.cursor);
   applyHoursFilters(params, filters);
-  if (filters.dateRange) {
-    params.set('start', filters.dateRange.start);
-    params.set('end', filters.dateRange.end);
+  if (dateRange) {
+    params.set('start', dateRange.start);
+    params.set('end', dateRange.end);
   }
   return apiClient.get<CursorPage<Hours>>(`/hours/table?${params}`, opts);
 }

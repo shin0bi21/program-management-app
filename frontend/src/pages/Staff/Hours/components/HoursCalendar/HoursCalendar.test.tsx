@@ -1,5 +1,5 @@
 import { makeItemCalendarProps } from '../../../../../tests/factories/calendarItem';
-import type { MutableRefObject } from 'react';
+import type { ComponentProps, MutableRefObject } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,6 +83,7 @@ function renderCalendar({
   staffIds = [],
   search = '',
   filters = {},
+  dateRange,
   canWrite = true,
   onAdd = vi.fn(),
   onEdit = vi.fn(),
@@ -95,6 +96,7 @@ function renderCalendar({
   staffIds?: string[];
   search?: string;
   filters?: Partial<HoursFilters>;
+  dateRange?: ComponentProps<typeof HoursCalendar>['dateRange'];
   canWrite?: boolean;
   onAdd?: ReturnType<typeof vi.fn>;
   onEdit?: ReturnType<typeof vi.fn>;
@@ -108,6 +110,7 @@ function renderCalendar({
       <HoursCalendar
         staff={staff}
         filters={{ staffIds, categories: [], programIds: [], types: [], cycleIds: ['cycle-1'], search, ...filters }}
+        dateRange={dateRange}
         canWrite={canWrite}
         actions={{
           isItemPending: () => false,
@@ -200,16 +203,18 @@ describe('HoursCalendar', () => {
     renderCalendar({
       data: [item],
       search: 'workshop',
-      filters: { staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'], types: ['regular'],
-        dateRange: { start: '2026-08-01', end: '2026-08-31' } },
+      filters: { staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'], types: ['regular'] },
+      dateRange: { start: '2026-08-01', end: '2026-08-31' },
     });
 
     await initializeCalendar(periods);
 
     expect(calendarState.props?.dateRange).toEqual({ start: '2026-08-01', end: '2026-08-31' });
     expect(getHoursCalendarData).toHaveBeenCalledWith({
-      staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'],
-      types: ['regular'], cycleIds: ['cycle-1'], search: 'workshop',
+      filters: {
+        staffIds: ['staff-1'], categories: ['program_delivery'], programIds: ['program-1'],
+        types: ['regular'], cycleIds: ['cycle-1'], search: 'workshop',
+      },
       dateRange: { start: '2026-08-01', end: '2026-08-31' },
     }, {
       start: expect.any(String),
